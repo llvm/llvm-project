@@ -105,7 +105,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -122,12 +121,15 @@
 #include "llvm/Transforms/Utils/CanonicalizeFreezeInLoops.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/LowerInvoke.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
 
 namespace llvm {
+extern cl::opt<bool> EnableProfcheckInPipeline;
+
 #define DUMMY_MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)                     \
   AnalysisKey PASS_NAME::Key;
 #include "llvm/Passes/MachinePassRegistry.def"
@@ -268,9 +270,6 @@ Error CodeGenPassBuilder::buildPipeline(
     addAsmPrinterBegin(PMW);
   }
 
-  if (PrintMIR)
-    addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
-
   if (auto Err = addCoreISelPasses(PMW))
     return Err;
 
@@ -286,14 +285,11 @@ Error CodeGenPassBuilder::buildPipeline(
   // MIR as the final output, we never end up running AsmPrinter.
   addAsmPrinter(PMW);
 
-  if (PrintAsm) {
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
+  flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/!PrintMIR);
+  if (PrintAsm)
     addAsmPrinterEnd(PMW);
-  } else {
-    if (PrintMIR)
-      addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
-  }
+  else if (PrintMIR)
+    addModulePass(PrintMIRPass(Out), PMW, /*Force=*/true);
 
   return verifyStartStop(*StartStopInfo);
 }
@@ -357,6 +353,11 @@ Error CodeGenPassBuilder::verifyStartStop(
 }
 
 void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
+  if (EnableProfcheckInPipeline) {
+    addFunctionPass(ProfileInjectorPass(), PMW);
+    flushFPMsToMPM(PMW);
+  }
+
   addGlobalMergePass(PMW);
   if (TM.useEmulatedTLS())
     addModulePass(LowerEmuTLSPass(), PMW);
@@ -460,7 +461,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
   // pad is shared by multiple invokes and is also a target of a normal
   // edge from elsewhere.
   if (TM.supportsExceptionModel(ExceptionHandling::SjLj)) {
-    addFunctionPass(SjLjEHPreparePass(&TM), PMW);
+    addFunctionPass(SjLjEHPreparePass(), PMW);
     HasEHPrep = true;
   }
   // We support using both GCC-style and MSVC-style exceptions on Windows, so
@@ -519,6 +520,11 @@ void CodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     addFunctionPass(PrintFunctionPass(
                         dbgs(), "\n\n*** Final LLVM Code input to ISel ***\n"),
                     PMW);
+
+  if (EnableProfcheckInPipeline) {
+    flushFPMsToMPM(PMW);
+    addModulePass(ProfileVerifierPass(), PMW);
+  }
 
   // All passes which modify the LLVM IR are now complete; run the verifier
   // to ensure that the IR is valid.
@@ -718,8 +724,7 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
-                         PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(), PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&

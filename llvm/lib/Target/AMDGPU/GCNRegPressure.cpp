@@ -248,8 +248,10 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
                       unsigned DynamicVGPRBlockSize) {
   return Printable([&RP, ST, DynamicVGPRBlockSize](raw_ostream &OS) {
-    OS << "VGPRs: " << RP.getArchVGPRNum() << ' '
-       << "AGPRs: " << RP.getAGPRNum();
+    OS << "VGPRs: " << RP.getArchVGPRNum();
+    if (unsigned NumAVGPRs = RP.getAVGPRNum())
+      OS << " (AV: " << NumAVGPRs << ')';
+    OS << " AGPRs: " << RP.getAGPRNum();
     if (ST)
       OS << "(O"
          << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()),
@@ -945,11 +947,6 @@ Printable llvm::print(const GCNRPTracker::LiveRegSet &LiveRegs,
 
 void GCNRegPressure::dump() const { dbgs() << print(*this); }
 
-static cl::opt<bool> UseDownwardTracker(
-    "amdgpu-print-rp-downward",
-    cl::desc("Use GCNDownwardRPTracker for GCNRegPressurePrinter pass"),
-    cl::init(false), cl::Hidden);
-
 char llvm::GCNRegPressurePrinter::ID = 0;
 char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
 
@@ -987,6 +984,8 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  const bool UseDownwardTracker =
+      MF.getSubtarget<GCNSubtarget>().getCLOpts().print_rp_downward;
 
   auto &OS = dbgs();
 

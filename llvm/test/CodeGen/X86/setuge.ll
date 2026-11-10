@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 ; Test that we ignore -sahf in 32-bit mode rather than asserting.
 ; RUN: llc < %s -mtriple=i686-- -mattr=-sahf | FileCheck %s
+; RUN: llc -enable-new-pm < %s -mtriple=i686-- | FileCheck %s
 
 declare i1 @llvm.isunordered.f32(float, float)
 

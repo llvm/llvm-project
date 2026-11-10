@@ -11,13 +11,13 @@ define float @sinf(float %x) {
   ret float %x
 }
 
-; CHECK: declare void @_Unwind_Resume(...)
+; CHECK: declare void @_Unwind_Resume(ptr)
 
 ; CHECK: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memset_chk(ptr, i32, i64, i64)
 
-; CHECK: declare void @__umodti3(...)
+; CHECK: declare i128 @__umodti3(i128, i128)
 
 ; CHECK: declare float @acosf(float)
 

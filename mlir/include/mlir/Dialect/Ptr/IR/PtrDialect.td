@@ -44,6 +44,7 @@ def Ptr_Dialect : Dialect {
 
 class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<Ptr_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/Ptr/IR/PtrTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

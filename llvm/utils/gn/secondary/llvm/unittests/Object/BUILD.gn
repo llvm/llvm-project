@@ -23,6 +23,7 @@ unittest("ObjectTests") {
     "OffloadingTest.cpp",
     "SymbolSizeTest.cpp",
     "SymbolicFileTest.cpp",
+    "WindowsMachineFlagTest.cpp",
     "XCOFFObjectFileTest.cpp",
   ]
 }

@@ -16,7 +16,6 @@
 # DEFAULT-NEXT: V6_vadd_qf32
 ---
 name: qfpAdd32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -49,7 +48,6 @@ body: |
 # DEFAULT-NEXT: V6_vadd_qf16
 ---
 name: qfpAdd16
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -82,7 +80,6 @@ body: |
 # DEFAULT-NEXT: V6_vsub_qf32
 ---
 name: qfpSub32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -115,7 +112,6 @@ body: |
 # DEFAULT-NEXT: V6_vsub_qf16
 ---
 name: qfpSub16
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -150,7 +146,6 @@ body: |
 # DEFAULT-NEXT: V6_vS32Ub_ai
 ---
 name: qfpMul32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3
@@ -182,7 +177,6 @@ body: |
 # DEFAULT-NEXT: V6_vmpy_qf16_hf
 ---
 name: qfpMul16
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1, $r2, $r3

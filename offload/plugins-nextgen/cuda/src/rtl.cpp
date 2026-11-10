@@ -16,7 +16,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 
@@ -986,50 +985,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
       if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
         return Err;
     }
-    return Plugin::success();
-  }
-
-  interop_spec_t selectInteropPreference(int32_t InteropType,
-                                         int32_t NumPrefers,
-                                         interop_spec_t *Prefers) override {
-    return interop_spec_t{tgt_fr_cuda, {true, 0}, 0};
-  }
-
-  Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override {
-    auto *Ret = new omp_interop_val_t(
-        DeviceId, static_cast<kmp_interop_type_t>(InteropType));
-    Ret->fr_id = tgt_fr_cuda;
-    Ret->vendor_id = omp_vendor_nvidia;
-
-    if (InteropType == kmp_interop_type_target ||
-        InteropType == kmp_interop_type_targetsync) {
-      Ret->device_info.Platform = nullptr;
-      Ret->device_info.Device = reinterpret_cast<void *>(Device);
-      Ret->device_info.Context = Context;
-    }
-
-    if (InteropType == kmp_interop_type_targetsync) {
-      Ret->async_info = new __tgt_async_info();
-      if (auto Err = setContext())
-        return Err;
-      CUstream Stream;
-      if (auto Err = CUDAStreamManager.getResource(Stream))
-        return Err;
-
-      Ret->async_info->Queue = Stream;
-    }
-    return Ret;
-  }
-
-  Error releaseInterop(omp_interop_val_t *Interop) override {
-    if (!Interop)
-      return Plugin::success();
-
-    if (Interop->async_info)
-      delete Interop->async_info;
-
-    delete Interop;
     return Plugin::success();
   }
 

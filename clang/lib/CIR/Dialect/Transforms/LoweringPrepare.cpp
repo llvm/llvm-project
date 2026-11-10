@@ -176,10 +176,12 @@ struct LoweringPreparePass
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
 
+  /// Init and cleanup functions pass \p hasDefaultFuncAttrs true.
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       cir::FuncType type,
-      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
+      cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
+      bool hasDefaultFuncAttrs = false);
 
   cir::GlobalOp getOrCreateRuntimeVariable(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
@@ -656,7 +658,8 @@ cir::GlobalOp LoweringPreparePass::getOrCreateRuntimeVariable(
 
 cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
     mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
-    cir::FuncType type, cir::GlobalLinkageKind linkage) {
+    cir::FuncType type, cir::GlobalLinkageKind linkage,
+    bool hasDefaultFuncAttrs) {
   cir::FuncOp f = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
       mlirModule, StringAttr::get(mlirModule->getContext(), name)));
   if (!f) {
@@ -665,6 +668,19 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
+    if (!hasDefaultFuncAttrs) {
+      f->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 builder.getUnitAttr());
+    } else {
+      // Give the function the TU-wide target-cpu/target-features that CIRGen
+      // recorded on the module, as classic codegen does for every function.
+      for (llvm::StringRef name :
+           {cir::CIRDialect::getTargetCPUAttrName(),
+            cir::CIRDialect::getTuneCPUAttrName(),
+            cir::CIRDialect::getTargetFeaturesAttrName()})
+        if (mlir::Attribute attr = mlirModule->getAttr(name))
+          f->setAttr(name, attr);
+    }
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
   }
@@ -929,15 +945,27 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
     const clang::LangOptions &langOpts, CIRBaseBuilderTy &builder,
     mlir::Type elementType) {
 
-  auto getHigherPrecisionFPType = [&context](mlir::Type type) -> mlir::Type {
+  auto getHigherPrecisionFPType = [&context,
+                                   &targetInfo](mlir::Type type) -> mlir::Type {
     if (mlir::isa<cir::FP16Type>(type))
       return cir::SingleType::get(&context);
 
     if (mlir::isa<cir::SingleType>(type) || mlir::isa<cir::BF16Type>(type))
       return cir::DoubleType::get(&context);
 
-    if (mlir::isa<cir::DoubleType>(type))
-      return cir::LongDoubleType::get(&context, type);
+    if (mlir::isa<cir::DoubleType>(type)) {
+      const llvm::fltSemantics &format = targetInfo.getLongDoubleFormat();
+      mlir::Type underlying;
+      if (&format == &llvm::APFloat::IEEEdouble())
+        underlying = cir::DoubleType::get(&context);
+      else if (&format == &llvm::APFloat::x87DoubleExtended())
+        underlying = cir::FP80Type::get(&context);
+      else if (&format == &llvm::APFloat::IEEEquad())
+        underlying = cir::FP128Type::get(&context);
+      else
+        llvm_unreachable("NYI: unsupported long double format");
+      return cir::LongDoubleType::get(&context, underlying);
+    }
 
     return type;
   };
@@ -1235,7 +1263,8 @@ LoweringPreparePass::buildGlobalArrayDtorFunc(CIRBaseBuilderTy &builder,
       cir::FuncType::get({builder.getVoidPtrTy()}, builder.getVoidTy());
   cir::FuncOp dtorFunc =
       buildRuntimeFunction(builder, fnName, op->getLoc(), fnType,
-                           cir::GlobalLinkageKind::InternalLinkage);
+                           cir::GlobalLinkageKind::InternalLinkage,
+                           /*hasDefaultFuncAttrs=*/true);
 
   SmallVector<mlir::NamedAttribute> paramAttrs;
   paramAttrs.push_back(
@@ -1404,7 +1433,8 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   cir::VoidType voidTy = builder.getVoidTy();
   auto fnType = cir::FuncType::get({}, voidTy);
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
-                                  cir::GlobalLinkageKind::InternalLinkage);
+                                  cir::GlobalLinkageKind::InternalLinkage,
+                                  /*hasDefaultFuncAttrs=*/true);
 
   // Forward the constrained floating-point marker recorded on the global by
   // CodeGen onto the generated initializer function. The marker on the global
@@ -1543,7 +1573,8 @@ cir::FuncOp LoweringPreparePass::getTlsInitFn() {
   mlir::Location loc = mlirModule.getLoc();
   auto fnType = builder.getVoidFnTy();
   return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
-                              cir::GlobalLinkageKind::InternalLinkage);
+                              cir::GlobalLinkageKind::InternalLinkage,
+                              /*hasDefaultFuncAttrs=*/true);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
@@ -2238,8 +2269,9 @@ cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
-  cir::FuncOp fn = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
-                                        fnType, linkage);
+  cir::FuncOp fn =
+      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
+                           linkage, /*hasDefaultFuncAttrs=*/true);
   builder.setInsertionPointToStart(fn.addEntryBlock());
   mlir::Location loc = fn.getLoc();
   auto emitCalls = [&] {
@@ -2416,9 +2448,12 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   }
 
-  mlir::Value tmpAddr =
-      builder.createAlloca(loc, /*addr type*/ builder.getPointerTo(eltTy),
-                           "__array_idx", builder.getAlignmentAttr(1));
+  cir::CIRDataLayout dataLayout(op->getParentOfType<mlir::ModuleOp>());
+  cir::PointerType tmpAddrTy = builder.getPointerTo(
+      eltTy, dataLayout.getAllocaAddrSpace(builder.getContext()));
+  mlir::Value tmpAddr = builder.createAlloca(
+      loc, /*addr type*/ tmpAddrTy, "__array_idx",
+      builder.getAlignmentAttr(dataLayout.getABITypeAlign(eltTy).value()));
   builder.createStore(loc, start, tmpAddr);
 
   mlir::Block *bodyBlock = &op->getRegion(0).front();
@@ -2656,6 +2691,9 @@ cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
       gv, mlir::SymbolTable::Visibility::Private);
   gv.setInitialValueAttr(constant);
   gv.setAlignment(alignment);
+  // Matches classic codegen's createUnnamedGlobalFrom: only the contents of
+  // the constant matter, not its address.
+  gv.setUnnamedAddr(true);
 
   // Keep the cached symbol table in sync with the new global so subsequent
   // lookups for other base names find it.
@@ -3362,6 +3400,17 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
           {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy},
           voidTy));
 
+  // void __cudaRegisterTexture(void **fatbinHandle,
+  //                            const struct textureReference *hostVar,
+  //                            const void **deviceAddress,
+  //                            const char *deviceName,
+  //                            int textureType, int normalized, int ext);
+  FuncOp cudaRegisterTexture = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterTexture"), loc,
+      FuncType::get(
+          {voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy, intTy, intTy},
+          voidTy));
+
   auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
     auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
     auto tmpString = cir::GlobalOp::create(
@@ -3457,8 +3506,17 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
         break;
       }
 
-      case cir::CUDADeviceVarKind::Texture:
-        llvm_unreachable("Texture registration NYI");
+      case cir::CUDADeviceVarKind::Texture: {
+        auto textureType = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getSurfTexType()));
+        auto normalized = ConstantOp::create(
+            builder, loc, IntAttr::get(intTy, regAttr.getNormalized() ? 1 : 0));
+
+        builder.createCallOp(loc, cudaRegisterTexture,
+                             {fatbinHandle, hostVar, deviceName, deviceName,
+                              textureType, normalized, isExtern});
+        break;
+      }
       }
     }
   }
@@ -3468,9 +3526,11 @@ void LoweringPreparePass::runOnOperation() {
   mlirModule = getOperation();
 
   lowerModule = cir::createLowerModule(mlirModule);
-  if (!lowerModule) {
+  assert(lowerModule && "LowerModule shouldn't be null");
+  if (!lowerModule->hasTarget()) {
     mlirModule.emitError() << getArgument()
-                           << " requires a module with a triple";
+                           << " requires a module with a supported '"
+                           << CIRDialect::getTripleAttrName() << "' attribute";
     return signalPassFailure();
   }
 
@@ -3489,7 +3549,18 @@ void LoweringPreparePass::runOnOperation() {
   for (mlir::Operation *o : opsToTransform)
     runOnOp(o);
 
+  // Every TLS wrapper, init alias and wrapper call has been built from
+  // 'tls_refs' by now. Nothing after this pass reads it, so drop it to keep a
+  // second run of this pass from building the wrappers again.
+  for (auto globalOp : mlirModule.getOps<cir::GlobalOp>())
+    globalOp.removeTlsRefsAttr();
+
   buildCXXGlobalInitFunc();
+  // The C++20 module initializer has been built from these. Nothing after this
+  // pass reads them, so drop them to keep a second run of this pass from
+  // building it again.
+  mlirModule->removeAttr(CIRDialect::getCXXModuleInitFnNameAttrName());
+  mlirModule->removeAttr(CIRDialect::getCXXModuleImportedInitsAttrName());
   buildCXXGlobalTlsFunc();
   if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice) {
     buildCUDAModuleCtor();
@@ -3498,6 +3569,13 @@ void LoweringPreparePass::runOnOperation() {
     // happen out here because the ctor and the CUDA dtor builder test the
     // attribute to decide whether a device-side binary exists at all.
     mlirModule->removeAttr(CIRDialect::getCUDADeviceBinaryAttrName());
+    // The kernels and device variables have been registered from these.
+    // Nothing after this pass reads them, so drop them to keep a second run
+    // of this pass from registering them again.
+    for (auto &entry : cudaKernelMap)
+      entry.getValue()->removeAttr(CUDAKernelNameAttr::getMnemonic());
+    for (auto &deviceVar : cudaDeviceVars)
+      deviceVar.first->removeAttr(CUDAVarRegistrationInfoAttr::getMnemonic());
   }
 
   buildGlobalCtorDtorList();
