@@ -343,6 +343,7 @@ public:
   /// Return true if the instruction requires an NTL hint to be emitted.
   bool requiresNTLHint(const MachineInstr &MI) const;
 
+  using TargetInstrInfo::isSafeToMove;
   /// Return true if moving \p From down to \p To won't cause any physical
   /// register reads or writes to be clobbered and no visible side effects are
   /// affected. From and To must be in the same block.

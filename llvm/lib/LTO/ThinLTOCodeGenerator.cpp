@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
+#include "llvm/Passes/RunCodeGen.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -351,15 +353,9 @@ static std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   // CodeGen
   {
     raw_svector_ostream OS(OutputBuffer);
-    legacy::PassManager PM;
-
-    // Setup the codegen now.
-    if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
-                               /* DisableVerify */ true))
-      report_fatal_error("Failed to setup codegen");
-
-    // Run codegen now. resulting binary is in OutputBuffer.
-    PM.run(TheModule);
+    if (runCodeGenPipeline(TM, TheModule, OS, nullptr,
+                           CodeGenFileType::ObjectFile))
+      report_fatal_error("Failed to run codegen");
   }
   return std::make_unique<SmallVectorMemoryBuffer>(
       std::move(OutputBuffer), /*RequiresNullTerminator=*/false);

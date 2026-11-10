@@ -1236,8 +1236,14 @@ TEST(SampleProfCanonicalNameTest, SelectedPolicyDefault) {
   EXPECT_EQ("foo.part.1.bar",
             FunctionSamples::getCanonicalFnName("foo.part.1.bar"));
 
-  // Combined suffixes in canonical order.
+  // Combined suffixes in canonical order (including split-LTO 32-hex module ID
+  // promotion and CFI .cfi suffix).
   EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1.llvm.456"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.cfi"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName(
+                       "foo.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName(
+                       "foo.part.1.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"));
 
   // Suffixes in non-canonical order: .llvm. cannot be stripped if .part.
   // follows it, but .part. can be stripped leaving .llvm.
@@ -1260,6 +1266,9 @@ TEST(SampleProfCanonicalNameTest, SelectedPolicyHasUniqSuffix) {
               FunctionSamples::getCanonicalFnName("foo.__uniq.123.part.1"));
     EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName(
                          "foo.__uniq.123.part.1.llvm.456"));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName(
+                  "foo.__uniq.123.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"));
     EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.456"));
     EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
   }
@@ -1275,6 +1284,9 @@ TEST(SampleProfCanonicalNameTest, SelectedPolicyHasUniqSuffix) {
               FunctionSamples::getCanonicalFnName("foo.__uniq.123.part.1"));
     EXPECT_EQ("foo.__uniq.123", FunctionSamples::getCanonicalFnName(
                                     "foo.__uniq.123.part.1.llvm.456"));
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName(
+                  "foo.__uniq.123.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"));
     EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.456"));
     EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
   }

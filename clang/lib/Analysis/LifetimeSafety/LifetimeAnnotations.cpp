@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/AnyCall.h"
@@ -593,6 +594,11 @@ bool isStdReferenceCast(const FunctionDecl *FD) {
   default:
     return false;
   }
+}
+
+const Expr *ignoreParensAndImpCasts(const Expr *E) {
+  return IgnoreExprNodes(E, IgnoreParensSingleStep,
+                         IgnoreImplicitCastsSingleStep);
 }
 
 } // namespace clang::lifetimes

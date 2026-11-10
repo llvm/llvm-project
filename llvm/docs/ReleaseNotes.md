@@ -399,6 +399,9 @@ Makes programs 10x faster by doing Special New Thing.
   global variant of Ascalon X without `Zvkng` and with reduced vector FP64
   throughput.
 * Removed X5 from the preserve_most register list.
+* Added `-mcpu=chipsalliance-veer-eh1` for the CHIPS Alliance VeeR EH1
+  processor.
+* The behavior of i128 arguments with the LP64E ABI now matches gcc.
 
 ### Changes to the WebAssembly Backend
 
@@ -539,6 +542,15 @@ Makes programs 10x faster by doing Special New Thing.
   uncompressed after garbage collection and deduplication, even if the input
   debug sections were compressed. They are now compressed using the input
   format by default.
+
+* llvm-strings now supports the `-e` (`--encoding`) option and by default prints
+  non-ASCII strings it finds, using the system's configured character set. The
+  prior behavior can be restored by specifying `-es` (`--encoding=s`), which is
+  mostly useful on large files when the searched-for strings are known ahead of
+  time to be ASCII, as it searches faster and gives the user fewer results to
+  sift through. The `-eutf8` is also available to search for UTF-8 strings,
+  which is mostly useful on Windows where configuring the system to use UTF-8 is
+  more involved than setting an environment variable.
 
 ### Changes to LLDB
 

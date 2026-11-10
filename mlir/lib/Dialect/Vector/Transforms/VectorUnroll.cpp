@@ -1217,10 +1217,9 @@ struct UnrollConstantMaskPattern
         unrolledMaskDims.push_back(unrolledMaskDim);
       }
 
-      // A tile that starts past the mask in some dimension gets a zero there
-      // while the remaining dimensions keep their extent. `constant_mask` is
-      // the conjunction of its dimensions, so such a tile is empty, and the op
-      // accepts only the all zeros spelling for an empty mask.
+      // If any of 'unrolledMaskDims' is zero, then the mask is effectively ALL
+      // FALSE and we can set all dims to zero (masked region is a conjunction
+      // of mask dim intervals).
       if (llvm::is_contained(unrolledMaskDims, 0))
         unrolledMaskDims.assign(unrolledMaskDims.size(), 0);
 
