@@ -11002,13 +11002,15 @@ class St1Lane128SubvecPat<ValueType VTy, ComplexPattern extract_high>
   : Pat<(store (extract_high (VTy V128:$Vt)), GPR64sp:$Rn),
         (ST1i64 V128:$Vt, 1, GPR64sp:$Rn)>;
 
+let Predicates = [IsLE] in {
 def : St1Lane128SubvecPat<v16i8, extract_high_v16i8>;
 def : St1Lane128SubvecPat<v8i16, extract_high_v8i16>;
 def : St1Lane128SubvecPat<v4i32, extract_high_v4i32>;
-def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
 def : St1Lane128SubvecPat<v8f16, extract_high_v8f16>;
 def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
 def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
+}
+def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
 def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
 
 // Truncating post-inc stores from lane 0 of v4i32/v2i64.
