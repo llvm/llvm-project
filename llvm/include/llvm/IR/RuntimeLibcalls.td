@@ -226,6 +226,18 @@ class TypeSuffix<string S, FuncArgType Ty> {
   FuncArgType Type = Ty;
 }
 
+class ErrnoMathLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ErrnoMemWriteOnly;
+}
+
+class PureLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<RetType, ArgTypes> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = NoMemory;
+}
+
 // Integer
 foreach IntTy = [TypeSuffix<"I16", Int16>, TypeSuffix<"I32", Int32>,
                  TypeSuffix<"I64", Int64>, TypeSuffix<"I128", Int128>] in {
@@ -250,6 +262,7 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
 }
 
 defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+defvar ReadPtrAttrs = [ReadOnly, CapturesNone];
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
@@ -320,17 +333,6 @@ def F80 : TypeSuffix<"F80", X86FP80>;
 def F128 : TypeSuffix<"F128", FP128>;
 def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
 
-foreach FPTy = [F32, F64] in {
-  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]> {
-    let FnAttrs = CommonFnAttrs;
-    let Memory = ErrnoMemWriteOnly;
-    let RetAttrs = [NoFPClassAttr<"fcNegInf | fcNegSubnormal | fcNegNormal">];
-  }
-}
-
-foreach FPTy = [F80, F128, PPCF128] in
-  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FAST_ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -344,46 +346,53 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def DIV_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FAST_DIV_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
-  def REM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def REM_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMA_#FPTy.Suffix
-      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, FPTy.Type]>;
-  def POWI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+      : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, FPTy.Type]>;
+  def POWI_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, Int]>;
 
+  def SQRT_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]> {
+    let RetAttrs = [NoFPClassAttr<"fcNegInf | fcNegSubnormal | fcNegNormal">];
+  }
   def FAST_SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
 
-  def CBRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def LOG10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def TAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def SINH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COSH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def TANH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ASIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def CBRT_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG2_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def LOG10_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP2_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXP10_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def SIN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def COS_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def TAN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def SINH_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def COSH_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def TANH_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ASIN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ACOS_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN2_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgOrErrnoMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
   }
   def REMQUO_#FPTy.Suffix
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgOrErrnoMemWriteOnly;
     let ParamAttrs = [[], [], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, NoneType, Int];
   }
-  def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FDIM_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
 }
@@ -393,47 +402,58 @@ foreach FPTy = [ "F32", "F64" ] in {
 }
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
-  def POW_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def POW_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def CEIL_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def TRUNC_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def RINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def NEARBYINT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ROUND_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def ROUNDEVEN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def FLOOR_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def COPYSIGN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMAX_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMINIMUM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def FMAXIMUM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def POW_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def POW_FINITE_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def CEIL_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def TRUNC_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def RINT_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
+  def NEARBYINT_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUND_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def ROUNDEVEN_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def FLOOR_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type]>;
+  def COPYSIGN_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMIN_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMAX_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMINIMUM_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def FMAXIMUM_#FPTy.Suffix : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMINIMUM_NUM_#FPTy.Suffix
-      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+      : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FMAXIMUM_NUM_#FPTy.Suffix
-      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def LROUND_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
-  def LLROUND_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
-  def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
-  def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
-  def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
+      : PureLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def LROUND_#FPTy.Suffix : ErrnoMathLibcall<Long, [FPTy.Type]>;
+  def LLROUND_#FPTy.Suffix : ErrnoMathLibcall<LLong, [FPTy.Type]>;
+  def LRINT_#FPTy.Suffix : ErrnoMathLibcall<Long, [FPTy.Type]>;
+  def LLRINT_#FPTy.Suffix : ErrnoMathLibcall<LLong, [FPTy.Type]>;
+  def LDEXP_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, Int]>;
   def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, Int];
   }
   def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgOrErrnoMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
   }
   def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
     let ParamAttrs = [[], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, FPTy.Type];
   }
-  def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
-  def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
-  def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def SCALBLN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Long]>;
-  def SCALBN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-  def TGAMMA_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemReadOnly;
+    let RetAttrs = [NoFPClassAttr<"~fcQNan">];
+    let ParamAttrs = [ReadPtrAttrs];
+  }
+  def NEXTTOWARD_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
+  def REMAINDER_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def SCALBLN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, Long]>;
+  def SCALBN_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type, Int]>;
+  def TGAMMA_#FPTy.Suffix : ErrnoMathLibcall<FPTy.Type, [FPTy.Type]>;
 }
 
 // Floating-point libcall families. Each generates the backend selector
@@ -711,8 +731,6 @@ foreach FPTy = [F32, F64, F128, PPCF128] in {
 }
 
 // Memory
-defvar ReadPtrAttrs = [ReadOnly, CapturesNone];
-
 class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemReadOnly;

@@ -86,10 +86,10 @@
 ; CHECK-NEXT: declare i8 @__eqdf2(double, double) addrspace(1)
 ; CHECK-NEXT: declare i8 @__eqsf2(float, float) addrspace(1)
 ; CHECK-NEXT: declare i8 @__eqtf2(fp128, fp128) addrspace(1)
-; CHECK-NEXT: declare double @__exp2_finite(double) addrspace(1)
-; CHECK-NEXT: declare float @__exp2f_finite(float) addrspace(1)
-; CHECK-NEXT: declare double @__exp_finite(double) addrspace(1)
-; CHECK-NEXT: declare float @__expf_finite(float) addrspace(1)
+; CHECK-NEXT: declare double @__exp2_finite(double) addrspace(1) [[SQRT_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare float @__exp2f_finite(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @__exp_finite(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @__expf_finite(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @__extendbfsf2(bfloat) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__extenddftf2(double) addrspace(1)
 ; CHECK-NEXT: declare double @__extendhfdf2(half) addrspace(1)
@@ -172,12 +172,12 @@
 ; CHECK-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i16, i16) addrspace(1)
 ; CHECK-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i16, i16) addrspace(1)
 ; CHECK-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i16, i16) addrspace(1)
-; CHECK-NEXT: declare double @__log10_finite(double) addrspace(1)
-; CHECK-NEXT: declare float @__log10f_finite(float) addrspace(1)
-; CHECK-NEXT: declare double @__log2_finite(double) addrspace(1)
-; CHECK-NEXT: declare float @__log2f_finite(float) addrspace(1)
-; CHECK-NEXT: declare double @__log_finite(double) addrspace(1)
-; CHECK-NEXT: declare float @__logf_finite(float) addrspace(1)
+; CHECK-NEXT: declare double @__log10_finite(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @__log10f_finite(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @__log2_finite(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @__log2f_finite(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @__log_finite(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @__logf_finite(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare i64 @__lshrdi3(i64, i16) addrspace(1)
 ; CHECK-NEXT: declare i16 @__lshrhi3(i16, i16) addrspace(1)
 ; CHECK-NEXT: declare i32 @__lshrsi3(i32, i16) addrspace(1)
@@ -205,11 +205,11 @@
 ; CHECK-NEXT: declare i16 @__popcountdi2(i64) addrspace(1)
 ; CHECK-NEXT: declare i16 @__popcountsi2(i32) addrspace(1)
 ; CHECK-NEXT: declare i16 @__popcountti2(i128) addrspace(1)
-; CHECK-NEXT: declare double @__pow_finite(double, double) addrspace(1)
-; CHECK-NEXT: declare float @__powf_finite(float, float) addrspace(1)
-; CHECK-NEXT: declare double @__powidf2(double, i16) addrspace(1)
-; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1)
-; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1)
+; CHECK-NEXT: declare double @__pow_finite(double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @__powf_finite(float, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @__powidf2(double, i16) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1) [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__subsf3(float, float) addrspace(1)
@@ -293,120 +293,122 @@
 ; CHECK-NEXT: declare i8 @__unorddf2(double, double) addrspace(1)
 ; CHECK-NEXT: declare i8 @__unordsf2(float, float) addrspace(1)
 ; CHECK-NEXT: declare i8 @__unordtf2(fp128, fp128) addrspace(1)
-; CHECK-NEXT: declare double @acos(double) addrspace(1)
-; CHECK-NEXT: declare float @acosf(float) addrspace(1)
-; CHECK-NEXT: declare double @asin(double) addrspace(1)
-; CHECK-NEXT: declare float @asinf(float) addrspace(1)
-; CHECK-NEXT: declare double @atan(double) addrspace(1)
-; CHECK-NEXT: declare double @atan2(double, double) addrspace(1)
-; CHECK-NEXT: declare float @atan2f(float, float) addrspace(1)
-; CHECK-NEXT: declare float @atanf(float) addrspace(1)
+; CHECK-NEXT: declare double @acos(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @acosf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @asin(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @asinf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @atan(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @atan2(double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @atan2f(float, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @atanf(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare void @cabs(...) addrspace(1)
 ; CHECK-NEXT: declare void @cabsf(...) addrspace(1)
 ; CHECK-NEXT: declare noalias noundef ptr @calloc(i16 noundef, i16 noundef) addrspace(1) [[CALLOC_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @cbrt(double) addrspace(1)
-; CHECK-NEXT: declare float @cbrtf(float) addrspace(1)
-; CHECK-NEXT: declare double @ceil(double) addrspace(1)
-; CHECK-NEXT: declare float @ceilf(float) addrspace(1)
-; CHECK-NEXT: declare double @copysign(double, double) addrspace(1)
-; CHECK-NEXT: declare float @copysignf(float, float) addrspace(1)
-; CHECK-NEXT: declare float @cos(float) addrspace(1)
-; CHECK-NEXT: declare double @cosh(double) addrspace(1)
-; CHECK-NEXT: declare float @coshf(float) addrspace(1)
-; CHECK-NEXT: declare double @exp(double) addrspace(1)
-; CHECK-NEXT: declare double @exp10(double) addrspace(1)
-; CHECK-NEXT: declare float @exp10f(float) addrspace(1)
-; CHECK-NEXT: declare double @exp2(double) addrspace(1)
-; CHECK-NEXT: declare float @exp2f(float) addrspace(1)
-; CHECK-NEXT: declare float @expf(float) addrspace(1)
-; CHECK-NEXT: declare double @fdim(double, double) addrspace(1)
-; CHECK-NEXT: declare float @fdimf(float, float) addrspace(1)
+; CHECK-NEXT: declare double @cbrt(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @cbrtf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @ceil(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @ceilf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @copysign(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @copysignf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @cos(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @cosh(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @coshf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @exp(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @exp10(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @exp10f(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @exp2(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @exp2f(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @expf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @fdim(double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @fdimf(float, float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare i16 @fegetenv(ptr) addrspace(1)
 ; CHECK-NEXT: declare i16 @fegetmode(ptr) addrspace(1)
 ; CHECK-NEXT: declare i16 @fesetenv(ptr) addrspace(1)
 ; CHECK-NEXT: declare i16 @fesetmode(ptr) addrspace(1)
-; CHECK-NEXT: declare double @floor(double) addrspace(1)
-; CHECK-NEXT: declare float @floorf(float) addrspace(1)
-; CHECK-NEXT: declare double @fma(double, double, double) addrspace(1)
-; CHECK-NEXT: declare float @fmaf(float, float, float) addrspace(1)
-; CHECK-NEXT: declare double @fmax(double, double) addrspace(1)
-; CHECK-NEXT: declare float @fmaxf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @fmaximum(double, double) addrspace(1)
-; CHECK-NEXT: declare double @fmaximum_num(double, double) addrspace(1)
-; CHECK-NEXT: declare float @fmaximum_numf(float, float) addrspace(1)
-; CHECK-NEXT: declare float @fmaximumf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @fmin(double, double) addrspace(1)
-; CHECK-NEXT: declare float @fminf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @fminimum(double, double) addrspace(1)
-; CHECK-NEXT: declare double @fminimum_num(double, double) addrspace(1)
-; CHECK-NEXT: declare float @fminimum_numf(float, float) addrspace(1)
-; CHECK-NEXT: declare float @fminimumf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @fmod(double, double) addrspace(1)
-; CHECK-NEXT: declare float @fmodf(float, float) addrspace(1)
+; CHECK-NEXT: declare double @floor(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @floorf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fma(double, double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @fmaf(float, float, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @fmax(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @fmaxf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fmaximum(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fmaximum_num(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @fmaximum_numf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @fmaximumf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fmin(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @fminf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fminimum(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fminimum_num(double, double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @fminimum_numf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @fminimumf(float, float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @fmod(double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @fmodf(float, float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) addrspace(1) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
-; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
-; CHECK-NEXT: declare double @ldexp(double, i16) addrspace(1)
-; CHECK-NEXT: declare float @ldexpf(float, i16) addrspace(1)
-; CHECK-NEXT: declare i64 @llrint(double) addrspace(1)
-; CHECK-NEXT: declare i64 @llrintf(float) addrspace(1)
-; CHECK-NEXT: declare i64 @llround(double) addrspace(1)
-; CHECK-NEXT: declare i64 @llroundf(float) addrspace(1)
-; CHECK-NEXT: declare double @log(double) addrspace(1)
-; CHECK-NEXT: declare double @log10(double) addrspace(1)
-; CHECK-NEXT: declare float @log10f(float) addrspace(1)
-; CHECK-NEXT: declare double @log2(double) addrspace(1)
-; CHECK-NEXT: declare float @log2f(float) addrspace(1)
-; CHECK-NEXT: declare float @logf(float) addrspace(1)
-; CHECK-NEXT: declare i32 @lrint(double) addrspace(1)
-; CHECK-NEXT: declare i32 @lrintf(float) addrspace(1)
-; CHECK-NEXT: declare i32 @lround(double) addrspace(1)
-; CHECK-NEXT: declare i32 @lroundf(float) addrspace(1)
+; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @ldexp(double, i16) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @ldexpf(float, i16) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @llrint(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @llrintf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @llround(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @llroundf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @log(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @log10(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @log10f(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @log2(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @log2f(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @logf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @lrint(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @lrintf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @lround(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @lroundf(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare noalias noundef ptr @malloc(i16 noundef) addrspace(1) [[MALLOC_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare ptr @memcpy(ptr, ptr, i16) addrspace(1)
 ; CHECK-NEXT: declare ptr @memmove(ptr, ptr, i16) addrspace(1)
 ; CHECK-NEXT: declare ptr @memset(ptr, i16, i16) addrspace(1)
-; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 1 dereferenceable(8)) addrspace(1)
-; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 1 dereferenceable(4)) addrspace(1)
-; CHECK-NEXT: declare double @nan(ptr) addrspace(1)
-; CHECK-NEXT: declare float @nanf(ptr) addrspace(1)
-; CHECK-NEXT: declare double @nearbyint(double) addrspace(1)
-; CHECK-NEXT: declare float @nearbyintf(float) addrspace(1)
-; CHECK-NEXT: declare double @nexttoward(double, float) addrspace(1)
-; CHECK-NEXT: declare float @nexttowardf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @pow(double, double) addrspace(1)
-; CHECK-NEXT: declare float @powf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @remainder(double, double) addrspace(1)
-; CHECK-NEXT: declare float @remainderf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
-; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
-; CHECK-NEXT: declare double @rint(double) addrspace(1)
-; CHECK-NEXT: declare float @rintf(float) addrspace(1)
-; CHECK-NEXT: declare double @round(double) addrspace(1)
-; CHECK-NEXT: declare double @roundeven(double) addrspace(1)
-; CHECK-NEXT: declare float @roundevenf(float) addrspace(1)
-; CHECK-NEXT: declare float @roundf(float) addrspace(1)
-; CHECK-NEXT: declare double @scalbln(double, i32) addrspace(1)
-; CHECK-NEXT: declare float @scalblnf(float, i32) addrspace(1)
-; CHECK-NEXT: declare double @scalbn(double, i16) addrspace(1)
-; CHECK-NEXT: declare float @scalbnf(float, i16) addrspace(1)
-; CHECK-NEXT: declare float @sin(float) addrspace(1)
-; CHECK-NEXT: declare double @sinh(double) addrspace(1)
-; CHECK-NEXT: declare float @sinhf(float) addrspace(1)
+; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 1 dereferenceable(8)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 1 dereferenceable(4)) addrspace(1) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) addrspace(1) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) addrspace(1) [[ARGMEM_READ_ATTRS]]
+; CHECK-NEXT: declare double @nearbyint(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @nearbyintf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @nexttoward(double, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @nexttowardf(float, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @pow(double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @powf(float, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @remainder(double, double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @remainderf(float, float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @rint(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @rintf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @round(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @roundeven(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @roundevenf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @roundf(float) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare double @scalbln(double, i32) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @scalblnf(float, i32) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @scalbn(double, i16) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @scalbnf(float, i16) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @sin(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @sinh(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @sinhf(float) addrspace(1) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) addrspace(1) [[SQRT_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) addrspace(1) [[SQRT_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @tan(double) addrspace(1)
-; CHECK-NEXT: declare float @tanf(float) addrspace(1)
-; CHECK-NEXT: declare double @tanh(double) addrspace(1)
-; CHECK-NEXT: declare float @tanhf(float) addrspace(1)
-; CHECK-NEXT: declare double @tgamma(double) addrspace(1)
-; CHECK-NEXT: declare float @tgammaf(float) addrspace(1)
-; CHECK-NEXT: declare double @trunc(double) addrspace(1)
-; CHECK-NEXT: declare float @truncf(float) addrspace(1)
+; CHECK-NEXT: declare double @tan(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @tanf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @tanh(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @tanhf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @tgamma(double) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @tgammaf(float) addrspace(1) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @trunc(double) addrspace(1) [[DIVMOD_ATTRS]]
+; CHECK-NEXT: declare float @truncf(float) addrspace(1) [[DIVMOD_ATTRS]]
 ; CHECK-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

@@ -90,10 +90,10 @@
 ; M68K-NEXT: declare i32 @__eqdf2(double, double)
 ; M68K-NEXT: declare i32 @__eqsf2(float, float)
 ; M68K-NEXT: declare i32 @__eqtf2(fp128, fp128)
-; M68K-NEXT: declare double @__exp2_finite(double)
-; M68K-NEXT: declare float @__exp2f_finite(float)
-; M68K-NEXT: declare double @__exp_finite(double)
-; M68K-NEXT: declare float @__expf_finite(float)
+; M68K-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; M68K-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare float @__extendbfsf2(bfloat)
 ; M68K-NEXT: declare fp128 @__extenddftf2(double)
 ; M68K-NEXT: declare double @__extendhfdf2(half)
@@ -176,12 +176,12 @@
 ; M68K-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; M68K-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; M68K-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; M68K-NEXT: declare double @__log10_finite(double)
-; M68K-NEXT: declare float @__log10f_finite(float)
-; M68K-NEXT: declare double @__log2_finite(double)
-; M68K-NEXT: declare float @__log2f_finite(float)
-; M68K-NEXT: declare double @__log_finite(double)
-; M68K-NEXT: declare float @__logf_finite(float)
+; M68K-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare i64 @__lshrdi3(i64, i32)
 ; M68K-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
 ; M68K-NEXT: declare i32 @__lshrsi3(i32, i32)
@@ -212,11 +212,11 @@
 ; M68K-NEXT: declare i32 @__popcountdi2(i64)
 ; M68K-NEXT: declare i32 @__popcountsi2(i32)
 ; M68K-NEXT: declare i32 @__popcountti2(i128)
-; M68K-NEXT: declare double @__pow_finite(double, double)
-; M68K-NEXT: declare float @__powf_finite(float, float)
-; M68K-NEXT: declare double @__powidf2(double, i32)
-; M68K-NEXT: declare float @__powisf2(float, i32)
-; M68K-NEXT: declare fp128 @__powitf2(fp128, i32)
+; M68K-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @__powidf2(double, i32) [[NOMEM_ATTRS:#[0-9]+]]
+; M68K-NEXT: declare float @__powisf2(float, i32) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare fp128 @__powitf2(fp128, i32) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare double @__subdf3(double, double)
 ; M68K-NEXT: declare float @__subsf3(float, float)
@@ -303,121 +303,124 @@
 ; M68K-NEXT: declare i32 @__unorddf2(double, double)
 ; M68K-NEXT: declare i32 @__unordsf2(float, float)
 ; M68K-NEXT: declare i32 @__unordtf2(fp128, fp128)
-; M68K-NEXT: declare double @acos(double)
-; M68K-NEXT: declare float @acosf(float)
-; M68K-NEXT: declare double @asin(double)
-; M68K-NEXT: declare float @asinf(float)
-; M68K-NEXT: declare double @atan(double)
-; M68K-NEXT: declare double @atan2(double, double)
-; M68K-NEXT: declare float @atan2f(float, float)
-; M68K-NEXT: declare float @atanf(float)
+; M68K-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @asinf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @atan(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @atan2(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @atan2f(float, float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @atanf(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare void @cabs(...)
 ; M68K-NEXT: declare void @cabsf(...)
 ; M68K-NEXT: declare noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; M68K-NEXT: declare double @cbrt(double)
-; M68K-NEXT: declare float @cbrtf(float)
-; M68K-NEXT: declare double @ceil(double)
-; M68K-NEXT: declare float @ceilf(float)
-; M68K-NEXT: declare double @copysign(double, double)
-; M68K-NEXT: declare float @copysignf(float, float)
-; M68K-NEXT: declare double @cos(double)
-; M68K-NEXT: declare float @cosf(float)
-; M68K-NEXT: declare double @cosh(double)
-; M68K-NEXT: declare float @coshf(float)
-; M68K-NEXT: declare double @exp(double)
-; M68K-NEXT: declare double @exp10(double)
-; M68K-NEXT: declare float @exp10f(float)
-; M68K-NEXT: declare double @exp2(double)
-; M68K-NEXT: declare float @exp2f(float)
-; M68K-NEXT: declare float @expf(float)
-; M68K-NEXT: declare double @fdim(double, double)
-; M68K-NEXT: declare float @fdimf(float, float)
+; M68K-NEXT: declare double @cbrt(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @cbrtf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @ceil(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @ceilf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @copysign(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @copysignf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @cos(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @cosf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @cosh(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @coshf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @exp(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @exp10(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @exp10f(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @exp2(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @exp2f(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @expf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @fdim(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @fdimf(float, float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare i32 @fegetenv(ptr)
 ; M68K-NEXT: declare i32 @fegetmode(ptr)
 ; M68K-NEXT: declare i32 @fesetenv(ptr)
 ; M68K-NEXT: declare i32 @fesetmode(ptr)
-; M68K-NEXT: declare double @floor(double)
-; M68K-NEXT: declare float @floorf(float)
-; M68K-NEXT: declare double @fma(double, double, double)
-; M68K-NEXT: declare float @fmaf(float, float, float)
-; M68K-NEXT: declare double @fmax(double, double)
-; M68K-NEXT: declare float @fmaxf(float, float)
-; M68K-NEXT: declare double @fmaximum(double, double)
-; M68K-NEXT: declare double @fmaximum_num(double, double)
-; M68K-NEXT: declare float @fmaximum_numf(float, float)
-; M68K-NEXT: declare float @fmaximumf(float, float)
-; M68K-NEXT: declare double @fmin(double, double)
-; M68K-NEXT: declare float @fminf(float, float)
-; M68K-NEXT: declare double @fminimum(double, double)
-; M68K-NEXT: declare double @fminimum_num(double, double)
-; M68K-NEXT: declare float @fminimum_numf(float, float)
-; M68K-NEXT: declare float @fminimumf(float, float)
-; M68K-NEXT: declare double @fmod(double, double)
-; M68K-NEXT: declare float @fmodf(float, float)
+; M68K-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fma(double, double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @fmax(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @fmaxf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fmaximum(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fmaximum_num(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @fmaximum_numf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @fmaximumf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fmin(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @fminf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fminimum(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fminimum_num(double, double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @fminimum_numf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @fminimumf(float, float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; M68K-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 2 dereferenceable(4))
-; M68K-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 2 dereferenceable(4))
-; M68K-NEXT: declare double @ldexp(double, i32)
-; M68K-NEXT: declare float @ldexpf(float, i32)
-; M68K-NEXT: declare i64 @llrint(double)
-; M68K-NEXT: declare i64 @llrintf(float)
-; M68K-NEXT: declare i64 @llround(double)
-; M68K-NEXT: declare i64 @llroundf(float)
-; M68K-NEXT: declare double @log(double)
-; M68K-NEXT: declare double @log10(double)
-; M68K-NEXT: declare float @log10f(float)
-; M68K-NEXT: declare double @log2(double)
-; M68K-NEXT: declare float @log2f(float)
-; M68K-NEXT: declare float @logf(float)
-; M68K-NEXT: declare i32 @lrint(double)
-; M68K-NEXT: declare i32 @lrintf(float)
-; M68K-NEXT: declare i32 @lround(double)
-; M68K-NEXT: declare i32 @lroundf(float)
+; M68K-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 2 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; M68K-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 2 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; M68K-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i64 @llround(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i64 @llroundf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @log(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @log10(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @log10f(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @log2(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @log2f(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @logf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i32 @lrint(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i32 @lrintf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i32 @lround(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare i32 @lroundf(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare ptr @memcpy(ptr, ptr, i32)
 ; M68K-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; M68K-NEXT: declare ptr @memset(ptr, i32, i32)
-; M68K-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; M68K-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; M68K-NEXT: declare double @nan(ptr)
-; M68K-NEXT: declare float @nanf(ptr)
-; M68K-NEXT: declare double @nearbyint(double)
-; M68K-NEXT: declare float @nearbyintf(float)
-; M68K-NEXT: declare double @nexttoward(double, double)
-; M68K-NEXT: declare float @nexttowardf(float, double)
-; M68K-NEXT: declare double @pow(double, double)
-; M68K-NEXT: declare float @powf(float, float)
-; M68K-NEXT: declare double @remainder(double, double)
-; M68K-NEXT: declare float @remainderf(float, float)
-; M68K-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 2 dereferenceable(4))
-; M68K-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 2 dereferenceable(4))
-; M68K-NEXT: declare double @rint(double)
-; M68K-NEXT: declare float @rintf(float)
-; M68K-NEXT: declare double @round(double)
-; M68K-NEXT: declare double @roundeven(double)
-; M68K-NEXT: declare float @roundevenf(float)
-; M68K-NEXT: declare float @roundf(float)
-; M68K-NEXT: declare double @scalbln(double, i32)
-; M68K-NEXT: declare float @scalblnf(float, i32)
-; M68K-NEXT: declare double @scalbn(double, i32)
-; M68K-NEXT: declare float @scalbnf(float, i32)
-; M68K-NEXT: declare double @sin(double)
-; M68K-NEXT: declare float @sinf(float)
-; M68K-NEXT: declare double @sinh(double)
-; M68K-NEXT: declare float @sinhf(float)
+; M68K-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; M68K-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; M68K-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; M68K-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; M68K-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @nearbyintf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @nexttoward(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @pow(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 2 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; M68K-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 2 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; M68K-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @roundeven(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @roundevenf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @roundf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare double @scalbln(double, i32) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @scalbn(double, i32) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @sinhf(float) [[SQRT_ATTRS]]
 ; M68K-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; M68K-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; M68K-NEXT: declare double @tan(double)
-; M68K-NEXT: declare float @tanf(float)
-; M68K-NEXT: declare double @tanh(double)
-; M68K-NEXT: declare float @tanhf(float)
-; M68K-NEXT: declare double @tgamma(double)
-; M68K-NEXT: declare float @tgammaf(float)
-; M68K-NEXT: declare double @trunc(double)
-; M68K-NEXT: declare float @truncf(float)
+; M68K-NEXT: declare double @tan(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @tanf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @tanh(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @tanhf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @tgamma(double) [[SQRT_ATTRS]]
+; M68K-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
+; M68K-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
+; M68K-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; M68K-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; M68K-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; M68K-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; M68K-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; M68K-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; M68K-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; M68K-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; M68K-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

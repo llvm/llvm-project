@@ -91,12 +91,12 @@
 ; RV32-NEXT: declare i32 @__eqdf2(double, double)
 ; RV32-NEXT: declare i32 @__eqsf2(float, float)
 ; RV32-NEXT: declare i32 @__eqtf2(fp128, fp128)
-; RV32-NEXT: declare double @__exp2_finite(double)
-; RV32-NEXT: declare float @__exp2f_finite(float)
-; RV32-NEXT: declare fp128 @__exp2l_finite(fp128)
-; RV32-NEXT: declare double @__exp_finite(double)
-; RV32-NEXT: declare float @__expf_finite(float)
-; RV32-NEXT: declare fp128 @__expl_finite(fp128)
+; RV32-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; RV32-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @__exp2l_finite(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @__expl_finite(fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare float @__extendbfsf2(bfloat)
 ; RV32-NEXT: declare fp128 @__extenddftf2(double)
 ; RV32-NEXT: declare double @__extendhfdf2(half)
@@ -179,15 +179,15 @@
 ; RV32-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; RV32-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; RV32-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; RV32-NEXT: declare double @__log10_finite(double)
-; RV32-NEXT: declare float @__log10f_finite(float)
-; RV32-NEXT: declare fp128 @__log10l_finite(fp128)
-; RV32-NEXT: declare double @__log2_finite(double)
-; RV32-NEXT: declare float @__log2f_finite(float)
-; RV32-NEXT: declare fp128 @__log2l_finite(fp128)
-; RV32-NEXT: declare double @__log_finite(double)
-; RV32-NEXT: declare float @__logf_finite(float)
-; RV32-NEXT: declare fp128 @__logl_finite(fp128)
+; RV32-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @__log10l_finite(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @__log2l_finite(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @__logl_finite(fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare i64 @__lshrdi3(i64, i32)
 ; RV32-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
 ; RV32-NEXT: declare i32 @__lshrsi3(i32, i32)
@@ -218,12 +218,12 @@
 ; RV32-NEXT: declare i32 @__popcountdi2(i64)
 ; RV32-NEXT: declare i32 @__popcountsi2(i32)
 ; RV32-NEXT: declare i32 @__popcountti2(i128)
-; RV32-NEXT: declare double @__pow_finite(double, double)
-; RV32-NEXT: declare float @__powf_finite(float, float)
-; RV32-NEXT: declare double @__powidf2(double, i32)
-; RV32-NEXT: declare float @__powisf2(float, i32)
-; RV32-NEXT: declare fp128 @__powitf2(fp128, i32)
-; RV32-NEXT: declare fp128 @__powl_finite(fp128, fp128)
+; RV32-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @__powidf2(double, i32) [[NOMEM_ATTRS:#[0-9]+]]
+; RV32-NEXT: declare float @__powisf2(float, i32) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @__powitf2(fp128, i32) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @__powl_finite(fp128, fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare i32 @__riscv_flush_icache(ptr, ptr, i32)
 ; RV32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare double @__subdf3(double, double)
@@ -311,175 +311,178 @@
 ; RV32-NEXT: declare i32 @__unorddf2(double, double)
 ; RV32-NEXT: declare i32 @__unordsf2(float, float)
 ; RV32-NEXT: declare i32 @__unordtf2(fp128, fp128)
-; RV32-NEXT: declare double @acos(double)
-; RV32-NEXT: declare float @acosf(float)
-; RV32-NEXT: declare fp128 @acosl(fp128)
-; RV32-NEXT: declare double @asin(double)
-; RV32-NEXT: declare float @asinf(float)
-; RV32-NEXT: declare fp128 @asinl(fp128)
-; RV32-NEXT: declare double @atan(double)
-; RV32-NEXT: declare double @atan2(double, double)
-; RV32-NEXT: declare float @atan2f(float, float)
-; RV32-NEXT: declare fp128 @atan2l(fp128, fp128)
-; RV32-NEXT: declare float @atanf(float)
-; RV32-NEXT: declare fp128 @atanl(fp128)
+; RV32-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @acosl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @asinf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @asinl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @atan(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @atan2(double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @atan2f(float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @atan2l(fp128, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @atanf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @atanl(fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare void @cabs(...)
 ; RV32-NEXT: declare void @cabsf(...)
 ; RV32-NEXT: declare void @cabsl(...)
 ; RV32-NEXT: declare noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; RV32-NEXT: declare double @cbrt(double)
-; RV32-NEXT: declare float @cbrtf(float)
-; RV32-NEXT: declare fp128 @cbrtl(fp128)
-; RV32-NEXT: declare double @ceil(double)
-; RV32-NEXT: declare float @ceilf(float)
-; RV32-NEXT: declare fp128 @ceill(fp128)
-; RV32-NEXT: declare double @copysign(double, double)
-; RV32-NEXT: declare float @copysignf(float, float)
-; RV32-NEXT: declare fp128 @copysignl(fp128, fp128)
-; RV32-NEXT: declare double @cos(double)
-; RV32-NEXT: declare float @cosf(float)
-; RV32-NEXT: declare double @cosh(double)
-; RV32-NEXT: declare float @coshf(float)
-; RV32-NEXT: declare fp128 @coshl(fp128)
-; RV32-NEXT: declare fp128 @cosl(fp128)
-; RV32-NEXT: declare double @exp(double)
-; RV32-NEXT: declare double @exp10(double)
-; RV32-NEXT: declare float @exp10f(float)
-; RV32-NEXT: declare fp128 @exp10l(fp128)
-; RV32-NEXT: declare double @exp2(double)
-; RV32-NEXT: declare float @exp2f(float)
-; RV32-NEXT: declare fp128 @exp2l(fp128)
-; RV32-NEXT: declare float @expf(float)
-; RV32-NEXT: declare fp128 @expl(fp128)
-; RV32-NEXT: declare double @fdim(double, double)
-; RV32-NEXT: declare float @fdimf(float, float)
-; RV32-NEXT: declare fp128 @fdiml(fp128, fp128)
+; RV32-NEXT: declare double @cbrt(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @cbrtf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @cbrtl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @ceil(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @ceilf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @ceill(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @copysign(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @copysignf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @copysignl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @cos(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @cosf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @cosh(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @coshf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @coshl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @cosl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @exp(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @exp10(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @exp10f(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @exp10l(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @exp2(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @exp2f(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @exp2l(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @expf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @expl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @fdim(double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @fdimf(float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @fdiml(fp128, fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare i32 @fegetenv(ptr)
 ; RV32-NEXT: declare i32 @fegetmode(ptr)
 ; RV32-NEXT: declare i32 @fesetenv(ptr)
 ; RV32-NEXT: declare i32 @fesetmode(ptr)
-; RV32-NEXT: declare double @floor(double)
-; RV32-NEXT: declare float @floorf(float)
-; RV32-NEXT: declare fp128 @floorl(fp128)
-; RV32-NEXT: declare double @fma(double, double, double)
-; RV32-NEXT: declare float @fmaf(float, float, float)
-; RV32-NEXT: declare fp128 @fmal(fp128, fp128, fp128)
-; RV32-NEXT: declare double @fmax(double, double)
-; RV32-NEXT: declare float @fmaxf(float, float)
-; RV32-NEXT: declare double @fmaximum(double, double)
-; RV32-NEXT: declare double @fmaximum_num(double, double)
-; RV32-NEXT: declare float @fmaximum_numf(float, float)
-; RV32-NEXT: declare fp128 @fmaximum_numl(fp128, fp128)
-; RV32-NEXT: declare float @fmaximumf(float, float)
-; RV32-NEXT: declare fp128 @fmaximuml(fp128, fp128)
-; RV32-NEXT: declare fp128 @fmaxl(fp128, fp128)
-; RV32-NEXT: declare double @fmin(double, double)
-; RV32-NEXT: declare float @fminf(float, float)
-; RV32-NEXT: declare double @fminimum(double, double)
-; RV32-NEXT: declare double @fminimum_num(double, double)
-; RV32-NEXT: declare float @fminimum_numf(float, float)
-; RV32-NEXT: declare fp128 @fminimum_numl(fp128, fp128)
-; RV32-NEXT: declare float @fminimumf(float, float)
-; RV32-NEXT: declare fp128 @fminimuml(fp128, fp128)
-; RV32-NEXT: declare fp128 @fminl(fp128, fp128)
-; RV32-NEXT: declare double @fmod(double, double)
-; RV32-NEXT: declare float @fmodf(float, float)
-; RV32-NEXT: declare fp128 @fmodl(fp128, fp128)
+; RV32-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fma(double, double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @fmal(fp128, fp128, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @fmax(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @fmaxf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fmaximum(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fmaximum_num(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @fmaximum_numf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @fmaximum_numl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @fmaximumf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @fmaximuml(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @fmaxl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fmin(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @fminf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fminimum(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fminimum_num(double, double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @fminimum_numf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @fminimum_numl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @fminimumf(float, float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @fminimuml(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @fminl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @fmodl(fp128, fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; RV32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare double @ldexp(double, i32)
-; RV32-NEXT: declare float @ldexpf(float, i32)
-; RV32-NEXT: declare fp128 @ldexpl(fp128, i32)
-; RV32-NEXT: declare i64 @llrint(double)
-; RV32-NEXT: declare i64 @llrintf(float)
-; RV32-NEXT: declare i64 @llrintl(fp128)
-; RV32-NEXT: declare i64 @llround(double)
-; RV32-NEXT: declare i64 @llroundf(float)
-; RV32-NEXT: declare i64 @llroundl(fp128)
-; RV32-NEXT: declare double @log(double)
-; RV32-NEXT: declare double @log10(double)
-; RV32-NEXT: declare float @log10f(float)
-; RV32-NEXT: declare fp128 @log10l(fp128)
-; RV32-NEXT: declare double @log2(double)
-; RV32-NEXT: declare float @log2f(float)
-; RV32-NEXT: declare fp128 @log2l(fp128)
-; RV32-NEXT: declare float @logf(float)
-; RV32-NEXT: declare fp128 @logl(fp128)
-; RV32-NEXT: declare i32 @lrint(double)
-; RV32-NEXT: declare i32 @lrintf(float)
-; RV32-NEXT: declare i32 @lrintl(fp128)
-; RV32-NEXT: declare i32 @lround(double)
-; RV32-NEXT: declare i32 @lroundf(float)
-; RV32-NEXT: declare i32 @lroundl(fp128)
+; RV32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV32-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV32-NEXT: declare double @ldexp(double, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @ldexpl(fp128, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i64 @llrintl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i64 @llround(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i64 @llroundf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i64 @llroundl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @log(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @log10(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @log10f(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @log10l(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @log2(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @log2f(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @log2l(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @logf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @logl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i32 @lrint(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i32 @lrintf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i32 @lrintl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i32 @lround(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i32 @lroundf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare i32 @lroundl(fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare ptr @memcpy(ptr, ptr, i32)
 ; RV32-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; RV32-NEXT: declare ptr @memset(ptr, i32, i32)
-; RV32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; RV32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
-; RV32-NEXT: declare double @nan(ptr)
-; RV32-NEXT: declare float @nanf(ptr)
-; RV32-NEXT: declare fp128 @nanl(ptr)
-; RV32-NEXT: declare double @nearbyint(double)
-; RV32-NEXT: declare float @nearbyintf(float)
-; RV32-NEXT: declare fp128 @nearbyintl(fp128)
-; RV32-NEXT: declare double @nexttoward(double, fp128)
-; RV32-NEXT: declare float @nexttowardf(float, fp128)
-; RV32-NEXT: declare fp128 @nexttowardl(fp128, fp128)
-; RV32-NEXT: declare double @pow(double, double)
-; RV32-NEXT: declare float @powf(float, float)
-; RV32-NEXT: declare fp128 @powl(fp128, fp128)
-; RV32-NEXT: declare double @remainder(double, double)
-; RV32-NEXT: declare float @remainderf(float, float)
-; RV32-NEXT: declare fp128 @remainderl(fp128, fp128)
-; RV32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV32-NEXT: declare double @rint(double)
-; RV32-NEXT: declare float @rintf(float)
-; RV32-NEXT: declare fp128 @rintl(fp128)
-; RV32-NEXT: declare double @round(double)
-; RV32-NEXT: declare double @roundeven(double)
-; RV32-NEXT: declare float @roundevenf(float)
-; RV32-NEXT: declare fp128 @roundevenl(fp128)
-; RV32-NEXT: declare float @roundf(float)
-; RV32-NEXT: declare fp128 @roundl(fp128)
-; RV32-NEXT: declare double @scalbln(double, i32)
-; RV32-NEXT: declare float @scalblnf(float, i32)
-; RV32-NEXT: declare fp128 @scalblnl(fp128, i32)
-; RV32-NEXT: declare double @scalbn(double, i32)
-; RV32-NEXT: declare float @scalbnf(float, i32)
-; RV32-NEXT: declare fp128 @scalbnl(fp128, i32)
-; RV32-NEXT: declare double @sin(double)
-; RV32-NEXT: declare float @sinf(float)
-; RV32-NEXT: declare double @sinh(double)
-; RV32-NEXT: declare float @sinhf(float)
-; RV32-NEXT: declare fp128 @sinhl(fp128)
-; RV32-NEXT: declare fp128 @sinl(fp128)
+; RV32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; RV32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV32-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; RV32-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; RV32-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; RV32-NEXT: declare nofpclass(snan inf zero sub norm) fp128 @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; RV32-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @nearbyintf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @nearbyintl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @nexttoward(double, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @nexttowardf(float, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @nexttowardl(fp128, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @pow(double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @powl(fp128, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @remainderl(fp128, fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; RV32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; RV32-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; RV32-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @rintl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @roundeven(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @roundevenf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @roundevenl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @roundf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @roundl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare double @scalbln(double, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @scalblnl(fp128, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @scalbn(double, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @scalbnl(fp128, i32) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @sinhf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @sinhl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @sinl(fp128) [[SQRT_ATTRS]]
 ; RV32-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; RV32-NEXT: declare fp128 @sqrtl(fp128)
-; RV32-NEXT: declare double @tan(double)
-; RV32-NEXT: declare float @tanf(float)
-; RV32-NEXT: declare double @tanh(double)
-; RV32-NEXT: declare float @tanhf(float)
-; RV32-NEXT: declare fp128 @tanhl(fp128)
-; RV32-NEXT: declare fp128 @tanl(fp128)
-; RV32-NEXT: declare double @tgamma(double)
-; RV32-NEXT: declare float @tgammaf(float)
-; RV32-NEXT: declare fp128 @tgammal(fp128)
-; RV32-NEXT: declare double @trunc(double)
-; RV32-NEXT: declare float @truncf(float)
-; RV32-NEXT: declare fp128 @truncl(fp128)
+; RV32-NEXT: declare nofpclass(ninf nsub nnorm) fp128 @sqrtl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @tan(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @tanf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @tanh(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @tanhf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @tanhl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @tanl(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @tgamma(double) [[SQRT_ATTRS]]
+; RV32-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
+; RV32-NEXT: declare fp128 @tgammal(fp128) [[SQRT_ATTRS]]
+; RV32-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; RV32-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; RV32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; RV32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; RV32-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; RV32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; RV32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; RV32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; RV32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; RV32-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
 ; RV64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; RV64-NEXT: @__stack_chk_guard = external global ptr
@@ -569,12 +572,12 @@
 ; RV64-NEXT: declare i64 @__eqdf2(double, double)
 ; RV64-NEXT: declare i64 @__eqsf2(float, float)
 ; RV64-NEXT: declare i64 @__eqtf2(fp128, fp128)
-; RV64-NEXT: declare double @__exp2_finite(double)
-; RV64-NEXT: declare float @__exp2f_finite(float)
-; RV64-NEXT: declare fp128 @__exp2l_finite(fp128)
-; RV64-NEXT: declare double @__exp_finite(double)
-; RV64-NEXT: declare float @__expf_finite(float)
-; RV64-NEXT: declare fp128 @__expl_finite(fp128)
+; RV64-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; RV64-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @__exp2l_finite(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @__expl_finite(fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare float @__extendbfsf2(bfloat)
 ; RV64-NEXT: declare fp128 @__extenddftf2(double)
 ; RV64-NEXT: declare double @__extendhfdf2(half)
@@ -657,15 +660,15 @@
 ; RV64-NEXT: declare void @__llvm_memset_element_unordered_atomic_2(ptr, i32 signext, i64)
 ; RV64-NEXT: declare void @__llvm_memset_element_unordered_atomic_4(ptr, i32 signext, i64)
 ; RV64-NEXT: declare void @__llvm_memset_element_unordered_atomic_8(ptr, i32 signext, i64)
-; RV64-NEXT: declare double @__log10_finite(double)
-; RV64-NEXT: declare float @__log10f_finite(float)
-; RV64-NEXT: declare fp128 @__log10l_finite(fp128)
-; RV64-NEXT: declare double @__log2_finite(double)
-; RV64-NEXT: declare float @__log2f_finite(float)
-; RV64-NEXT: declare fp128 @__log2l_finite(fp128)
-; RV64-NEXT: declare double @__log_finite(double)
-; RV64-NEXT: declare float @__logf_finite(float)
-; RV64-NEXT: declare fp128 @__logl_finite(fp128)
+; RV64-NEXT: declare double @__log10_finite(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @__log10f_finite(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @__log10l_finite(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @__log2_finite(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @__log2l_finite(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @__logl_finite(fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare i64 @__lshrdi3(i64, i32 signext)
 ; RV64-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32 signext)
 ; RV64-NEXT: declare signext i32 @__lshrsi3(i32 signext, i32 signext)
@@ -698,12 +701,12 @@
 ; RV64-NEXT: declare signext i32 @__popcountdi2(i64)
 ; RV64-NEXT: declare signext i32 @__popcountsi2(i32 signext)
 ; RV64-NEXT: declare signext i32 @__popcountti2(i128)
-; RV64-NEXT: declare double @__pow_finite(double, double)
-; RV64-NEXT: declare float @__powf_finite(float, float)
-; RV64-NEXT: declare double @__powidf2(double, i32 signext)
-; RV64-NEXT: declare float @__powisf2(float, i32 signext)
-; RV64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
-; RV64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
+; RV64-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @__powidf2(double, i32 signext) [[NOMEM_ATTRS:#[0-9]+]]
+; RV64-NEXT: declare float @__powisf2(float, i32 signext) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @__powitf2(fp128, i32 signext) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @__powl_finite(fp128, fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare signext i32 @__riscv_flush_icache(ptr, ptr, i64)
 ; RV64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare double @__subdf3(double, double)
@@ -791,172 +794,175 @@
 ; RV64-NEXT: declare i64 @__unorddf2(double, double)
 ; RV64-NEXT: declare i64 @__unordsf2(float, float)
 ; RV64-NEXT: declare i64 @__unordtf2(fp128, fp128)
-; RV64-NEXT: declare double @acos(double)
-; RV64-NEXT: declare float @acosf(float)
-; RV64-NEXT: declare fp128 @acosl(fp128)
-; RV64-NEXT: declare double @asin(double)
-; RV64-NEXT: declare float @asinf(float)
-; RV64-NEXT: declare fp128 @asinl(fp128)
-; RV64-NEXT: declare double @atan(double)
-; RV64-NEXT: declare double @atan2(double, double)
-; RV64-NEXT: declare float @atan2f(float, float)
-; RV64-NEXT: declare fp128 @atan2l(fp128, fp128)
-; RV64-NEXT: declare float @atanf(float)
-; RV64-NEXT: declare fp128 @atanl(fp128)
+; RV64-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @acosl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @asinf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @asinl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @atan(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @atan2(double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @atan2f(float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @atan2l(fp128, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @atanf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @atanl(fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare void @cabs(...)
 ; RV64-NEXT: declare void @cabsf(...)
 ; RV64-NEXT: declare void @cabsl(...)
 ; RV64-NEXT: declare noalias noundef ptr @calloc(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; RV64-NEXT: declare double @cbrt(double)
-; RV64-NEXT: declare float @cbrtf(float)
-; RV64-NEXT: declare fp128 @cbrtl(fp128)
-; RV64-NEXT: declare double @ceil(double)
-; RV64-NEXT: declare float @ceilf(float)
-; RV64-NEXT: declare fp128 @ceill(fp128)
-; RV64-NEXT: declare double @copysign(double, double)
-; RV64-NEXT: declare float @copysignf(float, float)
-; RV64-NEXT: declare fp128 @copysignl(fp128, fp128)
-; RV64-NEXT: declare double @cos(double)
-; RV64-NEXT: declare float @cosf(float)
-; RV64-NEXT: declare double @cosh(double)
-; RV64-NEXT: declare float @coshf(float)
-; RV64-NEXT: declare fp128 @coshl(fp128)
-; RV64-NEXT: declare fp128 @cosl(fp128)
-; RV64-NEXT: declare double @exp(double)
-; RV64-NEXT: declare double @exp10(double)
-; RV64-NEXT: declare float @exp10f(float)
-; RV64-NEXT: declare fp128 @exp10l(fp128)
-; RV64-NEXT: declare double @exp2(double)
-; RV64-NEXT: declare float @exp2f(float)
-; RV64-NEXT: declare fp128 @exp2l(fp128)
-; RV64-NEXT: declare float @expf(float)
-; RV64-NEXT: declare fp128 @expl(fp128)
-; RV64-NEXT: declare double @fdim(double, double)
-; RV64-NEXT: declare float @fdimf(float, float)
-; RV64-NEXT: declare fp128 @fdiml(fp128, fp128)
+; RV64-NEXT: declare double @cbrt(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @cbrtf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @cbrtl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @ceil(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @ceilf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @ceill(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @copysign(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @copysignf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @copysignl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @cos(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @cosf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @cosh(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @coshf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @coshl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @cosl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @exp(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @exp10(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @exp10f(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @exp10l(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @exp2(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @exp2f(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @exp2l(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @expf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @expl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @fdim(double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @fdimf(float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @fdiml(fp128, fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare signext i32 @fegetenv(ptr)
 ; RV64-NEXT: declare signext i32 @fegetmode(ptr)
 ; RV64-NEXT: declare signext i32 @fesetenv(ptr)
 ; RV64-NEXT: declare signext i32 @fesetmode(ptr)
-; RV64-NEXT: declare double @floor(double)
-; RV64-NEXT: declare float @floorf(float)
-; RV64-NEXT: declare fp128 @floorl(fp128)
-; RV64-NEXT: declare double @fma(double, double, double)
-; RV64-NEXT: declare float @fmaf(float, float, float)
-; RV64-NEXT: declare fp128 @fmal(fp128, fp128, fp128)
-; RV64-NEXT: declare double @fmax(double, double)
-; RV64-NEXT: declare float @fmaxf(float, float)
-; RV64-NEXT: declare double @fmaximum(double, double)
-; RV64-NEXT: declare double @fmaximum_num(double, double)
-; RV64-NEXT: declare float @fmaximum_numf(float, float)
-; RV64-NEXT: declare fp128 @fmaximum_numl(fp128, fp128)
-; RV64-NEXT: declare float @fmaximumf(float, float)
-; RV64-NEXT: declare fp128 @fmaximuml(fp128, fp128)
-; RV64-NEXT: declare fp128 @fmaxl(fp128, fp128)
-; RV64-NEXT: declare double @fmin(double, double)
-; RV64-NEXT: declare float @fminf(float, float)
-; RV64-NEXT: declare double @fminimum(double, double)
-; RV64-NEXT: declare double @fminimum_num(double, double)
-; RV64-NEXT: declare float @fminimum_numf(float, float)
-; RV64-NEXT: declare fp128 @fminimum_numl(fp128, fp128)
-; RV64-NEXT: declare float @fminimumf(float, float)
-; RV64-NEXT: declare fp128 @fminimuml(fp128, fp128)
-; RV64-NEXT: declare fp128 @fminl(fp128, fp128)
-; RV64-NEXT: declare double @fmod(double, double)
-; RV64-NEXT: declare float @fmodf(float, float)
-; RV64-NEXT: declare fp128 @fmodl(fp128, fp128)
+; RV64-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fma(double, double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @fmal(fp128, fp128, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @fmax(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @fmaxf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fmaximum(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fmaximum_num(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @fmaximum_numf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @fmaximum_numl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @fmaximumf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @fmaximuml(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @fmaxl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fmin(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @fminf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fminimum(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fminimum_num(double, double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @fminimum_numf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @fminimum_numl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @fminimumf(float, float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @fminimuml(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @fminl(fp128, fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @fmod(double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @fmodf(float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @fmodl(fp128, fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; RV64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare double @ldexp(double, i32 signext)
-; RV64-NEXT: declare float @ldexpf(float, i32 signext)
-; RV64-NEXT: declare fp128 @ldexpl(fp128, i32 signext)
-; RV64-NEXT: declare i64 @llrint(double)
-; RV64-NEXT: declare i64 @llrintf(float)
-; RV64-NEXT: declare i64 @llrintl(fp128)
-; RV64-NEXT: declare i64 @llround(double)
-; RV64-NEXT: declare i64 @llroundf(float)
-; RV64-NEXT: declare i64 @llroundl(fp128)
-; RV64-NEXT: declare double @log(double)
-; RV64-NEXT: declare double @log10(double)
-; RV64-NEXT: declare float @log10f(float)
-; RV64-NEXT: declare fp128 @log10l(fp128)
-; RV64-NEXT: declare double @log2(double)
-; RV64-NEXT: declare float @log2f(float)
-; RV64-NEXT: declare fp128 @log2l(fp128)
-; RV64-NEXT: declare float @logf(float)
-; RV64-NEXT: declare fp128 @logl(fp128)
-; RV64-NEXT: declare i64 @lrint(double)
-; RV64-NEXT: declare i64 @lrintf(float)
-; RV64-NEXT: declare i64 @lrintl(fp128)
-; RV64-NEXT: declare i64 @lround(double)
-; RV64-NEXT: declare i64 @lroundf(float)
-; RV64-NEXT: declare i64 @lroundl(fp128)
+; RV64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV64-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV64-NEXT: declare double @ldexp(double, i32 signext) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @ldexpf(float, i32 signext) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @ldexpl(fp128, i32 signext) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @llrint(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @llrintf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @llrintl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @llround(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @llroundf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @llroundl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @log(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @log10(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @log10f(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @log10l(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @log2(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @log2f(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @log2l(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @logf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @logl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @lrint(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @lrintf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @lrintl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @lround(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @lroundf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare i64 @lroundl(fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare noalias noundef ptr @malloc(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; RV64-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; RV64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; RV64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; RV64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
-; RV64-NEXT: declare double @nan(ptr)
-; RV64-NEXT: declare float @nanf(ptr)
-; RV64-NEXT: declare fp128 @nanl(ptr)
-; RV64-NEXT: declare double @nearbyint(double)
-; RV64-NEXT: declare float @nearbyintf(float)
-; RV64-NEXT: declare fp128 @nearbyintl(fp128)
-; RV64-NEXT: declare double @nexttoward(double, fp128)
-; RV64-NEXT: declare float @nexttowardf(float, fp128)
-; RV64-NEXT: declare fp128 @nexttowardl(fp128, fp128)
-; RV64-NEXT: declare double @pow(double, double)
-; RV64-NEXT: declare float @powf(float, float)
-; RV64-NEXT: declare fp128 @powl(fp128, fp128)
-; RV64-NEXT: declare double @remainder(double, double)
-; RV64-NEXT: declare float @remainderf(float, float)
-; RV64-NEXT: declare fp128 @remainderl(fp128, fp128)
-; RV64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; RV64-NEXT: declare double @rint(double)
-; RV64-NEXT: declare float @rintf(float)
-; RV64-NEXT: declare fp128 @rintl(fp128)
-; RV64-NEXT: declare double @round(double)
-; RV64-NEXT: declare double @roundeven(double)
-; RV64-NEXT: declare float @roundevenf(float)
-; RV64-NEXT: declare fp128 @roundevenl(fp128)
-; RV64-NEXT: declare float @roundf(float)
-; RV64-NEXT: declare fp128 @roundl(fp128)
-; RV64-NEXT: declare double @scalbln(double, i64)
-; RV64-NEXT: declare float @scalblnf(float, i64)
-; RV64-NEXT: declare fp128 @scalblnl(fp128, i64)
-; RV64-NEXT: declare double @scalbn(double, i32 signext)
-; RV64-NEXT: declare float @scalbnf(float, i32 signext)
-; RV64-NEXT: declare fp128 @scalbnl(fp128, i32 signext)
-; RV64-NEXT: declare double @sin(double)
-; RV64-NEXT: declare float @sinf(float)
-; RV64-NEXT: declare double @sinh(double)
-; RV64-NEXT: declare float @sinhf(float)
-; RV64-NEXT: declare fp128 @sinhl(fp128)
-; RV64-NEXT: declare fp128 @sinl(fp128)
+; RV64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; RV64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; RV64-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16)) [[ARGMEM_WRITE_ATTRS]]
+; RV64-NEXT: declare nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; RV64-NEXT: declare nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; RV64-NEXT: declare nofpclass(snan inf zero sub norm) fp128 @nanl(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; RV64-NEXT: declare double @nearbyint(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @nearbyintf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @nearbyintl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @nexttoward(double, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @nexttowardf(float, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @nexttowardl(fp128, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @pow(double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @powf(float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @powl(fp128, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @remainder(double, double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @remainderf(float, float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @remainderl(fp128, fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; RV64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; RV64-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; RV64-NEXT: declare double @rint(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @rintf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @rintl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @round(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @roundeven(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @roundevenf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @roundevenl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @roundf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @roundl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare double @scalbln(double, i64) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @scalblnf(float, i64) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @scalblnl(fp128, i64) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @scalbn(double, i32 signext) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @scalbnf(float, i32 signext) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @scalbnl(fp128, i32 signext) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @sin(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @sinf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @sinh(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @sinhf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @sinhl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @sinl(fp128) [[SQRT_ATTRS]]
 ; RV64-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; RV64-NEXT: declare fp128 @sqrtl(fp128)
-; RV64-NEXT: declare double @tan(double)
-; RV64-NEXT: declare float @tanf(float)
-; RV64-NEXT: declare double @tanh(double)
-; RV64-NEXT: declare float @tanhf(float)
-; RV64-NEXT: declare fp128 @tanhl(fp128)
-; RV64-NEXT: declare fp128 @tanl(fp128)
-; RV64-NEXT: declare double @tgamma(double)
-; RV64-NEXT: declare float @tgammaf(float)
-; RV64-NEXT: declare fp128 @tgammal(fp128)
-; RV64-NEXT: declare double @trunc(double)
-; RV64-NEXT: declare float @truncf(float)
-; RV64-NEXT: declare fp128 @truncl(fp128)
+; RV64-NEXT: declare nofpclass(ninf nsub nnorm) fp128 @sqrtl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @tan(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @tanf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @tanh(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @tanhf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @tanhl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @tanl(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @tgamma(double) [[SQRT_ATTRS]]
+; RV64-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
+; RV64-NEXT: declare fp128 @tgammal(fp128) [[SQRT_ATTRS]]
+; RV64-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; RV64-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; RV64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; RV64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; RV64-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; RV64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; RV64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; RV64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; RV64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; RV64-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
