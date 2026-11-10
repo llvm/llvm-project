@@ -582,6 +582,69 @@ bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
                                           Cnt);
 }
 
+/// Match a vector G_AND whose constant mask keeps every lane except one, which
+/// it clears. That is an insert of zero into that lane.
+bool matchAndClearOneLane(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          std::pair<Register, unsigned> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (!Ty.isFixedVector())
+    return false;
+  // An AND feeding an OR is better matched as a bitwise select.
+  for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Dst))
+    if (UseMI.getOpcode() == TargetOpcode::G_OR)
+      return false;
+
+  unsigned EltBits = Ty.getScalarSizeInBits();
+  // Constant vectors are not canonicalized to the RHS, so check both operands.
+  for (unsigned MaskIdx : {2u, 1u}) {
+    auto *Mask =
+        getOpcodeDef<GBuildVector>(MI.getOperand(MaskIdx).getReg(), MRI);
+    if (!Mask || Mask->getNumSources() != Ty.getNumElements())
+      continue;
+    std::optional<unsigned> ZeroLane;
+    bool Valid = true;
+    for (unsigned I = 0, E = Mask->getNumSources(); I != E && Valid; ++I) {
+      auto C = getIConstantVRegValWithLookThrough(Mask->getSourceReg(I), MRI);
+      if (!C) {
+        Valid = false;
+        break;
+      }
+      // Only the low EltBits of each element matter.
+      APInt V = C->Value.zextOrTrunc(EltBits);
+      if (V.isAllOnes())
+        continue;
+      if (!V.isZero() || ZeroLane)
+        Valid = false;
+      else
+        ZeroLane = I;
+    }
+    if (!Valid || !ZeroLane)
+      continue;
+    MatchInfo = {MI.getOperand(3 - MaskIdx).getReg(), *ZeroLane};
+    return true;
+  }
+  return false;
+}
+
+void applyAndClearOneLane(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B,
+                          std::pair<Register, unsigned> &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT EltTy = MRI.getType(Dst).getElementType();
+  // 8- and 16-bit constants are not legal, so build a 32-bit zero and truncate.
+  Register Zero =
+      EltTy.getSizeInBits() < 32
+          ? B.buildTrunc(EltTy, B.buildConstant(EltTy.changeElementSize(32), 0))
+                .getReg(0)
+          : B.buildConstant(EltTy, 0).getReg(0);
+  auto Lane = B.buildConstant(LLT::integer(64), MatchInfo.second);
+  B.buildInsertVectorElement(Dst, MatchInfo.first, Zero, Lane);
+  MI.eraseFromParent();
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
