@@ -170,6 +170,9 @@ namespace __pstl {
 // - __inclusive_scan_init
 // - __transform_inclusive_scan
 //
+// transform_exclusive_scan family
+// -------------------------------------
+// - __exclusive_scan
 
 //////////////////////////////////////////////////////////////
 // find_if family
@@ -1043,6 +1046,32 @@ struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
             std::move(__init));
     }
     return __result;
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// transform_exclusive_scan family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __exclusive_scan<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Tp, class _BinaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _Tp __init,
+             _BinaryOperation __reduce) const noexcept {
+    using _TransformExclusiveScan = __dispatch<__transform_exclusive_scan, __current_configuration, _ExecutionPolicy>;
+    return _TransformExclusiveScan()(
+        __policy,
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__init),
+        std::move(__reduce),
+        __identity{});
   }
 };
 
