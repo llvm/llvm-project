@@ -910,7 +910,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (TM)
     TM->setPGOOption(PGOOpt);
 
-  PipelineTuningOptions PTO(&LibraryOptions);
+  PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   PTO.LoopFusion = CodeGenOpts.FuseLoops;
@@ -1288,10 +1288,11 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 
   TimeCodegenPasses([&]() {
-    Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
-        !CodeGenOpts.VerifyModule,
-        /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
+    Error CodeGenError =
+        runCodeGenPipeline(*TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr,
+                           CGFT, !CodeGenOpts.VerifyModule,
+                           /*DisableSimplifyLibCalls=*/false, /*MSI=*/nullptr,
+                           CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });
@@ -1387,7 +1388,6 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.SampleProfile = std::move(SampleProfile);
   const cl::LibraryOptionsContext &LibraryOptions =
       M->getContext().getLibraryOptions();
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   Conf.PTO.LoopFusion = CGOpts.FuseLoops;
