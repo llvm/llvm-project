@@ -547,7 +547,9 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
       libc.hdr.sys_stat_macros
+      libc.hdr.unistd_macros
       libc.src.fcntl.open
       libc.src.stdio.rename
       libc.src.unistd.access
@@ -576,7 +578,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
-
 
   add_libc_test(
     fdopen_test
