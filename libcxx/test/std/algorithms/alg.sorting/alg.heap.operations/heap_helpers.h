@@ -16,8 +16,8 @@
 // LWG2166: Heap property underspecified?
 // [alg.heap.operations]/1: With N = b - a, for all i, 0 < i < N,
 // bool(comp(a[floor((i - 1) / 2)], a[i])) is false.
-template <class Comp, class Iter>
-TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b, Comp cmp) {
+template <class Iter, class Comp = std::less<typename std::iterator_traits<Iter>::value_type> >
+TEST_CONSTEXPR_CXX20 bool satisfies_heap_property(Iter a, Iter b, Comp cmp = Comp()) {
   typedef typename std::iterator_traits<Iter>::difference_type difference_type;
   const difference_type n = b - a;
   for (difference_type i = 1; i < n; ++i)
