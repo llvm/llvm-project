@@ -18,9 +18,9 @@ define void @fminnum_with_any_of_cost(ptr %p) #0 {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <16 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <16 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 32
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 128
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 192
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x float>, ptr [[TMP2]], align 4

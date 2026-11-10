@@ -2371,6 +2371,10 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   KnownFPClass &Known, const SimplifyQuery &SQ,
                                   unsigned Depth) {
 
+  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
   FPClassTest SrcDemandedMask = DemandedMask;
   if (DemandedMask & fcNan)
     SrcDemandedMask |= fcNan;
@@ -2387,6 +2391,19 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
   if (DemandedMask & fcPosSubnormal)
     SrcDemandedMask |= fcPosNormal;
 
+  const bool SubnormalNeverProducesNormal =
+      DstTy.minExponent > SrcTy.minExponent;
+
+  // A subnormal input may round to a normal value in the destination type.
+  // For example: bf16 = fptrunc(f32) and f80 = fptrunc(f128).
+  if (!SubnormalNeverProducesNormal) {
+    // TODO: Refine based on the rounding mode.
+    if (DemandedMask & fcNegNormal)
+      SrcDemandedMask |= fcNegSubnormal;
+    if (DemandedMask & fcPosNormal)
+      SrcDemandedMask |= fcPosSubnormal;
+  }
+
   if (DemandedMask & fcPosInf)
     SrcDemandedMask |= fcPosNormal;
   if (DemandedMask & fcNegInf)
@@ -2396,10 +2413,6 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
   if (IC.SimplifyDemandedFPClass(&I, 0, SrcDemandedMask, KnownSrc, SQ,
                                  Depth + 1))
     return &I;
-
-  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
-  const fltSemantics &SrcTy =
-      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
   const Function *Fn = I.getFunction();
   DenormalMode DstMode =
@@ -3424,19 +3437,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           IID == Intrinsic::nearbyint || IID == Intrinsic::rint ||
           IID == Intrinsic::trunc;
 
-      // Ignore denormals-as-zero, as canonicalization is not mandated.
       if ((IID == Intrinsic::floor || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcPosZero | fcPosSubnormal))
         return ConstantFP::getZero(VTy);
 
       if ((IID == Intrinsic::ceil || IsRoundNearestOrTrunc) &&
-          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal))
+          KnownSrc.isKnownAlways(fcNegZero | fcNegSubnormal) &&
+          !Mode.inputsMayBePositiveZero())
         return ConstantFP::getZero(VTy, true);
 
-      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal))
+      if (IID == Intrinsic::floor && KnownSrc.isKnownAlways(fcNegSubnormal) &&
+          !Mode.inputsMayBeZero())
         return ConstantFP::get(VTy, -1.0);
 
-      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
+      if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal) &&
+          !Mode.inputsMayBeZero())
         return ConstantFP::get(VTy, 1.0);
 
       switch (IID) {
@@ -3463,7 +3478,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return SingleVal;
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
-          KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+          KnownSrc.isKnownAlways(fcZero | fcSubnormal) &&
+          (!Mode.inputsMayBePositiveZero() ||
+           KnownSrc.isKnownNever(fcNegSubnormal))) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 

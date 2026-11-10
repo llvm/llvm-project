@@ -574,9 +574,6 @@ public:
     InstrToNodeMap.clear();
     DAGInterval = {};
   }
-  std::optional<Context::CallbackID> getEraseInstrCB() const {
-    return EraseInstrCB;
-  }
 #ifndef NDEBUG
   /// \Returns true if the DAG's state is clear. Used in assertions.
   bool empty() const {

@@ -16,7 +16,7 @@ define half @roundeven_f16(half %h) {
 ; SSE2-NEXT:    callq _roundevenf
 ; SSE2-NEXT:    callq ___truncsfhf2
 ; SSE2-NEXT:    ## kill: def $ax killed $ax def $eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
@@ -30,7 +30,7 @@ define half @roundeven_f16(half %h) {
 ; SSE41-NEXT:    roundss $8, %xmm0, %xmm0
 ; SSE41-NEXT:    callq ___truncsfhf2
 ; SSE41-NEXT:    ## kill: def $ax killed $ax def $eax
-; SSE41-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    popq %rax
 ; SSE41-NEXT:    retq
 ;
@@ -44,7 +44,7 @@ define half @roundeven_f16(half %h) {
 ; AVX1-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    callq ___truncsfhf2
 ; AVX1-NEXT:    ## kill: def $ax killed $ax def $eax
-; AVX1-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %eax, %xmm0
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;
