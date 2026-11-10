@@ -157,11 +157,8 @@ define i32 @test20(i32 %x) {
 
 define i32 @add_mask_or_lowbits_i32(i32 %t1) {
 ; CHECK-LABEL: @add_mask_or_lowbits_i32(
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T2:%.*]], -2
-; CHECK-NEXT:    [[T6:%.*]] = add i32 [[T1]], 2
-; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T2]], 1
-; CHECK-NEXT:    [[T7:%.*]] = or disjoint i32 [[T5]], [[T6]]
-; CHECK-NEXT:    ret i32 [[T7]]
+; CHECK-NEXT:    [[T6:%.*]] = add i32 [[T1:%.*]], 2
+; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t1.mask1 = add i32 %t1, 2
   %t3 = and i32 %t1.mask1, -2
@@ -173,11 +170,8 @@ define i32 @add_mask_or_lowbits_i32(i32 %t1) {
 
 define i8 @add_mask_or_lowbits_i8(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_i8(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add i8 %x, 4
   %hi = and i8 %add, -4
@@ -188,11 +182,8 @@ define i8 @add_mask_or_lowbits_i8(i8 %x) {
 
 define <4 x i8> @add_mask_or_lowbits_vec(<4 x i8> %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_vec(
-; CHECK-NEXT:    [[X:%.*]] = and <4 x i8> [[X1:%.*]], splat (i8 -8)
-; CHECK-NEXT:    [[R:%.*]] = add <4 x i8> [[X]], splat (i8 8)
-; CHECK-NEXT:    [[LO:%.*]] = and <4 x i8> [[X1]], splat (i8 7)
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint <4 x i8> [[R]], [[LO]]
-; CHECK-NEXT:    ret <4 x i8> [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add <4 x i8> [[X:%.*]], splat (i8 8)
+; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %add = add <4 x i8> %x, <i8 8, i8 8, i8 8, i8 8>
   %hi = and <4 x i8> %add, <i8 -8, i8 -8, i8 -8, i8 -8>
@@ -228,9 +219,8 @@ define i8 @add_mask_or_lowbits_multiuse_hi(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_mask_or_lowbits_multiuse_hi(
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -2
 ; CHECK-NEXT:    [[HI:%.*]] = add i8 [[M]], 2
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X]], 1
 ; CHECK-NEXT:    store i8 [[HI]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i8 [[HI]], [[LO]]
+; CHECK-NEXT:    [[RES:%.*]] = add i8 [[X]], 2
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %m = and i8 %x, -2
@@ -339,11 +329,8 @@ define i8 @add_mask_or_lowbits_signbit(i8 %x) {
 ; Input is already in the canonical form with the add on the masked high bits.
 define i8 @add_mask_or_lowbits_canonical(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_canonical(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, -4
   %hi = add i8 %m, 4
@@ -387,11 +374,8 @@ define i8 @add_mask_or_lowbits_different_x(i8 %x, i8 %y) {
 ; Commuted: the constant is the first operand of the add.
 define i8 @add_mask_or_lowbits_commuted_add(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_commuted_add(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add i8 4, %x
   %hi = and i8 %add, -4
@@ -403,11 +387,8 @@ define i8 @add_mask_or_lowbits_commuted_add(i8 %x) {
 ; Commuted: the constants are the first operands of the masks.
 define i8 @add_mask_or_lowbits_commuted_and(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_commuted_and(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add i8 %x, 4
   %hi = and i8 -4, %add
@@ -419,11 +400,8 @@ define i8 @add_mask_or_lowbits_commuted_and(i8 %x) {
 ; Commuted: the operands of the or are swapped.
 define i8 @add_mask_or_lowbits_commuted_or(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_commuted_or(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[LO]], [[R]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add i8 %x, 4
   %hi = and i8 %add, -4
@@ -435,11 +413,8 @@ define i8 @add_mask_or_lowbits_commuted_or(i8 %x) {
 ; Commuted: canonical form with the constants first and the or swapped.
 define i8 @add_mask_or_lowbits_commuted_canonical(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_commuted_canonical(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[LO]], [[R]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 -4, %x
   %hi = add i8 4, %m
@@ -453,10 +428,7 @@ define i8 @add_mask_or_lowbits_commuted_canonical(i8 %x) {
 define <4 x i8> @add_mask_or_lowbits_vec_poison(<4 x i8> %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_vec_poison(
 ; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i8> [[X:%.*]], <i8 4, i8 poison, i8 4, i8 4>
-; CHECK-NEXT:    [[HI:%.*]] = and <4 x i8> [[ADD]], <i8 -4, i8 -4, i8 poison, i8 -4>
-; CHECK-NEXT:    [[LO:%.*]] = and <4 x i8> [[X]], <i8 3, i8 poison, i8 3, i8 3>
-; CHECK-NEXT:    [[R:%.*]] = or disjoint <4 x i8> [[HI]], [[LO]]
-; CHECK-NEXT:    ret <4 x i8> [[R]]
+; CHECK-NEXT:    ret <4 x i8> [[ADD]]
 ;
   %add = add <4 x i8> %x, <i8 4, i8 poison, i8 4, i8 4>
   %hi = and <4 x i8> %add, <i8 -4, i8 -4, i8 poison, i8 -4>
@@ -484,11 +456,8 @@ define <4 x i8> @add_mask_or_lowbits_vec_poison_nonsplat(<4 x i8> %x) {
 ; Scalable vector splat.
 define <vscale x 4 x i8> @add_mask_or_lowbits_vec_scalable(<vscale x 4 x i8> %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_vec_scalable(
-; CHECK-NEXT:    [[X:%.*]] = and <vscale x 4 x i8> [[X1:%.*]], splat (i8 -4)
-; CHECK-NEXT:    [[R:%.*]] = add <vscale x 4 x i8> [[X]], splat (i8 4)
-; CHECK-NEXT:    [[LO:%.*]] = and <vscale x 4 x i8> [[X1]], splat (i8 3)
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint <vscale x 4 x i8> [[R]], [[LO]]
-; CHECK-NEXT:    ret <vscale x 4 x i8> [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add <vscale x 4 x i8> [[X:%.*]], splat (i8 4)
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
 ;
   %add = add <vscale x 4 x i8> %x, splat (i8 4)
   %hi = and <vscale x 4 x i8> %add, splat (i8 -4)
@@ -500,11 +469,8 @@ define <vscale x 4 x i8> @add_mask_or_lowbits_vec_scalable(<vscale x 4 x i8> %x)
 ; nuw/nsw on the add must be preserved.
 define i8 @add_mask_or_lowbits_nuw(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_nuw(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add nuw i8 %x, 4
   %hi = and i8 %add, -4
@@ -515,11 +481,8 @@ define i8 @add_mask_or_lowbits_nuw(i8 %x) {
 
 define i8 @add_mask_or_lowbits_nsw(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_nsw(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add nsw i8 %x, 4
   %hi = and i8 %add, -4
@@ -530,11 +493,8 @@ define i8 @add_mask_or_lowbits_nsw(i8 %x) {
 
 define i8 @add_mask_or_lowbits_nuw_nsw(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_nuw_nsw(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %add = add nuw nsw i8 %x, 4
   %hi = and i8 %add, -4
@@ -546,11 +506,8 @@ define i8 @add_mask_or_lowbits_nuw_nsw(i8 %x) {
 ; The canonical form must also preserve the flags on the add.
 define i8 @add_mask_or_lowbits_canonical_nuw_nsw(i8 %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_canonical_nuw_nsw(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[X1:%.*]], -4
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[X]], 4
-; CHECK-NEXT:    [[LO:%.*]] = and i8 [[X1]], 3
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[R]], [[LO]]
-; CHECK-NEXT:    ret i8 [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = and i8 %x, -4
   %hi = add nuw nsw i8 %m, 4
@@ -562,11 +519,8 @@ define i8 @add_mask_or_lowbits_canonical_nuw_nsw(i8 %x) {
 ; Vector nuw/nsw flags.
 define <4 x i8> @add_mask_or_lowbits_vec_nuw_nsw(<4 x i8> %x) {
 ; CHECK-LABEL: @add_mask_or_lowbits_vec_nuw_nsw(
-; CHECK-NEXT:    [[X:%.*]] = and <4 x i8> [[X1:%.*]], splat (i8 -8)
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <4 x i8> [[X]], splat (i8 8)
-; CHECK-NEXT:    [[LO:%.*]] = and <4 x i8> [[X1]], splat (i8 7)
-; CHECK-NEXT:    [[R1:%.*]] = or disjoint <4 x i8> [[R]], [[LO]]
-; CHECK-NEXT:    ret <4 x i8> [[R1]]
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <4 x i8> [[X:%.*]], splat (i8 8)
+; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %add = add nuw nsw <4 x i8> %x, <i8 8, i8 8, i8 8, i8 8>
   %hi = and <4 x i8> %add, <i8 -8, i8 -8, i8 -8, i8 -8>
