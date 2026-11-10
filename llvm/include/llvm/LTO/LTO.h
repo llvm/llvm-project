@@ -670,11 +670,11 @@ private:
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
 
-  // Pass-plugins that we load from Conf.PassPluginFilenames.
+  // Pass-plugins that we loaded from the provided configuration.
   SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
 
-  // Load pass-plugins from Conf.PassPluginFilenames.
-  Error loadPassPlugins();
+  // Load pass-plugins from the provided configuration.
+  Error setupPassPlugins();
 
   // LibFuncs that were implemented in bitcode but were not extracted
   // from their libraries. Such functions cannot safely be called, since

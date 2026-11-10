@@ -1314,7 +1314,7 @@ Error LTO::checkPartiallySplit() {
   return Error::success();
 }
 
-Error LTO::loadPassPlugins() {
+Error LTO::setupPassPlugins() {
   // Filenames are cleared on success, so repeated calls are no-ops.
   if (Conf.PassPluginFilenames.empty())
     return Error::success();
@@ -1343,7 +1343,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
 
-  if (Error Err = loadPassPlugins())
+  if (Error Err = setupPassPlugins())
     return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!
