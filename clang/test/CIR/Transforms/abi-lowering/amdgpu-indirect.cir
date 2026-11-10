@@ -57,6 +57,18 @@ module attributes {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  // A discarded result still gets sret memory from the caller.
+  cir.func @discard_big() requires_call_conv_lowering {
+    %0 = cir.call @make_big() : () -> !rec_Big
+    cir.return
+  }
+
+  // CHECK:      cir.func @discard_big() {
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "sret" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.call @make_big(%[[SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
   // The callee works on the caller's object in place, not on a copy.
   cir.func @take_nt(%arg0: !rec_NT) requires_call_conv_lowering {
     %0 = cir.alloca "n" align(4) init : !cir.ptr<!rec_NT, target_address_space(5)>

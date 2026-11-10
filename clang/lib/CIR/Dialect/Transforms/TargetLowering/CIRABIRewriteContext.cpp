@@ -75,18 +75,13 @@ cir::PointerType getPtrTyInAddrSpace(mlir::Type pointee, unsigned addrSpace) {
   return cir::PointerType::get(pointee, asAttr);
 }
 
-/// The pointer passed in place of a byref value of type \p pointee.
-cir::PointerType getByRefPtrTy(mlir::Type pointee,
-                               const ArgClassification &ac) {
-  assert(ac.kind == ArgKind::IndirectAliased && "expected a byref argument");
-  return getPtrTyInAddrSpace(pointee, ac.indirectAddrSpace);
-}
-
-/// The pointer passed in place of an Indirect argument or sret return of type
-/// \p pointee.
+/// The pointer passed in place of an Indirect or byref value, or an sret
+/// return, of type \p pointee.
 cir::PointerType getIndirectPtrTy(mlir::Type pointee,
                                   const ArgClassification &ac) {
-  assert(ac.kind == ArgKind::Indirect && "expected an indirect classification");
+  assert(
+      (ac.kind == ArgKind::Indirect || ac.kind == ArgKind::IndirectAliased) &&
+      "expected an indirect classification");
   return getPtrTyInAddrSpace(pointee, ac.indirectAddrSpace);
 }
 
@@ -176,10 +171,8 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
                                                        : origTy);
       break;
     case ArgKind::Indirect:
-      newArgTypes.push_back(getIndirectPtrTy(origTy, ac));
-      break;
     case ArgKind::IndirectAliased:
-      newArgTypes.push_back(getByRefPtrTy(origTy, ac));
+      newArgTypes.push_back(getIndirectPtrTy(origTy, ac));
       break;
     }
   }
@@ -1346,8 +1339,7 @@ insertArgCoercion(mlir::FunctionOpInterface funcOp,
       // parameter's slot is replaced by the pointer so the body works on the
       // caller's storage in place.  A byref parameter takes the byval path.
       bool byRef = ac.kind == ArgKind::IndirectAliased;
-      cir::PointerType ptrTy = byRef ? getByRefPtrTy(blockArg.getType(), ac)
-                                     : getIndirectPtrTy(blockArg.getType(), ac);
+      cir::PointerType ptrTy = getIndirectPtrTy(blockArg.getType(), ac);
 
       if (!byRef && !ac.byVal) {
         // Without byval, drop the spill store and let the slot's uses read the
@@ -1689,11 +1681,15 @@ rewriteIndirectReturnCall(cir::CallOp call, const FunctionClassification &fc,
     }
   }
   if (!sretSlot) {
-    auto alloca = cir::AllocaOp::create(
-        builder, call.getLoc(), ptrTy,
+    cir::PointerType allocaPtrTy = getAllocaPtrTy(origRetTy, dl);
+    sretSlot = cir::AllocaOp::create(
+        builder, call.getLoc(), allocaPtrTy,
         /*name=*/builder.getStringAttr("sret"),
         /*alignment=*/builder.getI64IntegerAttr(sretAlign));
-    sretSlot = alloca;
+    // The sret pointer can be outside the alloca address space.
+    if (allocaPtrTy != ptrTy)
+      sretSlot = cir::CastOp::create(builder, call.getLoc(), ptrTy,
+                                     cir::CastKind::address_space, sretSlot);
   }
 
   SmallVector<mlir::Value> sretArgs;
@@ -2261,8 +2257,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // like byval.
       bool byRef = ac.kind == ArgKind::IndirectAliased;
       bool byCopy = byRef || ac.byVal;
-      cir::PointerType ptrTy = byRef ? getByRefPtrTy(arg.getType(), ac)
-                                     : getIndirectPtrTy(arg.getType(), ac);
+      cir::PointerType ptrTy = getIndirectPtrTy(arg.getType(), ac);
 
       // A record operand that names storage is passed from that storage
       // rather than from the loaded value: a record value carries only the
