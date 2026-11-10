@@ -55,8 +55,6 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
-  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
-
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
 

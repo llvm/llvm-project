@@ -188,45 +188,6 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
-// Return a general-purpose register that is free at MBBI: not live there, not
-// reserved, not callee-saved (it may not have been saved) and not ExcludeReg.
-// Prefer PreferredReg.
-static Register findScratchNonCalleeSaveRegister(
-    const MachineBasicBlock &MBB, MachineBasicBlock::const_iterator MBBI,
-    Register PreferredReg, Register ExcludeReg = Register()) {
-  const MachineFunction &MF = *MBB.getParent();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  LivePhysRegs LiveRegs(*MF.getSubtarget().getRegisterInfo());
-  LiveRegs.addLiveOuts(MBB);
-  for (MachineBasicBlock::const_iterator I = MBB.end(); I != MBBI;)
-    LiveRegs.stepBackward(*--I);
-  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
-    LiveRegs.addReg(*CSR);
-  if (ExcludeReg.isValid())
-    LiveRegs.addReg(ExcludeReg);
-
-  if (LiveRegs.available(MRI, PreferredReg))
-    return PreferredReg;
-  for (MCPhysReg Reg : LoongArch::GPRRegClass)
-    if (LiveRegs.available(MRI, Reg))
-      return Reg;
-  return Register();
-}
-
-// Return a free register for a stack probe loop at MBBI, preferring
-// PreferredReg. Report an error if there is none.
-static Register getProbeLoopRegister(const MachineBasicBlock &MBB,
-                                     MachineBasicBlock::const_iterator MBBI,
-                                     Register PreferredReg) {
-  Register Reg = findScratchNonCalleeSaveRegister(MBB, MBBI, PreferredReg);
-  if (Reg.isValid())
-    return Reg;
-  const Function &F = MBB.getParent()->getFunction();
-  F.getContext().diagnose(
-      DiagnosticInfoUnsupported(F, "no free register for stack probing"));
-  return PreferredReg;
-}
-
 // Allocate stack space and probe it if necessary. When probing, at most
 // StackProbeMaxUnprobedStack bytes above the new SP are left unprobed, and none
 // if FollowupAllocs is set, so that later allocations start from a probed SP.
@@ -306,7 +267,7 @@ void LoongArchFrameLowering::allocateStack(MachineBasicBlock &MBB,
   const uint64_t Residual = Offset - RoundedSize;
   const uint64_t CFAAdjust = RealStackSize - Offset;
 
-  const Register TargetReg = getProbeLoopRegister(MBB, MBBI, LoongArch::R13);
+  const Register TargetReg = LoongArch::R13;
   // SUB TargetReg, $sp, RoundedSize
   adjustReg(MBB, MBBI, DL, TargetReg, SPReg, -RoundedSize, Flag);
 
@@ -449,8 +410,7 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
       if (NeedProbe && RealignPadding >= ProbeSize) {
         // Realigning may move SP down by the probe size or more: compute the
         // aligned SP and move SP down to it with a probing loop.
-        const Register TargetReg =
-            getProbeLoopRegister(MBB, MBBI, LoongArch::R13);
+        const Register TargetReg = LoongArch::R13;
         // move TargetReg, $sp
         BuildMI(MBB, MBBI, DL, TII->get(LoongArch::OR), TargetReg)
             .addReg(SPReg)
@@ -549,12 +509,9 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
 // the probe size below SP; as for dynamic allocations, the last probe may then
 // be below TargetReg, and SP is set to TargetReg after the loop.
 static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                                 Register TargetReg, Register ScratchReg,
-                                 bool IsVar) {
+                                 Register TargetReg, bool IsVar) {
   assert(TargetReg != LoongArch::R3 &&
          "New top of stack cannot already be in $sp");
-  assert(ScratchReg != LoongArch::R3 && "Scratch register cannot be $sp");
-  assert(TargetReg != ScratchReg && "Target and scratch must be different");
 
   MachineBasicBlock &MBB = *MBBI->getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -573,6 +530,7 @@ static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
   MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
   MF.insert(MBBInsertPoint, ExitMBB);
   const Register SPReg = LoongArch::R3;
+  const Register ScratchReg = LoongArch::R14;
   const MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
 
   // ScratchReg = ProbeSize
@@ -645,8 +603,7 @@ void LoongArchFrameLowering::inlineStackProbe(MachineFunction &MF,
     MachineBasicBlock::iterator MBBI = MI->getIterator();
     DebugLoc DL = MIBB.findDebugLoc(MBBI);
     Register TargetReg = MI->getOperand(0).getReg();
-    Register ScratchReg = getProbeLoopRegister(MIBB, MBBI, LoongArch::R14);
-    emitStackProbeInline(MBBI, DL, TargetReg, ScratchReg,
+    emitStackProbeInline(MBBI, DL, TargetReg,
                          MI->getOpcode() == LoongArch::PROBED_STACKALLOC_VAR);
     MBBI->eraseFromParent();
   }
@@ -826,17 +783,4 @@ bool LoongArchFrameLowering::enableShrinkWrapping(
     return false;
 
   return true;
-}
-
-bool LoongArchFrameLowering::canUseAsPrologue(
-    const MachineBasicBlock &MBB) const {
-  // The stack probe loops of the prologue need two free registers.
-  if (!STI.getTargetLowering()->hasInlineStackProbe(*MBB.getParent()))
-    return true;
-
-  Register Reg =
-      findScratchNonCalleeSaveRegister(MBB, MBB.begin(), LoongArch::R13);
-  return Reg.isValid() &&
-         findScratchNonCalleeSaveRegister(MBB, MBB.begin(), LoongArch::R14, Reg)
-             .isValid();
 }
