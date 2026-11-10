@@ -364,6 +364,7 @@ public:
   bool isOpSuitableForLDPSTP(const Instruction *I) const;
   bool isOpSuitableForLSE128(const Instruction *I) const;
   bool isOpSuitableForRCPC3(const Instruction *I) const;
+  bool isOpSuitableForLSCP(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
   bool shouldInsertTrailingSeqCstFenceForAtomicStore(
       const Instruction *I) const override;
