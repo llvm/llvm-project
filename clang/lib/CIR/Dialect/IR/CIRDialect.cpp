@@ -2042,24 +2042,32 @@ LogicalResult cir::ScopeOp::verify() {
   return success();
 }
 
+/// Returns true if `region` is a single block that holds only a `cir.yield`.
+static bool isYieldOnlyRegion(Region &region) {
+  if (!region.hasOneBlock())
+    return false;
+  Block &block = region.front();
+  return llvm::hasSingleElement(block) && isa<cir::YieldOp>(block.front());
+}
+
 LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
                                  SmallVectorImpl<OpFoldResult> &results) {
-  // Only fold "trivial" scopes: a single block containing only a `cir.yield`.
-  if (!getRegion().hasOneBlock())
+  // Only fold a trivial scope that produces a value.
+  if (getNumResults() != 1 || !isYieldOnlyRegion(getRegion()))
     return failure();
-  Block &block = getRegion().front();
-  if (block.getOperations().size() != 1)
+  auto yield = cast<cir::YieldOp>(getRegion().front().front());
+  if (yield.getNumOperands() != 1)
     return failure();
-
-  auto yield = dyn_cast<cir::YieldOp>(block.front());
-  if (!yield)
-    return failure();
-
-  // Only fold when the scope produces a value.
-  if (getNumResults() != 1 || yield.getNumOperands() != 1)
-    return failure();
-
   results.push_back(yield.getOperand(0));
+  return success();
+}
+
+/// Erases a scope that yields no value and contains only its terminator.
+LogicalResult cir::ScopeOp::canonicalize(ScopeOp op,
+                                         PatternRewriter &rewriter) {
+  if (op.getNumResults() != 0 || !isYieldOnlyRegion(op.getRegion()))
+    return failure();
+  rewriter.eraseOp(op);
   return success();
 }
 
@@ -2138,28 +2146,19 @@ void cir::CleanupScopeOp::getSuccessorRegions(
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
                                                 PatternRewriter &rewriter) {
-  auto isRegionTrivial = [](Region &region) {
-    assert(!region.empty() && "CleanupScopeOp regions must not be empty");
-    if (!region.hasOneBlock())
-      return false;
-    Block &block = llvm::getSingleElement(region);
-    return llvm::hasSingleElement(block) &&
-           isa<cir::YieldOp>(llvm::getSingleElement(block));
-  };
-
   Region &body = op.getBodyRegion();
   Region &cleanup = op.getCleanupRegion();
 
   // An EH-only cleanup scope with an empty body can never trigger its cleanup
   // region — there are no operations in the body that could throw. Erase it.
-  if (op.getCleanupKind() == CleanupKind::EH && isRegionTrivial(body)) {
+  if (op.getCleanupKind() == CleanupKind::EH && isYieldOnlyRegion(body)) {
     rewriter.eraseOp(op);
     return success();
   }
 
   // A cleanup scope with a trivial cleanup region has no cleanup to perform.
   // Inline the body into the parent block and erase the scope.
-  if (!isRegionTrivial(cleanup) || !body.hasOneBlock())
+  if (!isYieldOnlyRegion(cleanup) || !body.hasOneBlock())
     return failure();
 
   Block &bodyBlock = body.front();
@@ -2344,6 +2343,15 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
 //===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
+
+/// Erases a switch whose body contains only its terminator.
+LogicalResult cir::SwitchOp::canonicalize(SwitchOp op,
+                                          PatternRewriter &rewriter) {
+  if (!isYieldOnlyRegion(op.getBody()))
+    return failure();
+  rewriter.eraseOp(op);
+  return success();
+}
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
                           Value cond, BuilderOpStateCallbackRef switchBuilder) {

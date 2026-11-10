@@ -6,25 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements pass that canonicalizes CIR operations, eliminating
-// redundant branches, empty scopes, and other unnecessary operations.
+// This file implements the CIR canonicalization pass. It applies the
+// canonicalization patterns and folders of the CIR dialect to every operation
+// until a fixpoint is reached.
 //
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/Operation.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Region.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
-#include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
-using namespace cir;
 
 namespace mlir {
 #define GEN_PASS_DEF_CIRCANONICALIZE
@@ -33,60 +29,57 @@ namespace mlir {
 
 namespace {
 
-//===----------------------------------------------------------------------===//
-// CIRCanonicalizePass
-//===----------------------------------------------------------------------===//
-
 struct CIRCanonicalizePass
     : public impl::CIRCanonicalizeBase<CIRCanonicalizePass> {
   using CIRCanonicalizeBase::CIRCanonicalizeBase;
 
-  // The same operation rewriting done here could have been performed
-  // by CanonicalizerPass (adding hasCanonicalizer for target Ops and
-  // implementing the same from above in CIRDialects.cpp). However, it's
-  // currently too aggressive for static analysis purposes, since it might
-  // remove things where a diagnostic can be generated.
-  //
-  // FIXME: perhaps we can add one more mode to GreedyRewriteConfig to
-  // disable this behavior.
-  void runOnOperation() override;
+  LogicalResult initialize(MLIRContext *context) override {
+    RewritePatternSet owningPatterns(context);
+    for (RegisteredOperationName op : context->getRegisteredOperationsByDialect(
+             cir::CIRDialect::getDialectNamespace()))
+      op.getCanonicalizationPatterns(owningPatterns, context);
+    patterns =
+        std::make_shared<FrozenRewritePatternSet>(std::move(owningPatterns));
+    return success();
+  }
+
+  void runOnOperation() override {
+    Region &body = getOperation()->getRegion(0);
+    bool changed = applyPatterns(body);
+    // A single run must reach a fixpoint, so a second run changes nothing.
+    if (testConvergence && applyPatterns(body))
+      return signalPassFailure();
+    if (!changed)
+      markAllAnalysesPreserved();
+  }
+
+  /// Applies the patterns to every operation in `body` and returns whether
+  /// the IR changed.
+  bool applyPatterns(Region &body) {
+    // The driver pops from the back of the worklist, so seeding it in reverse
+    // pre-order visits the IR top-down.
+    SmallVector<Operation *> ops;
+    body.walk<WalkOrder::PostOrder, ReverseIterator>(
+        [&](Operation *op) { ops.push_back(op); });
+
+    // Use the multi-op driver rather than applyPatternsGreedily on the
+    // regions: the region driver always erases blocks that have no CFG
+    // predecessor, but before the goto solver runs, a block that starts with
+    // a `cir.label` is reached only through `cir.goto`, which is not a CFG
+    // edge. For the same reason region simplification is not run.
+    //
+    // Dead operations are kept: CIR stays close to the source, so an unused
+    // local or an ignored expression is still emitted, as in classic codegen.
+    GreedyRewriteConfig config;
+    config.setScope(&body);
+    config.enableDeadCodeElimination(false);
+    bool changed = false;
+    (void)applyOpPatternsGreedily(ops, *patterns, config, &changed);
+    return changed;
+  }
+
+  std::shared_ptr<const FrozenRewritePatternSet> patterns;
 };
-
-void CIRCanonicalizePass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
-
-  // Collect canonicalization patterns from CIR ops.
-  mlir::Dialect *cir = getContext().getLoadedDialect<cir::CIRDialect>();
-  for (mlir::RegisteredOperationName op :
-       getContext().getRegisteredOperations())
-    if (&op.getDialect() == cir)
-      op.getCanonicalizationPatterns(patterns, &getContext());
-
-  // Collect operations to apply patterns.
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk([&](Operation *op) {
-    assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::callOp());
-
-    // Many operations are here to perform a manual `fold` in
-    // applyOpPatternsGreedily.
-    if (isa<BrOp, BrCondOp, BuiltinIntCastOp, CastOp, ScopeOp, SwitchOp,
-            SelectOp, IncOp, DecOp, MinusOp, FNegOp, NotOp, AddOp, MulOp, AndOp,
-            OrOp, XorOp, MaxOp, MinOp, ComplexCreateOp, ComplexImagOp,
-            ComplexRealOp, VecCmpOp, VecCreateOp, VecExtractOp, VecShuffleOp,
-            VecShuffleDynamicOp, VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp,
-            BitFfsOp, BitParityOp, BitPopcountOp, BitReverseOp, ByteSwapOp,
-            RotateOp, ConstantOp, CleanupScopeOp>(op))
-      ops.push_back(op);
-  });
-
-  // Apply patterns. Scope the rewrite to the body region, which encloses
-  // the common ancestor the driver would otherwise search for.
-  GreedyRewriteConfig config;
-  config.setScope(&getOperation()->getRegion(0));
-  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
-    signalPassFailure();
-}
 
 } // namespace
 

@@ -458,7 +458,8 @@ void useHasField() {
 
 // CIR-BEFORE-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
 // CIR-BEFORE: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
-// CIR-BEFORE: %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-BEFORE: %{{.+}} = cir.const #cir.int<1> : !s32i
+// CIR-BEFORE: %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
 // CIR-BEFORE: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
 // CIR-BEFORE: %[[GET_DM:.*]] = cir.const #cir.data_member<[0]> : !cir.data_member<!u32i in !rec_hasField>
 // CIR-BEFORE: %[[GET_MEM:.*]] = cir.get_runtime_member %[[LOAD_ARG]][%[[GET_DM]] : !cir.data_member<!u32i in !rec_hasField>] : !cir.ptr<!rec_hasField> -> !cir.ptr<!u32i>
@@ -466,7 +467,8 @@ void useHasField() {
 
 // CIR-AFTER-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
 // CIR-AFTER: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
-// CIR-AFTER: %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-AFTER: %{{.+}} = cir.const #cir.int<1> : !s32i
+// CIR-AFTER: %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
 // CIR-AFTER: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
 // CIR-AFTER: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
 // CIR-AFTER: %[[ARG_AS_PTR:.*]] = cir.cast bitcast %[[LOAD_ARG]] : !cir.ptr<!rec_hasField> -> !cir.ptr<!s8i>

@@ -14,7 +14,9 @@ include "mlir/Pass/PassBase.td"
 def CIRCanonicalize : Pass<"cir-canonicalize"> {
   let summary = "Performs CIR canonicalization";
   let description = [{
-    Perform canonicalizations on CIR and removes some redundant operations.
+    Applies the canonicalization patterns and folders of every CIR operation
+    to all operations until a fixpoint is reached. Operations that are dead
+    but not folded away are kept.
 
     This pass performs basic cleanup and canonicalization transformations that
     are not intended to affect CIR-to-source fidelity and high-level code
@@ -24,6 +26,12 @@ def CIRCanonicalize : Pass<"cir-canonicalize"> {
     could significantly affect CIR-to-source fidelity are performed in the
     `cir-simplify` pass.
   }];
+
+  let options = [
+    Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
+           "Test only: Fail pass if a second run of the patterns changes the "
+           "IR">
+  ];
 
   let constructor = "mlir::createCIRCanonicalizePass()";
   let dependentDialects = ["cir::CIRDialect"];

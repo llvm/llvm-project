@@ -70,6 +70,7 @@ void acc_update(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1>
   // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[PARM_LOAD]], %[[ONE_CONST]]
+  // CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]]
   // CHECK-NEXT: acc.update if(%[[CMP_CAST]]) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_update_self) structured(false) name("parmVar")
@@ -78,6 +79,7 @@ void acc_update(int parmVar, int *ptrParmVar) {
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1>
   // CHECK-NEXT: %[[CMP:.*]] = cir.cmp eq %[[PARM_LOAD]], %[[ONE_CONST]]
+  // CHECK-NEXT: %{{.+}} = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !s32i
   // CHECK-NEXT: %[[CMP_CAST:.*]] = builtin.unrealized_conversion_cast %[[CMP]]
   // CHECK-NEXT: acc.update if(%[[CMP_CAST]]) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>) ifPresent
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_update_self) structured(false) name("parmVar")
