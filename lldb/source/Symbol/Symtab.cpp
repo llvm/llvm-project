@@ -1209,7 +1209,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 3;
+constexpr uint32_t CURRENT_CACHE_VERSION = 4;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the
@@ -1307,8 +1307,12 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     m_symbols.resize(num_symbols);
     SectionList *sections = m_objfile->GetModule()->GetSectionList();
     for (uint32_t i=0; i<num_symbols; ++i) {
-      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab))
+      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab)) {
+        // Don't leave partially decoded symbols behind for the caller to
+        // parse the symbol table on top of.
+        m_symbols.clear();
         return false;
+      }
     }
   }
 

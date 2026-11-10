@@ -1833,7 +1833,6 @@ bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
 
   const Pointer &Field = This.atField(I);
-  assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
   Field.initialize();
   return true;
@@ -1850,7 +1849,6 @@ bool InitThisFieldActivate(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
 
   const Pointer &Field = This.atField(I);
-  assert(Field.canBeInitialized());
   Field.deref<T>() = S.Stk.pop<T>();
   Field.activate();
   Field.initialize();
@@ -1869,7 +1867,6 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
     return false;
 
   const Pointer &Field = This.atField(FieldOffset);
-  assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
 
   if constexpr (isIntegralOrPointer<T>()) {
@@ -1894,7 +1891,6 @@ bool InitThisBitFieldActivate(InterpState &S, CodePtr OpPC,
     return false;
 
   const Pointer &Field = This.atField(FieldOffset);
-  assert(Field.canBeInitialized());
   const auto &Value = S.Stk.pop<T>();
 
   if constexpr (isIntegralOrPointer<T>()) {
@@ -2112,33 +2108,27 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 
 inline bool FinishInitPop(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   return true;
 }
 
 inline bool FinishInit(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   return true;
 }
 
 inline bool FinishInitActivate(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   return true;
 }
 
 inline bool FinishInitActivatePop(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   return true;
 }
 
@@ -2265,8 +2255,7 @@ bool Store(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.canDeref(Name))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2279,16 +2268,14 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.canDeref(Name))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   Ptr.deref<T>() = Value;
   return true;
 }
 
 static inline bool Activate(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.canBeInitialized())
-    Ptr.activate();
+  Ptr.activate();
   return true;
 }
 
@@ -2299,7 +2286,6 @@ static inline bool ActivateThisField(InterpState &S, uint32_t I) {
     return false;
 
   const Pointer &Ptr = S.Current->getThis();
-  assert(Ptr.atField(I).canBeInitialized());
   Ptr.atField(I).activate();
   return true;
 }
@@ -2311,10 +2297,8 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2326,10 +2310,8 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   Ptr.deref<T>() = Value;
   return true;
 }
@@ -2341,8 +2323,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2356,8 +2337,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
-    Ptr.initialize();
+  Ptr.initialize();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2372,10 +2352,8 @@ bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -2390,10 +2368,8 @@ bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
 
   if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else

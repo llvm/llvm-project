@@ -17,9 +17,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -35,6 +32,30 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Dominance information that stays coherent while patterns rewrite the IR.
+/// DominanceInfo caches per region and never notices IR edits, so this doubles
+/// as the rewrite listener and drops a region's cached tree whenever its block
+/// list changes. Successor edits would need notifyOperationModified as well; no
+/// pattern here makes any.
+class RewriteDominanceInfo final : public RewriterBase::Listener {
+public:
+  DominanceInfo &getDominanceInfo() { return domInfo; }
+
+  void notifyBlockInserted(Block *block, Region *previous,
+                           Region::iterator previousIt) override {
+    domInfo.invalidate(block->getParent(), /*recursive=*/false);
+    if (previous)
+      domInfo.invalidate(previous, /*recursive=*/false);
+  }
+
+  void notifyBlockErased(Block *block) override {
+    domInfo.invalidate(block->getParent(), /*recursive=*/false);
+  }
+
+private:
+  DominanceInfo domInfo;
+};
 
 /// Find the `cir.store` operation that stores to the given alloca and dominates
 /// the given load operation. Dominance calculation is done through the given
@@ -81,8 +102,9 @@ cir::StoreOp findDominatingInitOp(cir::AllocaOp alloca, cir::LoadOp load,
 ///   %1 = cir.load %0 : !cir.ptr<!s32i>
 ///
 /// All uses of the load above could be replaced with the SSA value `%init`.
-struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
-  using OpRewritePattern<LoadOp>::OpRewritePattern;
+struct SimplifyConstantLoad final : public OpRewritePattern<LoadOp> {
+  SimplifyConstantLoad(MLIRContext *context, RewriteDominanceInfo &domInfo)
+      : OpRewritePattern(context), domInfo(domInfo) {}
 
   LogicalResult matchAndRewrite(LoadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -94,7 +116,8 @@ struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
     if (!allocaOp || !allocaOp.getConstant())
       return mlir::failure();
 
-    cir::StoreOp initStoreOp = findDominatingInitOp(allocaOp, op, domInfo);
+    cir::StoreOp initStoreOp =
+        findDominatingInitOp(allocaOp, op, domInfo.getDominanceInfo());
     if (!initStoreOp)
       return mlir::failure();
     if (initStoreOp.getIsVolatile() || initStoreOp.getMemOrder()) {
@@ -108,7 +131,7 @@ struct SimplifyConstantLoad : public OpRewritePattern<LoadOp> {
   }
 
 private:
-  mlir::DominanceInfo domInfo;
+  RewriteDominanceInfo &domInfo;
 };
 
 /// Simplify suitable ternary operations into select operations.
@@ -393,24 +416,14 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
-// Phase 1 can erase loads the fused walk already collected: the greedy
-// driver folds plus drops trivially dead ops, so a load whose only user
-// folds away is gone before phase 2 runs. Track erasures to prune them.
-struct ErasedOpTracker : public RewriterBase::Listener {
-  void notifyOperationErased(Operation *op) override { erased.insert(op); }
-  DenseSet<Operation *> erased;
-};
-
 struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;
-
-private:
-  void runSimplifyConstantLoad(llvm::ArrayRef<Operation *> loadOps);
 };
 
-void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
+void populateMergeCleanupPatterns(RewritePatternSet &patterns,
+                                  RewriteDominanceInfo &domInfo) {
   // clang-format off
   patterns.add<
     SimplifyTernary,
@@ -419,55 +432,29 @@ void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
     SimplifyVecSplat
   >(patterns.getContext());
   // clang-format on
+  patterns.add<SimplifyConstantLoad>(patterns.getContext(), domInfo);
 }
 
 void CIRSimplifyPass::runOnOperation() {
-  // Collect rewrite patterns.
+  // Collect rewrite patterns. SimplifyConstantLoad queries dominance, so the
+  // dominance info doubles as the driver's listener to stay coherent.
+  RewriteDominanceInfo domInfo;
   RewritePatternSet patterns(&getContext());
-  populateMergeCleanupPatterns(patterns);
+  populateMergeCleanupPatterns(patterns, domInfo);
 
-  // Collect operations to apply patterns. Both op lists come from one
-  // walk: the first-phase patterns create no LoadOps (Select/Not/
-  // Constant only), so every load phase 2 could see is collected here.
+  // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
-  llvm::SmallVector<Operation *, 16> loadOps;
   getOperation()->walk([&](Operation *op) {
-    if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp>(op))
+    if (isa<TernaryOp, SelectOp, SwitchOp, VecSplatOp, LoadOp>(op))
       ops.push_back(op);
-    else if (isa<LoadOp>(op))
-      loadOps.push_back(op);
   });
 
   // Apply patterns. Scope the rewrite to the body region, which encloses
   // the common ancestor the driver would otherwise search for.
-  ErasedOpTracker tracker;
   GreedyRewriteConfig config;
   config.setScope(&getOperation()->getRegion(0));
-  config.setListener(&tracker);
+  config.setListener(&domInfo);
   if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
-    signalPassFailure();
-
-  // Drop loads phase 1 erased (fold plus dead-op cleanup); the old
-  // second walk never saw them either.
-  llvm::erase_if(loadOps,
-                 [&](Operation *op) { return tracker.erased.contains(op); });
-
-  // SimplifyConstantLoad needs to query dominance information, which could be
-  // invalidated by other rewrite patterns. Thus we run it separately after
-  // other patterns have been applied.
-  runSimplifyConstantLoad(loadOps);
-}
-
-void CIRSimplifyPass::runSimplifyConstantLoad(
-    llvm::ArrayRef<Operation *> loadOps) {
-  RewritePatternSet patterns(&getContext());
-  patterns.add<SimplifyConstantLoad>(patterns.getContext());
-
-  // Scope the rewrite to the body region, which encloses the common
-  // ancestor the driver would otherwise search for.
-  GreedyRewriteConfig config;
-  config.setScope(&getOperation()->getRegion(0));
-  if (applyOpPatternsGreedily(loadOps, std::move(patterns), config).failed())
     signalPassFailure();
 }
 

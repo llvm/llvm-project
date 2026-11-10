@@ -2178,6 +2178,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPFlattenDirective = 314,
 
+  /** OpenMP target loop directive.
+   */
+  CXCursor_OMPTargetGenericLoopDirective = 315,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,

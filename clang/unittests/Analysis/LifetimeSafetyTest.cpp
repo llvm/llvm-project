@@ -1207,7 +1207,7 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundTemplateFunctionReturnVal) {
   EXPECT_THAT(Origin("v2"), HasLoansTo({"b"}, "p2"));
   EXPECT_THAT(Origin("v3"), HasLoansTo({"v2"}, "p2"));
   // View temporary on RHS is lifetime-extended.
-  EXPECT_THAT(Origin("v4"), HasLoansTo({}, "p2"));
+  EXPECT_THAT(Origin("v4"), HasLoanToATemporary("p2"));
 }
 
 TEST_F(LifetimeAnalysisTest, LifetimeboundConversionOperator) {

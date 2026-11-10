@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -25,7 +26,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -72,7 +72,6 @@
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -106,42 +105,6 @@ STATISTIC(ByteArraySizeBytes, "Byte array size in bytes");
 STATISTIC(NumByteArraysCreated, "Number of byte arrays created");
 STATISTIC(NumTypeTestCallsLowered, "Number of type test calls lowered");
 STATISTIC(NumTypeIdDisjointSets, "Number of disjoint sets of type identifiers");
-
-static cl::opt<bool> AvoidReuse(
-    "lowertypetests-avoid-reuse",
-    cl::desc("Try to avoid reuse of byte array addresses using aliases"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<PassSummaryAction> ClSummaryAction(
-    "lowertypetests-summary-action",
-    cl::desc("What to do with the summary when running this pass"),
-    cl::values(clEnumValN(PassSummaryAction::None, "none", "Do nothing"),
-               clEnumValN(PassSummaryAction::Import, "import",
-                          "Import typeid resolutions from summary and globals"),
-               clEnumValN(PassSummaryAction::Export, "export",
-                          "Export typeid resolutions to summary and globals")),
-    cl::Hidden);
-
-static cl::opt<std::string>
-    ClReadSummary("lowertypetests-read-summary",
-                  cl::desc("Read summary from given textual assembly or YAML "
-                           "file before running pass"),
-                  cl::Hidden);
-
-static cl::opt<std::string> ClWriteSummary(
-    "lowertypetests-write-summary",
-    cl::desc("Write summary to given YAML file after running pass"),
-    cl::Hidden);
-
-// FIXME: Remove in clang 24.
-static cl::opt<bool> EnableJumpTableDebugInfo(
-    "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
-    cl::desc("Enable debug info generation for jump tables"));
-
-// FIXME: Remove in clang 26.
-static cl::opt<bool> ReorderCfiJumpTablesProfiles(
-    "reorder-cfi-jump-tables-profiles", cl::init(true), cl::Hidden,
-    cl::desc("Reorder CFI jump tables using profile information"));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -461,6 +424,7 @@ static void createCfiFunctionsMetadata(
     Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
     ProfileSummaryInfo &PSI,
     function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  const IPOOptions &Opts = getIPOOptions(DestM);
   auto &Ctx = DestM.getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
@@ -477,7 +441,7 @@ static void createCfiFunctionsMetadata(
       Linkage = CfiFunctionLinkage::WeakDeclaration;
 
     CfiFunctionHotness Hotness =
-        ReorderCfiJumpTablesProfiles
+        Opts.reorder_cfi_jump_tables_profiles
             ? CfiFunctionHotness::fromFunction(F, PSI, BFIGetter)
             : CfiFunctionHotness();
 
@@ -713,6 +677,7 @@ struct ScopedSaveAliaseesAndUsed {
 };
 
 class LowerTypeTestsModule {
+  const IPOOptions &Opts;
   Module &M;
 
   ModuleSummaryIndex *ExportSummary;
@@ -965,7 +930,7 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
     return createMaskedBitTest(B, TIL.InlineBits, BitOffset);
   } else {
     Constant *ByteArray = TIL.TheByteArray;
-    if (AvoidReuse && !ImportSummary) {
+    if (Opts.lowertypetests_avoid_reuse && !ImportSummary) {
       // Each use of the byte array uses a different alias. This makes the
       // backend less likely to reuse previously computed byte array addresses,
       // improving the security of the CFI mechanism based on this pass.
@@ -1916,7 +1881,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRBuilder<> IRB(BB);
 
   SmallVector<DILocation *> Locations;
-  if (M.getDwarfVersion() != 0 && EnableJumpTableDebugInfo)
+  if (M.getDwarfVersion() != 0 && Opts.lowertypetests_jump_table_debug_info)
     Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
@@ -2231,7 +2196,7 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 
   unique_function<bool(uint64_t, uint64_t)> Less;
   if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
-      ReorderCfiJumpTablesProfiles) {
+      Opts.reorder_cfi_jump_tables_profiles) {
     // Estimated weight of each jump entry.
     std::vector<CfiFunctionHotness> GTMHotness;
     GTMHotness.reserve(Globals.size());
@@ -2285,7 +2250,8 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
     const ModuleSummaryIndex *ImportSummary)
-    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
+    : Opts(getIPOOptions(M)), M(M), ExportSummary(ExportSummary),
+      ImportSummary(ImportSummary) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
@@ -2319,15 +2285,19 @@ LowerTypeTestsModule::LowerTypeTestsModule(
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
+  const IPOOptions &Opts = getIPOOptions(M);
+  StringRef ReadSummary = Opts.lowertypetests_read_summary;
+  StringRef WriteSummary = Opts.lowertypetests_write_summary;
+  PassSummaryAction SummaryAction = Opts.lowertypetests_summary_action;
   std::unique_ptr<ModuleSummaryIndex> Summary;
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
-  if (!ClReadSummary.empty()) {
-    ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
-                          ": ");
-    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
-        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
+  if (!ReadSummary.empty()) {
+    ExitOnError ExitOnErr(
+        ("-lowertypetests-read-summary: " + ReadSummary + ": ").str());
+    auto ReadSummaryFile = ExitOnErr(
+        errorOrToExpected(MemoryBuffer::getFile(ReadSummary, /*IsText=*/true)));
     // TODO: Convert the rest of tests (some YAML features are missing from
     // textual summary assembly) and remove YAML from this file.
     if (ReadSummaryFile->getBuffer().starts_with("---")) {
@@ -2340,7 +2310,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
       Summary =
           parseSummaryIndexAssembly(ReadSummaryFile->getMemBufferRef(), Err);
       if (!Summary) {
-        Err.print(ClReadSummary.c_str(), errs());
+        Err.print(ReadSummary.str().c_str(), errs());
         report_fatal_error("Failed to parse summary index assembly");
       }
     }
@@ -2351,17 +2321,15 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? Summary.get()
-                                                       : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? Summary.get()
-                                                       : nullptr)
+          SummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
+          SummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr)
           .lower();
 
-  if (!ClWriteSummary.empty()) {
-    ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
-                          ": ");
+  if (!WriteSummary.empty()) {
+    ExitOnError ExitOnErr(
+        ("-lowertypetests-write-summary: " + WriteSummary + ": ").str());
     std::error_code EC;
-    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_TextWithCRLF);
+    raw_fd_ostream OS(WriteSummary, EC, sys::fs::OF_TextWithCRLF);
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);

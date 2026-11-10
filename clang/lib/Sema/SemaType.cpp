@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -165,6 +166,11 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_ArmAgnostic:                                             \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
+  case ParsedAttr::AT_RISCVIn:                                                 \
+  case ParsedAttr::AT_RISCVOut:                                                \
+  case ParsedAttr::AT_RISCVInOut:                                              \
+  case ParsedAttr::AT_RISCVPreserves:                                          \
+  case ParsedAttr::AT_RISCVNew:                                                \
     CALLING_CONV_ATTRS_CASELIST
 
 // Microsoft-specific type qualifiers.
@@ -8101,6 +8107,51 @@ static bool handleArmStateAttribute(Sema &S,
   return false;
 }
 
+static bool handleRISCVStateAttribute(Sema &S,
+                                      FunctionProtoType::ExtProtoInfo &EPI,
+                                      ParsedAttr &Attr,
+                                      FunctionType::RISCVStateValue State) {
+  if (!Attr.getNumArgs()) {
+    S.Diag(Attr.getLoc(), diag::err_missing_riscv_state) << Attr;
+    Attr.setInvalid();
+    return true;
+  }
+
+  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
+      return true;
+
+    unsigned Shift;
+    FunctionType::RISCVStateValue ExistingState;
+
+    // Determine which tile state this is and get its shift/mask
+    if (StateName == "xsfmm") {
+      Shift = FunctionType::RISCVXsfmmShift;
+      ExistingState = FunctionType::getRISCVXsfmmState(EPI.RISCVAttributes);
+    } else {
+      S.Diag(LiteralLoc, diag::err_unknown_riscv_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    // __riscv_in, __riscv_out, __riscv_inout, __riscv_preserves, and
+    // __riscv_new are all mutually exclusive for the same state,
+    // so check if there are conflicting attributes.
+    if (ExistingState != FunctionType::RISCVNone && ExistingState != State) {
+      S.Diag(LiteralLoc, diag::err_mutually_exclusive_attributes_riscv_state)
+          << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setRISCVAttribute(
+        (FunctionType::RISCVTypeAttributes)((State << Shift)));
+  }
+  return false;
+}
+
 /// Process an individual function attribute.  Returns true to
 /// indicate that the attribute was handled, false if it wasn't.
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
@@ -8341,6 +8392,58 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       break;
     case ParsedAttr::AT_ArmAgnostic:
       if (handleArmAgnosticAttribute(S, EPI, attr))
+        return true;
+      break;
+    default:
+      llvm_unreachable("Unsupported attribute");
+    }
+
+    QualType newtype = S.Context.getFunctionType(FnTy->getReturnType(),
+                                                 FnTy->getParamTypes(), EPI);
+    type = unwrapped.wrap(S, newtype->getAs<FunctionType>());
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_RISCVIn ||
+      attr.getKind() == ParsedAttr::AT_RISCVOut ||
+      attr.getKind() == ParsedAttr::AT_RISCVInOut ||
+      attr.getKind() == ParsedAttr::AT_RISCVPreserves ||
+      attr.getKind() == ParsedAttr::AT_RISCVNew) {
+    if (S.CheckAttrTarget(attr))
+      return true;
+
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
+    if (!FnTy) {
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
+      return false;
+    }
+
+    FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
+    switch (attr.getKind()) {
+    case ParsedAttr::AT_RISCVIn:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVIn))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVOut:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVOut))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVInOut:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVInOut))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVPreserves:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVPreserves))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVNew:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVNew))
         return true;
       break;
     default:
@@ -8870,31 +8973,36 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  VectorKind VecKind;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
+    // A mask is stored in bytes. One with fewer than 8 lanes takes a single
+    // byte, and its lane count is recorded in the vector kind.
     NumElts = VecSize / S.Context.getCharWidth();
+    unsigned SubByteLanes = 0;
     if (!NumElts) {
       NumElts = 1;
-      switch (VecSize) {
-      case 1:
-        VecKind = VectorKind::RVVFixedLengthMask_1;
-        break;
-      case 2:
-        VecKind = VectorKind::RVVFixedLengthMask_2;
-        break;
-      case 4:
-        VecKind = VectorKind::RVVFixedLengthMask_4;
-        break;
-      }
-    } else
-      VecKind = VectorKind::RVVFixedLengthMask;
+      if (VecSize == 1 || VecSize == 2 || VecSize == 4)
+        SubByteLanes = VecSize;
+    }
+    // Record the ratio of the vbool<R>_t type in the vector kind, so that
+    // later stages do not have to re-derive it from VLEN and the lane count.
+    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    VecKind = getRVVFixedLengthMaskVectorKind(
+        llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
+
+    // Record the LMUL of the sizeless type in the vector kind, so that later
+    // stages do not have to re-derive it from VLEN and the element count.
+    //   LMUL = MinElts * EltSize / RVVBitsPerBlock
+    VecKind = getRVVFixedLengthDataVectorKind(
+        int(llvm::Log2_32(MinElts * EltSize)) -
+        int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
   // The attribute vector size must match -mrvv-vector-bits.

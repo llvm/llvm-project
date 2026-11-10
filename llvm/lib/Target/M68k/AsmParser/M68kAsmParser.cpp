@@ -9,6 +9,7 @@
 #include "M68kInstrInfo.h"
 #include "M68kRegisterInfo.h"
 #include "MCTargetDesc/M68kMCAsmInfo.h"
+#include "MCTargetDesc/M68kMCOptions.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCContext.h"
@@ -25,14 +26,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> RegisterPrefixOptional(
-    "m68k-register-prefix-optional", cl::Hidden,
-    cl::desc("Enable specifying registers without the % prefix"),
-    cl::init(false));
-
 namespace {
 /// Parses M68k assembly from a stream.
 class M68kAsmParser : public MCTargetAsmParser {
+  const M68kMCOptions &CLOpts;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
@@ -58,7 +55,9 @@ class M68kAsmParser : public MCTargetAsmParser {
 public:
   M68kAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                 const MCInstrInfo &MII)
-      : MCTargetAsmParser(STI, MII), Parser(Parser) {
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(M68k_MC::getCLOpts(Parser.getContext().getTargetOptions())),
+        Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
 
@@ -747,7 +746,7 @@ ParseStatus M68kAsmParser::parseRegister(MCRegister &RegNo,
   if (getTok().is(AsmToken::Percent)) {
     HasPercent = true;
     PercentToken = Lex();
-  } else if (!RegisterPrefixOptional.getValue()) {
+  } else if (!CLOpts.register_prefix_optional) {
     return ParseStatus::NoMatch;
   }
 

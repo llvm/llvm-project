@@ -4,7 +4,9 @@
 ; can sneak in between two checked declarations.
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm64ec-pc-windows-msvc < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=CHECK %s
 
-; CHECK: declare void @"#_Unwind_Resume"(ptr)
+; CHECK: @__security_cookie = external global ptr
+; CHECK-NEXT: declare i32 @"#_Unwind_RaiseException"(ptr)
+; CHECK-NEXT: declare void @"#_Unwind_Resume"(ptr)
 ; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq"(i128, i128, ptr)
 ; CHECK-NEXT: declare i128 @"#__aarch64_cas16_acq_rel"(i128, i128, ptr)
 ; CHECK-NEXT: declare i128 @"#__aarch64_cas16_rel"(i128, i128, ptr)
@@ -172,11 +174,14 @@
 ; CHECK-NEXT: declare void @"#__atomic_store_2"(ptr, i16 zeroext, i32)
 ; CHECK-NEXT: declare void @"#__atomic_store_4"(ptr, i32, i32)
 ; CHECK-NEXT: declare void @"#__atomic_store_8"(ptr, i64, i32)
-; CHECK-NEXT: declare void @"#__chkstk_arm64ec"(...)
+; CHECK-NEXT: declare void @"#__chkstk_arm64ec"()
 ; CHECK-NEXT: declare void @"#__clear_cache"(ptr, ptr)
 ; CHECK-NEXT: declare i32 @"#__clzdi2"(i64)
 ; CHECK-NEXT: declare i32 @"#__clzsi2"(i32)
 ; CHECK-NEXT: declare i32 @"#__clzti2"(i128)
+; CHECK-NEXT: declare i32 @"#__ctzdi2"(i64)
+; CHECK-NEXT: declare i32 @"#__ctzsi2"(i32)
+; CHECK-NEXT: declare i32 @"#__ctzti2"(i128)
 ; CHECK-NEXT: declare void @"#__cxa_end_cleanup"()
 ; CHECK-NEXT: declare double @"#__divdf3"(double, double)
 ; CHECK-NEXT: declare i64 @"#__divdi3"(i64, i64)
@@ -410,7 +415,7 @@
 ; CHECK-NEXT: declare float @"#atanf"(float)
 ; CHECK-NEXT: declare void @"#cabs"(...)
 ; CHECK-NEXT: declare void @"#cabsf"(...)
-; CHECK-NEXT: declare ptr @"#calloc"(i64, i64)
+; CHECK-NEXT: declare noalias noundef ptr @"#calloc"(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @"#cbrt"(double)
 ; CHECK-NEXT: declare float @"#cbrtf"(float)
 ; CHECK-NEXT: declare double @"#ceil"(double)
@@ -451,8 +456,8 @@
 ; CHECK-NEXT: declare float @"#fminimumf"(float, float)
 ; CHECK-NEXT: declare double @"#fmod"(double, double)
 ; CHECK-NEXT: declare float @"#fmodf"(float, float)
-; CHECK-NEXT: declare void @"#free"(ptr)
-; CHECK-NEXT: declare double @"#frexp"(double, ptr)
+; CHECK-NEXT: declare void @"#free"(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare double @"#frexp"(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#ldexp"(double, i32)
 ; CHECK-NEXT: declare i64 @"#llrint"(double)
 ; CHECK-NEXT: declare i64 @"#llrintf"(float)
@@ -468,12 +473,12 @@
 ; CHECK-NEXT: declare i32 @"#lrintf"(float)
 ; CHECK-NEXT: declare i32 @"#lround"(double)
 ; CHECK-NEXT: declare i32 @"#lroundf"(float)
-; CHECK-NEXT: declare ptr @"#malloc"(i64)
+; CHECK-NEXT: declare noalias noundef ptr @"#malloc"(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare ptr @"#memcpy"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#memmove"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#memset"(ptr, i32, i64)
-; CHECK-NEXT: declare double @"#modf"(double, ptr)
-; CHECK-NEXT: declare float @"#modff"(float, ptr)
+; CHECK-NEXT: declare double @"#modf"(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; CHECK-NEXT: declare float @"#modff"(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#nan"(ptr)
 ; CHECK-NEXT: declare float @"#nanf"(ptr)
 ; CHECK-NEXT: declare double @"#nearbyint"(double)
@@ -484,8 +489,8 @@
 ; CHECK-NEXT: declare float @"#powf"(float, float)
 ; CHECK-NEXT: declare double @"#remainder"(double, double)
 ; CHECK-NEXT: declare float @"#remainderf"(float, float)
-; CHECK-NEXT: declare double @"#remquo"(double, double, ptr)
-; CHECK-NEXT: declare float @"#remquof"(float, float, ptr)
+; CHECK-NEXT: declare double @"#remquo"(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; CHECK-NEXT: declare float @"#remquof"(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#rint"(double)
 ; CHECK-NEXT: declare float @"#rintf"(float)
 ; CHECK-NEXT: declare double @"#round"(double)
@@ -510,4 +515,6 @@
 ; CHECK-NEXT: declare float @"#tgammaf"(float)
 ; CHECK-NEXT: declare double @"#trunc"(double)
 ; CHECK-NEXT: declare float @"#truncf"(float)
-; CHECK-NEXT: declare void @__security_cookie(...)
+; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

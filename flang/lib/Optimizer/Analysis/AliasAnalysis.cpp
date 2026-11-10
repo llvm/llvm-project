@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -1502,6 +1503,15 @@ AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // TODO: remove the check for stacksave/stackrestore once these operations
+  // are updated with proper effects.
+  if (mlir::isa<mlir::LLVM::StackSaveOp, mlir::LLVM::StackRestoreOp>(op))
+    return ModRefResult::getNoModRef();
+  // TODO: remove the check once fir.unreachable is updated with proper
+  // effects.
+  if (mlir::isa<fir::UnreachableOp>(op))
+    return ModRefResult::getNoModRef();
+
   // If this AliasAnalysis is linked with a cache, route ops with
   // HasRecursiveMemoryEffects through it. Non-recursive ops fall through to
   // the inline path below; the cache eventually delegates back to

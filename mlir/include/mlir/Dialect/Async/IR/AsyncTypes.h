@@ -13,8 +13,6 @@
 #ifndef MLIR_DIALECT_ASYNC_IR_ASYNCTYPES_H_
 #define MLIR_DIALECT_ASYNC_IR_ASYNCTYPES_H_
 
-#include "mlir/IR/Types.h"
-
 //===----------------------------------------------------------------------===//
 // Async Dialect Types
 //===----------------------------------------------------------------------===//

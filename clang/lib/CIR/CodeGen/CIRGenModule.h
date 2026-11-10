@@ -524,6 +524,16 @@ public:
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
 
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
+
   /// Return the CIR address space attribute for a global in \p as, honoring
   /// the target address space map where the LangAS fold would lose it.
   mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
@@ -667,9 +677,8 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
-    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+    return (forEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Emit type info if type of an expression is a variably modified
@@ -685,9 +694,12 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
-  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                          GlobalDecl aliasGD, cir::FuncOp aliasee,
-                          cir::GlobalLinkageKind linkage);
+  /// Emit `aliasGD` as an alias of `aliasee`, replacing any existing
+  /// declaration `op`, and return the alias.
+  cir::FuncOp emitAliasForGlobal(llvm::StringRef mangledName,
+                                 mlir::Operation *op, GlobalDecl aliasGD,
+                                 cir::FuncOp aliasee,
+                                 cir::GlobalLinkageKind linkage);
 
   /// Emit a definition for an `__attribute__((alias))` declaration.
   void emitAliasDefinition(GlobalDecl gd);
@@ -1047,16 +1059,6 @@ private:
 
   /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
-
-  /// Return the AST address space of the underlying global variable for D, as
-  /// determined by its declaration. Normally this is the same as the address
-  /// space of D's type, but in CUDA, address spaces are associated with
-  /// declarations, not types. If D is nullptr, return the default address
-  /// space for global variable.
-  ///
-  /// For languages without explicit address spaces, if D has default address
-  /// space, target-specific global or constant address space may be returned.
-  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

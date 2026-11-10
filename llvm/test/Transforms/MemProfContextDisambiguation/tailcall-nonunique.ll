@@ -20,8 +20,9 @@
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOSTBUILD
 ; DOTPOSTBUILD: {OrigId: 15025054523792398438{{.*}}\nnull call (external)}
 
-;; Check that all calls in the IR are to the original functions, leading to a
-;; non-cold operator new call.
+;; Check that all calls in the IR are to the original functions, leading to an
+;; operator new call that keeps the ambiguous attribute (the cold and not cold
+;; contexts could not be disambiguated).
 
 source_filename = "tailcall-nonunique.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -31,7 +32,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; IR-LABEL: @_Z3barv()
 define dso_local ptr @_Z3barv() local_unnamed_addr #0 {
 entry:
-  ; IR: call ptr @_Znam(i64 10) #[[NOTCOLD:[0-9]+]]
+  ; IR: call ptr @_Znam(i64 10) #[[AMBIGUOUS:[0-9]+]]
   %call = tail call ptr @_Znam(i64 10) #2, !memprof !0, !callsite !9
   ret ptr %call
 }
@@ -116,7 +117,7 @@ define dso_local i32 @main() local_unnamed_addr #0 {
   ret i32 0
 }
 
-; IR: attributes #[[NOTCOLD]] = { builtin allocsize(0) "memprof"="notcold" }
+; IR: attributes #[[AMBIGUOUS]] = { builtin allocsize(0) "memprof"="ambiguous" }
 
 ; STATS: 1 memprof-context-disambiguation - Number of profiled callees found via multiple tail call chains
 

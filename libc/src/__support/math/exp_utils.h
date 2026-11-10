@@ -15,16 +15,14 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_UTILS_H
 
 #include "hdr/errno_macros.h"
-#include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/fp_bitwise.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -133,29 +131,16 @@ LIBC_NOINLINE LIBC_INLINE double set_exceptional(double x) {
     if (xbits.is_nan())
       return x + 0.0;
 
-    fputil::set_errno_if_required(ERANGE);
-    fputil::raise_underflow_except_if_required<double>();
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    if (fputil::quick_get_round() == FE_UPWARD)
-      return FPBits::min_subnormal().get_val();
-#endif
-    return 0.0;
+    return fputil::set_underflow<double>();
   }
 
   // Positive overflow or +inf/nan (caller has already checked the exact
   // overflow bound)
 
   // x is finite and positive
-  if (xbits.uintval() < FPBits::inf().uintval()) {
-    fputil::set_errno_if_required(ERANGE);
-    fputil::raise_overflow_except_if_required<double>();
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    int rounding = fputil::quick_get_round();
-    if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return FPBits::max_normal().get_val();
-#endif
-    return FPBits::inf().get_val();
-  }
+  if (xbits.uintval() < FPBits::inf().uintval())
+    return fputil::set_overflow<double>();
+
   // x is +inf or nan
   // Adding `inf` to silence signaling nan.
   return x + FPBits::inf().get_val();

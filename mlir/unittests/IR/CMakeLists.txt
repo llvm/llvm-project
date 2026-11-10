@@ -18,7 +18,8 @@ add_mlir_unittest(MLIRIRTests
   OpImplementationTest.cpp
   OperationSupportTest.cpp
   PatternMatchTest.cpp
-  RemarkTest.cpp  
+  RemarkPolicyTest.cpp
+  RemarkTest.cpp
   ShapedTypeTest.cpp
   SymbolTableTest.cpp
   TypeTest.cpp

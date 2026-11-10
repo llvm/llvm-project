@@ -1,4 +1,4 @@
-; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<ir2vec>' -disable-output -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s
 
 define dso_local i32 @abc(i32 noundef %a, i32 noundef %b) #0 {
 entry:

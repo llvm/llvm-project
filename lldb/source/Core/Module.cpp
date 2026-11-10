@@ -1526,7 +1526,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) {
 
 void Module::AddPrefixMapSearchDir(FileSpec dir) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_prefix_map_search_dirs.insert(ConstString(dir.GetPath()));
+  m_prefix_map_search_dirs.insert(dir.GetPath());
 }
 
 void Module::LoadPrefixMapsIfNeeded() {
@@ -1538,11 +1538,10 @@ void Module::LoadPrefixMapsIfNeeded() {
   llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
   // Track visited directories so two starting paths that share ancestors
   // don't redundantly walk the same directory.
-  llvm::DenseSet<ConstString> searched;
-  for (ConstString start_cs : m_prefix_map_search_dirs) {
-    for (FileSpec current(start_cs.GetStringRef());;) {
-      ConstString directory_cs(current.GetPath());
-      if (!searched.insert(directory_cs).second)
+  llvm::StringSet<> searched;
+  for (const auto &start : m_prefix_map_search_dirs) {
+    for (FileSpec current(start.getKey());;) {
+      if (!searched.insert(current.GetPath()).second)
         break;
       FileSpec map_file(current);
       map_file.AppendPathComponent("compilation-prefix-map.json");
