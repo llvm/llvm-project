@@ -6301,14 +6301,14 @@ let Predicates = [HasAVX] in {
                                    VEX, VVVV, VEX_L, WIG;
   defm VPBLENDW : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v8i16,
                                   VR128, load, i128mem, 0, SSEPackedInt,
-                                  SchedWriteBlend.XMM, BlendCommuteImm8>,
+                                  SchedWritePBLENDW.XMM, BlendCommuteImm8>,
                                   VEX, VVVV, WIG;
 }
 
 let Predicates = [HasAVX2] in {
   defm VPBLENDWY : SS41I_blend_rmi<0x0E, "vpblendw", X86Blendi, v16i16,
                                    VR256, load, i256mem, 0, SSEPackedInt,
-                                   SchedWriteBlend.YMM, BlendCommuteImm8>,
+                                   SchedWritePBLENDW.YMM, BlendCommuteImm8>,
                                    VEX, VVVV, VEX_L, WIG;
 }
 
@@ -6356,7 +6356,7 @@ defm BLENDPD : SS41I_blend_rmi<0x0D, "blendpd", X86Blendi, v2f64,
                                SchedWriteFBlend.XMM, BlendCommuteImm2>;
 defm PBLENDW : SS41I_blend_rmi<0x0E, "pblendw", X86Blendi, v8i16,
                                VR128, memop, i128mem, 1, SSEPackedInt,
-                               SchedWriteBlend.XMM, BlendCommuteImm8>;
+                               SchedWritePBLENDW.XMM, BlendCommuteImm8>;
 
 let Predicates = [UseSSE41] in {
 // Use pblendw for 128-bit integer to keep it in the integer domain and prevent
@@ -7698,10 +7698,10 @@ multiclass AVX2_blend_rmi<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 let Predicates = [HasAVX2] in {
 defm VPBLENDD : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v4i32,
-                               SchedWriteBlend.XMM, VR128, i128mem,
+                               SchedWritePBLENDD.XMM, VR128, i128mem,
                                BlendCommuteImm4>;
 defm VPBLENDDY : AVX2_blend_rmi<0x02, "vpblendd", X86Blendi, v8i32,
-                                SchedWriteBlend.YMM, VR256, i256mem,
+                                SchedWritePBLENDD.YMM, VR256, i256mem,
                                 BlendCommuteImm8>, VEX_L;
 
 def : Pat<(X86Blendi (v4i64 VR256:$src1), (v4i64 VR256:$src2), timm:$src3),

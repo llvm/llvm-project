@@ -426,9 +426,10 @@ defm : SBWriteResPair<WriteVarShuffle,  [SBPort15], 1, [1], 1, 5>;
 defm : SBWriteResPair<WriteVarShuffleX, [SBPort15], 1, [1], 1, 6>;
 defm : SBWriteResPair<WriteVarShuffleY, [SBPort15], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteVarShuffleZ, [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
-defm : SBWriteResPair<WriteBlend,   [SBPort15], 1, [1], 1, 6>;
-defm : SBWriteResPair<WriteBlendY,  [SBPort15], 1, [1], 1, 7>;
-defm : SBWriteResPair<WriteBlendZ,  [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
+defm : SBWriteResPair<WritePBLENDDX, [SBPort15], 1, [1], 1, 6>;
+defm : SBWriteResPair<WritePBLENDDY, [SBPort15], 1, [1], 1, 7>;
+defm : SBWriteResPair<WritePBLENDWX, [SBPort15], 1, [1], 1, 6>;
+defm : SBWriteResPair<WritePBLENDWY, [SBPort15], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteVarBlend, [SBPort15], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteVarBlendY,[SBPort15], 2, [2], 2, 7>;
 defm : SBWriteResPair<WriteVarBlendZ,[SBPort15], 2, [2], 2, 7>; // Unsupported = 1

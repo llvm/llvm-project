@@ -435,9 +435,12 @@ defm : ZnWriteResFpuPair<WriteVarShuffle, [ZnFPU12],   1>;
 defm : ZnWriteResFpuPair<WriteVarShuffleX,[ZnFPU12],   1>;
 defm : ZnWriteResFpuPair<WriteVarShuffleY,[ZnFPU12],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
-defm : ZnWriteResFpuPair<WriteBlend,      [ZnFPU013], 1>;
-defm : ZnWriteResFpuPair<WriteBlendY,     [ZnFPU013], 1, [2], 2>;
-defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : X86WriteRes<WritePBLENDDX,         [ZnFPU01], 1, [1], 1>;
+defm : X86WriteRes<WritePBLENDDY,         [ZnFPU01], 1, [1], 2>;
+defm : X86WriteRes<WritePBLENDDXLd,       [ZnAGU,ZnFPU01], 8, [1,2], 2>;
+defm : X86WriteRes<WritePBLENDDYLd,       [ZnAGU,ZnFPU01], 9, [1,3], 2>;
+defm : ZnWriteResFpuPair<WritePBLENDWX,   [ZnFPU013], 1>;
+defm : ZnWriteResFpuPair<WritePBLENDWY,   [ZnFPU013], 1, [2], 2>;
 defm : ZnWriteResFpuPair<WriteVarBlend,   [ZnFPU0],  1>;
 defm : ZnWriteResFpuPair<WriteVarBlendY,  [ZnFPU0],  1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
@@ -909,31 +912,6 @@ def ZnWriteFPU013m : SchedWriteRes<[ZnAGU, ZnFPU013]> {
   let Latency = 8;
   let NumMicroOps = 2;
 }
-
-def ZnWriteFPU01 : SchedWriteRes<[ZnFPU01]> ;
-def ZnWriteFPU01Y : SchedWriteRes<[ZnFPU01]> {
-  let NumMicroOps = 2;
-}
-
-// VPBLENDD.
-// v,v,v,i.
-def : InstRW<[ZnWriteFPU01], (instrs VPBLENDDrri)>;
-// ymm
-def : InstRW<[ZnWriteFPU01Y], (instrs VPBLENDDYrri)>;
-
-// v,v,m,i
-def ZnWriteFPU01Op2 : SchedWriteRes<[ZnAGU, ZnFPU01]> {
-  let NumMicroOps = 2;
-  let Latency = 8;
-  let ReleaseAtCycles = [1, 2];
-}
-def ZnWriteFPU01Op2Y : SchedWriteRes<[ZnAGU, ZnFPU01]> {
-  let NumMicroOps = 2;
-  let Latency = 9;
-  let ReleaseAtCycles = [1, 3];
-}
-def : InstRW<[ZnWriteFPU01Op2], (instrs VPBLENDDrmi)>;
-def : InstRW<[ZnWriteFPU01Op2Y], (instrs VPBLENDDYrmi)>;
 
 // MASKMOVQ.
 def : InstRW<[WriteMicrocoded], (instregex "MMX_MASKMOVQ(64)?")>;

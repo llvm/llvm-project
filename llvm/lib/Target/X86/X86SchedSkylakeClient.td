@@ -397,9 +397,10 @@ defm : SKLWriteResPair<WriteVarShuffle,  [SKLPort0,SKLPort5], 1, [1,1], 2, 5>; /
 defm : SKLWriteResPair<WriteVarShuffleX, [SKLPort5], 1, [1], 1, 6>;
 defm : SKLWriteResPair<WriteVarShuffleY, [SKLPort5], 1, [1], 1, 7>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
-defm : SKLWriteResPair<WriteBlend,  [SKLPort5], 1, [1], 1, 6>; // Vector blends.
-defm : SKLWriteResPair<WriteBlendY, [SKLPort5], 1, [1], 1, 7>;
-defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : SKLWriteResPair<WritePBLENDDX,  [SKLPort015], 1, [1], 1, 6>; // Vector blends.
+defm : SKLWriteResPair<WritePBLENDDY,  [SKLPort015], 1, [1], 1, 7>;
+defm : SKLWriteResPair<WritePBLENDWX,  [SKLPort5], 1, [1], 1, 6>; // Vector blends.
+defm : SKLWriteResPair<WritePBLENDWY,  [SKLPort5], 1, [1], 1, 7>;
 defm : SKLWriteResPair<WriteVarBlend,  [SKLPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : SKLWriteResPair<WriteVarBlendY, [SKLPort015], 2, [2], 2, 6>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
@@ -691,8 +692,7 @@ def SKLWriteResGroup9 : SchedWriteRes<[SKLPort015]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[SKLWriteResGroup9], (instregex "(V?)PADD(B|D|Q|W)(Y?)rr",
-                                            "VPBLENDD(Y?)rri")>;
+def: InstRW<[SKLWriteResGroup9], (instregex "(V?)PADD(B|D|Q|W)(Y?)rr")>;
 
 def SKLWriteResGroup10 : SchedWriteRes<[SKLPort0156]> {
   let Latency = 1;
@@ -1088,8 +1088,7 @@ def SKLWriteResGroup91 : SchedWriteRes<[SKLPort23,SKLPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[SKLWriteResGroup91], (instrs VINSERTF128rmi,
-                                          VINSERTI128rmi,
-                                          VPBLENDDrmi)>;
+                                          VINSERTI128rmi)>;
 def: InstRW<[SKLWriteResGroup91, ReadAfterVecXLd],
                                   (instregex "(V?)PADD(B|D|Q|W)rm",
                                              "(V?)PSUB(B|D|Q|W)rm")>;
@@ -1195,7 +1194,6 @@ def SKLWriteResGroup110 : SchedWriteRes<[SKLPort23,SKLPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[SKLWriteResGroup110], (instrs VPBLENDDYrmi)>;
 def: InstRW<[SKLWriteResGroup110, ReadAfterVecYLd],
                                    (instregex "VPADD(B|D|Q|W)Yrm",
                                               "VPSUB(B|D|Q|W)Yrm")>;

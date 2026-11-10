@@ -457,9 +457,10 @@ defm : HWWriteResPair<WriteVarShuffle, [HWPort5], 1, [1], 1, 5>;
 defm : HWWriteResPair<WriteVarShuffleX,[HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteVarShuffleY,[HWPort5], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarShuffleZ,[HWPort5], 1, [1], 1, 7>; // Unsupported = 1
-defm : HWWriteResPair<WriteBlend,  [HWPort5], 1, [1], 1, 6>;
-defm : HWWriteResPair<WriteBlendY, [HWPort5], 1, [1], 1, 7>;
-defm : HWWriteResPair<WriteBlendZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
+defm : HWWriteResPair<WritePBLENDDX,   [HWPort015], 1, [1], 1, 6>;
+defm : HWWriteResPair<WritePBLENDDY,   [HWPort015], 1, [1], 1, 7>;
+defm : HWWriteResPair<WritePBLENDWX,   [HWPort5], 1, [1], 1, 6>;
+defm : HWWriteResPair<WritePBLENDWY,   [HWPort5], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVPMOV256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarShuffle256, [HWPort5], 3, [1], 1, 7>;
@@ -947,13 +948,6 @@ def HWWriteResGroup8 : SchedWriteRes<[HWPort15]> {
 }
 def: InstRW<[HWWriteResGroup8], (instregex "ANDN(32|64)rr")>;
 
-def HWWriteResGroup9 : SchedWriteRes<[HWPort015]> {
-  let Latency = 1;
-  let NumMicroOps = 1;
-  let ReleaseAtCycles = [1];
-}
-def: InstRW<[HWWriteResGroup9], (instregex "VPBLENDD(Y?)rri")>;
-
 def HWWriteResGroup10 : SchedWriteRes<[HWPort0156]> {
   let Latency = 1;
   let NumMicroOps = 1;
@@ -1029,15 +1023,7 @@ def HWWriteResGroup17 : SchedWriteRes<[HWPort23,HWPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[HWWriteResGroup17], (instrs VINSERTF128rmi,
-                                         VINSERTI128rmi,
-                                         VPBLENDDrmi)>;
-
-def HWWriteResGroup17_2 : SchedWriteRes<[HWPort23,HWPort015]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup17_2], (instrs VPBLENDDYrmi)>;
+                                         VINSERTI128rmi)>;
 
 def HWWriteResGroup18 : SchedWriteRes<[HWPort23,HWPort0156]> {
   let Latency = 6;
