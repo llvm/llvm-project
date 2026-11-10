@@ -28,7 +28,7 @@ define bfloat @fptrunc_f32(float %x) nounwind {
 ; SSE2-NEXT:    ucomiss %xmm0, %xmm0
 ; SSE2-NEXT:    cmovnpl %ecx, %eax
 ; SSE2-NEXT:    shrl $16, %eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    retl
 ;
 ; SOFT-FLOAT-LABEL: fptrunc_f32:
@@ -96,11 +96,11 @@ define bfloat @fptrunc_f32_strict(float %x) strictfp {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subl $12, %esp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd %xmm0, (%esp)
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    calll __truncsfbf2
 ; SSE2-NEXT:    # kill: def $ax killed $ax def $eax
-; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    addl $12, %esp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 4
 ; SSE2-NEXT:    retl

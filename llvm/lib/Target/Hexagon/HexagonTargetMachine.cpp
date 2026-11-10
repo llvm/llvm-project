@@ -216,6 +216,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonGlobalSchedulerPass(PR);
+  initializeHLXExpandPseudosPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonHVXSaveRemarkPass(PR);
@@ -561,6 +562,10 @@ void HexagonPassConfig::addPreEmitPass() {
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
+
+  // Expand HLX load/store pseudos into their final bundled form. This must run
+  // after packetization so the resulting bundles are not seen by the scheduler.
+  addPass(createHLXExpandPseudos());
 
   if (!NoOpt) {
     // Global pull-up scheduler

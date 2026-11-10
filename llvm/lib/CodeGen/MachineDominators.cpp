@@ -17,6 +17,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
@@ -85,6 +86,16 @@ MachineDominatorTreePrinterPass::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &MFAM) {
   OS << "MachineDominatorTree for machine function: " << MF.getName() << '\n';
   MFAM.getResult<MachineDominatorTreeAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+MachineDominatorTreeVerifierPass::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  auto &DT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  if (!DT.verify())
+    reportFatalInternalError(
+        "verify<machine-dom-tree> detected an invalid dominator tree");
   return PreservedAnalyses::all();
 }
 
