@@ -721,13 +721,6 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-LABEL: spill_reduce_succ:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpdi r6, 0
-; CHECK-NEXT:    ble cr0, .LBB7_9
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    sldi r6, r6, 2
-; CHECK-NEXT:    li r11, 1
-; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr r26, r10
-; CHECK-NEXT:    cmpdi r6, 1
 ; CHECK-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
@@ -740,6 +733,7 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    std r23, -72(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r24, -64(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
@@ -907,16 +901,7 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    stfdx f0, r9, r7
 ; CHECK-NEXT:    add r7, r7, r11
 ; CHECK-NEXT:    bdnz .LBB7_3
-; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    ld r3, -160(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r4, -168(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r7, -176(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r8, -184(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r10, -192(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r5, -200(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r9, -208(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r26, -216(r1) # 8-byte Folded Reload
-; CHECK-NEXT:  .LBB7_5: # %for.cond.cleanup.loopexit.unr-lcssa
+; CHECK-NEXT:  .LBB7_4: # %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    cmpldi r6, 0
 ; CHECK-NEXT:    beq cr0, .LBB7_7
 ; CHECK-NEXT:  # %bb.5: # %for.body.epil.preheader
@@ -942,7 +927,7 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    add r4, r4, r3
 ; CHECK-NEXT:    add r3, r0, r3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB7_7: # %for.body.epil
+; CHECK-NEXT:  .LBB7_6: # %for.body.epil
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lfdx f0, r3, r10
 ; CHECK-NEXT:    lfdx f1, r4, r10
@@ -972,6 +957,7 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    ld r31, -8(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
@@ -987,8 +973,6 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    ld r16, -128(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
-; CHECK-NEXT:  .LBB7_9: # %for.cond.cleanup
-; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    blr
 entry:
   %cmp49 = icmp sgt i64 %m, 0

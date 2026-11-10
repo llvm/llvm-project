@@ -104,9 +104,8 @@ define i32 @test_pr62852() {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[INC_1_LCSSA:%.*]] = phi i64 [ [[INC_1]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 [[INC_1_LCSSA]], -1
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT_LCSSA]])
-; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 2, -1
+; CHECK-NEXT:    [[LSR_IV_NEXT2:%.*]] = add i64 [[INC_1_LCSSA]], -1
 ; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 -1, 53
 ; CHECK-NEXT:    ret i32 [[TMP3]]

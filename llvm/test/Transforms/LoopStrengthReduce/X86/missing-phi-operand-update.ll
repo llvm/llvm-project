@@ -21,23 +21,20 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV1:%.*]], [[IFMERGE_34:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLITSPLIT:%.*]]
 ; CHECK:       ifmerge.38.loop.exit.loopexitsplitsplit_crit_edge:
-; CHECK-NEXT:    [[LSR_IV_LCSSA19:%.*]] = phi i64 [ [[LSR_IV2:%.*]], [[IFMERGE_38:%.*]] ]
-; CHECK-NEXT:    [[SPLIT16:%.*]] = phi i64 [ [[_TMP3:%.*]], [[IFMERGE_38]] ]
+; CHECK-NEXT:    [[SPLIT16:%.*]] = phi i64 [ [[_TMP3:%.*]], [[IFMERGE_38:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLITSPLIT]]
 ; CHECK:       loop.exit.loopexitsplitsplit:
-; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH_PH_PH:%.*]] = phi i64 [ [[LSR_IV_LCSSA19]], [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE:%.*]] ], [ [[LSR_IV]], [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH_PH_PH:%.*]] = phi i64 [ [[SPLIT16]], [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE:%.*]] ], [ [[LSR_IV]], [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLIT:%.*]]
 ; CHECK:       ifmerge.42.loop.exit.loopexitsplit_crit_edge:
-; CHECK-NEXT:    [[LSR_IV_LCSSA11:%.*]] = phi i64 [ [[LSR_IV2]], [[IFMERGE_42:%.*]] ]
-; CHECK-NEXT:    [[SPLIT11:%.*]] = phi i64 [ [[_TMP4:%.*]], [[IFMERGE_42]] ]
+; CHECK-NEXT:    [[LSR_IV_LCSSA11:%.*]] = phi i64 [ [[_TMP3]], [[IFMERGE_42:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV_LCSSA11]], 1
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXITSPLIT]]
 ; CHECK:       loop.exit.loopexitsplit:
 ; CHECK-NEXT:    [[INDVARS_IV_LCSSA_PH_PH:%.*]] = phi i64 [ [[TMP1]], [[IFMERGE_42_LOOP_EXIT_LOOPEXITSPLIT_CRIT_EDGE:%.*]] ], [ [[INDVARS_IV_LCSSA_PH_PH_PH]], [[LOOP_EXIT_LOOPEXITSPLITSPLIT]] ]
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       then.34.loop.exit.loopexit_crit_edge:
-; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i64 [ [[LSR_IV2]], [[THEN_34:%.*]] ]
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[_TMP1:%.*]], [[THEN_34]] ]
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i64 [ [[_TMP3]], [[THEN_34:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[LSR_IV_LCSSA]], -2
 ; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT]]
 ; CHECK:       loop.exit.loopexit:
@@ -51,26 +48,24 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[I_0_LCSSA:%.*]] = phi i32 [ [[TMP]], [[LOOP_EXIT]] ], [ 50, [[THEN_8_1]] ], [ 50, [[IFMERGE_8:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[I_0_LCSSA]]
 ; CHECK:       loop.32:
-; CHECK-NEXT:    [[LSR_IV2]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[IFMERGE_46:%.*]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[_TMP3]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[IFMERGE_46:%.*]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I1_I64_0:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXTIVLOOP_32:%.*]], [[IFMERGE_46]] ]
-; CHECK-NEXT:    [[_TMP1]] = shl i64 [[I1_I64_0]], 2
-; CHECK-NEXT:    [[LSR_IV1]] = add i64 [[LSR_IV2]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[LSR_IV1]] = add i64 [[_TMP3]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[_TMP3]], 2
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 -4
 ; CHECK-NEXT:    [[GEPLOAD:%.*]] = load i32, ptr [[SCEVGEP8]], align 4
 ; CHECK-NEXT:    [[CMP_34:%.*]] = icmp sgt i32 [[GEPLOAD]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_34]], label [[THEN_34]], label [[IFMERGE_34]]
 ; CHECK:       then.34:
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[_TMP3]], 2
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 -8
 ; CHECK-NEXT:    [[GEPLOAD18:%.*]] = load i32, ptr [[SCEVGEP6]], align 4
 ; CHECK-NEXT:    [[CMP_35:%.*]] = icmp slt i32 [[GEPLOAD18]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_35]], label [[THEN_34_LOOP_EXIT_LOOPEXIT_CRIT_EDGE]], label [[IFMERGE_34]]
 ; CHECK:       ifmerge.34:
-; CHECK-NEXT:    [[_TMP3]] = or disjoint i64 [[_TMP1]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[_TMP3]], 2
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[GEPLOAD20:%.*]] = load i32, ptr [[SCEVGEP4]], align 4
 ; CHECK-NEXT:    [[CMP_38:%.*]] = icmp sgt i32 [[GEPLOAD20]], [[T]]
@@ -78,8 +73,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_38]], [[CMP_39]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT]], label [[IFMERGE_38]]
 ; CHECK:       ifmerge.38:
-; CHECK-NEXT:    [[_TMP4]] = or disjoint i64 [[_TMP1]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[_TMP3]], 2
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 4
 ; CHECK-NEXT:    [[GEPLOAD24:%.*]] = load i32, ptr [[SCEVGEP3]], align 4
@@ -88,7 +82,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[OR_COND55:%.*]] = and i1 [[CMP_42]], [[CMP_43]]
 ; CHECK-NEXT:    br i1 [[OR_COND55]], label [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE]], label [[IFMERGE_42]]
 ; CHECK:       ifmerge.42:
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[LSR_IV2]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[_TMP3]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 8
 ; CHECK-NEXT:    [[GEPLOAD28:%.*]] = load i32, ptr [[SCEVGEP1]], align 4
@@ -98,7 +92,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    br i1 [[OR_COND56]], label [[IFMERGE_42_LOOP_EXIT_LOOPEXITSPLIT_CRIT_EDGE]], label [[IFMERGE_46]]
 ; CHECK:       ifmerge.46:
 ; CHECK-NEXT:    [[NEXTIVLOOP_32]] = add nuw nsw i64 [[I1_I64_0]], 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV2]], 4
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[_TMP3]], 4
 ; CHECK-NEXT:    [[CONDLOOP_32:%.*]] = icmp ult i64 [[NEXTIVLOOP_32]], 12
 ; CHECK-NEXT:    br i1 [[CONDLOOP_32]], label [[LOOP_32]], label [[LOOP_25:%.*]]
 ; CHECK:       loop.25:

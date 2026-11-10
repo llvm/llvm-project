@@ -324,12 +324,13 @@ define i64 @find_index(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[N]], [[IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[EXITSPLIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[EXITSPLIT]]:
+; CHECK-NEXT:    [[RET_PH:%.*]] = phi i64 [ 0, %[[FOR_INC]] ]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[FOR_BODY_EXIT_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[IV_LCSSA]], %[[FOR_BODY_EXIT_CRIT_EDGE]] ], [ 0, %[[EXITSPLIT]] ]
+; CHECK-NEXT:    [[RET:%.*]] = phi i64 [ [[IV_LCSSA]], %[[FOR_BODY_EXIT_CRIT_EDGE]] ], [ [[RET_PH]], %[[EXITSPLIT]] ]
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
 entry:
