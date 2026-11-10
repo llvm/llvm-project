@@ -287,4 +287,4 @@ exit:
   ret i32 %add
 }
 
-attributes #0 = { "target-cpu"="grace" }
+attributes #0 = { "target-cpu"="grace" vscale_range(1,16) }
