@@ -10676,9 +10676,14 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     EVT XorVT = VT.isScalarInteger()
                     ? TLI.getLegalTypeToTransformTo(*DAG.getContext(), VT)
                     : VT;
+    // Delay sharing scalable comparisons until after legalization so early
+    // logic/minmax combines can still fold single-use comparisons. Fixed-length
+    // SETCCs may be custom-lowered before the final combine, so preserve their
+    // sharing here.
     KeepNotOfSetCC =
-        (OpVT.isVector() ||
-         (XorVT != MVT::i1 && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
+        (OpVT.isVector()
+             ? (!OpVT.isScalableVector() || LegalDAG)
+             : (XorVT != MVT::i1 && TLI.isOperationLegal(ISD::SETCC, OpVT))) &&
         TLI.isOperationLegalOrCustom(ISD::XOR, XorVT);
   }
   // Folding the NOT can reuse an inverse comparison that already has users.
@@ -15194,6 +15199,19 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   SDLoc DL(N);
+
+  // Let legalization and the initial logic/minmax combines finish before
+  // sharing scalable comparisons.
+  if (LegalDAG && VT.isScalableVector() && N->hasOneUse() &&
+      TLI.isOperationLegalOrCustom(ISD::XOR, VT)) {
+    ISD::CondCode InverseCC = ISD::getSetCCInverse(Cond, N0.getValueType());
+    SDNode *Inverse = DAG.getNodeIfExists(ISD::SETCC, N->getVTList(),
+                                          {N0, N1, DAG.getCondCode(InverseCC)},
+                                          N->getFlags());
+    if (Inverse && !Inverse->use_empty() && !Inverse->hasOneUse())
+      return DAG.getNode(ISD::XOR, DL, VT, SDValue(Inverse, 0),
+                         DAG.getBoolConstant(true, DL, VT, N0.getValueType()));
+  }
 
   if (SDValue Combined = SimplifySetCC(VT, N0, N1, Cond, DL, !PreferSetCC)) {
     // If we prefer to have a setcc, and we don't, we'll try our best to

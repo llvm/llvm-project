@@ -219,14 +219,11 @@ define <vscale x 4 x i1> @or_setcc_with_shared_not(ptr %a, ptr %b, i32 %evl) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    vmsle.vi v0, v8, 1
+; RV32-NEXT:    vle32.v v10, (a1), v0.t
 ; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmsgt.vi v10, v8, 1
-; RV32-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
-; RV32-NEXT:    vmnot.m v0, v10
-; RV32-NEXT:    vle32.v v8, (a1), v0.t
-; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmsgt.vi v11, v8, 1
-; RV32-NEXT:    vmor.mm v0, v10, v11
+; RV32-NEXT:    vmax.vv v8, v8, v10
+; RV32-NEXT:    vmsgt.vi v0, v8, 1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: or_setcc_with_shared_not:
@@ -235,14 +232,11 @@ define <vscale x 4 x i1> @or_setcc_with_shared_not(ptr %a, ptr %b, i32 %evl) {
 ; RV64-NEXT:    srli a2, a2, 32
 ; RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    vmsle.vi v0, v8, 1
+; RV64-NEXT:    vle32.v v10, (a1), v0.t
 ; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmsgt.vi v10, v8, 1
-; RV64-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
-; RV64-NEXT:    vmnot.m v0, v10
-; RV64-NEXT:    vle32.v v8, (a1), v0.t
-; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmsgt.vi v11, v8, 1
-; RV64-NEXT:    vmor.mm v0, v10, v11
+; RV64-NEXT:    vmax.vv v8, v8, v10
+; RV64-NEXT:    vmsgt.vi v0, v8, 1
 ; RV64-NEXT:    ret
   %va = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %a, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   %ca = icmp sgt <vscale x 4 x i32> %va, splat (i32 1)
