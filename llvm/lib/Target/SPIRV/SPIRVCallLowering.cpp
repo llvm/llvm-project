@@ -621,6 +621,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .isValid()) {
     // insert a no-op
     MIRBuilder.buildTrap();
+    Info.LoweredTailCall = true; // Do not emit an ill-formed G_ASSERT_ALIGN.
     return true;
   }
 
