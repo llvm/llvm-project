@@ -171,5 +171,5 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-cpu"="neoverse-512tvb" }
+attributes #0 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
 attributes #1 = { vscale_range(1, 16) "target-features"="+sve,+sme" "aarch64_pstate_sm_enabled" }
