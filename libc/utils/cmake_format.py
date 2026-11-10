@@ -925,8 +925,8 @@ class CallState:
         active_kw: The currently open keyword (None if no keyword is active).
         active_kw_type: ONE_VALUE, MULTI_VALUE, or None — governs indent of child lines.
         active_kw_on_cmd_line: True if active_kw was opened on the command line itself.
-        can_have_substanzas: True if unused sibling keywords exist in the command's schema
-            (excluding ``set``), allowing header-opened keywords to indent child items +4.
+        can_have_substanzas: True if unused sibling keywords exist in the command's schema,
+            allowing header-opened keywords to indent child items +4.
         seen_keywords: Uppercased keywords matched while processing tokens.
         one_value_count: Number of values consumed under the current ONE_VALUE keyword;
             the keyword closes after the first value is seen.
@@ -1245,9 +1245,7 @@ def _process_command_invocation_line(
     state.formatted_lines.append(reconstructed)
 
     if not is_single_line:
-        can_have_substanzas = lower_cmd != "set" and bool(
-            cmd_schema.all_keywords - temp_state.seen_keywords
-        )
+        can_have_substanzas = bool(cmd_schema.all_keywords - temp_state.seen_keywords)
         state.current_call_state = CallState(
             cmd_name=lower_cmd,
             base_indent=call_base_indent,
