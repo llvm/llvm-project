@@ -1550,6 +1550,13 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
                           ? WidthB
                           : LocationSize::precise(OverlapB);
 
+  // After control flow transformations, the IR values of two memory operands
+  // may refer to different executions of the same IR instruction (e.g. tail
+  // duplication copies a load whose address is computed from a PHI into a
+  // predecessor, where it denotes the address of the next execution). Query AA
+  // in cross-iteration mode, which does not assume that such a value is the
+  // same in both locations.
+  BatchAACrossIterationScope CrossIteration(*AA, /*CrossIteration=*/true);
   return !AA->isNoAlias(
       MemoryLocation(ValA, LocA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
       MemoryLocation(ValB, LocB, UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
