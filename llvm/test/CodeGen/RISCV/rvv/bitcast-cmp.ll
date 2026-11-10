@@ -137,3 +137,29 @@ define i1 @cmp_v16i16_to_plain(ptr %a0, ptr %a1) {
   %cmp = icmp eq i256 %x, %y
   ret i1 %cmp
 }
+
+; Volatile loads are not turned into vector loads.
+define i1 @cmp_volatile_load(ptr %a0, ptr %a1) {
+; CHECK-LABEL: cmp_volatile_load:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a2, 8(a0)
+; CHECK-NEXT:    ld a3, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a3
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    ld a2, 16(a0)
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
+; CHECK-NEXT:    ld a0, 24(a0)
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vmsne.vv v12, v8, v10
+; CHECK-NEXT:    vcpop.m a0, v12
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %x = load volatile i256, ptr %a0, align 32
+  %y = load i256, ptr %a1, align 32
+  %cmp = icmp eq i256 %x, %y
+  ret i1 %cmp
+}
