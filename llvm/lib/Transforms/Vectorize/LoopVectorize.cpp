@@ -5152,6 +5152,8 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
               *CM);
 
   LLVM_DEBUG(printPlans(dbgs()));
+  // Compute costs for each VPlan:
+  computeVPlanCosts(*CM);
 }
 
 bool LoopVectorizationPlanner::planForEpilogueTF() {
@@ -5521,30 +5523,28 @@ LoopVectorizationPlanner::selectBestVF() {
   if (VPlans.size() == 1) {
     // For outer loops, the plan has a single vector VF determined by the
     // heuristic.
-    assert((FirstPlan.hasScalarVFOnly() || hasPlanWithVF(UserVF) ||
+    assert((FirstPlan.hasScalarVFOnly() || FirstPlan.getSingleVF() == UserVF ||
             FirstPlan.isOuterLoop()) &&
            "must have a single scalar VF, UserVF or an outer loop");
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF() && VPlans.size() == 2) {
+  if (VPlans.size() == 2 && hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
     assert(VPlans[0]->getSingleVF() == UserVF &&
-           "expected second plan to be for the forced UserVF");
+           "expected first plan to be for the forced UserVF");
     assert(VPlans[1]->getSingleVF() == EpilogueVectorizationForceVF &&
-           "expected first plan to be for the forced epilogue VF");
+           "expected second plan to be for the forced epilogue VF");
     return {VectorizationFactor(UserVF, 0, 0), VPlans[0].get()};
   }
 
-  computeVPlanCosts(*CM);
-
   assert(!FeasibleVFs.empty() &&
-         "Expected to have at least 1 VF that could be profitable");
+         "Expected to have at least 1 non-scalar VF with a valid cost");
   VectorizationFactor ScalarFactor = FeasibleVFs[0];
   assert(ScalarFactor.Width.isScalar() &&
          "Expect first feasible VF to be the scalar one");
 
   assert(FirstPlan.hasVF(ScalarFactor.Width) &&
-         "More than a single plan/VF w/o any plan having scalar VF");
+         "Expected the first vplan to contain the scalar VF");
 
   VPlan *PlanForBestVF = &FirstPlan;
   VectorizationFactor BestFactor = ScalarFactor;
