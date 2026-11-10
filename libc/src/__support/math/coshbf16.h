@@ -48,31 +48,33 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
     return x;
   }
 
-  // cosh is an even function, cosh(-x) = cosh(x), so we only need to look at
-  // |x|, and we can compare it as an integer.
-  uint16_t x_abs = x_bits.abs().uintval();
+  // cosh is an even function, cosh(-x) = cosh(x), so we only need |x|.
+  // We bound the cases below by comparing the bits of |x| as an integer.
+  uint16_t x_abs_uint = x_bits.abs().uintval();
 
-  // For small |x|, cosh(x) = 1 + x^2/2 + ... lies strictly between 1 and
-  // the next bfloat16 above 1, and is closer to 1. So the result is 1 in all
-  // rounding modes except for round-up, where it is the next value above 1.
+  constexpr uint16_t ONE_UINT = 0x3F80;         // 0x1p0 = 1.0
+  constexpr uint16_t ONE_NEXT_UP_UINT = 0x3F81; // 0x1.02p0 = 1.0078125
+
+  // For 0 < |x| <= 0.0879, cosh(x) = 1 + x^2/2 + ... lies strictly between 1
+  // and the next bfloat16 above 1, and is closer to 1. So the result is 1 in
+  // all rounding modes except for RU, where it is the next value above 1.
   // x = 0 is the exception, since cosh(0) = 1 exactly.
-  constexpr uint16_t SMALL_ABS_BOUND = 0x3DB4; // 0x1.68p-4 = 0.0879
-  if (LIBC_UNLIKELY(x_abs <= SMALL_ABS_BOUND)) {
-    if (x_abs == 0U)
-      return FPBits::one().get_val();
+  constexpr uint16_t ROUNDS_TO_ONE_ABS_BOUND = 0x3DB4; // 0x1.68p-4 = 0.0879
+  if (x_abs_uint <= ROUNDS_TO_ONE_ABS_BOUND) {
+    if (x_abs_uint == 0U)
+      return FPBits(ONE_UINT).get_val();
 
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     if (fputil::fenv_is_round_up())
-      return FPBits(static_cast<uint16_t>(FPBits::one().uintval() + 1))
-          .get_val();
+      return FPBits(ONE_NEXT_UP_UINT).get_val();
 #endif
-    return FPBits::one().get_val();
+    return FPBits(ONE_UINT).get_val();
   }
 
   // cosh(x) overflows bfloat16 for |x| >= 89.5. cosh(x) > 0 for all x, so the
   // overflow is always to +Inf, regardless of the sign of x.
   constexpr uint16_t OVERFLOW_ABS_BOUND = 0x42B3; // 0x1.66p6 = 89.5
-  if (LIBC_UNLIKELY(x_abs >= OVERFLOW_ABS_BOUND)) {
+  if (LIBC_UNLIKELY(x_abs_uint >= OVERFLOW_ABS_BOUND)) {
     // cosh(+-Inf) = +Inf
     if (x_bits.is_inf())
       return FPBits::inf().get_val();
@@ -80,21 +82,22 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
     return fputil::set_overflow<bfloat16>();
   }
 
-  // For |x| >= 6.875, e^(-|x|) / e^|x| = e^(-2|x|) < 2^-19 is far below the
-  // precision of bfloat16, so we can use
+  // For 6.875 <= |x| < 89.5, e^(-|x|) / e^|x| = e^(-2|x|) < 2^-19 is far below
+  // the precision of bfloat16, so we can use
   //   cosh(x) = (e^|x| + e^(-|x|)) / 2 ~ e^|x| / 2.
   constexpr uint16_t EXP_HALF_ABS_BOUND = 0x40DC; // 0x1.b8p2 = 6.875
-  if (x_abs >= EXP_HALF_ABS_BOUND)
-    return fputil::cast<bfloat16>(math::sinhcoshbf16_internal::exp_half(
-        fputil::cast<float>(x_bits.abs().get_val())));
+  if (x_abs_uint >= EXP_HALF_ABS_BOUND) {
+    float x_abs_float = fputil::cast<float>(x_bits.abs().get_val());
+    return fputil::cast<bfloat16>(sinhcoshbf16_internal::exp_half(x_abs_float));
+  }
 
-  // For the remaining inputs, we compute
+  // For the remaining inputs, 0.0879 < |x| < 6.875, we compute
   //   cosh(x) = (e^x + e^(-x)) / 2
-  // with the range reduction and the shared polynomial in
+  // using the range reduction and the polynomial shared with sinhbf16 in
   // sinhcoshbf16_utils.h.
+  float x_float = fputil::cast<float>(x);
   return fputil::cast<bfloat16>(
-      math::sinhcoshbf16_internal::eval_sinh_or_cosh</*IsSinh=*/false>(
-          fputil::cast<float>(x)));
+      sinhcoshbf16_internal::eval_sinh_or_cosh</*IsSinh=*/false>(x_float));
 }
 
 } // namespace math
