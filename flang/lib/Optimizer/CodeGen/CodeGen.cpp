@@ -4447,6 +4447,30 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
       rewriter.eraseOp(undef);
       return mlir::success();
     }
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(undef.getType())) {
+      // A fir.box value is lowered as the address of its descriptor storage,
+      // and fir.load/fir.store of a box copy the descriptor through that
+      // address. An undefined box must therefore be valid storage holding an
+      // undefined descriptor, not an undefined address.
+      mlir::Location loc = undef.getLoc();
+      mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
+      mlir::Value storage =
+          genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign, rewriter);
+      if (boxTy.isAssumedRank()) {
+        // Copies of an assumed-rank descriptor are sized from its rank, which
+        // must therefore stay within the storage.
+        mlir::Type rankTy = getBoxEleTy(llvmBoxTy, {kRankPosInBox});
+        mlir::LLVM::GEPOp rankAddr =
+            genGEP(loc, llvmBoxTy, rewriter, storage, 0, kRankPosInBox);
+        mlir::Value zero = mlir::LLVM::ConstantOp::create(
+            rewriter, loc, rankTy, rewriter.getIntegerAttr(rankTy, 0));
+        auto storeOp =
+            mlir::LLVM::StoreOp::create(rewriter, loc, zero, rankAddr);
+        attachTBAATag(storeOp, boxTy, nullptr, rankAddr);
+      }
+      rewriter.replaceOp(undef, storage);
+      return mlir::success();
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
         undef, convertType(undef.getType()));
     return mlir::success();

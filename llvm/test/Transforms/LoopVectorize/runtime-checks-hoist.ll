@@ -2170,15 +2170,14 @@ exit:
 }
 
 ; The bound %ptr + (%step + %len + 1 - smin) mixes outer-variant and invariant
-; operands.
-; TODO: Sum the invariant operands and expand the sum outside the outer loop.
+; operands. The invariant operands are summed outside the outer loop.
 define void @upper_bound_invariant_operands_summed(ptr %dst, ptr %src, ptr %step.ptr, i64 %len, i64 %m) {
 ; CHECK-LABEL: define void @upper_bound_invariant_operands_summed(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], ptr [[STEP_PTR:%.*]], i64 [[LEN:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[LEN]], i64 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LEN]], 1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[LEN]], i64 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SMIN]]
 ; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
@@ -2193,9 +2192,7 @@ define void @upper_bound_invariant_operands_summed(ptr %dst, ptr %src, ptr %step
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[STEP]], [[LEN]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], [[SMIN]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], [[STEP]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[TMP8]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_NEXT]], [[SCEVGEP11]]
@@ -2295,6 +2292,10 @@ define void @invariant_base_and_constant_offset_hoisted(ptr %A, ptr %B, ptr %Off
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[OFFS:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[M]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP0]], 4
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[B]], i64 4
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
@@ -2305,12 +2306,9 @@ define void @invariant_base_and_constant_offset_hoisted(ptr %A, ptr %B, ptr %Off
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[OFF]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[SCEVGEP8]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[TMP2]], [[TMP8]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
