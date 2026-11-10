@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -1783,6 +1784,15 @@ bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
 }
 
 namespace {
+/// Byte alignment required by \p sym, or zero if it cannot be determined.
+static std::size_t getSymbolAlignment(const semantics::Symbol &sym) {
+  semantics::SemanticsContext &context = sym.owner().context();
+  if (auto chars = evaluate::characteristics::TypeAndShape::Characterize(
+          sym, context.foldingContext()))
+    return chars->type().GetAlignment(context.targetCharacteristics());
+  return 0;
+}
+
 /// This helper class sorts the symbols in a scope such that a symbol will
 /// be placed after those it depends upon. Otherwise the sort is stable and
 /// preserves the order of the symbol table, which is sorted by name. This
@@ -1868,6 +1878,7 @@ private:
         continue;
       std::size_t start = first.offset();
       std::size_t end = first.offset() + first.size();
+      std::size_t alignment = 0;
       const Fortran::semantics::Symbol *namingSym = nullptr;
       for (semantics::SymbolRef symRef : aggregate) {
         const semantics::Symbol &sym = *symRef;
@@ -1878,6 +1889,7 @@ private:
           isGlobal |= lower::symbolIsGlobal(sym);
           start = std::min(sym.offset(), start);
           end = std::max(sym.offset() + sym.size(), end);
+          alignment = std::max(alignment, getSymbolAlignment(sym));
           if (!namingSym || (sym.name() < namingSym->name()))
             namingSym = &sym;
         }
@@ -1890,6 +1902,7 @@ private:
       } else {
         stores.emplace_back(*aggregateSym, *namingSym, isGlobal);
       }
+      stores.back().alignment = alignment;
     }
   }
 
