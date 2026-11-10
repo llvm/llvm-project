@@ -1,4 +1,19 @@
+standard: c23
+posix: posix-2024
 c-reference-root: string/byte
+types:
+  errno_t:
+    c-definition: K.3.7
+    c-reference: error
+  locale_t:
+    in-latest-posix: ''
+  rsize_t:
+    c-definition: K.3.7
+    c-reference: error
+  size_t:
+    c-definition: 7.26.1
+    c-reference: types/size_t
+    in-latest-posix: ''
 functions:
   memccpy:
     c-definition: 7.26.2.2
@@ -16,7 +31,7 @@ functions:
     c-definition: 7.26.2.3
     in-latest-posix: ''
   mempcpy:
-    c-definition: 'TODO: glibc extension'
+    extension: gnu
   memset:
     c-definition: 7.26.6.1
     in-latest-posix: ''
@@ -93,7 +108,33 @@ functions:
     in-latest-posix: ''
   strxfrm_l:
     in-latest-posix: ''
+  memmem:
+    in-latest-posix: ''
+  memrchr:
+    extension: gnu
+  strcasestr:
+    extension: gnu
+  strchrnul:
+    extension: gnu
+  strerror_l:
+    in-latest-posix: ''
+  strerror_r:
+    in-latest-posix: ''
+  strlcat:
+    in-latest-posix: ''
+  strlcpy:
+    in-latest-posix: ''
+  strnlen:
+    in-latest-posix: ''
+  strsep:
+    extension: bsd
+  strsignal:
+    in-latest-posix: ''
 macros:
   __STDC_VERSION_STRING_H__:
     c-definition: 7.26.1
 
+  'NULL':
+    c-definition: 7.26.1
+    c-reference: types/NULL
+    in-latest-posix: ''

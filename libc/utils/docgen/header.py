@@ -8,6 +8,7 @@
 from functools import lru_cache
 from pathlib import Path
 import re
+import sys
 from typing import Dict, Generator, Optional, Set, Tuple
 import yaml
 
@@ -77,15 +78,26 @@ def _is_stub_file(path: Path) -> bool:
     return True
 
 
+_VARIABLE_RE = re.compile(
+    r"LLVM_LIBC_VARIABLE\s*\([^,]+,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)"
+)
+
+
 @lru_cache(maxsize=None)
 def _load_implemented_functions(
     libc_root: Path,
 ) -> Tuple[Set[str], Dict[str, Set[str]]]:
     stubs, reals = set(), set()
+    vars_by_target: Dict[str, Set[str]] = {}
     src_dir = libc_root / "src"
     if src_dir.exists():
         for p in src_dir.rglob("*.cpp"):
-            (stubs if _is_stub_file(p) else reals).add(p.stem)
+            if _is_stub_file(p):
+                stubs.add(p.stem)
+            else:
+                reals.add(p.stem)
+                for var in _VARIABLE_RE.findall(p.read_text(encoding="utf-8")):
+                    vars_by_target.setdefault(p.stem, set()).add(var)
 
     stub_only = stubs - reals
     all_fns: Set[str] = set()
@@ -99,9 +111,10 @@ def _load_implemented_functions(
                     parts = line.split(".")
                     sym = parts[-1]
                     if sym not in stub_only:
-                        all_fns.add(sym)
                         stem = "/".join(parts[2:-1])
-                        by_stem.setdefault(stem, set()).add(sym)
+                        exported = {sym} | vars_by_target.get(sym, set())
+                        all_fns |= exported
+                        by_stem.setdefault(stem, set()).update(exported)
     return all_fns, by_stem
 
 
@@ -155,7 +168,10 @@ class Header:
         self.macros_dir = Path(self.libc_root, "include", "llvm-libc-macros")
 
     def is_clang_provided(self) -> bool:
-        return self.name in CLANG_FREESTANDING_HEADERS
+        return (
+            self.name in CLANG_FREESTANDING_HEADERS
+            or self.api.get("provider") == "clang"
+        )
 
     @property
     def api(self) -> Dict:
@@ -227,6 +243,74 @@ class Header:
             return True
 
         return False
+
+    def _load_exposed_types(self) -> Set[str]:
+        hdrgen_dir = str(self.docgen_root.parent / "hdrgen")
+        if hdrgen_dir not in sys.path:
+            sys.path.insert(0, hdrgen_dir)
+        from hdrgen.header import COMPILER_HEADER_TYPES, HeaderFile
+        from hdrgen.yaml_to_classes import load_yaml_file
+
+        queue = []
+        if self.include_yaml.exists() and "header" in self.include_data:
+            header_file = load_yaml_file(self.include_yaml, HeaderFile, None)
+            queue.extend(t.name for t in header_file.all_types())
+        else:
+            queue.extend(
+                t["type_name"]
+                for t in self.include_data.get("types", [])
+                if "type_name" in t
+            )
+
+        def_file = self.libc_root / "include" / f"{self.name}.def"
+        if def_file.exists():
+            queue.extend(
+                re.findall(
+                    r"llvm-libc-types/([A-Za-z0-9_]+)\.h",
+                    def_file.read_text(encoding="utf-8"),
+                )
+            )
+
+        found: Set[str] = set()
+        seen: Set[str] = set()
+        types_dir = self.libc_root / "include" / "llvm-libc-types"
+        while queue:
+            type_name = queue.pop()
+            if type_name in seen:
+                continue
+            seen.add(type_name)
+
+            type_path = types_dir / f"{type_name}.h"
+            if type_name in COMPILER_HEADER_TYPES or type_path.exists():
+                found.add(type_name)
+            if type_path.exists():
+                queue.extend(
+                    re.findall(
+                        r'#include\s+"(?:.*/)?([A-Za-z0-9_]+)\.h"',
+                        type_path.read_text(encoding="utf-8"),
+                    )
+                )
+        return found
+
+    def implements_type(self, t_name: str) -> bool:
+        if self.is_clang_provided():
+            return True
+        if not hasattr(self, "_exposed_types"):
+            self._exposed_types = self._load_exposed_types()
+        return (
+            t_name in self._exposed_types
+            or t_name.replace(" ", "_") in self._exposed_types
+        )
+
+    def implements_object(self, o_name: str) -> bool:
+        if self.is_clang_provided():
+            return True
+        if not any(
+            o.get("object_name") == o_name for o in self.include_data.get("objects", [])
+        ):
+            return False
+        all_syms, by_stem = _load_implemented_functions(self.libc_root)
+        return o_name in by_stem.get(self.stem, set()) or o_name in all_syms
 
     def __get_macro_files(self) -> Generator[Path, None, None]:
         """

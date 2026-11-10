@@ -75,10 +75,38 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
         self.assertTrue(Header("float.h").implements_macro("NAN"))
 
+    def test_implements_type(self):
+        self.assertTrue(Header("stdio.h").implements_type("FILE"))
+        self.assertTrue(Header("time.h").implements_type("struct tm"))
+        self.assertTrue(Header("setjmp.h").implements_type("sigjmp_buf"))
+        self.assertFalse(Header("wctype.h").implements_type("wctrans_t"))
+        self.assertFalse(Header("monetary.h").implements_type("size_t"))
+
+    def test_implements_object(self):
+        self.assertTrue(Header("stdio.h").implements_object("stdin"))
+        self.assertTrue(Header("time.h").implements_object("tzname"))
+        self.assertTrue(Header("unistd.h").implements_object("optarg"))
+        self.assertFalse(Header("time.h").implements_object("getdate_err"))
+        self.assertFalse(Header("errno.h").implements_object("errno"))
+
     def test_md_output_generation(self):
         hdr = Header("stdio.h")
         api = {
             "c-reference-root": "io",
+            "types": {
+                "FILE": {
+                    "c-definition": "7.23.1",
+                    "c-reference": "io/FILE",
+                    "in-latest-posix": None,
+                }
+            },
+            "objects": {
+                "stdin": {
+                    "c-definition": "7.23.1",
+                    "c-reference": "io/std_streams",
+                    "in-latest-posix": None,
+                }
+            },
             "macros": {"EOF": {"c-definition": "7.23.1", "in-latest-posix": None}},
             "functions": {
                 "printf": {
@@ -100,9 +128,27 @@ class DocgenTest(unittest.TestCase):
         out = buf.getvalue()
         lines = {line.strip() for line in out.splitlines()}
         self.assertIn("# stdio.h", out)
+        self.assertIn("## Types", out)
+        self.assertIn("## Global Variables", out)
         self.assertIn("## Macros", out)
         self.assertIn("## Functions", out)
         self.assertIn('<table class="hc-table">', out)
+        self.assertTrue(
+            any(
+                'id="type-FILE"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/FILE"' in l
+                for l in lines
+            )
+        )
+        self.assertTrue(
+            any(
+                'id="object-stdin"' in l
+                and 'title="Implemented"' in l
+                and 'href="https://en.cppreference.com/w/c/io/std_streams"' in l
+                for l in lines
+            )
+        )
         self.assertTrue(
             any(
                 'id="macro-EOF"' in l
@@ -233,7 +279,8 @@ class DocgenTest(unittest.TestCase):
                 "function",
                 {"removed-in-posix-2024": None},
             ),
-            "https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/gettimeofday.html",
+            "https://pubs.opengroup.org/onlinepubs/"
+            "9699919799.2018edition/functions/gettimeofday.html",
         )
         self.assertEqual(posix_url(Header("stdio.h"), "printf", "function", {}), "")
 

@@ -54,52 +54,63 @@ def check_api(header: Header, api: Dict):
     :param api: docgen yaml file contents parsed into a dict
     """
     errors = []
-    if "c-reference-root" in api and not isinstance(api["c-reference-root"], str):
-        errors.append("error: c-reference-root must be a string")
+    for key in ("c-reference-root", "standard", "posix", "provider"):
+        if key in api and not isinstance(api[key], str):
+            errors.append(f"error: {key} must be a string")
     # We require entries to have at least one of these.
     possible_keys = [
         "c-definition",
         "in-latest-posix",
         "removed-in-posix-2008",
         "removed-in-posix-2024",
+        "extension",
     ]
 
-    # Validate macros
-    if "macros" in api:
-        if not header.macro_file_exists() and not any(
-            header.implements_macro(m) for m in api["macros"]
-        ):
-            print(
-                f"warning: Macro definitions are listed for {header.name}, but no macro file can be found in the directory tree rooted at {header.macros_dir}. All macros will be listed as not implemented.",
-                file=sys.stderr,
-            )
+    if "macros" in api and (
+        not header.macro_file_exists()
+        and not any(header.implements_macro(m) for m in api["macros"])
+    ):
+        print(
+            f"warning: Macro definitions are listed for {header.name}, "
+            "but no macro file can be found in the directory tree rooted "
+            f"at {header.macros_dir}. All macros will be listed as not "
+            "implemented.",
+            file=sys.stderr,
+        )
 
-        macros = api["macros"]
+    if "functions" in api and (
+        not header.fns_dir_exists()
+        and not any(header.implements_fn(f) for f in api["functions"])
+    ):
+        print(
+            f"warning: Function definitions are listed for {header.name}, "
+            "but no function implementation directory exists at "
+            f"{header.fns_dir}. All functions will be listed as not "
+            "implemented.",
+            file=sys.stderr,
+        )
 
-        for name, obj in macros.items():
-            if not any(k in obj for k in possible_keys):
-                err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
-                errors.append(err)
+    for section, label in (
+        ("macros", "Macro"),
+        ("functions", "function"),
+        ("types", "type"),
+        ("objects", "object"),
+    ):
+        if section not in api:
+            continue
+        entries = api[section]
+        if not isinstance(entries, dict):
+            errors.append(f"error: {section} must be a dict")
+            continue
+        for name, obj in entries.items():
+            if not isinstance(obj, dict) or not any(k in obj for k in possible_keys):
+                errors.append(
+                    f"error: {label} {name} does not contain at least one "
+                    f"required property: {possible_keys}"
+                )
+                continue
             if "c-reference" in obj and not isinstance(obj["c-reference"], str):
-                errors.append(f"error: Macro {name} c-reference must be a string")
-
-    # Validate functions
-    if "functions" in api:
-        if not header.fns_dir_exists() and not any(
-            header.implements_fn(f) for f in api["functions"]
-        ):
-            print(
-                f"warning: Function definitions are listed for {header.name}, but no function implementation directory exists at {header.fns_dir}. All functions will be listed as not implemented.",
-                file=sys.stderr,
-            )
-
-        fns = api["functions"]
-        for name, obj in fns.items():
-            if not any(k in obj for k in possible_keys):
-                err = f"error: function {name} does not contain at least one required property: {possible_keys}"
-                errors.append(err)
-            if "c-reference" in obj and not isinstance(obj["c-reference"], str):
-                errors.append(f"error: function {name} c-reference must be a string")
+                errors.append(f"error: {label} {name} c-reference must be a string")
 
     if errors:
         raise DocgenAPIFormatError("\n".join(errors))
@@ -235,6 +246,28 @@ def print_symbol_table_md(
 
 def print_header_status_md(header: Header, api: Dict):
     print(f"# {header.name}\n")
+
+    if api.get("types"):
+        print_symbol_table_md(
+            header,
+            "Types",
+            "Type",
+            api["types"],
+            header.implements_type,
+            "type",
+            api,
+        )
+
+    if api.get("objects"):
+        print_symbol_table_md(
+            header,
+            "Global Variables",
+            "Global Variable",
+            api["objects"],
+            header.implements_object,
+            "object",
+            api,
+        )
 
     if api.get("macros"):
         print_symbol_table_md(

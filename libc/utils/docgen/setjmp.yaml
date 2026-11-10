@@ -1,4 +1,13 @@
+standard: c23
+posix: posix-2024
 c-reference-root: program
+types:
+  jmp_buf:
+    c-definition: '7.13'
+    c-reference: program/jmp_buf
+    in-latest-posix: ''
+  sigjmp_buf:
+    in-latest-posix: ''
 functions:
   longjmp:
     c-definition: 7.13.2.1
