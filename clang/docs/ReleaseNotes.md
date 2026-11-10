@@ -1397,6 +1397,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-mcpu` is present, the ISA will be selected from the host CPU and the tune
   CPU will be selected from `-mcpu`.
 
+- The handling of __int128 arguments with the LP64E ABI now matches gcc.
+
 #### CUDA/HIP Language Changes
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected

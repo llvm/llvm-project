@@ -1878,7 +1878,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget.hasStdExtZaamo())
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, XLenVT, Expand);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB,
+                       {MVT::i8, MVT::i16, MVT::i32, XLenVT}, Expand);
 
   if (Subtarget.hasForcedAtomics()) {
     // Force __sync libcalls to be emitted for atomic rmw/cas operations.
@@ -1887,7 +1888,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
          ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
          ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
          ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
-        XLenVT, LibCall);
+        {MVT::i8, MVT::i16, MVT::i32, XLenVT}, LibCall);
   }
 
   if (Subtarget.hasVendorXTHeadMemIdx()) {
@@ -21525,7 +21526,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   auto IsVectorBitCastCheap = [](SDValue X) {
     X = peekThroughBitcasts(X);
     return isa<ConstantSDNode>(X) || X.getValueType().isVector() ||
-           X.getOpcode() == ISD::LOAD;
+           (ISD::isNormalLoad(X.getNode()) && cast<LoadSDNode>(X)->isSimple());
   };
   if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
     return SDValue();
@@ -29059,6 +29060,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFunction::CallSiteInfo CSInfo;
+
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(Callee))
+    checkRISCVStateCall(MF.getFunction(), GA->getGlobal());
+  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(Callee))
+    checkRISCVStateCall(MF.getFunction(), ES->getSymbol());
 
   // Set type id for call site info.
   setTypeIdForCallsiteInfo(CB, MF, CSInfo);
