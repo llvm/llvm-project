@@ -226,3 +226,13 @@ using AliasName = A<T, Ts...>;
 AliasName aa([](int){}, 0);
 
 }
+
+namespace NestedPackExpansionInConstructor {
+template <class...> struct tuple {};
+template <class, class> struct pair {};
+template <class... Ts> struct A {
+  template <class... Us> A(tuple<pair<Ts, Us>...>);
+};
+A a(tuple<pair<int, char>, pair<long, float>>{});
+static_assert(__is_same(decltype(a), A<int, long>));
+} // namespace NestedPackExpansionInConstructor
