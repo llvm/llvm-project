@@ -762,6 +762,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  posix_close
+  SRCS
+    posix_close.cpp
+  HDRS
+    ../posix_close.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   pread
   SRCS
     pread.cpp

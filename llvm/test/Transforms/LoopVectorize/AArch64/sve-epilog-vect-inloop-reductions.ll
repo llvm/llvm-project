@@ -4,7 +4,7 @@
 ;
 ; In-loop integer and reduction
 ;
-define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) {
+define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @int_reduction_and(
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 2
