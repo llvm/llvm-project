@@ -45,6 +45,7 @@
 # RUN:   | FileCheck %s --check-prefixes=OBJ,CASE6
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
