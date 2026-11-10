@@ -774,6 +774,25 @@ def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]> {
   let ParamAttrs = [[WriteOnly]];
 }
 
+class VoidMemCpyLibcall : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
+}
+
+class VoidMemMoveLibcall : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[WriteOnly], [ReadOnly]];
+}
+
+class VoidMemSetLibcall<list<FuncArgType> ArgTypes>
+    : RuntimeLibcall<Void, ArgTypes> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly]];
+}
+
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
@@ -1057,7 +1076,11 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
 def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def SC_MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
-def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[ReadOnly]];
+}
 
 // AArch64 SME ABI calls
 def SMEState : StructFuncArgType<[UInt64, UInt64]>;
@@ -1073,45 +1096,39 @@ def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 // ARM EABI calls
 // The AEABI memory functions (RTABI section 5.3.4) return void, and
 // __aeabi_memset takes (dest, n, c).
-def AEABI_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
-  let Memory = ArgMemOnly;
-  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
-}
+def AEABI_MEMCPY : VoidMemCpyLibcall;
+def AEABI_MEMMOVE : VoidMemMoveLibcall;
+def AEABI_MEMSET : VoidMemSetLibcall<[Ptr, SizeT, Int]>;
+def AEABI_MEMCPY4 : VoidMemCpyLibcall; // Align 4
+def AEABI_MEMCPY8 : VoidMemCpyLibcall; // Align 8
+def AEABI_MEMMOVE4 : VoidMemMoveLibcall;
+def AEABI_MEMMOVE8 : VoidMemMoveLibcall;
+def AEABI_MEMSET4 : VoidMemSetLibcall<[Ptr, SizeT, Int]>;
+def AEABI_MEMSET8 : VoidMemSetLibcall<[Ptr, SizeT, Int]>;
+def AEABI_MEMCLR : VoidMemSetLibcall<[Ptr, SizeT]>;
+def AEABI_MEMCLR4 : VoidMemSetLibcall<[Ptr, SizeT]>;
+def AEABI_MEMCLR8 : VoidMemSetLibcall<[Ptr, SizeT]>;
 
-def AEABI_MEMMOVE : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
-  let Memory = ArgMemOnly;
-  let ParamAttrs = [[WriteOnly], [ReadOnly]];
+foreach Ty = [Int, LLong] in {
+  defvar Suffix = !if(!eq(Ty, Int), "4", "8");
+  def AEABI_UREAD#Suffix : RuntimeLibcall<Ty, [Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemReadOnly;
+    let ParamAttrs = [ReadPtrAttrs];
+  }
+  def AEABI_UWRITE#Suffix : RuntimeLibcall<Ty, [Ty, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [WriteOnly, CapturesNone]];
+  }
 }
-
-def AEABI_MEMSET : RuntimeLibcall<Void, [Ptr, SizeT, Int]> {
-  let FnAttrs = CommonFnAttrs;
-  let Memory = ArgMemWriteOnly;
-  let ParamAttrs = [[WriteOnly]];
-}
-
-def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
-def AEABI_MEMCPY8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 8
-def AEABI_MEMMOVE4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
-def AEABI_MEMMOVE8 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
-def AEABI_MEMSET4 : RuntimeLibcall<Void, [Ptr, SizeT, Int]>;
-def AEABI_MEMSET8 : RuntimeLibcall<Void, [Ptr, SizeT, Int]>;
-def AEABI_MEMCLR : RuntimeLibcall<Void, [Ptr, SizeT]>;
-def AEABI_MEMCLR4 : RuntimeLibcall<Void, [Ptr, SizeT]>;
-def AEABI_MEMCLR8 : RuntimeLibcall<Void, [Ptr, SizeT]>;
-def AEABI_UREAD4 : RuntimeLibcall<Int, [Ptr]>;
-def AEABI_UREAD8 : RuntimeLibcall<LLong, [Ptr]>;
-def AEABI_UWRITE4 : RuntimeLibcall<Int, [Int, Ptr]>;
-def AEABI_UWRITE8 : RuntimeLibcall<LLong, [LLong, Ptr]>;
 
 // Hexagon calls
-def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES
-    : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : VoidMemCpyLibcall;
 def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, UInt]>;
 
 // XCore calls
-def MEMCPY_ALIGN_4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def MEMCPY_ALIGN_4 : VoidMemCpyLibcall;
 
 // Objective-C calls
 def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
