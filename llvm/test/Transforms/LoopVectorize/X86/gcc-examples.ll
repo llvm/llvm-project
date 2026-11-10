@@ -44,17 +44,17 @@ define void @example1() {
   ret void
 }
 
-; Select VF=4 because sext <8 x i1> to <8 x i32> is expensive.
+; With bandwidth maximization the i16 -> i32 sext widens to VF=8.
 ;CHECK-LABEL: @example10b(
-;CHECK: load <4 x i16>
-;CHECK: sext <4 x i16>
-;CHECK: store <4 x i32>
+;CHECK: load <8 x i16>
+;CHECK: sext <8 x i16>
+;CHECK: store <8 x i32>
 ;CHECK: ret void
 ;UNROLL-LABEL: @example10b(
-;UNROLL: load <4 x i16>
-;UNROLL: load <4 x i16>
-;UNROLL: store <4 x i32>
-;UNROLL: store <4 x i32>
+;UNROLL: load <8 x i16>
+;UNROLL: load <8 x i16>
+;UNROLL: store <8 x i32>
+;UNROLL: store <8 x i32>
 ;UNROLL: ret void
 define void @example10b(ptr noalias nocapture %sa, ptr noalias nocapture %sb, ptr noalias nocapture %sc, ptr noalias nocapture %ia, ptr noalias nocapture %ib, ptr noalias nocapture %ic) {
   br label %1
