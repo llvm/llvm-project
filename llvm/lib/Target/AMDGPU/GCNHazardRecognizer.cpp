@@ -539,10 +539,11 @@ static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
 }
 
 /// Check if \p MI is a SALU/SMEM/Tex/LDS/Export instruction that reads an SGPR
-/// operand.
-static bool isNonVALUReadsSGPR(const MachineInstr &MI,
-                               const MachineRegisterInfo &MRI,
-                               const SIRegisterInfo &TRI) {
+/// operand. For the isMem condition, we want to precisely capture
+/// SMEM/Tex/LDS/Export
+static bool isMemOrSALUReadsSGPR(const MachineInstr &MI,
+                                 const MachineRegisterInfo &MRI,
+                                 const SIRegisterInfo &TRI) {
   if (!(SIInstrInfo::isSALU(MI) || SIInstrInfo::isSMRD(MI) ||
         SIInstrInfo::isDS(MI) || SIInstrInfo::isEXP(MI) ||
         SIInstrInfo::isVMEM(MI)))
@@ -608,7 +609,7 @@ static bool isCBranchReadEXECZ(const MachineInstr &MI) {
 unsigned
 GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   // Model the scheduling va_ssrc and va_sdst hazard on gfx1250 chips.
-  // These are only relevant when not using SCHED_MODE 0.
+  // These are only relevant when not using SCHED_MODE 1.
   if (!ST.hasGFX1250Insts())
     return 0;
 
@@ -640,7 +641,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
 
   // 1. VALU writes SGPR, and SALU/SMEM/Tex/LDS/Export reads any SGPR
   // 2. VALU writes VCC and SALU reads non-VCC. Note, we must use
-  // (getWaveMaskRegClass || getBoolRC) to gaurantee that we capture any
+  // (getWaveMaskRegClass || getBoolRC) to guarantee that we capture any
   // register which may be assigned to VCC. Thus, to define this hazard in terms
   // of RegisterClass, we can only capture an extremely narrow subset. For now,
   // it is just folded in here.
@@ -648,7 +649,7 @@ GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   // 3. VALU writes VCCZ/EXECZ and CBRANCH reads VCCZ/EXECZ. We use VALU writes
   // VCC / EXEC as a proxy for writing VCCZ / EXECZ. See note above.
   const int VASdstWaitStates = ST.isWave64() ? 17 : 16;
-  if (isNonVALUReadsSGPR(MI, MRI, TRI) || IsSALUCopy || IsCBranchVCCZ ||
+  if (isMemOrSALUReadsSGPR(MI, MRI, TRI) || IsSALUCopy || IsCBranchVCCZ ||
       IsCBranchEXECZ) {
     auto IsVALUDefsSGPRHazardFn = [&MRI, this](const MachineInstr &MI) {
       return isVALUDefsSGPR(MI, MRI, TRI);
