@@ -9,17 +9,6 @@
 // Checks that CallConvLowering classifies return values of ordinary AMDGPU
 // functions, which use the default convention rather than the kernel one.
 
-// TODO(cir): Add the return cases still NYI in CallConvLowering:
-// - Aggregates of 33 to 64 bits, which classic coerces to [2 x i32].
-//   abiTypeToCIR has no array case yet.
-// - Aggregates over 64 bits that fit the 16-register budget. The classifier
-//   returns Direct with no coerce type, which the bridge rejects.
-// - Larger aggregates, returned through sret in addrspace(5). The bridge
-//   cannot express an indirect address space yet.
-// - Structs with a flexible array member. The bridge does not set that
-//   record flag yet.
-// - 3-element vector returns, blocked on CIRGen's vec3 load and store NYI.
-
 typedef struct {} empty_t;
 typedef struct { char c; } i8_wrapper_t;
 typedef struct { int i; } i32_wrapper_t;
@@ -28,6 +17,12 @@ typedef struct { int *p; } ptr_wrapper_t;
 typedef struct { char a, b; } char2_t;
 typedef struct { char a, b, c; } small_t;
 typedef union { int i; float f; } int_float_t;
+typedef struct { int a, b; } pair_t;
+typedef struct { int a, b, c; } triple_t;
+typedef struct { int data[17]; } big_t;
+typedef struct { int n; int data[]; } fam_t;
+typedef struct { _Complex double c; } cdwrap_t;
+typedef union { int a[3]; double d; } u_pad_t;
 
 void ret_void(void) {}
 
@@ -156,3 +151,129 @@ int_float_t ret_union(void) {
 
 // CIR: cir.func {{.*}}@ret_union() -> !u32i
 // LLVM: define {{.*}}i32 @ret_union()
+
+// Aggregates of 33 to 64 bits are packed into a pair of i32 registers.
+pair_t ret_pair(void) {
+  pair_t p = {1, 2};
+  return p;
+}
+
+// CIR: cir.func {{.*}}@ret_pair() -> !cir.array<!u32i x 2>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_pair_t, target_address_space(5)>
+// CIR:   %[[RET_ARR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_pair_t, target_address_space(5)> -> !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)>
+// CIR:   %[[RET:.*]] = cir.load align(4) %[[RET_ARR]] : !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)>, !cir.array<!u32i x 2>
+// CIR:   cir.return %[[RET]] : !cir.array<!u32i x 2>
+// LLVM: define {{.*}}[2 x i32] @ret_pair()
+// LLVM:   %[[RET:.*]] = load [2 x i32], ptr addrspace(5) %{{.*}}, align 4
+// LLVM:   ret [2 x i32] %[[RET]]
+
+// Larger aggregates that fit the register budget return whole.
+triple_t ret_triple(void) {
+  triple_t t = {1, 2, 3};
+  return t;
+}
+
+// CIR: cir.func {{.*}}@ret_triple() -> !rec_triple_t
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_triple_t, target_address_space(5)>
+// CIR:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_triple_t, target_address_space(5)>, !rec_triple_t
+// CIR:   cir.return %[[RET]] : !rec_triple_t
+// LLVM: define {{.*}}%struct.triple_t @ret_triple()
+// LLVM:   %[[RET:.*]] = load %struct.triple_t, ptr addrspace(5) %{{.*}}, align 4
+// LLVM:   ret %struct.triple_t %[[RET]]
+
+// The call site unpacks the result the same way.
+void call_ret_pair(void) { pair_t p = ret_pair(); }
+
+// CIR: cir.func {{.*}}@call_ret_pair()
+// CIR:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)>
+// CIR:   %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_pair_t, target_address_space(5)>
+// CIR:   %[[P_VIEW:.*]] = cir.cast address_space %[[P]] : !cir.ptr<!rec_pair_t, target_address_space(5)> -> !cir.ptr<!rec_pair_t>
+// CIR:   %[[RES:.*]] = cir.call @ret_pair() {{.*}}: () -> !cir.array<!u32i x 2>
+// CIR:   cir.store %[[RES]], %[[COERCE]] : !cir.array<!u32i x 2>, !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)>
+// CIR:   %[[COERCE_REC:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)> -> !cir.ptr<!rec_pair_t, target_address_space(5)>
+// CIR:   cir.copy %[[COERCE_REC]] align(4) to %[[P_VIEW]] align(4)
+// LLVM: define {{.*}}void @call_ret_pair()
+// LLVM:   %[[RES:.*]] = call [2 x i32] @ret_pair()
+// LLVM:   store [2 x i32] %[[RES]], ptr addrspace(5) %{{.*}}, align 4
+
+// A _Complex up to 64 bits is packed like a small aggregate.
+_Complex float ret_cfloat(void) { return 0; }
+
+// CIR: cir.func {{.*}}@ret_cfloat() -> !cir.array<!u32i x 2>
+// CIR:   %[[RET_PTR:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.complex<!cir.float>, target_address_space(5)> -> !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)>
+// CIR-NEXT:   %[[RET:.*]] = cir.load %[[RET_PTR]] : !cir.ptr<!cir.array<!u32i x 2>, target_address_space(5)>, !cir.array<!u32i x 2>
+// CIR-NEXT:   cir.return %[[RET]] : !cir.array<!u32i x 2>
+// LLVM: define {{.*}}[2 x i32] @ret_cfloat()
+// LLVM:   %[[RET:.*]] = load [2 x i32], ptr addrspace(5) %{{.*}}, align 4
+// LLVM-NEXT:   ret [2 x i32] %[[RET]]
+
+// A wider _Complex that fits the register budget returns whole.
+_Complex double ret_cdouble(void) { return 0; }
+
+// CIR: cir.func {{.*}}@ret_cdouble() -> ![[PAIR:rec_anon_struct[0-9]*]]
+// CIR:   %[[RET_PTR:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)> -> !cir.ptr<![[PAIR]], target_address_space(5)>
+// CIR-NEXT:   %[[RET:.*]] = cir.load %[[RET_PTR]] : !cir.ptr<![[PAIR]], target_address_space(5)>, ![[PAIR]]
+// CIR-NEXT:   cir.return %[[RET]] : ![[PAIR]]
+// LLVM: define {{.*}}{ double, double } @ret_cdouble()
+// LLVM:   ret { double, double } %{{.*}}
+
+// An aggregate past the register budget returns through sret in addrspace(5).
+big_t ret_big(void) {
+  big_t b = {0};
+  return b;
+}
+
+// CIR: cir.func {{.*}}@ret_big(%[[RET:[^:]+]]: !cir.ptr<!rec_big_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_big_t, llvm.writable}
+// CIR-NEXT:   %[[RET_VIEW:.*]] = cir.cast address_space %[[RET]] : !cir.ptr<!rec_big_t, target_address_space(5)> -> !cir.ptr<!rec_big_t>
+// CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.zero : !rec_big_t
+// CIR-NEXT:   cir.store align(4) %[[ZERO]], %[[RET_VIEW]] : !rec_big_t, !cir.ptr<!rec_big_t>
+// CIR-NEXT:   cir.return
+// LLVM: define {{.*}}void @ret_big(ptr addrspace(5) dead_on_unwind noalias writable sret(%struct.big_t) align 4 %[[RET:[^)]+]])
+// LLVM:   %{{.*}} = addrspacecast ptr addrspace(5) %[[RET]] to ptr
+
+// The caller's local is passed as the sret.
+void call_ret_big(void) { big_t b = ret_big(); }
+
+// CIR: cir.func {{.*}}@call_ret_big()
+// CIR-NEXT:   %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!rec_big_t, target_address_space(5)>
+// CIR:   cir.call @ret_big(%[[B]]) {{.*}}: (!cir.ptr<!rec_big_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_big_t, llvm.writable}) -> ()
+// LLVM: define {{.*}}void @call_ret_big()
+// LLVM:   alloca %struct.big_t, align 4, addrspace(5)
+// LLVM:   call void @ret_big(ptr addrspace(5) dead_on_unwind writable sret(%struct.big_t) align 4 %{{.*}})
+
+// A struct with a flexible array member returns through sret in addrspace(5).
+fam_t ret_fam(void) {
+  fam_t s = {0};
+  return s;
+}
+
+// CIR: cir.func {{.*}}@ret_fam(%[[RET:[^:]+]]: !cir.ptr<!rec_fam_t, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_fam_t, llvm.writable}
+// CIR-NEXT:   %[[RET_VIEW:.*]] = cir.cast address_space %[[RET]] : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
+// CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.zero : !rec_fam_t
+// CIR-NEXT:   cir.store align(4) %[[ZERO]], %[[RET_VIEW]] : !rec_fam_t, !cir.ptr<!rec_fam_t>
+// CIR-NEXT:   cir.return
+// LLVM: define {{.*}}void @ret_fam(ptr addrspace(5) dead_on_unwind noalias writable sret(%struct.fam_t) align 4 %[[RET:[^)]+]])
+// LLVM:   %{{.*}} = addrspacecast ptr addrspace(5) %[[RET]] to ptr
+
+// A union return is not flattened.
+u_pad_t ret_u_pad(u_pad_t *p) { return *p; }
+
+// CIR: cir.func {{.*}}@ret_u_pad(%{{.*}}: !cir.ptr<!rec_u_pad_t> {llvm.noundef}{{.*}}) -> !rec_u_pad_t
+// CIR:   %[[RET:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_u_pad_t, target_address_space(5)>, !rec_u_pad_t
+// CIR-NEXT:   cir.return %[[RET]] : !rec_u_pad_t
+// LLVM: define {{.*}}%union.u_pad_t @ret_u_pad(ptr noundef %{{.*}})
+// LLVM:   %[[RET:.*]] = load %union.u_pad_t, ptr addrspace(5) %{{.*}}, align 8
+// LLVM-NEXT:   ret %union.u_pad_t %[[RET]]
+
+// A one-field struct return is not unwrapped.
+cdwrap_t ret_cdwrap(void) {
+  cdwrap_t w = {0};
+  return w;
+}
+
+// CIR: cir.func {{.*}}@ret_cdwrap() -> !rec_cdwrap_t
+// CIR:   %[[RET:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>, !rec_cdwrap_t
+// CIR-NEXT:   cir.return %[[RET]] : !rec_cdwrap_t
+// LLVM: define {{.*}}%struct.cdwrap_t @ret_cdwrap()
+// LLVM:   %[[RET:.*]] = load %struct.cdwrap_t, ptr addrspace(5) %{{.*}}, align 8
+// LLVM-NEXT:   ret %struct.cdwrap_t %[[RET]]
