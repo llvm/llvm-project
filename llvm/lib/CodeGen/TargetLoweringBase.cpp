@@ -2216,8 +2216,7 @@ void TargetLoweringBase::insertSSPDeclarations(
             !M.getTargetTriple().isOSCygMing() &&
             !(M.getTargetTriple().isPPC64() &&
               M.getTargetTriple().isOSFreeBSD()) &&
-            (!M.getTargetTriple().isOSDarwin() ||
-             TM.getRelocationModel() == Reloc::Static))
+            !M.getTargetTriple().isOSDarwin())
           GV->setDSOLocal(true);
 
         return GV;

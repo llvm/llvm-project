@@ -24,12 +24,15 @@ class AcceleratorResponder(MockGDBServerResponder):
         self,
         library_infos,
         dyld_plugin_name="accelerator-gdb-remote",
+        stop_replies=None,
     ):
         MockGDBServerResponder.__init__(self)
         self.library_infos = library_infos
         self.dyld_plugin_name = dyld_plugin_name
         self.dyld_queries = 0
         self.last_dyld_packet = None
+        self.stop_replies = list(stop_replies or [])
+        self.cont_queries = 0
 
     def qSupported(self, client_supported):
         features = super().qSupported(client_supported) + ";qXfer:features:read+"
@@ -55,6 +58,9 @@ class AcceleratorResponder(MockGDBServerResponder):
         return "00" * 8
 
     def cont(self):
+        self.cont_queries += 1
+        if self.stop_replies:
+            return self.stop_replies.pop(0)
         return "T05thread:1;library:;"
 
     def other(self, packet):
@@ -191,6 +197,69 @@ class TestAcceleratorDynamicLoader(GDBRemoteTestBase):
         module = self.find_module(target, lib)
         self.assertIsNotNone(module, "library should be loaded into the target")
         self.assert_text_loaded_at(target, module, 0x10001000)
+
+    def test_dyld_stop_auto_continues(self):
+        """A dyld stop updates libraries and auto-continues by default."""
+        lib = self.getBuildArtifact("accelerator_lib.so")
+        self.yaml2obj(self.getSourcePath("../accelerator_lib.yaml"), lib)
+
+        self.server.responder = AcceleratorResponder(
+            [],
+            stop_replies=[
+                "T05thread:1;reason:dyld;",
+                "T05thread:1;reason:signal;",
+            ],
+        )
+        target = self.createTarget("accelerator.yaml")
+        process = self.connect(target)
+        self.server.responder.library_infos = [
+            {"pathname": lib, "load": True, "load_address": 0x10000000}
+        ]
+
+        self.assertSuccess(process.Continue())
+
+        self.assertEqual(self.server.responder.cont_queries, 2)
+        self.assertEqual(self.server.responder.dyld_queries, 2)
+        self.assertIn('"full":false', self.server.responder.last_dyld_packet)
+        module = self.find_module(target, lib)
+        self.assertIsNotNone(module, "library should be loaded into the target")
+        self.assert_text_loaded_at(target, module, 0x10001000)
+        self.assertStopReason(
+            process.GetSelectedThread().GetStopReason(), lldb.eStopReasonSignal
+        )
+
+    def test_dyld_stop_can_be_user_visible(self):
+        """The shared-library event setting makes a dyld stop visible."""
+        lib = self.getBuildArtifact("accelerator_lib.so")
+        self.yaml2obj(self.getSourcePath("../accelerator_lib.yaml"), lib)
+        self.runCmd("settings set target.process.stop-on-sharedlibrary-events true")
+        self.addTearDownHook(
+            lambda: self.runCmd(
+                "settings set target.process.stop-on-sharedlibrary-events false"
+            )
+        )
+
+        self.server.responder = AcceleratorResponder(
+            [], stop_replies=["T05thread:1;reason:dyld;"]
+        )
+        target = self.createTarget("accelerator.yaml")
+        process = self.connect(target)
+        self.server.responder.library_infos = [
+            {"pathname": lib, "load": True, "load_address": 0x10000000}
+        ]
+
+        self.assertSuccess(process.Continue())
+
+        self.assertEqual(self.server.responder.cont_queries, 1)
+        self.assertEqual(self.server.responder.dyld_queries, 2)
+        self.assertIn('"full":false', self.server.responder.last_dyld_packet)
+        module = self.find_module(target, lib)
+        self.assertIsNotNone(module, "library should be loaded into the target")
+        self.assert_text_loaded_at(target, module, 0x10001000)
+        self.assertStopReason(
+            process.GetSelectedThread().GetStopReason(),
+            lldb.eStopReasonDynamicLoader,
+        )
 
     def test_accelerator_lldb_settings_not_supported(self):
         """The loader is not used unless the server selects it by name."""

@@ -526,6 +526,9 @@ public:
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
+  cl::LibraryOptionsContext &getLibraryOptions() const {
+    return Context->getLibraryOptions();
+  }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
 
