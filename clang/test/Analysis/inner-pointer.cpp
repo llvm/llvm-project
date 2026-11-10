@@ -25,6 +25,8 @@ T *__addressof(T &arg);
 
 char *data(std::string &c);
 
+string to_string(int);
+
 } // end namespace std
 
 void consume(const char *) {}
@@ -436,4 +438,11 @@ void no_CXXRecordDecl() {
 
 void checkReference(std::string &s) {
   const char *c = s.c_str();
+}
+
+const char *GH59870(int value) {
+  thread_local std::string retval;
+
+  retval = std::to_string(value);
+  return retval.c_str(); // no-warning
 }

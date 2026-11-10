@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -verify %s
 
 template <typename T> void clang_analyzer_dump(T);
 template <typename T> void clang_analyzer_value(T);
@@ -98,4 +98,28 @@ void nestedLazyCompoundVal(List* n) {
     }
   }
   delete w;
+}
+
+struct GH60694_Node { GH60694_Node *parent; };
+
+void GH60694(GH60694_Node *a, GH60694_Node *b) {
+  if (a->parent)
+    return;
+  *a = *b;
+  a->parent->parent = 0;
+}
+
+void free(void *);
+
+struct GH26595_List { GH26595_List *next; };
+
+GH26595_List *GH26595(GH26595_List *item) {
+  GH26595_List *next = item->next;
+  if (next) {
+    *item = *next;
+    free(next);
+    return item->next; // no-warning
+  }
+
+  return item;
 }

@@ -22,3 +22,11 @@ int compare(Data &a, Data &b) {
 
   return compare(*aData, *bData); // no-warning
 }
+
+void GH3206(char* a, char* b) {
+  if (a != b) {
+    if (a != nullptr || b == nullptr) {
+			a[0] = '\0'; // no-warning
+		}
+  }
+}

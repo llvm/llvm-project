@@ -120,3 +120,30 @@ void test_constant_p(void *ptr) {
   clang_analyzer_eval(__builtin_constant_p(k - 3) == 1); // expected-warning {{TRUE}}
   clang_analyzer_eval(__builtin_constant_p(ptr == 0)); // expected-warning {{FALSE}}
 }
+
+#ifdef _WIN32
+namespace GH39448 {
+struct A { int someApi(); };
+
+int testAssert(A* a) {
+  __assume(a != nullptr);
+  return a->someApi();
+}
+
+int testAssert2(int* a) {
+  __assume(a != nullptr);
+  return *a;
+}
+
+int testAssert3(A* a) {
+  __assume(a);
+  return a->someApi();
+}
+
+int testAssert4(int* a) {
+  __assume(a);
+  return *a;
+}
+
+} // namespace GH39448
+#endif

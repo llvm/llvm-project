@@ -151,3 +151,25 @@ void b(void) {
       foo();
   }
 } // no-crash
+
+float GH49330(int nValues, int x) {
+  int sqr = nValues * nValues;
+  float array[sqr];
+
+  for(unsigned long i = 0; i < sqr; ++i) {
+    array[i] = 0;
+  }
+
+  float sum = 0;
+  for (int i = 0; i < nValues; i++){
+    for (int j = 0; j < nValues; j++) {
+      sum += x * array[i + nValues * j]; // no-warning
+    }
+  }
+
+  if ( x < 12 ) {
+    GH49330(nValues, x+1);
+  }
+
+  return sum;
+}

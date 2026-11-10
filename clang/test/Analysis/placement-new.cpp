@@ -485,3 +485,15 @@ void test22() {
 }
 
 } // namespace testStructAlign
+
+namespace GH56264 {
+struct S {
+  int x;
+};
+
+void test() {
+  S arr[4];
+  ::new (arr + 1) S[1]; // no-warning
+}
+
+} // namespace GH56264

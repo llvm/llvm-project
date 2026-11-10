@@ -1,12 +1,12 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
 // RUN:     -verify=expected,noassumeone,eagerlyassume,combo %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
 // RUN:     -analyzer-config eagerly-assume=false \
 // RUN:     -verify=expected,noassumeone,noeagerlyassume,combo %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
 // RUN:     -analyzer-config assume-at-least-one-iteration=true \
 // RUN:     -verify=expected,eagerlyassume,combo %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
 // RUN:     -analyzer-config assume-at-least-one-iteration=true,eagerly-assume=false \
 // RUN:     -verify=expected,noeagerlyassume %s
 
@@ -259,4 +259,18 @@ void onlyLoopConditions(int arg) {
   }
 
   clang_analyzer_dump(i); // expected-warning {{1}} expected-warning {{2}} expected-warning {{3}} expected-warning {{4}}
+}
+
+void GH20099(const unsigned char n) {
+
+  int buf[2][4] = {{0,0,0,0},{0,0,0,0}};
+  unsigned char j,k,l,x;
+
+  for (l = n - 1; l >= 1; l--)
+    x = 0;
+
+  for (j = n - 1; j >= 1; j--) {
+    for (k = 0; k <= j - 1; k++)
+      x = buf[k][j]; // no-warning
+  }
 }
