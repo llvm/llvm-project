@@ -26,7 +26,7 @@ define <2 x float> @f32x2_splat_two_src(<2 x float> %a, <2 x float> %b) {
 
 define <2 x float> @f32x2_broadcast_lane1(<2 x float> %v) {
 ; CHECK-LABEL: 'f32x2_broadcast_lane1'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 3 for instruction: %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT: Cost Model: Found an estimated cost of 0 for instruction: %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> <i32 1, i32 1>
   %s = shufflevector <2 x float> %v, <2 x float> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x float> %s
 }
