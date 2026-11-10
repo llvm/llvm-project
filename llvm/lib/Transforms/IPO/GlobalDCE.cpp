@@ -274,12 +274,18 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Changed = false;
 
   // The algorithm first computes the set L of global variables that are
-  // trivially live.  Then it walks the initialization of these variables to
-  // compute the globals used to initialize them, which effectively builds a
-  // directed graph where nodes are global variables, and an edge from A to B
-  // means B is used to initialize A.  Finally, it propagates the liveness
-  // information through the graph starting from the nodes in L. Nodes note
-  // marked as alive are discarded.
+  // trivially live.
+  //
+  // Then it walks the initialization of these variables to compute the globals
+  // used to initialize them, which effectively builds a directed graph where
+  // nodes are global variables, and an edge from A to B means B is used to
+  // initialize A.
+  //
+  // Finally, it propagates the liveness information through the graph starting
+  // from the nodes in L. A virtual call only keeps a virtual function alive
+  // when its vtable is also live.
+  //
+  // Nodes not marked as alive are discarded.
 
   // Remove empty functions from the global ctors list.
   Changed |= optimizeGlobalCtorsList(
