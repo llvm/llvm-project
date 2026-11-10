@@ -154,6 +154,8 @@ bool lowerDynamicLocalMemory(Module &M, const SPIRVTargetMachine &TM) {
     Function *NewF = appendKernelParam(*F, LocalPtrTy);
     IRBuilder<> Builder(NewF->getEntryBlock().getFirstNonPHIOrAlloca());
     Builder.CreateStore(NewF->getArg(NewF->arg_size() - 1), Slot);
+    NewF->setMemoryEffects(NewF->getMemoryEffects() |
+                           MemoryEffects::otherMemOnly(ModRefInfo::ModRef));
   }
 
   return true;
