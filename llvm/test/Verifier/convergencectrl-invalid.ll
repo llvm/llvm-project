@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Entry or anchor intrinsic cannot have a convergencectrl token operand.
 ; CHECK-NEXT: %t04_tok2 = call token

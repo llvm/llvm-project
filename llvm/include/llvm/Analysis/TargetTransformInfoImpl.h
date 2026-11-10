@@ -116,6 +116,8 @@ public:
 
   virtual uint64_t getMaxMemIntrinsicInlineSizeThreshold() const { return 64; }
 
+  virtual uint64_t getMaxBoundedMemSetInlineSize() const { return 0; }
+
   // Although this default value is arbitrary, it is not random. It is assumed
   // that a condition that evaluates the same way by a higher percentage than
   // this is best represented as control flow. Therefore, the default value N
@@ -316,6 +318,11 @@ public:
   virtual bool isLegalAddScalableImmediate(int64_t Imm) const { return false; }
 
   virtual bool isLegalICmpImmediate(int64_t Imm) const { return false; }
+
+  virtual bool preferLoopExitWithEqualityComparison(const ICmpInst &,
+                                                    const APInt &) const {
+    return false;
+  }
 
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                      int64_t BaseOffset, bool HasBaseReg,
@@ -1218,6 +1225,12 @@ public:
   virtual bool isProfitableToSinkOperands(Instruction *I,
                                           SmallVectorImpl<Use *> &Ops) const {
     return false;
+  }
+
+  virtual bool isProfitableToSinkOperands(Instruction *I,
+                                          SmallVectorImpl<Use *> &Ops,
+                                          const LoopInfo *) const {
+    return isProfitableToSinkOperands(I, Ops);
   }
 
   virtual bool isVectorShiftByScalarCheap(Type *Ty) const { return false; }

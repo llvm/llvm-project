@@ -2446,9 +2446,6 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     }
   }
 
-  // We don't track kills for reserved registers.
-  MRI->clearKillFlags(CP.getSrcReg());
-
   return true;
 }
 
@@ -3925,12 +3922,6 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   // Join RHS into LHS.
   LHS.join(RHS, LHSVals.getAssignments(), RHSVals.getAssignments(), NewVNInfo);
 
-  // Kill flags are going to be wrong if the live ranges were overlapping.
-  // Eventually, we should simply clear all kill flags when computing live
-  // ranges. They are reinserted after register allocation.
-  MRI->clearKillFlags(LHS.reg());
-  MRI->clearKillFlags(RHS.reg());
-
   if (!EndPoints.empty()) {
     // Recompute the parts of the live range we had to remove because of
     // CR_Replace conflicts.
@@ -4323,7 +4314,9 @@ void RegisterCoalescer::joinAllIntervals() {
     MBBs.push_back(MBBPriorityInfo(&MBB, Loops->getLoopDepth(&MBB),
                                    JoinSplitEdges && isSplitEdge(&MBB)));
   }
-  array_pod_sort(MBBs.begin(), MBBs.end(), compareMBBPriority);
+  llvm::sort(MBBs, [](const MBBPriorityInfo &LHS, const MBBPriorityInfo &RHS) {
+    return compareMBBPriority(&LHS, &RHS) < 0;
+  });
 
   // Coalesce intervals in MBB priority order.
   unsigned CurrDepth = std::numeric_limits<unsigned>::max();

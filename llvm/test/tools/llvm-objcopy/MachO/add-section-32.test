@@ -20,6 +20,7 @@
 # RUN:   | FileCheck %s --check-prefixes=COMMON,CASE3
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007

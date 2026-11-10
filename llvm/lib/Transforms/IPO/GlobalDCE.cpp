@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "IPOOptions.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
@@ -23,7 +25,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
@@ -58,10 +59,6 @@ INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce", "Dead Global Elimination",
 
 // Public interface to the GlobalDCEPass.
 ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCELegacyPass(); }
-
-static cl::opt<bool>
-    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
-                cl::desc("Enable virtual function elimination"));
 
 STATISTIC(NumAliases  , "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
@@ -218,6 +215,10 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
       &M, Intrinsic::type_checked_load_relative);
 
+  // Keep track of which (function, type id, offset) triples we've already
+  // scanned, to prevent repeated work.
+  DenseSet<std::tuple<Function *, Metadata *, uint64_t>> ScannedLoads;
+
   auto scan = [&](Function *CheckedLoadFunc) {
     if (!CheckedLoadFunc)
       return;
@@ -232,7 +233,10 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
       auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
 
       if (Offset) {
-        ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
+        if (ScannedLoads
+                .insert({CI->getFunction(), TypeId, Offset->getZExtValue()})
+                .second)
+          ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
       } else {
         // type.checked.load with a non-constant offset, so assume every entry
         // in every matching vtable is used.
@@ -248,7 +252,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
 }
 
 void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
-  if (!ClEnableVFE)
+  if (!getIPOOptions(M).enable_vfe)
     return;
 
   // If the Virtual Function Elim module flag is present and set to zero, then

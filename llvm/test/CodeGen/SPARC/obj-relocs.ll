@@ -14,11 +14,13 @@
 ; CHECK-PIC:      Relocations [
 ; CHECK-PIC:         0x{{[0-9,A-F]+}} R_SPARC_PC22 _GLOBAL_OFFSET_TABLE_ 0x4
 ; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_PC10 _GLOBAL_OFFSET_TABLE_ 0x8
-; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOT22 AGlobalVar 0x0
-; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOT10 AGlobalVar 0x0
-; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOT22 .L.mystr 0x0
-; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOT10 .L.mystr 0x0
+; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP_HIX22 AGlobalVar 0x0
+; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP_LOX10 AGlobalVar 0x0
+; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP AGlobalVar 0x0
+; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP_HIX22 .L.mystr 0x0
+; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP_LOX10 .L.mystr 0x0
 ; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_WPLT30 bar 0x0
+; CHECK-PIC-NEXT:    0x{{[0-9,A-F]+}} R_SPARC_GOTDATA_OP .L.mystr 0x0
 ; CHECK-PIC:      ]
 
 

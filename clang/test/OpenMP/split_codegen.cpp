@@ -173,6 +173,8 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK1:       for.end11:
+// CHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK1-NEXT:    store i32 20, ptr [[TMP14]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1085,6 +1087,8 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK2:       for.end11:
+// CHECK2-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK2-NEXT:    store i32 20, ptr [[TMP14]], align 4
 // CHECK2-NEXT:    ret void
 //
 //

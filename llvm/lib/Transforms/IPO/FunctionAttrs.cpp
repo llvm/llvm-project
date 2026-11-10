@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -94,19 +95,6 @@ STATISTIC(NumThinLinkNoRecurse,
           "Number of functions marked as norecurse during thinlink");
 STATISTIC(NumThinLinkNoUnwind,
           "Number of functions marked as nounwind during thinlink");
-
-static cl::opt<bool> EnablePoisonArgAttrPropagation(
-    "enable-poison-arg-attr-prop", cl::init(true), cl::Hidden,
-    cl::desc("Try to propagate nonnull and nofpclass argument attributes from "
-             "callsites to caller functions."));
-
-static cl::opt<bool> DisableNoUnwindInference(
-    "disable-nounwind-inference", cl::Hidden,
-    cl::desc("Stop inferring nounwind attribute during function-attrs pass"));
-
-static cl::opt<bool> DisableNoFreeInference(
-    "disable-nofree-inference", cl::Hidden,
-    cl::desc("Stop inferring nofree attribute during function-attrs pass"));
 
 static cl::opt<bool> DisableThinLTOPropagation(
     "disable-thinlto-funcattrs", cl::init(true), cl::Hidden,
@@ -207,20 +195,25 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    if (auto *Call = dyn_cast<CallBase>(&I)) {
-      // We can optimistically ignore calls to functions in the same SCC, with
-      // two caveats:
-      //  * Calls with operand bundles may have additional effects.
-      //  * Argument memory accesses may imply additional effects depending on
-      //    what the argument location is.
-      if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
-          SCCNodes.count(Call->getCalledFunction())) {
-        // Keep track of which additional locations are accessed if the SCC
-        // turns out to access argmem.
-        addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR);
-        continue;
-      }
+    // We can optimistically ignore calls to functions in the same SCC, with
+    // two caveats:
+    //  * Calls with operand bundles may have additional effects.
+    //  * Argument memory accesses may imply additional effects depending on
+    //    what the argument location is.
+    auto *Call = dyn_cast<CallBase>(&I);
+    if (Call && !Call->hasOperandBundles() && Call->getCalledFunction() &&
+        SCCNodes.count(Call->getCalledFunction())) {
+      // Keep track of which additional locations are accessed if the SCC
+      // turns out to access argmem.
+      addArgLocs(RecursiveArgME, Call, ModRefInfo::ModRef, AAR);
+      continue;
+    }
 
+    // Once ME covers OrigME, the returned effects are final.
+    if ((ME & OrigME) == OrigME)
+      continue;
+
+    if (Call) {
       MemoryEffects CallME = AAR.getMemoryEffects(Call);
 
       // If the call doesn't access memory, we're done.
@@ -1019,8 +1012,8 @@ static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
 /// try to propagate attributes from the callsite's arguments to the parent's
 /// arguments. This may be important because inlining can cause information loss
 /// when attribute knowledge disappears with the inlined call.
-static bool addArgumentAttrsFromCallsites(Function &F) {
-  if (!EnablePoisonArgAttrPropagation)
+static bool addArgumentAttrsFromCallsites(const IPOOptions &Opts, Function &F) {
+  if (!Opts.enable_poison_arg_attr_prop)
     return false;
 
   bool Changed = false;
@@ -1235,7 +1228,7 @@ static bool inferInitializes(Argument &A, Function &F) {
 }
 
 /// Deduce nocapture attributes for the SCC.
-static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
+static void addArgumentAttrs(const IPOOptions &Opts, const SCCNodeSet &SCCNodes,
                              SmallPtrSet<Function *, 8> &Changed,
                              bool SkipInitializes) {
   ArgumentGraph AG;
@@ -1255,7 +1248,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     if (!F->hasExactDefinition())
       continue;
 
-    if (addArgumentAttrsFromCallsites(*F))
+    if (addArgumentAttrsFromCallsites(Opts, *F))
       Changed.insert(F);
 
     // Functions that are readonly (or readnone) and nounwind and don't return
@@ -1956,11 +1949,12 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
 /// instruction for compliance to the attribute assumptions.
 ///
 /// Returns true if any changes to function attributes were made.
-static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
+static void inferAttrsFromFunctionBodies(const IPOOptions &Opts,
+                                         const SCCNodeSet &SCCNodes,
                                          SmallPtrSet<Function *, 8> &Changed) {
   AttributeInferer AI;
 
-  if (!DisableNoUnwindInference)
+  if (Opts.nounwind_inference)
     // Request to infer nounwind attribute for all the functions in the SCC if
     // every callsite within the SCC is not throwing (except for calls to
     // functions within the SCC). Note that nounwind attribute suffers from
@@ -1982,7 +1976,7 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
         },
         /* RequiresExactDefinition= */ true});
 
-  if (!DisableNoFreeInference)
+  if (Opts.nofree_inference)
     // Request to infer nofree attribute for all the functions in the SCC if
     // every callsite within the SCC does not directly or indirectly free
     // memory (except for calls to functions within the SCC). Note that nofree
@@ -2221,18 +2215,19 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   if (Nodes.SCCNodes.empty())
     return {};
 
+  const IPOOptions &Opts = getIPOOptions(*Nodes.SCCNodes.front());
   SmallPtrSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
     // ArgAttrsOnly means to only infer attributes that may aid optimizations
     // on the *current* function. "initializes" attribute is to aid
     // optimizations (like DSE) on the callers, so skip "initializes" here.
-    addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
+    addArgumentAttrs(Opts, Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
     return Changed;
   }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
   addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
-  addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
+  addArgumentAttrs(Opts, Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
   addColdAttrs(Nodes.SCCNodes, Changed);
@@ -2240,7 +2235,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   addNoUndefAttrs(Nodes.SCCNodes, Changed);
   addNoAliasAttrs(Nodes.SCCNodes, Changed);
   addNonNullAttrs(Nodes.SCCNodes, Changed);
-  inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
+  inferAttrsFromFunctionBodies(Opts, Nodes.SCCNodes, Changed);
   addNoRecurseAttrs(Nodes.SCCNodes, Changed);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred

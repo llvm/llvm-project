@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fexceptions -fcxx-exceptions -std=c++1z -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fexceptions -fcxx-exceptions -std=c++1z -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s %}
 
 // CHECK-LABEL: define {{.*}} @_Z11builtin_newm(
 // CHECK: call {{.*}} @_Znwm(

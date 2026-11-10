@@ -27,12 +27,13 @@ static_library("Interpreter") {
     "CodeCompletion.cpp",
     "DeviceOffload.cpp",
     "IncrementalAction.cpp",
-    "IncrementalExecutor.cpp",
+    "IncrementalExecutorBuilder.cpp",
     "IncrementalParser.cpp",
     "Interpreter.cpp",
     "InterpreterUtils.cpp",
     "InterpreterValuePrinter.cpp",
     "OrcIncrementalExecutor.cpp",
+    "OrcIncrementalExecutorBuilder.cpp",
     "Value.cpp",
   ]
 }

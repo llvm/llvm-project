@@ -58,6 +58,8 @@ private:
   void printSWaitLoadcntDscntImm(uint64_t Imm, raw_ostream &OS) const;
   /// Print the string to represent s_delay_alu immediate value
   void printSDelayAluImm(int64_t Imm, llvm::raw_ostream &OS) const;
+  /// Prints the string to represent an asyncmark stage mask.
+  void printAsyncStageMaskImm(int64_t Imm, raw_ostream &OS) const;
 
   /// Parse the immediate pseudo literal for s_wait_alu
   bool parseSWaitAluImmMnemonic(
@@ -79,6 +81,10 @@ private:
       const unsigned int OpIdx, int64_t &Imm, llvm::StringRef &Src,
       llvm::MIRFormatter::ErrorCallbackType &ErrorCallback) const;
 
+  /// Parse the immediate pseudo literal for an asyncmark stage mask
+  bool parseAsyncStageMaskImmMnemonic(
+      const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+      MIRFormatter::ErrorCallbackType &ErrorCallback) const;
 };
 
 } // end namespace llvm

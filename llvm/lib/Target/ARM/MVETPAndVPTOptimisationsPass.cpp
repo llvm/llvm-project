@@ -289,6 +289,8 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
         continue;
 
       LLVM_DEBUG(dbgs() << "Found LR use in predecessors, reverting: " << MI);
+      Register DefReg = LoopStart->getOperand(0).getReg();
+      Register SrcReg = LoopStart->getOperand(1).getReg();
 
       // Create a t2DoLoopStart at the end of the preheader.
       MachineInstrBuilder MIB =
@@ -297,11 +299,15 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
       MIB.add(LoopStart->getOperand(0));
       MIB.add(LoopStart->getOperand(1));
 
-      // Make sure to remove the kill flags, to prevent them from being invalid.
-      LoopStart->getOperand(1).setIsKill(false);
-
       // Revert the t2WhileLoopStartLR to a CMP and Br.
       RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
+      // If we looked through a COPY to find the WhileLoopStart, replace it's
+      // use with SrcReg.
+      for (MachineOperand &MO :
+           make_early_inc_range(MRI->use_operands(DefReg))) {
+        if (MO.getParent()->getOpcode() == TargetOpcode::COPY)
+          MO.setReg(SrcReg);
+      }
       return MIB;
     }
 
@@ -639,9 +645,8 @@ MachineInstr &MVETPAndVPTOptimisations::ReplaceRegisterUseWithVPNOT(
           .addReg(Target);
   addUnpredicatedMveVpredNOp(MIBuilder);
 
-  // Make the user use NewResult instead, and clear its kill flag.
+  // Make the user use NewResult instead.
   User.setReg(NewResult);
-  User.setIsKill(false);
 
   LLVM_DEBUG(dbgs() << "  Inserting VPNOT (for spill prevention): ";
              MIBuilder.getInstr()->dump());
@@ -661,20 +666,11 @@ static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
 
   MachineInstr &VPNOT = *Iter;
   Register VPNOTResult = VPNOT.getOperand(0).getReg();
-  Register VPNOTOperand = VPNOT.getOperand(1).getReg();
 
   // Whether the VPNOT will need to be moved, and whether we found a user of the
   // VPNOT.
   bool MustMove = false, HasUser = false;
-  MachineOperand *VPNOTOperandKiller = nullptr;
   for (; Iter != MBB.end(); ++Iter) {
-    if (MachineOperand *MO =
-            Iter->findRegisterUseOperand(VPNOTOperand, /*TRI=*/nullptr,
-                                         /*isKill*/ true)) {
-      // If we find the operand that kills the VPNOTOperand's result, save it.
-      VPNOTOperandKiller = MO;
-    }
-
     if (Iter->findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr) != -1) {
       MustMove = true;
       continue;
@@ -691,11 +687,6 @@ static bool MoveVPNOTBeforeFirstUser(MachineBasicBlock &MBB,
     LLVM_DEBUG(dbgs() << "Moving: "; VPNOT.dump(); dbgs() << "  Before: ";
                Iter->dump());
     MBB.splice(Iter, &MBB, VPNOT.getIterator());
-    // If we move the instr, and its operand was killed earlier, remove the kill
-    // flag.
-    if (VPNOTOperandKiller)
-      VPNOTOperandKiller->setIsKill(false);
-
     break;
   }
   return HasUser;
@@ -811,8 +802,6 @@ bool MVETPAndVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
             MO->setReg(LastVPNOTResult);
             Modified = true;
           }
-
-          MO->setIsKill(false);
         }
 
         // If this is an unpredicated VPNOT on
@@ -852,22 +841,8 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
   // We'll only replace VCMPs with VPNOTs when this is not null, and when the
   // current VCMP is the opposite of PrevVCMP.
   MachineInstr *PrevVCMP = nullptr;
-  // If we find an instruction that kills the result of PrevVCMP, we save the
-  // operand here to remove the kill flag in case we need to use PrevVCMP's
-  // result.
-  MachineOperand *PrevVCMPResultKiller = nullptr;
 
   for (MachineInstr &Instr : MBB.instrs()) {
-    if (PrevVCMP) {
-      if (MachineOperand *MO =
-              Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
-                                           /*TRI=*/nullptr, /*isKill*/ true)) {
-        // If we come across the instr that kills PrevVCMP's result, record it
-        // so we can remove the kill flag later if we need to.
-        PrevVCMPResultKiller = MO;
-      }
-    }
-
     // Ignore predicated instructions.
     if (getVPTInstrPredicate(Instr) != ARMVCC::None)
       continue;
@@ -899,16 +874,9 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
                MIBuilder.getInstr()->dump(); dbgs() << "  Removed VCMP: ";
                Instr.dump());
 
-    // If we found an instruction that uses, and kills PrevVCMP's result,
-    // remove the kill flag.
-    if (PrevVCMPResultKiller)
-      PrevVCMPResultKiller->setIsKill(false);
-
-    // Finally, mark the old VCMP for removal and reset
-    // PrevVCMP/PrevVCMPResultKiller.
+    // Finally, mark the old VCMP for removal and reset PrevVCMP.
     DeadInstructions.push_back(&Instr);
     PrevVCMP = nullptr;
-    PrevVCMPResultKiller = nullptr;
   }
 
   for (MachineInstr *DeadInstruction : DeadInstructions)
@@ -963,7 +931,6 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
 
     unsigned NotImm = ~Imm & 0xffff;
     if (LastVPTReg != 0 && LastVPTReg != VPR && LastVPTImm == Imm) {
-      MRI->clearKillFlags(LastVPTReg);
       Instr.getOperand(PIdx + 1).setReg(LastVPTReg);
       if (MRI->use_empty(VPR)) {
         DeadInstructions.insert(Copy);
@@ -988,7 +955,6 @@ bool MVETPAndVPTOptimisations::ReplaceConstByVPNOTs(MachineBasicBlock &MBB,
         if (MRI->hasOneUse(GPR))
           DeadInstructions.insert(MRI->getVRegDef(GPR));
       }
-      MRI->clearKillFlags(LastVPTReg);
       LLVM_DEBUG(dbgs() << "Adding VPNot: " << *VPNot << "  to replace use at "
                         << Instr);
       VPR = NewVPR;

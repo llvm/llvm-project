@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -O2 -disable-llvm-passes -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu %s -O2 -disable-llvm-passes -emit-llvm -o - | FileCheck %s %}
 struct A { virtual ~A(); };
 template<typename T> struct B : virtual A {
   ~B() override {}

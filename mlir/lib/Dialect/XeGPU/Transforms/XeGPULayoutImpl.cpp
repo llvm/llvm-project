@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -21,15 +22,18 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
+#include <functional>
 #include <numeric>
 
 using namespace mlir;
@@ -132,23 +136,82 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
   return layout;
 }
 
-// Returns true if `op` is safe and cheap to clone (no side effects, no
-// regions, and all operands are themselves trivially rematerializable, e.g.
-// block-arg-free pure value generators such as `vector.step`, splat
-// `arith.constant`, or `vector.create_mask` whose operands are constants).
-bool xegpu::isTriviallyRematerializable(Operation *op) {
-  if (!op || op->getNumRegions() != 0)
+static constexpr unsigned kMaxRematerializableChainOps = 16;
+
+/// Accept pure vector generators and elementwise ops that preserve vector
+/// shape. Generators have no vector operands; elementwise ops share their
+/// result layout with their vector operands, so the chain needs no layout
+/// inference.
+static bool isLayoutPreservingVectorProducer(Operation *op) {
+  if (op->getNumResults() != 1 || op->getNumRegions() != 0 ||
+      !isa<VectorType>(op->getResult(0).getType()) || !isMemoryEffectFree(op))
     return false;
-  if (!isMemoryEffectFree(op))
-    return false;
-  for (Value v : op->getOperands()) {
-    Operation *defOp = v.getDefiningOp();
-    if (!defOp)
+  if (auto constant = dyn_cast<arith::ConstantOp>(op)) {
+    auto value = dyn_cast<DenseElementsAttr>(constant.getValue());
+    return value && value.isSplat();
+  }
+  if (isa<vector::StepOp, vector::CreateMaskOp>(op))
+    return true;
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
+    return !isa<VectorType>(broadcast.getSource().getType());
+  return OpTrait::hasElementwiseMappableTraits(op);
+}
+
+/// Collect each eligible producer once, producers first, for cloning with an
+/// IRMapping. Reject chains exceeding the duplication limit or reaching an
+/// unsupported producer or vector block argument.
+static bool collectRematerializableChain(Operation *root,
+                                         SmallVectorImpl<Operation *> &chain) {
+  // Re-push each op below its producers to obtain an iterative post-order walk.
+  SmallVector<std::pair<Operation *, bool>> worklist{{root, false}};
+  DenseSet<Operation *> visited;
+  while (!worklist.empty()) {
+    auto [op, expanded] = worklist.pop_back_val();
+    if (expanded) {
+      chain.push_back(op);
+      continue;
+    }
+    if (!visited.insert(op).second)
+      continue;
+    if (visited.size() > kMaxRematerializableChainOps ||
+        !isLayoutPreservingVectorProducer(op))
       return false;
-    if (!isTriviallyRematerializable(defOp))
-      return false;
+    worklist.emplace_back(op, true);
+    for (Value operand : op->getOperands()) {
+      if (!isa<VectorType>(operand.getType()))
+        continue;
+      Operation *producer = operand.getDefiningOp();
+      if (!producer)
+        return false;
+      if (!visited.contains(producer))
+        worklist.emplace_back(producer, false);
+    }
   }
   return true;
+}
+
+bool xegpu::isTriviallyRematerializable(Operation *op) {
+  if (!op)
+    return false;
+  SmallVector<Operation *> chain;
+  return collectRematerializableChain(op, chain);
+}
+
+Value xegpu::rematerialize(OpBuilder &builder, Value value) {
+  Operation *producer = value.getDefiningOp();
+  SmallVector<Operation *> chain;
+  if (!producer || !collectRematerializableChain(producer, chain))
+    return nullptr;
+  // Clone producers first so vector operands map to clones; scalars stay
+  // shared.
+  OpBuilder::InsertionGuard guard(builder);
+  IRMapping mapping;
+  for (Operation *op : chain) {
+    builder.setInsertionPointAfter(op);
+    Operation *clone = builder.clone(*op, mapping);
+    removeLayoutAttrs(clone);
+  }
+  return mapping.lookup(value);
 }
 
 // For regular operations: First the result layouts are propagated from uses.
@@ -1155,6 +1218,55 @@ static std::optional<SmallVector<int64_t>> get2DBlockIOInstDataLayout(
   return instData;
 }
 
+/// Picks the subgroup layout for a 2D block IO op (store_nd / prefetch_nd).
+/// Every supported block (height, width) dividing the shape is tried, largest
+/// area first and the more square block first among equal areas, until one
+/// admits a subgroup layout.
+static xegpu::DistributeLayoutAttr get2DBlockIOSubgroupLayout(
+    MLIRContext *context, ArrayRef<int64_t> dataShape, Type elemTy,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    int numSg) {
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+  int rank = dataShape.size();
+  assert(rank >= 2 && "dataShape must be at least 2D for 2D-block IO");
+
+  SmallVector<SmallVector<int64_t>> instDataCandidates;
+  for (int width : bWidths) {
+    if (width <= 0 || dataShape[rank - 1] % width != 0)
+      continue;
+    for (int height : bHeights) {
+      if (height <= 0 || dataShape[rank - 2] % height != 0)
+        continue;
+      SmallVector<int64_t> instData(rank, 1);
+      instData[rank - 1] = width;
+      instData[rank - 2] = height;
+      instDataCandidates.push_back(std::move(instData));
+    }
+  }
+  // Largest area first; among equal areas, the more square block first (e.g.
+  // 16x16 before 8x32 before 4x64), then the wider one.
+  llvm::stable_sort(instDataCandidates, [&](ArrayRef<int64_t> lhs,
+                                            ArrayRef<int64_t> rhs) {
+    int64_t hL = lhs[rank - 2], wL = lhs[rank - 1];
+    int64_t hR = rhs[rank - 2], wR = rhs[rank - 1];
+    if (hL * wL != hR * wR)
+      return hL * wL > hR * wR;
+    if (std::min(hL, wL) != std::min(hR, wR))
+      return std::min(hL, wL) > std::min(hR, wR);
+    return wL > wR;
+  });
+
+  for (ArrayRef<int64_t> instData : instDataCandidates) {
+    auto sgLayouts = getSgLayoutCandidates(dataShape, instData, numSg);
+    if (!sgLayouts.empty())
+      return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
+  }
+  return nullptr;
+}
+
 /// Helper function to compute inst_data vectors for DPAS operands A, B, and
 /// C/D. Look up the uArch table and search for the largest supported block size
 /// that divides the data shape
@@ -1446,40 +1558,61 @@ getDpasSubgroupLayouts(
     mlir::MLIRContext *context, VectorType aTy, VectorType bTy, VectorType cdTy,
     xegpu::DistributeLayoutAttr consumerLayout, int numSg,
     std::tuple<SmallVector<int64_t>, SmallVector<int64_t>, SmallVector<int64_t>>
-        instDataVecs) {
-  auto [instDataA, instDataB, instDataCD] = instDataVecs;
+        instDataVecs,
+    const xegpu::uArch::MMAInstructionInterface *uArchInstruction) {
+  SmallVector<int64_t> instDataA = std::get<0>(instDataVecs);
+  SmallVector<int64_t> instDataB = std::get<1>(instDataVecs);
+  SmallVector<int64_t> instDataCD = std::get<2>(instDataVecs);
 
   std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
   if (consumerLayout && consumerLayout.isForWorkgroup()) {
     consumerSgLayout = consumerLayout.getEffectiveSgLayoutAsInt();
   }
 
-  // Get all valid layouts for A, B and C/D operands
-  auto layoutsA = getSgLayoutCandidates(aTy.getShape(), instDataA, numSg,
-                                        /*broadcastDim=*/aTy.getRank() - 1);
-  auto layoutsB = getSgLayoutCandidates(bTy.getShape(), instDataB, numSg,
-                                        /*broadcastDim=*/bTy.getRank() - 2);
-  auto layoutsCD = getSgLayoutCandidates(cdTy.getShape(), instDataCD, numSg);
-  if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
-    return std::nullopt;
+  // Picks the best subgroup layout common to A, B and C/D for the given
+  // inst_data, or std::nullopt if there is none.
+  auto pickSgLayout = [&]() -> std::optional<LayoutRepresentation> {
+    auto layoutsA = getSgLayoutCandidates(aTy.getShape(), instDataA, numSg,
+                                          /*broadcastDim=*/aTy.getRank() - 1);
+    auto layoutsB = getSgLayoutCandidates(bTy.getShape(), instDataB, numSg,
+                                          /*broadcastDim=*/bTy.getRank() - 2);
+    auto layoutsCD = getSgLayoutCandidates(cdTy.getShape(), instDataCD, numSg);
+    if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
+      return std::nullopt;
 
-  // Pick the best subgroup layout
-  std::optional<LayoutRepresentation> bestPick;
-  for (auto &sgLayout : layoutsB) {
-    if (llvm::is_contained(layoutsA, sgLayout) &&
-        llvm::is_contained(layoutsCD, sgLayout)) {
-      // Is in (A and B and CD) and matches consumer -> best pick
-      if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
-        bestPick = sgLayout;
-        break;
+    std::optional<LayoutRepresentation> bestPick;
+    for (auto &sgLayout : layoutsB) {
+      if (llvm::is_contained(layoutsA, sgLayout) &&
+          llvm::is_contained(layoutsCD, sgLayout)) {
+        // Is in (A and B and CD) and matches consumer -> best pick
+        if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout)
+          return sgLayout;
+        // Is in (A and B and CD) layoutsB is ordered from most
+        // balanced to least. So the first one we see is the most balanced
+        // one, remember it and later only update if there is one that matches
+        // the consumer.
+        if (!bestPick)
+          bestPick = sgLayout;
       }
-      // Is in (A and B and CD) layoutsB is ordered from most
-      // balanced to least. So the first one we see is the most balanced one,
-      // remember it and later only update if there is one that matches the
-      // consumer.
-      if (!bestPick)
-        bestPick = sgLayout;
     }
+    return bestPick;
+  };
+
+  // Try supported M (repeat count) values, largest first, until one admits a
+  // common subgroup layout. N and K are fixed, so only M can shrink.
+  int64_t mDimA = aTy.getRank() - 2;
+  int64_t mDimCD = cdTy.getRank() - 2;
+  auto supportedM = uArchInstruction->getSupportedM(aTy.getElementType());
+  llvm::sort(supportedM, std::greater<uint32_t>());
+
+  std::optional<LayoutRepresentation> bestPick;
+  for (unsigned m : supportedM) {
+    if (m == 0 || aTy.getShape()[mDimA] % m != 0)
+      continue;
+    instDataA[mDimA] = m;
+    instDataCD[mDimCD] = m;
+    if ((bestPick = pickSgLayout()))
+      break;
   }
   if (!bestPick)
     return std::nullopt;
@@ -1533,7 +1666,7 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
     return getDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout,
-                                  numSg, *instDataVecs);
+                                  numSg, *instDataVecs, uArchInstruction);
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
     auto [instDataA, instDataB, instDataCD] = *instDataVecs;
     return std::make_tuple(
@@ -1671,8 +1804,9 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
-    auto dpasLayouts = getDpasSubgroupLayouts(
-        context, aTy, bTy, cdTy, consumerLayout, numSg, *instDataVecs);
+    auto dpasLayouts =
+        getDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout, numSg,
+                               *instDataVecs, uArchInstruction);
     if (!dpasLayouts)
       return std::nullopt;
 
@@ -1767,10 +1901,8 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
-    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
-    if (sgLayouts.empty())
-      return nullptr;
-    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
+    return get2DBlockIOSubgroupLayout(context, dataShape, elemTy,
+                                      uArchInstruction, numSg);
   }
 
   return nullptr;
@@ -1823,10 +1955,8 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(numSg > 0 &&
            "Number of subgroups must be provided for sg layout creation.");
-    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
-    if (sgLayouts.empty())
-      return nullptr;
-    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
+    return get2DBlockIOSubgroupLayout(context, dataShape, elemTy,
+                                      uArchInstruction, numSg);
   }
 
   return nullptr;
@@ -1930,10 +2060,16 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     // spread packed lanes over (width 16 for an 8-bit scale needing 16 lanes of
     // 2 elements) cannot be loaded regularly; transformed, it packs down the
     // column instead. A vertical lane_layout is already transposed.
+    // Only switch if a transformed load is possible (checking via a call
+    // to 'get2DBlockIOInstDataLayout') otherwise keep the regularone and leave
+    // the conflict to a convert_layout.
     if (!hasTranspose && !hasTransform &&
         consumerInstData[rank - 1] %
                 (laneLayout[rank - 1] * laneData[rank - 1]) !=
-            0) {
+            0 &&
+        get2DBlockIOInstDataLayout(dataShape, elemTy, uArchInstruction,
+                                   /*transform=*/true,
+                                   /*transpose=*/false)) {
       hasTransform = true;
       std::tie(laneLayout, laneData, order) = compute2DBlockIOLaneLayout(
           dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(),
