@@ -1562,6 +1562,31 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
   expandMemSetAsLoop(MemSet, &TTI);
 }
 
+// Returns the VP memop size data of a bounded memset (or memset.pattern) as
+// prefix sums sorted by value, dropping values the expansion can't see.
+static SmallVector<InstrProfValueData>
+getBoundedMemSetPrefixSum(const Instruction &MemSet, uint64_t MinLen,
+                          uint64_t MaxLen, uint64_t MinStoreSize) {
+  uint64_t TotalCount = 0;
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
+  llvm::sort(ProfData,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Value < B.Value;
+             });
+  SmallVector<InstrProfValueData> MemSetPrefixSum;
+  uint64_t TotalSeenWeight = 0;
+  for (const InstrProfValueData &SizeWeight : ProfData) {
+    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
+        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
+      continue;
+    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
+    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
+  }
+  return MemSetPrefixSum;
+}
+
 static MDNode *
 getBoundedMemSetBranchWeights(uint64_t Size,
                               ArrayRef<InstrProfValueData> MemSetPrefixSum,
@@ -1656,23 +1681,8 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   //     br label %memset_done
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
-  uint64_t TotalCount = 0;
-  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
-      *MemSet, InstrProfValueKind::IPVK_MemOPSize,
-      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
-  llvm::sort(ProfData,
-             [](const InstrProfValueData &A, const InstrProfValueData &B) {
-               return A.Value < B.Value;
-             });
-  SmallVector<InstrProfValueData> MemSetPrefixSum;
-  uint64_t TotalSeenWeight = 0;
-  for (const InstrProfValueData &SizeWeight : ProfData) {
-    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
-        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
-      continue;
-    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
-    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
-  }
+  SmallVector<InstrProfValueData> MemSetPrefixSum =
+      getBoundedMemSetPrefixSum(*MemSet, MinLen, MaxLen, MinStoreSize);
   for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
     if (MinLen < Size) {
@@ -1766,8 +1776,8 @@ void llvm::expandBoundedMemSetPattern(MemSetPatternInst *MemSet,
   //     store i32 7, ptr %dst
   //     br label %memset_pattern_done
   uint64_t TopSize = llvm::bit_floor(MaxCount);
-  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
-      *MemSet->getFunction(), DEBUG_TYPE);
+  SmallVector<InstrProfValueData> MemSetPrefixSum =
+      getBoundedMemSetPrefixSum(*MemSet, MinCount, MaxCount, MinStoreCount);
   Instruction *InsertBefore = MemSet;
   for (uint64_t Size = TopSize; Size >= MinStoreCount; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
@@ -1775,13 +1785,15 @@ void llvm::expandBoundedMemSetPattern(MemSetPatternInst *MemSet,
       IRBuilder<> B(InsertBefore);
       Value *Cond = B.CreateICmpUGE(Count, ConstantInt::get(CountTy, Size),
                                     "count.ge" + Twine(Size));
+      MDNode *BranchWeights = getBoundedMemSetBranchWeights(
+          Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
       if (Size == MinStoreCount) {
         StoreBefore =
-            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, BranchWeights);
       } else {
         Instruction *ElseTerm;
         SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
-                                      &ElseTerm, Weights);
+                                      &ElseTerm, BranchWeights);
         ElseTerm->getParent()->setName("memset_pattern_lt" + Twine(Size));
         InsertBefore = ElseTerm;
       }
