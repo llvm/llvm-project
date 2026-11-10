@@ -10,6 +10,7 @@
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/IfConversion.h"
 #include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -96,9 +97,8 @@ void SystemZCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void SystemZCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add IfConverter
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(IfConverterPass(), PMW);
 }
 
 void SystemZCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {

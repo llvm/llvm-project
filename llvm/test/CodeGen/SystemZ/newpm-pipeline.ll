@@ -132,6 +132,7 @@
 ; O3-NEXT:     tailduplication
 ; O3-NEXT:     machine-cp
 ; O3-NEXT:     post-ra-pseudos
+; O3-NEXT:     if-converter
 ; O3-NEXT:     block-placement
 ; O3-NEXT:     fentry-insert
 ; O3-NEXT:     xray-instrumentation
