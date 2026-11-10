@@ -86,6 +86,12 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv81") {
     Builder.defineMacro("__HEXAGON_V81__");
     Builder.defineMacro("__HEXAGON_ARCH__", "81");
+  } else if (CPU == "hexagonv83") {
+    Builder.defineMacro("__HEXAGON_V83__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "83");
+  } else if (CPU == "hexagonv85") {
+    Builder.defineMacro("__HEXAGON_V85__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "85");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -104,6 +110,12 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasHVXIeeeFp)
     Builder.defineMacro("__HVX_IEEE_FP__");
+
+  if (hasFeature("hlx")) {
+    Builder.defineMacro("__HLX__");
+    Builder.defineMacro("__HLX_ARCH__", "85");
+    Builder.defineMacro("__HLX_LENGTH__", "2048");
+  }
 
   if (hasFeature("audio")) {
     Builder.defineMacro("__HEXAGON_AUDIO__");
@@ -158,6 +170,10 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasHVXIeeeFp = true;
     else if (F == "+audio")
       HasAudio = true;
+    else if (F == "+hlx")
+      HasHLX = true;
+    else if (F == "-hlx")
+      HasHLX = false;
   }
   if (CPU.compare("hexagonv68") >= 0) {
     HasFastHalfType = true;
@@ -253,6 +269,7 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hvx-ieee-fp", HasHVXIeeeFp)
       .Case("long-calls", UseLongCalls)
       .Case("audio", HasAudio)
+      .Case("hlx", HasHLX)
       .Default(false);
 }
 
@@ -269,7 +286,8 @@ static constexpr CPUSuffix Suffixes[] = {
     {{"hexagonv68"}, {"68"}}, {{"hexagonv69"}, {"69"}},
     {{"hexagonv71"}, {"71"}}, {{"hexagonv71t"}, {"71t"}},
     {{"hexagonv73"}, {"73"}}, {{"hexagonv75"}, {"75"}},
-    {{"hexagonv79"}, {"79"}}, {{"hexagonv81"}, {"81"}}};
+    {{"hexagonv79"}, {"79"}}, {{"hexagonv81"}, {"81"}},
+    {{"hexagonv83"}, {"83"}}, {{"hexagonv85"}, {"85"}}};
 
 std::optional<unsigned> HexagonTargetInfo::getHexagonCPURev(StringRef Name) {
   StringRef Arch = Name;

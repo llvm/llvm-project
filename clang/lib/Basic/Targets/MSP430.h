@@ -44,6 +44,7 @@ public:
     IntMaxType = SignedLongLong;
     IntPtrType = SignedInt;
     PtrDiffType = SignedInt;
+    WCharType = SignedInt;
     SigAtomicType = SignedLong;
     resetDataLayout();
   }

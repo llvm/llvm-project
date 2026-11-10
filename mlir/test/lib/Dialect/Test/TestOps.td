@@ -612,6 +612,21 @@ def OpWithBitEnumVerticalBarDirective
   let assemblyFormat = "enum($value) attr-dict";
 }
 
+def TestBitEnumSpaceAttr
+    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
+
+def OpWithBitEnumSpace : TEST_Op<"op_with_bit_enum_space"> {
+  let arguments = (ins TestBitEnumSpaceAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
+}
+
+def OpWithBitEnumSpaceDirective : TEST_Op<"op_with_bit_enum_space_directive"> {
+  let arguments = (ins TestBitEnumSpaceAttr:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "enum($value) (`tag` $tag^)? attr-dict";
+}
+
 // Define a pattern that matches and creates a bit enum attribute.
 def : Pat<(OpWithBitEnum ConstantEnumCase<TestBitEnumAttr, "write|execute">,
                          ConstantAttr<I32Attr, "0">),
@@ -2891,6 +2906,23 @@ def IsolatedRegionYieldOp : TEST_Op<"isolated_region_yield", [
   let arguments = (ins Variadic<AnyType>:$values);
 }
 
+def TypeChangingRegionBranchOp : TEST_Op<"type_changing_region_branch", [
+    RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs", "areTypesCompatible"]>]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$outputs);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let hasCanonicalizer = 1;
+}
+
+def TypeChangingYieldOp : TEST_Op<"type_changing_yield", [
+    Pure, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+}
+
 def RegionIfYieldOp : TEST_Op<"region_if_yield",
       [NoMemoryEffect, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>:$results);
@@ -3643,6 +3675,20 @@ def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
   // The region has one argument of any integer type
   let regions = (region SizedRegion<1>:$region);
   let hasCustomAssemblyFormat = 1;
+}
+
+def TestWithBoundsRegionBranchOp : TEST_Op<"with_bounds_region_branch", [
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Forward the first input to the first region argument, and yield it to the
+    first result. The second region argument and second result have the range
+    of the second input.
+  }];
+  let arguments = (ins I32:$forwarded, I32:$value);
+  let results = (outs I32:$forwardedResult, I32:$inferredResult);
+  let regions = (region SizedRegion<1>:$body);
 }
 
 def TestIncrementOp : TEST_Op<"increment",
@@ -4652,6 +4698,28 @@ def TestPartialAlias : TEST_Op<"partial_alias",
   let arguments = (ins AnyMemRef:$source);
   let results = (outs AnyMemRef:$result);
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Tests `ownsWrappedBlockingUses` by wrapping a single memory access and
+// forwarding promotion methods to it. `disown` disables ownership; `decline`
+// rejects removal of blocking uses.
+def TestOwningAccess : TEST_Op<"owning_access",
+    [DeclareOpInterfaceMethods<PromotableMemOpInterface,
+                               ["ownsWrappedBlockingUses"]>,
+     SingleBlock]> {
+  let arguments = (ins UnitAttr:$disown, UnitAttr:$decline);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    (`disown` $disown^)? (`decline` $decline^)? attr-dict-with-keyword $body
+    (`:` type($results)^)?
+  }];
+}
+
+def TestOwningAccessYield : TEST_Op<"owning_access_yield",
+    [Pure, Terminator, HasParent<"TestOwningAccess">]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+  let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
 //===----------------------------------------------------------------------===//

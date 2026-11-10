@@ -48,6 +48,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
         ":PluginObjectFilePDB",
+        ":PluginObjectFilePECOFF",
         ":PluginProcessUtility",
         ":SymbolFileDWARFProperties",
         ":SymbolFilePDBProperties",
@@ -911,6 +912,36 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginRustLanguage",
+    srcs = glob(["Language/Rust/*.cpp"]),
+    hdrs = glob(["Language/Rust/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Demangle",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginDLanguage",
+    srcs = glob(["Language/D/*.cpp"]),
+    hdrs = glob(["Language/D/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Demangle",
+        "//llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "LanguageCPlusPlusProperties",
     strip_include_prefix = "Language/CPlusPlus",
@@ -1153,6 +1184,23 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginDynamicLoaderAcceleratorGDBRemote",
+    srcs = glob(["DynamicLoader/AcceleratorGDBRemote/*.cpp"]),
+    hdrs = glob(["DynamicLoader/AcceleratorGDBRemote/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1983,6 +2031,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginProcessUtility",
+        ":PluginRegisterDarwin",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
@@ -2269,6 +2318,7 @@ cc_library(
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
+        ":PluginRegisterCore",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",
@@ -2309,6 +2359,7 @@ cc_library(
         ":PluginDynamicLoaderDarwinKernel",
         ":PluginDynamicLoaderStatic",
         ":PluginProcessUtility",
+        ":PluginRegisterDarwin",
         ":ProcessKDPProperties",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -2391,6 +2442,38 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterCore",
+    srcs = glob(["Register/Core/*.cpp"]),
+    hdrs = glob(["Register/Core/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterDarwin",
+    srcs = glob(["Register/Darwin/*.cpp"]),
+    hdrs = glob(["Register/Darwin/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessUtility",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

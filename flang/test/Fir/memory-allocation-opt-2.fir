@@ -1,5 +1,6 @@
 // Test memory allocation pass for fir.alloca outside of function entry block
 // RUN: fir-opt --memory-allocation-opt="dynamic-array-on-heap=true" %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="legacy=true dynamic-array-on-heap=true" %s | FileCheck %s
 
 func.func @test_loop() {
   %c1 = arith.constant 1 : index

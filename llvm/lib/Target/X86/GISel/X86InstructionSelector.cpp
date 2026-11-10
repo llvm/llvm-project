@@ -250,11 +250,11 @@ static const TargetRegisterClass *getRegClassFromGRPhysReg(Register Reg) {
 bool X86InstructionSelector::selectCopy(MachineInstr &I,
                                         MachineRegisterInfo &MRI) const {
   Register DstReg = I.getOperand(0).getReg();
-  const unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  const unsigned DstSize = TRI.getRegSizeInBits(DstReg, MRI);
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
 
   Register SrcReg = I.getOperand(1).getReg();
-  const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+  const unsigned SrcSize = TRI.getRegSizeInBits(SrcReg, MRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
   if (DstReg.isPhysical()) {
@@ -331,12 +331,12 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 
   assert((!SrcReg.isPhysical() || I.isCopy()) &&
          "No phys reg on generic operators");
-  assert((DstSize == SrcSize ||
-          // Copies are a mean to setup initial types, the number of
-          // bits may not exactly match.
-          (SrcReg.isPhysical() &&
-           DstSize <= RBI.getSizeInBits(SrcReg, MRI, TRI))) &&
-         "Copy with different width?!");
+  assert(
+      (DstSize == SrcSize ||
+       // Copies are a mean to setup initial types, the number of
+       // bits may not exactly match.
+       (SrcReg.isPhysical() && DstSize <= TRI.getRegSizeInBits(SrcReg, MRI))) &&
+      "Copy with different width?!");
 
   const TargetRegisterClass *DstRC =
       getRegClass(MRI.getType(DstReg), DstRegBank);

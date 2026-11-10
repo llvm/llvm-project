@@ -10,6 +10,7 @@
 # MALFORMED: error: {{.*}}: truncated or malformed object (load command 0 LC_SEGMENT_64 cmdsize too small)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -39,6 +40,7 @@ LoadCommands:
 # WARNING-UNKNOWN: warning: load command 0 (0xdeadbeef) cmdsize too small (8 bytes) for actual size (20 bytes)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
