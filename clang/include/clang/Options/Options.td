@@ -7855,8 +7855,8 @@ def fsycl_host_only : Flag<["-"], "fsycl-host-only">,
   Alias<offload_host_only>, HelpText<"Compile SYCL code for host only. Has no "
   "effect on non-SYCL compilations">;
 def fsycl_link : Flag<["-"], "fsycl-link">,
-  HelpText<"Link and wrap SYCL device code into a host object without running "
-  "the host linker">;
+  HelpText<"Link SYCL device code and wrap it into a host object for a later "
+  "host link, without running the host linker">;
 def sycl_link : Flag<["--"], "sycl-link">, Flags<[HelpHidden]>,
   HelpText<"Perform link through clang-sycl-linker via the target "
   "offloading toolchain.">;

@@ -4,15 +4,18 @@
 // RUN: touch %t.a.o %t.b.o
 
 /// clang-linker-wrapper is the only link job, and it gets --sycl-device-link
-/// with the link inputs instead of the host link command.
+/// with the sysroot, library paths and link inputs instead of the host link
+/// command.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-link \
-// RUN:   %t.a.o -L/foo -Wl,--whole-archive -lbar -Wl,--no-whole-archive \
-// RUN:   %t.b.o -o dev.o 2>&1 \
+// RUN:   --sysroot=%S/Inputs/basic_linux_tree %t.a.o -L/foo \
+// RUN:   -Wl,--whole-archive -lbar -Wl,--no-whole-archive %t.b.o -o dev.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=crt1.o \
 // RUN:     --implicit-check-not='"-lc"'
 // LINK: clang-linker-wrapper"
-// LINK-SAME: "--sycl-device-link" "-o" "dev.o" "-L/foo"
-// LINK-SAME: "{{.*}}a.o" "--whole-archive" "-lbar" "--no-whole-archive" "{{.*}}b.o"{{$}}
+// LINK-SAME: "--sycl-device-link" "-o" "dev.o"
+// LINK-SAME: "--sysroot={{[^"]*}}basic_linux_tree" "-L/foo"
+// LINK-SAME: "-L{{[^"]*}}basic_linux_tree{{[^"]*}}{{[/\\]+}}usr{{[/\\]+}}lib"
+// LINK-SAME: "{{[^"]*}}a.o" "--whole-archive" "-lbar" "--no-whole-archive" "{{[^"]*}}b.o"{{$}}
 
 // RUN: %clang -ccc-print-bindings --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   -fsycl-link %t.a.o %t.b.o -o dev.o 2>&1 \

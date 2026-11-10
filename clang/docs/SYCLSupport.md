@@ -119,6 +119,8 @@ clang++ -fsycl -fsycl-link a.o b.o -o dev.o
 clang++ main.o a.o b.o dev.o -L<libsycl dir> -lLLVMSYCL -o app
 ```
 
+On Windows, the host link uses `LLVMSYCL.lib` instead of `-lLLVMSYCL`.
+
 The host link does not use `-fsycl`. With `-fsycl`, the device code in `a.o`
 and `b.o` would be linked and registered a second time.
 

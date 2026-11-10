@@ -10142,11 +10142,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   } else if (C.isOffloadingHostKind(Action::OFK_SYCL) &&
              Args.hasArg(options::OPT_fsycl_link)) {
     // With -fsycl-link, the wrapper writes the wrapped SYCL device object to
-    // the output and no host link runs. Pass only the link inputs and library
-    // paths, not the host link command with its startup files and default
-    // libraries.
+    // the output and no host link runs. Pass only what is needed to find the
+    // device code: the sysroot, library paths and link inputs. Other host link
+    // options, startup files and default libraries are not used.
     CmdArgs.push_back("--sycl-device-link");
     CmdArgs.append({"-o", Output.getFilename()});
+    const Driver &D = getToolChain().getDriver();
+    if (!D.SysRoot.empty())
+      CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
     Args.AddAllArgs(CmdArgs, options::OPT_L);
     getToolChain().AddFilePathLibArgs(Args, CmdArgs);
     AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
