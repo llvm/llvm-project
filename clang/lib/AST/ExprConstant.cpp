@@ -2829,7 +2829,6 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
          "the new expression or address the root cause of this usage.");
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St;
-  APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
   return checkFloatingPointResultForConstantFolding(Info, E, St);
@@ -7321,7 +7320,6 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
                            MD->getParent()->isUnion()))
       return false;
 
-    LValue Obj;
     if (!handleAssignment(Info, Args[ExplicitOffset], *ObjectArg,
                           MD->getFunctionObjectParameterReferenceType(),
                           RHSValue))
@@ -10931,13 +10929,6 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     switch (BuiltinOp) {
     case Builtin::BIstrchr:
     case Builtin::BI__builtin_strchr:
-      // strchr compares directly to the passed integer, and therefore
-      // always fails if given an int that is not a char.
-      if (!APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
-                                                  E->getArg(1)->getType(),
-                                                  Desired),
-                               Desired))
-        return ZeroInitialization(E);
       StopAtNull = true;
       [[fallthrough]];
     case Builtin::BImemchr:

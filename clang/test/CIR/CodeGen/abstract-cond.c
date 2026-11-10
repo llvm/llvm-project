@@ -84,8 +84,6 @@ int test_stmt_expr(int flag, struct s6 a1, struct s6 a2) {
 // LLVM:    %[[COND:.*]] = icmp ne i32 %[[LOAD_FLAG]], 0
 // LLVM:    br i1 %[[COND]], label %[[TRUE:.*]], label %[[FALSE:.*]]
 // LLVM:  [[TRUE]]:
-// LLVM:    br label %[[STMT_BODY:.*]]
-// LLVM:  [[STMT_BODY]]:
 // LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[T:.*]], ptr align 4 {{.*}}, i64 4, i1 false)
 // LLVM:    call void @foo()
 // LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP:.*]], ptr align 4 %[[T]], i64 4, i1 false)

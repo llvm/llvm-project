@@ -270,6 +270,9 @@ check-generated-output)
         false
     fi
 
+    step "Making sure the conformance status CSV files are well-formed"
+    ${NINJA} -vC "${BUILD_DIR}" libcxx-validate-conformance-csvs
+
     # This depends on LC_COLLATE set at the top of this script.
     step "Reject patches that introduce non-ASCII characters or hard tabs."
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test \
@@ -317,6 +320,18 @@ test-tools)
 
     step "Compare benchmark results" # perform a no-op comparison, just to run the tool
     "${MONOREPO_ROOT}/libcxx/utils/compare-benchmarks" "${BUILD_DIR}/results.lnt" "${BUILD_DIR}/results.lnt"
+
+    step "Create a LNT report from the benchmark results" # just to run the tool
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/create-lnt-report" \
+        --git-repo "${MONOREPO_ROOT}" \
+        --input "${BUILD_DIR}/results.lnt" \
+        --output "${BUILD_DIR}/results.json" \
+        --machine test-tools \
+        --commit HEAD \
+        --test-suite-commit HEAD \
+        --compiler "${CXX}" \
+        --lit-build-dir "${BUILD_DIR}/benchmarks" \
+        -- --param optimization=speed --param "libcxx_installation=${INSTALL_DIR}"
 
     step "Testing the selection of anchor commits"
     # Basic test with a known past window
