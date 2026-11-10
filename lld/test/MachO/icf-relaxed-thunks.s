@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
-# RUN: %lld -arch arm64 -dylib --icf=safe_thunks -interposable %t.o -map - -o %t.dylib | FileCheck %s
+# RUN: %lld -arch arm64 -dylib --icf=relaxed_thunks -interposable %t.o -map - -o %t.dylib | FileCheck %s
 # RUN: llvm-objdump --macho --disassemble %t.dylib | FileCheck %s --check-prefix=DISASM
 
 ## Taking the leaves' addresses must still produce different code. A caller of

@@ -210,15 +210,14 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     // Typically, we should not encounter sections marked with `keepUnique` at
     // this point as they would have resulted in different hashes and therefore
     // no need for a full comparison.
-    // However, in `safe_thunks` mode, it's possible for two different
-    // relocations to reference identical `keepUnique` functions that will be
-    // distinguished later via thunks - so we need to handle this case
-    // explicitly.
+    // However, in thunk modes, two different relocations can reference
+    // identical `keepUnique` functions that will be distinguished later via
+    // thunks, so we need to handle this case explicitly.
     if (isecA != isecB && ((isecA->keepUnique && isCodeSection(isecA)) ||
                            (isecB->keepUnique && isCodeSection(isecB)))) {
-      // In `safe_thunks` mode, we can still fold functions with direct calls to
+      // In `relaxed_thunks` mode, we can fold functions with direct calls to
       // equivalent functions.
-      if (config->icfLevel != ICFLevel::safe_thunks ||
+      if (config->icfLevel != ICFLevel::relaxed_thunks ||
           !getDirectCallTarget(ra) || !getDirectCallTarget(rb))
         return false;
     }
@@ -480,9 +479,10 @@ void ICF::run() {
       isec->icfEqClass[(icfPass + 1) % 2] = hash | (1ull << 31);
     });
   }
-  const bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
+  const bool useThunks = config->icfLevel == ICFLevel::safe_thunks ||
+                         config->icfLevel == ICFLevel::relaxed_thunks;
   // Sort by icfEqClass so that inputs in the same equivalence class are
-  // consecutive. When using safe_thunks, also sort by keepUnique (descending)
+  // consecutive. When using thunks, also sort by keepUnique (descending)
   // within a class. This guarantees that within an equivalence class, the
   // keepUnique inputs are always first. The index in the low bits keeps the
   // order stable.
@@ -490,7 +490,7 @@ void ICF::run() {
   SmallVector<uint64_t, 0> keys(icfInputs.size());
   parallelFor(0, icfInputs.size(), [&](size_t i) {
     uint64_t key = uint64_t(icfInputs[i]->icfEqClass[0]) << 32 | i;
-    if (useSafeThunks && !icfInputs[i]->keepUnique)
+    if (useThunks && !icfInputs[i]->keepUnique)
       key |= 1u << 31;
     keys[i] = key;
   });
@@ -517,10 +517,10 @@ void ICF::run() {
     log("equalsVariable() called " + Twine(equalsVariableCount) + " times");
   }
 
-  // When using safe_thunks, we need to create thunks for all keepUnique
+  // When using thunks, we need to create thunks for all keepUnique
   // functions that can be deduplicated. Since we're creating / adding new
   // InputSections, we can't parallelize this.
-  if (useSafeThunks)
+  if (useThunks)
     forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
       applySafeThunksToRange(begin, end);
     });
@@ -529,14 +529,13 @@ void ICF::run() {
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin < 2)
       return;
-    // For ICF level safe_thunks, replace keepUnique function bodies with
-    // thunks. For all other ICF levels, directly merge the functions.
+    // In thunk modes, replace keepUnique function bodies with thunks.
+    // For all other ICF levels, directly merge the functions.
 
     ConcatInputSection *beginIsec = icfInputs[begin];
     for (size_t i = begin + 1; i < end; ++i) {
-      // Skip keepUnique inputs when using safe_thunks (already handled above)
-      if (useSafeThunks && isCodeSection(beginIsec) &&
-          icfInputs[i]->keepUnique) {
+      // Skip keepUnique inputs when using thunks (already handled above).
+      if (useThunks && isCodeSection(beginIsec) && icfInputs[i]->keepUnique) {
         // Assert keepUnique sections are either small or replaced with thunks.
         assert(!icfInputs[i]->live ||
                icfInputs[i]->data.size() <= target->getICFSafeThunkSize());
@@ -676,14 +675,15 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     //     __llvm_addrsig entries that can cover non-address-significant data
     //     symbols in these sections; ld64 coalesces them unconditionally, and
     //     we match that behavior.
-    //   - Under safe_thunks, keepUnique code sections still fold; the
-    //     safe_thunks logic is applied later at merge time based on the
+    //   - In thunk modes, keepUnique code sections still fold; the
+    //     thunk logic is applied later at merge time based on the
     //     keepUnique flag.
     //   - Otherwise, keepUnique sections are not foldable.
-    bool isSafeThunksCode =
-        config->icfLevel == ICFLevel::safe_thunks && isCodeSec;
+    bool isThunkCode = (config->icfLevel == ICFLevel::safe_thunks ||
+                        config->icfLevel == ICFLevel::relaxed_thunks) &&
+                       isCodeSec;
     bool keepUniqueAllowsFolding =
-        !isec->keepUnique || isUnconditionallyCoalescedData || isSafeThunksCode;
+        !isec->keepUnique || isUnconditionallyCoalescedData || isThunkCode;
 
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&

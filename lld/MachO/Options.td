@@ -86,11 +86,12 @@ def print_dylib_search: Flag<["--"], "print-dylib-search">,
     Group<grp_lld>;
 def icf_eq: Joined<["--"], "icf=">,
     HelpText<"Set level for identical code folding (default: none). Possible values:\n"
-            "  none        - Disable ICF\n"
-            "  safe        - Only folds non-address significant functions (as described by `__addrsig` section)\n"
-            "  safe_thunks - Like safe, but replaces address-significant functions with thunks\n"
-            "  all         - Fold all identical functions">,
-    MetaVarName<"[none,safe,safe_thunks,all]">,
+            "  none           - Disable ICF\n"
+            "  safe           - Only folds non-address significant functions (as described by `__addrsig` section)\n"
+            "  safe_thunks    - Like safe, but replaces address-significant functions with thunks\n"
+            "  relaxed_thunks - Like safe_thunks, but allows direct callers to bypass thunks and branch directly to the function body\n"
+            "  all            - Fold all identical functions">,
+    MetaVarName<"[none,safe,safe_thunks,relaxed_thunks,all]">,
     Group<grp_lld>;
 def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
     HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
