@@ -15,6 +15,8 @@
 
 namespace llvm {
 class BitVector;
+// Used by the generated MXI8Type declaration in BuiltinTypes.h.inc.
+class FixedPointSemantics;
 struct fltSemantics;
 } // namespace llvm
 

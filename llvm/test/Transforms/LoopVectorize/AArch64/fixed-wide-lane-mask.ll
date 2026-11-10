@@ -254,4 +254,4 @@ for.end:
   ret void
 }
 
-attributes #0 = { nounwind "target-features"="+neon,+sve" }
+attributes #0 = { nounwind "target-features"="+neon,+sve" vscale_range(1,16) }
