@@ -196,9 +196,7 @@ bool hasImmExt(MCInst const &MCI);
 bool hasNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasNewValue2(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHlxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHxxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isTmpWrite(MCInstrInfo const &MCII, MCInst const &MCI);
 unsigned iClassOfDuplexPair(unsigned Ga, unsigned Gb);
 
 int64_t minConstant(MCInst const &MCI, size_t Index);
