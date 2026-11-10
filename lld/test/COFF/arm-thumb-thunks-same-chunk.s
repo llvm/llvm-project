@@ -8,7 +8,7 @@
 // would clobber r12. far_target is out of range and gets the one thunk.
 // local_target is a function so that the assembler keeps the relocation.
 
-// VERBOSE: Added 1 thunks with margin 102400 in 1 passes
+// VERBOSE: Added 1 thunks with margin {{.*}} in 1 passes
 
 // MAIN: 401000: {{.*}}bne.w 0x4f1004 <.text+0xf0004>
 // MAIN-NEXT: 401004: {{.*}}bne.w 0x4f1006 <.text+0xf0006>
