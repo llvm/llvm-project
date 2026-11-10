@@ -6594,7 +6594,7 @@ public:
       std::string Name = FD->getNameInfo().getAsString();
       IsOpenMPAPI = Name.find("omp_") == 0;
     }
-    TeamsLoopCanBeParallelFor =
+    TeamsLoopCanBeParallelFor &=
         IsOpenMPAPI || SemaRef.getLangOpts().OpenMPNoNestedParallelism;
     if (!TeamsLoopCanBeParallelFor)
       return;
