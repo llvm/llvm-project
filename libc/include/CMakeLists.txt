@@ -929,6 +929,7 @@ add_header_macro(
     .llvm-libc-types.struct_semid_ds
     .llvm-libc-types.struct_sembuf
     .llvm-libc-types.struct_seminfo
+    .sys_ipc
 )
 
 add_header_macro(
