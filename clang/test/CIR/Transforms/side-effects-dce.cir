@@ -1,0 +1,48 @@
+// RUN: cir-opt %s -canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!u64i = !cir.int<u, 64>
+
+#bfi_f = #cir.bitfield_info<name = "f", storage_type = !u8i, size = 3, offset = 0, is_signed = true>
+
+module {
+  // Volatile and atomic loads are kept by dead code elimination even when
+  // their result is unused; plain loads are erased.
+  // CHECK-LABEL: cir.func @loads
+  cir.func @loads(%arg0: !cir.ptr<!s32i>, %arg1: !cir.ptr<!u8i>,
+                  %arg2: !cir.ptr<!cir.float>, %arg3: !u64i) {
+    // CHECK-NEXT: cir.load volatile %arg0
+    %0 = cir.load volatile %arg0 : !cir.ptr<!s32i>, !s32i
+    // CHECK-NEXT: cir.load syncscope(system) atomic(seq_cst) %arg0
+    %1 = cir.load syncscope(system) atomic(seq_cst) %arg0 : !cir.ptr<!s32i>, !s32i
+    // CHECK-NEXT: cir.load syncscope(system) atomic(relaxed) %arg0
+    %2 = cir.load syncscope(system) atomic(relaxed) %arg0 : !cir.ptr<!s32i>, !s32i
+    // Erased.
+    %3 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    // CHECK-NEXT: cir.get_bitfield align(4) (#bfi_f, %arg1 {is_volatile}
+    %4 = cir.get_bitfield align(4) (#bfi_f, %arg1 {is_volatile} : !cir.ptr<!u8i>) -> !s32i
+    // Erased.
+    %5 = cir.get_bitfield align(4) (#bfi_f, %arg1 : !cir.ptr<!u8i>) -> !s32i
+    // CHECK-NEXT: cir.matrix.column_major_load %arg2 {{.*}} volatile
+    %6 = cir.matrix.column_major_load %arg2 : <!cir.float>, %arg3 : !u64i volatile, !cir.matrix<2 x 2 x !cir.float>
+    // Erased.
+    %7 = cir.matrix.column_major_load %arg2 : <!cir.float>, %arg3 : !u64i, !cir.matrix<2 x 2 x !cir.float>
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
+
+  // An inline asm with a memory output writes through its operand, so it is
+  // kept even though it has no result.
+  // CHECK-LABEL: cir.func @asm_memory_output
+  cir.func @asm_memory_output(%arg0: !cir.ptr<!s32i>) {
+    // CHECK-NEXT: cir.asm(x86_att,
+    // CHECK-NEXT:   out = [%arg0 : !cir.ptr<!s32i> (maybe_memory)],
+    cir.asm(x86_att,
+      out = [%arg0 : !cir.ptr<!s32i> (maybe_memory)],
+      in = [],
+      in_out = [],
+      {"nop" "=*m,~{dirflag},~{fpsr},~{flags}"})
+    cir.return
+  }
+}

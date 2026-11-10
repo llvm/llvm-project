@@ -6584,19 +6584,10 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
   if (!op.getNumResults())
     opAttrs.push_back(mlir::Attribute());
 
-  SmallVector<mlir::Value> llvmOperands;
-  SmallVector<mlir::Value> cirOperands;
-  for (auto const &[llvmOp, cirOp] :
-       zip(adaptor.getAsmOperands(), op.getAsmOperands())) {
-    append_range(llvmOperands, llvmOp);
-    append_range(cirOperands, cirOp);
-  }
-
   // so far we infer the llvm dialect element type attr from
   // CIR operand type.
-  for (auto const &[cirOpAttr, cirOp] :
-       zip(op.getOperandAttrs(), cirOperands)) {
-    if (!mlir::isa<mlir::UnitAttr>(cirOpAttr)) {
+  for (auto [index, cirOp] : llvm::enumerate(op->getOperands())) {
+    if (!op.isMemoryOperand(index)) {
       opAttrs.push_back(mlir::Attribute());
       continue;
     }
@@ -6615,8 +6606,8 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
   }
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::InlineAsmOp>(
-      op, llResTy, llvmOperands, op.getAsmStringAttr(), op.getConstraintsAttr(),
-      op.getSideEffectsAttr(),
+      op, llResTy, adaptor.getOperands(), op.getAsmStringAttr(),
+      op.getConstraintsAttr(), op.getSideEffectsAttr(),
       /*is_align_stack*/ mlir::UnitAttr(),
       /*tail_call_kind*/
       mlir::LLVM::TailCallKindAttr::get(
