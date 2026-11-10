@@ -16,7 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -38,6 +38,18 @@ public:
     return cir::LangAddressSpaceAttr::get(
         &getABIInfo().cgt.getMLIRContext(),
         cir::LangAddressSpace::OffloadPrivate);
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getGlobalCIRAddressSpace(LangAS as) const override {
+    // The cir::LangAddressSpace fold loses the SPIRDefIsGenMap split between
+    // cuda_constant and opencl_constant, so use the target map like classic.
+    if (as == LangAS::cuda_device || as == LangAS::cuda_constant ||
+        as == LangAS::cuda_shared)
+      return cir::TargetAddressSpaceAttr::get(
+          &getABIInfo().cgt.getMLIRContext(),
+          getABIInfo().cgt.getASTContext().getTargetAddressSpace(as));
+    return TargetCIRGenInfo::getGlobalCIRAddressSpace(as);
   }
 
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,

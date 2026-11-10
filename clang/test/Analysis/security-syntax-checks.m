@@ -83,7 +83,7 @@ int getpw(unsigned int uid, char *buf);
 
 void test_getpw(void) {
   char buff[1024];
-  getpw(2, buff); // expected-warning{{The getpw() function is dangerous as it may overflow the provided buffer. It is obsoleted by getpwuid()}}
+  getpw(2, buff); // expected-warning{{The getpw() function is dangerous as it may overflow the provided buffer; it is obsoleted by getpwuid()}}
 }
 
 // CWE-273: Failure to Check Whether Privileges Were Dropped Successfully
@@ -100,8 +100,8 @@ void abort(void);
 
 void test_setuid(void) 
 {
-  setuid(2); // expected-warning{{The return value from the call to 'setuid' is not checked.  If an error occurs in 'setuid', the following code may execute with unexpected privileges}}
-  setuid(0); // expected-warning{{The return value from the call to 'setuid' is not checked.  If an error occurs in 'setuid', the following code may execute with unexpected privileges}}
+  setuid(2); // expected-warning{{The return value from the call to 'setuid' is not checked; if an error occurs in 'setuid', the following code may execute with unexpected privileges}}
+  setuid(0); // expected-warning{{The return value from the call to 'setuid' is not checked; if an error occurs in 'setuid', the following code may execute with unexpected privileges}}
   if (setuid (2) != 0)
     abort();
 
@@ -113,8 +113,8 @@ void test_setuid(void)
 
   check(setuid (2)); // no-warning
 
-  setreuid(2,2); // expected-warning{{The return value from the call to 'setreuid' is not checked.  If an error occurs in 'setreuid', the following code may execute with unexpected privileges}}
-  setregid(2,2); // expected-warning{{The return value from the call to 'setregid' is not checked.  If an error occurs in 'setregid', the following code may execute with unexpected privileges}}
+  setreuid(2,2); // expected-warning{{The return value from the call to 'setreuid' is not checked; if an error occurs in 'setreuid', the following code may execute with unexpected privileges}}
+  setregid(2,2); // expected-warning{{The return value from the call to 'setregid' is not checked; if an error occurs in 'setregid', the following code may execute with unexpected privileges}}
 }
 
 // CWE-338: Use of cryptographically weak prng
@@ -135,16 +135,16 @@ void test_rand(void)
   unsigned short a[7];
   unsigned b;
   
-  rand();	// expected-warning{{Function 'rand' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  drand48();	// expected-warning{{Function 'drand48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  erand48(a);	// expected-warning{{Function 'erand48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  jrand48(a);	// expected-warning{{Function 'jrand48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  lcong48(a);	// expected-warning{{Function 'lcong48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  lrand48();	// expected-warning{{Function 'lrand48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  mrand48();	// expected-warning{{Function 'mrand48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  nrand48(a);	// expected-warning{{Function 'nrand48' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  rand_r(&b);	// expected-warning{{Function 'rand_r' is obsolete because it implements a poor random number generator.  Use 'arc4random' instead}}
-  random();	// expected-warning{{The 'random' function produces a sequence of values that an adversary may be able to predict.  Use 'arc4random' instead}}
+  rand();	// expected-warning{{Function 'rand' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  drand48();	// expected-warning{{Function 'drand48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  erand48(a);	// expected-warning{{Function 'erand48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  jrand48(a);	// expected-warning{{Function 'jrand48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  lcong48(a);	// expected-warning{{Function 'lcong48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  lrand48();	// expected-warning{{Function 'lrand48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  mrand48();	// expected-warning{{Function 'mrand48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  nrand48(a);	// expected-warning{{Function 'nrand48' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  rand_r(&b);	// expected-warning{{Function 'rand_r' is obsolete because it implements a poor random number generator; use 'arc4random' instead}}
+  random();	// expected-warning{{The 'random' function produces a sequence of values that an adversary may be able to predict; use 'arc4random' instead}}
 }
 
 char *mktemp(char *buf);
@@ -175,12 +175,12 @@ void test_strcpy(void) {
   char x[4];
   char *y;
 
-  strcpy(x, y); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
+  strcpy(x, y); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer; replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'; CWE-119}}
 }
 
 void test_strcpy_2(void) {
   char x[4];
-  strcpy(x, "abcd"); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
+  strcpy(x, "abcd"); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer; replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'; CWE-119}}
 }
 
 void test_strcpy_safe(void) {
@@ -214,7 +214,7 @@ void test_strcat(void) {
   char x[4];
   char *y;
 
-  strcat(x, y); //expected-warning{{Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119}}
+  strcat(x, y); //expected-warning{{Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer; replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'; CWE-119}}
 }
 
 //===----------------------------------------------------------------------===

@@ -187,6 +187,59 @@ define amdgpu_kernel void @workitem_id_x_div_wavefront_size_trunc_masked(ptr %o)
   ret void
 }
 
+; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_divergent_mask_lshr'
+; CHECK: DIVERGENT: %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK: DIVERGENT: %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK: DIVERGENT: %mask = shl i32 -1, %lane
+; CHECK: DIVERGENT: %id.x.masked = and i32 %id.x, %mask
+; CHECK: DIVERGENT: %id.sg = lshr i32 %id.x.masked, 6
+; CHECK: DIVERGENT: store i32 %id.sg, ptr %o
+define amdgpu_kernel void @workitem_id_x_divergent_mask_lshr(ptr %o) #3 !reqd_work_group_size !5 {
+  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %mask = shl i32 -1, %lane
+  %id.x.masked = and i32 %id.x, %mask
+  %id.sg = lshr i32 %id.x.masked, 6
+  store i32 %id.sg, ptr %o
+  ret void
+}
+
+; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_divergent_mask_after_cast_lshr'
+; CHECK: DIVERGENT: %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK: DIVERGENT: %id.x.zext = zext nneg i32 %id.x to i64
+; CHECK: DIVERGENT: %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK: DIVERGENT: %lane.zext = zext nneg i32 %lane to i64
+; CHECK: DIVERGENT: %mask = shl i64 -1, %lane.zext
+; CHECK: DIVERGENT: %id.x.masked = and i64 %id.x.zext, %mask
+; CHECK: DIVERGENT: %id.sg = lshr i64 %id.x.masked, 6
+; CHECK: DIVERGENT: store i64 %id.sg, ptr %o
+define amdgpu_kernel void @workitem_id_x_divergent_mask_after_cast_lshr(ptr %o) #3 !reqd_work_group_size !5 {
+  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %id.x.zext = zext nneg i32 %id.x to i64
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %lane.zext = zext nneg i32 %lane to i64
+  %mask = shl i64 -1, %lane.zext
+  %id.x.masked = and i64 %id.x.zext, %mask
+  %id.sg = lshr i64 %id.x.masked, 6
+  store i64 %id.sg, ptr %o
+  ret void
+}
+
+; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_divergent_mask_and'
+; CHECK: DIVERGENT: %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK: DIVERGENT: %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK: DIVERGENT: %mask = shl i32 %lane, 6
+; CHECK: DIVERGENT: %id.sg = and i32 %id.x, %mask
+; CHECK: DIVERGENT: store i32 %id.sg, ptr %o
+define amdgpu_kernel void @workitem_id_x_divergent_mask_and(ptr %o) #3 !reqd_work_group_size !5 {
+  %id.x = call i32 @llvm.amdgcn.workitem.id.x()
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %mask = shl i32 %lane, 6
+  %id.sg = and i32 %id.x, %mask
+  store i32 %id.sg, ptr %o
+  ret void
+}
+
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_y_uniform_in_subgroup'
 ; CHECK-NOT: DIVERGENT
 define amdgpu_kernel void @workitem_id_y_uniform_in_subgroup(ptr %o) #3 !reqd_work_group_size !5 {

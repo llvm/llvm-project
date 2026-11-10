@@ -21,22 +21,22 @@ NeedsCtor Holder::second;
 NeedsCtor Holder::first;
 
 // CIR-BEFORE-LPP: cir.global external @p = #cir.global_view<@_ZN6Holder5firstE> : !cir.ptr<!rec_NeedsCtor>
-// CIR-BEFORE-LPP: cir.global external @_ZN6Holder6secondE = ctor : !rec_NeedsCtor {
+// CIR-BEFORE-LPP: cir.global external @_ZN6Holder6secondE = #cir.zero : !rec_NeedsCtor ctor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @_ZN6Holder6secondE : !cir.ptr<!rec_NeedsCtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsCtorC1Ev(%[[THIS]])
 // CIR-BEFORE-LPP: }
-// CIR-BEFORE-LPP: cir.global external @_ZN6Holder5firstE = ctor : !rec_NeedsCtor {
+// CIR-BEFORE-LPP: cir.global external @_ZN6Holder5firstE = #cir.zero : !rec_NeedsCtor ctor {
 // CIR-BEFORE-LPP:   %[[THIS:.*]] = cir.get_global @_ZN6Holder5firstE : !cir.ptr<!rec_NeedsCtor>
 // CIR-BEFORE-LPP:   cir.call @_ZN9NeedsCtorC1Ev(%[[THIS]])
 // CIR-BEFORE-LPP: }
 
 // CIR: cir.global external @p = #cir.global_view<@_ZN6Holder5firstE> : !cir.ptr<!rec_NeedsCtor>
 // CIR: cir.global external @_ZN6Holder6secondE = #cir.zero : !rec_NeedsCtor
-// CIR: cir.func internal private @__cxx_global_var_init() {
+// CIR: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR:   %[[SECOND:.*]] = cir.get_global @_ZN6Holder6secondE : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%[[SECOND]])
 // CIR: cir.global external @_ZN6Holder5firstE = #cir.zero : !rec_NeedsCtor
-// CIR: cir.func internal private @__cxx_global_var_init.1() {
+// CIR: cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR:   %[[FIRST:.*]] = cir.get_global @_ZN6Holder5firstE : !cir.ptr<!rec_NeedsCtor>
 // CIR:   cir.call @_ZN9NeedsCtorC1Ev(%[[FIRST]])
 

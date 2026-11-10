@@ -258,7 +258,8 @@ public:
             cgf.emitNullInitialization(loc, dest.getAddress(), atomicType);
 
           Address valueAddr = cgf.getBuilder().createGetMember(
-              loc, valueDest.getAddress(), "value_addr", 0);
+              loc, valueDest.getAddress(), "value_addr", 0,
+              cgf.cgm.getDataLayout());
 
           assert(!cir::MissingFeatures::aggValueSlotGC());
           valueDest = AggValueSlot::forAddr(
@@ -277,7 +278,8 @@ public:
       cgf.emitAggExpr(e->getSubExpr(), atomicSlot);
 
       Address valueAddr = cgf.getBuilder().createGetMember(
-          loc, atomicSlot.getAddress(), "value_addr", 0);
+          loc, atomicSlot.getAddress(), "value_addr", 0,
+          cgf.cgm.getDataLayout());
       RValue rvalue = RValue::getAggregate(valueAddr, atomicSlot.isVolatile());
       return emitFinalDestCopy(valueType, rvalue);
     }
@@ -752,7 +754,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
   const mlir::Type cirElementType = cgf.convertType(elementType);
   const cir::PointerType cirElementPtrType =
-      builder.getPointerTo(cirElementType);
+      builder.getPointerTo(cirElementType, destPtr.getAddressSpace());
 
   auto begin = cir::CastOp::create(builder, loc, cirElementPtrType,
                                    cir::CastKind::array_to_ptrdecay,
@@ -867,10 +869,18 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
           CIRGenFunction::ArrayInitLoopExprScope loopExprScope(
               cgf, setArrayInitLoopExprScope, idx);
 
-          if (arrayFiller)
+          // C++17 [class.temporary]p5:
+          // "when a default constructor is called to initialize an element of
+          // an array with no corresponding initializer [...] the destruction
+          // of every temporary created in a default argument is sequenced
+          // before the construction of the next array element, if any."
+          if (arrayFiller) {
+            CIRGenFunction::FullExprCleanupScope scope(cgf, arrayFiller);
+            scope.deferLifetimeExtendedCleanups();
             emitInitializationToLValue(arrayFiller, elementLV);
-          else
+          } else {
             emitNullInitializationToLValue(loc, elementLV);
+          }
 
           // Advance pointer and store them to temporary variable
           cir::ConstantOp one = builder.getConstInt(

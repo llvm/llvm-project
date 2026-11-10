@@ -46,7 +46,7 @@ def inst_d : Instruction {
   let InOperandList = (ins GPR32:$src0, GPR32:$src1);
 }
 
-// SDAG: case 0: {
+// SDAG: case 1: {
 // SDAG-NEXT: // Predicate_pat_frag_b
 // SDAG-NEXT: // Predicate_truncstorei16_addrspace
 // SDAG-NEXT: SDNode *N = Op.getNode();
@@ -57,7 +57,26 @@ def inst_d : Instruction {
 // SDAG-NEXT: return true;
 
 
-// GISEL: GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 0 //
+// Test truncstore without a specific MemoryVT
+// GISEL: GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 4 //
+// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
+// GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
+// GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
+// GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(2),
+// GISEL-NEXT: GIM_CheckMemoryAddressSpace, /*MI*/0, /*MMO*/0, /*NumAddrSpace*/2, /*AddrSpace*/123, /*AddrSpace*//* 455(*/0xC7, 0x03/*)*/,
+// GISEL-NEXT: // MIs[0] src0
+// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+
+
+
+def : Pat <
+  (truncstore GPR32:$src0, GPR32:$src1),
+  (inst_c GPR32:$src0, GPR32:$src1)
+>;
+
+
+// GISEL: GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 1 //
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -68,8 +87,7 @@ def : Pat <
   (inst_b GPR32:$src)
 >;
 
-
-// SDAG: case 4: {
+// SDAG: case 7: {
 // SDAG: // Predicate_pat_frag_a
 // SDAG-NEXT: SDNode *N = Op.getNode();
 // SDAG-NEXT: (void)N;
@@ -77,7 +95,7 @@ def : Pat <
 // SDAG-NEXT: return false;
 // SDAG-NEXT: return true;
 
-// GISEL: GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 1 //
+// GISEL: GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 2 //
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_LOAD),
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
@@ -95,26 +113,8 @@ def truncstorei16_addrspace : PatFrag<(ops node:$val, node:$ptr),
   let AddressSpaces = [ 123, 455 ];
 }
 
-// Test truncstore without a specific MemoryVT
-// GISEL: GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 4 //
-// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
-// GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
-// GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
-// GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(2),
-// GISEL-NEXT: GIM_CheckMemoryAddressSpace, /*MI*/0, /*MMO*/0, /*NumAddrSpace*/2, /*AddrSpace*/123, /*AddrSpace*//* 455(*/0xC7, 0x03/*)*/,
-// GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-
-
-
-def : Pat <
-  (truncstore GPR32:$src0, GPR32:$src1),
-  (inst_c GPR32:$src0, GPR32:$src1)
->;
-
 // Test non-truncstore has a size equal to LLT check.
-// GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 2 //
+// GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 0 //
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,

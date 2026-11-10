@@ -624,6 +624,10 @@ following requirements:
 The attribute shall be present on the first declaration of a function and
 may optionally be present on subsequent declarations.
 
+SYCL prohibits calls to a variadic function in device functions. Since there is
+little reason to emit a function that cannot be called, the attribute is ignored,
+with a warning, when applied to a variadic function.
+
 When compiling for a SYCL device target that does not support the generic
 address space, the function shall not specify a raw pointer or reference type
 as the return type or as a parameter type.
@@ -638,6 +642,8 @@ The following examples demonstrate the use of this attribute:
 [[clang::sycl_external]] extern void Baz(); // Ok.
 
 [[clang::sycl_external]] static void Quux() { /* ... */ } // error:  Quux() has internal linkage.
+
+[[clang::sycl_external]] void Corge(int, ...); // warning: attribute ignored;  Corge() is variadic.
 ```
 
   }];
@@ -6957,6 +6963,73 @@ the ABI. This variant aims to pass fixed-length vectors via vector registers,
 if possible, rather than through general-purpose registers.}];
 }
 
+def RISCVInDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_in";
+  let Content = [{
+The ``__riscv_in(S)`` attribute indicates that a function reads from state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will read from a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVOutDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_out";
+  let Content = [{
+The ``__riscv_out(S)`` attribute indicates that a function writes to state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will write to a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVInOutDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_inout";
+  let Content = [{
+The ``__riscv_inout(S)`` attribute indicates that a function reads from and
+writes to state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will read from and write to a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVPreservesDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_preserves";
+  let Content = [{
+The ``__riscv_preserves(S)`` attribute indicates that a function neither reads
+from nor writes to state S.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will not read from or write to a matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
+def RISCVNewDocs : Documentation {
+  let Category = DocCatFunction;
+  let Heading = "__riscv_new";
+  let Content = [{
+The ``__riscv_new(S)`` attribute indicates that a function initiates a new state.
+This attribute is usually used in RISC-V matrix extensions to specify that the
+function will initiate a new matrix state passed as arguments.
+This helps compiler checks to prevent common programming errors that could lead
+to undefined behavior, data corruption, or incorrect computation results when
+working with matrix operations.
+  }];
+}
+
 def PreferredNameDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -8325,6 +8398,7 @@ zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle("tag")]])
 
 def UnsafeBufferUsageDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "unsafe_buffer_usage";
   let Content = [{
 The attribute `[[clang::unsafe_buffer_usage]]` should be placed on functions
 that need to be avoided as they are prone to buffer overflows or unsafe buffer
@@ -8425,6 +8499,44 @@ alternatives, though the attribute can be used even when the fix can't be automa
 
   Here, every read/write to the fields `ptr1`, `ptr2`, `buf` and `sz` will trigger a warning
   that the field has been explicitly marked as unsafe due to unsafe-buffer operations.
+
+- Attribute attached to container constructors and factory functions: The
+  spellings `[[clang::unsafe_buffer_usage_in_container]]` and
+  `[[clang::unsafe_buffer_usage("container")]]` are equivalent and can be
+  placed on two-parameter constructors and factory functions of container or
+  view types (such as custom span types taking a `(pointer, size)` or
+  `(begin, end)` pair) to opt them in to `-Wunsafe-buffer-usage-in-container`.
+
+  Unlike the general `[[clang::unsafe_buffer_usage]]` attribute, which warns on
+  every call, this form suppresses the warning when the argument pair is
+  provably safe -- for example, when constructing from `c.data(), c.size()` or
+  `c.begin(), c.end()` on the same container object `c`, a constant-sized array
+  with a matching bound, `&var, 1`, or a `0` size:
+
+  ```c++
+  template <typename T>
+  class CustomSpan {
+  public:
+    [[clang::unsafe_buffer_usage_in_container]]
+    CustomSpan(T *ptr, size_t size);
+
+    template <typename It>
+    [[clang::unsafe_buffer_usage("container")]]
+    CustomSpan(It first, It last);
+  };
+
+  template <typename T>
+  [[clang::unsafe_buffer_usage("container")]]
+  CustomSpan<T> MakeCustomSpan(T *ptr, size_t size);
+
+  void example(int *p, size_t n, MyVector<int> &v) {
+    CustomSpan<int> s1(p, n);                     // warning: decoupled pointer and size
+    auto s2 = MakeCustomSpan(p, n);               // warning: decoupled pointer and size
+    CustomSpan<int> s3(v.data(), v.size());       // no warning
+    CustomSpan<int> s4(v.begin(), v.end());       // no warning
+    auto s5 = MakeCustomSpan(v.data(), v.size()); // no warning
+  }
+  ```
 
   }];
 }
@@ -9389,9 +9501,17 @@ support `nointerpolation`.
 
 Unqualified pixel shader inputs and vertex shader outputs default to `linear`
 for floating-point components of at most 32 bits and `nointerpolation` otherwise.
-`SV_Position` uses the corresponding `noperspective` mode. Vertex shader inputs,
-pixel shader outputs, and signatures in other shader stages have no
-interpolation mode; their interpolation modifiers are ignored.
+In DirectX signatures, `SV_Position` uses the corresponding `noperspective` mode.
+Vertex shader inputs, pixel shader outputs, and signatures in other shader
+stages have no interpolation mode so their interpolation modifiers are ignored.
+
+For SPIR-V targets, `nointerpolation`, `noperspective`, `centroid`, and `sample`
+emit `Flat`, `NoPerspective`, `Centroid`, and `Sample` decorations, respectively.
+`linear` and `center` use the SPIR-V defaults and require no decoration.
+Sample-qualified interfaces also require the `SampleRateShading` capability.
+For `SV_Barycentrics` inputs, `noperspective` selects the `BaryCoordNoPerspKHR`
+built-in instead of adding a `NoPerspective` decoration; `centroid` and `sample`
+still decorate the selected built-in.
   }];
 }
 

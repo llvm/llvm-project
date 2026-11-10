@@ -212,6 +212,9 @@ protected:
   /// True if full register names are printed.
   bool PPCUseFullRegisterNames = false;
 
+  /// True if the target supports the .addrsig directive.
+  bool HasAddrsigDirective = true;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -353,11 +356,9 @@ protected:
   /// false.
   bool SupportsDebugInformation = false;
 
-  /// Exception handling format for the target.  Defaults to None.
-  ExceptionHandling ExceptionsType = ExceptionHandling::None;
-
   /// True if target uses CFI unwind information for other purposes than EH
-  /// (debugging / sanitizers) when `ExceptionsType == ExceptionHandling::None`.
+  /// (debugging / sanitizers) when the exception model is
+  /// `ExceptionHandling::None`.
   bool UsesCFIWithoutEH = false;
 
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
@@ -449,6 +450,8 @@ public:
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
+
+  unsigned getAsmMacroMaxNestingDepth() const;
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -602,6 +605,8 @@ public:
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
 
+  bool hasAddrsigDirective() const { return HasAddrsigDirective; }
+
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
@@ -653,35 +658,33 @@ public:
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
-  ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
-  void setExceptionsType(ExceptionHandling EH) {
-    ExceptionsType = EH;
+  bool usesCFIWithoutEH(ExceptionHandling EH) const {
+    return EH == ExceptionHandling::None && UsesCFIWithoutEH;
   }
 
-  bool usesCFIWithoutEH() const {
-    return ExceptionsType == ExceptionHandling::None && UsesCFIWithoutEH;
+  /// Returns true if the exception handling method \p EH uses call frame
+  /// information to unwind.
+  bool usesCFIForEH(ExceptionHandling EH) const {
+    return EH == ExceptionHandling::DwarfCFI || EH == ExceptionHandling::ARM ||
+           EH == ExceptionHandling::ZOS ||
+           (EH == ExceptionHandling::WinEH && usesWindowsCFI());
   }
 
-  /// Returns true if the exception handling method for the platform uses call
-  /// frame information to unwind.
-  bool usesCFIForEH() const {
-    return (ExceptionsType == ExceptionHandling::DwarfCFI ||
-            ExceptionsType == ExceptionHandling::ARM ||
-            ExceptionsType == ExceptionHandling::ZOS || usesWindowsCFI());
-  }
-
+  /// Returns true if the object format describes unwind information with
+  /// Windows SEH unwind opcodes (.seh_* directives, .pdata and .xdata).
+  /// Whether a function uses that encoding also depends on the exception
+  /// model; see MachineFunction::usesWindowsUnwindInfo().
   bool usesWindowsCFI() const {
-    return ExceptionsType == ExceptionHandling::WinEH &&
-           (WinEHEncodingType != WinEH::EncodingType::Invalid &&
-            WinEHEncodingType != WinEH::EncodingType::X86);
+    return WinEHEncodingType != WinEH::EncodingType::Invalid &&
+           WinEHEncodingType != WinEH::EncodingType::X86;
   }
 
   /// Returns true if the exception tables reference the per-invoke EH labels
   /// emitted around invokes. 32-bit x86 SEH and Wasm do not.
-  bool usesPerInvokeEHLabels() const {
-    switch (ExceptionsType) {
+  bool usesPerInvokeEHLabels(ExceptionHandling EH) const {
+    switch (EH) {
     case ExceptionHandling::WinEH:
       // 32-bit x86 SEH uses a state table, not per-invoke IP-to-state ranges.
       return WinEHEncodingType != WinEH::EncodingType::X86;
@@ -761,6 +764,14 @@ public:
   }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
+
+  /// True if the instruction is stored in multiple halfwords, with
+  /// the high-order half appearing first in memory regardless of target
+  /// endianness, to distinguish it from instructions occupying only one
+  /// halfword. Examples are the Thumb variant of Arm, microMIPS, and nanoMIPS.
+  virtual bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

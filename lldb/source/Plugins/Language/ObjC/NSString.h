@@ -37,7 +37,7 @@ bool NSMutableAttributedStringSummaryProvider(
 
 class NSString_Additionals {
 public:
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+  static llvm::StringMap<CXXFunctionSummaryFormat::Callback> &
   GetAdditionalSummaries();
 };
 } // namespace formatters

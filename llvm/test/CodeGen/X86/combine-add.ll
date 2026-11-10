@@ -640,3 +640,34 @@ define i32 @add_adc_multi_use(i32 %0, i32 %1, i32 %2) nounwind {
   %10 = add i32 %9, %6
   ret i32 %10
 }
+
+; Don't fold add(x,x) -> X86ISD::VSHLI(x,1) for elements wider than 64 bits.
+; PR228829
+define <1 x i128> @combine_vec_add_self_v1i128(<1 x i128> %a) {
+; CHECK-LABEL: combine_vec_add_self_v1i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rdi, %rax
+; CHECK-NEXT:    adcq %rsi, %rdx
+; CHECK-NEXT:    retq
+  %s = add <1 x i128> %a, %a
+  ret <1 x i128> %s
+}
+
+define <2 x i128> @combine_vec_add_self_v2i128(<2 x i128> %a) {
+; CHECK-LABEL: combine_vec_add_self_v2i128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rsi, %rsi
+; CHECK-NEXT:    adcq %rdx, %rdx
+; CHECK-NEXT:    addq %rcx, %rcx
+; CHECK-NEXT:    adcq %r8, %r8
+; CHECK-NEXT:    movq %r8, 24(%rdi)
+; CHECK-NEXT:    movq %rcx, 16(%rdi)
+; CHECK-NEXT:    movq %rdx, 8(%rdi)
+; CHECK-NEXT:    movq %rsi, (%rdi)
+; CHECK-NEXT:    retq
+  %s = add <2 x i128> %a, %a
+  ret <2 x i128> %s
+}

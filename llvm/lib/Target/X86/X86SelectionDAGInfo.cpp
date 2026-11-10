@@ -63,15 +63,6 @@ bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
 
 void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                            const SDNode *N) const {
-  switch (N->getOpcode()) {
-  default:
-    break;
-  case X86ISD::INSERTQI:
-  case X86ISD::EXTRQI:
-    // result #0 must have type v2i64, but has type v16i8/v8i16
-    return;
-  }
-
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);
 
   switch (N->getOpcode()) {
@@ -101,6 +92,14 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                          " operand #1 must have type " +
                          ExpectedVT.getEVTString() + ", but has type " +
                          VT.getEVTString());
+    break;
+  }
+  case X86ISD::SETCC_CARRY: {
+    // SETCC_CARRY materializes CF as 0/-1, so the condition must be COND_B.
+    auto *CC = dyn_cast<ConstantSDNode>(N->getOperand(0));
+    if (!CC || CC->getZExtValue() != X86::COND_B)
+      report_fatal_error("invalid node: " + Twine(N->getOperationName(&DAG)) +
+                         " operand #0 must be X86::COND_B");
     break;
   }
   }
