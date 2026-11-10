@@ -50,6 +50,13 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   // Each processor has a SchedClassDesc table with an entry for each
   // SchedClass. The SchedClassDesc table indexes into a global write resource
   // table, write latency table, and read advance table.
+  struct SchedClassEntries {
+    std::vector<MCWriteProcResEntry> WriteProcResources;
+    std::vector<MCWriteLatencyEntry> WriteLatencies;
+    std::vector<std::string> WriterNames;
+    std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
+  };
+
   struct SchedClassTables {
     std::vector<std::vector<MCSchedClassDesc>> ProcSchedClasses;
     std::vector<MCWriteProcResEntry> WriteProcResources;
@@ -137,6 +144,11 @@ class SubtargetEmitter : TargetFeaturesEmitter {
                            std::vector<int64_t> &ReleaseAtCycles,
                            std::vector<int64_t> &AcquireAtCycles,
                            const CodeGenProcModel &ProcModel);
+  const CodeGenSchedRW *genSchedClassEntries(ArrayRef<unsigned> Writes,
+                                             ArrayRef<unsigned> Reads,
+                                             const CodeGenProcModel &ProcModel,
+                                             MCSchedClassDesc &SCDesc,
+                                             SchedClassEntries &Entries);
   void genSchedClassTables(const CodeGenProcModel &ProcModel,
                            SchedClassTables &SchedTables);
   void emitSchedClassTables(SchedClassTables &SchedTables, raw_ostream &OS);
@@ -1089,6 +1101,189 @@ void SubtargetEmitter::expandProcResources(
 
 // Generate the SchedClass table for this processor and update global
 // tables. Must be called for each processor in order.
+const CodeGenSchedRW *SubtargetEmitter::genSchedClassEntries(
+    ArrayRef<unsigned> Writes, ArrayRef<unsigned> Reads,
+    const CodeGenProcModel &ProcModel, MCSchedClassDesc &SCDesc,
+    SchedClassEntries &Entries) {
+  // Sum resources across all operand writes.
+  auto &[WriteProcResources, WriteLatencies, WriterNames, ReadAdvanceEntries] =
+      Entries;
+  for (unsigned W : Writes) {
+    IdxVec WriteSeq;
+    SchedModels.expandRWSeqForProc(W, WriteSeq, /*IsRead=*/false, ProcModel);
+
+    // For each operand, create a latency entry.
+    MCWriteLatencyEntry WLEntry;
+    WLEntry.Cycles = 0;
+    unsigned WriteID = WriteSeq.back();
+    WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
+    // If this Write is not referenced by a ReadAdvance, don't distinguish it
+    // from other WriteLatency entries.
+    if (!ProcModel.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef))
+      WriteID = 0;
+    WLEntry.WriteResourceID = WriteID;
+
+    for (unsigned WS : WriteSeq) {
+      const Record *WriteRes =
+          findWriteResources(SchedModels.getSchedWrite(WS), ProcModel);
+      if (!WriteRes)
+        return &SchedModels.getSchedWrite(WS);
+
+      // Mark the parent class as invalid for unsupported write types.
+      if (WriteRes->getValueAsBit("Unsupported")) {
+        SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
+        break;
+      }
+      WLEntry.Cycles += WriteRes->getValueAsInt("Latency");
+      SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
+      SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
+      SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
+      SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
+      SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
+      SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
+
+      // Create an entry for each ProcResource listed in WriteRes.
+      ConstRecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
+      std::vector<int64_t> ReleaseAtCycles =
+          WriteRes->getValueAsListOfInts("ReleaseAtCycles");
+
+      std::vector<int64_t> AcquireAtCycles =
+          WriteRes->getValueAsListOfInts("AcquireAtCycles");
+
+      // Check consistency of the two vectors carrying the start and
+      // stop cycles of the resources.
+      if (!ReleaseAtCycles.empty() && ReleaseAtCycles.size() != PRVec.size()) {
+        // If ReleaseAtCycles is provided, check consistency.
+        PrintFatalError(
+            WriteRes->getLoc(),
+            Twine("Inconsistent release at cycles: size(ReleaseAtCycles) != "
+                  "size(ProcResources): ")
+                .concat(Twine(PRVec.size()))
+                .concat(" vs ")
+                .concat(Twine(ReleaseAtCycles.size())));
+      }
+
+      if (!AcquireAtCycles.empty() && AcquireAtCycles.size() != PRVec.size()) {
+        PrintFatalError(
+            WriteRes->getLoc(),
+            Twine("Inconsistent resource cycles: size(AcquireAtCycles) != "
+                  "size(ProcResources): ")
+                .concat(Twine(AcquireAtCycles.size()))
+                .concat(" vs ")
+                .concat(Twine(PRVec.size())));
+      }
+
+      if (ReleaseAtCycles.empty()) {
+        // If ReleaseAtCycles is not provided, default to one cycle
+        // per resource.
+        ReleaseAtCycles.resize(PRVec.size(), 1);
+      }
+
+      if (AcquireAtCycles.empty()) {
+        // If AcquireAtCycles is not provided, reserve the resource
+        // starting from cycle 0.
+        AcquireAtCycles.resize(PRVec.size(), 0);
+      }
+
+      assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+
+      expandProcResources(PRVec, ReleaseAtCycles, AcquireAtCycles, ProcModel);
+      assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+
+      for (unsigned PRIdx = 0, PREnd = PRVec.size(); PRIdx != PREnd; ++PRIdx) {
+        MCWriteProcResEntry WPREntry;
+        WPREntry.ProcResourceIdx = ProcModel.getProcResourceIdx(PRVec[PRIdx]);
+        assert(WPREntry.ProcResourceIdx && "Bad ProcResourceIdx");
+        WPREntry.ReleaseAtCycle = ReleaseAtCycles[PRIdx];
+        WPREntry.AcquireAtCycle = AcquireAtCycles[PRIdx];
+        if (AcquireAtCycles[PRIdx] > ReleaseAtCycles[PRIdx]) {
+          PrintFatalError(WriteRes->getLoc(),
+                          Twine("Inconsistent resource cycles: AcquireAtCycles "
+                                "<= ReleaseAtCycles must hold."));
+        }
+        if (AcquireAtCycles[PRIdx] < 0) {
+          PrintFatalError(WriteRes->getLoc(),
+                          Twine("Invalid value: AcquireAtCycle "
+                                "must be a non-negative value."));
+        }
+        // If this resource is already used in this sequence, add the current
+        // entry's cycles so that the same resource appears to be used
+        // serially, rather than multiple parallel uses. This is important for
+        // in-order machine where the resource consumption is a hazard.
+        unsigned WPRIdx = 0, WPREnd = WriteProcResources.size();
+        for (; WPRIdx != WPREnd; ++WPRIdx) {
+          if (WriteProcResources[WPRIdx].ProcResourceIdx ==
+              WPREntry.ProcResourceIdx) {
+            // TODO: multiple use of the same resources would
+            // require either 1. thinking of how to handle multiple
+            // intervals for the same resource in
+            // `<Target>WriteProcResTable` (see
+            // `SubtargetEmitter::EmitSchedClassTables`), or
+            // 2. thinking how to merge multiple intervals into a
+            // single interval.
+            assert(WPREntry.AcquireAtCycle == 0 &&
+                   "multiple use ofthe same resource is not yet handled");
+            WriteProcResources[WPRIdx].ReleaseAtCycle +=
+                WPREntry.ReleaseAtCycle;
+            break;
+          }
+        }
+        if (WPRIdx == WPREnd)
+          WriteProcResources.push_back(WPREntry);
+      }
+    }
+    WriteLatencies.push_back(WLEntry);
+  }
+  // Create an entry for each operand Read in this SchedClass.
+  // Entries must be sorted first by UseIdx then by WriteResourceID.
+  for (unsigned UseIdx = 0, EndIdx = Reads.size(); UseIdx != EndIdx; ++UseIdx) {
+    const CodeGenSchedRW &SchedRead = SchedModels.getSchedRead(Reads[UseIdx]);
+    const Record *ReadAdvance = findReadAdvance(SchedRead, ProcModel);
+    if (!ReadAdvance) {
+      if (SchedRead.TheDef->getName() != "ReadDefault")
+        return &SchedRead;
+      continue;
+    }
+
+    // Mark the parent class as invalid for unsupported write types.
+    if (ReadAdvance->getValueAsBit("Unsupported")) {
+      SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
+      break;
+    }
+    ConstRecVec ValidWrites = ReadAdvance->getValueAsListOfDefs("ValidWrites");
+    std::vector<int64_t> CycleTunables =
+        ReadAdvance->getValueAsListOfInts("CycleTunables");
+    std::vector<std::pair<unsigned, int>> WriteIDs;
+    assert(CycleTunables.size() <= ValidWrites.size() && "Bad ReadAdvance");
+    CycleTunables.resize(ValidWrites.size(), 0);
+    if (ValidWrites.empty())
+      WriteIDs.emplace_back(0, 0);
+    else {
+      for (const auto [VW, CT] : zip_equal(ValidWrites, CycleTunables)) {
+        unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
+        assert(WriteID != 0 &&
+               "Expected a valid SchedRW in the list of ValidWrites");
+        WriteIDs.emplace_back(WriteID, CT);
+      }
+    }
+    llvm::sort(WriteIDs);
+    for (const auto &[W, T] : WriteIDs) {
+      MCReadAdvanceEntry &RAEntry = ReadAdvanceEntries.emplace_back();
+      RAEntry.UseIdx = UseIdx;
+      RAEntry.WriteResourceID = W;
+      RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles") + T;
+    }
+  }
+  if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
+    WriteProcResources.clear();
+    WriteLatencies.clear();
+    ReadAdvanceEntries.clear();
+  }
+  // WritePrecRes entries are sorted by ProcResIdx.
+  llvm::sort(WriteProcResources, LessWriteProcResources());
+  return nullptr;
+}
+
 void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
                                            SchedClassTables &SchedTables) {
   std::vector<MCSchedClassDesc> &SCTab =
@@ -1168,197 +1363,16 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
       }
     }
-    // Sum resources across all operand writes.
-    std::vector<MCWriteProcResEntry> WriteProcResources;
-    std::vector<MCWriteLatencyEntry> WriteLatencies;
-    std::vector<std::string> WriterNames;
-    std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
-    for (unsigned W : Writes) {
-      IdxVec WriteSeq;
-      SchedModels.expandRWSeqForProc(W, WriteSeq, /*IsRead=*/false, ProcModel);
-
-      // For each operand, create a latency entry.
-      MCWriteLatencyEntry WLEntry;
-      WLEntry.Cycles = 0;
-      unsigned WriteID = WriteSeq.back();
-      WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
-      // If this Write is not referenced by a ReadAdvance, don't distinguish it
-      // from other WriteLatency entries.
-      if (!ProcModel.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef))
-        WriteID = 0;
-      WLEntry.WriteResourceID = WriteID;
-
-      for (unsigned WS : WriteSeq) {
-        const Record *WriteRes =
-            findWriteResources(SchedModels.getSchedWrite(WS), ProcModel);
-        if (!WriteRes)
-          PrintFatalError(ProcModel.ModelDef->getLoc(),
-                          Twine("Processor does not define resources for ") +
-                              SchedModels.getSchedWrite(WS).TheDef->getName());
-
-        // Mark the parent class as invalid for unsupported write types.
-        if (WriteRes->getValueAsBit("Unsupported")) {
-          SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
-          break;
-        }
-        WLEntry.Cycles += WriteRes->getValueAsInt("Latency");
-        SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
-        SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
-        SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
-        SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
-        SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
-        SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
-
-        // Create an entry for each ProcResource listed in WriteRes.
-        ConstRecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
-        std::vector<int64_t> ReleaseAtCycles =
-            WriteRes->getValueAsListOfInts("ReleaseAtCycles");
-
-        std::vector<int64_t> AcquireAtCycles =
-            WriteRes->getValueAsListOfInts("AcquireAtCycles");
-
-        // Check consistency of the two vectors carrying the start and
-        // stop cycles of the resources.
-        if (!ReleaseAtCycles.empty() &&
-            ReleaseAtCycles.size() != PRVec.size()) {
-          // If ReleaseAtCycles is provided, check consistency.
-          PrintFatalError(
-              WriteRes->getLoc(),
-              Twine("Inconsistent release at cycles: size(ReleaseAtCycles) != "
-                    "size(ProcResources): ")
-                  .concat(Twine(PRVec.size()))
-                  .concat(" vs ")
-                  .concat(Twine(ReleaseAtCycles.size())));
-        }
-
-        if (!AcquireAtCycles.empty() &&
-            AcquireAtCycles.size() != PRVec.size()) {
-          PrintFatalError(
-              WriteRes->getLoc(),
-              Twine("Inconsistent resource cycles: size(AcquireAtCycles) != "
-                    "size(ProcResources): ")
-                  .concat(Twine(AcquireAtCycles.size()))
-                  .concat(" vs ")
-                  .concat(Twine(PRVec.size())));
-        }
-
-        if (ReleaseAtCycles.empty()) {
-          // If ReleaseAtCycles is not provided, default to one cycle
-          // per resource.
-          ReleaseAtCycles.resize(PRVec.size(), 1);
-        }
-
-        if (AcquireAtCycles.empty()) {
-          // If AcquireAtCycles is not provided, reserve the resource
-          // starting from cycle 0.
-          AcquireAtCycles.resize(PRVec.size(), 0);
-        }
-
-        assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
-
-        expandProcResources(PRVec, ReleaseAtCycles, AcquireAtCycles, ProcModel);
-        assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
-
-        for (unsigned PRIdx = 0, PREnd = PRVec.size(); PRIdx != PREnd;
-             ++PRIdx) {
-          MCWriteProcResEntry WPREntry;
-          WPREntry.ProcResourceIdx = ProcModel.getProcResourceIdx(PRVec[PRIdx]);
-          assert(WPREntry.ProcResourceIdx && "Bad ProcResourceIdx");
-          WPREntry.ReleaseAtCycle = ReleaseAtCycles[PRIdx];
-          WPREntry.AcquireAtCycle = AcquireAtCycles[PRIdx];
-          if (AcquireAtCycles[PRIdx] > ReleaseAtCycles[PRIdx]) {
-            PrintFatalError(
-                WriteRes->getLoc(),
-                Twine("Inconsistent resource cycles: AcquireAtCycles "
-                      "<= ReleaseAtCycles must hold."));
-          }
-          if (AcquireAtCycles[PRIdx] < 0) {
-            PrintFatalError(WriteRes->getLoc(),
-                            Twine("Invalid value: AcquireAtCycle "
-                                  "must be a non-negative value."));
-          }
-          // If this resource is already used in this sequence, add the current
-          // entry's cycles so that the same resource appears to be used
-          // serially, rather than multiple parallel uses. This is important for
-          // in-order machine where the resource consumption is a hazard.
-          unsigned WPRIdx = 0, WPREnd = WriteProcResources.size();
-          for (; WPRIdx != WPREnd; ++WPRIdx) {
-            if (WriteProcResources[WPRIdx].ProcResourceIdx ==
-                WPREntry.ProcResourceIdx) {
-              // TODO: multiple use of the same resources would
-              // require either 1. thinking of how to handle multiple
-              // intervals for the same resource in
-              // `<Target>WriteProcResTable` (see
-              // `SubtargetEmitter::EmitSchedClassTables`), or
-              // 2. thinking how to merge multiple intervals into a
-              // single interval.
-              assert(WPREntry.AcquireAtCycle == 0 &&
-                     "multiple use ofthe same resource is not yet handled");
-              WriteProcResources[WPRIdx].ReleaseAtCycle +=
-                  WPREntry.ReleaseAtCycle;
-              break;
-            }
-          }
-          if (WPRIdx == WPREnd)
-            WriteProcResources.push_back(WPREntry);
-        }
-      }
-      WriteLatencies.push_back(WLEntry);
-    }
-    // Create an entry for each operand Read in this SchedClass.
-    // Entries must be sorted first by UseIdx then by WriteResourceID.
-    for (unsigned UseIdx = 0, EndIdx = Reads.size(); UseIdx != EndIdx;
-         ++UseIdx) {
-      const CodeGenSchedRW &SchedRead = SchedModels.getSchedRead(Reads[UseIdx]);
-      const Record *ReadAdvance = findReadAdvance(SchedRead, ProcModel);
-      if (!ReadAdvance) {
-        if (SchedRead.TheDef->getName() != "ReadDefault")
-          PrintFatalError(ProcModel.ModelDef->getLoc(),
-                          Twine("Processor does not define resources for ") +
-                              SchedRead.TheDef->getName());
-        continue;
-      }
-
-      // Mark the parent class as invalid for unsupported write types.
-      if (ReadAdvance->getValueAsBit("Unsupported")) {
-        SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
-        break;
-      }
-      ConstRecVec ValidWrites =
-          ReadAdvance->getValueAsListOfDefs("ValidWrites");
-      std::vector<int64_t> CycleTunables =
-          ReadAdvance->getValueAsListOfInts("CycleTunables");
-      std::vector<std::pair<unsigned, int>> WriteIDs;
-      assert(CycleTunables.size() <= ValidWrites.size() && "Bad ReadAdvance");
-      CycleTunables.resize(ValidWrites.size(), 0);
-      if (ValidWrites.empty())
-        WriteIDs.emplace_back(0, 0);
-      else {
-        for (const auto [VW, CT] : zip_equal(ValidWrites, CycleTunables)) {
-          unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
-          assert(WriteID != 0 &&
-                 "Expected a valid SchedRW in the list of ValidWrites");
-          WriteIDs.emplace_back(WriteID, CT);
-        }
-      }
-      llvm::sort(WriteIDs);
-      for (const auto &[W, T] : WriteIDs) {
-        MCReadAdvanceEntry &RAEntry = ReadAdvanceEntries.emplace_back();
-        RAEntry.UseIdx = UseIdx;
-        RAEntry.WriteResourceID = W;
-        RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles") + T;
-      }
-    }
-    if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
-      WriteProcResources.clear();
-      WriteLatencies.clear();
-      ReadAdvanceEntries.clear();
-    }
+    SchedClassEntries Entries;
+    if (const CodeGenSchedRW *RW =
+            genSchedClassEntries(Writes, Reads, ProcModel, SCDesc, Entries))
+      PrintFatalError(ProcModel.ModelDef->getLoc(),
+                      Twine("Processor does not define resources for ") +
+                          RW->TheDef->getName());
+    auto &[WriteProcResources, WriteLatencies, WriterNames,
+           ReadAdvanceEntries] = Entries;
     // Add the information for this SchedClass to the global tables using basic
     // compression.
-    //
-    // WritePrecRes entries are sorted by ProcResIdx.
-    llvm::sort(WriteProcResources, LessWriteProcResources());
 
     SchedTables.MaxWriteProcResEntries =
         std::max(SchedTables.MaxWriteProcResEntries, WriteProcResources.size());
