@@ -116,9 +116,9 @@ struct CopyCandidate {
 /// action maps, everything else updates the counter). By issuing the copies
 /// before the copyins, we can ensure we do not break anything even if we
 /// relied on the language rules to do the optimization.
-static void appendConvertedCopyins(
-    Operation *regionOp,
-    const llvm::SmallPtrSetImpl<Operation *> &converted) {
+static void
+appendConvertedCopyins(Operation *regionOp,
+                       const llvm::SmallPtrSetImpl<Operation *> &converted) {
   SmallVector<Value> operands(acc::getDataOperands(regionOp));
   SmallVector<Value> copyins;
   llvm::erase_if(operands, [&](Value value) {
