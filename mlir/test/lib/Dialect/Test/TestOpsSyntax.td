@@ -147,6 +147,15 @@ def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
   }];
 }
 
+def OIListOptionalAttr : TEST_Op<"oilist_optional_attr"> {
+  let arguments = (ins UnitAttr:$keyword,
+                       OptionalAttr<CompoundAttrNested>:$nested);
+  let assemblyFormat = [{
+    oilist( `keyword` $keyword
+          | `nested` $nested) attr-dict
+  }];
+}
+
 def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   let assemblyFormat = [{
     oilist( `foo` | `bar` ) `buzz` attr-dict
@@ -184,7 +193,7 @@ def FormatLiteralOp : TEST_Op<"format_literal_op"> {
   }];
 }
 
-// Test that we elide attributes that are within the syntax.
+// Test that inherent and discardable attributes use separate dictionaries.
 def FormatAttrOp : TEST_Op<"format_attr_op"> {
   let arguments = (ins I64Attr:$attr);
   let assemblyFormat = "$attr attr-dict";
@@ -221,7 +230,7 @@ def FormatOptSymbolRefAttrOp : TEST_Op<"format_opt_symbol_ref_attr_op"> {
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "attr-dict-with-keyword";
+  let assemblyFormat = "prop-dict attr-dict-with-keyword";
 }
 
 // Test that we don't need to provide types in the format if they are buildable.
@@ -475,6 +484,16 @@ def OpWithTwoDefaultBitEnumProps : TEST_Op<"op_with_two_default_bit_enum_props">
   let assemblyFormat = "($value1^)? ($value2^)? attr-dict";
 }
 
+def TestBitEnumSpacePropDefault : EnumProp<TestBitEnumSpace> {
+  let defaultValue = TestBitEnumSpace.cppType # "::None";
+}
+def OpWithDefaultSpaceBitEnumProp
+    : TEST_Op<"op_with_default_space_bit_enum_prop"> {
+  let arguments = (ins TestBitEnumSpacePropDefault:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "($value^)? (`tag` $tag^)? attr-dict";
+}
+
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
@@ -637,7 +656,7 @@ def FormatCustomDirectiveAttrDict
     : TEST_Op<"format_custom_directive_attrdict"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
   let assemblyFormat = [{
-    custom<CustomDirectiveAttrDict>( attr-dict )
+    prop-dict custom<CustomDirectiveAttrDict>( attr-dict )
   }];
 }
 

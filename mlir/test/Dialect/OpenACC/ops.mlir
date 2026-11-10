@@ -1384,6 +1384,11 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
   acc.delete accPtr(%create : memref<10xf32>) dataClause(acc_create)
   acc.delete accPtr(%createimplicit : memref<10x20xf32>) dataClause(acc_create) implicit(true)
 
+  %createsynthetic = acc.create varPtr(%c : memref<10x20xf32>) varType(tensor<10x20xf32>) implicit(true) synthetic -> memref<10x20xf32>
+  acc.parallel dataOperands(%createsynthetic : memref<10x20xf32>) {
+  }
+  acc.delete accPtr(%createsynthetic : memref<10x20xf32>) dataClause(acc_create) implicit(true) synthetic
+
   %copyoutzero = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero) -> memref<10xf32>
   acc.parallel dataOperands(%copyoutzero: memref<10xf32>) {
   }
@@ -1420,6 +1425,13 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
   }
   acc.copyout accPtr(%copyinpartial : memref<10xf32>) bounds(%bounds1partial) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 
+  // A slice of a larger array records how far apart consecutive slice elements
+  // are in the original array.
+  %bounds1source = acc.bounds lowerbound(%c4 : index) upperbound(%c9 : index) extent(%c4 : index) sourceExtent(%c10 : index) stride(%c1 : index) startIdx(%c0 : index)
+  %copyinsource = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) bounds(%bounds1source) -> memref<10xf32>
+  acc.parallel dataOperands(%copyinsource : memref<10xf32>) {
+  }
+
   return
 }
 
@@ -1446,6 +1458,10 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.delete accPtr([[CREATE]] : memref<10xf32>) dataClause(acc_create)
 // CHECK-NEXT: acc.delete accPtr([[CREATEIMP]] : memref<10x20xf32>) dataClause(acc_create) implicit(true)
+// CHECK: [[CREATESYN:%.*]] = acc.create varPtr([[ARGC]] : memref<10x20xf32>) varType(tensor<10x20xf32>) implicit(true) synthetic -> memref<10x20xf32>
+// CHECK-NEXT: acc.parallel dataOperands([[CREATESYN]] : memref<10x20xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.delete accPtr([[CREATESYN]] : memref<10x20xf32>) dataClause(acc_create) implicit(true) synthetic
 // CHECK: [[COPYOUTZ:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copyout_zero) -> memref<10xf32>
 // CHECK-NEXT: acc.parallel dataOperands([[COPYOUTZ]] : memref<10xf32>) {
 // CHECK-NEXT: }
@@ -1462,6 +1478,7 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK-DAG: [[CON1:%.*]] = arith.constant 1 : index
 // CHECK-DAG: [[CON4:%.*]] = arith.constant 4 : index
 // CHECK-DAG: [[CON9:%.*]] = arith.constant 9 : index
+// CHECK-DAG: [[CON10:%.*]] = arith.constant 10 : index
 // CHECK-DAG: [[CON20:%.*]] = arith.constant 20 : index
 // CHECK: [[BOUNDS1F:%.*]] = acc.bounds lowerbound([[CON0]] : index) upperbound([[CON9]] : index) stride([[CON1]] : index)
 // CHECK-NEXT: [[COPYINF1:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1F]]) name("arrayA[0:9]") -> memref<10xf32>
@@ -1474,6 +1491,10 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK-NEXT: acc.parallel dataOperands([[COPYINPART]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.copyout accPtr([[COPYINPART]] : memref<10xf32>) bounds([[BOUNDS1P]]) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
+// CHECK-NEXT: [[BOUNDS1S:%.*]] = acc.bounds lowerbound([[CON4]] : index) upperbound([[CON9]] : index) extent([[CON4]] : index) sourceExtent([[CON10]] : index) stride([[CON1]] : index) startIdx([[CON0]] : index)
+// CHECK-NEXT: [[COPYINSRC:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1S]]) -> memref<10xf32>
+// CHECK-NEXT: acc.parallel dataOperands([[COPYINSRC]] : memref<10xf32>) {
+// CHECK-NEXT: }
 
 // -----
 

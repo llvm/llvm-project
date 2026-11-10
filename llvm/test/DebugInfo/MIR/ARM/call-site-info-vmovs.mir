@@ -65,8 +65,8 @@
 ---
 name:            b
 callSites:
-  - { bb: 0, offset: 12, fwdArgRegs: [] }
-  - { bb: 0, offset: 18, fwdArgRegs:
+  - { bb: '%bb.0', offset: 12, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 18, fwdArgRegs:
       - { arg: 0, reg: '$d0' } }
 body:             |
   bb.0.entry:

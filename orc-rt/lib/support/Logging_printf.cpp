@@ -85,9 +85,12 @@ constexpr size_t LogBufferSize = 1024;
 
 } // namespace
 
-extern "C" void orc_rt_log_printf(orc_rt_log_Level Level,
-                                  orc_rt_log_Category Category, const char *Fmt,
-                                  ...) noexcept {
+// --- C API Implementation ---
+
+extern "C" {
+
+void orc_rt_log_printf(orc_rt_log_Level Level, orc_rt_log_Category Category,
+                       const char *Fmt, ...) noexcept {
   if (Level < runtimeLevel())
     return;
 
@@ -120,3 +123,5 @@ extern "C" void orc_rt_log_printf(orc_rt_log_Level Level,
   // written atomically with respect to other threads logging to the same sink.
   std::fwrite(Buf, 1, Len, sink());
 }
+
+} // extern "C"

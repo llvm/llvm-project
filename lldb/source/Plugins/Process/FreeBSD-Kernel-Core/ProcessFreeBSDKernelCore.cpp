@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
+
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -18,8 +22,10 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/Error.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "ProcessFreeBSDKernelCore.h"
 #include "ThreadFreeBSDKernelCore.h"
 
@@ -62,6 +68,58 @@ public:
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
+}
+
+static bool SetKernelDebugFile(const ModuleSP &module) {
+  if (!module)
+    return false;
+
+  FileSpec object_file = module->GetFileSpec();
+  FileSystem::Instance().Resolve(object_file);
+
+  FileSpec symbol_file = module->GetSymbolFileFileSpec();
+  if (symbol_file)
+    FileSystem::Instance().Resolve(symbol_file);
+  if (symbol_file && symbol_file != object_file)
+    return false;
+
+  auto *elf = llvm::dyn_cast_or_null<ObjectFileELF>(module->GetObjectFile());
+  if (!elf)
+    return false;
+
+  // GetDebugLink() returns information collected while parsing section
+  // headers, which might not have happened when a PT_NOTE supplied the UUID.
+  (void)elf->GetSectionList();
+  std::optional<FileSpec> debug_link = elf->GetDebugLink();
+  if (!debug_link || debug_link->GetFilename().empty())
+    return false;
+
+  // The kernel's linker_files list may require symbols from kernel.debug to
+  // locate.  Infer an extracted filesystem's root from the local kernel path
+  // and load its FreeBSD-installed debug file before the dynamic loader runs.
+  std::string object_path = object_file.GetPath();
+  FileSpec sysroot = object_file;
+  while (sysroot.RemoveLastPathComponent()) {
+    std::string sysroot_path = sysroot.GetPath();
+    llvm::StringRef relative_path(object_path);
+    if (!relative_path.consume_front(sysroot_path))
+      continue;
+    relative_path = relative_path.ltrim("/\\");
+
+    FileSpec relative_file(relative_path);
+    FileSpec debug_file = sysroot;
+    debug_file.AppendPathComponent("usr/lib/debug");
+    if (!relative_file.GetDirectory().empty())
+      debug_file.AppendPathComponent(relative_file.GetDirectory());
+    debug_file.AppendPathComponent(debug_link->GetFilename());
+    if (!FileSystem::Instance().Exists(debug_file))
+      continue;
+
+    module->SetSymbolFileFileSpec(debug_file);
+    return true;
+  }
+
+  return false;
 }
 
 class CommandObjectProcessFreeBSDKernelCoreRefreshThreads
@@ -134,9 +192,7 @@ lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
     char errbuf[_POSIX2_LINE_MAX];
-    kvm_t *kvm =
-        kvm_open2(executable->GetFileSpec().GetPath().c_str(),
-                  crash_file->GetPath().c_str(), O_RDONLY, errbuf, nullptr);
+    kvm_t *kvm = OpenKVM(executable, *crash_file, O_RDONLY, errbuf);
     if (kvm) {
       kvm_close(kvm);
       return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
@@ -195,9 +251,12 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
     return Status::FromErrorString(
         "ProcessFreeBSDKernelCore: no executable module set on target");
 
+  bool symbols_changed = SetKernelDebugFile(executable);
+
   char errbuf[_POSIX2_LINE_MAX];
-  m_kvm = kvm_open2(executable->GetFileSpec().GetPath().c_str(),
-                    GetCoreFile().GetPath().c_str(), O_RDWR, errbuf, nullptr);
+  const int flags =
+      GetGlobalPluginProperties().GetReadOnly() ? O_RDONLY : O_RDWR;
+  m_kvm = OpenKVM(executable, GetCoreFile(), flags, errbuf);
 
   if (!m_kvm) {
     LLDB_LOGF(GetLog(LLDBLog::Process), "FreeBSD-Kernel-Core: %s", errbuf);
@@ -209,6 +268,12 @@ Status ProcessFreeBSDKernelCore::DoLoadCore() {
   }
 
   SetKernelDisplacement();
+
+  if (symbols_changed) {
+    ModuleList modules;
+    modules.Append(executable);
+    GetTarget().SymbolsDidLoad(modules);
+  }
 
   return Status();
 }
@@ -350,6 +415,20 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
       return false;
 
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
+    // In later FreeBSD versions stoppcbs is a pointer to the array.
+    int32_t osreldate =
+        ReadSignedIntegerFromMemory(FindSymbol("osreldate"), 4, -1, error);
+    if (stoppcbs != LLDB_INVALID_ADDRESS && osreldate >= 1400089) {
+      llvm::Expected<lldb::addr_t> stoppcbs_or_err =
+          ReadPointerFromMemory(stoppcbs);
+      if (!stoppcbs_or_err || *stoppcbs_or_err == 0) {
+        LLDB_LOGF(GetLog(LLDBLog::Process),
+                  "FreeBSD-Kernel-Core: Could not find stoppcbs");
+        return false;
+      }
+
+      stoppcbs = *stoppcbs_or_err;
+    }
 
     // Read stopped_cpus bitmask and mp_maxid for CPU validation.
     lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");
@@ -537,11 +616,36 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
+int ProcessFreeBSDKernelCore::ResolveKVMSymbol(const char *name,
+                                               kvaddr_t *value) {
+  if (!g_kvm_kernel_module)
+    return 1;
+
+  const Symbol *symbol =
+      g_kvm_kernel_module->FindFirstSymbolWithNameAndType(ConstString(name));
+  if (!symbol)
+    return 1;
+
+  lldb::addr_t address = symbol->GetFileAddress();
+  if (address == LLDB_INVALID_ADDRESS)
+    return 1;
+
+  *value = address;
+  return 0;
+}
+
+kvm_t *ProcessFreeBSDKernelCore::OpenKVM(const ModuleSP &kernel_module,
+                                         const FileSpec &core_file, int flags,
+                                         char *errbuf) {
+  llvm::SaveAndRestore resolver_module(g_kvm_kernel_module,
+                                       kernel_module.get());
+  return kvm_open2(kernel_module->GetFileSpec().GetPath().c_str(),
+                   core_file.GetPath().c_str(), flags, errbuf,
+                   ResolveKVMSymbol);
+}
+
 void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
   kssize_t displacement = kvm_kerndisp(m_kvm);
-
-  if (displacement == 0)
-    return;
 
   Target &target = GetTarget();
   lldb::ModuleSP kernel_module_sp = target.GetExecutableModule();

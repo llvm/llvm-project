@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
@@ -207,7 +208,7 @@ static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : Conf.PassPluginFilenames) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
+    auto PassPlugin = PassPlugin::load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
@@ -239,10 +240,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  assert(!Conf.Options.MCOptions.LibraryOptions &&
+         "set Config::LibraryOptions instead");
   TargetOptions TargetOpts = Conf.Options;
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
+  TargetOpts.MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
@@ -294,7 +298,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(Mod.getContext(), TM, Conf.PTO, PGOOpt, &PIC);
 
   RegisterPassPlugins(Conf, PB);
 
@@ -336,6 +340,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
+
   ModulePassManager MPM;
 
   if (!Conf.DisableVerify)
@@ -375,7 +382,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
-  if (PrintPipelinePasses) {
+  if (PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
@@ -476,37 +483,15 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  // Create the codegen pipeline in its own scope so it gets deleted before
-  // Stream->commit() is called. The commit function of CacheStream deletes
-  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
-  // keep the pointer and may use it until their destruction. See #138194.
-  {
-    legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
-    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        TM->Options.ExceptionModel, TM->Options.EABIVersion,
-        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
-
-    // No need to make index available if the module is empty.
-    // In theory these passes should not use the index for an empty
-    // module, however, this guards against doing any unnecessary summary-based
-    // analysis in the case of a ThinLTO build where this might be an empty
-    // regular LTO combined module, with a large combined index from ThinLTO.
-    if (!isEmptyModule(Mod))
-      CodeGenPasses.add(
-          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-    if (Conf.PreCodeGenPassesHook)
-      Conf.PreCodeGenPassesHook(CodeGenPasses);
-    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                                DwoOut ? &DwoOut->os() : nullptr,
-                                Conf.CGFileType))
-      report_fatal_error("Failed to setup codegen");
-    CodeGenPasses.run(Mod);
-
-    if (DwoOut)
-      DwoOut->keep();
-  }
+  const ModuleSummaryIndex *MSI =
+      !isEmptyModule(Mod) ? &CombinedIndex : nullptr;
+  if (runCodeGenPipeline(*TM, Mod, *Stream->OS,
+                         DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType,
+                         /*DisableVerify=*/true,
+                         /*DisableSimplifyLibCalls=*/false, MSI))
+    report_fatal_error("Failed to run codegen");
+  if (DwoOut)
+    DwoOut->keep();
 
   if (Error Err = Stream->commit())
     report_fatal_error(std::move(Err));
@@ -713,7 +698,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM->getTargetTriple().isOSBinFormatELF() &&
+      Mod.getTargetTriple().isOSBinFormatELF() &&
       TM->getRelocationModel() != Reloc::Static &&
       Mod.getPIELevel() == PIELevel::Default;
   renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);

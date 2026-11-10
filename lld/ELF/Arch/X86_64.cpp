@@ -773,9 +773,9 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void X86_64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<X86_64, ELF64LE>(*this, sec, shard);
+    elf::scanSection1<ELF64LE>(*this, sec, shard);
   else // ilp32
-    elf::scanSection1<X86_64, ELF32LE>(*this, sec, shard);
+    elf::scanSection1<ELF32LE>(*this, sec, shard);
 }
 
 static bool isPltOff64Tls(const uint8_t *loc) {
@@ -866,6 +866,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
       memcpy(loc - 3, inst, sizeof(inst));
       // Both code sequences are PC relatives, but since we are moving the
       // constant forward by 9 bytes we have to subtract the value by 9.
+      checkInt(ctx, loc, val - 9, 32, rel);
       write32le(loc + 9, val - 9);
       return;
     }
@@ -885,6 +886,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
 
     // Both code sequences are PC relatives, but since we are moving the
     // constant forward by 8 bytes we have to subtract the value by 8.
+    checkInt(ctx, loc, val - 8, 32, rel);
     write32le(loc + 8, val - 8);
   } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
              rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
@@ -899,6 +901,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
       return;
     }
     loc[-2] = 0x8b;
+    checkInt(ctx, loc, val, 32, rel);
     write32le(loc, val);
   }
 }

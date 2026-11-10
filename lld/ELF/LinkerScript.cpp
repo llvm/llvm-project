@@ -67,7 +67,9 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
         return ss.save(".rela" + out->name);
       return ss.save(".rel" + out->name);
     }
-    if (ctx.arg.relocatable)
+    // Use default LLD behavior for the embedded unoptimized dynamic debugging
+    // relocatable link.
+    if (ctx.arg.relocatable && !ctx.dynDbgRelocatable)
       return s->name;
   }
 
@@ -305,8 +307,8 @@ void LinkerScript::addSymbol(SymbolAssignment *cmd) {
   // write expressions like this: `alignment = 16; . = ALIGN(., alignment)`.
   uint64_t symValue = value.sec ? 0 : value.getValue();
 
-  Defined newSym(ctx, createInternalFile(ctx, cmd->location), cmd->name,
-                 STB_GLOBAL, visibility, value.type, symValue, 0, sec);
+  Defined newSym(createInternalFile(ctx, cmd->location), cmd->name, STB_GLOBAL,
+                 visibility, value.type, symValue, 0, sec);
 
   Symbol *sym = ctx.symtab->insert(cmd->name);
   sym->mergeProperties(newSym);
@@ -322,7 +324,7 @@ void LinkerScript::declareSymbol(SymbolAssignment *cmd) {
     return;
 
   uint8_t visibility = cmd->hidden ? STV_HIDDEN : STV_DEFAULT;
-  Defined newSym(ctx, ctx.internalFile, cmd->name, STB_GLOBAL, visibility,
+  Defined newSym(ctx.internalFile, cmd->name, STB_GLOBAL, visibility,
                  STT_NOTYPE, 0, 0, nullptr);
 
   // If the symbol is already defined, its order is 0 (with absence indicating

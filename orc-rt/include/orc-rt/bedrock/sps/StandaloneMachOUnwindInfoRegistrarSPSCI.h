@@ -15,13 +15,20 @@
 #define ORC_RT_BEDROCK_SPS_STANDALONEMACHOUNWINDINFOREGISTRARSPSCI_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
+#include "orc-rt/support/sps/SPSAllocAction.h"
 
-namespace orc_rt::sps_ci {
+ORC_RT_SPS_ALLOC_ACTION_DECL(
+    orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections)
+
+ORC_RT_SPS_ALLOC_ACTION_DECL(
+    orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections)
+
+namespace orc_rt::sps::ci {
 
 /// Add the StandaloneMachOUnwindInfoRegistrar SPS interface to the
 /// controller interface.
 Error addStandaloneMachOUnwindInfoRegistrar(SimpleSymbolTable &ST);
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci
 
 #endif // ORC_RT_BEDROCK_SPS_STANDALONEMACHOUNWINDINFOREGISTRARSPSCI_H

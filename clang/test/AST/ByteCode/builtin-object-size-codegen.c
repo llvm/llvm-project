@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fexperimental-new-constant-interpreter -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1                                         -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir                                         -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s %}
 
 
 #define PS(N) __attribute__((pass_object_size(N)))
@@ -133,4 +135,16 @@ void f17(void) {
   int gi;
   // CHECK: store i32 8
   gi = __builtin_object_size(h0.s1, 0);
+}
+
+struct Parse {
+  int a;
+  char b;
+  short c;
+};
+struct Parse _P;
+void f18(void) {
+  int gi;
+  // CHECK: store i32 3
+  gi = __builtin_object_size((char*)&_P + 5, 0);
 }

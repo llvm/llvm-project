@@ -17,8 +17,11 @@
 #include "lldb/Target/Target.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Sema/ExternalSemaSource.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace lldb_private {
 
@@ -202,12 +205,31 @@ public:
   }
   bool GetLookupsEnabled() { return m_lookups_enabled; }
 
+  /// Called by Sema when it starts a qualified name lookup into \p DC.
+  void StartedQualifiedLookup(const clang::DeclContext *DC) {
+    m_qualified_lookup_contexts.push_back(DC);
+  }
+
+  /// Called by Sema when it finishes a qualified name lookup into \p DC.
+  void FinishedQualifiedLookup(const clang::DeclContext *DC) {
+    assert(!m_qualified_lookup_contexts.empty() &&
+           m_qualified_lookup_contexts.back() == DC &&
+           "Unbalanced qualified lookup notifications");
+    m_qualified_lookup_contexts.pop_back();
+  }
+
+  /// Returns true if Sema is currently performing a qualified name lookup
+  /// into \p DC.
+  bool IsInQualifiedLookup(const clang::DeclContext *DC) const {
+    return llvm::is_contained(m_qualified_lookup_contexts, DC);
+  }
+
   /// \class ClangASTSourceProxy ClangASTSource.h
   /// "lldb/Expression/ClangASTSource.h" Proxy for ClangASTSource
   ///
   /// Clang AST contexts like to own their AST sources, so this is a state-
   /// free proxy object.
-  class ClangASTSourceProxy : public clang::ExternalASTSource {
+  class ClangASTSourceProxy : public clang::ExternalSemaSource {
   public:
     ClangASTSourceProxy(ClangASTSource &original) : m_original(original) {}
 
@@ -245,6 +267,14 @@ public:
 
     void StartTranslationUnit(clang::ASTConsumer *Consumer) override {
       return m_original.StartTranslationUnit(Consumer);
+    }
+
+    void StartedQualifiedLookup(const clang::DeclContext *DC) override {
+      m_original.StartedQualifiedLookup(DC);
+    }
+
+    void FinishedQualifiedLookup(const clang::DeclContext *DC) override {
+      m_original.FinishedQualifiedLookup(DC);
     }
 
   private:
@@ -393,6 +423,8 @@ protected:
   std::shared_ptr<ClangASTImporter> m_ast_importer_sp;
   std::set<const clang::Decl *> m_active_lexical_decls;
   std::set<const char *> m_active_lookups;
+  /// The DeclContexts Sema is currently performing a qualified lookup into.
+  llvm::SmallVector<const clang::DeclContext *, 2> m_qualified_lookup_contexts;
 };
 
 } // namespace lldb_private

@@ -28,3 +28,28 @@ define i1 @atan2_negative_x_is_subnormal(float %y, float %x) {
   %class = call i1 @llvm.is.fpclass.f32(float %atan2, i32 144)
   ret i1 %class
 }
+
+define i1 @atan2_positive_y_is_negzero(float %y, float %x) {
+; CHECK-LABEL: define i1 @atan2_positive_y_is_negzero(
+; CHECK-SAME: float [[Y:%.*]], float [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %abs_y = call float @llvm.fabs.f32(float %y)
+  %positive_y = fadd float %abs_y, 1.000000e+00
+  %atan2 = call float @llvm.atan2.f32(float %positive_y, float %x)
+  %class = call i1 @llvm.is.fpclass.f32(float %atan2, i32 32)
+  ret i1 %class
+}
+
+define i1 @atan2_negative_y_is_poszero(float %y, float %x) {
+; CHECK-LABEL: define i1 @atan2_negative_y_is_poszero(
+; CHECK-SAME: float [[Y:%.*]], float [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %abs_y = call float @llvm.fabs.f32(float %y)
+  %positive_y = fadd float %abs_y, 1.000000e+00
+  %negative_y = fneg float %positive_y
+  %atan2 = call float @llvm.atan2.f32(float %negative_y, float %x)
+  %class = call i1 @llvm.is.fpclass.f32(float %atan2, i32 64)
+  ret i1 %class
+}

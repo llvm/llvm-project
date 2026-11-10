@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify=ped -std=c23 -Wall -pedantic %s
 // RUN: %clang_cc1 -verify=yay -std=c2y -Wall -pedantic %s
-// RUN: %clang_cc1 -verify=pre -std=c2y -Wpre-c2y-compat -Wall -pedantic %s
+// RUN: %clang_cc1 -verify=pre -std=c2y -Wpre-c2y-compat-pedantic -Wall -pedantic %s
 // RUN: %clang_cc1 -verify=gnu -Wall -Wgnu -x c++ %s
 // RUN: %clang_cc1 -verify=yay -Wall -Wgnu -Wno-gnu-imaginary-constant -x c++ %s
 
@@ -101,4 +101,3 @@ static_assert(_Generic(12.0Jl, _Complex long double : 1, default : 0)); /* gnu-w
                                                                            ped-warning {{imaginary constants are a C2y extension}}
                                                                            pre-warning {{imaginary constants are incompatible with C standards before C2y}}
                                                                          */
-

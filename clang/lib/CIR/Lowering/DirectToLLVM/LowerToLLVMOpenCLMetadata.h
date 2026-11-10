@@ -27,10 +27,13 @@ public:
 
 private:
   void lower(cir::OpenCLKernelArgMetadataAttr clArgMetadata);
+  void lower(cir::MaxWorkGroupSizeAttr maxWGSize);
 
   mlir::MLIRContext *ctx;
   llvm::SmallVector<mlir::Attribute> functionMetadata;
 };
+
+void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module);
 
 } // namespace direct
 } // namespace cir

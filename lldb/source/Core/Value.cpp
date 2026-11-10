@@ -26,6 +26,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
@@ -492,10 +493,14 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     address_type = eAddressTypeHost;
     if (exe_ctx) {
       if (Target *target = exe_ctx->GetTargetPtr()) {
-        // Registers are always stored in host endian.
-        data.SetByteOrder(m_context_type == ContextType::RegisterInfo
-                              ? endian::InlHostByteOrder()
-                              : target->GetArchitecture().GetByteOrder());
+        ByteOrder byte_order = target->GetArchitecture().GetByteOrder();
+        // ValueObjectRegister stores structured register types in target byte
+        // order and all other register buffers in host byte order.
+        if (m_context_type == ContextType::RegisterInfo &&
+            !llvm::isa_and_present<RegisterTypeComposite>(
+                GetRegisterInfo()->register_type))
+          byte_order = endian::InlHostByteOrder();
+        data.SetByteOrder(byte_order);
         data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
         break;
       }

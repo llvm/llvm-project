@@ -54,7 +54,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
   if (!M)
     return nullptr;
 
-  M->setDataLayout(TM.createDataLayout());
+  M->setDataLayout(TM.getTargetTriple().computeDataLayout());
 
   if (MIR->parseMachineFunctions(*M, MMI))
     return nullptr;
@@ -82,6 +82,7 @@ TEST(WebAssemblyExceptionInfoTest, TEST0) {
 ...
 ---
 name: test0
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
   - { reg: '$value_stack' }
@@ -244,6 +245,7 @@ TEST(WebAssemblyExceptionInfoTest, TEST1) {
 ...
 ---
 name: test1
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
   - { reg: '$value_stack' }

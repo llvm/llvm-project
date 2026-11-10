@@ -10,4 +10,4 @@
 
 #include "src/math/ceilf16.h"
 
-LIST_CEIL_TESTS(float16, LIBC_NAMESPACE::ceilf16)
+LIST_CEIL_TESTS(Ceilf16, float16, LIBC_NAMESPACE::ceilf16)

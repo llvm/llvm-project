@@ -39,6 +39,7 @@
 
 // Device, CPU
 // RUN: %clang_cc1 -fopenmp -fclangir -emit-cir \
+// RUN:   -triple x86_64-linux-gnu \
 // RUN:   -fopenmp-is-target-device %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CPU-DEVICE
 

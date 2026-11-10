@@ -9,9 +9,10 @@
 #include "ProcessMockAccelerator.h"
 #include "ThreadMockAccelerator.h"
 
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "llvm/Support/Error.h"
+
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,7 +25,9 @@ static constexpr lldb::tid_t kMockTid = 3456;
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 ProcessMockAccelerator::Manager::Launch(ProcessLaunchInfo &launch_info,
                                         NativeDelegate &native_delegate) {
-  return std::make_unique<ProcessMockAccelerator>(kMockPid, native_delegate);
+  return std::make_unique<ProcessMockAccelerator>(
+      kMockPid, m_arch, m_dynamic_loader_library_path, m_native_memory_address,
+      m_native_memory_size, native_delegate);
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -34,15 +37,26 @@ ProcessMockAccelerator::Manager::Attach(lldb::pid_t pid,
                                  "accelerator process");
 }
 
-ProcessMockAccelerator::ProcessMockAccelerator(lldb::pid_t pid,
-                                               NativeDelegate &delegate)
-    : NativeProcessProtocol(pid, /*terminal_fd=*/-1, delegate) {
+ProcessMockAccelerator::ProcessMockAccelerator(
+    lldb::pid_t pid, ArchSpec arch, std::string dynamic_loader_library_path,
+    std::optional<uint64_t> native_memory_address,
+    std::optional<uint64_t> native_memory_size, NativeDelegate &delegate)
+    : NativeProcessProtocol(pid, /*terminal_fd=*/-1, delegate),
+      m_arch(std::move(arch)),
+      m_dynamic_loader_library_path(std::move(dynamic_loader_library_path)),
+      m_native_memory_address(native_memory_address),
+      m_native_memory_size(native_memory_size) {
   m_state = eStateStopped;
   UpdateThreads();
 }
 
+void ProcessMockAccelerator::HandleNativeProcessExit(
+    const WaitStatus &exit_status) {
+  SetExitStatus(exit_status, /*bNotifyStateChange=*/true);
+}
+
 Status ProcessMockAccelerator::Resume(const ResumeActionList &resume_actions) {
-  // Nothing actually runs; stay stopped.
+  SetState(eStateRunning, /*notify_delegates=*/true);
   return Status();
 }
 
@@ -62,8 +76,18 @@ Status ProcessMockAccelerator::Kill() { return Status(); }
 Status ProcessMockAccelerator::ReadMemory(const ProcessAddress &process_addr,
                                           void *buf, size_t size,
                                           size_t &bytes_read) {
-  bytes_read = 0;
-  return Status::FromErrorString("unimplemented");
+  // No real memory to read, so synthesize bytes that identify the address the
+  // request arrived with: byte 0 is the address space and byte 1 is the thread
+  // (zero when the read was not thread specific). That lets a test tell reads
+  // of the same numeric address apart.
+  uint8_t *bytes = static_cast<uint8_t *>(buf);
+  std::memset(bytes, 0, size);
+  if (size > 0)
+    bytes[0] = static_cast<uint8_t>(process_addr.GetAddressSpace());
+  if (size > 1)
+    bytes[1] = static_cast<uint8_t>(process_addr.GetThreadID().value_or(0));
+  bytes_read = size;
+  return Status();
 }
 
 Status ProcessMockAccelerator::DoWriteMemory(lldb::addr_t addr, const void *buf,
@@ -87,8 +111,6 @@ size_t ProcessMockAccelerator::UpdateThreads() {
 }
 
 const ArchSpec &ProcessMockAccelerator::GetArchitecture() const {
-  if (!m_arch.IsValid())
-    m_arch = HostInfo::GetArchitecture();
   return m_arch;
 }
 
@@ -111,4 +133,25 @@ Status
 ProcessMockAccelerator::GetFileLoadAddress(const llvm::StringRef &file_name,
                                            lldb::addr_t &load_addr) {
   return Status::FromErrorString("unimplemented");
+}
+
+std::vector<AddressSpaceInfo> ProcessMockAccelerator::GetAddressSpaces() {
+  return {{"global", 1, /*is_thread_specific=*/false},
+          {"local", 2, /*is_thread_specific=*/true}};
+}
+
+std::optional<AcceleratorDynamicLoaderResponse>
+ProcessMockAccelerator::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo info;
+  info.pathname = m_dynamic_loader_library_path;
+  if (m_native_memory_address && m_native_memory_size) {
+    info.native_memory_address = m_native_memory_address;
+    info.native_memory_size = m_native_memory_size;
+  }
+  info.load = true;
+  info.load_address = 0x10000000;
+  response.library_infos.push_back(std::move(info));
+  return response;
 }

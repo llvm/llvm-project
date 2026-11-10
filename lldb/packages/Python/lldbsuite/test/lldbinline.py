@@ -1,6 +1,7 @@
 # System modules
 import os
 import textwrap
+import typing
 
 # Third-party modules
 import io
@@ -84,6 +85,9 @@ class CommandParser:
 
 
 class InlineTest(TestBase):
+    _build_dict: typing.Dict
+    _makefile_extras: typing.Optional[str]
+
     def getBuildDirBasename(self):
         return self.__class__.__name__ + "." + self.testMethodName
 
@@ -113,6 +117,9 @@ class InlineTest(TestBase):
 
             if "CXX_SOURCES" in list(categories.keys()):
                 makefile.write("CXXFLAGS += -std=c++11\n")
+
+            if self._makefile_extras is not None:
+                makefile.write(self._makefile_extras)
 
             makefile.write("include Makefile.rules\n")
 
@@ -206,7 +213,15 @@ def ApplyDecoratorsToFunction(func, decorators):
     return tmp
 
 
-def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=None):
+def MakeInlineTest(
+    __file,
+    __globals,
+    decorators=None,
+    name=None,
+    build_dict=None,
+    *,
+    makefile_extras=None,
+):
     # Adjust the filename if it ends in .pyc.  We want filenames to
     # reflect the source python file, not the compiled variant.
     if __file is not None and __file.endswith(".pyc"):
@@ -223,7 +238,14 @@ def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=Non
     )
     # Build the test case
     test_class = type(
-        name, (InlineTest,), dict(test=test_func, name=name, _build_dict=build_dict)
+        name,
+        (InlineTest,),
+        dict(
+            test=test_func,
+            name=name,
+            _build_dict=build_dict,
+            _makefile_extras=makefile_extras,
+        ),
     )
 
     # Add the test case to the globals, and hide InlineTest
