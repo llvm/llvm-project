@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -168,6 +169,7 @@ class InlineSpiller : public Spiller {
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
   LiveRegMatrix *Matrix = nullptr;
+  LiveDebugVariables *DebugVars = nullptr;
 
   // Variables that are valid during spill(), but used by multiple methods.
   LiveRangeEdit *Edit = nullptr;
@@ -194,6 +196,9 @@ class InlineSpiller : public Spiller {
   // Dead defs generated during spilling.
   SmallVector<MachineInstr*, 8> DeadDefs;
 
+  // Virtual registers whose saves were forwarded to restores, by stack slot.
+  DenseMap<int, SmallVector<Register, 4>> ForwardedStoreRegs;
+
   // Object records spills information and does the hoisting.
   HoistSpillHelper HSpiller;
 
@@ -208,7 +213,8 @@ public:
       : MF(MF), LIS(Analyses.LIS), LSS(Analyses.LSS), VRM(VRM),
         MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
         TRI(*MF.getSubtarget().getRegisterInfo()), Matrix(Matrix),
-        HSpiller(Analyses, MF, VRM, Matrix), VRAI(VRAI) {}
+        DebugVars(Analyses.DebugVars), HSpiller(Analyses, MF, VRM, Matrix),
+        VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &, AllocationOrder *Order = nullptr) override;
   ArrayRef<Register> getSpilledRegs() override { return RegsToSpill; }
@@ -641,7 +647,6 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
   MF.substituteDebugValuesForInst(Restore, *Copy, /*MaxOperand=*/1);
   Restore.eraseFromParent();
   ++NumReloadsRemoved;
-  HSpiller.addDeadSpillCandidate(Store, StoreFI);
   SlotIndex BlockStart = LIS.getMBBStartIdx(&MBB);
   if (!StoreLI) {
     // Store register is physical, extend the live range.
@@ -652,6 +657,12 @@ bool InlineSpiller::tryForwardFromStoreToRestore(MachineInstr &Store,
         LR->extendInBlock(BlockStart, Use);
     }
     return true;
+  }
+  // Saves can only be removed if LiveDebugVariables can be told that the value
+  // is in the forwarded register instead of the stack slot.
+  if (DebugVars) {
+    HSpiller.addDeadSpillCandidate(Store, StoreFI);
+    ForwardedStoreRegs[StoreFI].push_back(StoreReg);
   }
   // Store register is virtual, update liveness information and re-assign in the
   // matrix.
@@ -685,6 +696,17 @@ void InlineSpiller::eliminateRedundantRestores() {
           PreviousSlotAccess[MO.getIndex()] = &MI;
     }
   }
+
+  if (ForwardedStoreRegs.empty())
+    return;
+  // Update LiveDebugVariables for forwarded registers.
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    auto It = ForwardedStoreRegs.find(VRM.getStackSlot(Reg));
+    if (It != ForwardedStoreRegs.end())
+      DebugVars->splitRegister(Reg, It->second, LIS);
+  }
+  ForwardedStoreRegs.clear();
 }
 
 /// eliminateRedundantSpills - SLI:VNI is known to be on the stack. Remove any
