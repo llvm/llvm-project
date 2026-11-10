@@ -464,26 +464,9 @@ def AArch64PostLegalizerLowering
                         unmerge_duplanes]> {
 }
 
-def mul_one_zero_vector : GICombineRule<
-  (defs root:$dst),
-  (match
-    (G_BUILD_VECTOR $mask, (i32 1), (i32 0)),
-    (G_MUL v2i32:$dst, $src, $mask)),
-  (apply
-    (G_BUILD_VECTOR v2i32:$and_mask, (i32 -1), (i32 0)),
-    (G_AND $dst, $src, $and_mask))
->;
-
-def mul_one_zero_vector_lhs : GICombineRule<
-  (defs root:$dst),
-  (match
-    (G_BUILD_VECTOR $mask, (i32 1), (i32 0)),
-    (G_MUL v2i32:$dst, $mask, $src)),
-  (apply
-    (G_BUILD_VECTOR v2i32:$and_mask, (i32 -1), (i32 0)),
-    (G_AND $dst, $src, $and_mask))
->;
-
+// Turn an AND that clears the second lane of a v2i32 into an insert of zero,
+// which selects to a single "mov v.s[1], wzr". Skip ANDs that feed a G_OR,
+// since the AND/OR pair is better matched as a bitwise select.
 def and_clear_second_lane : GICombineRule<
   (defs root:$dst),
   (match
@@ -511,8 +494,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_by_zero_one_vector, mul_one_zero_vector,
-                        mul_one_zero_vector_lhs, and_clear_second_lane,
+                        mul_by_zero_one_vector, and_clear_second_lane,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
