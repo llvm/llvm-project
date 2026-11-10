@@ -52,7 +52,7 @@ public:
   const AMDGPUTargetMachine &TM;
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo *TLI;
-  UniformityInfo &UA;
+  const UniformityInfo &UA;
   const DataLayout &DL;
   SimplifyQuery SQ;
   const bool HasFP32DenormalFlush;
@@ -67,7 +67,7 @@ public:
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
                            const TargetTransformInfo &TTI,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
-                           const DominatorTree *DT, UniformityInfo &UA,
+                           const DominatorTree *DT, const UniformityInfo &UA,
                            bool ExpandDiv64InIR)
       : CLOpts(TM.getCLOpts()), F(F), ST(TM.getSubtarget<GCNSubtarget>(F)),
         TM(TM), TTI(TTI), TLI(TLI), UA(UA), DL(F.getDataLayout()),
@@ -153,7 +153,7 @@ public:
 
   Value *shrinkDivRem64(IRBuilder<> &Builder, BinaryOperator &I,
                         Value *Num, Value *Den) const;
-  void expandDivRem64(BinaryOperator &I);
+  void expandDivRem64(BinaryOperator &I) const;
 
   /// Widen a scalar load.
   ///
@@ -1318,20 +1318,20 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
   return nullptr;
 }
 
-void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) {
+void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) const {
   Instruction::BinaryOps Opc = I.getOpcode();
-  // Bypasses the DeadVals worklist, so forget I from UA if it got erased to
-  // avoid a stale entry for a reused instruction address.
-  bool Erased;
-  if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
-    Erased = expandDivisionUpTo64Bits(&I);
-  else if (Opc == Instruction::URem || Opc == Instruction::SRem)
-    Erased = expandRemainderUpTo64Bits(&I);
-  else
-    llvm_unreachable("not a division");
+  // Do the general expansion.
+  if (Opc == Instruction::UDiv || Opc == Instruction::SDiv) {
+    expandDivisionUpTo64Bits(&I);
+    return;
+  }
 
-  if (Erased)
-    UA.forgetValue(&I);
+  if (Opc == Instruction::URem || Opc == Instruction::SRem) {
+    expandRemainderUpTo64Bits(&I);
+    return;
+  }
+
+  llvm_unreachable("not a division");
 }
 
 /*
@@ -1468,8 +1468,13 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
         NewDiv = expandDivRem32(Builder, I, Num, Den);
       else {
         NewDiv = shrinkDivRem64(Builder, I, Num, Den);
-        if (!NewDiv)
-          Div64ToExpand.push_back(&I);
+        if (!NewDiv && ExpandDiv64InIR) {
+          // The expansion erases its input. Expand a copy so that I is erased
+          // through DeadVals.
+          auto *Copy = cast<BinaryOperator>(Builder.Insert(I.clone()));
+          Div64ToExpand.push_back(Copy);
+          NewDiv = Copy;
+        }
       }
     }
 
@@ -2232,7 +2237,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
       &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  UniformityInfo &UA =
+  const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA, ExpandDiv64InIR)
       .run();
@@ -2245,7 +2250,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   const TargetLibraryInfo *TLI = &FAM.getResult<TargetLibraryAnalysis>(F);
   AssumptionCache *AC = &FAM.getResult<AssumptionAnalysis>(F);
   const DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
-  UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
+  const UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
   AMDGPUCodeGenPrepareImpl Impl(F, ATM, TTI, TLI, AC, DT, UA,
                                 ATM.getCLOpts().codegenprepare_expand_div64);
   if (!Impl.run())
