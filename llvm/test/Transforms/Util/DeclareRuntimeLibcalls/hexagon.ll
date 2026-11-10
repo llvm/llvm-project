@@ -240,7 +240,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i32)
 ; CHECK-NEXT: declare float @__powisf2(float, i32)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i32)
-; CHECK-NEXT: declare void @__stack_chk_fail()
+; CHECK-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double)
 ; CHECK-NEXT: declare float @__subsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -439,6 +439,7 @@
 ; CHECK-NEXT: declare float @tgammaf(float)
 ; CHECK-NEXT: declare double @trunc(double)
 ; CHECK-NEXT: declare float @truncf(float)
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -679,7 +680,7 @@
 ; LINUX-NEXT: declare double @__powidf2(double, i32)
 ; LINUX-NEXT: declare float @__powisf2(float, i32)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
-; LINUX-NEXT: declare void @__stack_chk_fail()
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -880,6 +881,7 @@
 ; LINUX-NEXT: declare float @tgammaf(float)
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

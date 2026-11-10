@@ -111,6 +111,12 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasHVXIeeeFp)
     Builder.defineMacro("__HVX_IEEE_FP__");
 
+  if (hasFeature("hlx")) {
+    Builder.defineMacro("__HLX__");
+    Builder.defineMacro("__HLX_ARCH__", "85");
+    Builder.defineMacro("__HLX_LENGTH__", "2048");
+  }
+
   if (hasFeature("audio")) {
     Builder.defineMacro("__HEXAGON_AUDIO__");
   }
@@ -164,6 +170,10 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasHVXIeeeFp = true;
     else if (F == "+audio")
       HasAudio = true;
+    else if (F == "+hlx")
+      HasHLX = true;
+    else if (F == "-hlx")
+      HasHLX = false;
   }
   if (CPU.compare("hexagonv68") >= 0) {
     HasFastHalfType = true;
@@ -259,6 +269,7 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hvx-ieee-fp", HasHVXIeeeFp)
       .Case("long-calls", UseLongCalls)
       .Case("audio", HasAudio)
+      .Case("hlx", HasHLX)
       .Default(false);
 }
 

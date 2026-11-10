@@ -1,3 +1,4 @@
+c-reference-root: locale
 functions:
   duplocale:
     in-latest-posix: ''
@@ -18,20 +19,26 @@ functions:
 macros:
   LC_ALL:
     c-definition: '7.11'
+    c-reference: locale/LC_categories
     in-latest-posix: ''
   LC_COLLATE:
     c-definition: '7.11'
+    c-reference: locale/LC_categories
     in-latest-posix: ''
   LC_CTYPE:
     c-definition: '7.11'
+    c-reference: locale/LC_categories
     in-latest-posix: ''
   LC_MONETARY:
     c-definition: '7.11'
+    c-reference: locale/LC_categories
     in-latest-posix: ''
   LC_NUMERIC:
     c-definition: '7.11'
+    c-reference: locale/LC_categories
     in-latest-posix: ''
   LC_TIME:
     c-definition: '7.11'
+    c-reference: locale/LC_categories
     in-latest-posix: ''
 

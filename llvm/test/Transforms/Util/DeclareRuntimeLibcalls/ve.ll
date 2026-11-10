@@ -1,5 +1,5 @@
 ; REQUIRES: ve-registered-target
-; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=ve < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck %s
+; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=ve < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck --match-full-lines %s
 
 ; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; CHECK-NEXT: @__stack_chk_guard = external global ptr
@@ -226,7 +226,7 @@
 ; CHECK-NEXT: declare float @__powisf2(float, i32 signext)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; CHECK-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; CHECK-NEXT: declare void @__stack_chk_fail()
+; CHECK-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double)
 ; CHECK-NEXT: declare float @__subsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -475,6 +475,7 @@
 ; CHECK-NEXT: declare double @trunc(double)
 ; CHECK-NEXT: declare float @truncf(float)
 ; CHECK-NEXT: declare fp128 @truncl(fp128)
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
