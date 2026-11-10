@@ -38,11 +38,9 @@ struct MissingFeatures {
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
   static bool emitNVVMMetadata() { return false; }
-  static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool hiddenVisibility() { return false; }
-  static bool protectedVisibility() { return false; }
   static bool defaultVisibility() { return false; }
 
   // Load/store attributes

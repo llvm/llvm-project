@@ -4,7 +4,6 @@
 ---
 name:            madd_addwi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1
@@ -28,7 +27,6 @@ body:             |
 ---
 name:            madd_addxi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -52,7 +50,6 @@ body:             |
 ---
 name:            madd_subwi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1
@@ -76,7 +73,6 @@ body:             |
 ---
 name:            madd_subxi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
@@ -100,7 +96,6 @@ body:             |
 ---
 name:            madd_addorwi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1
@@ -124,7 +119,6 @@ body:             |
 ---
 name:            madd_addorxi
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1
