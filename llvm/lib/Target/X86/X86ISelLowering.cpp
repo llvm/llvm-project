@@ -48587,17 +48587,21 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       return DAG.getConstant(EltBits[Idx].zext(NumEltBits), dl, VT);
     }
 
-    // Convert extract_element(bitcast(<X x i1>) -> bitcast(extract_subvector()).
-    // Improves lowering of bool masks on rust which splits them into byte array.
-    if (InputVector.getOpcode() == ISD::BITCAST && (NumEltBits % 8) == 0) {
+    // Convert extract_element(bitcast(<X x i1>) ->
+    // bitcast(extract_subvector()). Improves lowering of bool masks on rust
+    // which splits them into byte array. The result type may be wider than the
+    // vector element type (implicitly any-extended, or zero-extended for
+    // PEXTRB/PEXTRW), so index the mask by the element width, not by VT.
+    if (InputVector.getOpcode() == ISD::BITCAST && (VecEltBitWidth % 8) == 0) {
       SDValue Src = peekThroughBitcasts(InputVector);
       if (Src.getValueType().getScalarType() == MVT::i1 &&
           TLI.isTypeLegal(Src.getValueType())) {
-        MVT SubVT = MVT::getVectorVT(MVT::i1, NumEltBits);
-        SDValue Sub = DAG.getNode(
-            ISD::EXTRACT_SUBVECTOR, dl, SubVT, Src,
-            DAG.getVectorIdxConstant(CIdx->getZExtValue() * NumEltBits, dl));
-        return DAG.getBitcast(VT, Sub);
+        MVT SubVT = MVT::getVectorVT(MVT::i1, VecEltBitWidth);
+        SDValue Sub = DAG.getExtractSubvector(
+            dl, SubVT, Src, CIdx->getZExtValue() * VecEltBitWidth);
+        Sub = DAG.getBitcast(SrcVT.getScalarType(), Sub);
+        return IsPextr ? DAG.getZExtOrTrunc(Sub, dl, VT)
+                       : DAG.getAnyExtOrTrunc(Sub, dl, VT);
       }
     }
   }
