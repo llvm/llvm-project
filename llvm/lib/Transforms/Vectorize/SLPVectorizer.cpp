@@ -628,25 +628,11 @@ public:
     return std::nullopt;
   }
 
-  /// Describes a root node mul(ext(A), ext(B)) that only feeds an add
-  /// reduction, so the reduction is costed as a multiply-accumulate.
-  struct MulAccRootInfo {
-    /// The element type of A and B.
-    Type *SrcTy;
-    bool IsUnsigned;
-    /// A and B are the same value, so a single extend is emitted.
-    bool SameOperands;
-    /// The context of the extended operands.
-    TTI::CastContextHint CCH;
-  };
-
-  /// Returns the multiply-accumulate description of the root node, if the
-  /// root multiply and its extended operands fold into the reduction.
-  std::optional<MulAccRootInfo> getMulAccRootInfo() const;
-
-  /// Returns true if \p TE is an extended operand of the multiply-accumulate
-  /// root that is only used by the root, so it is not emitted on its own.
-  bool isFoldedMulAccExtend(const TreeEntry &TE) const;
+  /// Combines the root mul(ext(A), ext(B)) of an add reduction with the
+  /// reduction, so they are costed as a single multiply-accumulate. Must be
+  /// called after the minimal bitwidths are computed, since narrowed nodes
+  /// are emitted differently.
+  void combineMulAccReduction();
 
   /// Checks if the root graph node can be emitted with narrower bitwidth at
   /// codegen and returns it signedness, if so.
@@ -678,6 +664,12 @@ public:
             getRootNode().CombinedOp == TreeEntry::ReducedBitcastBSwapLoads ||
             getRootNode().CombinedOp == TreeEntry::ReducedBitPack) &&
            getRootNode().State == TreeEntry::Vectorize;
+  }
+
+  /// Returns true if the root node includes the cost of the reduction as a
+  /// multiply-accumulate.
+  bool isMulAccReductionRoot() const {
+    return getRootNode().CombinedOp == TreeEntry::ReducedMulAcc;
   }
 
   /// Returns true if the tree results in the reduced cmp bitcast root.
@@ -2953,6 +2945,7 @@ private:
       ReducedBitcastBSwapLoads,
       ReducedBitPack,
       ReducedCmpBitcast,
+      ReducedMulAcc,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -16143,9 +16136,9 @@ const BoUpSLP::TreeEntry *BoUpSLP::getOperandEntry(const TreeEntry *E,
   return Op;
 }
 
-std::optional<BoUpSLP::MulAccRootInfo> BoUpSLP::getMulAccRootInfo() const {
+void BoUpSLP::combineMulAccReduction() {
   if (!UserIgnoreList || VectorizableTree.empty())
-    return std::nullopt;
+    return;
   // Narrowed, combined, alternate or reused nodes are emitted differently.
   auto IsPlainNode = [&](const TreeEntry &TE) {
     return TE.State == TreeEntry::Vectorize && !TE.isAltShuffle() &&
@@ -16153,7 +16146,7 @@ std::optional<BoUpSLP::MulAccRootInfo> BoUpSLP::getMulAccRootInfo() const {
            TE.CombinedOp == TreeEntry::NotCombinedOp &&
            TE.ReuseShuffleIndices.empty() && !MinBWs.contains(&TE);
   };
-  const TreeEntry &Root = getRootNode();
+  TreeEntry &Root = *VectorizableTree.front();
   // The multiply is emitted only as part of the reduction.
   if (!IsPlainNode(Root) || Root.getOpcode() != Instruction::Mul ||
       getReductionType()->getElementType() != Root.Scalars.front()->getType() ||
@@ -16166,12 +16159,12 @@ std::optional<BoUpSLP::MulAccRootInfo> BoUpSLP::getMulAccRootInfo() const {
                  return UserIgnoreList->contains(U);
                });
       }))
-    return std::nullopt;
-  const TreeEntry *LHS = getOperandEntry(&Root, 0);
-  const TreeEntry *RHS = getOperandEntry(&Root, 1);
+    return;
+  TreeEntry *LHS = getOperandEntry(&Root, 0);
+  TreeEntry *RHS = getOperandEntry(&Root, 1);
   unsigned ExtOpcode = LHS->hasState() ? LHS->getOpcode() : 0;
   if (ExtOpcode != Instruction::ZExt && ExtOpcode != Instruction::SExt)
-    return std::nullopt;
+    return;
   Type *SrcTy = cast<CastInst>(LHS->getMainOp())->getSrcTy();
   TTI::CastContextHint CCH = getCastContextHint(*getOperandEntry(LHS, 0));
   auto IsFoldableExt = [&](const TreeEntry *TE) {
@@ -16182,24 +16175,21 @@ std::optional<BoUpSLP::MulAccRootInfo> BoUpSLP::getMulAccRootInfo() const {
     return !MinBWs.contains(Op) && getCastContextHint(*Op) == CCH;
   };
   // A square reuses the vectorized extend for both operands.
-  bool SameOperands =
+  bool IsSquare =
       RHS == LHS || (RHS->isGather() && RHS->Scalars == LHS->Scalars);
-  if (!IsFoldableExt(LHS) || (!SameOperands && !IsFoldableExt(RHS)))
-    return std::nullopt;
-  return MulAccRootInfo{SrcTy, ExtOpcode == Instruction::ZExt, SameOperands,
-                        CCH};
-}
-
-bool BoUpSLP::isFoldedMulAccExtend(const TreeEntry &TE) const {
-  if (!TE.UserTreeIndex || TE.UserTreeIndex.UserTE->Idx != 0 ||
-      !getMulAccRootInfo())
-    return false;
+  if (!IsFoldableExt(LHS) || (!IsSquare && !IsFoldableExt(RHS)))
+    return;
+  Root.CombinedOp = TreeEntry::ReducedMulAcc;
   // Extends with other users are still emitted for them.
-  ArrayRef<Value *> RootScalars = getRootNodeScalars();
-  return all_of(TE.Scalars, [&](Value *V) {
-    return all_of(V->users(),
-                  [&](User *U) { return is_contained(RootScalars, U); });
-  });
+  for (TreeEntry *ExtTE : {LHS, RHS}) {
+    if (ExtTE->isGather() || !all_of(ExtTE->Scalars, [&](Value *V) {
+          return all_of(V->users(),
+                        [&](User *U) { return is_contained(Root.Scalars, U); });
+        }))
+      continue;
+    ExtTE->State = TreeEntry::CombinedVectorize;
+    ExtTE->CombinedOp = TreeEntry::ReducedMulAcc;
+  }
 }
 
 TTI::CastContextHint BoUpSLP::getCastContextHint(const TreeEntry &TE) const {
@@ -17182,9 +17172,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (IsArithmeticExtendedReduction &&
           (VecOpcode == Instruction::ZExt || VecOpcode == Instruction::SExt))
         return CommonCost;
-      // Costed by the reduction as a multiply-accumulate.
-      if (isFoldedMulAccExtend(*E))
-        return CommonCost;
       return CommonCost +
              TTI->getCastInstrCost(VecOpcode, VecTy, SrcVecTy, CCH, CostKind,
                                    VecOpcode == Opcode ? VI : nullptr);
@@ -17382,6 +17369,36 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return VecCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
+  }
+  case TreeEntry::ReducedMulAcc: {
+    auto GetScalarCost = [&](unsigned Idx) {
+      return TTI->getInstructionCost(cast<Instruction>(UniqueValues[Idx]),
+                                     CostKind);
+    };
+    // The combined extends are not costed on their own, so their scalars
+    // are accounted here.
+    InstructionCost CombinedExtsScalarCost = 0;
+    SmallPtrSet<const TreeEntry *, 2> CombinedExts;
+    for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
+      const TreeEntry *OpTE = getOperandEntry(E, Idx);
+      if (OpTE->State != TreeEntry::CombinedVectorize ||
+          !CombinedExts.insert(OpTE).second)
+        continue;
+      for (Value *V : OpTE->Scalars)
+        CombinedExtsScalarCost +=
+            TTI->getInstructionCost(cast<Instruction>(V), CostKind);
+    }
+    auto GetVectorCost = [&](InstructionCost CommonCost) {
+      const TreeEntry *LHS = getOperandEntry(E, 0);
+      auto *SrcVecTy = cast<VectorType>(getWidenedType(
+          cast<CastInst>(LHS->getMainOp())->getSrcTy(), EntryVF));
+      return TTI->getMulAccReductionCost(
+                 LHS->getOpcode() == Instruction::ZExt, Instruction::Add,
+                 OrigScalarTy, SrcVecTy, CostKind,
+                 getCastContextHint(*getOperandEntry(LHS, 0)), E->Scalars) +
+             CommonCost;
+    };
+    return GetCostDiff(GetScalarCost, GetVectorCost) - CombinedExtsScalarCost;
   }
   case TreeEntry::ReducedBitcast:
   case TreeEntry::ReducedBitcastBSwap: {
@@ -17592,9 +17609,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return ScalarCost;
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
-      // Costed by the reduction as a multiply-accumulate.
-      if (E->Idx == 0 && ShuffleOrOp == Instruction::Mul && getMulAccRootInfo())
-        return CommonCost;
       // And peephole only applies to plain 2-operand nodes.
       if (ShuffleOrOp == Instruction::And && It != MinBWs.end() &&
           !E->hasReassocScalars()) {
@@ -32250,7 +32264,7 @@ public:
                      bool SameScaleFactor) const {
       if (!Phi || VectorizedTree || HasVectorizedSlices || Pos != 0 ||
           (OptReusedScalars && SameScaleFactor) || R.isReducedBitcastRoot() ||
-          R.isReducedCmpBitcastRoot() ||
+          R.isReducedCmpBitcastRoot() || R.isMulAccReductionRoot() ||
           (NumCalls != 0 && !Root->getType()->isFloatingPointTy()))
         return false;
       if (!all_of(ArrayRef(Candidates).drop_front(ReduxWidth),
@@ -33070,6 +33084,9 @@ public:
         }
         V.transformNodes();
         V.computeMinimumValueSizes();
+        // Only the first vector part is reduced on its own.
+        if (VectorValuesAndScales.empty())
+          V.combineMulAccReduction();
         InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
         // A negated slice is subtracted in the final combine, it cannot be
         // accumulated lane-wise.
@@ -34233,6 +34250,9 @@ private:
                     VectorCost, getBoolReduxBitcastCmpCost(
                                     *TTI, RdxKind, WideVecTy, ReductionRoot,
                                     NarrowedChainInsts, CostKind));
+            } else if (R.isMulAccReductionRoot()) {
+              // Costed by the root node as a multiply-accumulate.
+              VectorCost = 0;
             } else if (RType == RedTy) {
               if (VectorTy->getElementType()->isIntegerTy(1) &&
                   ((ScalarTy->isIntegerTy(1) &&
@@ -34253,13 +34273,6 @@ private:
                   cast<VectorType>(getWidenedType(RType, ReduxWidth)), FMF,
                   CostKind);
             }
-            if (RdxKind == RecurKind::Add)
-              if (std::optional<BoUpSLP::MulAccRootInfo> MulAcc =
-                      R.getMulAccRootInfo())
-                VectorCost = TTI->getMulAccReductionCost(
-                    MulAcc->IsUnsigned, RdxOpcode, RedTy,
-                    cast<VectorType>(getWidenedType(MulAcc->SrcTy, ReduxWidth)),
-                    CostKind, MulAcc->CCH, MulAcc->SameOperands);
             RdxOpCost = VectorCost;
           }
         } else {
@@ -34319,21 +34332,6 @@ private:
             VectorCost += TTI->getCastInstrCost(
                 Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
           }
-          // The multiply-accumulate folds only into the final reduction, so
-          // this part emits its multiply and extends.
-          if (RdxKind == RecurKind::Add)
-            if (std::optional<BoUpSLP::MulAccRootInfo> MulAcc =
-                    R.getMulAccRootInfo()) {
-              auto *SrcVecTy =
-                  cast<VectorType>(getWidenedType(MulAcc->SrcTy, ReduxWidth));
-              VectorCost += TTI->getArithmeticInstrCost(Instruction::Mul,
-                                                        VectorTy, CostKind);
-              VectorCost += (MulAcc->SameOperands ? 1 : 2) *
-                            TTI->getCastInstrCost(
-                                MulAcc->IsUnsigned ? Instruction::ZExt
-                                                   : Instruction::SExt,
-                                VectorTy, SrcVecTy, MulAcc->CCH, CostKind);
-            }
         }
       }
       Type *ScalarCostTy =

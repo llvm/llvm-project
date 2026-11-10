@@ -272,8 +272,8 @@ public:
   InstructionCost
   getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
                          VectorType *ValTy, TTI::TargetCostKind CostKind,
-                         TTI::CastContextHint CCH = TTI::CastContextHint::None,
-                         bool SameOperands = false) const override;
+                         TTI::CastContextHint CCH,
+                         ArrayRef<const Value *> VL) const override;
 
   InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,

@@ -501,11 +501,11 @@ public:
                            VectorType *ValTy, std::optional<FastMathFlags> FMF,
                            TTI::TargetCostKind CostKind) const override;
 
-  InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      TTI::CastContextHint CCH = TTI::CastContextHint::None,
-      bool SameOperands = false) const override;
+  InstructionCost
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind,
+                         TTI::CastContextHint CCH,
+                         ArrayRef<const Value *> VL) const override;
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,

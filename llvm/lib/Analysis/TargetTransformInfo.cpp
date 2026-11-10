@@ -1406,9 +1406,9 @@ InstructionCost TargetTransformInfo::getExtendedReductionCost(
 InstructionCost TargetTransformInfo::getMulAccReductionCost(
     bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
     TTI::TargetCostKind CostKind, TTI::CastContextHint CCH,
-    bool SameOperands) const {
+    ArrayRef<const Value *> VL) const {
   return TTIImpl->getMulAccReductionCost(IsUnsigned, RedOpcode, ResTy, Ty,
-                                         CostKind, CCH, SameOperands);
+                                         CostKind, CCH, VL);
 }
 
 InstructionCost

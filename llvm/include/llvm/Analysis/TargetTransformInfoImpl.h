@@ -1040,8 +1040,8 @@ public:
   virtual InstructionCost
   getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
                          VectorType *Ty, TTI::TargetCostKind CostKind,
-                         TTI::CastContextHint CCH = TTI::CastContextHint::None,
-                         bool SameOperands = false) const {
+                         TTI::CastContextHint CCH,
+                         ArrayRef<const Value *> VL) const {
     return 1;
   }
 
