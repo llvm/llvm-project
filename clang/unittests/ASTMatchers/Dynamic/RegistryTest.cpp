@@ -566,6 +566,22 @@ TEST_F(RegistryTest, HasArgs) {
   EXPECT_FALSE(matches("struct X {};", Value));
 }
 
+TEST_F(RegistryTest, AttrHasKindAndArgument) {
+  Matcher<Decl> Value =
+      constructMatcher(
+          "varDecl",
+          constructMatcher(
+              "has",
+              constructMatcher(
+                  "attr",
+                  constructMatcher("hasKind", StringRef("attr::Annotate")),
+                  constructMatcher("hasArgument", VariantValue(0),
+                                   StringRef("foo")))))
+          .getTypedMatcher<Decl>();
+  EXPECT_TRUE(matches("__attribute__((annotate(\"foo\"))) int x;", Value));
+  EXPECT_FALSE(matches("__attribute__((annotate(\"bar\"))) int x;", Value));
+}
+
 TEST_F(RegistryTest, ParenExpr) {
   Matcher<Stmt> Value = constructMatcher("parenExpr").getTypedMatcher<Stmt>();
   EXPECT_TRUE(matches("int i = (1);", traverse(TK_AsIs, Value)));
