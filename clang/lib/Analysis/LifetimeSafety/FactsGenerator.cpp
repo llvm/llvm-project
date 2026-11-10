@@ -460,7 +460,7 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::handleAssignment(const Expr *TargetExpr,
                                       const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
-  LHSExpr = LHSExpr->IgnoreParenImpCasts();
+  LHSExpr = ignoreParensAndImpCasts(LHSExpr);
   handleAccess(LHSExpr);
   OriginList *RHSList = readValue(RHSExpr);
   OriginList *LHSList = nullptr;
@@ -965,30 +965,23 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
-  unsigned ImplicitObjectArgOffset = 0;
-  // Constructors are excluded because Args has no object argument for them,
-  // even though isImplicitObjectMemberFunction() is true.
+  // std::unique_ptr::release() transfers ownership.
+  // Treat it as a move to prevent false-positive warnings when the unique_ptr
+  // destructor runs after ownership has been transferred.
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      MD && !isa<CXXConstructorDecl>(FD) &&
-      MD->isImplicitObjectMemberFunction()) {
-    ImplicitObjectArgOffset = 1;
-    // std::unique_ptr::release() transfers ownership.
-    // Treat it as a move to prevent false-positive warnings when the unique_ptr
-    // destructor runs after ownership has been transferred.
-    if (isUniquePtrRelease(*MD)) {
-      const Expr *UniquePtrExpr = Args[0];
-      OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
-      if (MovedOrigins)
-        CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
-            UniquePtrExpr, MovedOrigins->getOuterOriginID()));
-    }
+      MD && hasImplicitObjectArg(*FD) && isUniquePtrRelease(*MD)) {
+    const Expr *UniquePtrExpr = Args[0];
+    OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+    if (MovedOrigins)
+      CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+          UniquePtrExpr, MovedOrigins->getOuterOriginID()));
   }
 
-  // Skip implicit 'this' arg as it cannot be moved.
-  for (unsigned I = ImplicitObjectArgOffset;
-       I < Args.size() && I < FD->getNumParams() + ImplicitObjectArgOffset;
-       ++I) {
-    const ParmVarDecl *PVD = FD->getParamDecl(I - ImplicitObjectArgOffset);
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    // Null for the implicit 'this' arg, which cannot be moved.
+    const ParmVarDecl *PVD = getParamForArg(*FD, I);
+    if (!PVD)
+      continue;
     // In principle, explicit object parameters can be moved, but skip marking
     // them as moved for consistency with implicit 'this'.
     if (PVD->isExplicitObjectParameter())
@@ -1024,7 +1017,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   // Heuristics to turn-down false positives. Skip member field expressions for
   // now. This is not a perfect filter and will still surface some false
   // positives (e.g. `auto& r = s.v`). Static data members are not fields.
-  const Expr *Obj = Args[0]->IgnoreImpCasts();
+  const Expr *Obj = ignoreParensAndImpCasts(Args[0]);
   if (const auto *ME = dyn_cast<MemberExpr>(Obj);
       !isa<DeclRefExpr>(Obj) && !(ME && isa<VarDecl>(ME->getMemberDecl())))
     return;
@@ -1053,7 +1046,7 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
     return;
 
   if (!isa_and_present<CXXThisExpr>(
-          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
+          ignoreParensAndImpCasts(MemberCall->getImplicitObjectArgument())))
     return;
 
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -1085,31 +1078,13 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   // FIXME: Add support for capture_by on constructors.
   if (isa<CXXConstructorDecl>(FD))
     return;
-  const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-  bool HasImplicitObjectArg = Method &&
-                              Method->isImplicitObjectMemberFunction() &&
-                              !isa<CXXConstructorDecl>(FD);
   auto getArgCaptureByAttr =
-      [FD, HasImplicitObjectArg](
-          unsigned I) -> std::pair<const LifetimeCaptureByAttr *, QualType> {
-    if (HasImplicitObjectArg) {
-      if (I == 0) {
-        auto *MethodDecl = cast<CXXMethodDecl>(FD);
-        QualType ParamType = MethodDecl->getFunctionObjectParameterType();
-        return {getCaptureByAttrFromFunctionType(FD), ParamType};
-      }
-      if (I > 0 && I - 1 < FD->getNumParams()) {
-        const ParmVarDecl *PVD = FD->getParamDecl(I - 1);
-        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
-                PVD->getType()};
-      }
-    } else {
-      if (I < FD->getNumParams()) {
-        const ParmVarDecl *PVD = FD->getParamDecl(I);
-        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
-                PVD->getType()};
-      }
-    }
+      [FD](unsigned I) -> std::pair<const LifetimeCaptureByAttr *, QualType> {
+    if (I == 0 && hasImplicitObjectArg(*FD))
+      return {getCaptureByAttrFromFunctionType(FD),
+              cast<CXXMethodDecl>(FD)->getFunctionObjectParameterType()};
+    if (const ParmVarDecl *PVD = getParamForArg(*FD, I))
+      return {PVD->getAttr<LifetimeCaptureByAttr>(), PVD->getType()};
     return {nullptr, QualType()};
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
@@ -1234,11 +1209,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     return;
   }
   auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
-    const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-    if (!Method || !Method->isInstance())
+    if (I != 0 || !hasObjectArg(*FD))
       return false;
-    return I == 0 &&
-           isGslPointerType(Method->getFunctionObjectParameterType()) &&
+    // A by-value explicit object parameter takes a prvalue copy, which is
+    // handled as an ordinary argument below.
+    if (!hasImplicitObjectArg(*FD) && !Args[0]->isGLValue())
+      return false;
+    const auto *Method = cast<CXXMethodDecl>(FD);
+    return isGslPointerType(Method->getFunctionObjectParameterType()) &&
            shouldTrackImplicitObjectArg(*Args[0], Method,
                                         /*RunningUnderLifetimeSafety=*/true);
   };

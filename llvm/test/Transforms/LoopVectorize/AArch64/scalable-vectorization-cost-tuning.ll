@@ -24,7 +24,7 @@
 ; RUN:     -force-target-instruction-cost=1 -passes=loop-vectorize -S -debug-only=loop-vectorize --disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=VSCALEFORTUNING1-PREFER-FIXED
 
-define void @test0(ptr %a, ptr %b, ptr %c) #0 {
+define void @test0(ptr %a, ptr %b, ptr %c) #0 vscale_range(1,16) {
 ; VSCALEFORTUNING1-LABEL: 'test0'
 ; VSCALEFORTUNING1:  Cost for VF vscale x 1: 10 (Estimated cost per lane: 10)
 ; VSCALEFORTUNING1:  Cost for VF vscale x 2: 10 (Estimated cost per lane: 5)

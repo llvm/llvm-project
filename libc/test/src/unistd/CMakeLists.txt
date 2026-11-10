@@ -124,6 +124,26 @@ add_libc_test(
 )
 
 add_libc_test(
+  copy_file_range_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    copy_file_range_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.__support.CPP.string_view
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.copy_file_range
+    libc.src.unistd.read
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   dup2_test
   SUITE
     libc-unistd-tests
@@ -443,6 +463,23 @@ add_libc_test(
     libc.include.unistd
     libc.src.unistd.close
     libc.src.unistd.pipe2
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  posix_close_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    posix_close_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.unistd_macros
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.unistd.posix_close
+    libc.src.unistd.read
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -1022,7 +1059,6 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
-
 
 add_libc_test(
   confstr_test

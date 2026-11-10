@@ -81,6 +81,20 @@ struct FunctionCallInfo {
   explicit FunctionCallInfo(const Expr *Call);
 };
 
+/// Returns true if argument 0 of a call to \p FD (as listed by
+/// FunctionCallInfo) is the object argument, bound either to the implicit
+/// object parameter or to an explicit object parameter. Constructors have no
+/// object argument.
+bool hasObjectArg(const FunctionDecl &FD);
+
+/// Returns true if argument 0 of a call to \p FD is the implicit object
+/// argument. An explicit object parameter is an ordinary parameter.
+bool hasImplicitObjectArg(const FunctionDecl &FD);
+
+/// Returns the parameter that argument \p I of a call to \p FD binds to, or
+/// null for the implicit object argument and for variadic arguments.
+const ParmVarDecl *getParamForArg(const FunctionDecl &FD, unsigned I);
+
 /// Returns the parameter corresponding to argument I when the argument should
 /// be tracked for lifetime safety.
 std::optional<LifetimeBoundParamInfo>
@@ -161,6 +175,10 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD);
 /// refers to the same object as the argument, so all origins propagate from
 /// argument to result.
 bool isStdReferenceCast(const FunctionDecl *FD);
+
+/// Skips parentheses and implicit casts. Unlike IgnoreParenImpCasts(), stops at
+/// a MaterializeTemporaryExpr, which owns the storage of a temporary.
+const Expr *ignoreParensAndImpCasts(const Expr *E);
 
 } // namespace clang::lifetimes
 
