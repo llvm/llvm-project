@@ -1328,11 +1328,14 @@ Error LTO::setupPassPlugins() {
     Loaded.push_back(std::make_unique<PassPlugin>(std::move(*Plugin)));
   }
 
-  // Append them to the list of client loaded ones.
+  // Register them ahead of the client loaded ones.
+  SmallVector<PassPlugin *> FromFiles;
   for (std::unique_ptr<PassPlugin> &Plugin : Loaded) {
-    Conf.LoadedPassPlugins.push_back(Plugin.get());
+    FromFiles.push_back(Plugin.get());
     PassPlugins.push_back(std::move(Plugin));
   }
+  Conf.LoadedPassPlugins.insert(Conf.LoadedPassPlugins.begin(),
+                                FromFiles.begin(), FromFiles.end());
 
   Conf.PassPluginFilenames.clear();
   return Error::success();
