@@ -57,6 +57,8 @@ private:
   // reduction, so the USE is written once even when several such reductions
   // come from the same module.
   UnorderedSymbolSet reexportedReductionModules_;
+  // Modules already re-exported by a plain USE for a DEC STRUCTURE.
+  UnorderedSymbolSet reexportedDECStructureModules_;
 
   llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};
