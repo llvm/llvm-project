@@ -119,8 +119,50 @@ define i32 @level_caller.v3(i32 %x) #4 {
   ret i32 %a
 }
 
+; Names that __builtin_cpu_supports does not accept, such as a CPU model, are
+; left to the runtime resolver on both callee versions and callers.
+@unknown = weak_odr ifunc i32 (i32), ptr @unknown.resolver
+@model = weak_odr ifunc i32 (i32), ptr @model.resolver
+
+define ptr @unknown.resolver() {
+  %features = load i32, ptr @features
+  %set = icmp ne i32 %features, 0
+  %result = select i1 %set, ptr @unknown.bogus, ptr @unknown.default
+  ret ptr %result
+}
+
+define ptr @model.resolver() {
+  %features = load i32, ptr @features
+  %set = icmp ne i32 %features, 0
+  %result = select i1 %set, ptr @model.haswell, ptr @model.default
+  ret ptr %result
+}
+
+declare i32 @unknown.default(i32) #0
+declare i32 @unknown.bogus(i32) #5
+declare i32 @model.default(i32) #0
+declare i32 @model.haswell(i32) #6
+
+define i32 @unknown_callee(i32 %x) {
+; CHECK-LABEL: define i32 @unknown_callee(
+; CHECK: call i32 @unknown(
+; CHECK: call i32 @model(
+  %a = call i32 @unknown(i32 %x)
+  %b = call i32 @model(i32 %a)
+  ret i32 %b
+}
+
+define i32 @unknown_caller(i32 %x) #5 {
+; CHECK-LABEL: define i32 @unknown_caller(
+; CHECK: call i32 @callee(
+  %a = call i32 @callee(i32 %x)
+  ret i32 %a
+}
+
 attributes #0 = { "fmv-features" }
 attributes #1 = { "fmv-features"="avx2" }
 attributes #2 = { "target-cpu"="haswell" }
 attributes #3 = { "target-features"="+avx2" }
 attributes #4 = { "fmv-features"="x86-64-v3" }
+attributes #5 = { "fmv-features"="avx2,bogus" }
+attributes #6 = { "fmv-features"="haswell" }
