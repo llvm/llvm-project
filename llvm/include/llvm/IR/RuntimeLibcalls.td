@@ -281,6 +281,8 @@ class DivRemPairImpl<RuntimeLibcall P, string Name = NAME>
   defvar IntTy = P.ReturnType;
   let ReturnType = !cast<FuncArgType>(!cast<string>(IntTy) # "Pair");
   let ArgumentTypes = [IntTy, IntTy];
+  let FnAttrs = MathFnAttrs;
+  let Memory = NoMemory;
 }
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
