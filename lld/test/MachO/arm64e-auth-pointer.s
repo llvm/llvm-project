@@ -1,4 +1,4 @@
-# REQUIRES: aarch64
+# REQUIRES: aarch64, llvm-64-bits
 ## Authenticated pointers become authenticated chained rebases and binds that
 ## keep their key, diversity, address diversity and addend, next to
 ## unauthenticated ones. The words and imports below are the ones Xcode 27's ld

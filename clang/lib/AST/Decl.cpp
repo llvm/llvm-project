@@ -3119,8 +3119,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
   FunctionDeclBits.IsMultiVersion = false;
-  FunctionDeclBits.DeductionCandidateKind =
-      static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
 
@@ -3326,7 +3324,20 @@ FunctionDecl::getDefaultedFunctionKind() const {
       return CXXSpecialMemberKind::Destructor;
   }
 
+  // Only the postfix forms of ++ and -- can be defaulted. They are
+  // distinguished from the prefix forms by their trailing 'int' parameter, so
+  // they have exactly two parameters including implicit or explicit 'this'.
   switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_PlusPlus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Increment;
+    break;
+
+  case OO_MinusMinus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Decrement;
+    break;
+
   case OO_EqualEqual:
     return DefaultedComparisonKind::Equal;
 

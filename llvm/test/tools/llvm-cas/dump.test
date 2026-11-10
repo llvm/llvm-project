@@ -1,13 +1,13 @@
 RUN: rm -rf %t
 RUN: mkdir %t
 
-RUN: llvm-cas --cas %t/cas --make-blob \
+RUN: llvm-cas make-blob --cas %t/cas \
 RUN:   --data - </dev/null
 
-RUN: llvm-cas --cas %t/cas --make-blob \
+RUN: llvm-cas make-blob --cas %t/cas \
 RUN:   --data %s
 
-RUN: llvm-cas --cas %t/cas --dump | FileCheck %s
+RUN: llvm-cas dump --cas %t/cas | FileCheck %s
 
 // check the dump format.
 CHECK:      index:
