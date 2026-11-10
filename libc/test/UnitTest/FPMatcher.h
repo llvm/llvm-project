@@ -30,6 +30,8 @@ using LIBC_NAMESPACE::Sign;
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
+#if LIBC_TEST_HAS_MATCHERS()
+
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
@@ -183,6 +185,8 @@ CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
 
+#endif // LIBC_TEST_HAS_MATCHERS()
+
 // Optimization barrier to prevent constant folding.
 template <typename T> LIBC_INLINE T opaque(T value) {
   // The pointer is volatile rather than the value, which keeps this usable for
@@ -291,6 +295,10 @@ private:
           FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
   };
 
+#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
+
+#if LIBC_TEST_HAS_MATCHERS()
+
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
                           LIBC_NAMESPACE::testing::TestCond::EQ>(expected))
@@ -303,8 +311,6 @@ private:
   LIBC_NAMESPACE::testing::getMatcher<LIBC_NAMESPACE::testing::TestCond::EQ>(  \
       expected)                                                                \
       .match(actual)
-
-#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -680,6 +686,8 @@ private:
     EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
                                                      (expected_except));       \
   } while (0)
+
+#endif // LIBC_TEST_HAS_MATCHERS()
 
 #define ASSERT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
   do {                                                                         \
