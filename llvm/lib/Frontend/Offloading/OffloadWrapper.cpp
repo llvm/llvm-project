@@ -732,10 +732,10 @@ private:
 
 } // namespace
 
-Error offloading::wrapLLVMBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
-                                   EntryArrayTy EntryArray,
-                                   llvm::StringRef Suffix, bool Relocatable,
-                                   OffloadKind Kind) {
+Error offloading::wrapOmpAccBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
+                                     EntryArrayTy EntryArray,
+                                     llvm::StringRef Suffix, bool Relocatable,
+                                     OffloadKind Kind) {
   assert((Kind == OFK_OpenMP || Kind == OFK_OpenACC) &&
          "Only OpenMP or OpenACC allowed.");
   GlobalVariable *Desc =

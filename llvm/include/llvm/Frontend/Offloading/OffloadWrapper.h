@@ -29,9 +29,9 @@ using EntryArrayTy = std::pair<Constant *, Constant *>;
 /// create a relocatable object.
 /// \param Kind The producer kind (either OpenMP or OpenACC).
 LLVM_ABI llvm::Error
-wrapLLVMBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
-                 EntryArrayTy EntryArray, llvm::StringRef Suffix,
-                 bool Relocatable, object::OffloadKind Kind);
+wrapOmpAccBinaries(llvm::Module &M, llvm::ArrayRef<llvm::ArrayRef<char>> Images,
+                   EntryArrayTy EntryArray, llvm::StringRef Suffix,
+                   bool Relocatable, object::OffloadKind Kind);
 
 /// Wraps the input fatbinary image into the module \p M as global symbols and
 /// registers the images with the CUDA runtime.
