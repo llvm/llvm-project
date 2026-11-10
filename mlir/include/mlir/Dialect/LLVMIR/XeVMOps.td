@@ -37,7 +37,6 @@ def XeVM_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 }
 
 class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
@@ -627,7 +626,7 @@ def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
 }
 
 def XeVM_TruncfOp
-    : XeVM_Op<"truncf">,
+    : XeVM_Op<"truncf", [Pure]>,
       Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,
                                I<4>]>:$dst)>,
       Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
@@ -644,6 +643,7 @@ def XeVM_TruncfOp
     $src ` ` `{` $src_etype `,` $dst_etype `}` attr-dict `:` functional-type(operands, results)
   }];
 
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
@@ -672,7 +672,7 @@ def XeVM_ExtfDstElemTypeAttr : XeVM_Attr<"ExtfDstElemType", "ext_dst_etype"> {
 }
 
 def XeVM_ExtfOp
-    : XeVM_Op<"extf">,
+    : XeVM_Op<"extf", [Pure]>,
       Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
                               BF16]>:$dst)>,
       Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,

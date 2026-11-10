@@ -138,8 +138,7 @@ define i1 @align_with_offset_on_gep(ptr %base) {
 
 define void @align_with_constant_offset_0(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_0(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -149,8 +148,7 @@ define void @align_with_constant_offset_0(ptr %ptr) {
 
 define void @align_with_constant_offset_1(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_1(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -161,8 +159,7 @@ define void @align_with_constant_offset_1(ptr %ptr) {
 
 define void @align_with_constant_offset_4(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_4(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -173,8 +170,7 @@ define void @align_with_constant_offset_4(ptr %ptr) {
 
 define void @align_with_constant_offset_8(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_8(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -184,8 +180,7 @@ define void @align_with_constant_offset_8(ptr %ptr) {
 
 define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @align_with_variable_offset(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16), "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -650,10 +645,7 @@ define void @redundant_nonnull3(ptr %ptr) {
 
 define void @partially_redundant(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr %ptr4, ptr %ptr5) {
 ; CHECK-LABEL: @partially_redundant(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR2:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR5:%.*]]), "nonnull"(ptr [[PTR4:%.*]]), "nonnull"(ptr [[PTR3:%.*]]), "nonnull"(ptr [[PTR:%.*]]), "nonnull"(ptr [[PTR2:%.*]]) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr), "nonnull"(ptr %ptr2) ]
@@ -1431,6 +1423,111 @@ define i32 @assume_noundef_on_load_after_call(ptr %ptr) {
   call void @block()
   call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
   ret i32 %val
+}
+
+define ptr @avoid_get_operand_bundle() {
+; CHECK-LABEL: @avoid_get_operand_bundle(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[LOAD:%.*]] = load volatile ptr, ptr null, align 8
+; CHECK-NEXT:    [[PTRTOINT_I:%.*]] = ptrtoint ptr [[LOAD]] to i64
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 [[PTRTOINT_I]]), "dereferenceable"(ptr null, i64 [[PTRTOINT_I]]) ]
+; CHECK-NEXT:    ret ptr null
+;
+bb:
+  %load = load volatile ptr, ptr null, align 8
+  %ptrtoint.i = ptrtoint ptr %load to i64
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %ptrtoint.i) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %ptrtoint.i) ]
+  ret ptr null
+}
+
+define void @assume_empty_range(i2 %i) {
+; CHECK-LABEL: @assume_empty_range(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i2 [[I:%.*]], i2 0, i2 0) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i2 %i, i2 0, i2 0) ]
+  ret void
+}
+
+define void @redundant_assume_range0(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range0(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 0, i64 44) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  ret void
+}
+
+define void @redundant_assume_range1(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 22) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 22) ]
+  ret void
+}
+
+define void @redundant_assume_range2(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range2(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 22) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 22) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 44) ]
+  ret void
+}
+
+define void @redundant_assume_range3(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range3(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 20) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 22) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 0, i64 20) ]
+  ret void
+}
+
+define void @redundant_assume_range_disjoint(i64 %i) {
+; CHECK-LABEL: @redundant_assume_range_disjoint(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 0, i64 0) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 3, i64 10) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 11, i64 20) ]
+  ret void
+}
+
+define void @assume_range_excluding_different_values(i64 %i) {
+; CHECK-LABEL: @assume_range_excluding_different_values(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 10, i64 9), "range"(i64 [[I]], i64 5, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 10, i64 9) ]
+  call void @llvm.assume(i1 true) [ "range"(i64 %i, i64 5, i64 4) ]
+  ret void
+}
+
+define void @assume_range_add(i64 %i) {
+; CHECK-LABEL: @assume_range_add(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 -3, i64 17) ]
+; CHECK-NEXT:    ret void
+;
+  %add = add i64 %i, 3
+  call void @llvm.assume(i1 true) [ "range"(i64 %add, i64 0, i64 20) ]
+  ret void
+}
+
+define void @assume_range_sub(i64 %i) {
+; CHECK-LABEL: @assume_range_sub(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[I:%.*]], i64 3, i64 23) ]
+; CHECK-NEXT:    ret void
+;
+  %add = sub i64 %i, 3
+  call void @llvm.assume(i1 true) [ "range"(i64 %add, i64 0, i64 20) ]
+  ret void
 }
 
 declare void @use(i1)

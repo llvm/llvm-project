@@ -238,9 +238,11 @@ bool CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
     case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem:
-      // 2nd operand must not be zero.
+      // 2nd operand must not be zero. The mask needs to be frozen as it may
+      // have poison lanes, and a poison divisor would introduce UB even if Op1
+      // didn't cause UB to begin with.
       Value *SafeDivisor = getSafeDivisor(VPI.getType());
-      Op1 = Builder.CreateSelect(Mask, Op1, SafeDivisor);
+      Op1 = Builder.CreateSelect(Builder.CreateFreeze(Mask), Op1, SafeDivisor);
     }
   }
 
@@ -397,7 +399,7 @@ bool CachingVPExpander::discardEVLParameter(VPIntrinsic &VPI) {
   Type *Int32Ty = Type::getInt32Ty(VPI.getContext());
   if (StaticElemCount.isScalable()) {
     // TODO add caching
-    IRBuilder<> Builder(VPI.getParent(), VPI.getIterator());
+    IRBuilder<> Builder(VPI.getIterator());
     Value *FactorConst = Builder.getInt32(StaticElemCount.getKnownMinValue());
     Value *VScale = Builder.CreateVScale(Int32Ty, "vscale");
     MaxEVL = Builder.CreateNUWMul(VScale, FactorConst, "scalable_size");

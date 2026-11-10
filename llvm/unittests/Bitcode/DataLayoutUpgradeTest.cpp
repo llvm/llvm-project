@@ -137,6 +137,12 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv64"), "e-p:32:32-G1");
   // but that SPIRV Logical does not.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "spirv"), "e-p:32:32");
+
+  // Check that ARM targets add -Fi8 if it is not present.
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64", "arm"),
+            "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
+  EXPECT_EQ(UpgradeDataLayoutString("p:32:32", "arm"), "p:32:32-Fi8");
 }
 
 TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
@@ -226,6 +232,22 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
           "powerpc64-unknown-aix"),
       "E-m:a-Fi64-i64:64-i128:128-n32:64-f64:32:64-S128-v256:256:256-v512:512:"
       "512");
+
+  // Check that ARM targets do not add Fi8 if there is no p32:32.
+  const char *ARM_no_f3232 = "e-m:e-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_no_f3232, "arm"), ARM_no_f3232);
+  // Or if Fi8 is already present.
+  const char *ARM_has_fi8 =
+      "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_has_fi8, "arm"), ARM_has_fi8);
+  // Or if there is another Fi.
+  const char *ARM_has_fi4 =
+      "e-m:e-p:32:32-Fi4-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_has_fi4, "arm"), ARM_has_fi4);
+  // Or if there is a Fn.
+  const char *ARM_has_fn =
+      "e-m:e-p:32:32-Fn4-i64:64-v128:64:128-a:0:32-n32-s64";
+  EXPECT_EQ(UpgradeDataLayoutString(ARM_has_fn, "arm"), ARM_has_fn);
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
@@ -249,6 +271,9 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
   EXPECT_EQ(UpgradeDataLayoutString("", "spirv64"), "G1");
   // but SPIRV Logical does not.
   EXPECT_EQ(UpgradeDataLayoutString("", "spirv"), "");
+
+  // Check that ARM targets do not add Fi8 to an empty layout.
+  EXPECT_EQ(UpgradeDataLayoutString("", "arm"), "");
 }
 
 } // end namespace

@@ -8,7 +8,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(
     default_visibility = ["//visibility:public"],
     features = [
-        "-layering_check",
+        "layering_check",
     ],
 )
 
@@ -42,8 +42,8 @@ expand_template(
 # unqualified `#include "config.h"` in the runtime .cpp files resolves to it.
 cc_library(
     name = "runtime_config",
-    includes = ["."],
-    textual_hdrs = ["config.h"],
+    hdrs = ["config.h"],
+    strip_include_prefix = "/flang-rt/lib/runtime",
 )
 
 cc_library(

@@ -14,6 +14,7 @@ HLSLSupport
 ExpectedDifferences
 HLSLIRReference
 ResourceTypes
+DynamicResources
 EntryFunctions
 FunctionCalls
 AvailabilityDiagnostics

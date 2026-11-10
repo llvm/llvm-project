@@ -11,6 +11,7 @@
 #include "PtrTypesSemantics.h"
 #include "RawPtrRefSafetyModel.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -120,6 +121,9 @@ public:
       }
 
       bool shouldCheckThis() {
+        // A pointer to the object itself is not a loan on its interior.
+        if (Checker->Model->checksForInteriorDestruction())
+          return false;
         auto result =
             !ClsType.isNull() ? Checker->isUnsafePtr(ClsType) : std::nullopt;
         return result && *result;
@@ -227,6 +231,15 @@ public:
         LambdasToIgnore.insert(L);
       }
 
+      bool VisitExplicitCastExpr(ExplicitCastExpr *CE) override {
+        // Discarding a variable with (void) doesn't let a lambda escape.
+        if (CE->getCastKind() != CK_ToVoid)
+          return true;
+        if (auto *DRE = dyn_cast<DeclRefExpr>(CE->getSubExpr()->IgnoreParens()))
+          DeclRefExprsToIgnore.insert(DRE);
+        return true;
+      }
+
       bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
         if (DeclRefExprsToIgnore.contains(DRE))
           return true;
@@ -265,9 +278,16 @@ public:
           // workaround that.
           if (Name == "WTF" && PreviousName == "switchOn")
             return true;
-          // Treat every argument of functions in std::ranges as noescape.
-          if (Name == "std" && PreviousName == "ranges")
-            return true;
+          if (Name == "std") {
+            // Treat every argument of functions in std::ranges as noescape.
+            if (PreviousName == "ranges")
+              return true;
+            // Treat every argument of call_once as noescape even though only
+            // the second argument is lambda since we can't add annotation to
+            // a std function.
+            if (PreviousName == "call_once")
+              return true;
+          }
           PreviousName = Name;
         }
         return false;
@@ -549,9 +569,15 @@ public:
   void visitLambdaExpr(const LambdaExpr *L, bool shouldCheckThis,
                        const QualType T,
                        bool ignoreParamVarDecl = false) const {
+    if (BR->getSourceManager().isInSystemHeader(L->getBeginLoc()))
+      return;
+    // FIXME: This check is unsound. Destruction can happen in three places,
+    // and a capture is only safe when all three are trivial: the lambda's
+    // body, the callee that receives it, and the scope that creates it.
     if (TFA.isTrivial(L->getBody()))
       return;
-    for (const LambdaCapture &C : L->captures()) {
+    for (auto [C, CaptureInit] :
+         llvm::zip_equal(L->captures(), L->capture_inits())) {
       if (C.capturesVariable()) {
         ValueDecl *CapturedVar = C.getCapturedVar();
         if (ignoreParamVarDecl && isa<ParmVarDecl>(CapturedVar))
@@ -564,22 +590,67 @@ public:
             continue;
         }
         QualType CapturedVarQualType = CapturedVar->getType();
-        auto IsUncountedPtr = isUnsafePtr(CapturedVar->getType());
+        auto IsUncountedPtr = isUnsafePtr(CapturedVarQualType);
         if (C.getCaptureKind() == LCK_ByCopy &&
             CapturedVarQualType->isReferenceType())
           continue;
-        if (IsUncountedPtr && *IsUncountedPtr)
-          reportBug(C, CapturedVar, CapturedVarQualType, L);
+        if (!IsUncountedPtr || !*IsUncountedPtr)
+          continue;
+        const Expr *Origin = nullptr;
+        if (Model->checksForInteriorDestruction()) {
+          if (!CaptureInit)
+            continue;
+          if (isCaptureOriginSafeToEscape(CaptureInit, Origin,
+                                          CapturedVarQualType))
+            continue;
+        }
+        reportBug(C, CapturedVar, CapturedVarQualType, L, Origin);
       } else if (C.capturesThis() && shouldCheckThis) {
-        if (ignoreParamVarDecl) // this is always a parameter to this function.
+        if (ignoreParamVarDecl)
           continue;
         reportBugOnThisPtr(C, T);
       }
     }
   }
 
+  bool isCaptureOriginSafeToEscape(const Expr *CaptureInit, const Expr *&Origin,
+                                   QualType SinkType) const {
+    return tryToFindPtrOrigin(
+        CaptureInit, /*StopAtFirstRefCountedObj=*/false,
+        Model->checksForInteriorDestruction(),
+
+        // A smart pointer, even if safe, has shorter lifetime than an
+        // escaping lambda, so we do not treat it as a guarantee of safety.
+        /*isSafePtr=*/[](const clang::CXXRecordDecl *) { return false; },
+        /*isSafePtrType=*/[](const clang::QualType) { return false; },
+
+        // A global has longer lifetime, and can be safe.
+        /*isSafeGlobalDecl=*/
+        [&](const clang::Decl *D) {
+          return Model->isSafeDecl(D, BR->getSourceManager());
+        },
+
+        [&](const clang::Expr *CaptureOrigin, bool IsSafe,
+            bool /*OriginDependsOnFullExpressionTemporary*/,
+            bool PtrIsLifetimeBoundToOrigin) {
+          if (!CaptureOrigin)
+            return true;
+          if (isa<CXXThisExpr>(CaptureOrigin))
+            return true;
+          if (IsSafe)
+            return true;
+          if (Model->isSafeExpr(CaptureOrigin, PtrIsLifetimeBoundToOrigin,
+                                SinkType, /*SinkMayEscape=*/true))
+            return true;
+          if (!Origin)
+            Origin = CaptureOrigin;
+          return false;
+        });
+  }
+
   void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
-                 const QualType T, const LambdaExpr *L) const {
+                 const QualType T, const LambdaExpr *L,
+                 const Expr *Origin) const {
     assert(CapturedVar);
 
     auto Location = Capture.getLocation();
@@ -601,8 +672,10 @@ public:
       Os << " is a ";
     else
       Os << " contains a ";
-    auto *CapturedType = T.getTypePtrOrNull();
-    printPointer(Os, CapturedType);
+    if (Model->checksForInteriorDestruction())
+      Model->describeHazard(Os, Origin, T);
+    else
+      printPointer(Os, T.getTypePtrOrNull());
 
     PathDiagnosticLocation BSLoc(Location, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -694,6 +767,14 @@ public:
                                        makeRetainPtrSafetyModel()) {}
 };
 
+class UnborrowedLambdaCapturesChecker : public RawPtrRefLambdaCapturesChecker {
+public:
+  UnborrowedLambdaCapturesChecker()
+      : RawPtrRefLambdaCapturesChecker("Lambda capture of a loan on a "
+                                       "CanBorrow object",
+                                       makeBorrowSafetyModel()) {}
+};
+
 } // namespace
 
 void ento::registerUncountedLambdaCapturesChecker(CheckerManager &Mgr) {
@@ -719,6 +800,15 @@ void ento::registerUnretainedLambdaCapturesChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUnretainedLambdaCapturesChecker(
+    const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerUnborrowedLambdaCapturesChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<UnborrowedLambdaCapturesChecker>();
+}
+
+bool ento::shouldRegisterUnborrowedLambdaCapturesChecker(
     const CheckerManager &mgr) {
   return true;
 }

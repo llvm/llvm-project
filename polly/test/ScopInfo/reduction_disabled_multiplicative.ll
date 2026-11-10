@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -polly-disable-multiplicative-reductions -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-disable-multiplicative-reductions -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: ReadAccess :=       [Reduction Type: +
 ; CHECK:     { Stmt_for_body[i0] -> MemRef_sum[0] };

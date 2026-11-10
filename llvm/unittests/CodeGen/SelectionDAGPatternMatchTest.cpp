@@ -124,26 +124,32 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
 
   using namespace SDPatternMatch;
   ISD::CondCode CC;
-  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(),
-                                         m_SpecificCondCode(ISD::SETUGT))));
   EXPECT_TRUE(
-      sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_CondCode(CC))));
+      sd_match(ICMP_UGT, m_SpecificSetCC(ISD::SETUGT, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(CC, m_Value(), m_Value())));
   EXPECT_TRUE(CC == ISD::SETUGT);
-  EXPECT_FALSE(sd_match(
-      ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_SpecificCondCode(ISD::SETLE))));
+  EXPECT_FALSE(
+      sd_match(ICMP_UGT, m_SpecificSetCC(ISD::SETLE, m_Value(), m_Value())));
 
-  EXPECT_TRUE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                          m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_TRUE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                          m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_FALSE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                           m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_FALSE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                           m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                            m_SpecificCondCode(ISD::SETEQ))));
-  EXPECT_TRUE(sd_match(ICMP_EQ10, m_c_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                            m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op0),
+                                                  m_Specific(Op1))));
+  EXPECT_TRUE(sd_match(ICMP_EQ10, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op1),
+                                                  m_Specific(Op0))));
+  EXPECT_FALSE(sd_match(ICMP_EQ01, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op1),
+                                                   m_Specific(Op0))));
+  EXPECT_FALSE(sd_match(ICMP_EQ10, m_SpecificSetCC(ISD::SETEQ, m_Specific(Op0),
+                                                   m_Specific(Op1))));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SpecificSetCC(ISD::SETEQ, m_Specific(Op1),
+                                                    m_Specific(Op0))));
+  EXPECT_TRUE(sd_match(ICMP_EQ10, m_c_SpecificSetCC(ISD::SETEQ, m_Specific(Op0),
+                                                    m_Specific(Op1))));
+  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Select, m_SetCC(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SetCC(m_Specific(Op1), m_Specific(Op0))));
+  CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(
+      sd_match(ICMP_EQ10, m_c_SetCC(CC, m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_TRUE(CC == ISD::SETEQ);
 
   EXPECT_TRUE(sd_match(
       Select, m_Select(m_Specific(Cond), m_Specific(T), m_Specific(F))));
@@ -296,6 +302,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_FALSE(sd_match(Add, m_NSWAddLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Mul, m_Mul(m_OneUse(m_SpecificOpc(ISD::SUB)),
                                   m_NUses<2>(m_Specific(Add)))));
+  EXPECT_TRUE(sd_match(Mul, m_Mul(m_OneUse(m_SpecificOpc<ISD::SUB>()),
+                                  m_NUses<2>(m_Specific(Add)))));
+  EXPECT_FALSE(sd_match(Mul, m_Mul(m_OneUse(m_SpecificOpc<ISD::MUL>()),
+                                   m_NUses<2>(m_Specific(Add)))));
   EXPECT_TRUE(
       sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_SpecificVT(Float32VT),
                                      m_SpecificVT(Float32VT))));
@@ -370,14 +380,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(CCUMinLikeULT, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(CCUMinLikeULE, m_UMinLike(m_Value(), m_Value())));
 
-  EXPECT_FALSE(
-      sd_match(UMax, DAG.get(), m_SMaxLike(m_Specific(Op0), m_Specific(Op1))));
-  EXPECT_FALSE(
-      sd_match(UMin, DAG.get(), m_SMinLike(m_Specific(Op0), m_Specific(Op1))));
-  EXPECT_FALSE(
-      sd_match(SMax, DAG.get(), m_UMaxLike(m_Specific(Op0), m_Specific(Op1))));
-  EXPECT_FALSE(
-      sd_match(SMin, DAG.get(), m_UMinLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(sd_match(UMax, m_SMaxLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(sd_match(UMin, m_SMinLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(sd_match(SMax, m_UMaxLike(m_Specific(Op0), m_Specific(Op1))));
+  EXPECT_FALSE(sd_match(SMin, m_UMinLike(m_Specific(Op0), m_Specific(Op1))));
 
   SDValue BindVal;
   // By default, it matches any of the results.
@@ -681,19 +687,6 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue Ctlz = DAG->getNode(ISD::CTLZ, DL, Int32VT, Op0);
   SDValue Cttz = DAG->getNode(ISD::CTTZ, DL, Int32VT, Op0);
 
-  SDValue SignBit = DAG->getConstant(0x80000000u, DL, Int32VT);
-  SDValue LSB = DAG->getConstant(0x00000001u, DL, Int32VT);
-  SDValue NotSignBit = DAG->getNOT(DL, SignBit, Int32VT);
-
-  // Clear sign bit of Op0
-  SDValue NonNegativeValue =
-      DAG->getNode(ISD::AND, DL, Int32VT, Op0, NotSignBit);
-  // Set sign bit to Op0
-  SDValue NegativeValue = DAG->getNode(ISD::OR, DL, Int32VT, Op0, SignBit);
-  // Set LSB of Op0
-  SDValue PositiveValue =
-      DAG->getNode(ISD::OR, DL, Int32VT, NonNegativeValue, LSB);
-
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(ZExt, m_UnaryOp(ISD::ZERO_EXTEND, m_Value())));
   EXPECT_TRUE(sd_match(SExt, m_SExt(m_Value())));
@@ -719,65 +712,6 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(ZExt, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Sub, m_Neg(m_Value())));
   EXPECT_FALSE(sd_match(Neg, m_Not(m_Value())));
-
-  SDValue BindVal;
-
-  EXPECT_FALSE(sd_match(Abs, DAG.get(), m_Negative()));
-
-  EXPECT_FALSE(
-      sd_match(NonNegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NonNegativeValue);
-  EXPECT_FALSE(
-      sd_match(NonNegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NonNegativeValue);
-  EXPECT_FALSE(sd_match(NonNegativeValue, DAG.get(),
-                        m_StrictlyPositive(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NonNegativeValue);
-  EXPECT_FALSE(
-      sd_match(NonNegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NonNegativeValue);
-
-  EXPECT_TRUE(
-      sd_match(NonNegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, NonNegativeValue);
-
-  EXPECT_FALSE(
-      sd_match(NegativeValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NegativeValue);
-  EXPECT_FALSE(
-      sd_match(NegativeValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
-  EXPECT_NE(BindVal, NegativeValue);
-
-  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_Negative(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, NegativeValue);
-  EXPECT_TRUE(sd_match(NegativeValue, DAG.get(), m_NonZero(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, NegativeValue);
-  EXPECT_TRUE(
-      sd_match(NegativeValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, NegativeValue);
-
-  EXPECT_FALSE(
-      sd_match(PositiveValue, DAG.get(), m_Negative(m_Value(BindVal))));
-  EXPECT_NE(BindVal, PositiveValue);
-  EXPECT_FALSE(
-      sd_match(PositiveValue, DAG.get(), m_NonPositive(m_Value(BindVal))));
-  EXPECT_NE(BindVal, PositiveValue);
-
-  EXPECT_TRUE(sd_match(PositiveValue, DAG.get(), m_NonZero(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, PositiveValue);
-  EXPECT_TRUE(
-      sd_match(PositiveValue, DAG.get(), m_NonNegative(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, PositiveValue);
-  EXPECT_TRUE(
-      sd_match(PositiveValue, DAG.get(), m_StrictlyPositive(m_Value(BindVal))));
-  EXPECT_EQ(BindVal, PositiveValue);
-
-  // If DAG is not provided all matches fail regardless of the value
-  EXPECT_FALSE(sd_match(NegativeValue, m_Negative(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(NonNegativeValue, m_NonNegative(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(NegativeValue, m_NonZero(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(NegativeValue, m_NonPositive(m_Value(BindVal))));
-  EXPECT_FALSE(sd_match(PositiveValue, m_StrictlyPositive(m_Value(BindVal))));
 
   EXPECT_TRUE(sd_match(VScale, m_VScale(m_Value())));
 
@@ -818,8 +752,6 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   SDValue ConstSplat = DAG->getSplat(VInt32VT, DL, Const3);
   SDValue Zero = DAG->getConstant(0, DL, Int32VT);
   SDValue One = DAG->getConstant(1, DL, Int32VT);
-  SDValue MinusOne = DAG->getConstant(
-      APInt(Int32VT.getScalarSizeInBits(), -1, true), DL, Int32VT);
   SDValue AllOnes = DAG->getConstant(APInt::getAllOnes(32), DL, Int32VT);
   SDValue SetCC = DAG->getSetCC(DL, Int32VT, Arg0, Const3, ISD::SETULT);
 
@@ -841,34 +773,9 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_TRUE(sd_match(Const3, m_SpecificInt(ConstVal)));
   EXPECT_TRUE(sd_match(AllOnes, m_AllOnes()));
 
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_False()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_True()));
-  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_True()));
-
-  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_Negative()));
-  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_NonNegative()));
-  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonZero()));
-  EXPECT_TRUE(sd_match(MinusOne, DAG.get(), m_NonPositive()));
-  EXPECT_FALSE(sd_match(MinusOne, DAG.get(), m_StrictlyPositive()));
-
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_Negative()));
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonNegative()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_NonZero()));
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_NonPositive()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_StrictlyPositive()));
-
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_Negative()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonNegative()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_NonZero()));
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_NonPositive()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_StrictlyPositive()));
-
-  // If DAG is not provided all matches would fail
-  EXPECT_FALSE(sd_match(MinusOne, m_Negative()));
-  EXPECT_FALSE(sd_match(Zero, m_NonNegative()));
-  EXPECT_FALSE(sd_match(One, m_NonZero()));
-  EXPECT_FALSE(sd_match(Zero, m_NonPositive()));
-  EXPECT_FALSE(sd_match(One, m_StrictlyPositive()));
+  EXPECT_TRUE(sd_match(Zero, m_False(*DAG)));
+  EXPECT_TRUE(sd_match(One, m_True(*DAG)));
+  EXPECT_FALSE(sd_match(AllOnes, m_True(*DAG)));
 
   ISD::CondCode CC;
   EXPECT_TRUE(sd_match(
@@ -943,8 +850,6 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(Trunc, m_TruncOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op64);
-
-  EXPECT_TRUE(sd_match(ZExt, DAG.get(), m_NonNegative(m_Value())));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchNode) {
@@ -960,7 +865,9 @@ TEST_F(SelectionDAGPatternMatchTest, matchNode) {
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(Add, m_Node(ISD::ADD, m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(Add, m_Node<ISD::ADD>(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Add, m_Node(ISD::SUB, m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(Add, m_Node<ISD::SUB>(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Add, m_Node(ISD::ADD, m_Value())));
   EXPECT_FALSE(
       sd_match(Add, m_Node(ISD::ADD, m_Value(), m_Value(), m_Value())));
@@ -1058,10 +965,10 @@ TEST_F(SelectionDAGPatternMatchTest, matchAdvancedProperties) {
   SDValue Add = DAG->getNode(ISD::ADD, DL, Int64VT, Op0, Op0);
 
   using namespace SDPatternMatch;
-  EXPECT_TRUE(sd_match(Op0, DAG.get(), m_LegalType(m_Value())));
-  EXPECT_FALSE(sd_match(Op1, DAG.get(), m_LegalType(m_Value())));
-  EXPECT_TRUE(sd_match(Add, DAG.get(),
-                       m_LegalOp(m_IntegerVT(m_Add(m_Value(), m_Value())))));
+  EXPECT_TRUE(sd_match(Op0, m_LegalType(*DAG, m_Value())));
+  EXPECT_FALSE(sd_match(Op1, m_LegalType(*DAG, m_Value())));
+  EXPECT_TRUE(
+      sd_match(Add, m_LegalOp(*DAG, m_IntegerVT(m_Add(m_Value(), m_Value())))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchReassociatableOp) {
@@ -1235,22 +1142,22 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
 
   // Scalar constant 0
   SDValue Zero = DAG->getConstant(0, DL, VT);
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_Zero()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_One()));
-  EXPECT_FALSE(sd_match(Zero, DAG.get(), m_AllOnes()));
+  EXPECT_TRUE(sd_match(Zero, m_Zero()));
+  EXPECT_FALSE(sd_match(Zero, m_One()));
+  EXPECT_FALSE(sd_match(Zero, m_AllOnes()));
 
   // Scalar constant 1
   SDValue One = DAG->getConstant(1, DL, VT);
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_Zero()));
-  EXPECT_TRUE(sd_match(One, DAG.get(), m_One()));
-  EXPECT_FALSE(sd_match(One, DAG.get(), m_AllOnes()));
+  EXPECT_FALSE(sd_match(One, m_Zero()));
+  EXPECT_TRUE(sd_match(One, m_One()));
+  EXPECT_FALSE(sd_match(One, m_AllOnes()));
 
   // Scalar constant -1
   SDValue AllOnes =
       DAG->getConstant(APInt::getAllOnes(VT.getSizeInBits()), DL, VT);
-  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_Zero()));
-  EXPECT_FALSE(sd_match(AllOnes, DAG.get(), m_One()));
-  EXPECT_TRUE(sd_match(AllOnes, DAG.get(), m_AllOnes()));
+  EXPECT_FALSE(sd_match(AllOnes, m_Zero()));
+  EXPECT_FALSE(sd_match(AllOnes, m_One()));
+  EXPECT_TRUE(sd_match(AllOnes, m_AllOnes()));
 
   EVT VecF32 = EVT::getVectorVT(Context, MVT::f32, 4);
   EVT VecVT = EVT::getVectorVT(Context, MVT::i32, 4);
@@ -1260,13 +1167,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(0, DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Zero()));
-
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, m_Zero()));
   }
 
   // m_One: splat vector of 1 → bitcast
@@ -1274,13 +1175,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(1, DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
-
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Negative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
+    EXPECT_FALSE(sd_match(Bitcasted, m_One()));
   }
 
   // m_AllOnes: splat vector of -1 → bitcast
@@ -1288,13 +1183,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(APInt::getAllOnes(32), DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_AllOnes()));
-
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Negative()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_NonNegative()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonZero()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_NonPositive()));
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_StrictlyPositive()));
+    EXPECT_TRUE(sd_match(Bitcasted, m_AllOnes()));
   }
 
   // splat vector with one undef → default should NOT match
@@ -1306,8 +1195,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, Zero);
     Ops[2] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_Zero()));
-    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_Zero(true)));
+    EXPECT_FALSE(sd_match(Vec, m_Zero()));
+    EXPECT_TRUE(sd_match(Vec, m_Zero(true)));
   }
 
   {
@@ -1316,8 +1205,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, One);
     Ops[1] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_One()));
-    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_One(true)));
+    EXPECT_FALSE(sd_match(Vec, m_One()));
+    EXPECT_TRUE(sd_match(Vec, m_One(true)));
   }
 
   {
@@ -1326,8 +1215,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, AllOnes);
     Ops[0] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_AllOnes()));
-    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_AllOnes(true)));
+    EXPECT_FALSE(sd_match(Vec, m_AllOnes()));
+    EXPECT_TRUE(sd_match(Vec, m_AllOnes(true)));
   }
 }
 
@@ -1341,10 +1230,43 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCCLike) {
   SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
                                 TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
-  ISD::CondCode CC = ISD::SETLT;
-  EXPECT_TRUE(sd_match(
-      Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS), m_Specific(TVal),
-                             m_Specific(FVal), m_CondCode(CC))));
+  ISD::CondCode CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(
+      sd_match(Select, m_SelectCCLike(CC, m_Specific(LHS), m_Specific(RHS),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(CC == ISD::SETLT);
+  EXPECT_TRUE(
+      sd_match(Select, m_SelectCCLike(m_Specific(LHS), m_Specific(RHS),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(sd_match(Select, m_SpecificSelectCCLike(
+                                   ISD::SETLT, m_Specific(LHS), m_Specific(RHS),
+                                   m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_FALSE(
+      sd_match(Select, m_SpecificSelectCCLike(ISD::SETGT, m_Specific(LHS),
+                                              m_Specific(RHS), m_Specific(TVal),
+                                              m_Specific(FVal))));
+
+  // Use non-constant operands so the SETCC isn't constant folded.
+  SDValue X = DAG->getCopyFromReg(DAG->getEntryNode(), SDLoc(),
+                                  Register::index2VirtReg(1), MVT::i32);
+  SDValue Y = DAG->getCopyFromReg(DAG->getEntryNode(), SDLoc(),
+                                  Register::index2VirtReg(2), MVT::i32);
+  SDValue Cond = DAG->getSetCC(SDLoc(), MVT::i1, X, Y, ISD::SETULT);
+  SDValue SelectOfSetCC =
+      DAG->getNode(ISD::SELECT, SDLoc(), MVT::i32, Cond, TVal, FVal);
+  CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(sd_match(SelectOfSetCC,
+                       m_SelectCCLike(CC, m_Specific(X), m_Specific(Y),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(CC == ISD::SETULT);
+  EXPECT_TRUE(
+      sd_match(SelectOfSetCC,
+               m_SpecificSelectCCLike(ISD::SETULT, m_Specific(X), m_Specific(Y),
+                                      m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_FALSE(
+      sd_match(SelectOfSetCC,
+               m_SpecificSelectCCLike(ISD::SETLT, m_Specific(X), m_Specific(Y),
+                                      m_Specific(TVal), m_Specific(FVal))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
@@ -1357,10 +1279,18 @@ TEST_F(SelectionDAGPatternMatchTest, MatchSelectCC) {
   SDValue Select = DAG->getNode(ISD::SELECT_CC, SDLoc(), MVT::i32, LHS, RHS,
                                 TVal, FVal, DAG->getCondCode(ISD::SETLT));
 
-  ISD::CondCode CC = ISD::SETLT;
+  ISD::CondCode CC = ISD::SETCC_INVALID;
+  EXPECT_TRUE(sd_match(Select, m_SelectCC(CC, m_Specific(LHS), m_Specific(RHS),
+                                          m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(CC == ISD::SETLT);
   EXPECT_TRUE(sd_match(Select, m_SelectCC(m_Specific(LHS), m_Specific(RHS),
-                                          m_Specific(TVal), m_Specific(FVal),
-                                          m_CondCode(CC))));
+                                          m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_TRUE(sd_match(
+      Select, m_SpecificSelectCC(ISD::SETLT, m_Specific(LHS), m_Specific(RHS),
+                                 m_Specific(TVal), m_Specific(FVal))));
+  EXPECT_FALSE(sd_match(
+      Select, m_SpecificSelectCC(ISD::SETGE, m_Specific(LHS), m_Specific(RHS),
+                                 m_Specific(TVal), m_Specific(FVal))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, MatchSpecificNeg) {

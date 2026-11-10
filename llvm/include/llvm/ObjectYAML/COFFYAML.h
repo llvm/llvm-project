@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/ObjectYAML/BBAddrMapYAML.h"
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
@@ -84,12 +85,14 @@ struct SectionDataEntry {
 struct Section {
   COFF::section Header;
   unsigned Alignment = 0;
-  yaml::BinaryRef SectionData;
+  std::optional<yaml::BinaryRef> SectionData;
   std::vector<CodeViewYAML::YAMLDebugSubsection> DebugS;
   std::vector<CodeViewYAML::LeafRecord> DebugT;
   std::vector<CodeViewYAML::LeafRecord> DebugP;
   std::optional<CodeViewYAML::DebugHSection> DebugH;
   std::vector<SectionDataEntry> StructuredData;
+  std::optional<std::vector<BBAddrMapYAML::BBAddrMapEntry>> BBAddrMapEntries;
+  std::optional<std::vector<BBAddrMapYAML::PGOAnalysisMapEntry>> PGOAnalyses;
   std::vector<Relocation> Relocations;
   StringRef Name;
 
