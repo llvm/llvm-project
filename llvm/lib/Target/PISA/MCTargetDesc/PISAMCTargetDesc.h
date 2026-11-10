@@ -49,7 +49,7 @@ MCTargetStreamer *createPISANullTargetStreamer(MCStreamer &S);
 
 } // namespace llvm
 
-// Defines symbolic names for PISA registers.  This defines a mapping from
+// Defines symbolic names for PISA registers. This defines a mapping from
 // register name to register number.
 #define GET_REGINFO_ENUM
 #include "PISAGenRegisterInfo.inc"
