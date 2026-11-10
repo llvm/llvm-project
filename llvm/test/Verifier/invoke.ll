@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; PR1042
 define i32 @foo() {
@@ -46,7 +46,7 @@ contb:
 
 define i8 @f2() personality ptr @__gxx_personality_v0 {
 entry:
-; CHECK: Cannot invoke an intrinsic other than donothing, patchpoint, statepoint, coro_resume, coro_destroy, clang.arc.attachedcall or wasm.(re)throw
+; CHECK: Cannot invoke an intrinsic other than donothing, patchpoint, statepoint, coro_resume, coro_destroy, clang.arc.attachedcall, wasm.(re)throw or bpf.unwind.exit
   invoke void @llvm.trap()
   to label %cont unwind label %lpad
 

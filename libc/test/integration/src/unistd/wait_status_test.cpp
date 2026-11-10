@@ -11,16 +11,20 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
+#include "hdr/sys_wait_macros.h"
+#include "hdr/types/pid_t.h"
+#include "hdr/types/ssize_t.h"
+#include "src/__support/OSUtil/exit.h"
 #include "src/signal/kill.h"
 #include "src/signal/raise.h"
-#include "src/stdlib/exit.h"
 #include "src/sys/wait/waitpid.h"
+#include "src/unistd/close.h"
 #include "src/unistd/fork.h"
+#include "src/unistd/pipe.h"
+#include "src/unistd/read.h"
 
 #include "test/IntegrationTest/test.h"
-
-#include <signal.h>
-#include <sys/wait.h>
 
 // Decodes statuses produced by the kernel, and checks that exactly one of the
 // predicates is true for each.
@@ -56,12 +60,20 @@ void signaled() {
 }
 
 void stopped_and_continued() {
+  int pipefd[2];
+  ASSERT_EQ(LIBC_NAMESPACE::pipe(pipefd), 0);
+
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {
+    ASSERT_EQ(LIBC_NAMESPACE::close(pipefd[1]), 0);
     LIBC_NAMESPACE::raise(SIGSTOP);
+    char c = 0;
+    ASSERT_EQ(LIBC_NAMESPACE::read(pipefd[0], &c, 1), ssize_t(0));
+    ASSERT_EQ(LIBC_NAMESPACE::close(pipefd[0]), 0);
     LIBC_NAMESPACE::internal::exit(0);
   }
   ASSERT_TRUE(pid > 0);
+  ASSERT_EQ(LIBC_NAMESPACE::close(pipefd[0]), 0);
 
   int status = 0;
   ASSERT_EQ(LIBC_NAMESPACE::waitpid(pid, &status, WUNTRACED), pid);
@@ -78,6 +90,7 @@ void stopped_and_continued() {
   ASSERT_FALSE(WIFSIGNALED(status));
   ASSERT_FALSE(WIFSTOPPED(status));
 
+  ASSERT_EQ(LIBC_NAMESPACE::close(pipefd[1]), 0);
   ASSERT_EQ(LIBC_NAMESPACE::waitpid(pid, &status, 0), pid);
   ASSERT_TRUE(WIFEXITED(status));
   ASSERT_EQ(WEXITSTATUS(status), 0);

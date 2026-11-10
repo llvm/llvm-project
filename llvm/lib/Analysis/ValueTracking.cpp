@@ -1125,14 +1125,25 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (auto OBU = I->getOperandBundleAt(Elem.Index);
-          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+      auto OBU = I->getOperandBundleAt(Elem.Index);
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::Align: {
         auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
         if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
             isValidAssumeForContext(I, Q)) {
           Known.Zero |= (*Alignment - 1) & ~*Offset;
           Known.One |= (*Alignment - 1) & *Offset;
         }
+      } break;
+
+      case BundleAttr::Range: {
+        auto [Val, Range] = getAssumeRangeInfo(OBU);
+        if (Val == V && isValidAssumeForContext(I, Q))
+          Known = Known.unionWith(Range.toKnownBits());
+      } break;
+
+      default:
+        break;
       }
       continue;
     }
@@ -1705,6 +1716,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Q, Depth,
                                       KF);
+    // X << X is even: X is either zero or shifts by at least one bit. Both
+    // uses must observe the same value, so X must not be undef.
+    if (I->getOperand(0) == I->getOperand(1) &&
+        isGuaranteedNotToBeUndef(I->getOperand(0), Q.AC, Q.CtxI, Q.DT,
+                                 Depth + 1))
+      Known.Zero.setBit(0);
+
     // Trailing zeros of a right-shifted constant never decrease.
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
@@ -2080,12 +2098,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // to help us determine the range of the value.
         if (!Known2.isConstant()) {
           CmpPredicate Pred;
-          const APInt *RHSC;
+          Value *RHSValue = nullptr;
           BasicBlock *TrueSucc, *FalseSucc;
-          // TODO: Use RHS Value and compute range from its known bits.
-          if (match(RecQ.CtxI,
-                    m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
-                         m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
+          if (match(
+                  RecQ.CtxI,
+                  m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_Value(RHSValue)),
+                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
             // Check for cases of duplicate successors.
             if ((TrueSucc == CtxPhi->getParent()) !=
                 (FalseSucc == CtxPhi->getParent())) {
@@ -2093,18 +2111,24 @@ static void computeKnownBitsFromOperator(const Operator *I,
               if (FalseSucc == CtxPhi->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
-              auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
-              KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
-              // We can have conflicts here if we are analyzing deadcode (its
-              // impossible for us reach this BB based the icmp).
-              if (KnownUnion.hasConflict()) {
-                // No reason to continue analyzing in a known dead region, so
-                // just resetAll and break. This will cause us to also exit the
-                // outer loop.
-                Known.resetAll();
-                break;
+              KnownBits RHSKnown = computeKnownBits(
+                  RHSValue, DemandedElts, RecQ, MaxAnalysisRecursionDepth - 1);
+              if (!RHSKnown.isUnknown()) {
+                ConstantRange RHSRange = ConstantRange::fromKnownBits(
+                    RHSKnown, /*IsSigned=*/ICmpInst::isSigned(Pred));
+                auto CR = ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+                KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
+                // We can have conflicts here if we are analyzing deadcode (its
+                // impossible for us reach this BB based the icmp).
+                if (KnownUnion.hasConflict()) {
+                  // No reason to continue analyzing in a known dead region, so
+                  // just resetAll and break. This will cause us to also exit
+                  // the outer loop.
+                  Known.resetAll();
+                  break;
+                }
+                Known2 = KnownUnion;
               }
-              Known2 = KnownUnion;
             }
           }
         }
@@ -5267,6 +5291,68 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
+static void computeKnownFPClassForFRem(const Operator *Op,
+                                       const APInt &DemandedElts,
+                                       FPClassTest InterestedClasses,
+                                       KnownFPClass &Known,
+                                       const SimplifyQuery &Q, unsigned Depth) {
+  const Value *LHS = Op->getOperand(0);
+  const Value *RHS = Op->getOperand(1);
+
+  FPClassTest InterestedLHS = fcNone;
+  FPClassTest InterestedRHS = fcNone;
+
+  // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
+  if (InterestedClasses & fcNan) {
+    InterestedLHS |= fcNan | fcInf;
+    InterestedRHS |= fcNan | fcZero | fcSubnormal;
+  }
+
+  // The sign for frem is the same as the first operand.
+  if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
+    InterestedLHS |= fcPosNormal | fcPosSubnormal;
+  if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
+    InterestedLHS |= fcNegNormal | fcNegSubnormal;
+
+  // A negative zero result requires a negative finite first operand.
+  if (InterestedClasses & fcNegZero)
+    InterestedLHS |= fcNegFinite;
+
+  // A positive zero result can additionally come from a negative finite
+  // result being flushed to positive zero.
+  if (InterestedClasses & fcPosZero)
+    InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
+
+  const Function *F = cast<Instruction>(Op)->getFunction();
+  DenormalMode Mode =
+      F ? F->getDenormalMode(Op->getType()->getScalarType()->getFltSemantics())
+        : DenormalMode::getDynamic();
+
+  if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT)) {
+    // X % X is always exactly [+-]0.0 or a NaN.
+    FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
+    KnownFPClass KnownSrc;
+    if (InterestedSrcs != fcNone)
+      computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownSrc, Q,
+                          Depth + 1);
+    Known = KnownFPClass::frem_self(KnownSrc, Mode);
+    return;
+  }
+
+  KnownFPClass KnownLHS;
+  if (InterestedLHS != fcNone)
+    computeKnownFPClass(LHS, DemandedElts, InterestedLHS, KnownLHS, Q,
+                        Depth + 1);
+
+  KnownFPClass KnownRHS;
+  // RHS is only useful for refining NaN classes.
+  if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
+    computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Q,
+                        Depth + 1);
+
+  Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
+}
+
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   switch (IID) {
   case Intrinsic::minimum:
@@ -5323,13 +5409,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.setKnownFPClasses(fcPosZero);
-    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     return;
   }
 
@@ -5337,9 +5421,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
-    Known.setKnownFPClasses(fcNone);
-    bool SignBitAllZero = true;
-    bool SignBitAllOne = true;
+    Known = KnownFPClass::getEmpty();
 
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
@@ -5360,28 +5442,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      const APFloat &C = CElt->getValueAPF();
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-      if (C.isNegative())
-        SignBitAllZero = false;
-      else
-        SignBitAllOne = false;
+      Known |= KnownFPClass(CElt->getValueAPF());
     }
-    if (SignBitAllOne != SignBitAllZero)
-      Known.setSignBit(SignBitAllOne);
     return;
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      Known |= CDS->getElementAsAPFloat(I).classify();
+      Known |= KnownFPClass(CDS->getElementAsAPFloat(I));
     return;
   }
 
   if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
     // TODO: Handle complex aggregates
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (const Use &Op : CA->operands()) {
       auto *CFP = dyn_cast<ConstantFP>(Op.get());
       if (!CFP) {
@@ -5389,7 +5464,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      Known |= CFP->getValueAPF().classify();
+      Known |= KnownFPClass(CFP->getValueAPF());
     }
 
     return;
@@ -5501,11 +5576,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
+        FPClassTest InterestedSquared = InterestedClasses;
+        FPClassTest InterestedAddend = InterestedClasses;
+        // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+        // squaring.
+        if (InterestedClasses & fcQNan) {
+          InterestedSquared |= fcSNan | fcInf;
+          InterestedAddend |= fcSNan | fcNegInf;
+        }
+
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
-                            InterestedClasses, KnownAddend, Q, Depth + 1);
+                            InterestedAddend, KnownAddend, Q, Depth + 1);
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Q, Depth + 1);
+                            InterestedSquared, KnownSrc, Q, Depth + 1);
 
         const Function *F = II->getFunction();
         const fltSemantics &FltSem =
@@ -5553,12 +5637,20 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                                         Mode);
       break;
     }
+    case Intrinsic::experimental_constrained_frem: {
+      computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
+                                 Depth);
+      break;
+    }
     case Intrinsic::sqrt:
     case Intrinsic::experimental_constrained_sqrt: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedClasses & fcNan)
-        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+      if (InterestedClasses & fcQNan)
+        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+      // Subnormals may flush to zero.
+      if (InterestedClasses & fcZero)
+        InterestedSrcs |= fcSubnormal;
 
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
@@ -6152,8 +6244,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     Value *LHS = Op->getOperand(0);
     Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
-    if (LHS == RHS &&
-        isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT, Depth + 1)) {
+    // FIXME: Should check isGuaranteedNotToBeUndef
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);
@@ -6225,7 +6317,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                         Q, Depth + 1);
 
     bool KnowSomethingUseful =
-        KnownRHS.isKnownNeverNaN() ||
+        KnownRHS.isKnownNever(fcSNan) ||
         KnownRHS.isKnownNever(fcNegNormal | fcNegSubnormal) ||
         KnownRHS.isKnownNever(fcPosNormal | fcPosSubnormal);
 
@@ -6237,61 +6329,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
-    FPClassTest InterestedLHS = fcNone;
-    FPClassTest InterestedRHS = fcNone;
-
-    // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
-    if (InterestedClasses & fcNan) {
-      InterestedLHS |= fcNan | fcInf;
-      InterestedRHS |= fcNan | fcZero | fcSubnormal;
-    }
-
-    // The sign for frem is the same as the first operand.
-    if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
-      InterestedLHS |= fcPosNormal | fcPosSubnormal;
-    if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
-      InterestedLHS |= fcNegNormal | fcNegSubnormal;
-
-    // A negative zero result requires a negative finite first operand.
-    if (InterestedClasses & fcNegZero)
-      InterestedLHS |= fcNegFinite;
-
-    // A positive zero result can additionally come from a negative finite
-    // result being flushed to positive zero.
-    if (InterestedClasses & fcPosZero)
-      InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
-
-    const Function *F = cast<Instruction>(Op)->getFunction();
-    DenormalMode Mode =
-        F ? F->getDenormalMode(
-                Op->getType()->getScalarType()->getFltSemantics())
-          : DenormalMode::getDynamic();
-
-    if (Op->getOperand(0) == Op->getOperand(1) &&
-        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CtxI, Q.DT)) {
-      // X % X is always exactly [+-]0.0 or a NaN.
-      FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
-      KnownFPClass KnownSrc;
-      if (InterestedSrcs != fcNone)
-        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                            KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::frem_self(KnownSrc, Mode);
-      break;
-    }
-
-    KnownFPClass KnownLHS;
-    if (InterestedLHS != fcNone)
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedLHS,
-                          KnownLHS, Q, Depth + 1);
-
-    KnownFPClass KnownRHS;
-    // RHS is only useful for refining NaN classes.
-    if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
-                          KnownRHS, Q, Depth + 1);
-
-    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
-
+    computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
+                               Depth);
     break;
   }
   case Instruction::FPExt: {
@@ -6418,7 +6457,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -6454,7 +6493,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
@@ -6691,7 +6730,7 @@ KnownFPClass llvm::computeKnownFPClass(const Value *V, FastMathFlags FMF,
 bool llvm::cannotBeNegativeZero(const Value *V, const SimplifyQuery &SQ,
                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcNegZero, SQ, Depth);
-  return Known.isKnownNeverNegZero();
+  return Known.isKnownNever(fcNegZero);
 }
 
 bool llvm::cannotBeOrderedLessThanZero(const Value *V, const SimplifyQuery &SQ,
@@ -8132,9 +8171,10 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
 
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
-
+  const auto *CB = dyn_cast<CallBase>(Op);
+  bool CBHasNoUndef = CB && CB->hasRetAttr(Attribute::NoUndef);
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingAnnotations())
+      Op->hasPoisonGeneratingAnnotations() && !CBHasNoUndef)
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -8170,9 +8210,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
     [[fallthrough]];
   case Instruction::CallBr:
   case Instruction::Invoke: {
-    const auto *CB = cast<CallBase>(Op);
-    return !CB->hasRetAttr(Attribute::NoUndef) &&
-           !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
+    return !CBHasNoUndef && !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
@@ -8633,42 +8671,73 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
   case Intrinsic::pow:
+  case Intrinsic::experimental_constrained_pow:
   case Intrinsic::powi:
+  case Intrinsic::experimental_constrained_powi:
   case Intrinsic::sin:
+  case Intrinsic::experimental_constrained_sin:
   case Intrinsic::sinh:
+  case Intrinsic::experimental_constrained_sinh:
   case Intrinsic::cos:
+  case Intrinsic::experimental_constrained_cos:
   case Intrinsic::cosh:
+  case Intrinsic::experimental_constrained_cosh:
   case Intrinsic::sincos:
   case Intrinsic::sincospi:
   case Intrinsic::tan:
+  case Intrinsic::experimental_constrained_tan:
   case Intrinsic::tanh:
+  case Intrinsic::experimental_constrained_tanh:
   case Intrinsic::asin:
+  case Intrinsic::experimental_constrained_asin:
   case Intrinsic::acos:
+  case Intrinsic::experimental_constrained_acos:
   case Intrinsic::atan:
+  case Intrinsic::experimental_constrained_atan:
   case Intrinsic::atan2:
+  case Intrinsic::experimental_constrained_atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::experimental_constrained_sqrt:
   case Intrinsic::fma:
+  case Intrinsic::experimental_constrained_fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::experimental_constrained_fmuladd:
   case Intrinsic::exp:
+  case Intrinsic::experimental_constrained_exp:
   case Intrinsic::exp2:
+  case Intrinsic::experimental_constrained_exp2:
   case Intrinsic::exp10:
   case Intrinsic::log:
+  case Intrinsic::experimental_constrained_log:
   case Intrinsic::log2:
+  case Intrinsic::experimental_constrained_log2:
   case Intrinsic::log10:
+  case Intrinsic::experimental_constrained_log10:
   case Intrinsic::modf:
   case Intrinsic::floor:
+  case Intrinsic::experimental_constrained_floor:
   case Intrinsic::ceil:
+  case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::trunc:
+  case Intrinsic::experimental_constrained_trunc:
   case Intrinsic::rint:
+  case Intrinsic::experimental_constrained_rint:
   case Intrinsic::nearbyint:
+  case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::round:
+  case Intrinsic::experimental_constrained_round:
   case Intrinsic::roundeven:
+  case Intrinsic::experimental_constrained_roundeven:
   case Intrinsic::lrint:
+  case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::llrint:
+  case Intrinsic::experimental_constrained_llrint:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:
+  case Intrinsic::ldexp:
+  case Intrinsic::experimental_constrained_ldexp:
   case Intrinsic::get_active_lane_mask:
   case Intrinsic::mask_beforefirst:
     return true;
@@ -10907,6 +10976,16 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
+      if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
+        auto OBU = I->getOperandBundleAt(AssumeVH.Index);
+        if (getBundleAttrFromOBU(OBU) == BundleAttr::Range) {
+          auto [Val, Range] = getAssumeRangeInfo(OBU);
+          if (Val == V && isValidAssumeForContext(I, SQ))
+            CR = CR.intersectWith(Range);
+        }
+        continue;
+      }
+
       if (!isValidAssumeForContext(I, SQ))
         continue;
       Value *Arg = I->getArgOperand(0);
@@ -11062,7 +11141,8 @@ void llvm::findValuesAffectedByCondition(
       // fcmp fneg(x), y
       // fcmp fabs(x), y
       // fcmp fneg(fabs(x)), y
-      if (match(A, m_FNeg(m_Value(A))))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(A, m_FNegOrFSubNegZero(m_Value(A))))
         AddAffected(A);
       if (match(A, m_FAbs(m_Value(A))))
         AddAffected(A);
