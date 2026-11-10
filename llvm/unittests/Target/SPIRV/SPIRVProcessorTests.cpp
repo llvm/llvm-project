@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// SPIRV.td lists the Intel IGCA targets by hand, so check that it agrees with
-// IntelGPUTargetParser.def.
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -43,6 +38,11 @@ protected:
 
   std::unique_ptr<MCSubtargetInfo> STI;
 };
+
+// Intel IGCA target tests:
+//
+// SPIRV.td lists the Intel IGCA targets by hand, so check that it agrees with
+// IntelGPUTargetParser.def.
 
 // Every IGCA target that a device in IntelGPUTargetParser.def can run is a
 // SPIR-V processor.
