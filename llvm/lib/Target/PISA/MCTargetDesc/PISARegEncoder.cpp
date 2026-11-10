@@ -137,18 +137,18 @@ static_assert(RegEncoder::NUM_TYPE < 5, "need to update encoding");
 static_assert(static_cast<unsigned>(RegEncoder::RegBank::NUM_BANK) <= 32,
               "need to update encoding");
 
-RegEncoder::RegType RegEncoder::getRegType(uint8_t TSFlags) {
+RegEncoder::RegType RegEncoder::getRegType(uint8_t EncodedBits) {
   unsigned TypeBitsMask = (1U << NumTypeBits) - 1;
-  return static_cast<RegEncoder::RegType>(TSFlags & TypeBitsMask);
+  return static_cast<RegEncoder::RegType>(EncodedBits & TypeBitsMask);
 }
 
 RegEncoder::RegType RegEncoder::getRegType(const MCRegisterClass *RC) {
   return getRegType(RC->TSFlags);
 }
 
-RegEncoder::RegBank RegEncoder::getRegBank(uint8_t TSFlags) {
+RegEncoder::RegBank RegEncoder::getRegBank(uint8_t EncodedBits) {
   unsigned BankBitsMask = (1U << NumBankBits) - 1;
-  return static_cast<RegEncoder::RegBank>(TSFlags & BankBitsMask);
+  return static_cast<RegEncoder::RegBank>(EncodedBits & BankBitsMask);
 }
 
 unsigned RegEncoder::encodeVirtualRegisterIndex(unsigned Idx, RegBank Bank,
@@ -163,8 +163,8 @@ unsigned RegEncoder::encodeVirtualRegisterIndex(unsigned Idx, RegBank Bank,
 
 std::pair<const char *, unsigned>
 RegEncoder::decodeVirtualRegister(MCRegister Reg) {
-  unsigned BankBits = Reg >> NumRegBits;
-  const char *Prefix = getPrefixFromBank(getRegBank(BankBits));
+  unsigned EncodedBits = Reg >> NumRegBits;
+  const char *Prefix = getPrefixFromBank(getRegBank(EncodedBits));
   unsigned Num = Reg & ((1U << NumRegBits) - 1);
   return std::make_pair(Prefix, Num);
 }
