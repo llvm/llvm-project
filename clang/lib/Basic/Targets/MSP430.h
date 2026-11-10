@@ -45,6 +45,7 @@ public:
     IntPtrType = SignedInt;
     PtrDiffType = SignedInt;
     WCharType = SignedInt;
+    WIntType = UnsignedInt;
     SigAtomicType = SignedLong;
     resetDataLayout();
   }
