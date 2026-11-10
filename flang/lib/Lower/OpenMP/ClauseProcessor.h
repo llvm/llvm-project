@@ -181,10 +181,12 @@ public:
                         mlir::omp::ReductionClauseOps &result,
                         llvm::SmallVectorImpl<Object> &reductionObjects,
                         llvm::DenseMap<const semantics::Symbol *, mlir::Value>
-                            *reductionVarCache = nullptr) const;
-  bool processTaskReduction(
-      mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
-      llvm::SmallVectorImpl<Object> &outReductionObjects) const;
+                            *reductionVarCache = nullptr,
+                        bool *hasUserDefinedReduction = nullptr) const;
+  bool processTaskReduction(mlir::Location currentLocation,
+                            mlir::omp::TaskReductionClauseOps &result,
+                            llvm::SmallVectorImpl<Object> &outReductionObjects,
+                            bool *hasUserDefinedReduction = nullptr) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool
   processUseDeviceAddr(lower::StatementContext &stmtCtx,
