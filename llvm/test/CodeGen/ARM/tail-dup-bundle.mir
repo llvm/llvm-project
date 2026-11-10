@@ -3,7 +3,6 @@
 ---
 # Make sure the bundle gets duplicated correctly
 name: func
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: func
   ; CHECK: bb.0:

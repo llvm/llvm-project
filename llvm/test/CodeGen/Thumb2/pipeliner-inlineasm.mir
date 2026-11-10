@@ -43,7 +43,6 @@
 ---
 name:            dot
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 25, class: spr, preferred-register: '' }
 constants:

@@ -13,7 +13,6 @@
 ...
 ---
 name:            vector_spill_in_loop
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -120, size: 16, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -111,7 +110,6 @@ stack:
   - { id: 0, name: '', type: spill-slot, offset: -120, size: 16, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: vector_spill_load_outside
   ; CHECK: bb.0:

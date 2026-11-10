@@ -814,7 +814,6 @@
 ---
 name:            legal_vaddv_s32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -919,7 +918,6 @@ body:             |
 ---
 name:            legal_vaddv_s16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1024,7 +1022,6 @@ body:             |
 ---
 name:            legal_vaddv_s8
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1129,7 +1126,6 @@ body:             |
 ---
 name:            legal_vaddva_s32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1245,7 +1241,6 @@ body:             |
 ---
 name:            illegal_vaddv_s32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1363,7 +1358,6 @@ body:             |
 ---
 name:            illegal_vaddva_s32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1492,7 +1486,6 @@ body:             |
 ---
 name:            illegal_vaddv_u32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1610,7 +1603,6 @@ body:             |
 ---
 name:            illegal_vaddva_u32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1739,7 +1731,6 @@ body:             |
 ---
 name:            illegal_vaddv_s16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -1867,7 +1858,6 @@ body:             |
 ---
 name:            illegal_vaddva_s16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2007,7 +1997,6 @@ body:             |
 ---
 name:            illegal_vaddv_u16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2134,7 +2123,6 @@ body:             |
 ---
 name:            illegal_vaddva_u16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2274,7 +2262,6 @@ body:             |
 ---
 name:            illegal_vaddv_s8
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2401,7 +2388,6 @@ body:             |
 ---
 name:            illegal_vaddva_s8
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2541,7 +2527,6 @@ body:             |
 ---
 name:            illegal_vaddv_u8
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2668,7 +2653,6 @@ body:             |
 ---
 name:            illegal_vaddva_u8
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2808,7 +2792,6 @@ body:             |
 ---
 name:            regalloc_legality_vaddva_u32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -2931,7 +2914,6 @@ body:             |
 ---
 name:            regalloc_legality_vaddv_u16
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -3056,7 +3038,6 @@ body:             |
 ---
 name:            regalloc_illegality_vaddva_s32
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
@@ -3193,7 +3174,6 @@ body:             |
 ---
 name:            illegal_vmull_non_zero
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }

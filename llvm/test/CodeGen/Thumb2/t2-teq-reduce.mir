@@ -91,7 +91,6 @@
 ...
 ---
 name:            reg_reg_it_block
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -180,7 +179,6 @@ body:             |
 ...
 ---
 name:            op_not_killed
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

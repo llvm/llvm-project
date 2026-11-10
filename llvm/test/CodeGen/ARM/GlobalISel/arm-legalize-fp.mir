@@ -86,7 +86,6 @@ name:            test_frem_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -201,7 +200,6 @@ name:            test_frem_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -382,7 +380,6 @@ name:            test_fpow_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -497,7 +494,6 @@ name:            test_fpow_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -678,7 +674,6 @@ name:            test_fadd_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -774,7 +769,6 @@ name:            test_fadd_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -924,7 +918,6 @@ name:            test_fsub_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1020,7 +1013,6 @@ name:            test_fsub_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1170,7 +1162,6 @@ name:            test_fmul_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1266,7 +1257,6 @@ name:            test_fmul_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1416,7 +1406,6 @@ name:            test_fdiv_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1512,7 +1501,6 @@ name:            test_fdiv_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1662,7 +1650,6 @@ name:            test_fconstant_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
 body:             |
@@ -1687,7 +1674,6 @@ name:            test_fconstant_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1746,7 +1732,6 @@ name:            test_fneg_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1782,7 +1767,6 @@ name:            test_fneg_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1891,7 +1875,6 @@ name:            test_fpext_float_to_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -1990,7 +1973,6 @@ name:            test_fptrunc_double_to_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2089,7 +2071,6 @@ name:            test_fptosi_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2107,7 +2088,6 @@ name:            test_fptosi_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2202,7 +2182,6 @@ name:            test_fptoui_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2279,7 +2258,6 @@ name:            test_fptoui_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2374,7 +2352,6 @@ name:            test_sitofp_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2451,7 +2428,6 @@ name:            test_sitofp_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2546,7 +2522,6 @@ name:            test_uitofp_float
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2623,7 +2598,6 @@ name:            test_uitofp_double
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2720,7 +2694,6 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2762,7 +2735,6 @@ name:            test_fcmp_false_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2804,7 +2776,6 @@ name:            test_fcmp_oeq_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -2911,7 +2882,6 @@ name:            test_fcmp_ogt_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3018,7 +2988,6 @@ name:            test_fcmp_oge_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3125,7 +3094,6 @@ name:            test_fcmp_olt_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3232,7 +3200,6 @@ name:            test_fcmp_ole_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3339,7 +3306,6 @@ name:            test_fcmp_ord_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3446,7 +3412,6 @@ name:            test_fcmp_ugt_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3553,7 +3518,6 @@ name:            test_fcmp_uge_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3660,7 +3624,6 @@ name:            test_fcmp_ult_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3767,7 +3730,6 @@ name:            test_fcmp_ule_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3874,7 +3836,6 @@ name:            test_fcmp_une_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -3981,7 +3942,6 @@ name:            test_fcmp_uno_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4088,7 +4048,6 @@ name:            test_fcmp_one_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4239,7 +4198,6 @@ name:            test_fcmp_ueq_s32
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4390,7 +4348,6 @@ name:            test_fcmp_true_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4442,7 +4399,6 @@ name:            test_fcmp_false_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4494,7 +4450,6 @@ name:            test_fcmp_oeq_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4637,7 +4592,6 @@ name:            test_fcmp_ogt_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4780,7 +4734,6 @@ name:            test_fcmp_oge_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -4923,7 +4876,6 @@ name:            test_fcmp_olt_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5066,7 +5018,6 @@ name:            test_fcmp_ole_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5209,7 +5160,6 @@ name:            test_fcmp_ord_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5352,7 +5302,6 @@ name:            test_fcmp_ugt_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5495,7 +5444,6 @@ name:            test_fcmp_uge_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5638,7 +5586,6 @@ name:            test_fcmp_ult_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5781,7 +5728,6 @@ name:            test_fcmp_ule_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -5924,7 +5870,6 @@ name:            test_fcmp_une_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -6067,7 +6012,6 @@ name:            test_fcmp_uno_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -6210,7 +6154,6 @@ name:            test_fcmp_one_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -6413,7 +6356,6 @@ name:            test_fcmp_ueq_s64
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

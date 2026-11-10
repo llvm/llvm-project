@@ -22,7 +22,6 @@
 
 name:            main
 alignment:       4
-tracksRegLiveness: true
 constants:
 
 -
