@@ -20849,7 +20849,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
     // Vector conversion the target has to unroll, or one it only supports by
     // widening the operand back up, is not a win.
     if (!hasOperation(ISD::SINT_TO_FP, NarrowVT) ||
-        !TLI.isTypeDesirableForOp(ISD::SINT_TO_FP, NarrowVT) ||
+        !TLI.isTypeDesirableForOp(N, NarrowVT) ||
         !TLI.isTruncateFree(N0, NarrowVT))
       continue;
 
@@ -20918,8 +20918,10 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   for (unsigned Bits = bit_ceil(ActiveBits); Bits < ScalarBits; Bits *= 2) {
     EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
 
-    // Vector conversion is unrolled to scalars, but truncate is not.
+    // Vector conversion is unrolled to scalars, but truncate is not. A type
+    // the target would only widen back up is not a win either.
     if (!hasOperation(ISD::UINT_TO_FP, NarrowVT.getScalarType()) ||
+        !TLI.isTypeDesirableForOp(N, NarrowVT) ||
         !TLI.isTruncateFree(N0, NarrowVT))
       continue;
 

@@ -2111,6 +2111,8 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
   Value *RemSel =
       Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  if (auto *SI = dyn_cast<SelectInst>(RemSel))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
 
   NewRem->addIncoming(Start, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());

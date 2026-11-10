@@ -262,7 +262,7 @@ struct CharSet {
         for (int I = 0; I < 0x100; ++I) {
           const unsigned char Ch = I;
           const char *Cur = reinterpret_cast<const char *>(&Ch);
-          char_t UCh;
+          char_t UCh = 0;
           std::mbstate_t InitialMBState{};
           if (mbrtoc(&UCh, Cur, 1, &InitialMBState) == 1)
             LookupTable[Ch] = UCh;
