@@ -11,7 +11,8 @@ define private void @foo() {
 
 define i32 @bar() {
 ; CHECK-LABEL: bar:
-; CHECK: call16($foo)
+; CHECK: lw $[[R1:[0-9]+]], %got($foo)($
+; CHECK: addiu $25, $[[R1]], %lo($foo)
 ; CHECK: lw $[[R0:[0-9]+]], %got($baz)($
 ; CHECK: lw ${{[0-9]+}}, %lo($baz)($[[R0]])
   call void @foo()

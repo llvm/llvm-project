@@ -59,9 +59,12 @@ subroutine parallel_loop_cycle(a, n)
   end do
 end subroutine
 
+! The directive owns this loop, so the bounds belong on its own acc.loop --
+! the one carrying combined(parallel) -- and not on a second one nested inside.
 ! CHECK-LABEL: func.func @_QPparallel_loop_cycle
 ! CHECK:         acc.parallel combined(loop) {
-! CHECK:           acc.loop private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK-NOT:       acc.loop
+! CHECK:           acc.loop combined(parallel) private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:             scf.execute_region no_inline {
 ! CHECK:               cf.cond_br %{{[0-9]+}}, ^bb[[CYCLE:[0-9]+]], ^bb[[BODY:[0-9]+]]
 ! CHECK:             ^bb[[CYCLE]]:

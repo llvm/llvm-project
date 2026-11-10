@@ -21,6 +21,35 @@
 
 namespace llvm {
 
+namespace AMDGPU {
+// DPP/Iterative option enables the atomic optimizer with given strategy
+// whereas None disables the atomic optimizer.
+enum class ScanOptions { DPP, Iterative, None };
+
+enum class AntiHintRule {
+  None,
+  MFMAWAW,
+  MFMAWAR,
+  WMMAWARAB,
+  SWMMACWARIndex,
+  WMMAWAW,
+  TransWAR,
+  MemAddrWAR,
+  VAVdstWAR,
+  All,
+};
+
+enum class CarriedLatency { Off, Fence, All };
+
+enum class LDSLoweringKind { module, table, kernel, hybrid };
+} // namespace AMDGPU
+} // namespace llvm
+
+#define OPTIONS_STRUCT_DECL
+#include "AMDGPUOptions.inc"
+
+namespace llvm {
+
 enum AMDGPUDwarfFlavour : unsigned;
 class Function;
 class Instruction;
@@ -46,6 +75,7 @@ public:
   };
 
 private:
+  const AMDGPUOptions &CLOpts;
   const Triple &TargetTriple;
 
 protected:
@@ -65,7 +95,10 @@ protected:
   unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
+  AMDGPUSubtarget(const Triple &TT, const AMDGPUOptions &CLOpts)
+      : CLOpts(CLOpts), TargetTriple(TT) {}
+
+  const AMDGPUOptions &getCLOpts() const { return CLOpts; }
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -82,6 +115,10 @@ public:
   /// \returns Subtarget's default values if explicitly requested values cannot
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
+
+  /// \returns true if the maximum flat work-group size for \p F is at most the
+  /// wavefront size, so a work-group may fit in a single wavefront.
+  bool isSingleWavefrontWorkgroup(const Function &F) const;
 
   /// \returns The required size of workgroups that will be used to execute \p F
   /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
@@ -101,7 +138,7 @@ public:
   /// This information is currently only gathered from the !reqd_work_group_size
   /// metadata on \p F, but this may be improved in the future.
   bool hasWavefrontsEvenlySplittingXDim(const Function &F,
-                                        bool REquiresUniformYZ = false) const;
+                                        bool RequiresUniformYZ = false) const;
 
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per

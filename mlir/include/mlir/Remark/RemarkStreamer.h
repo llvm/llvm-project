@@ -11,10 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_REMARK_REMARKSTREAMER_H
+#define MLIR_REMARK_REMARKSTREAMER_H
+
 #include "mlir/IR/Remarks.h"
 
 #include "llvm/Remarks/RemarkStreamer.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
+
+#include <mutex>
 
 namespace mlir::remark::detail {
 
@@ -22,16 +28,19 @@ namespace mlir::remark::detail {
 /// (YAML or Bitstream). Lives outside core.
 class LLVMRemarkStreamer final : public MLIRRemarkStreamerBase {
 public:
-  static FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>>
+  /// Open \p path and create the serializer for \p fmt.
+  static llvm::Expected<std::unique_ptr<MLIRRemarkStreamerBase>>
   createToFile(llvm::StringRef path, llvm::remarks::Format fmt);
 
   void streamOptimizationRemark(const Remark &remark) override;
+  /// Finalize after all reporting threads have stopped.
   void finalize() override;
   ~LLVMRemarkStreamer() override;
 
 private:
   LLVMRemarkStreamer() = default;
 
+  std::mutex mutex;
   std::unique_ptr<class llvm::ToolOutputFile> file;
   // RemarkStreamer must be destructed before file is destroyed!
   std::unique_ptr<class llvm::remarks::RemarkStreamer> remarkStreamer;
@@ -42,10 +51,13 @@ namespace mlir::remark {
 /// Enable optimization remarks to a file with the given path and format.
 /// The remark categories are used to filter the remarks that are emitted.
 /// If the printAsEmitRemarks flag is set, remarks will also be printed using
-/// mlir::emitRemarks.
+/// mlir::emitRemarks. If the file cannot be opened or the serializer cannot be
+/// created, an error is emitted on the context.
 LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     MLIRContext &ctx, StringRef filePath, llvm::remarks::Format fmt,
     std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
     const RemarkCategories &cat, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark
+
+#endif // MLIR_REMARK_REMARKSTREAMER_H

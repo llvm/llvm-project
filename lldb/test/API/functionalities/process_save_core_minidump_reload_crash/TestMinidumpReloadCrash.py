@@ -9,6 +9,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class MinidumpReloadCrashTestCase(TestBase):
+    @requireMinidumpSave
     def test_reload_minidump_does_not_crash(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_name_breakpoint(self, "main")

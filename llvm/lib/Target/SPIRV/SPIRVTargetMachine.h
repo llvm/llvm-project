@@ -19,6 +19,7 @@
 
 namespace llvm {
 class SPIRVTargetMachine : public CodeGenTargetMachineImpl {
+  const SPIRVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   SPIRVSubtarget Subtarget;
 
@@ -28,6 +29,8 @@ public:
                      std::optional<Reloc::Model> RM,
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
+
+  const SPIRVOptions &getCLOpts() const { return CLOpts; }
 
   const SPIRVSubtarget *getSubtargetImpl() const { return &Subtarget; }
 
@@ -41,6 +44,7 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
   bool usesPhysRegsForValues() const override { return false; }
+  CSEConfigBase *createCSEConfig() const override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();

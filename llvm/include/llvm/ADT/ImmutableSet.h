@@ -39,7 +39,6 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 
 template <typename ImutInfo, bool Canonicalize = true> class ImutAVLFactory;
-template <typename ImutInfo> class ImutIntervalAVLFactory;
 template <typename ImutInfo, bool Canonicalize = true>
 class ImutAVLTreeInOrderIterator;
 
@@ -84,7 +83,6 @@ public:
   using iterator = ImutAVLTreeInOrderIterator<ImutInfo, Canonicalize>;
 
   friend class ImutAVLFactory<ImutInfo, Canonicalize>;
-  friend class ImutIntervalAVLFactory<ImutInfo>;
 
 private:
   using CanonLinks = ImutAVLDetail::CanonicalLinks<ImutAVLTree, Canonicalize>;
@@ -1090,7 +1088,7 @@ template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
 
 template <typename ValT, typename ValInfo = ImutContainerInfo<ValT>,
           bool Canonicalize = true>
-class ImmutableSet {
+class LLVM_ATTRIBUTE_WARN_UNUSED ImmutableSet {
 public:
   using value_type = typename ValInfo::value_type;
   using value_type_ref = typename ValInfo::value_type_ref;

@@ -322,6 +322,10 @@ public:
   }
 };
 
+inline FileCheckDiag::~FileCheckDiag() {}
+inline MatchResultDiag::~MatchResultDiag() {}
+inline MatchNoteDiag::~MatchNoteDiag() {}
+
 /// \c MatchNoteDiag for a fuzzy match that serves as a suggestion for the next
 /// intended match for an expected pattern with too few or no good matches.
 class MatchFuzzyDiag : public MatchNoteDiag {

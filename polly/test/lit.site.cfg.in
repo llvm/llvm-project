@@ -27,8 +27,6 @@ for arch in config.targets_to_build.split():
 # directories.
 config.excludes = ['Inputs']
 
-# TODO: Let tests spell out -load-pass-plugin and these options, and remove
-# %loadNPMPolly.
 commonOpts = ''.join(' -plugin-arg=Polly,' + opt for opt in [
     '-polly-process-unprofitable',
     '-polly-remarks-minimal',

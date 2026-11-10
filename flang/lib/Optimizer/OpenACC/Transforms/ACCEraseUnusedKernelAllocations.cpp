@@ -1,4 +1,4 @@
-//===- ACCEraseUnusedKernelAllocations.cpp - Drop dead kernel allocmem ---===//
+//===- ACCEraseUnusedKernelAllocations.cpp - Drop dead kernel allocs ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Erase fir.allocmem inside acc.compute_region when the storage is never read
-// or written. fir.declare's debug effect and fir.freemem keep that chain alive
-// through ordinary DCE, and lowering it would produce a checked device malloc.
-// An unused private-recipe allocation is deleted the same way as an unused
-// source array.
+// Erase an allocation inside acc.compute_region when the storage is never
+// read or written. Covered allocations are fir.allocmem, fir.alloca,
+// memref.alloc, and memref.alloca. fir.declare's debug effect and the
+// matching free (fir.freemem or memref.dealloc) keep that chain alive
+// through ordinary DCE, and a dynamic allocation would otherwise be lowered
+// to a checked device malloc. An unused private-recipe allocation is deleted
+// the same way as an unused source array.
 //
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -31,14 +34,29 @@ namespace {
 
 using namespace mlir;
 
-// True when every use of \p value is fir.freemem, a view of that value
-// (ViewLikeOpInterface, including fir.convert), or a fir.declare of that
-// value, and the same is true of those results. No uses is included: the
-// allocation is dead. fir.declare is not view-like; it only carries debug
-// info for the memref.
+// fir.freemem or memref.dealloc of \p value.
+bool isDeallocOf(Operation *user, Value value) {
+  if (auto freeMem = dyn_cast<fir::FreeMemOp>(user))
+    return freeMem.getHeapref() == value;
+  if (auto dealloc = dyn_cast<memref::DeallocOp>(user))
+    return dealloc.getMemref() == value;
+  return false;
+}
+
+// Heap and stack allocations that privatization may turn into a device malloc.
+bool isErasedAlloc(Operation *op) {
+  return isa<fir::AllocMemOp, fir::AllocaOp, memref::AllocOp, memref::AllocaOp>(
+      op);
+}
+
+// True when every use of \p value is a free of that value, a view of that
+// value (ViewLikeOpInterface, including fir.convert), or a fir.declare of
+// that value, and the same is true of those results. No uses is included:
+// the allocation is dead. fir.declare is not view-like; it only carries
+// debug info for the memref.
 bool isDeadAllocChain(Value value, SmallPtrSetImpl<Operation *> &bookkeeping) {
   for (Operation *user : value.getUsers()) {
-    if (isa<fir::FreeMemOp>(user)) {
+    if (isDeallocOf(user, value)) {
       bookkeeping.insert(user);
       continue;
     }
@@ -98,19 +116,21 @@ class ACCEraseUnusedKernelAllocations
 public:
   void runOnOperation() override {
     func::FuncOp func = getOperation();
-    SmallVector<fir::AllocMemOp> dead;
-    func.walk([&](fir::AllocMemOp alloc) {
-      if (!alloc->getParentOfType<acc::ComputeRegionOp>())
+    SmallVector<Operation *> dead;
+    func.walk([&](Operation *op) {
+      if (!isErasedAlloc(op) || op->getNumResults() != 1)
+        return;
+      if (!op->getParentOfType<acc::ComputeRegionOp>())
         return;
       SmallPtrSet<Operation *, 8> bookkeeping;
-      if (!isDeadAllocChain(alloc.getResult(), bookkeeping))
+      if (!isDeadAllocChain(op->getResult(0), bookkeeping))
         return;
-      dead.push_back(alloc);
+      dead.push_back(op);
     });
 
-    for (fir::AllocMemOp alloc : dead) {
+    for (Operation *alloc : dead) {
       SmallPtrSet<Operation *, 8> bookkeeping;
-      if (!isDeadAllocChain(alloc.getResult(), bookkeeping))
+      if (!isDeadAllocChain(alloc->getResult(0), bookkeeping))
         continue;
       SmallVector<Operation *> toErase(bookkeeping.begin(), bookkeeping.end());
       toErase.push_back(alloc);

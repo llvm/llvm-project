@@ -349,6 +349,9 @@ let Class = FunctionProtoType in {
   def : Property<"AArch64SMEAttributes", UInt32> {
     let Read = [{ node->getAArch64SMEAttributes() }];
   }
+  def : Property<"RISCVAttributes", UInt32> {
+    let Read = [{ node->getRISCVAttributes() }];
+  }
   def : Property<"functionEffects", Array<FunctionEffect>> {
     let Read = [{ node->getFunctionEffectsWithoutConditions() }];
   }
@@ -372,6 +375,7 @@ let Class = FunctionProtoType in {
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
     epi.AArch64SMEAttributes = AArch64SMEAttributes;
+    epi.RISCVAttributes = RISCVAttributes;
     epi.FunctionEffects = FunctionEffectsRef::create(functionEffects, functionEffectConds);
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
@@ -887,6 +891,10 @@ let Class = BuiltinType in {
 #define HLSL_INTANGIBLE_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+
+#define HLSL_PACKED_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/HLSLPackedTypes.def"
 
 #define SPIRV_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;

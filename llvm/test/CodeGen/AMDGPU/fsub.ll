@@ -1,12 +1,14 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_fsub_f32:
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @v_fsub_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %a = load float, ptr addrspace(1) %in, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds float, ptr addrspace(1) %in, i32 %tid
+  %b_ptr = getelementptr float, ptr addrspace(1) %in.tid, i32 1
+  %a = load float, ptr addrspace(1) %in.tid, align 4
   %b = load float, ptr addrspace(1) %b_ptr, align 4
   %result = fsub float %a, %b
   store float %result, ptr addrspace(1) %out, align 4
@@ -46,8 +48,10 @@ define amdgpu_kernel void @fsub_v2f32(ptr addrspace(1) %out, <2 x float> %a, <2 
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 ; SI: v_sub_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
 define amdgpu_kernel void @v_fsub_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %b_ptr = getelementptr <4 x float>, ptr addrspace(1) %in, i32 1
-  %a = load <4 x float>, ptr addrspace(1) %in, align 16
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <4 x float>, ptr addrspace(1) %in, i32 %tid
+  %b_ptr = getelementptr <4 x float>, ptr addrspace(1) %in.tid, i32 1
+  %a = load <4 x float>, ptr addrspace(1) %in.tid, align 16
   %b = load <4 x float>, ptr addrspace(1) %b_ptr, align 16
   %result = fsub <4 x float> %a, %b
   store <4 x float> %result, ptr addrspace(1) %out, align 16
@@ -70,8 +74,10 @@ define amdgpu_kernel void @s_fsub_v4f32(ptr addrspace(1) %out, <4 x float> %a, <
 ; SI: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; SI: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[SUB]]
 define amdgpu_kernel void @v_fneg_fsub_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %a = load float, ptr addrspace(1) %in, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds float, ptr addrspace(1) %in, i32 %tid
+  %b_ptr = getelementptr float, ptr addrspace(1) %in.tid, i32 1
+  %a = load float, ptr addrspace(1) %in.tid, align 4
   %b = load float, ptr addrspace(1) %b_ptr, align 4
   %result = fsub float %a, %b
   %neg.result = fsub float -0.0, %result
@@ -83,8 +89,10 @@ define amdgpu_kernel void @v_fneg_fsub_f32(ptr addrspace(1) %out, ptr addrspace(
 ; SI: v_sub_f32_e32 [[SUB:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; SI-NOT: xor
 define amdgpu_kernel void @v_fneg_fsub_nsz_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
-  %a = load float, ptr addrspace(1) %in, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds float, ptr addrspace(1) %in, i32 %tid
+  %b_ptr = getelementptr float, ptr addrspace(1) %in.tid, i32 1
+  %a = load float, ptr addrspace(1) %in.tid, align 4
   %b = load float, ptr addrspace(1) %b_ptr, align 4
   %result = fsub nsz float %a, %b
   %neg.result = fsub float -0.0, %result
@@ -95,7 +103,9 @@ define amdgpu_kernel void @v_fneg_fsub_nsz_f32(ptr addrspace(1) %out, ptr addrsp
 ; FUNC-LABEL: {{^}}v_fsub_0_nsz_flag_f32:
 ; SI-NOT: v_sub
 define amdgpu_kernel void @v_fsub_0_nsz_flag_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
-  %a = load float, ptr addrspace(1) %in, align 4
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds float, ptr addrspace(1) %in, i32 %tid
+  %a = load float, ptr addrspace(1) %in.tid, align 4
   %result = fsub nsz float %a, 0.0
   store float %result, ptr addrspace(1) %out, align 4
   ret void

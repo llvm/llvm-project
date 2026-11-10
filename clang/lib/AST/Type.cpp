@@ -310,6 +310,8 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
                     ? TypeDependence::DependentInstantiation
                     : TypeDependence::None)),
       ElementType(et) {
+  assert(!(tq & ~Qualifiers::CVRMask) &&
+         "only CVR index qualifiers are stored");
   ArrayTypeBits.IndexTypeQuals = tq;
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
@@ -2840,8 +2842,6 @@ bool Type::isSveVLSBuiltinType() const {
     case BuiltinType::SveFloat64:
     case BuiltinType::SveBFloat16:
     case BuiltinType::SveBool:
-    case BuiltinType::SveBoolx2:
-    case BuiltinType::SveBoolx4:
     case BuiltinType::SveMFloat8:
       return true;
     default:
@@ -3293,6 +3293,13 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
     return true;
   }
 
+  // C++26 [basic.types]p9:
+  // -- std::meta::info is a scalar type
+  // C++26 [basic.types]p10:
+  // -- a scalar type is a literal type
+  if (isMetaInfoType())
+    return true;
+
   // We treat _Atomic T as a literal type if T is a literal type.
   if (const auto *AT = BaseTy->getAs<AtomicType>())
     return AT->getValueType()->isLiteralType(Ctx);
@@ -3668,6 +3675,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "unsigned _Accum";
   case ULongAccum:
     return "unsigned long _Accum";
+  case BuiltinType::MetaInfo:
+    return "std::meta::info";
   case BuiltinType::ShortFract:
     return "short _Fract";
   case BuiltinType::Fract:
@@ -3793,6 +3802,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case Id:                                                                     \
+    return #Name;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId)                                      \
   case Id:                                                                     \
     return Name;
@@ -3947,6 +3960,15 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     ExtraBits.HasArmTypeAttributes = true;
   }
 
+  if (epi.requiresFunctionProtoTypeRISCVAttributes()) {
+    auto &RISCVTypeAttrs = *getTrailingObjects<FunctionTypeRISCVAttributes>();
+    RISCVTypeAttrs = FunctionTypeRISCVAttributes();
+
+    // Also set the bit in FunctionTypeExtraBitfields
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.HasRISCVTypeAttributes = true;
+  }
+
   // Fill in the trailing argument array.
   auto *argSlot = getTrailingObjects<QualType>();
   for (unsigned i = 0; i != getNumParams(); ++i) {
@@ -3961,6 +3983,14 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     assert(epi.AArch64SMEAttributes <= SME_AttributeMask &&
            "Not enough bits to encode SME attributes");
     ArmTypeAttrs.AArch64SMEAttributes = epi.AArch64SMEAttributes;
+  }
+
+  // Propagate the RISC-V state attributes.
+  if (epi.RISCVAttributes != RISCVNormalFunction) {
+    auto &RISCVTypeAttrs = *getTrailingObjects<FunctionTypeRISCVAttributes>();
+    assert(epi.RISCVAttributes <= RISCVAttributeMask &&
+           "Not enough bits to encode RISC-V attributes");
+    RISCVTypeAttrs.RISCVAttributes = epi.RISCVAttributes;
   }
 
   // Fill in the exception type array if present.
@@ -4213,6 +4243,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
                 (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
   ID.AddInteger(epi.CFIUncheckedCallee);
+  ID.AddInteger(epi.RISCVAttributes);
 
   for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
     ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
@@ -5414,10 +5445,13 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
+    case BuiltinType::MetaInfo:
     case BuiltinType::IncompleteMatrixIdx:
     case BuiltinType::ArraySection:
     case BuiltinType::OMPArrayShaping:

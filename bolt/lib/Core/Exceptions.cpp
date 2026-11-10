@@ -773,37 +773,52 @@ CFIReaderWriter::generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
 
   // Generate a new .eh_frame_hdr based on the new map.
 
-  // Header plus table of entries of size 8 bytes.
-  std::vector<char> EHFrameHeader(12 + PCToFDE.size() * 8);
+  const int64_t EHFramePtr =
+      NewEHFrame.getEHFrameAddress() - (EHFrameHeaderAddress + 4);
+
+  // Switch to 8-byte encodings if any offset does not fit into 32 bits.
+  const bool UseSData8 =
+      !isInt<32>(EHFramePtr) || llvm::any_of(PCToFDE, [&](const auto &PCI) {
+        return !isInt<32>(PCI.first - EHFrameHeaderAddress) ||
+               !isInt<32>(PCI.second - EHFrameHeaderAddress);
+      });
+  const unsigned FieldSize = UseSData8 ? 8 : 4;
+  const uint8_t FieldEncoding = UseSData8 ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4;
+
+  // 4 bytes of version and encodings, eh_frame_ptr, 4-byte FDE count, table.
+  std::vector<char> EHFrameHeader(8 + FieldSize +
+                                  PCToFDE.size() * 2 * FieldSize);
+
+  auto writeField = [&](uint32_t Offset, int64_t Value) {
+    if (UseSData8)
+      support::ulittle64_t::ref(EHFrameHeader.data() + Offset) = Value;
+    else
+      support::ulittle32_t::ref(EHFrameHeader.data() + Offset) = Value;
+  };
 
   // Version is 1.
   EHFrameHeader[0] = 1;
   // Encoding of the eh_frame pointer.
-  EHFrameHeader[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
+  EHFrameHeader[1] = DW_EH_PE_pcrel | FieldEncoding;
   // Encoding of the count field to follow.
   EHFrameHeader[2] = DW_EH_PE_udata4;
-  // Encoding of the table entries - 4-byte offset from the start of the header.
-  EHFrameHeader[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
+  // Encoding of the table entries - offset from the start of the header.
+  EHFrameHeader[3] = DW_EH_PE_datarel | FieldEncoding;
 
   // Address of eh_frame. Use the new one.
-  support::ulittle32_t::ref(EHFrameHeader.data() + 4) =
-      NewEHFrame.getEHFrameAddress() - (EHFrameHeaderAddress + 4);
+  writeField(4, EHFramePtr);
 
   // Number of entries in the table (FDE count).
-  support::ulittle32_t::ref(EHFrameHeader.data() + 8) = PCToFDE.size();
+  support::ulittle32_t::ref(EHFrameHeader.data() + 4 + FieldSize) =
+      PCToFDE.size();
 
-  // Write the table at offset 12.
-  char *Ptr = EHFrameHeader.data();
-  uint32_t Offset = 12;
+  // Write the table after the FDE count.
+  uint32_t Offset = 8 + FieldSize;
   for (const auto &PCI : PCToFDE) {
-    int64_t InitialPCOffset = PCI.first - EHFrameHeaderAddress;
-    assert(isInt<32>(InitialPCOffset) && "PC offset out of bounds");
-    support::ulittle32_t::ref(Ptr + Offset) = InitialPCOffset;
-    Offset += 4;
-    int64_t FDEOffset = PCI.second - EHFrameHeaderAddress;
-    assert(isInt<32>(FDEOffset) && "FDE offset out of bounds");
-    support::ulittle32_t::ref(Ptr + Offset) = FDEOffset;
-    Offset += 4;
+    writeField(Offset, PCI.first - EHFrameHeaderAddress);
+    Offset += FieldSize;
+    writeField(Offset, PCI.second - EHFrameHeaderAddress);
+    Offset += FieldSize;
   }
 
   return EHFrameHeader;

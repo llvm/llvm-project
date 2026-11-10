@@ -31,10 +31,10 @@ llvm.func @test_alloca_ip_workaround() {
 
 // CHECK-LABEL: define {{.*}} @__omp_offloading_{{.*}}_test_alloca_ip_workaround
 // CHECK:       entry:
+// CHECK:         %[[ALLOC_REG_ARG:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 // CHECK:         %[[PRIV_ALLOC:.*]] = alloca ptr, align 8
 
 // CHECK:       omp.target:
-// CHECK:         %[[ALLOC_REG_ARG:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 // Verify that the `init` region of the privatizer is inlined within the `target`
 // region body not before that.
 // CHECK:         call void @foo(ptr %[[ALLOC_REG_ARG]])

@@ -31,6 +31,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -152,8 +153,9 @@ int main(int argc, const char **argv) {
 
   cl::HideUnrelatedOptions(ClangOffloadBundlerCategory);
   cl::SetVersionPrinter(PrintVersion);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(
+      LibraryOptions, ArrayRef(argv, argc),
       "A tool to bundle several input files of the specified type <type> \n"
       "referring to the same source file but different targets into a single \n"
       "one. The resulting file can also be unbundled into different files by \n"

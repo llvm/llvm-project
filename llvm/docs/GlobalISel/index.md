@@ -102,7 +102,7 @@ We considered never having a fallback to SelectionDAG, instead deciding early
 whether a given function is supported by GlobalISel or not. The decision would
 be based on {ref}`milegalizer` queries.
 We abandoned that for two reasons:
-a) on IR inputs, we'd need to basically simulate the {ref}`irtranslator`;
+a) on IR inputs, we'd need to basically simulate the {ref}`ir-translator`;
 b) to be robust against unforeseen failures and to enable iterative
 improvements.
 

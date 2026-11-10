@@ -61,4 +61,4 @@ declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, <7 x i1>)
 !6 = distinct !{!6, !9, !"scope"}
 !7 = !{!8}
 !8 = distinct !{!8, !9, !"noalias"}
-!9 = distinct !{!9, !"domain"}
+!9 = distinct !{!9, i1 false, !"domain"}
