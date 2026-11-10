@@ -61,12 +61,14 @@ public:
   static char ID;
 
 private:
+  const RISCVMCOptions &CLOpts;
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID) {}
+      : AsmPrinter(TM, std::move(Streamer), ID),
+        CLOpts(RISCV_MC::getCLOpts(TM.Options.MCOptions)) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -123,8 +125,6 @@ public:
   void emitNoteGnuProperty(const Module &M);
 
 private:
-  void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
-
   void emitNTLHint(const MachineInstr *MI);
 
   void emitLpadAlignedCall(const MachineInstr &MI);
@@ -160,8 +160,11 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (NumNOPBytes > 0) {
+    if (MII != MBB.end() && MII->isDebugInstr()) {
+      ++MII;
+      continue;
+    }
     if (MII == MBB.end() || MII->isCall() ||
-        MII->getOpcode() == RISCV::DBG_VALUE ||
         MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
@@ -402,8 +405,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     lowerOperand(MI->getOperand(0), SymOp);
     MCInst TmpInst;
     TmpInst.setOpcode(RISCV::PseudoTAILReg);
-    TmpInst.addOperand(SymOp);
     TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    TmpInst.addOperand(SymOp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -463,7 +466,7 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       return true; // Unknown modifier.
     case 'z':      // Print zero register if zero, regular printing otherwise.
       if (MO.isImm() && MO.getImm() == 0) {
-        OS << RISCVInstPrinter::getRegisterName(RISCV::X0);
+        OS << RISCVInstPrinter::getRegisterName(CLOpts, RISCV::X0);
         return false;
       }
       break;
@@ -471,13 +474,14 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (!MO.isReg())
         OS << 'i';
       return false;
-    case 'N': // Print the register encoding as an integer (0-31)
+    case 'N': { // Print the register encoding as an integer (0-31)
       if (!MO.isReg())
         return true;
 
       const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
       OS << TRI->getEncodingValue(MO.getReg());
       return false;
+    }
     }
   }
 
@@ -486,7 +490,7 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     OS << MO.getImm();
     return false;
   case MachineOperand::MO_Register:
-    OS << RISCVInstPrinter::getRegisterName(MO.getReg());
+    OS << RISCVInstPrinter::getRegisterName(CLOpts, MO.getReg());
     return false;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
@@ -538,7 +542,8 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     MMI->getContext().registerInlineAsmLabel(Sym);
   }
 
-  OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
+  OS << "(" << RISCVInstPrinter::getRegisterName(CLOpts, AddrReg.getReg())
+     << ")";
   return false;
 }
 
@@ -651,7 +656,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   StringRef ABIName = M.getTargetABIFromMD();
   if (!ABIName.empty()) {
     RISCVABI::ABI ABI = RISCVABI::getTargetABI(ABIName);
-    if (ABI == RISCVABI::ABI_Unknown) {
+    if (ABI == RISCVABI::ABI::Unknown) {
       M.getContext().emitError(Twine('\'') + ABIName +
                                "' is not a recognized ABI for this target");
     } else {
@@ -686,7 +691,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   }
 
   if (M.getTargetTriple().isOSBinFormatELF())
-    emitAttributes(SubtargetInfo);
+    RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign=*/true);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -697,14 +702,6 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
     emitNoteGnuProperty(M);
   }
   EmitHwasanMemaccessSymbols(M);
-}
-
-void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
-  RISCVTargetStreamer &RTS = getTargetStreamer();
-  // Use MCSubtargetInfo from TargetMachine. Individual functions may have
-  // attributes that differ from other functions in the module and we have no
-  // way to know which function is correct.
-  RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
@@ -765,7 +762,7 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   for (auto &Reg : ScratchRegs) {
     if (isRegAvailable(Reg))
       continue;
-    while (!isRegAvailable(NextReg))
+    while (NextReg <= RISCV::X31 && !isRegAvailable(NextReg))
       ++NextReg;
     Reg = NextReg++;
     if (Reg > RISCV::X31)

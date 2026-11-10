@@ -1229,8 +1229,8 @@ void logical_or_vf4() {
 // CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.fcmp(une, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.fcmp(une, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 // CIR: %[[RESULT:.*]] = cir.or %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
@@ -1348,8 +1348,8 @@ void logical_and_vf4() {
 // CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.fcmp(une, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.fcmp(une, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 // CIR: %[[RESULT:.*]] = cir.and %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
@@ -1463,3 +1463,31 @@ vi4 ternary_expression_with_vec_cond() {
 // OGCG: %[[COND:.*]] = icmp slt <4 x i32> %[[TMP_C]], zeroinitializer
 // OGCG: %[[RESULT:.*]] = select <4 x i1> %[[COND]], <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]]
 // OGCG: ret <4 x i32> %[[RESULT]]
+
+void init_list_same_vector(vi4 v) { vi4 w{v}; }
+
+// CIR-LABEL: cir.func {{.*}} @_Z21init_list_same_vectorDv4_i
+// CIR: %[[V_ADDR:.*]] = cir.alloca "v"
+// CIR: %[[W_ADDR:.*]] = cir.alloca "w"
+// CIR: %[[V:.*]] = cir.load {{.*}} %[[V_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<4 x !s32i>
+// CIR: %[[POISON_2:.*]] = cir.const #cir.poison : !cir.vector<4 x !s32i>
+// CIR: %[[EXT:.*]] = cir.vec.shuffle(%[[V]], %[[POISON_2]] : !cir.vector<4 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.shuffle(%[[EXT]], %[[POISON]] : !cir.vector<4 x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i] : !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[W_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM-LABEL: define {{.*}} @_Z21init_list_same_vectorDv4_i
+// LLVM: %[[V_ADDR:.*]] = alloca <4 x i32>
+// LLVM: %[[W_ADDR:.*]] = alloca <4 x i32>
+// LLVM: %[[V:.*]] = load <4 x i32>, ptr %[[V_ADDR]], align 16
+// LLVM: %[[EXT:.*]] = shufflevector <4 x i32> %[[V]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// LLVM: %[[RESULT:.*]] = shufflevector <4 x i32> %[[EXT]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[W_ADDR]], align 16
+
+// OGCG-LABEL: define {{.*}} @_Z21init_list_same_vectorDv4_i
+// OGCG: %[[V_ADDR:.*]] = alloca <4 x i32>
+// OGCG: %[[W_ADDR:.*]] = alloca <4 x i32>
+// OGCG: %[[V:.*]] = load <4 x i32>, ptr %[[V_ADDR]], align 16
+// OGCG: %[[EXT:.*]] = shufflevector <4 x i32> %[[V]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// OGCG: %[[RESULT:.*]] = shufflevector <4 x i32> %[[EXT]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// OGCG: store <4 x i32> %[[RESULT]], ptr %[[W_ADDR]], align 16

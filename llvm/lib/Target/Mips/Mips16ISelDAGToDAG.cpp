@@ -214,7 +214,12 @@ Mips16DAGToDAGISelLegacy::Mips16DAGToDAGISelLegacy(MipsTargetMachine &TM,
                                                    CodeGenOptLevel OL)
     : MipsDAGToDAGISelLegacy(std::make_unique<Mips16DAGToDAGISel>(TM, OL)) {}
 
-FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM,
-                                        CodeGenOptLevel OptLevel) {
+FunctionPass *llvm::createMips16ISelDAGLegacyPass(MipsTargetMachine &TM,
+                                                  CodeGenOptLevel OptLevel) {
   return new Mips16DAGToDAGISelLegacy(TM, OptLevel);
+}
+
+Mips16ISelDAGPass::Mips16ISelDAGPass(MipsTargetMachine &TM,
+                                     CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<Mips16DAGToDAGISel>(TM, OptLevel)) {
 }

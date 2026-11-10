@@ -185,11 +185,11 @@ private:
   /// every window WindowFor can return, and zero if it accepts none. Each
   /// window is paired with the distance to the instruction that supplied it.
   int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
+  int getMaxVALUWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
 
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
                          GetNumWaitStatesFn GetNumWaitStates) const;
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit) const;
-  int getWaitStatesSinceVALU(IsHazardFn IsHazard, int Limit) const;
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef,
                             int Limit) const;
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit) const;
@@ -295,9 +295,6 @@ public:
 
   ~GCNHazardRecognizer();
 
-  /// Returns the current operating mode.
-  OperatingMode getOperatingMode() const { return Mode; }
-
   /// Returns true if running in pre-RA scheduling mode.
   bool isPreRA() const { return Mode == OperatingMode::PreRA; }
 
@@ -319,19 +316,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Co-execution Window Queries
   //===--------------------------------------------------------------------===//
-
-  /// Returns true if currently inside a WMMA co-execution window.
-  bool inCoExecWindow() const { return CurrentCoExecStage.has_value(); }
-
-  /// Returns the current stage within the co-execution window, or nullopt.
-  std::optional<unsigned> getCurrentCoExecStage() const {
-    return CurrentCoExecStage;
-  }
-
-  /// Returns the active co-execution info (slot masks, preferences).
-  const AMDGPU::CoExecInfo &getActiveCoExecInfo() const {
-    return ActiveCoExecInfo;
-  }
 
   /// Get the CoExecMask for a given instruction.
   static AMDGPU::CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI,

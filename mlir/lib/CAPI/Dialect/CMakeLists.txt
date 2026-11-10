@@ -158,10 +158,18 @@ add_mlir_upstream_c_api_library(MLIRCAPIGPU
   PARTIAL_SOURCES_INTENDED
   DEPENDS
   MLIRGPUPassIncGen
+  MLIRGPUNVVMPassIncGen
+  MLIRGPUROCDLPassIncGen
+  MLIRGPUSPIRVPassIncGen
+  MLIRGPUXeVMPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
+  MLIRGPUNVVMTransforms
+  MLIRGPUROCDLTransforms
+  MLIRGPUSPIRVTransforms
   MLIRGPUTransforms
+  MLIRGPUXeVMTransforms
   MLIRPass
 )
 
@@ -291,6 +299,8 @@ add_mlir_upstream_c_api_library(MLIRCAPIOpenACC
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
+  MLIRGPUDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
   MLIROpenACCTransforms
 )

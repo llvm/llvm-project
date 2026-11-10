@@ -76,11 +76,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-fix-sgpr-copies"
 
-static cl::opt<bool> EnableM0Merge(
-  "amdgpu-enable-merge-m0",
-  cl::desc("Merge and hoist M0 initializations"),
-  cl::init(true));
-
 namespace {
 
 class V2SCopyInfo {
@@ -200,10 +195,6 @@ INITIALIZE_PASS_END(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
 char SIFixSGPRCopiesLegacy::ID = 0;
 
 char &llvm::SIFixSGPRCopiesLegacyID = SIFixSGPRCopiesLegacy::ID;
-
-FunctionPass *llvm::createSIFixSGPRCopiesLegacyPass() {
-  return new SIFixSGPRCopiesLegacy();
-}
 
 static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
 getCopyRegClasses(const MachineInstr &Copy,
@@ -347,9 +338,8 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
       Register TmpAReg = MRI.createVirtualRegister(NewSrcRC);
       unsigned Opc = NewSrcRC == &AMDGPU::AGPR_32RegClass ?
         AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::COPY;
-      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc),
-            TmpAReg)
-        .addReg(TmpReg, RegState::Kill);
+      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc), TmpAReg)
+          .addReg(TmpReg);
       TmpReg = TmpAReg;
     }
 
@@ -823,7 +813,8 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   while (!Relegalize.empty())
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
-  if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
+  if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None &&
+      ST.getCLOpts().enable_merge_m0)
     hoistAndMergeSGPRInits(AMDGPU::M0, RegMaskInstrs, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
@@ -1254,6 +1245,7 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
 PreservedAnalyses
 SIFixSGPRCopiesPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   SIFixSGPRCopies Impl(&MDT);
   bool Changed = Impl.run(MF);

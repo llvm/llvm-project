@@ -55,9 +55,10 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
+  c.LibraryOptions = &ctx.arg.libraryOptions;
 
   // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.arg.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -88,8 +89,8 @@ static lto::Config createConfig(Ctx &ctx) {
                        << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+        c.Options.BBSections = BasicBlockSection::List;
       }
-      c.Options.BBSections = BasicBlockSection::List;
     }
   }
 

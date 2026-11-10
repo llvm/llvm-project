@@ -1,4 +1,4 @@
-ARG LLVM_VERSION=23.1.0
+ARG LLVM_VERSION=23.1.3
 
 FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS llvm-downloader
 ARG LLVM_VERSION

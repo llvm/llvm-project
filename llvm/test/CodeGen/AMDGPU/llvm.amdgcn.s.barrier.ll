@@ -7,6 +7,8 @@
 ; RUN: llc -mtriple=amdgpu12.00 < %s | FileCheck --check-prefix=VARIANT4 %s
 ; RUN: llc -mtriple=amdgpu12.00 -mattr=+auto-waitcnt-before-barrier < %s | FileCheck --check-prefix=VARIANT5 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck --check-prefix=VARIANT6 %s
+; RUN: llc -mtriple=amdgpu13.10 < %s | FileCheck --check-prefix=VARIANT7 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu13.10 < %s | FileCheck --check-prefix=VARIANT8 %s
 
 define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT0-LABEL: test_barrier:
@@ -178,6 +180,36 @@ define amdgpu_kernel void @test_barrier(ptr addrspace(1) %out, i32 %size) #0 {
 ; VARIANT6-NEXT:    s_wait_loadcnt 0x0
 ; VARIANT6-NEXT:    global_store_b32 v4, v0, s[0:1]
 ; VARIANT6-NEXT:    s_endpgm
+;
+; VARIANT7-LABEL: test_barrier:
+; VARIANT7:       ; %bb.0: ; %entry
+; VARIANT7-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; VARIANT7-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; VARIANT7-NEXT:    s_wait_kmcnt 0x0
+; VARIANT7-NEXT:    global_store_b32 v0, v0, s[0:1] scale_offset
+; VARIANT7-NEXT:    s_barrier_signal -1
+; VARIANT7-NEXT:    v_xad_u32 v1, v0, -1, s2
+; VARIANT7-NEXT:    s_barrier_wait -1
+; VARIANT7-NEXT:    global_load_b32 v1, v1, s[0:1] scale_offset
+; VARIANT7-NEXT:    s_wait_loadcnt 0x0
+; VARIANT7-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; VARIANT7-NEXT:    s_endpgm
+;
+; VARIANT8-LABEL: test_barrier:
+; VARIANT8:       ; %bb.0: ; %entry
+; VARIANT8-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; VARIANT8-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; VARIANT8-NEXT:    s_wait_kmcnt 0x0
+; VARIANT8-NEXT:    global_store_b32 v0, v0, s[0:1] scale_offset
+; VARIANT8-NEXT:    s_barrier_signal -1
+; VARIANT8-NEXT:    s_add_co_i32 s2, s2, -1
+; VARIANT8-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; VARIANT8-NEXT:    v_sub_nc_u32_e32 v1, s2, v0
+; VARIANT8-NEXT:    s_barrier_wait -1
+; VARIANT8-NEXT:    global_load_b32 v1, v1, s[0:1] scale_offset
+; VARIANT8-NEXT:    s_wait_loadcnt 0x0
+; VARIANT8-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; VARIANT8-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr i32, ptr addrspace(1) %out, i32 %tmp

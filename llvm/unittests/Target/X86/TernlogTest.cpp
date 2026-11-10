@@ -170,12 +170,12 @@ TEST(TernlogTest, TestConstantFolding) {
   LLVMContext Ctx;
   FunctionAnalysisManager FAM;
   FunctionPassManager FPM;
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  TargetIRAnalysis TIRA = TargetIRAnalysis(
-      [&](const Function &F) { return initTM()->getTargetTransformInfo(F); });
+  std::unique_ptr<TargetMachine> TM = initTM();
+  TargetIRAnalysis TIRA = TM->getTargetIRAnalysis();
 
   FAM.registerPass([&] { return TIRA; });
   PB.registerModuleAnalyses(MAM);

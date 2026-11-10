@@ -318,8 +318,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AlignPackStack(AlignPackInfo(getLangOpts().XLPragmaPack)),
       DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
       CodeSegStack(nullptr), StrictGuardStackCheckStack(false),
-      FpPragmaStack(FPOptionsOverride()), CurInitSeg(nullptr),
-      VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
+      FpPragmaStack(FPOptionsOverride()), CurInitSeg(), VisContext(nullptr),
+      PragmaAttributeCurrentTargetDecl(nullptr),
       StdCoroutineTraitsCache(nullptr), IdResolver(pp),
       OriginalLexicalContext(nullptr), StdInitializerList(nullptr),
       StdTypeIdentity(nullptr),
@@ -329,7 +329,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
       CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+      ArgPackSubstIndex(std::nullopt) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -627,11 +627,7 @@ Sema::~Sema() {
     ExternalSema->ForgetSema();
 
   // Delete cached satisfactions.
-  std::vector<ConstraintSatisfaction *> Satisfactions;
-  Satisfactions.reserve(SatisfactionCache.size());
-  for (auto &Node : SatisfactionCache)
-    Satisfactions.push_back(&Node);
-  for (auto *Node : Satisfactions)
+  for (auto [_, Node] : SatisfactionCache)
     delete Node;
 
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);
@@ -1550,6 +1546,20 @@ void Sema::ActOnEndOfTranslationUnit() {
       Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
+    // Uninitialized tentative definitions are zero-initialized (C17 6.9.2p2) so
+    // diagnose fields requiring explicit initialization.
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        !VD->getAnyInitializer()) {
+      if (const RecordDecl *RD = Type->getAsRecordDecl();
+          RD && RD->hasUninitializedExplicitInitFields()) {
+        Diag(VD->getLocation(), diag::warn_field_requires_explicit_init)
+            << /*Var-in-Record=*/1 << RD;
+        for (const FieldDecl *FD : RD->fields())
+          if (FD->hasAttr<ExplicitInitAttr>())
+            Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+      }
+    }
+
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
@@ -2095,9 +2105,16 @@ public:
       return;
     InUsePath.insert(FD);
     UsePath.push_back(FD);
-    if (auto *S = FD->getBody()) {
-      this->Visit(S);
+    const FunctionDecl *Definition = nullptr;
+    auto *Body = FD->getBody(Definition);
+    if (Body)
+      this->Visit(Body);
+
+    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Definition)) {
+      for (auto *Init : Ctor->inits())
+        this->Visit(Init->getInit());
     }
+
     if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
       asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();
@@ -2262,7 +2279,9 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
 Sema::SemaDiagnosticBuilder
 Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
-  if (LangOpts.OpenMP)
+  // OpenMPSimd is set only for -fopenmp-simd without -fopenmp. It has no device
+  // compilation and ignores 'declare target', so there is nothing to defer for.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd)
     return LangOpts.OpenMPIsTargetDevice
                ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
                : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);

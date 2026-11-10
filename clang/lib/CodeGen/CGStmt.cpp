@@ -468,6 +468,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetGenericLoopDirective>(*S));
+    break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
@@ -1245,15 +1248,22 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
 void CodeGenFunction::EmitForStmt(const ForStmt &S,
                                   ArrayRef<const Attr *> ForAttrs) {
-  JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
-
   std::optional<LexicalScope> ForScope;
-  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+  JumpDest LoopExit;
+  if (getLangOpts().C99 || getLangOpts().CPlusPlus) {
+    LoopExit = getJumpDestInCurrentScope("for.end");
     ForScope.emplace(*this, S.getSourceRange());
 
-  // Evaluate the first part before the loop.
-  if (S.getInit())
-    EmitStmt(S.getInit());
+    // Evaluate the first part before the loop.
+    if (S.getInit())
+      EmitStmt(S.getInit());
+  } else {
+    // Before C99 the init variable belongs to the enclosing scope, so create
+    // the loop exit after its cleanups: leaving the loop must not run them.
+    if (S.getInit())
+      EmitStmt(S.getInit());
+    LoopExit = getJumpDestInCurrentScope("for.end");
+  }
 
   // Start the loop with a block that tests the condition.
   // If there's an increment, the continue scope will be overwritten
@@ -1699,11 +1709,11 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
 
 auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
     -> const BreakContinue * {
-  if (!S.hasLabelTarget())
+  if (!S.isNamed())
     return &BreakContinueStack.back();
 
   const Stmt *LoopOrSwitch = S.getNamedLoopOrSwitch();
-  assert(LoopOrSwitch && "break/continue target not set?");
+  assert(LoopOrSwitch && "break/continue target label not available?");
   for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
     if (BC.LoopOrSwitch == LoopOrSwitch)
       return &BC;
@@ -1848,18 +1858,14 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
     Builder.getInt(S.getLHS()->EvaluateKnownConstInt(getContext()));
 
   // Emit debuginfo for the case value if it is an enum value.
-  const ConstantExpr *CE;
-  if (auto ICE = dyn_cast<ImplicitCastExpr>(S.getLHS()))
-    CE = dyn_cast<ConstantExpr>(ICE->getSubExpr());
-  else
-    CE = dyn_cast<ConstantExpr>(S.getLHS());
-  if (CE) {
-    if (auto DE = dyn_cast<DeclRefExpr>(CE->getSubExpr()))
-      if (CGDebugInfo *Dbg = getDebugInfo())
-        if (CGM.getCodeGenOpts().hasReducedDebugInfo())
-          Dbg->EmitGlobalVariable(DE->getDecl(),
-              APValue(llvm::APSInt(CaseVal->getValue())));
-  }
+  // Look through implicit casts and check the subexpression of ConstantExpr.
+  const auto *CE = dyn_cast<ConstantExpr>(S.getLHS()->IgnoreImpCasts());
+  const Expr *SubExpr = CE ? CE->getSubExpr() : S.getLHS()->IgnoreImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr))
+    if (CGDebugInfo *Dbg = getDebugInfo())
+      if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+        Dbg->EmitGlobalVariable(DRE->getDecl(),
+                                APValue(llvm::APSInt(CaseVal->getValue())));
 
   if (SwitchLikelihood)
     SwitchLikelihood->push_back(Stmt::getLikelihood(Attrs));
@@ -2804,6 +2810,10 @@ void AsmConstraintsInfo::EmitAsmStmt() {
       CBRRegResults;
 
   if (IsGCCAsmGoto) {
+    if (CGF.HaveInsertPoint() && !CGF.Bypasses.isAlwaysBypassed()) {
+      CGF.emitBypassedVarInitsForSource(&S);
+      CGF.BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+    }
     CBR = Builder.CreateCallBr(IA, DefaultDest, IndirectDests, Args);
     CGF.EmitBlock(DefaultDest);
     UpdateAsmCallInst(*CBR, HasSideEffect,
@@ -3345,9 +3355,15 @@ void AsmConstraintsInfo::EmitAsmStores(
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
 
+    // ResultTypeRequiresCast elements correspond to the first
+    // ResultTypeRequiresCast.size() elements of RegResults.
+    const bool RequiresCast =
+        i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i];
+
     // If the result type of the LLVM IR asm doesn't match the result type of
-    // the expression, do the conversion.
-    if (ResultRegTypes[i] != TruncTy) {
+    // the expression, do the conversion. An output returned as an integer is
+    // converted where it's stored below.
+    if (ResultRegTypes[i] != TruncTy && !RequiresCast) {
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
       if (TruncTy->isFloatingPointTy())
@@ -3373,14 +3389,13 @@ void AsmConstraintsInfo::EmitAsmStores(
     ApplyAtomGroup Grp(CGF.getDebugInfo());
     LValue Dest = ResultRegDests[i];
 
-    // ResultTypeRequiresCast elements correspond to the first
-    // ResultTypeRequiresCast.size() elements of RegResults.
-    if (i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i]) {
+    if (RequiresCast) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
       Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
 
       if (getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
-        llvm::StoreInst *S = Builder.CreateStore(Tmp, A);
+        llvm::StoreInst *S =
+            Builder.CreateStore(Tmp, A, Dest.isVolatileQualified());
         CGF.addInstToCurrentSourceAtom(S, S->getValueOperand());
         continue;
       }
@@ -3393,7 +3408,24 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      Dest = CGF.MakeAddrLValue(A, Ty);
+      // The output's type may not be an integer: an output tied to a larger
+      // input has the input's type (e.g., a pointer), and a mask register
+      // output ("k" on X86) is a vector of i1. Convert it to an integer of the
+      // same size, then store only the destination's bits.
+      llvm::Type *IntTy = llvm::IntegerType::get(CTX, Size);
+      uint64_t TmpSize = CGM.getDataLayout().getTypeSizeInBits(Tmp->getType());
+      Tmp = Builder.CreateBitOrPointerCast(
+          Tmp, llvm::IntegerType::get(CTX, (unsigned)TmpSize));
+      Tmp = Builder.CreateTrunc(Tmp, IntTy);
+
+      // The store writes all of the destination's members at once, so it must
+      // be allowed to alias an access to any of them. A TBAA access type must
+      // be a scalar, so use may-alias (char), which aliases any access. Keep
+      // the destination's qualifiers, such as volatile.
+      Dest = CGF.MakeAddrLValue(
+          Dest.getAddress().withElementType(IntTy),
+          getContext().getQualifiedType(Ty, Dest.getQuals()),
+          Dest.getBaseInfo(), TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);
@@ -3519,18 +3551,24 @@ static llvm::ConvergenceControlInst *getConvergenceToken(llvm::BasicBlock *BB) {
   return nullptr;
 }
 
-llvm::CallBase *
-CodeGenFunction::addConvergenceControlToken(llvm::CallBase *Input) {
+void CodeGenFunction::addConvergenceControlBundle(
+    SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+  if (!CGM.shouldEmitConvergenceTokens())
+    return;
+
   llvm::ConvergenceControlInst *ParentToken = ConvergenceTokenStack.back();
   assert(ParentToken);
+  Bundles.emplace_back("convergencectrl", ParentToken);
+}
 
-  llvm::Value *bundleArgs[] = {ParentToken};
-  llvm::OperandBundleDef OB("convergencectrl", bundleArgs);
-  auto *Output = llvm::CallBase::addOperandBundle(
-      Input, llvm::LLVMContext::OB_convergencectrl, OB, Input->getIterator());
-  Input->replaceAllUsesWith(Output);
-  Input->eraseFromParent();
-  return Output;
+void CodeGenFunction::setConvergentCallSite(llvm::CallBase *Call,
+                                            bool IsConvergent) {
+  if (IsConvergent && !Call->isConvergent())
+    Call->setConvergent();
+
+  assert((IsConvergent || !Call->isConvergent() ||
+          !CGM.shouldEmitConvergenceTokens()) &&
+         "convergent call is missing a convergence control token");
 }
 
 llvm::ConvergenceControlInst *
