@@ -743,6 +743,8 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // In that case, we have the same actual Symbol that can get two different
     // GUID, leading to some invalid internalization. Workaround this by marking
     // the GlobalRes external.
+    // Do this check before the IRName is rewritten below, otherwise it'll miss
+    // the case where a prevailing symbol comes first.
 
     // FIXME: instead of this check, it would be desirable to compute GUIDs
     // based on mangled name, but this requires an access to the Target Triple
