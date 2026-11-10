@@ -994,6 +994,32 @@ void TestWithBoundsRegionOp::inferResultRanges(
   setResultRanges(arg, {getUmin(), getUmax(), getSmin(), getSmax()});
 }
 
+void TestWithBoundsRegionBranchOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.emplace_back(getOperation());
+}
+
+ValueRange
+TestWithBoundsRegionBranchOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return getResults().take_front(1);
+  return getBody().getArguments().take_front(1);
+}
+
+OperandRange
+TestWithBoundsRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getOperands().take_front(1);
+}
+
+void TestWithBoundsRegionBranchOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+  setResultRanges(getInferredResult(), argRanges[1]);
+  setResultRanges(getBody().getArgument(1), argRanges[1]);
+}
+
 //===----------------------------------------------------------------------===//
 // TestIncrementOp
 //===----------------------------------------------------------------------===//

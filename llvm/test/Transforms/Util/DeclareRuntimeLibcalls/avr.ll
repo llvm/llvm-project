@@ -210,7 +210,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i16) addrspace(1)
 ; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1)
-; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1)
+; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1) [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__subsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128) addrspace(1)
@@ -404,6 +404,7 @@
 ; CHECK-NEXT: declare double @trunc(double) addrspace(1)
 ; CHECK-NEXT: declare float @truncf(float) addrspace(1)
 ; CHECK-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
