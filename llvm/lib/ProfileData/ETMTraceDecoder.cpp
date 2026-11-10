@@ -84,6 +84,18 @@ class ETMDecoderImpl : public ETMDecoder {
   SmallVector<ocsd_file_mem_region_t> CodeRegions;
   SmallVector<ocsd_file_mem_region_t> DataRegions;
 
+  // Per the Armv7-M Architecture Reference Manual (Hardware source packet
+  // discriminator IDs), check payload_src_id to match only DWT data trace
+  // address packets.
+  static bool isDataAddressPacket(const swt_itm_info &ITM) {
+    uint8_t ID = ITM.payload_src_id;
+    // Bits [4:3] == 0x1 selects data trace PC/address packets (IDs 8-15).
+    uint8_t Type = (ID >> 3) & 0x3;
+    // Bit 0 distinguishes data address packets (1) from PC value packets (0).
+    bool IsAddress = ID & 0x1;
+    return Type == 0x1 && IsAddress;
+  }
+
   uint64_t resolveDataAddress(const swt_itm_info &ITM) const {
     // ITM data address packets carry a 1-, 2-, or 4-byte address payload.
     assert((ITM.payload_size == 1 || ITM.payload_size == 2 ||
@@ -131,7 +143,8 @@ class ETMDecoderImpl : public ETMDecoder {
 
     // Process data addresses from the ITM trace.
     if (Element->elem_type == OCSD_GEN_TRC_ELEM_ITMTRACE &&
-        Element->swt_itm.pkt_type == DWT_PAYLOAD) {
+        Element->swt_itm.pkt_type == DWT_PAYLOAD &&
+        isDataAddressPacket(Element->swt_itm)) {
       uint64_t Address = Decoder->resolveDataAddress(Element->swt_itm);
       Decoder->CurrentCallback->processDataAddress(Address);
     }

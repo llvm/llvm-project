@@ -520,6 +520,9 @@ void ProfileGenerator::generateProfile() {
     } else {
       generateLineNumBasedProfile();
     }
+
+    const SampleCounter &SC = SampleCounters->begin()->second;
+    populateDataAccessSamples(SC.DataAccessCounter);
   }
 
   postProcessProfiles();
@@ -566,7 +569,6 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
   populateTypeSamplesForAllFunctions(SC.VTableAccessCounter);
-  populateDataAccessSamples(SC.DataAccessCounter);
 
   updateFunctionSamples();
 }
