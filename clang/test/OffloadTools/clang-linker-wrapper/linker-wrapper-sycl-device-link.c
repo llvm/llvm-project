@@ -66,6 +66,11 @@
 // RUN: env LIB=%t.libdir clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
 // RUN:   --dry-run --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE \
 // RUN:   foo.lib -o dev.obj 2>&1 | FileCheck %s --check-prefix=WINLIB
+// In a host link, the wrapped image follows /OUT: in any case.
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --linker-path=link.exe %t.win.obj /OUT:app.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WIN-LINK
+// WIN-LINK: "link.exe" {{.*}}win.obj /OUT:app.exe {{.*}}app.exe.sycl.image.wrapper{{[^ ]*}}.o{{$}}
 // WINLIB: --target=spirv64-unknown-unknown {{.*}}win-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
 // RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
 // RUN:   --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE:nope.lib \

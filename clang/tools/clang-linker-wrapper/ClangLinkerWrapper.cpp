@@ -358,6 +358,25 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
   return Error::success();
 }
 
+/// link.exe options are case-insensitive, but the COFF options in the option
+/// table only match lower case, so a '/' spelling in another case, e.g.
+/// '/OUT:', is parsed as an input. Returns the value of option \p Name if
+/// \p Input is such a spelling of it and the host is Windows.
+std::optional<StringRef> getCOFFOptionValue(StringRef Input, StringRef Name,
+                                            const Triple &HostTriple) {
+  if (!HostTriple.isOSWindows() || !Input.consume_front("/") ||
+      !Input.consume_front_insensitive(Name))
+    return std::nullopt;
+  return Input;
+}
+
+/// Returns true if \p Arg names the output file.
+bool isOutputArg(const opt::Arg *Arg, const Triple &HostTriple) {
+  return Arg->getOption().matches(OPT_o) || Arg->getOption().matches(OPT_out) ||
+         (Arg->getOption().matches(OPT_INPUT) &&
+          getCOFFOptionValue(Arg->getValue(), "out:", HostTriple));
+}
+
 /// Runs the wrapped linker job with the newly created input.
 Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("Execute host linker");
@@ -367,6 +386,8 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
   StringRef LinkerPath = Args.getLastArgValue(OPT_linker_path_EQ);
   if (LinkerPath.empty())
     return createStringError("linker path missing, must pass 'linker-path'");
+  const Triple HostTriple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   ArgStringList NewLinkerArgs;
   for (const opt::Arg *Arg : Args) {
     // Do not forward arguments only intended for the linker wrapper.
@@ -374,7 +395,7 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
       continue;
 
     Arg->render(Args, NewLinkerArgs);
-    if (Arg->getOption().matches(OPT_o) || Arg->getOption().matches(OPT_out))
+    if (isOutputArg(Arg, HostTriple))
       llvm::transform(Files, std::back_inserter(NewLinkerArgs),
                       [&](StringRef A) { return Args.MakeArgString(A); });
   }
@@ -1414,16 +1435,8 @@ getDeviceInput(const ArgList &Args) {
   const llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
-  // link.exe options are case-insensitive, but the COFF options in the option
-  // table only match lower case. A '/' spelling in another case, e.g.
-  // '/LIBPATH:', is parsed as an input. Returns the value of option \p Name if
-  // \p Input is such a spelling of it.
-  auto GetCOFFOptionValue = [&](StringRef Input,
-                                StringRef Name) -> std::optional<StringRef> {
-    if (!HostTriple.isOSWindows() || !Input.consume_front("/") ||
-        !Input.consume_front_insensitive(Name))
-      return std::nullopt;
-    return Input;
+  auto GetCOFFOptionValue = [&](StringRef Input, StringRef Name) {
+    return getCOFFOptionValue(Input, Name, HostTriple);
   };
 
   // Libraries are searched in -L and -libpath: paths. Only `link.exe` style
@@ -1698,16 +1711,14 @@ int main(int Argc, char **Argv) {
 
   llvm::Triple Triple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
-  // link.exe options are case-insensitive, but the option table only matches
-  // '/out:' in lower case. Another spelling, e.g. '/OUT:', is parsed as an
-  // input.
+  // The last '/out:' in any case names the output if there is no -o.
   StringRef COFFOutput;
   for (const opt::Arg *Arg : Args.filtered(OPT_out, OPT_INPUT)) {
-    StringRef Value = Arg->getValue();
-    if (Arg->getOption().matches(OPT_out) ||
-        (Triple.isOSWindows() && Value.consume_front("/") &&
-         Value.consume_front_insensitive("out:")))
-      COFFOutput = Value;
+    if (Arg->getOption().matches(OPT_out))
+      COFFOutput = Arg->getValue();
+    else if (std::optional<StringRef> Value =
+                 getCOFFOptionValue(Arg->getValue(), "out:", Triple))
+      COFFOutput = *Value;
   }
   if (Args.hasArg(OPT_o))
     ExecutableName = Args.getLastArgValue(OPT_o, "a.out");
