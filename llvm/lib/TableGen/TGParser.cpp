@@ -387,7 +387,7 @@ bool TGParser::AddParentClass(RecordsEntry &Entry,
   if (Entry.Rec)
     return AddParentClass(Entry.Rec.get(), ParentClass);
 
-  if (Entry.Assertion)
+  if (Entry.Assertion || Entry.Dump)
     return false;
 
   for (auto &E : Entry.Loop->Entries) {

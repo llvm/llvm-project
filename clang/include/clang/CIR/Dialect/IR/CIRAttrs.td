@@ -29,6 +29,7 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRAttrs.h"];
   let mnemonic = attrMnemonic;
   // Setting this to 0 will make the CXXABILowering always consider this
   // attribute 'legal', so that it won't require any transformation. This should
@@ -1600,10 +1601,14 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 // VisibilityKind
 //===----------------------------------------------------------------------===//
 
+def CIR_VisibilityDefault : I32EnumCase<"Default", 0, "default">;
+def CIR_VisibilityHidden : I32EnumCase<"Hidden", 1, "hidden">;
+def CIR_VisibilityProtected : I32EnumCase<"Protected", 2, "protected">;
+
 def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
-  I32EnumCase<"Default", 0, "default">,
-  I32EnumCase<"Hidden", 1, "hidden">,
-  I32EnumCase<"Protected", 2, "protected">
+  CIR_VisibilityDefault,
+  CIR_VisibilityHidden,
+  CIR_VisibilityProtected
 ]>;
 
 //===----------------------------------------------------------------------===//

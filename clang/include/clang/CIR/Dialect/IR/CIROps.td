@@ -3536,9 +3536,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedProp<
-                        EnumProp<CIR_VisibilityKind>,
-                        "cir::VisibilityKind::Default"
+                       DefaultValuedEnumProp<
+                        CIR_VisibilityKind, CIR_VisibilityDefault
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -4448,9 +4447,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    DefaultValuedProp<
-      EnumProp<CIR_VisibilityKind>,
-      "cir::VisibilityKind::Default"
+    DefaultValuedEnumProp<
+      CIR_VisibilityKind, CIR_VisibilityDefault
     >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
@@ -4800,7 +4798,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
+      if (auto calling =
+              (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        return calling;
+      return getOperand(0);
     }
 
     /// Set the callee for this operation.
@@ -8918,6 +8919,44 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   }];
 
   let constrainedLLVMIntrinsic = "atan2";
+}
+
+def CIR_LdexpOp : CIR_Op<"ldexp",
+    !listconcat([AllTypesMatch<["src", "result"]>], CIR_FenvOpTraits)> {
+  let summary = "Multiplies a floating-point value by an integral power of two";
+  let description = [{
+    `cir.ldexp` computes `src * 2^exp`.
+
+    Lowers to `llvm.ldexp`, or to `llvm.experimental.constrained.ldexp` when
+    the `fenv` attribute is present.
+
+    Example:
+      %r = cir.ldexp %x, %e : !cir.float, !s32i
+  }];
+
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$src,
+    CIR_AnyIntOrVecOfIntType:$exp,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $src `,` $exp `:` qualified(type($src)) `,` qualified(type($exp))
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src, "mlir::Value":$exp), [{
+      build($_builder, $_state, src, exp, cir::FenvAttr{});
+    }]>
+  ];
+
+  let hasVerifier = 1;
+
+  let llvmOp = "LoadExpOp";
+  let constrainedLLVMIntrinsic = "ldexp";
 }
 
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {

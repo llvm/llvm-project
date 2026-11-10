@@ -31,7 +31,7 @@ define void @foo() {
 ; CHECK:       [[INNER_LOOP1]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP13:%.*]], %[[INNER_LOOP1]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 4 x float> [ [[WIDE_LOAD]], %[[VECTOR_BODY]] ], [ [[TMP12:%.*]], %[[INNER_LOOP1]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [512 x float], ptr @B, i64 0, <vscale x 4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x i8], ptr @B, <vscale x 4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER3:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP11]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP12]] = fmul <vscale x 4 x float> [[VEC_PHI2]], [[WIDE_MASKED_GATHER3]]
 ; CHECK-NEXT:    [[TMP13]] = add nuw nsw <vscale x 4 x i64> [[VEC_PHI]], splat (i64 1)

@@ -26,13 +26,16 @@
 ; O0-NEXT:   safe-stack
 ; O0-NEXT:   stack-protector
 ; O0-NEXT:   verify
+; O0-NEXT: systemz-asm-printer-begin
 ; O0-NEXT: function
 ; O0-NEXT:   machine-function
 ; O0-NEXT:     systemz-isel
 ; O0-NEXT:     finalize-isel
 ; O0-NEXT:     localstackalloc
+; O0-NEXT:     systemz-copy-physregs
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
+; O0-NEXT:     systemz-post-rewrite
 ; O0-NEXT:     remove-redundant-debug-values
 ; O0-NEXT:     fixup-statepoint-caller-saved
 ; O0-NEXT:     prolog-epilog
@@ -40,6 +43,7 @@
 ; O0-NEXT:     fentry-insert
 ; O0-NEXT:     xray-instrumentation
 ; O0-NEXT:     patchable-function
+; O0-NEXT:     systemz-long-branch
 ; O0-NEXT:     funclet-layout
 ; O0-NEXT:     remove-loads-into-fake-uses
 ; O0-NEXT:     StackMapLivenessPass
@@ -47,7 +51,9 @@
 ; O0-NEXT:     machine-sanmd
 ; O0-NEXT:     stack-frame-layout
 ; O0-NEXT:     verify
+; O0-NEXT:     systemz-asm-printer
 ; O0-NEXT:   free-machine-function
+; O0-NEXT: systemz-asm-printer-end
 
 ; O3: require<MachineModuleAnalysis>
 ; O3-NEXT: require<profile-summary>
@@ -61,6 +67,7 @@
 ; O3-NEXT:   expand-ir-insts<O3>
 ; O3-NEXT: systemz-align-globals
 ; O3-NEXT: function
+; O3-NEXT:   systemz-tdc
 ; O3-NEXT:   loop-data-prefetch
 ; O3-NEXT:   atomic-expand
 ; O3-NEXT:   verify
@@ -84,9 +91,11 @@
 ; O3-NEXT:   safe-stack
 ; O3-NEXT:   stack-protector
 ; O3-NEXT:   verify
+; O3-NEXT: systemz-asm-printer-begin
 ; O3-NEXT: function
 ; O3-NEXT:   machine-function
 ; O3-NEXT:     systemz-isel
+; O3-NEXT:     systemz-ld-cleanup
 ; O3-NEXT:     finalize-isel
 ; O3-NEXT:     early-tailduplication
 ; O3-NEXT:     opt-phis
@@ -100,6 +109,7 @@
 ; O3-NEXT:     machine-sink
 ; O3-NEXT:     peephole-opt
 ; O3-NEXT:     dead-mi-elimination
+; O3-NEXT:     systemz-copy-physregs
 ; O3-NEXT:     detect-dead-lanes
 ; O3-NEXT:     init-undef
 ; O3-NEXT:     process-implicit-defs
@@ -114,6 +124,7 @@
 ; O3-NEXT:     greedy<all>
 ; O3-NEXT:     virt-reg-rewriter
 ; O3-NEXT:     stack-slot-coloring
+; O3-NEXT:     systemz-post-rewrite
 ; O3-NEXT:     machine-cp
 ; O3-NEXT:     machinelicm
 ; O3-NEXT:     remove-redundant-debug-values
@@ -126,10 +137,14 @@
 ; O3-NEXT:     tailduplication
 ; O3-NEXT:     machine-cp
 ; O3-NEXT:     post-ra-pseudos
+; O3-NEXT:     if-converter
 ; O3-NEXT:     block-placement
 ; O3-NEXT:     fentry-insert
 ; O3-NEXT:     xray-instrumentation
 ; O3-NEXT:     patchable-function
+; O3-NEXT:     systemz-shorten-inst
+; O3-NEXT:     systemz-elim-compare
+; O3-NEXT:     systemz-long-branch
 ; O3-NEXT:     postmisched
 ; O3-NEXT:     funclet-layout
 ; O3-NEXT:     remove-loads-into-fake-uses
@@ -138,4 +153,6 @@
 ; O3-NEXT:     machine-sanmd
 ; O3-NEXT:     stack-frame-layout
 ; O3-NEXT:     verify
+; O3-NEXT:     systemz-asm-printer
 ; O3-NEXT:   free-machine-function
+; O3-NEXT: systemz-asm-printer-end

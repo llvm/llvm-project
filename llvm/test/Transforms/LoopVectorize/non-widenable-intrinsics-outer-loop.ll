@@ -29,7 +29,7 @@ define void @test_assume(ptr %arr, i64 %n) {
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[VEC_IND]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <2 x i64> [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> splat (i32 1), <2 x ptr> align 4 [[TMP3]], <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP4]] = add <2 x i64> [[TMP1]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
@@ -120,7 +120,7 @@ define void @test_assume_non_canonical_iv(ptr %arr, i64 %n) {
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP10:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[VEC_IND]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <2 x i64> [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[TMP7]], <2 x i1> splat (i1 true), <2 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> splat (i32 1), <2 x i32> splat (i32 -1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[WIDE_MASKED_GATHER]], [[TMP8]]
@@ -219,7 +219,7 @@ define void @test_lifetime(ptr %arr, i64 %n) {
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[VEC_IND]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> splat (i32 1), <2 x ptr> align 4 [[TMP2]], <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i64> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -305,7 +305,7 @@ define void @test_sideeffect(ptr %arr, i64 %n) {
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[VEC_IND]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> splat (i32 1), <2 x ptr> align 4 [[TMP2]], <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i64> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -389,7 +389,7 @@ define void @test_pseudoprobe(ptr %arr, i64 %n) {
 ; CHECK:       [[INNER1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[VEC_IND]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[ARR]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> splat (i32 1), <2 x ptr> align 4 [[TMP2]], <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add <2 x i64> [[TMP0]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i64> [[TMP3]], [[BROADCAST_SPLAT]]

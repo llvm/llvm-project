@@ -1110,7 +1110,8 @@ public:
   /// @{
 
   /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
-  /// or Default is absent or an unrecognized kind.
+  /// or the target's default debugger tuning (from the target triple) when the
+  /// flag is absent. Never returns DebuggerKind::Default.
   DebuggerKind getDebuggerTuning() const;
 
   /// Set the debugger tuning.
