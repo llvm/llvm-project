@@ -167,7 +167,7 @@ namespace mlir {
 /// class can be created for an operation implementing DataLayoutOpInterface.
 /// Upon construction, a layout spec combining that of the given operation with
 /// all its ancestors will be computed and used to handle further requests. For
-/// efficiency, query results may be cached in this object.
+/// efficiency, results to all requests will be cached in this object.
 /// Therefore, if the data layout spec for the scoping operation, or any of the
 /// enclosing operations, changes, the cache is no longer valid. The user is
 /// responsible creating a new DataLayout object after any spec change. In debug
