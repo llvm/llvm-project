@@ -299,6 +299,12 @@ defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;
 defm : OptionalValueField<"slp-threshold", "int",
   "Only vectorize if you gain more than this number">;
+defm : BoolField<"slp-downward-allow-multi-use", "true",
+  "Let the downward use-chain walk descend through values that have uses outside the chain">;
+defm : ValueField<"slp-max-downward-levels", "unsigned", "4",
+  "Maximum number of levels the downward use-chain walk may descend when looking for a deeper root">;
+defm : BoolField<"slp-traverse-down-nonvec", "true",
+  "Extend compare chains downward (toward users) before attempting bottom-up vectorization of the compare roots">;
 // The scalar loop left by the loop vectorizer runs only a few iterations or the
 // ranges its runtime checks found overlapping, where the checks executed on
 // each iteration are unlikely to pay off, so they get a tighter bound.

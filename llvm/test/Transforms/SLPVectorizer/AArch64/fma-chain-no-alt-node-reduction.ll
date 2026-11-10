@@ -59,8 +59,6 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[BZ]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[NPBC]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[G22]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[G23D]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[FIRST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -81,7 +79,6 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[DX2:%.*]] = fadd fast double [[DX1]], [[BX]]
 ; CHECK-NEXT:    [[XIJ:%.*]] = select nsz i1 [[CX2]], double [[DX2]], double [[DX1]]
 ; CHECK-NEXT:    [[PY:%.*]] = getelementptr i8, ptr [[LCS_J]], i64 56
-; CHECK-NEXT:    [[M1:%.*]] = fmul fast double [[XIJ]], [[G11]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[PY]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fcmp fast ogt <2 x double> [[TMP11]], [[TMP3]]
@@ -90,6 +87,7 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp fast olt <2 x double> [[TMP14]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = fadd fast <2 x double> [[TMP14]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP15]], <2 x double> [[TMP16]], <2 x double> [[TMP14]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul fast double [[XIJ]], [[G11]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
 ; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[TMP18]], [[G12D]]
 ; CHECK-NEXT:    [[A1:%.*]] = fadd fast double [[M2]], [[M1]]
@@ -97,8 +95,9 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[M3:%.*]] = fmul fast double [[TMP19]], [[G13D]]
 ; CHECK-NEXT:    [[A2:%.*]] = fadd fast double [[A1]], [[M3]]
 ; CHECK-NEXT:    [[TX:%.*]] = fmul fast double [[A2]], [[XIJ]]
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul fast <2 x double> [[TMP17]], [[TMP9]]
-; CHECK-NEXT:    [[TMP21:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP20]])
+; CHECK-NEXT:    [[M4:%.*]] = fmul fast double [[TMP18]], [[G22]]
+; CHECK-NEXT:    [[M5:%.*]] = fmul fast double [[TMP19]], [[G23D]]
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd fast double [[M5]], [[M4]]
 ; CHECK-NEXT:    [[TY:%.*]] = fmul fast double [[TMP21]], [[TMP18]]
 ; CHECK-NEXT:    [[ZZ:%.*]] = fmul fast double [[TMP19]], [[TMP19]]
 ; CHECK-NEXT:    [[TZ:%.*]] = fmul fast double [[ZZ]], [[G33]]

@@ -8,6 +8,7 @@
 
 #include "SLPUtils.h"
 #include "SLPMemoryUtils.h"
+#include "SLPTypeUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1720,6 +1721,106 @@ bool areTwoInsertFromSameBuildVector(
     }
   } while (!IsReusedIdx && (IE1 || IE2));
   return false;
+}
+
+bool canBeDownwardChainUser(Instruction *I,
+                            function_ref<bool(Instruction *)> IsDeleted,
+                            bool ReVec) {
+  if (IsDeleted(I))
+    return false;
+  // Only plain, vectorizable users can form the next bundle. insert/extract
+  // bundles in particular can agree on their result type while their operands
+  // do not; those are handled by vectorizeInserts.
+  if (I->isTerminator() ||
+      isa<CallInst, PHINode, InsertElementInst, InsertValueInst,
+          ExtractElementInst, ExtractValueInst>(I))
+    return false;
+  // Choosing a root trades one level's per-lane extracts for the next level's.
+  // Under ReVec a lane is itself a vector, so the extracts become shuffles
+  // whose cost this walk does not model; descending there only builds
+  // redundant shuffle chains.
+  if (I->getType()->isVectorTy())
+    return false;
+  return isValidElementType(getValueType(I, ReVec, /*LookThroughCmp=*/true),
+                            ReVec);
+}
+
+bool areDownwardChainSiblings(Instruction *I, Instruction *ReprInst) {
+  if (I->getParent() != ReprInst->getParent() ||
+      I->getOpcode() != ReprInst->getOpcode() ||
+      I->getType() != ReprInst->getType())
+    return false;
+  // Matching result types is not enough for compares: getSameOpcode() asserts
+  // that the operands of the compared instructions have the same type, which
+  // a pure opcode/result-type match does not guarantee.
+  return !isa<CmpInst>(I) ||
+         I->getOperand(0)->getType() == ReprInst->getOperand(0)->getType();
+}
+
+/// Collects into \p UseVL the next level of the isomorphic user chain of \p VL,
+/// i.e. one user of each value in \p VL, such that those users form a bundle
+/// that is a legal vectorization seed. \p ReprInst fixes the opcode, type and
+/// parent block the collected users must agree on.
+/// \returns true if the chain could be extended by one level.
+static bool collectIsomorphicUsers(ArrayRef<Value *> VL,
+                                   function_ref<bool(Instruction *)> IsDeleted,
+                                   bool ReVec, bool AllowMultiUse,
+                                   Instruction *ReprInst,
+                                   SmallVectorImpl<Value *> &UseVL) {
+  UseVL.clear();
+  SmallPtrSet<Value *, 8> UniqueUsers;
+  for (Value *V : VL) {
+    Instruction *Use = nullptr;
+    for (User *U : V->users()) {
+      auto *I = dyn_cast<Instruction>(U);
+      if (!I || !areDownwardChainSiblings(I, ReprInst) ||
+          !canBeDownwardChainUser(I, IsDeleted, ReVec))
+        continue;
+      // Several values of the bundle may share the same user (e.g. both
+      // operands of one binary operator). Such a user cannot occupy two lanes.
+      if (!UniqueUsers.insert(I).second)
+        continue;
+      // More than one candidate user leaves the next level ambiguous.
+      if (Use)
+        return false;
+      Use = I;
+    }
+    if (!Use)
+      return false;
+    // A value with uses outside the chain keeps its extract wherever the tree
+    // is rooted, so rerooting past it buys less. The extract is priced in by
+    // buildExternalUses(), so this is only a compile-time guard.
+    if (!AllowMultiUse && !V->hasOneUse())
+      return false;
+    UseVL.push_back(Use);
+  }
+  return true;
+}
+
+void collectDownwardChain(ArrayRef<Value *> VL,
+                          function_ref<bool(Instruction *)> IsDeleted,
+                          bool ReVec, bool AllowMultiUse, unsigned MaxLevels,
+                          SmallVectorImpl<SmallVector<Value *, 8>> &Levels) {
+  Levels.emplace_back(VL);
+  while (Levels.size() <= MaxLevels) {
+    // The first value's users decide the shape of the next level; with
+    // multiple uses allowed, try each of them until one yields a full level.
+    SmallVector<Value *, 8> UseVL;
+    bool Extended = false;
+    for (User *U : Levels.back().front()->users()) {
+      auto *ReprInst = dyn_cast<Instruction>(U);
+      if (!ReprInst || !canBeDownwardChainUser(ReprInst, IsDeleted, ReVec))
+        continue;
+      if (collectIsomorphicUsers(Levels.back(), IsDeleted, ReVec,
+                                 AllowMultiUse, ReprInst, UseVL)) {
+        Extended = true;
+        break;
+      }
+    }
+    if (!Extended)
+      break;
+    Levels.push_back(std::move(UseVL));
+  }
 }
 
 } // namespace llvm::slpvectorizer
