@@ -7354,7 +7354,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
-    unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
+    const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+    unsigned ReturnAddrReg = TRI->getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
     MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL))
@@ -7362,6 +7363,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     for (const MachineOperand &MO : MI.operands())
       MIB.add(MO);
+
+    TRI->addT16ReturnRegClobbers(*MIB);
 
     MIB.cloneMemRefs(MI);
     MIB.setMIFlags(MI.getFlags());
