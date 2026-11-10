@@ -169,8 +169,8 @@ private:
   static_assert(alignof(TSD<Allocator>) >= 2, "");
 
   ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
-    *getTlsPtr() &= 1;
-    *getTlsPtr() |= reinterpret_cast<uptr>(CurrentTSD);
+    uptr *TlsPtr = getTlsPtr();
+    *TlsPtr = (*TlsPtr & 1ULL) | reinterpret_cast<uptr>(CurrentTSD);
   }
 
   ALWAYS_INLINE TSD<Allocator> *getCurrentTSD() {
@@ -222,8 +222,8 @@ private:
   }
 
   void setDisableMemInit(bool B) {
-    *getTlsPtr() &= ~1ULL;
-    *getTlsPtr() |= B;
+    uptr *TlsPtr = getTlsPtr();
+    *TlsPtr = (*TlsPtr & ~1ULL) | (B ? 1 : 0);
   }
 
   NOINLINE void initThread(Allocator *Instance) {

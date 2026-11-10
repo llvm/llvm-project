@@ -1127,18 +1127,16 @@ define <16 x i8> @load2multi2_v4i8(float %tmp, ptr %a, ptr %b) {
 ; CHECK-SD-NEXT:    ldr s1, [x1]
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    mov v1.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v1.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load2multi2_v4i8:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr s0, [x0]
-; CHECK-GI-NEXT:    ldr s1, [x1]
-; CHECK-GI-NEXT:    ld1 { v0.s }[1], [x0]
-; CHECK-GI-NEXT:    ld1 { v1.s }[1], [x1]
-; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ld1r { v0.2s }, [x0]
+; CHECK-GI-NEXT:    ld1r { v1.2s }, [x1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
   %la = load <4 x i8>, ptr %a
   %lb = load <4 x i8>, ptr %b

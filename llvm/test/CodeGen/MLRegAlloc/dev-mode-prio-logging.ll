@@ -24,5 +24,5 @@
 ; CHECK-NOT: nan
 ; CHECK-LABEL: priority:
 ; NOML-SAME: 2684358400.0
-; ML-SAME: 3807
+; ML-SAME: 3775
 ; CHECK-LABEL: reward:

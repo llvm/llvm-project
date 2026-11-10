@@ -219,6 +219,7 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 endif ()
 
+option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" ON)
 if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
     NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
   message(STATUS "Enabling MLIR as a dependency of ClangIR")
@@ -641,7 +642,7 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 set(LLVM_USE_STATIC_LIBXML2 "OFF" CACHE BOOL "Use static version of libxml2. Can be ON, or OFF")
 
-option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
+set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
@@ -973,7 +974,8 @@ else()
 endif()
 
 # Used to test building the llvm shared library with explicit symbol visibility on
-# Windows and Linux. For ELF platforms default symbols visibility is set to hidden.
+# Windows, Linux and macOS. For ELF and Mach-O platforms default symbol visibility
+# is set to hidden.
 set(LLVM_BUILD_LLVM_DYLIB_VIS FALSE CACHE BOOL "")
 mark_as_advanced(LLVM_BUILD_LLVM_DYLIB_VIS)
 

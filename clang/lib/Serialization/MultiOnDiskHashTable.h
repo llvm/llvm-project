@@ -110,8 +110,9 @@ private:
 
   MergedTable *getMergedTable() const {
     // If we already have a merged table, it's the first one.
-    return Tables.empty() ? nullptr : Table::getFromOpaqueValue(*Tables.begin())
-                                          .template dyn_cast<MergedTable*>();
+    return Tables.empty() ? nullptr
+                          : llvm::dyn_cast<MergedTable *>(
+                                Table::getFromOpaqueValue(*Tables.begin()));
   }
 
   /// Delete all our current on-disk tables.

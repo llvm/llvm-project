@@ -28,7 +28,6 @@ function(check_entrypoint_deps entrypoint_deps)
   set(${entrypoint_deps} ${PUBLIC_DEPS} PARENT_SCOPE)
 endfunction()
 
-
 # Rule which is essentially a wrapper over add_library to compile a set of
 # sources to object files.
 # Usage:
@@ -151,7 +150,6 @@ function(add_object_library target_name)
     CREATE_TARGET create_object_library
     ${ARGN})
 endfunction()
-
 
 # A rule for entrypoint object targets.
 # Usage:
@@ -481,7 +479,7 @@ function(add_implementation name impl_name)
     SRCS ${ADD_IMPL_SRCS}
     HDRS ${ADD_IMPL_HDRS}
     DEPENDS ${ADD_IMPL_DEPENDS}
-    COMPILE_OPTIONS ${libc_opt_high_flag} ${ADD_IMPL_COMPILE_OPTIONS}
+    COMPILE_OPTIONS ${ADD_IMPL_COMPILE_OPTIONS}
   )
   get_fq_target_name(${impl_name} fq_target_name)
   set_target_properties(${fq_target_name} PROPERTIES REQUIRE_CPU_FEATURES "${ADD_IMPL_REQUIRE}")

@@ -240,6 +240,88 @@ define float @fsub_zero_nsz_2(float %x) {
   ret float %r
 }
 
+define float @fadd_zero_minnum_nsz(float %x) {
+; CHECK-LABEL: fadd_zero_minnum_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %add = fadd float %x, 0.0
+  %r = call nsz float @llvm.minnum.f32(float %add, float 1.0)
+  ret float %r
+}
+
+define float @fadd_zero_minnum_nsz_neg_const(float %x) {
+; CHECK-LABEL: fadd_zero_minnum_nsz_neg_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %add = fadd float %x, 0.0
+  %r = call nsz float @llvm.minnum.f32(float %add, float -1.0)
+  ret float %r
+}
+
+define float @fadd_zero_minnum_nnan_nsz(float %x) {
+; CHECK-LABEL: fadd_zero_minnum_nnan_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %add = fadd float %x, 0.0
+  %r = call nnan nsz float @llvm.minnum.f32(float %add, float 1.0)
+  ret float %r
+}
+
+define float @fadd_zero_minnum_nnan_nsz_neg_const(float %x) {
+; CHECK-LABEL: fadd_zero_minnum_nnan_nsz_neg_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %add = fadd float %x, 0.0
+  %r = call nnan nsz float @llvm.minnum.f32(float %add, float -1.0)
+  ret float %r
+}
+
+define float @fsub_negzero_maxnum_nnan_nsz(float %x) {
+; CHECK-LABEL: fsub_negzero_maxnum_nnan_nsz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %sub = fsub float %x, -0.0
+  %r = call nnan nsz float @llvm.maxnum.f32(float %sub, float -1.0)
+  ret float %r
+}
+
+define float @fsub_negzero_maxnum_nnan_nsz_pos_const(float %x) {
+; CHECK-LABEL: fsub_negzero_maxnum_nnan_nsz_pos_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %sub = fsub float %x, -0.0
+  %r = call nnan nsz float @llvm.maxnum.f32(float %sub, float 1.0)
+  ret float %r
+}
+
+define <4 x float> @fadd_zero_minnum_nnan_nsz_vector(<4 x float> %x) {
+; CHECK-LABEL: fadd_zero_minnum_nnan_nsz_vector:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    addps %xmm1, %xmm0
+; CHECK-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %add = fadd <4 x float> %x, zeroinitializer
+  %r = call nnan nsz <4 x float> @llvm.minnum.v4f32(<4 x float> %add, <4 x float> splat (float 1.0))
+  ret <4 x float> %r
+}
+
 define float @fmul_zero(float %x) {
 ; CHECK-LABEL: fmul_zero:
 ; CHECK:       # %bb.0:

@@ -544,13 +544,6 @@ public:
   /// the complete CFG of the Region will be walked.
   void verifyRegion() const;
 
-  /// Clear the cache for BB RegionNodes.
-  ///
-  /// After calling this function the BasicBlock RegionNodes will be stored at
-  /// different memory locations. RegionNodes obtained before this function is
-  /// called are therefore not comparable to RegionNodes abtained afterwords.
-  void clearNodeCache();
-
   /// @name Subregion Iterators
   ///
   /// These iterators iterator over all subregions of this Region.
@@ -862,14 +855,6 @@ public:
   RegionT *getCommonRegion(SmallVectorImpl<BlockT *> &BBs) const;
 
   RegionT *getTopLevelRegion() const { return TopLevelRegion; }
-
-  /// Clear the Node Cache for all Regions.
-  ///
-  /// @see Region::clearNodeCache()
-  void clearNodeCache() {
-    if (TopLevelRegion)
-      TopLevelRegion->clearNodeCache();
-  }
 
   void verifyAnalysis() const;
 };

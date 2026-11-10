@@ -137,10 +137,6 @@ private:
   bool canReplaceText(SourceLocation loc, StringRef text,
                       FileOffset &Offs, unsigned &Len);
 
-  void commitInsert(FileOffset offset, StringRef text,
-                    bool beforePreviousInsertions);
-  void commitRemove(FileOffset offset, unsigned length);
-
   bool isAtStartOfMacroExpansion(SourceLocation loc,
                                  SourceLocation *MacroBegin = nullptr) const;
   bool isAtEndOfMacroExpansion(SourceLocation loc,

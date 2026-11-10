@@ -2100,7 +2100,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     B.SetInsertPoint(BBSubs[i]);
     Value *VL =
         B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
-                                  B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
+                                  B.CreatePtrAddWithUnsignedOffset(
+                                      Base, i, "", GEPNoWrapFlags::inBounds())),
                      CI->getType());
     Value *VR =
         ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));

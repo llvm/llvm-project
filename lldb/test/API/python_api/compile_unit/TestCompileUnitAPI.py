@@ -42,7 +42,7 @@ class CompileUnitAPITestCase(TestBase):
         main_cu_by_name = a_mod.compile_unit["main.c"]
         self.assertTrue(main_cu_by_name.IsValid(), "Main executable CU is not valid")
 
-        main_cu_by_regex_list = a_mod.compile_unit[re.compile(r".*main.*")]
+        main_cu_by_regex_list = a_mod.compile_unit[re.compile(r"[/\\]main\.c$")]
         self.assertEqual(len(main_cu_by_regex_list), 1)
         [main_cu_by_regex] = main_cu_by_regex_list
         self.assertTrue(main_cu_by_regex.IsValid(), "Main executable CU is not valid")

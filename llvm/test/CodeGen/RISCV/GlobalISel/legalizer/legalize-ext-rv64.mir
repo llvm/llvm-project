@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            sext_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sext_i32
@@ -24,6 +25,7 @@ body:             |
 ...
 ---
 name:            zext_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: zext_i32
@@ -47,6 +49,7 @@ body:             |
 ...
 ---
 name:            anyext_16_i32
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: anyext_16_i32
   ; CHECK: bb.0.entry:
@@ -85,6 +88,7 @@ body:             |
 ...
 ---
 name:            sext_16_i32
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: sext_16_i32
   ; CHECK: bb.0.entry:
@@ -123,6 +127,7 @@ body:             |
 ...
 ---
 name:            zext_16_i32
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: zext_16_i32
   ; CHECK: bb.0.entry:

@@ -106,12 +106,19 @@ SmallVector<uint32_t> llvm::fitWeights(ArrayRef<uint64_t> Weights) {
   return Ret;
 }
 
+// This option is mainly used when constructing the pass pipeline, but needs to
+// be defined here so that it can also control all zero branch weight elision
+// and avoid layering issues.
+namespace llvm {
+cl::opt<bool> EnableProfcheckInPipeline(
+    "enable-profcheck-in-pipeline", cl::init(false),
+    cl::desc("Adds profile verification to the pipeline, erroring if profile "
+             "information is dropped."));
+} // namespace llvm
 const char *MDProfLabels::BranchWeights = "branch_weights";
 const char *MDProfLabels::ExpectedBranchWeights = "expected";
 const char *MDProfLabels::ValueProfile = "VP";
 const char *MDProfLabels::FunctionEntryCount = "function_entry_count";
-const char *MDProfLabels::SyntheticFunctionEntryCount =
-    "synthetic_function_entry_count";
 const char *MDProfLabels::UnknownBranchWeightsMarker = "unknown";
 const char *llvm::LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
 
@@ -316,8 +323,9 @@ bool llvm::hasExplicitlyUnknownBranchWeights(const Instruction &I) {
 
 void llvm::setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                             bool IsExpected, bool ElideAllZero) {
-  if (ElideAllZero && llvm::all_of(Weights, equal_to(0)) &&
-      getIROptions(I.getContext()).elide_all_zero_branch_weights) {
+  if ((getIROptions(I.getContext()).elide_all_zero_branch_weights &&
+       !EnableProfcheckInPipeline && ElideAllZero) &&
+      llvm::all_of(Weights, equal_to(0))) {
     I.setMetadata(LLVMContext::MD_prof, nullptr);
     return;
   }

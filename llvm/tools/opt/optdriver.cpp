@@ -16,7 +16,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -431,7 +430,6 @@ optMain(int argc, char **argv,
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandIRInstsLegacyPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeInlineAsmPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
@@ -445,7 +443,6 @@ optMain(int argc, char **argv,
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
-  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeWasmEHPreparePass(Registry);
@@ -496,7 +493,7 @@ optMain(int argc, char **argv,
   // construct the PassBuilder before parsing IR so we can reuse the same
   // PassBuilder for print passes.
   if (PrintPasses) {
-    printPasses(outs());
+    printPasses(Context, outs());
     return 0;
   }
 
@@ -524,7 +521,7 @@ optMain(int argc, char **argv,
     // Pass "help" as CPU for -mtune=help
     std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
     TargetOptions Options =
-        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
     // Create the target machine just to print the help info. Use unique_ptr
     // to avoid a memory leak.
     std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
@@ -562,7 +559,8 @@ optMain(int argc, char **argv,
 
   codegen::MaybeEnableStatistics();
 
-  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+  StringRef ABIName =
+      mc::getABIName(Context.getLibraryOptions()); // FIXME: Handle module flag.
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
@@ -717,7 +715,7 @@ optMain(int argc, char **argv,
   const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
   if (!TM) {
     CodeGenFlagsOptions =
-        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   }
 
   // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and

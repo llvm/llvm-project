@@ -32,6 +32,7 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Redeclarable.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -2236,6 +2237,21 @@ bool VarDecl::isInExternCXXContext() const {
 
 VarDecl *VarDecl::getCanonicalDecl() { return getFirstDecl(); }
 
+static bool isStaticDataMemberOutOfLine(const VarDecl *VD) {
+  // A static data member is out-of-line if and only if it is not declared in
+  // the definition of a class. ([class.mem.general] says all declarations
+  // in a class are members outside of a specific list of exceptions.)
+  //
+  // For invalid decls, this shortcut can produce different results from a full
+  // check of the lexical and semantic contexts, but nothing should care about
+  // that.
+  //
+  // It might be possible to implement a similar shortcut for other member
+  // declarations, but it would need to account for friend declarations.
+  assert(VD->isStaticDataMember());
+  return !isa<CXXRecordDecl>(VD->getLexicalDeclContext());
+}
+
 VarDecl::DefinitionKind
 VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isThisDeclarationADemotedDefinition())
@@ -2255,20 +2271,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // FIXME: How do you declare (but not define) a partial specialization of
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
-    if (isOutOfLine() &&
+    bool IsOutOfLine = isStaticDataMemberOutOfLine(this);
+    if (IsOutOfLine &&
         !(getCanonicalDecl()->isInline() && getCanonicalDecl()->isConstexpr() &&
-          !getCanonicalDecl()->isOutOfLine()) &&
+          !isStaticDataMemberOutOfLine(getCanonicalDecl())) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
          // template for which we have not yet instantiated the initializer.
-         (getFirstDecl()->isOutOfLine()
+         (isStaticDataMemberOutOfLine(getFirstDecl())
               ? getTemplateSpecializationKind() == TSK_Undeclared
               : getTemplateSpecializationKind() !=
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && (isInline() || hasDefiningAttr()))
+    if (!IsOutOfLine && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
@@ -2405,7 +2422,7 @@ Expr *VarDecl::getInit() {
 }
 
 Stmt **VarDecl::getInitAddress() {
-  if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
+  if (auto *ES = dyn_cast<EvaluatedStmt *>(Init))
     return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
@@ -2444,19 +2461,10 @@ bool VarDecl::hasInitWithSideEffects() const {
 }
 
 bool VarDecl::isOutOfLine() const {
-  if (Decl::isOutOfLine())
-    return true;
+  if (isStaticDataMember())
+    return isStaticDataMemberOutOfLine(this);
 
-  if (!isStaticDataMember())
-    return false;
-
-  // If this static data member was instantiated from a static data member of
-  // a class template, check whether that static data member was defined
-  // out-of-line.
-  if (VarDecl *VD = getInstantiatedFromStaticDataMember())
-    return VD->isOutOfLine();
-
-  return false;
+  return Decl::isOutOfLine();
 }
 
 void VarDecl::setInit(Expr *I) {
@@ -2558,11 +2566,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
 }
 
 const APValue *VarDecl::evaluateValue() const {
-  return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
+  return evaluateValueImpl(/*Notes=*/nullptr, /*SProxy=*/nullptr,
+                           hasConstantInitialization());
 }
 
 const APValue *
 VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           SemaProxy *SProxy,
                            bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
@@ -2587,8 +2597,15 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
   EStatus.ExtendedDiag = &MSWarning;
+
+  // VarDecl::evaluateValue is used in a great many places, but we only want to
+  // allow AST mutation during the initial check for constant initialization.
   bool Result =
-      Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
+      (SProxy && IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+          ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx, *SProxy,
+                                                        this)
+          : Init->EvaluateAsInitializer(Ctx, this, EStatus,
+                                        IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
@@ -2658,7 +2675,7 @@ bool VarDecl::hasConstantInitialization() const {
 }
 
 bool VarDecl::checkForConstantInitialization(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+    SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   // If we ask for the value before we know whether we have a constant
   // initializer, we can compute the wrong value (for example, due to
@@ -2673,7 +2690,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(&Notes, true) && Notes.empty();
+      evaluateValueImpl(&Notes, &SProxy, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
@@ -3102,8 +3119,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
   FunctionDeclBits.IsMultiVersion = false;
-  FunctionDeclBits.DeductionCandidateKind =
-      static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
 
@@ -3309,7 +3324,20 @@ FunctionDecl::getDefaultedFunctionKind() const {
       return CXXSpecialMemberKind::Destructor;
   }
 
+  // Only the postfix forms of ++ and -- can be defaulted. They are
+  // distinguished from the prefix forms by their trailing 'int' parameter, so
+  // they have exactly two parameters including implicit or explicit 'this'.
   switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_PlusPlus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Increment;
+    break;
+
+  case OO_MinusMinus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Decrement;
+    break;
+
   case OO_EqualEqual:
     return DefaultedComparisonKind::Equal;
 
@@ -4263,7 +4291,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
   return dyn_cast_if_present<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast<NamedDecl *>(TemplateOrSpecialization));
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {
@@ -4579,12 +4607,13 @@ bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
 }
 
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                        FunctionTemplateSpecializationInfo*>())
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getPointOfInstantiation();
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();

@@ -1,0 +1,66 @@
+// RUN: cir-opt %s --split-input-file --cir-to-llvm -verify-diagnostics | FileCheck %s
+
+// Vector-of-_BitInt conversion is unsupported; propagate its failure to the
+// enclosing operation instead of constructing invalid LLVM operations.
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!union = !cir.union<"U" {data !cir.int<s, 128>, data !vec}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // The union's integer storage converts, but its active initializer does not.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @global_union = #cir.const_record<{#cir.zero : !vec}> : !union
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!union = !cir.union<"U" {data !cir.int<s, 128>, data !vec}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @constant_union() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_record<{#cir.zero : !vec}> : !union
+    cir.return
+  }
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!union = !cir.union<"U" {data !cir.int<s, 128>, data !vec}>
+!outer = !cir.union<"Outer" {data !cir.int<s, 128>, data !union}>
+!record = !cir.struct<"Record" {data !outer}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Propagate adjustment failure through both the enclosing union and struct.
+  cir.func @nested_union() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.zero : !vec}> : !union}> : !outer}> : !record
+    cir.return
+  }
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!union = !cir.union<"U" {data !cir.int<s, 128>, data !vec}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @array_union() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_array<[#cir.const_record<{#cir.zero : !vec}> : !union]> : !cir.array<!union x 1>
+    cir.return
+  }
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!union = !cir.union<"U" {data !cir.int<s, 128>, data !vec}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // An inactive unsupported member does not prevent lowering integer storage.
+  // CHECK: llvm.mlir.global external @integer_initializer
+  cir.global external @integer_initializer = #cir.const_record<{#cir.int<0> : !cir.int<s, 128>}> : !union
+}

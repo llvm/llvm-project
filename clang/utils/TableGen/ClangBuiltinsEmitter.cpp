@@ -152,6 +152,57 @@ struct Builtin {
   }
 };
 
+bool isIdentifierChar(char C) { return isAlnum(C) || C == '_'; }
+
+bool endsWithWord(StringRef S, StringRef Word) {
+  return S.ends_with(Word) &&
+         (S.size() == Word.size() ||
+          !isIdentifierChar(S[S.size() - Word.size() - 1]));
+}
+
+bool consumeFrontWord(StringRef &S, StringRef Word) {
+  if (!S.starts_with(Word))
+    return false;
+  if (S.size() > Word.size() && isIdentifierChar(S[Word.size()]))
+    return false;
+  S = S.drop_front(Word.size());
+  return true;
+}
+
+bool consumeBackWord(StringRef &S, StringRef Word) {
+  if (!endsWithWord(S, Word))
+    return false;
+  S = S.drop_back(Word.size());
+  return true;
+}
+
+/// Split a parameter list string into individual parameter type strings,
+/// respecting nested angle brackets (e.g. address_space<4>, _ExtVector<4,
+/// float>).
+SmallVector<StringRef> splitParams(StringRef Params) {
+  SmallVector<StringRef> Result;
+  if (Params.empty())
+    return Result;
+
+  int Depth = 0;
+  size_t Start = 0;
+  for (size_t I = 0, E = Params.size(); I < E; ++I) {
+    if (Params[I] == '<') {
+      ++Depth;
+    } else if (Params[I] == '>') {
+      --Depth;
+    } else if (Params[I] == ',' && Depth == 0) {
+      Result.push_back(Params.substr(Start, I - Start).trim());
+      Start = I + 1;
+    }
+  }
+  // Add the last parameter.
+  StringRef Last = Params.substr(Start).trim();
+  if (!Last.empty())
+    Result.push_back(Last);
+  return Result;
+}
+
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
@@ -185,56 +236,9 @@ private:
     Prototype = Prototype.drop_back();
 
     // Look through the input parameters.
-    const size_t end = Prototype.size();
-    for (size_t I = 0; I != end;) {
-      const StringRef Current = Prototype.substr(I, end);
-      // Skip any leading space or commas
-      if (Current.starts_with(" ") || Current.starts_with(",")) {
-        ++I;
-        continue;
-      }
-
-      // Check if we are in _ExtVector. We do this first because
-      // extended vectors are written in template form with the syntax
-      // _ExtVector< ..., ...>, so we need to make sure we are not
-      // detecting the comma of the template class as a separator for
-      // the parameters of the prototype. Note: the assumption is that
-      // we cannot have nested _ExtVector.
-      if (Current.starts_with("_ExtVector<") ||
-          Current.starts_with("_Vector<")) {
-        size_t Pos = Current.find('<');
-        int Depth = 1;
-
-        // There may be a nested address_space<...> modifier on the type.
-        while (Depth > 0 && ++Pos < Current.size()) {
-          if (Current[Pos] == '<')
-            ++Depth;
-          else if (Current[Pos] == '>')
-            --Depth;
-        }
-
-        const size_t EndTemplate = Pos;
-        ParseType(Current.substr(0, EndTemplate + 1));
-        // Move the prototype beyond _ExtVector<...>
-        I += EndTemplate + 1;
-        continue;
-      }
-
-      // We know that we are past _ExtVector, therefore the first seen
-      // comma is the boundary of a parameter in the prototype.
-      if (size_t CommaPos = Current.find(',', 0)) {
-        if (CommaPos != StringRef::npos) {
-          StringRef T = Current.substr(0, CommaPos);
-          ParseType(T);
-          // Move the prototype beyond the comma.
-          I += CommaPos + 1;
-          continue;
-        }
-      }
-
-      // No more commas, parse final parameter.
-      ParseType(Current);
-      I = end;
+    for (StringRef Param : splitParams(Prototype)) {
+      if (!Param.empty())
+        ParseType(Param);
     }
   }
 
@@ -243,19 +247,25 @@ private:
 
     auto ConsumeAddrSpace = [&]() -> std::optional<unsigned> {
       T = T.trim();
-      if (!T.consume_back(">"))
+      if (!T.ends_with(">"))
         return std::nullopt;
 
       auto Open = T.find_last_of('<');
       if (Open == StringRef::npos)
         PrintFatalError(Loc, "Mismatched angle-brackets in type");
 
-      StringRef ArgStr = T.substr(Open + 1);
-      T = T.slice(0, Open);
-      if (!T.consume_back("address_space"))
+      StringRef BeforeOpen = T.slice(0, Open).rtrim();
+      if (!consumeBackWord(BeforeOpen, "address_space")) {
+        if (endsWithWord(BeforeOpen, "_ExtVector") ||
+            endsWithWord(BeforeOpen, "_Vector"))
+          return std::nullopt;
         PrintFatalError(Loc,
                         "Only `address_space<N>` supported as a parameterized "
                         "pointer or reference type qualifier");
+      }
+
+      StringRef ArgStr = T.slice(Open + 1, T.size() - 1);
+      T = BeforeOpen;
 
       unsigned Number = 0;
       if (ArgStr.getAsInteger(10, Number))
@@ -273,15 +283,15 @@ private:
       Type += "*";
       if (AS)
         Type += std::to_string(*AS);
-    } else if (T.consume_back("const")) {
+    } else if (consumeBackWord(T, "const")) {
       if (!T.empty())
         ParseType(T);
       Type += "C";
-    } else if (T.consume_back("volatile")) {
+    } else if (consumeBackWord(T, "volatile")) {
       if (!T.empty())
         ParseType(T);
       Type += "D";
-    } else if (T.consume_back("restrict")) {
+    } else if (consumeBackWord(T, "restrict")) {
       if (!T.empty())
         ParseType(T);
       Type += "R";
@@ -295,6 +305,14 @@ private:
     } else if (T.consume_back(")")) {
       ParseType(T);
       Type += "&";
+    } else if (consumeFrontWord(T, "const")) {
+      if (!T.empty())
+        ParseType(T);
+      Type += "C";
+    } else if (consumeFrontWord(T, "volatile")) {
+      if (!T.empty())
+        ParseType(T);
+      Type += "D";
     } else if (EnableOpenCLLong && T.consume_front("long long")) {
       Type += "O";
       ParseType(T);
@@ -376,6 +394,7 @@ private:
                                .Case("short", "s")
                                .Case("sigjmp_buf", "SJ")
                                .Case("size_t", "z")
+                               .Case("std::meta::info", "r")
                                .Case("ucontext_t", "K")
                                .Case("uint8_t", "UBi")
                                .Case("uint16_t", "UTi")
@@ -665,33 +684,6 @@ static void writeCategoryHeader(const Record *Category, raw_ostream &OS) {
   StringRef CategoryContent = Category->getValueAsString("Content");
   if (!CategoryContent.trim().empty())
     OS << CategoryContent.trim() << "\n\n";
-}
-
-/// Split a parameter list string into individual parameter type strings,
-/// respecting nested angle brackets (e.g. address_space<4>, _ExtVector<4,
-/// float>).
-static SmallVector<StringRef> splitParams(StringRef Params) {
-  SmallVector<StringRef> Result;
-  if (Params.empty())
-    return Result;
-
-  int Depth = 0;
-  size_t Start = 0;
-  for (size_t I = 0, E = Params.size(); I < E; ++I) {
-    if (Params[I] == '<') {
-      ++Depth;
-    } else if (Params[I] == '>') {
-      --Depth;
-    } else if (Params[I] == ',' && Depth == 0) {
-      Result.push_back(Params.substr(Start, I - Start).trim());
-      Start = I + 1;
-    }
-  }
-  // Add the last parameter.
-  StringRef Last = Params.substr(Start).trim();
-  if (!Last.empty())
-    Result.push_back(Last);
-  return Result;
 }
 
 static void writeBuiltinDocumentation(const BuiltinDocData &Doc,

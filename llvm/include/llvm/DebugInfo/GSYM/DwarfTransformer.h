@@ -100,8 +100,6 @@ private:
   GsymCreator &Gsym;
   bool LoadDwarfCallSites;
   bool IsMachO;
-
-  friend class DwarfTransformerTest;
 };
 
 } // namespace gsym

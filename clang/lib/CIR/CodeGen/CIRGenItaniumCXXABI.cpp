@@ -113,6 +113,9 @@ public:
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
+  cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase);
@@ -279,14 +282,14 @@ CIRGenItaniumCXXABI::buildStructorSignature(
   // All parameters are already in place except VTT, which goes after 'this'.
   // These are clang types, so we don't need to worry about sret yet.
 
-  // Check if we need to add a VTT parameter (which has type void **).
+  // Check if we need to add a VTT parameter (which has type global void **).
   if ((isa<CXXConstructorDecl>(gd.getDecl()) ? gd.getCtorType() == Ctor_Base
                                              : gd.getDtorType() == Dtor_Base) &&
       cast<CXXMethodDecl>(gd.getDecl())->getParent()->getNumVBases() != 0) {
-    assert(!cir::MissingFeatures::addressSpace());
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
     argTys.insert(argTys.begin() + 1,
-                  astContext.getPointerType(
-                      CanQualType::CreateUnsafe(astContext.VoidPtrTy)));
+                  astContext.getPointerType(CanQualType::CreateUnsafe(q)));
     return AddedStructorArgCounts::withPrefix(1);
   }
 
@@ -354,7 +357,11 @@ static void emitConstructorDestructorAlias(CIRGenModule &cgm,
   auto aliasee = cast<cir::FuncOp>(cgm.getAddrOfGlobal(targetDecl));
 
   // Populate actual alias.
-  cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+  cir::FuncOp alias =
+      cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+
+  // Alias constructors and destructors are always unnamed_addr.
+  alias.setUnnamedAddr(true);
 }
 
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
@@ -411,8 +418,9 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
     ASTContext &astContext = cgm.getASTContext();
 
     // FIXME: avoid the fake decl
-    assert(!cir::MissingFeatures::addressSpace());
-    QualType t = astContext.getPointerType(astContext.VoidPtrTy);
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+    QualType t = astContext.getPointerType(q);
     auto *vttDecl = ImplicitParamDecl::Create(
         astContext, /*DC=*/nullptr, md->getLocation(),
         &astContext.Idents.get("vtt"), t, ImplicitParamKind::CXXVTT);
@@ -464,9 +472,10 @@ CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
   // some targets.
   mlir::Value vtt =
       cgf.getVTTParameter(GlobalDecl(d, type), forVirtualBase, delegating);
-  QualType vttTy =
-      cgm.getASTContext().getPointerType(cgm.getASTContext().VoidPtrTy);
-  assert(!cir::MissingFeatures::addressSpace());
+  ASTContext &astContext = cgm.getASTContext();
+  LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+  QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+  QualType vttTy = astContext.getPointerType(q);
   return AddedStructorArgs::withPrefix({{vtt, vttTy}});
 }
 
@@ -1714,6 +1723,27 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
                                  addressPoint.AddressPointIndex));
 }
 
+cir::GlobalViewAttr CIRGenItaniumCXXABI::getVTableAddressPointAttr(
+    BaseSubobject base, const CXXRecordDecl *vtableClass) {
+  cir::GlobalOp vtable = getAddrOfVTable(vtableClass, CharUnits());
+
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation addressPoint =
+      cgm.getItaniumVTableContext()
+          .getVTableLayout(vtableClass)
+          .getAddressPoint(base);
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ArrayAttr indices = builder.getArrayAttr(
+      {builder.getI32IntegerAttr(addressPoint.VTableIndex),
+       builder.getI32IntegerAttr(addressPoint.AddressPointIndex)});
+  return cir::GlobalViewAttr::get(
+      cir::VPtrType::get(builder.getContext()),
+      mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()), indices,
+      /*addressPoint=*/true);
+}
+
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
     CIRGenFunction &cgf, const clang::CXXRecordDecl *vtableClass,
     clang::BaseSubobject base, const clang::CXXRecordDecl *nearestVBase) {
@@ -2077,7 +2107,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // TODO: When sanitizer support is implemented, we'll need to
   // get the address space from `newPtr`.
-  assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::sanitizers());
 
   ASTContext &ctx = cgm.getASTContext();
@@ -2090,9 +2119,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
   mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
-  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8Ty);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;
@@ -2257,8 +2285,10 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
-  cir::PointerType i8PtrTy = builder.getUInt8PtrTy();
-  mlir::Value v = builder.createBitcast(initialPtr.getPointer(), i8PtrTy);
+  cir::PointerType ui8DefaultASPtrTy = builder.getUInt8PtrTy();
+  mlir::Value v =
+      builder.createPtrBitcast(initialPtr.getPointer(), builder.getUInt8Ty());
+  auto i8PtrTy = mlir::cast<cir::PointerType>(v.getType());
 
   // In a base-to-derived cast, the non-virtual adjustment is applied first.
   if (nonVirtualAdjustment && !isReturnAdjustment) {
@@ -2271,11 +2301,11 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
   if (virtualAdjustment) {
     mlir::Value vtablePtr = cgf.getVTablePtr(
         loc, Address(v, clang::CharUnits::One()), unadjustedClass);
-    vtablePtr = builder.createBitcast(vtablePtr, i8PtrTy);
+    vtablePtr = builder.createBitcast(vtablePtr, ui8DefaultASPtrTy);
 
     mlir::Value offset;
     mlir::Value offsetPtr =
-        cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
+        cir::PtrStrideOp::create(builder, loc, ui8DefaultASPtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());

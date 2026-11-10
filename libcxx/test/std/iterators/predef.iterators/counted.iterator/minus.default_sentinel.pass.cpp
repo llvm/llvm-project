@@ -9,9 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // friend constexpr iter_difference_t<I> operator-(
-//   const counted_iterator& x, default_sentinel_t);
+//   const counted_iterator& x, default_sentinel_t) noexcept;
 // friend constexpr iter_difference_t<I> operator-(
-//   default_sentinel_t, const counted_iterator& y);
+//   default_sentinel_t, const counted_iterator& y) noexcept;
 
 #include <cassert>
 #include <iterator>
@@ -30,6 +30,9 @@ constexpr bool test() {
 
     ASSERT_SAME_TYPE(decltype(iter - std::default_sentinel), std::iter_difference_t<int*>);
     ASSERT_SAME_TYPE(decltype(std::default_sentinel - iter), std::iter_difference_t<int*>);
+
+    static_assert(noexcept(iter - std::default_sentinel));
+    static_assert(noexcept(std::default_sentinel - iter));
   }
   {
     const std::counted_iterator iter(random_access_iterator<int*>{buffer}, 8);

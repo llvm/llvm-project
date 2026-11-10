@@ -10,8 +10,8 @@ declare ppc_fp128 @llvm.log10.ppcf128(ppc_fp128)
 ; subnormal.
 define ppc_fp128 @ret_log_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_log_ppcf128(
-; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR4:[0-9]+]]
+; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.log.ppcf128(ppc_fp128 %arg)
@@ -24,8 +24,8 @@ define ppc_fp128 @ret_log_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %a
 ; watches for such a change.
 define ppc_fp128 @ret_log2_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_log2_ppcf128(
-; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log2.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log2.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.log2.ppcf128(ppc_fp128 %arg)
@@ -35,8 +35,8 @@ define ppc_fp128 @ret_log2_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %
 ; |log10(x)| < |log(x)|
 define ppc_fp128 @ret_log10_ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf) ppc_fp128 @ret_log10_ppcf128(
-; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log10.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR4]]
+; CHECK-SAME: ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf) ppc_fp128 @llvm.log10.ppcf128(ppc_fp128 nofpclass(nan inf zero sub nnorm) [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.log10.ppcf128(ppc_fp128 %arg)

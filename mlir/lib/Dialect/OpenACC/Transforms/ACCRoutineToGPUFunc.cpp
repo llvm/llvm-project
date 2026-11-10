@@ -61,6 +61,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -89,7 +90,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 /// Create a gpu.func from a func.func by cloning the body.
 static gpu::GPUFuncOp createGPUFuncFromFunc(OpBuilder &builder,
                                             func::FuncOp sourceFunc) {
@@ -155,7 +155,7 @@ static void collectRoutineCandidates(
   };
 
   mod.walk([&](RoutineOp op) {
-    if (op.getBindNameValue() || op.getBindNameValue(deviceType)) {
+    if (op.getEffectiveBindName(deviceType)) {
       bindAccRoutines.insert(op);
       return;
     }
@@ -328,6 +328,12 @@ public:
   using acc::impl::ACCRoutineToGPUFuncBase<
       ACCRoutineToGPUFunc>::ACCRoutineToGPUFuncBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::ACCRoutineToGPUFuncBase<
+        ACCRoutineToGPUFunc>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     ModuleOp mod = getOperation();
     if (mod.getOps<RoutineOp>().empty()) {
@@ -368,5 +374,4 @@ public:
     cleanupHostModule(funcsToClone);
   }
 };
-
 } // namespace

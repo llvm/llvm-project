@@ -849,6 +849,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(critical);
   // Deprecated, keep in order to support old files.
   KEYWORD(relbf);
+  KEYWORD(indirect);
   KEYWORD(variable);
   KEYWORD(vTableFuncs);
   KEYWORD(virtFunc);
@@ -901,6 +902,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(versions);
   KEYWORD(memProf);
   KEYWORD(notcold);
+  KEYWORD(ambiguous);
 
 #undef KEYWORD
 

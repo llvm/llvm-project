@@ -1118,10 +1118,11 @@ struct OutlinedFunctionFixture {
   Address caller_addr;
 };
 
-/// \param text the contents of .text: the kCallerSize bytes of `caller`,
+/// \param text the contents of .text: the \a caller_size bytes of `caller`,
 /// followed by the body of OUTLINED_FUNCTION_TEST.
 std::optional<OutlinedFunctionFixture>
-MakeOutlinedFunctionFixture(llvm::ArrayRef<uint8_t> text) {
+MakeOutlinedFunctionFixture(llvm::ArrayRef<uint8_t> text,
+                            size_t caller_size = kCallerSize) {
   OutlinedFunctionFixture fixture;
 
   llvm::Expected<TestFile> file = TestFile::fromYaml(
@@ -1148,11 +1149,12 @@ Symbols:
   - Name:            OUTLINED_FUNCTION_TEST
     Type:            STT_FUNC
     Section:         .text
-    Value:           0x1010
+    Value:           {3}
     Size:            {2}
 ...
 )",
-                    llvm::toHex(text), kCallerSize, text.size() - kCallerSize)
+                    llvm::toHex(text), caller_size, text.size() - caller_size,
+                    llvm::format_hex(0x1000 + caller_size, 6))
           .str());
   if (!file)
     return std::nullopt;
@@ -1280,4 +1282,110 @@ TEST_F(TestArm64InstEmulation, TestBranchingOutlinedFunctionIsNotFollowed) {
     SCOPED_TRACE(reg);
     EXPECT_FALSE(row->GetRegisterInfo(reg, regloc));
   }
+}
+
+// Test that temporarily moving the link register's contents to a scratch
+// register, then restoring it after calling an outlined function can still be
+// recognized by the scanner.
+TEST_F(TestArm64InstEmulation, TestReturnAddressSpilledAfterCallIsRecorded) {
+  constexpr size_t kCallerSizeWithMoves = 24;
+  // clang-format off
+  uint8_t text[] = {
+      // 0x1000 <caller>
+      0xe2, 0x03, 0x1e, 0xaa, // 0xaa1e03e2 : mov x2, x30 <- stash lr in x2
+      0x05, 0x00, 0x00, 0x94, // 0x94000005 : bl  OUTLINED_FUNCTION_TEST
+      0xfe, 0x03, 0x02, 0xaa, // 0xaa0203fe : mov x30, x2 <- restore lr
+      0xfd, 0x7b, 0xbf, 0xa9, // 0xa9bf7bfd : stp x29, x30, [sp, #-0x10]! <- store lr on the stack
+      0x1f, 0x20, 0x03, 0xd5, // 0xd503201f : nop
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+
+      // 0x1018 <OUTLINED_FUNCTION_TEST>
+      0xf4, 0x4f, 0xbe, 0xa9, // 0xa9be4ff4 : stp x20, x19, [sp, #-0x20]!
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+  };
+  // clang-format on
+
+  auto fixture = MakeOutlinedFunctionFixture(text, kCallerSizeWithMoves);
+  ASSERT_TRUE(fixture.has_value());
+
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(
+              fixture->module_sp->GetArchitecture())));
+  ASSERT_NE(nullptr, engine);
+
+  AddressRange sample_range(fixture->caller_addr, kCallerSizeWithMoves);
+
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, text, kCallerSizeWithMoves, unwind_plan));
+
+  // Offset 16 is where the effects of everything up to and including the stp
+  // at offset 12 are visible.
+  const UnwindPlan::Row *row = unwind_plan.GetRowForFunctionOffset(16);
+  ASSERT_NE(nullptr, row);
+  EXPECT_EQ(16, row->GetOffset());
+  EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
+  EXPECT_EQ(48, row->GetCFAValue().GetOffset());
+
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+  for (auto [reg, offset] :
+       {std::pair(gpr_x19_arm64, -24), std::pair(gpr_x20_arm64, -32),
+        std::pair(gpr_fp_arm64, -48), std::pair(gpr_lr_arm64, -40)}) {
+    SCOPED_TRACE(reg);
+    EXPECT_TRUE(row->GetRegisterInfo(reg, regloc));
+    EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+    EXPECT_EQ(offset, regloc.GetOffset());
+  }
+}
+
+// Without a move putting the return address back, the register really does
+// hold the address the call just produced, so storing it is not a spill of
+// this function's return address.
+TEST_F(TestArm64InstEmulation, TestReturnAddressClobberedByCallIsNotRecorded) {
+  // clang-format off
+  uint8_t text[] = {
+      // 0x1000 <caller>
+      0x04, 0x00, 0x00, 0x94, // 0x94000004 : bl  OUTLINED_FUNCTION_TEST
+      0xfd, 0x7b, 0xbf, 0xa9, // 0xa9bf7bfd : stp x29, x30, [sp, #-0x10]!
+      0x1f, 0x20, 0x03, 0xd5, // 0xd503201f : nop
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+
+      // 0x1010 <OUTLINED_FUNCTION_TEST>
+      0xf4, 0x4f, 0xbe, 0xa9, // 0xa9be4ff4 : stp x20, x19, [sp, #-0x20]!
+      0xc0, 0x03, 0x5f, 0xd6, // 0xd65f03c0 : ret
+  };
+  // clang-format on
+
+  auto fixture = MakeOutlinedFunctionFixture(text);
+  ASSERT_TRUE(fixture.has_value());
+
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(
+              fixture->module_sp->GetArchitecture())));
+  ASSERT_NE(nullptr, engine);
+
+  AddressRange sample_range(fixture->caller_addr, kCallerSize);
+
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, text, kCallerSize, unwind_plan));
+
+  const UnwindPlan::Row *row = unwind_plan.GetRowForFunctionOffset(8);
+  ASSERT_NE(nullptr, row);
+
+  // The outlined spills and the frame pointer are still recovered.
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+  for (auto [reg, offset] :
+       {std::pair(gpr_x19_arm64, -24), std::pair(gpr_x20_arm64, -32),
+        std::pair(gpr_fp_arm64, -48)}) {
+    SCOPED_TRACE(reg);
+    EXPECT_TRUE(row->GetRegisterInfo(reg, regloc));
+    EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+    EXPECT_EQ(offset, regloc.GetOffset());
+  }
+
+  EXPECT_FALSE(row->GetRegisterInfo(gpr_lr_arm64, regloc) &&
+               regloc.IsAtCFAPlusOffset());
 }

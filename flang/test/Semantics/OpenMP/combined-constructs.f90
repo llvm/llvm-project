@@ -53,7 +53,7 @@ program main
   enddo
   !$omp end target parallel
 
-  !ERROR: COPYIN clause is not allowed on TARGET PARALLEL directive
+  !ERROR: COPYIN clause is not allowed on a compound directive with TARGET as a constituent
   !ERROR: Non-THREADPRIVATE object 'a' in COPYIN clause
   !$omp target parallel copyin(a)
   do i = 1, N
@@ -100,7 +100,7 @@ program main
   enddo
   !$omp end target parallel do
 
-  !ERROR: COPYIN clause is not allowed on TARGET PARALLEL DO directive
+  !ERROR: COPYIN clause is not allowed on a compound directive with TARGET as a constituent
   !ERROR: Non-THREADPRIVATE object 'a' in COPYIN clause
   !$omp target parallel do copyin(a)
   do i = 1, N

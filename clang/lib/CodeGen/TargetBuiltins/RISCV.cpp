@@ -1416,6 +1416,11 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pusati_u32x2:
   case RISCV::BI__builtin_riscv_psati_i16x4:
   case RISCV::BI__builtin_riscv_psati_i32x2:
+  // Scalar Saturation
+  case RISCV::BI__builtin_riscv_sati_i32:
+  case RISCV::BI__builtin_riscv_usati_u32:
+  case RISCV::BI__builtin_riscv_sati_i64:
+  case RISCV::BI__builtin_riscv_usati_u64:
   // Scalar Multiply High
   case RISCV::BI__builtin_riscv_mulh_i32:
   case RISCV::BI__builtin_riscv_mulhu_u32: {
@@ -1582,31 +1587,23 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_pmhacc_b0_i16x2:
     case RISCV::BI__builtin_riscv_pmhacc_b0_i16x4:
-      ID = Intrinsic::riscv_pmhacc_b0;
-      break;
-    case RISCV::BI__builtin_riscv_pmhacc_b1_i16x2:
-    case RISCV::BI__builtin_riscv_pmhacc_b1_i16x4:
-      ID = Intrinsic::riscv_pmhacc_b1;
+    case RISCV::BI__builtin_riscv_pmhacc_h0_i32x2:
+      ID = Intrinsic::riscv_pmhacc_half_0;
       break;
     case RISCV::BI__builtin_riscv_pmhaccsu_b0_i16x2:
     case RISCV::BI__builtin_riscv_pmhaccsu_b0_i16x4:
-      ID = Intrinsic::riscv_pmhaccsu_b0;
+    case RISCV::BI__builtin_riscv_pmhaccsu_h0_i32x2:
+      ID = Intrinsic::riscv_pmhaccsu_half_0;
+      break;
+    case RISCV::BI__builtin_riscv_pmhacc_b1_i16x2:
+    case RISCV::BI__builtin_riscv_pmhacc_b1_i16x4:
+    case RISCV::BI__builtin_riscv_pmhacc_h1_i32x2:
+      ID = Intrinsic::riscv_pmhacc_half_1;
       break;
     case RISCV::BI__builtin_riscv_pmhaccsu_b1_i16x2:
     case RISCV::BI__builtin_riscv_pmhaccsu_b1_i16x4:
-      ID = Intrinsic::riscv_pmhaccsu_b1;
-      break;
-    case RISCV::BI__builtin_riscv_pmhacc_h0_i32x2:
-      ID = Intrinsic::riscv_pmhacc_h0;
-      break;
-    case RISCV::BI__builtin_riscv_pmhacc_h1_i32x2:
-      ID = Intrinsic::riscv_pmhacc_h1;
-      break;
-    case RISCV::BI__builtin_riscv_pmhaccsu_h0_i32x2:
-      ID = Intrinsic::riscv_pmhaccsu_h0;
-      break;
     case RISCV::BI__builtin_riscv_pmhaccsu_h1_i32x2:
-      ID = Intrinsic::riscv_pmhaccsu_h1;
+      ID = Intrinsic::riscv_pmhaccsu_half_1;
       break;
     case RISCV::BI__builtin_riscv_psabs_i8x4:
     case RISCV::BI__builtin_riscv_psabs_i16x2:
@@ -1668,6 +1665,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pusati_u16x4:
     case RISCV::BI__builtin_riscv_pusati_u32x2:
       ID = Intrinsic::riscv_pusati;
+      break;
+    case RISCV::BI__builtin_riscv_sati_i32:
+    case RISCV::BI__builtin_riscv_sati_i64:
+      ID = Intrinsic::riscv_sati;
+      break;
+    case RISCV::BI__builtin_riscv_usati_u32:
+    case RISCV::BI__builtin_riscv_usati_u64:
+      ID = Intrinsic::riscv_usati;
       break;
     case RISCV::BI__builtin_riscv_mulh_i32:
       ID = Intrinsic::smulh;
@@ -1745,6 +1750,14 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   case RISCV::BI__builtin_riscv_mulqr_i32:
     ID = Intrinsic::riscv_mulqr_i32;
+    break;
+
+  // Scalar "Q-format" Multiply with Widening Accumulate
+  case RISCV::BI__builtin_riscv_mqwacc_i64:
+    ID = Intrinsic::riscv_mqwacc_i64;
+    break;
+  case RISCV::BI__builtin_riscv_mqrwacc_i64:
+    ID = Intrinsic::riscv_mqrwacc_i64;
     break;
 
   // Packed "Q-format" Multiply with Widening Accumulate
@@ -1888,6 +1901,160 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     }
 
     IntrinsicTypes = {ResultType, Ops[0]->getType()};
+    break;
+  }
+
+  // Packed Widening Multiply Accumulate
+  case RISCV::BI__builtin_riscv_pwmacc_i32x2:
+  case RISCV::BI__builtin_riscv_pwmaccu_u32x2:
+  case RISCV::BI__builtin_riscv_pwmaccsu_i32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pwmacc_i32x2:
+      ID = Intrinsic::riscv_pwmacc_i32x2;
+      break;
+    case RISCV::BI__builtin_riscv_pwmaccu_u32x2:
+      ID = Intrinsic::riscv_pwmaccu_u32x2;
+      break;
+    case RISCV::BI__builtin_riscv_pwmaccsu_i32x2:
+      ID = Intrinsic::riscv_pwmaccsu_i32x2;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
+    break;
+  }
+
+  // Packed Multiplication with Widening Horizontal Addition and Accumulate.
+  case RISCV::BI__builtin_riscv_pm2wadda_i64:
+  case RISCV::BI__builtin_riscv_pm2wadda_x_i64:
+  case RISCV::BI__builtin_riscv_pm2waddau_u64:
+  case RISCV::BI__builtin_riscv_pm2wsuba_i64:
+  case RISCV::BI__builtin_riscv_pm2wsuba_x_i64:
+  case RISCV::BI__builtin_riscv_pm2waddasu_i64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pm2wadda_i64:
+      ID = Intrinsic::riscv_pm2wadda;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wadda_x_i64:
+      ID = Intrinsic::riscv_pm2wadda_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2waddau_u64:
+      ID = Intrinsic::riscv_pm2waddau;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wsuba_i64:
+      ID = Intrinsic::riscv_pm2wsuba;
+      break;
+    case RISCV::BI__builtin_riscv_pm2wsuba_x_i64:
+      ID = Intrinsic::riscv_pm2wsuba_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2waddasu_i64:
+      ID = Intrinsic::riscv_pm2waddasu;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
+    break;
+  }
+
+  // Packed Multiplication with Horizontal Addition and Accumulate.
+  case RISCV::BI__builtin_riscv_pm2adda_i16x2:
+  case RISCV::BI__builtin_riscv_pm2adda_i16x4:
+  case RISCV::BI__builtin_riscv_pm2adda_i32x2:
+  case RISCV::BI__builtin_riscv_pm2adda_x_i16x2:
+  case RISCV::BI__builtin_riscv_pm2adda_x_i16x4:
+  case RISCV::BI__builtin_riscv_pm2adda_x_i32x2:
+  case RISCV::BI__builtin_riscv_pm2addau_u16x2:
+  case RISCV::BI__builtin_riscv_pm2addau_u16x4:
+  case RISCV::BI__builtin_riscv_pm2addau_u32x2:
+  case RISCV::BI__builtin_riscv_pmq2adda_i16x2:
+  case RISCV::BI__builtin_riscv_pmq2adda_i16x4:
+  case RISCV::BI__builtin_riscv_pmq2adda_i32x2:
+  case RISCV::BI__builtin_riscv_pmqr2adda_i16x2:
+  case RISCV::BI__builtin_riscv_pmqr2adda_i16x4:
+  case RISCV::BI__builtin_riscv_pmqr2adda_i32x2:
+  case RISCV::BI__builtin_riscv_pm2suba_i16x2:
+  case RISCV::BI__builtin_riscv_pm2suba_i16x4:
+  case RISCV::BI__builtin_riscv_pm2suba_i32x2:
+  case RISCV::BI__builtin_riscv_pm2suba_x_i16x2:
+  case RISCV::BI__builtin_riscv_pm2suba_x_i16x4:
+  case RISCV::BI__builtin_riscv_pm2suba_x_i32x2:
+  case RISCV::BI__builtin_riscv_pm2addasu_i16x2:
+  case RISCV::BI__builtin_riscv_pm2addasu_i16x4:
+  case RISCV::BI__builtin_riscv_pm2addasu_i32x2:
+  case RISCV::BI__builtin_riscv_pm4adda_i8x4:
+  case RISCV::BI__builtin_riscv_pm4adda_i8x8:
+  case RISCV::BI__builtin_riscv_pm4adda_i16x4:
+  case RISCV::BI__builtin_riscv_pm4addau_u8x4:
+  case RISCV::BI__builtin_riscv_pm4addau_u8x8:
+  case RISCV::BI__builtin_riscv_pm4addau_u16x4:
+  case RISCV::BI__builtin_riscv_pm4addasu_i8x4:
+  case RISCV::BI__builtin_riscv_pm4addasu_i8x8:
+  case RISCV::BI__builtin_riscv_pm4addasu_i16x4: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pm2adda_i16x2:
+    case RISCV::BI__builtin_riscv_pm2adda_i16x4:
+    case RISCV::BI__builtin_riscv_pm2adda_i32x2:
+      ID = Intrinsic::riscv_pm2adda;
+      break;
+    case RISCV::BI__builtin_riscv_pm2adda_x_i16x2:
+    case RISCV::BI__builtin_riscv_pm2adda_x_i16x4:
+    case RISCV::BI__builtin_riscv_pm2adda_x_i32x2:
+      ID = Intrinsic::riscv_pm2adda_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2addau_u16x2:
+    case RISCV::BI__builtin_riscv_pm2addau_u16x4:
+    case RISCV::BI__builtin_riscv_pm2addau_u32x2:
+      ID = Intrinsic::riscv_pm2addau;
+      break;
+    case RISCV::BI__builtin_riscv_pmq2adda_i16x2:
+    case RISCV::BI__builtin_riscv_pmq2adda_i16x4:
+    case RISCV::BI__builtin_riscv_pmq2adda_i32x2:
+      ID = Intrinsic::riscv_pmq2adda;
+      break;
+    case RISCV::BI__builtin_riscv_pmqr2adda_i16x2:
+    case RISCV::BI__builtin_riscv_pmqr2adda_i16x4:
+    case RISCV::BI__builtin_riscv_pmqr2adda_i32x2:
+      ID = Intrinsic::riscv_pmqr2adda;
+      break;
+    case RISCV::BI__builtin_riscv_pm2suba_i16x2:
+    case RISCV::BI__builtin_riscv_pm2suba_i16x4:
+    case RISCV::BI__builtin_riscv_pm2suba_i32x2:
+      ID = Intrinsic::riscv_pm2suba;
+      break;
+    case RISCV::BI__builtin_riscv_pm2suba_x_i16x2:
+    case RISCV::BI__builtin_riscv_pm2suba_x_i16x4:
+    case RISCV::BI__builtin_riscv_pm2suba_x_i32x2:
+      ID = Intrinsic::riscv_pm2suba_x;
+      break;
+    case RISCV::BI__builtin_riscv_pm2addasu_i16x2:
+    case RISCV::BI__builtin_riscv_pm2addasu_i16x4:
+    case RISCV::BI__builtin_riscv_pm2addasu_i32x2:
+      ID = Intrinsic::riscv_pm2addasu;
+      break;
+    case RISCV::BI__builtin_riscv_pm4adda_i8x4:
+    case RISCV::BI__builtin_riscv_pm4adda_i8x8:
+    case RISCV::BI__builtin_riscv_pm4adda_i16x4:
+      ID = Intrinsic::riscv_pm4adda;
+      break;
+    case RISCV::BI__builtin_riscv_pm4addau_u8x4:
+    case RISCV::BI__builtin_riscv_pm4addau_u8x8:
+    case RISCV::BI__builtin_riscv_pm4addau_u16x4:
+      ID = Intrinsic::riscv_pm4addau;
+      break;
+    case RISCV::BI__builtin_riscv_pm4addasu_i8x4:
+    case RISCV::BI__builtin_riscv_pm4addasu_i8x8:
+    case RISCV::BI__builtin_riscv_pm4addasu_i16x4:
+      ID = Intrinsic::riscv_pm4addasu;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType, Ops[1]->getType()};
     break;
   }
 
@@ -2067,31 +2234,23 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
     case RISCV::BI__builtin_riscv_pmulh_b0_i16x2:
     case RISCV::BI__builtin_riscv_pmulh_b0_i16x4:
-      ID = Intrinsic::riscv_pmulh_b0;
-      break;
-    case RISCV::BI__builtin_riscv_pmulh_b1_i16x2:
-    case RISCV::BI__builtin_riscv_pmulh_b1_i16x4:
-      ID = Intrinsic::riscv_pmulh_b1;
+    case RISCV::BI__builtin_riscv_pmulh_h0_i32x2:
+      ID = Intrinsic::riscv_pmulh_half_0;
       break;
     case RISCV::BI__builtin_riscv_pmulhsu_b0_i16x2:
     case RISCV::BI__builtin_riscv_pmulhsu_b0_i16x4:
-      ID = Intrinsic::riscv_pmulhsu_b0;
+    case RISCV::BI__builtin_riscv_pmulhsu_h0_i32x2:
+      ID = Intrinsic::riscv_pmulhsu_half_0;
+      break;
+    case RISCV::BI__builtin_riscv_pmulh_b1_i16x2:
+    case RISCV::BI__builtin_riscv_pmulh_b1_i16x4:
+    case RISCV::BI__builtin_riscv_pmulh_h1_i32x2:
+      ID = Intrinsic::riscv_pmulh_half_1;
       break;
     case RISCV::BI__builtin_riscv_pmulhsu_b1_i16x2:
     case RISCV::BI__builtin_riscv_pmulhsu_b1_i16x4:
-      ID = Intrinsic::riscv_pmulhsu_b1;
-      break;
-    case RISCV::BI__builtin_riscv_pmulh_h0_i32x2:
-      ID = Intrinsic::riscv_pmulh_h0;
-      break;
-    case RISCV::BI__builtin_riscv_pmulh_h1_i32x2:
-      ID = Intrinsic::riscv_pmulh_h1;
-      break;
-    case RISCV::BI__builtin_riscv_pmulhsu_h0_i32x2:
-      ID = Intrinsic::riscv_pmulhsu_h0;
-      break;
     case RISCV::BI__builtin_riscv_pmulhsu_h1_i32x2:
-      ID = Intrinsic::riscv_pmulhsu_h1;
+      ID = Intrinsic::riscv_pmulhsu_half_1;
       break;
     }
 

@@ -283,6 +283,11 @@ public:
     llvm_unreachable("Don't call countLeadingZeros() on negative values.");
   }
 
+  unsigned getActiveBits() const {
+    assert(isNumber());
+    return Bits - countLeadingZeros();
+  }
+
   Integral truncate(unsigned TruncBits) const {
     assert(TruncBits >= 1);
     if (TruncBits >= Bits)

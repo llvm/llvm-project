@@ -20,6 +20,8 @@ define i64 @f1(ptr %src, i64 %b) {
 ; CHECK: slgfi [[RO]], 1
 ; CHECK: lgr [[RO]], %r3
 ; CHECK: jle [[L1]]
+; CHECK: lgr [[RO]], [[RB]]
+; CHECK: j [[L1]]
 ; CHECK: [[L4]]:
 ; CHECK: br %r14
   %res = atomicrmw udec_wrap ptr %src, i64 %b seq_cst

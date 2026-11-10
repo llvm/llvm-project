@@ -279,3 +279,21 @@ declare void @llvm.pseudoprobe(i64, i64, i32, i64)
   ASSERT_TRUE(IsReadOnlyLoop(F3, NonDerefLoads));
   ASSERT_TRUE(NonDerefLoads.empty());
 }
+
+// Constant indices narrower than the index type are sign-extended.
+TEST(LoadsTest, DecomposeLinearExpressionNarrowConstantIndex) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define ptr @f(ptr %p) {
+  %g = getelementptr i32, ptr %p, i32 -1
+  ret ptr %g
+}
+)IR");
+  auto *F = cast<Function>(M->getNamedValue("f"));
+  auto *GEP = cast<GetElementPtrInst>(&F->front().front());
+  LinearExpression Expr = decomposeLinearExpression(M->getDataLayout(), GEP);
+  EXPECT_EQ(Expr.BasePtr, F->getArg(0));
+  EXPECT_EQ(Expr.Index, nullptr);
+  EXPECT_EQ(Expr.Offset.getBitWidth(), 64u);
+  EXPECT_EQ(Expr.Offset.getSExtValue(), -4);
+}

@@ -30,7 +30,7 @@ body: |
     liveins: $edi
 
     %0:gr32 = COPY $edi
-    %1:gr32 = COPY killed %0
+    %1:gr32 = COPY %0
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
     $edi = COPY %1
 
@@ -66,9 +66,9 @@ body: |
   ; CHECK-NEXT:   movq $.Lpre_g, %{{.*}}
   ; CHECK-NEXT:   movq $.Lpost_h, %{{.*}}
 
-    %6:gr64 = ADD64rr killed %2, killed %3, implicit-def $eflags
-    %7:gr64 = ADD64rr killed %4, killed %5, implicit-def $eflags
-    %8:gr64 = ADD64rr killed %6, killed %7, implicit-def $eflags
+    %6:gr64 = ADD64rr %2, %3, implicit-def $eflags
+    %7:gr64 = ADD64rr %4, %5, implicit-def $eflags
+    %8:gr64 = ADD64rr %6, %7, implicit-def $eflags
     $rax = COPY %8
     RET64 implicit $rax
 

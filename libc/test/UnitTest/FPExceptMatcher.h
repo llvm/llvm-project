@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPEXCEPTMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPEXCEPTMATCHER_H
 
+#include "src/__support/CPP/functional.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
-#include "test/UnitTest/TestLogger.h"
 
 #if LIBC_TEST_HAS_MATCHERS()
 
@@ -24,30 +24,15 @@ class FPExceptMatcher : public Matcher<bool> {
   bool exceptionRaised;
 
 public:
-  class FunctionCaller {
-  public:
-    virtual ~FunctionCaller() {}
-    virtual void call() = 0;
-  };
+  explicit FPExceptMatcher(cpp::function_ref<void(void)> func);
 
-  template <typename Func> static FunctionCaller *getFunctionCaller(Func func) {
-    struct Callable : public FunctionCaller {
-      Func f;
-      explicit Callable(Func theFunc) : f(theFunc) {}
-      void call() override { f(); }
-    };
-
-    return new Callable(func);
-  }
-
-  // Takes ownership of func.
-  explicit FPExceptMatcher(FunctionCaller *func);
-
-  bool match([[maybe_unused]] bool unused) { return exceptionRaised; }
-
-  void explainError() override {
-    tlog << "A floating point exception should have been raised but it "
-         << "wasn't\n";
+  bool MatchAndExplain([[maybe_unused]] bool unused,
+                       MatchResultListener *listener) const {
+    if (exceptionRaised)
+      return true;
+    *listener << "A floating point exception should have been raised but it "
+              << "wasn't\n";
+    return false;
   }
 };
 
@@ -55,10 +40,7 @@ public:
 } // namespace LIBC_NAMESPACE_DECL
 
 #define ASSERT_RAISES_FP_EXCEPT(func)                                          \
-  ASSERT_THAT(                                                                 \
-      true,                                                                    \
-      LIBC_NAMESPACE::testing::FPExceptMatcher(                                \
-          LIBC_NAMESPACE::testing::FPExceptMatcher::getFunctionCaller(func)))
+  ASSERT_THAT(true, LIBC_NAMESPACE::testing::FPExceptMatcher(func))
 
 #else // !LIBC_TEST_HAS_MATCHERS()
 

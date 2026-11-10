@@ -29,6 +29,7 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRAttrs.h"];
   let mnemonic = attrMnemonic;
   // Setting this to 0 will make the CXXABILowering always consider this
   // attribute 'legal', so that it won't require any transformation. This should
@@ -171,11 +172,14 @@ def CIR_ArgPassingKind : CIR_I32Enum<
 ]>;
 
 def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
-    // record_align is consumed as an llvm::Align, whose constructor asserts a
-    // non-zero power of two.
+    // Both alignments are consumed as llvm::Align, whose constructor asserts
+    // a non-zero power of two.
     PredAttrTrait<"record_align must be a non-zero power of two",
                   CPred<"$record_align != 0 && "
-                        "::llvm::isPowerOf2_64($record_align)">>
+                        "::llvm::isPowerOf2_64($record_align)">>,
+    PredAttrTrait<"unadjusted_align must be a non-zero power of two",
+                  CPred<"$unadjusted_align != 0 && "
+                        "::llvm::isPowerOf2_64($unadjusted_align)">>
   ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
@@ -190,6 +194,13 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `record_align_in_bytes`: from `ASTRecordLayout::getAlignment()`.
       Needed because CIR's DataLayout cannot account for
       `__attribute__((aligned(N)))`.
+    - `unadjusted_align`: the alignment the members give the record before an
+      alignment attribute on the record raises it.  AAPCS64 sizes argument slots
+      using this alignment.  This field is not printed when it is equal to
+      `record_align`.
+    - `transparent_union`: whether the record is a union with
+      `__attribute__((transparent_union))`, which is passed as its first
+      member.  False, the default, is omitted from the printed form.
 
     Example:
     ```
@@ -211,16 +222,23 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
   let parameters = (ins
     EnumParameter<CIR_ArgPassingKind>:$arg_passing_kind,
     "bool":$has_trivial_dtor,
-    "uint64_t":$record_align
+    "uint64_t":$record_align,
+    "uint64_t":$unadjusted_align,
+    DefaultValuedParameter<"bool", "false">:$transparent_union
   );
 
-  let assemblyFormat = [{
-    `<`
-      `arg_passing_kind` `=` $arg_passing_kind `,`
-      `has_trivial_dtor` `=` $has_trivial_dtor `,`
-      `record_align` `=` $record_align
-    `>`
-  }];
+  let builders = [
+    AttrBuilder<(ins "cir::ArgPassingKind":$arg_passing_kind,
+                     "bool":$has_trivial_dtor,
+                     "uint64_t":$record_align), [{
+      return $_get($_ctxt, arg_passing_kind, has_trivial_dtor, record_align,
+                   /*unadjusted_align=*/record_align,
+                   /*transparent_union=*/false);
+    }]>
+  ];
+
+  // Printing and parsing available in CIRAttrs.cpp.
+  let hasCustomAssemblyFormat = 1;
 
   let canHaveIllegalCXXABIType = 0;
 }
@@ -537,9 +555,9 @@ def CIR_ConstRecordAttr : CIR_ValueLikeAttr<"ConstRecord", "const_record"> {
 
     Example:
     ```
-    cir.global external @rgb2 = #cir.const_record<{0 : i8,
-                                                   5 : i64, #cir.null : !cir.ptr<i8>
-                                                  }> : !cir.record<"", i8, i64, !cir.ptr<i8>>
+    cir.global external @rgb2 = #cir.const_record<{#cir.int<0> : !s8i,
+        #cir.int<5> : !s64i, #cir.ptr<null> : !cir.ptr<!s8i>
+      }> : !cir.struct<{data !s8i, data !s64i, data !cir.ptr<!s8i>}>
     ```
   }];
 
@@ -1002,7 +1020,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     - `must_progress`: the loop must eventually terminate or have an
       observable side effect (the forward-progress guarantee of C++11 and
       later, and C11 loops with a non-constant condition).
-    - `vectorize_enable`: force vectorization on.
+    - `vectorize_enable`: force vectorization on/off.
     - `vectorize_width`: the vectorization factor. A width of 1 disables
       vectorization.
     - `vectorize_scalable`: whether the vectorization factor is
@@ -1025,14 +1043,14 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
     ```
     #cir.loop_hint<>
     #cir.loop_hint< must_progress>
-    #cir.loop_hint< must_progress vectorize_enable interleave_count = 2
+    #cir.loop_hint< must_progress vectorize_enable = true interleave_count = 2
                     unroll_count = 4>
     ```
   }];
 
   let parameters = (ins
     CIR_FlagParam<"must_progress">:$must_progress,
-    CIR_FlagParam<"vectorize_enable">:$vectorize_enable,
+    OptionalParameter<"mlir::BoolAttr">:$vectorize_enable,
     OptionalParameter<"uint32_t">:$vectorize_width,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_scalable,
     OptionalParameter<"mlir::BoolAttr">:$vectorize_predicate,
@@ -1051,7 +1069,7 @@ def CIR_LoopHintAttr : CIR_Attr<"LoopHint", "loop_hint"> {
   let assemblyFormat = [{
     `<`
       (` ` $must_progress^)?
-      (` ` $vectorize_enable^)?
+      (` ` `vectorize_enable` `=` $vectorize_enable^)?
       (` ` `vectorize_width` `=` $vectorize_width^)?
       (` ` `vectorize_scalable` `=` $vectorize_scalable^)?
       (` ` `vectorize_predicate` `=` $vectorize_predicate^)?
@@ -1122,6 +1140,22 @@ def CIR_FastMathFlags : CIR_I32BitEnum<
 def CIR_FastMathFlagsAttr : CIR_EnumAttr<CIR_FastMathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
+// OverflowFlags
+//===----------------------------------------------------------------------===//
+
+// `nuw` is listed first so the flags print in LLVM IR order, `nuw nsw`.
+def CIR_OFNone : I32BitEnumCaseNone<"None", "none">;
+def CIR_OFNoSignedWrap : I32BitEnumCaseBit<"NoSignedWrap", 0, "nsw">;
+def CIR_OFNoUnsignedWrap : I32BitEnumCaseBit<"NoUnsignedWrap", 1, "nuw">;
+
+def CIR_OverflowFlags : CIR_I32BitEnum<
+    "OverflowFlags", "integer overflow flags", [
+  CIR_OFNone, CIR_OFNoUnsignedWrap, CIR_OFNoSignedWrap
+]> {
+  let separator = " ";
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -1149,13 +1183,13 @@ def CIR_GlobalViewAttr : CIR_ValueLikeAttr<"GlobalView", "global_view"> {
     Example:
 
     ```
-      cir.global external @s = @".str2": !cir.ptr<i8>
-      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s = @".str2": !cir.ptr<!s8i>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<!s8i>
       cir.global external @s_addr = #cir.global_view<@s> : !s64i
 
-      cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]
-                                                   : !cir.array<i8 x 3>>
-      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
+      cir.global external @rgb = #cir.const_array<[#cir.int<0> : !s8i,
+          #cir.int<-23> : !s8i, #cir.int<33> : !s8i]> : !cir.array<!s8i x 3>
+      cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<!s8i>
     ```
 
     Note, that unlike LLVM IR's gep instruction, CIR doesn't add the leading
@@ -1567,10 +1601,14 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 // VisibilityKind
 //===----------------------------------------------------------------------===//
 
+def CIR_VisibilityDefault : I32EnumCase<"Default", 0, "default">;
+def CIR_VisibilityHidden : I32EnumCase<"Hidden", 1, "hidden">;
+def CIR_VisibilityProtected : I32EnumCase<"Protected", 2, "protected">;
+
 def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
-  I32EnumCase<"Default", 0, "default">,
-  I32EnumCase<"Hidden", 1, "hidden">,
-  I32EnumCase<"Protected", 2, "protected">
+  CIR_VisibilityDefault,
+  CIR_VisibilityHidden,
+  CIR_VisibilityProtected
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -1641,6 +1679,28 @@ def CIR_FramePointerKindAttr
     }
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MaxWorkGroupSizeAttr
+    : CIR_Attr<"MaxWorkGroupSize", "max_work_group_size"> {
+  let summary = "Maximum kernel work-group size";
+  let description = [{
+    Stores the maximum work-group size of a kernel, emitted to LLVM IR as
+    `max_work_group_size` function metadata.
+  }];
+
+  let parameters = (ins
+    "uint32_t":$x,
+    "uint32_t":$y,
+    "uint32_t":$z
+  );
+
+  let assemblyFormat = "`<` $x `,` $y `,` $z `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1852,6 +1912,36 @@ def CIR_FuncInfoAttr : AnyAttrOf<[
   CIR_FuncIdentityAttr
 ], "function information attribute">;
 
+
+//===----------------------------------------------------------------------===//
+// CoroutineKindAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroutineKind : CIR_I32Enum<"CoroutineKind", "coroutine kind", [
+  I32EnumCase<"Coroutine", 0, "coroutine">,
+  I32EnumCase<"FlattenedCoroutine", 1, "flattened_coroutine">
+]>;
+
+def CIR_CoroutineKindAttr : CIR_EnumAttr<CIR_CoroutineKind, "coroutine_kind"> {
+  let description = [{
+    Marks a `cir.func` as a coroutine and records which form its body
+    is in. A function without this attribute is not a coroutine.
+
+    - `coroutine`: the body still holds the structured `cir.coroutine` op
+      (and its `cir.await` / `cir.co_return` children), as emitted by CIRGen.
+    - `flattened_coroutine`: FlattenCFG has inlined those regions into plain
+      blocks. The function no longer contains a `cir.coroutine` op, but is
+      still a coroutine for the purposes of LLVM lowering.
+
+    On `cir.func` it is printed as a bare keyword:
+
+    ```mlir
+    cir.func coroutine @f() { ... }
+    cir.func flattened_coroutine @f() { ... }
+    ```
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // BitFieldDeclAttr
 //===----------------------------------------------------------------------===//
@@ -2062,7 +2152,7 @@ def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
 
     ```
     cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE
-      : !cir.ptr<i32>
+      : !cir.ptr<!s32i>
 
     !rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>,
       !cir.ptr<!u8i>}>
@@ -2619,34 +2709,53 @@ def CIR_DynamicInitInfoAttr
 }
 
 //===----------------------------------------------------------------------===//
-// LoweringLangOptionsAttr
+// LoweringOptionsAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_LoweringLangOptionsAttr
-    : CIR_Attr<"LoweringLangOptions", "lowering_lang_options"> {
-  let summary = "LangOptions facts that post-CIRGen lowering consumes";
+def CIR_LoweringOptionsAttr
+    : CIR_Attr<"LoweringOptions", "lowering_options"> {
+  let summary =
+    "LangOptions and CodeGenOptions facts that post-CIRGen lowering consumes";
   let description = [{
-    Serializes the subset of `clang::LangOptions` that post-CIRGen lowering
-    reads, as plain data, so a reloaded `.cir` module lowers the same way it
-    was compiled without a live `clang::LangOptions`. Only LangOpts flags with
-    no triple/module representation live here; target-derived facts (size_t
+    Serializes the subset of `clang::LangOptions` and `clang::CodeGenOptions`
+    that post-CIRGen lowering reads, as plain data, so a reloaded `.cir`
+    module lowers the same way it was compiled without a live
+    `clang::LangOptions` or `clang::CodeGenOptions`. Only flags with no
+    triple/module representation live here; target-derived facts (size_t
     width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
 
-    Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
+    The following fields come from `LangOptions`.  Each bool field mirrors the
+    like-named `LangOptions` member: `exceptions`,
     `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
     `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
     `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
     `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
     `ClangABI` gains an enumerator every Clang release (see
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain.
+    single toolchain. `no_trapping_math` is true when
+    `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
+
+    The following fields come from `CodeGenOptions`.
+    `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
+    which calling convention lowering reads when it decides whether an
+    argument is `noundef`. `ssp_buffer_size` mirrors
+    `CodeGenOptions::SSPBufferSize`.
+
+    `LowerToLLVM` turns `no_trapping_math` and `ssp_buffer_size` into the
+    `"no-trapping-math"` and `"stack-protector-buffer-size"` LLVM function
+    attributes of every function not marked `runtime_func`. A `strictfp`
+    function does not get `"no-trapping-math"`, since a pragma such as
+    `float_control(except, on)` can make its FP operations observe exceptions
+    even when the TU-wide default ignores them.
 
     Example:
     ```
-    module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+    module attributes {cir.lowering_options = #cir.lowering_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
-      cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
-      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+      cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
+      openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
+      long_double_size = 0, enable_noundef_attrs = false,
+      no_trapping_math = true, ssp_buffer_size = 8>} { }
     ```
   }];
 
@@ -2660,13 +2769,18 @@ def CIR_LoweringLangOptionsAttr
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
-    "int32_t":$clang_abi_compat
+    "int32_t":$clang_abi_compat,
+    "int32_t":$long_double_size,
+    "bool":$enable_noundef_attrs,
+    "bool":$no_trapping_math,
+    "uint32_t":$ssp_buffer_size
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat) `>`
+               $clang_abi_compat, $long_double_size, $enable_noundef_attrs,
+               $no_trapping_math, $ssp_buffer_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

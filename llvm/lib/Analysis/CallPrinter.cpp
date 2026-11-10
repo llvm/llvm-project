@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CallPrinter.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -21,7 +22,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/GraphWriter.h"
 
@@ -31,29 +31,11 @@ namespace llvm {
 template <class GraphType> struct GraphTraits;
 } // namespace llvm
 
-// This option shows static (relative) call counts.
-// FIXME:
-// Need to show real counts when profile data is available
-static cl::opt<bool> ShowHeatColors("callgraph-heat-colors", cl::init(false),
-                                    cl::Hidden,
-                                    cl::desc("Show heat colors in call-graph"));
-
-static cl::opt<bool>
-    ShowEdgeWeight("callgraph-show-weights", cl::init(false), cl::Hidden,
-                       cl::desc("Show edges labeled with weights"));
-
-static cl::opt<bool>
-    CallMultiGraph("callgraph-multigraph", cl::init(false), cl::Hidden,
-            cl::desc("Show call-multigraph (do not remove parallel edges)"));
-
-static cl::opt<std::string> CallGraphDotFilenamePrefix(
-    "callgraph-dot-filename-prefix", cl::Hidden,
-    cl::desc("The prefix used for the CallGraph dot file names."));
-
 namespace llvm {
 
 class CallGraphDOTInfo {
 private:
+  const AnalysisOptions &Opts;
   Module *M;
   CallGraph *CG;
   DenseMap<const Function *, uint64_t> Freq;
@@ -64,7 +46,7 @@ public:
 
   CallGraphDOTInfo(Module *M, CallGraph *CG,
                    function_ref<BlockFrequencyInfo *(Function &)> LookupBFI)
-      : M(M), CG(CG), LookupBFI(LookupBFI) {
+      : Opts(getAnalysisOptions(*M)), M(M), CG(CG), LookupBFI(LookupBFI) {
     MaxFreq = 0;
 
     for (Function &F : M->getFunctionList()) {
@@ -79,9 +61,11 @@ public:
         MaxFreq = localSumFreq;
       Freq[&F] = localSumFreq;
     }
-    if (!CallMultiGraph)
+    if (!Opts.callgraph_multigraph)
       removeParallelEdges();
   }
+
+  const AnalysisOptions &getOpts() const { return Opts; }
 
   Module *getModule() const { return M; }
 
@@ -150,7 +134,7 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
 
   static bool isNodeHidden(const CallGraphNode *Node,
                            const CallGraphDOTInfo *CGInfo) {
-    if (CallMultiGraph || Node->getFunction())
+    if (CGInfo->getOpts().callgraph_multigraph || Node->getFunction())
       return false;
     return true;
   }
@@ -177,7 +161,7 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
 
   std::string getEdgeAttributes(const CallGraphNode *Node, nodes_iterator I,
                                 CallGraphDOTInfo *CGInfo) {
-    if (!ShowEdgeWeight)
+    if (!CGInfo->getOpts().callgraph_show_weights)
       return "";
 
     Function *Caller = Node->getFunction();
@@ -202,7 +186,7 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
     if (F == nullptr)
       return "";
     std::string attrs;
-    if (ShowHeatColors) {
+    if (CGInfo->getOpts().callgraph_heat_colors) {
       uint64_t freq = CGInfo->getFreq(F);
       std::string color = getHeatColor(freq, CGInfo->getMaxFreq());
       std::string edgeColor = (freq <= (CGInfo->getMaxFreq() / 2))
@@ -220,9 +204,10 @@ struct DOTGraphTraits<CallGraphDOTInfo *> : public DefaultDOTGraphTraits {
 namespace {
 void doCallGraphDOTPrinting(
     Module &M, function_ref<BlockFrequencyInfo *(Function &)> LookupBFI) {
+  StringRef Prefix = getAnalysisOptions(M).callgraph_dot_filename_prefix;
   std::string Filename;
-  if (!CallGraphDotFilenamePrefix.empty())
-    Filename = (CallGraphDotFilenamePrefix + ".callgraph.dot");
+  if (!Prefix.empty())
+    Filename = (Prefix + ".callgraph.dot").str();
   else
     Filename = (std::string(M.getModuleIdentifier()) + ".callgraph.dot");
   errs() << "Writing '" << Filename << "'...";

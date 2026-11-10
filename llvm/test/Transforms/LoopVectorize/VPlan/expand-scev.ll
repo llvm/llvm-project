@@ -264,8 +264,8 @@ define void @scev_ptrtoint_expanded(ptr %start, ptr %end) {
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %end2 = ptrtoaddr ptr %end to i64
 ; CHECK-NEXT:    IR   %start1 = ptrtoaddr ptr %start to i64
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub ir<%end2>, ir<%start1>
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = sub ir<%end2>, ir<%start1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -360,10 +360,9 @@ define void @addrec_outer_iv_narrow(ptr %dst) {
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
-; CHECK-NEXT:    IR   %indvar = phi i64 [ %indvar.next, %outer.latch ], [ 0, %entry ]
 ; CHECK-NEXT:    IR   %outer.iv = phi i32 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
-; CHECK-NEXT:    IR   %0 = add i64 %indvar, 5
 ; CHECK-NEXT:    IR   %ext = zext i32 %outer.iv to i64
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nuw ir<5>, ir<%ext>
 ; CHECK-NEXT:  Successor(s): vector.ph
 ;
 entry:
@@ -400,11 +399,11 @@ define void @addrec_non_unit_outer_stride(ptr %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<outer>:
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
-; CHECK-NEXT:    IR   %0 = add i64 %outer.iv, 6
 ; CHECK-NEXT:    IR   %outer.iv.next = add nuw i64 %outer.iv, 2
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nuw ir<6>, ir<%outer.iv>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = udiv vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add nuw nsw vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -440,9 +439,10 @@ define void @addrec_over_grandparent_loop(ptr %dst) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<middle>:
 ; CHECK-NEXT:    IR   %mid = phi i64 [ 0, %outermost ], [ %mid.next, %mid.latch ]
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nuw ir<4>, ir<%outer.iv>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = udiv vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add nuw nsw vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -485,9 +485,10 @@ define void @addrec_phi_not_in_inner_preheader(ptr %dst) {
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<inner.ph>:
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = udiv ir<%0>, ir<3>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nuw ir<4>, ir<%outer.iv>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = udiv vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add nuw nsw vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -528,11 +529,10 @@ define void @addrec_nuw_flags(ptr %dst) {
 ; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
 ; CHECK-NEXT:    IR   %m = mul nuw i64 %outer.iv, 4
 ; CHECK-NEXT:    IR   %bound = add nuw i64 %m, 5
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw nsw ir<%outer.iv>, ir<2>
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw ir<4>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = udiv vp<[[VP3]]>, ir<3>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = add nuw nsw vp<[[VP4]]>, ir<1>
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP5]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = add nuw ir<4>, ir<%m>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = udiv vp<[[VP2]]>, ir<3>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = add nuw nsw vp<[[VP3]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -720,6 +720,81 @@ outer.latch:
   %outer.iv.next = add nuw i64 %outer.iv, 1
   %ec.outer = icmp ult i64 %outer.iv.next, 100
   br i1 %ec.outer, label %outer, label %exit
+
+exit:
+  ret void
+}
+
+; The outer trip count bounds %i to [0, 100), so {0,+,3}<%outer> can be
+; expanded with a nuw nsw multiply.
+define void @addrec_zero_start_mul_nowrap(ptr %dst) {
+; CHECK-LABEL: VPlan for loop in 'addrec_zero_start_mul_nowrap'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<inner.preheader>:
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = mul nuw nsw ir<%i>, ir<3>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %end = shl nuw nsw i64 %i, 2
+  %guard = icmp eq i64 %i, 0
+  br i1 %guard, label %outer.latch, label %inner
+
+inner:
+  %j = phi i64 [ %i, %outer ], [ %j.next, %inner ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %j
+  store i8 0, ptr %gep
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %end
+  br i1 %ec, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %outer.ec = icmp eq i64 %i.next, 100
+  br i1 %outer.ec, label %exit, label %outer
+
+exit:
+  ret void
+}
+
+; Same as above, but the outer trip count is unknown, so the multiply may wrap.
+define void @addrec_zero_start_mul_may_wrap(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'addrec_zero_start_mul_may_wrap'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<inner.preheader>:
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = mul ir<%i>, ir<3>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  br label %outer
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %end = shl nuw nsw i64 %i, 2
+  %guard = icmp eq i64 %i, 0
+  br i1 %guard, label %outer.latch, label %inner
+
+inner:
+  %j = phi i64 [ %i, %outer ], [ %j.next, %inner ]
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %j
+  store i8 0, ptr %gep
+  %j.next = add nuw nsw i64 %j, 1
+  %ec = icmp eq i64 %j.next, %end
+  br i1 %ec, label %outer.latch, label %inner
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %outer.ec = icmp eq i64 %i.next, %n
+  br i1 %outer.ec, label %exit, label %outer
 
 exit:
   ret void

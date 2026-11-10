@@ -24,8 +24,6 @@
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
-; CHECK-NEXT:   experimental-rva23p1s64          - RISC-V experimental-rva23p1s64 profile.
-; CHECK-NEXT:   experimental-rvb23p1s64          - RISC-V experimental-rvb23p1s64 profile.
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
 ; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
@@ -69,6 +67,7 @@
 ; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
+; CHECK-NEXT:   experimental-zyhybrid            - 'Zyhybrid' (Hybrid Extension for RVI Compatibility).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.
@@ -154,8 +153,10 @@
 ; CHECK-NEXT:   rva20u64                         - RISC-V rva20u64 profile.
 ; CHECK-NEXT:   rva22s64                         - RISC-V rva22s64 profile.
 ; CHECK-NEXT:   rva22u64                         - RISC-V rva22u64 profile.
+; CHECK-NEXT:   rva23p1s64                       - RISC-V rva23p1s64 profile.
 ; CHECK-NEXT:   rva23s64                         - RISC-V rva23s64 profile.
 ; CHECK-NEXT:   rva23u64                         - RISC-V rva23u64 profile.
+; CHECK-NEXT:   rvb23p1s64                       - RISC-V rvb23p1s64 profile.
 ; CHECK-NEXT:   rvb23s64                         - RISC-V rvb23s64 profile.
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.

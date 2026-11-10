@@ -57,10 +57,9 @@ define <16 x i16> @should_not_be_optimized_zext_load(ptr %ptr) {
 define <4 x i64> @xvldrepl_d_unaligned_offset(ptr %ptr) {
 ; LA32-LABEL: xvldrepl_d_unaligned_offset:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 4
-; LA32-NEXT:    ld.w $a0, $a0, 8
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a1, $a0, 8
+; LA32-NEXT:    fld.s $fa0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    ret
 ;
@@ -150,10 +149,9 @@ define <8 x i32> @xvldrepl_w_offset(ptr %ptr) {
 define <4 x i64> @xvldrepl_d(ptr %ptr) {
 ; LA32-LABEL: xvldrepl_d:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a1, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    ret
 ;
@@ -170,10 +168,9 @@ define <4 x i64> @xvldrepl_d(ptr %ptr) {
 define <4 x i64> @xvldrepl_d_offset(ptr %ptr) {
 ; LA32-LABEL: xvldrepl_d_offset:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 264
-; LA32-NEXT:    ld.w $a0, $a0, 268
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a1, $a0, 268
+; LA32-NEXT:    fld.s $fa0, $a0, 264
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
 ; LA32-NEXT:    xvreplve0.d $xr0, $xr0
 ; LA32-NEXT:    ret
 ;

@@ -71,6 +71,7 @@
 #include <cstring>
 #include <map>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -217,9 +218,9 @@ Module::Module(const ModuleSpec &module_spec)
 
   // Copy the object name over
   if (!matching_module_spec.GetObjectName().empty())
-    m_object_name = ConstString(matching_module_spec.GetObjectName());
+    m_object_name = matching_module_spec.GetObjectName();
   else if (!module_spec.GetObjectName().empty())
-    m_object_name = ConstString(module_spec.GetObjectName());
+    m_object_name = module_spec.GetObjectName();
 
   // Always trust the object offset (file offset) and object modification time
   // (for mod time in a BSD static archive) of from the matching module
@@ -229,11 +230,11 @@ Module::Module(const ModuleSpec &module_spec)
 }
 
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
-               ConstString object_name, lldb::offset_t object_offset,
+               std::string object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
     : UserID(g_unique_id++),
       m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
-      m_arch(arch), m_file(file_spec), m_object_name(object_name),
+      m_arch(arch), m_file(file_spec), m_object_name(std::move(object_name)),
       m_object_offset(object_offset), m_object_mod_time(object_mod_time),
       m_unwind_table(*this), m_file_has_changed(false),
       m_first_file_changed_log(false) {
@@ -705,9 +706,24 @@ std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
   for (LanguageType lang_type : lang_types) {
     Module::LookupInfo info(name, lookup_name_override, name_type_mask,
                             lang_type);
+    // The language of a lookup only matters for matching names that aren't
+    // full names, so a lookup of full names that only differs from an earlier
+    // one in its language would find the same functions again.
+    if (info.m_name_type_mask & eFunctionNameTypeFull &&
+        llvm::any_of(infos, [&info](const LookupInfo &other) {
+          return info.EqualsIgnoringLanguage(other);
+        }))
+      continue;
     infos.push_back(info);
   }
   return infos;
+}
+
+bool Module::LookupInfo::EqualsIgnoringLanguage(const LookupInfo &other) const {
+  return std::tie(m_name, m_lookup_name, m_name_type_mask,
+                  m_match_name_after_lookup) ==
+         std::tie(other.m_name, other.m_lookup_name, other.m_name_type_mask,
+                  other.m_match_name_after_lookup);
 }
 
 bool Module::LookupInfo::NameMatchesLookupInfo(
@@ -1006,21 +1022,21 @@ Symtab *Module::GetSymtab(bool can_create) {
 }
 
 void Module::SetFileSpecAndObjectName(const FileSpec &file,
-                                      ConstString object_name) {
+                                      std::string object_name) {
   // Container objects whose paths do not specify a file directly can call this
   // function to correct the file and object names.
   m_file = file;
   m_mod_time = FileSystem::Instance().GetModificationTime(file);
-  m_object_name = object_name;
+  m_object_name = std::move(object_name);
 }
 
 const ArchSpec &Module::GetArchitecture() const { return m_arch; }
 
 std::string Module::GetSpecificationDescription() const {
   std::string spec(GetFileSpec().GetPath());
-  if (m_object_name) {
+  if (!m_object_name.empty()) {
     spec += '(';
-    spec += m_object_name.GetCString();
+    spec += m_object_name;
     spec += ')';
   }
   if (m_memory_module_addr.has_value()) {
@@ -1048,9 +1064,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
       s << path;
   }
 
-  const char *object_name = m_object_name.GetCString();
-  if (object_name)
-    s << llvm::formatv("({0})", object_name);
+  if (!m_object_name.empty())
+    s << llvm::formatv("({0})", m_object_name);
   if (m_memory_module_addr.has_value())
     s << llvm::formatv("({0})", m_memory_module_addr.value());
 }
@@ -1174,7 +1189,7 @@ void Module::Dump(Stream *s) {
   s->IndentLess();
 }
 
-ConstString Module::GetObjectName() const { return m_object_name; }
+llvm::StringRef Module::GetObjectName() const { return m_object_name; }
 
 ObjectFile *Module::GetObjectFile() {
   if (!m_did_load_objfile.load()) {
@@ -1222,12 +1237,16 @@ SectionList *Module::GetSectionList() {
   // Guard the lazy build with m_sections_mutex rather than m_mutex:
   // Module::PreloadSymbols holds m_mutex across the parallel DWARF index, whose
   // worker threads re-enter GetSectionList, so taking m_mutex here deadlocks.
-  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
-  if (!m_sections_up) {
-    if (ObjectFile *obj_file = GetObjectFile())
-      obj_file->CreateSections(*GetUnifiedSectionList());
+  {
+    std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+    if (m_sections_up)
+      return m_sections_up.get();
   }
-  return m_sections_up.get();
+  ObjectFile *obj_file = GetObjectFile();
+  if (obj_file)
+    obj_file->GetSectionList();
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  return obj_file ? GetUnifiedSectionList() : m_sections_up.get();
 }
 
 LockedPtr<ObjectFile> Module::GetObjectFileLocked() {
@@ -1507,7 +1526,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) {
 
 void Module::AddPrefixMapSearchDir(FileSpec dir) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_prefix_map_search_dirs.insert(ConstString(dir.GetPath()));
+  m_prefix_map_search_dirs.insert(dir.GetPath());
 }
 
 void Module::LoadPrefixMapsIfNeeded() {
@@ -1519,11 +1538,10 @@ void Module::LoadPrefixMapsIfNeeded() {
   llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
   // Track visited directories so two starting paths that share ancestors
   // don't redundantly walk the same directory.
-  llvm::DenseSet<ConstString> searched;
-  for (ConstString start_cs : m_prefix_map_search_dirs) {
-    for (FileSpec current(start_cs.GetStringRef());;) {
-      ConstString directory_cs(current.GetPath());
-      if (!searched.insert(directory_cs).second)
+  llvm::StringSet<> searched;
+  for (const auto &start : m_prefix_map_search_dirs) {
+    for (FileSpec current(start.getKey());;) {
+      if (!searched.insert(current.GetPath()).second)
         break;
       FileSpec map_file(current);
       map_file.AppendPathComponent("compilation-prefix-map.json");
@@ -1643,7 +1661,7 @@ uint32_t Module::Hash() {
   std::string identifier;
   llvm::raw_string_ostream id_strm(identifier);
   id_strm << m_arch.GetTriple().str() << '-' << m_file.GetPath();
-  if (m_object_name)
+  if (!m_object_name.empty())
     id_strm << '(' << m_object_name << ')';
   if (m_object_offset > 0)
     id_strm << m_object_offset;
@@ -1657,7 +1675,7 @@ std::string Module::GetCacheKey() {
   std::string key;
   llvm::raw_string_ostream strm(key);
   strm << m_arch.GetTriple().str() << '-' << m_file.GetFilename();
-  if (m_object_name)
+  if (!m_object_name.empty())
     strm << '(' << m_object_name << ')';
   strm << '-' << llvm::format_hex(Hash(), 10);
   return key;

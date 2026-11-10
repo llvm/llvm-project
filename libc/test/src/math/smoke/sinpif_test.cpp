@@ -31,6 +31,11 @@ TEST_F(LlvmLibcSinpifTest, SpecialNumbers) {
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(0x1.1abe4p-130f,
+                              LIBC_NAMESPACE::sinpif(0x1.68p-132f),
+                              FE_UNDERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
 }
 
 TEST_F(LlvmLibcSinpifTest, Integers) {

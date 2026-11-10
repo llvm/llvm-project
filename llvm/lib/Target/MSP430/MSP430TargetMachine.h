@@ -24,6 +24,7 @@ class StringRef;
 /// MSP430TargetMachine
 ///
 class MSP430TargetMachine : public CodeGenTargetMachineImpl {
+  const MSP430Options &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   MSP430Subtarget Subtarget;
 
@@ -34,6 +35,8 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                       bool JIT);
   ~MSP430TargetMachine() override;
+
+  const MSP430Options &getCLOpts() const { return CLOpts; }
 
   const MSP430Subtarget *getSubtargetImpl(const Function &F) const override {
     return &Subtarget;

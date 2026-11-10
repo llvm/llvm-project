@@ -294,7 +294,6 @@ define zeroext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __atomic_load_1
-; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -310,7 +309,6 @@ define zeroext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __atomic_load_1
-; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -330,7 +328,6 @@ define zeroext i8 @atomic_load_i8_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __atomic_load_1
-; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -346,7 +343,6 @@ define zeroext i8 @atomic_load_i8_monotonic(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __atomic_load_1
-; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -366,7 +362,6 @@ define zeroext i8 @atomic_load_i8_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 2
 ; RV32I-NEXT:    call __atomic_load_1
-; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -388,7 +383,6 @@ define zeroext i8 @atomic_load_i8_acquire(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    call __atomic_load_1
-; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -458,7 +452,6 @@ define zeroext i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 5
 ; RV32I-NEXT:    call __atomic_load_1
-; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -482,7 +475,6 @@ define zeroext i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 5
 ; RV64I-NEXT:    call __atomic_load_1
-; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -548,8 +540,6 @@ define zeroext i16 @atomic_load_i16_unordered(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __atomic_load_2
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -565,8 +555,6 @@ define zeroext i16 @atomic_load_i16_unordered(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __atomic_load_2
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -586,8 +574,6 @@ define zeroext i16 @atomic_load_i16_monotonic(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    call __atomic_load_2
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -603,8 +589,6 @@ define zeroext i16 @atomic_load_i16_monotonic(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __atomic_load_2
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -624,8 +608,6 @@ define zeroext i16 @atomic_load_i16_acquire(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 2
 ; RV32I-NEXT:    call __atomic_load_2
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -647,8 +629,6 @@ define zeroext i16 @atomic_load_i16_acquire(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 2
 ; RV64I-NEXT:    call __atomic_load_2
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
@@ -720,8 +700,6 @@ define zeroext i16 @atomic_load_i16_seq_cst(ptr %a) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    li a1, 5
 ; RV32I-NEXT:    call __atomic_load_2
-; RV32I-NEXT:    slli a0, a0, 16
-; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -745,8 +723,6 @@ define zeroext i16 @atomic_load_i16_seq_cst(ptr %a) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    li a1, 5
 ; RV64I-NEXT:    call __atomic_load_2
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret

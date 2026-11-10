@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
@@ -35,7 +36,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool
 computeRegionInSpecializedAccRoutine(acc::ComputeRegionOp computeRegion) {
   if (auto func = computeRegion->getParentOfType<FunctionOpInterface>())
@@ -158,6 +158,11 @@ class ACCEmitRemarksLoop
 public:
   using ACCEmitRemarksLoopBase<ACCEmitRemarksLoop>::ACCEmitRemarksLoopBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCEmitRemarksLoopBase<ACCEmitRemarksLoop>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
@@ -179,5 +184,4 @@ public:
     });
   }
 };
-
 } // namespace

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple i386-apple-macosx10.7.2 < %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple i386-apple-macosx10.7.2 < %s | FileCheck %s %}
 
 // The preferred alignment for a long long on x86-32 is 8; make sure the
 // alloca for x uses that alignment.

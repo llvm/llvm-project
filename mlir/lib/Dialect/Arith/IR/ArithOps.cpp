@@ -1087,6 +1087,17 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv ? Attribute() : result;
 }
 
+Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
+  // Division by zero is UB.
+  // Signed division overflow (INT_MIN / -1) is also UB.
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // RemUIOp
 //===----------------------------------------------------------------------===//
@@ -2769,6 +2780,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
   return BoolAttr::get(getContext(), val);
 }
 
+namespace {
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
   using Base::Base;
@@ -3084,6 +3096,7 @@ public:
     return success();
   }
 };
+} // namespace
 
 void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
@@ -3094,6 +3107,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // SelectOp
 //===----------------------------------------------------------------------===//
 
+namespace {
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
   using Base::Base;
@@ -3127,6 +3141,7 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
     return failure();
   }
 };
+} // namespace
 
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
@@ -3385,7 +3400,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::maxnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/true);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/true)
+                           : APFloat::getNaN(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::addf:
@@ -3414,7 +3431,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::minnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/false);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/false)
+                           : APFloat::getNaN(semantic, /*Negative=*/false);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::mins:
@@ -3469,6 +3488,16 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
     arith::FastMathFlagsAttr fmfAttr = fmfOpInterface.getFastMathFlagsAttr();
     useOnlyFiniteValue =
         bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::ninf);
+    if (*maybeKind == AtomicRMWKind::maxnumf ||
+        *maybeKind == AtomicRMWKind::minnumf) {
+      if (bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::nnan)) {
+        *maybeKind = *maybeKind == AtomicRMWKind::maxnumf
+                         ? AtomicRMWKind::maximumf
+                         : AtomicRMWKind::minimumf;
+      } else {
+        useOnlyFiniteValue = false;
+      }
+    }
   }
 
   // Builder only used as helper for attribute creation.

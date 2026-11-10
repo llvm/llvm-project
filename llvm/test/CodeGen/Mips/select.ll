@@ -106,11 +106,10 @@ define i64 @i32_icmp_ne_i64_val(i32 signext %s, i64 %f0, i64 %f1) nounwind readn
 ;
 ; 64R6-LABEL: i32_icmp_ne_i64_val:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    seleqz $2, $5, $1
-; 64R6-NEXT:    selnez $1, $6, $1
+; 64R6-NEXT:    seleqz $1, $5, $4
+; 64R6-NEXT:    selnez $2, $6, $4
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    or $2, $1, $2
+; 64R6-NEXT:    or $2, $2, $1
 entry:
   %tobool = icmp ne i32 %s, 0
   %cond = select i1 %tobool, i64 %f1, i64 %f0
