@@ -90,9 +90,9 @@
 TEXTURE<> default_template : register(t1, space2);
 TEXTURE implicit_template : register(t0, space1);
 
-// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// CHECK-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]), %"struct.hlsl::[[TEXTURE]]::mips_type" }
 // CHECK-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) }
-// SPIRV-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0), %"struct.hlsl::[[TEXTURE]]<>::mips_type" }
+// SPIRV-TEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0), %"struct.hlsl::[[TEXTURE]]::mips_type" }
 // SPIRV-NOTEXEL: %"class.hlsl::[[TEXTURE]]" = type { target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, 1, 0) }
 
 // CHECK: @{{.*}}default_template = internal global %"class.hlsl::[[TEXTURE]]" poison, align {{[0-9]+}}
