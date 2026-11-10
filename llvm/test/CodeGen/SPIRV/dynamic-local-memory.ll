@@ -80,7 +80,7 @@ define spir_kernel void @nouse() addrspace(9) {
   ret void
 }
 
-; IR: attributes #0 = { "foo" }
+; IR: attributes #0 = { memory(readwrite) "foo" }
 
 ; SPV-DAG: OpEntryPoint Kernel %[[#KERNEL:]] "kernel"
 ; SPV-DAG: OpEntryPoint Kernel %[[#NOUSE:]] "nouse"
