@@ -182,9 +182,8 @@ body:             |
     ; CHECK-NEXT: [[SMAXVv4i32v:%[0-9]+]]:fpr32 = SMAXVv4i32v [[COPY]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[SMAXVv4i32v]], %subreg.ssub
-    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK-NEXT: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: $q0 = COPY [[INSvi32lane]]
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[SMAXVv4i32v]], %subreg.ssub
+    ; CHECK-NEXT: $q0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr128 = COPY $q0
     %1:fpr32 = SMAXVv4i32v %0:fpr128
@@ -208,9 +207,8 @@ body:             |
     ; CHECK-NEXT: [[SMAXVv8i16v:%[0-9]+]]:fpr16 = SMAXVv8i16v [[COPY]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[SMAXVv8i16v]], %subreg.hsub
-    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: $q0 = COPY [[INSvi16lane]]
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[SMAXVv8i16v]], %subreg.hsub
+    ; CHECK-NEXT: $q0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr128 = COPY $q0
     %1:fpr16 = SMAXVv8i16v %0:fpr128
@@ -234,9 +232,8 @@ body:             |
     ; CHECK-NEXT: [[SMAXVv16i8v:%[0-9]+]]:fpr8 = SMAXVv16i8v [[COPY]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[SMAXVv16i8v]], %subreg.bsub
-    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-    ; CHECK-NEXT: [[INSvi8lane:%[0-9]+]]:fpr128 = INSvi8lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: $q0 = COPY [[INSvi8lane]]
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[SMAXVv16i8v]], %subreg.bsub
+    ; CHECK-NEXT: $q0 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr128 = COPY $q0
     %1:fpr8 = SMAXVv16i8v %0:fpr128
@@ -324,9 +321,8 @@ body:             |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr32 = PHI [[SMAXVv4i32v]], %bb.0, [[FMOVSi]], %bb.1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[PHI]], %subreg.ssub
-  ; CHECK-NEXT:   [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-  ; CHECK-NEXT:   [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   $q0 = COPY [[INSvi32lane]]
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[PHI]], %subreg.ssub
+  ; CHECK-NEXT:   $q0 = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
   bb.0:
     successors: %bb.1, %bb.2
@@ -378,9 +374,8 @@ body:             |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr16 = PHI [[SMAXVv8i16v]], %bb.0, [[FMOVHi]], %bb.1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[PHI]], %subreg.hsub
-  ; CHECK-NEXT:   [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-  ; CHECK-NEXT:   [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   $q0 = COPY [[INSvi16lane]]
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[PHI]], %subreg.hsub
+  ; CHECK-NEXT:   $q0 = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
   bb.0:
     successors: %bb.1, %bb.2
@@ -432,9 +427,8 @@ body:             |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:fpr8 = PHI [[SMAXVv16i8v]], %bb.0, [[DUPi8_]], %bb.1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[PHI]], %subreg.bsub
-  ; CHECK-NEXT:   [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
-  ; CHECK-NEXT:   [[INSvi8lane:%[0-9]+]]:fpr128 = INSvi8lane [[MOVIv2d_ns]], 0, [[INSERT_SUBREG]], 0
-  ; CHECK-NEXT:   $q0 = COPY [[INSvi8lane]]
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[PHI]], %subreg.bsub
+  ; CHECK-NEXT:   $q0 = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
   bb.0:
     successors: %bb.1, %bb.2
