@@ -329,12 +329,12 @@ flagging UB-prone operator dereferences. Default is `false`.
 
 ```{option} BoolModel
 Can be set to `SAT` (default) or `Simple`. The flow-sensitive analysis uses
-boolean formulas to model whether an `optional<T>` object has a value among
+Boolean formulas to model whether an `optional<T>` object has a value among
 other conditions. The analysis checks that, during accesses, the "has a value"
 state is provably true. The `SAT` model uses a SAT solver for this proof, so
 it can handle {ref}`branches with correlated conditions <correlated-branches>`
 and branches that contain ORs. The `Simple` model does a more limited tracking
-of boolean constants, and evaluates formulas without backtracking given
+of Boolean constants, and evaluates formulas without backtracking given
 assumptions at branch points, and does not introduce ORs for joins. As a result,
 the `Simple` model is faster but may have more false positives.
 ```
