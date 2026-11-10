@@ -11,18 +11,18 @@
 ; MSVC-NEXT: @__security_cookie = external global ptr
 ; MSVC-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MSVC-NEXT: declare void @_Unwind_Resume(ptr)
-; MSVC-NEXT: declare double @__adddf3(double, double)
-; MSVC-NEXT: declare float @__addsf3(float, float)
-; MSVC-NEXT: declare fp128 @__addtf3(fp128, fp128)
-; MSVC-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80)
-; MSVC-NEXT: declare i64 @__ashldi3(i64, i32)
-; MSVC-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32)
-; MSVC-NEXT: declare i32 @__ashlsi3(i32, i32)
-; MSVC-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32)
-; MSVC-NEXT: declare i64 @__ashrdi3(i64, i32)
-; MSVC-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32)
-; MSVC-NEXT: declare i32 @__ashrsi3(i32, i32)
-; MSVC-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32)
+; MSVC-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; MSVC-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__ashrdi3(i64, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__ashrsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32, i32)
 ; MSVC-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; MSVC-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, <2 x i64>, i32, i32)
@@ -79,108 +79,108 @@
 ; MSVC-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
 ; MSVC-NEXT: declare void @__chkstk()
 ; MSVC-NEXT: declare void @__clear_cache(ptr, ptr)
-; MSVC-NEXT: declare i32 @__clzdi2(i64)
-; MSVC-NEXT: declare i32 @__clzsi2(i32)
-; MSVC-NEXT: declare i32 @__clzti2(<2 x i64>)
-; MSVC-NEXT: declare i32 @__ctzdi2(i64)
-; MSVC-NEXT: declare i32 @__ctzsi2(i32)
-; MSVC-NEXT: declare i32 @__ctzti2(<2 x i64>)
+; MSVC-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare void @__cxa_end_cleanup()
-; MSVC-NEXT: declare double @__divdf3(double, double)
-; MSVC-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; MSVC-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; MSVC-NEXT: declare float @__divsf3(float, float)
-; MSVC-NEXT: declare i32 @__divsi3(i32, i32)
-; MSVC-NEXT: declare fp128 @__divtf3(fp128, fp128)
-; MSVC-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>)
-; MSVC-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80)
-; MSVC-NEXT: declare i64 @__eqdf2(double, double)
-; MSVC-NEXT: declare i64 @__eqsf2(float, float)
-; MSVC-NEXT: declare i64 @__eqtf2(fp128, fp128)
+; MSVC-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__divsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__divtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__eqtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
-; MSVC-NEXT: declare float @__extendbfsf2(bfloat)
-; MSVC-NEXT: declare fp128 @__extenddftf2(double)
-; MSVC-NEXT: declare double @__extendhfdf2(half)
-; MSVC-NEXT: declare float @__extendhfsf2(half)
-; MSVC-NEXT: declare fp128 @__extendhftf2(half)
-; MSVC-NEXT: declare x86_fp80 @__extendhfxf2(half)
-; MSVC-NEXT: declare double @__extendsfdf2(float)
-; MSVC-NEXT: declare fp128 @__extendsftf2(float)
-; MSVC-NEXT: declare fp128 @__extendxftf2(x86_fp80)
-; MSVC-NEXT: declare i64 @__fixdfdi(double)
-; MSVC-NEXT: declare i32 @__fixdfsi(double)
-; MSVC-NEXT: declare <2 x i64> @__fixdfti(double)
-; MSVC-NEXT: declare i64 @__fixhfdi(half)
-; MSVC-NEXT: declare i32 @__fixhfsi(half)
-; MSVC-NEXT: declare <2 x i64> @__fixhfti(half)
-; MSVC-NEXT: declare i64 @__fixsfdi(float)
-; MSVC-NEXT: declare i32 @__fixsfsi(float)
-; MSVC-NEXT: declare <2 x i64> @__fixsfti(float)
-; MSVC-NEXT: declare i64 @__fixtfdi(fp128)
-; MSVC-NEXT: declare i32 @__fixtfsi(fp128)
-; MSVC-NEXT: declare <2 x i64> @__fixtfti(fp128)
-; MSVC-NEXT: declare i64 @__fixunsdfdi(double)
-; MSVC-NEXT: declare i32 @__fixunsdfsi(double)
-; MSVC-NEXT: declare <2 x i64> @__fixunsdfti(double)
-; MSVC-NEXT: declare i64 @__fixunshfdi(half)
-; MSVC-NEXT: declare i32 @__fixunshfsi(half)
-; MSVC-NEXT: declare <2 x i64> @__fixunshfti(half)
-; MSVC-NEXT: declare i64 @__fixunssfdi(float)
-; MSVC-NEXT: declare i32 @__fixunssfsi(float)
-; MSVC-NEXT: declare <2 x i64> @__fixunssfti(float)
-; MSVC-NEXT: declare i64 @__fixunstfdi(fp128)
-; MSVC-NEXT: declare i32 @__fixunstfsi(fp128)
-; MSVC-NEXT: declare <2 x i64> @__fixunstfti(fp128)
-; MSVC-NEXT: declare i64 @__fixunsxfdi(x86_fp80)
-; MSVC-NEXT: declare i32 @__fixunsxfsi(x86_fp80)
-; MSVC-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80)
-; MSVC-NEXT: declare i64 @__fixxfdi(x86_fp80)
-; MSVC-NEXT: declare i32 @__fixxfsi(x86_fp80)
-; MSVC-NEXT: declare <2 x i64> @__fixxfti(x86_fp80)
-; MSVC-NEXT: declare bfloat @__floatdibf(i64)
-; MSVC-NEXT: declare double @__floatdidf(i64)
-; MSVC-NEXT: declare half @__floatdihf(i64)
-; MSVC-NEXT: declare float @__floatdisf(i64)
-; MSVC-NEXT: declare fp128 @__floatditf(i64)
-; MSVC-NEXT: declare x86_fp80 @__floatdixf(i64)
-; MSVC-NEXT: declare double @__floatsidf(i32)
-; MSVC-NEXT: declare half @__floatsihf(i32)
-; MSVC-NEXT: declare float @__floatsisf(i32)
-; MSVC-NEXT: declare fp128 @__floatsitf(i32)
-; MSVC-NEXT: declare x86_fp80 @__floatsixf(i32)
-; MSVC-NEXT: declare double @__floattidf(<2 x i64>)
-; MSVC-NEXT: declare half @__floattihf(<2 x i64>)
-; MSVC-NEXT: declare float @__floattisf(<2 x i64>)
-; MSVC-NEXT: declare fp128 @__floattitf(<2 x i64>)
-; MSVC-NEXT: declare x86_fp80 @__floattixf(<2 x i64>)
-; MSVC-NEXT: declare bfloat @__floatundibf(i64)
-; MSVC-NEXT: declare double @__floatundidf(i64)
-; MSVC-NEXT: declare half @__floatundihf(i64)
-; MSVC-NEXT: declare float @__floatundisf(i64)
-; MSVC-NEXT: declare fp128 @__floatunditf(i64)
-; MSVC-NEXT: declare x86_fp80 @__floatundixf(i64)
-; MSVC-NEXT: declare double @__floatunsidf(i32)
-; MSVC-NEXT: declare half @__floatunsihf(i32)
-; MSVC-NEXT: declare float @__floatunsisf(i32)
-; MSVC-NEXT: declare fp128 @__floatunsitf(i32)
-; MSVC-NEXT: declare x86_fp80 @__floatunsixf(i32)
-; MSVC-NEXT: declare double @__floatuntidf(<2 x i64>)
-; MSVC-NEXT: declare half @__floatuntihf(<2 x i64>)
-; MSVC-NEXT: declare float @__floatuntisf(<2 x i64>)
-; MSVC-NEXT: declare fp128 @__floatuntitf(<2 x i64>)
-; MSVC-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>)
-; MSVC-NEXT: declare i64 @__gedf2(double, double)
-; MSVC-NEXT: declare i64 @__gesf2(float, float)
-; MSVC-NEXT: declare i64 @__getf2(fp128, fp128)
-; MSVC-NEXT: declare i64 @__gtdf2(double, double)
-; MSVC-NEXT: declare i64 @__gtsf2(float, float)
-; MSVC-NEXT: declare i64 @__gttf2(fp128, fp128)
-; MSVC-NEXT: declare i64 @__ledf2(double, double)
-; MSVC-NEXT: declare i64 @__lesf2(float, float)
-; MSVC-NEXT: declare i64 @__letf2(fp128, fp128)
+; MSVC-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__extenddftf2(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__extendhftf2(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__extendhfxf2(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__extendsftf2(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__extendxftf2(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixdfti(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixhfti(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixsfti(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixtfdi(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixtfsi(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixtfti(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixunshfti(half) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixunssfti(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixunstfdi(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixunstfsi(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixunstfti(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixunsxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixunsxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__fixxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__fixxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__fixxfti(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__floatdixf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__floatsidf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__floatsihf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__floatsisf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__floatsitf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__floatsixf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__floattidf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__floattihf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__floattisf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__floattitf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__floattixf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__floatundixf(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__floatunsidf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__floatunsihf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__floatunsisf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__floatunsitf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__floatunsixf(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__floatuntidf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__floatuntihf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__floatuntisf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__floatuntitf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__getf2(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__gttf2(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__letf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare void @__llvm_deoptimize(...)
 ; MSVC-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
 ; MSVC-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
@@ -203,45 +203,45 @@
 ; MSVC-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
-; MSVC-NEXT: declare i64 @__lshrdi3(i64, i32)
-; MSVC-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
-; MSVC-NEXT: declare i32 @__lshrsi3(i32, i32)
-; MSVC-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32)
-; MSVC-NEXT: declare i64 @__ltdf2(double, double)
-; MSVC-NEXT: declare i64 @__ltsf2(float, float)
-; MSVC-NEXT: declare i64 @__lttf2(fp128, fp128)
+; MSVC-NEXT: declare i64 @__lshrdi3(i64, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__lshrsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; MSVC-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; MSVC-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
-; MSVC-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; MSVC-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; MSVC-NEXT: declare i32 @__modsi3(i32, i32)
-; MSVC-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>)
-; MSVC-NEXT: declare double @__muldf3(double, double)
-; MSVC-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
+; MSVC-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
-; MSVC-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; MSVC-NEXT: declare float @__mulsf3(float, float)
-; MSVC-NEXT: declare i32 @__mulsi3(i32, i32)
-; MSVC-NEXT: declare fp128 @__multf3(fp128, fp128)
-; MSVC-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>)
-; MSVC-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80)
-; MSVC-NEXT: declare i64 @__nedf2(double, double)
-; MSVC-NEXT: declare i64 @__negdi2(i64)
-; MSVC-NEXT: declare i32 @__negsi2(i32)
-; MSVC-NEXT: declare i64 @__nesf2(float, float)
-; MSVC-NEXT: declare i64 @__netf2(fp128, fp128)
-; MSVC-NEXT: declare i32 @__popcountdi2(i64)
-; MSVC-NEXT: declare i32 @__popcountsi2(i32)
-; MSVC-NEXT: declare i32 @__popcountti2(<2 x i64>)
+; MSVC-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__multf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__negsi2(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__netf2(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__popcountsi2(i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__popcountti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32) [[NOMEM_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare void @__security_check_cookie(ptr)
-; MSVC-NEXT: declare double @__subdf3(double, double)
-; MSVC-NEXT: declare float @__subsf3(float, float)
-; MSVC-NEXT: declare fp128 @__subtf3(fp128, fp128)
-; MSVC-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80)
+; MSVC-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; MSVC-NEXT: declare <2 x i64> @__sync_fetch_and_add_16(ptr, <2 x i64>)
 ; MSVC-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -302,31 +302,31 @@
 ; MSVC-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; MSVC-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; MSVC-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; MSVC-NEXT: declare bfloat @__truncdfbf2(double)
-; MSVC-NEXT: declare half @__truncdfhf2(double)
-; MSVC-NEXT: declare float @__truncdfsf2(double)
-; MSVC-NEXT: declare bfloat @__truncsfbf2(float)
-; MSVC-NEXT: declare half @__truncsfhf2(float)
-; MSVC-NEXT: declare bfloat @__trunctfbf2(fp128)
-; MSVC-NEXT: declare double @__trunctfdf2(fp128)
-; MSVC-NEXT: declare half @__trunctfhf2(fp128)
-; MSVC-NEXT: declare float @__trunctfsf2(fp128)
-; MSVC-NEXT: declare x86_fp80 @__trunctfxf2(fp128)
-; MSVC-NEXT: declare bfloat @__truncxfbf2(x86_fp80)
-; MSVC-NEXT: declare double @__truncxfdf2(x86_fp80)
-; MSVC-NEXT: declare half @__truncxfhf2(x86_fp80)
-; MSVC-NEXT: declare float @__truncxfsf2(x86_fp80)
-; MSVC-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; MSVC-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; MSVC-NEXT: declare i32 @__udivsi3(i32, i32)
-; MSVC-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>)
-; MSVC-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; MSVC-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; MSVC-NEXT: declare i32 @__umodsi3(i32, i32)
-; MSVC-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>)
-; MSVC-NEXT: declare i64 @__unorddf2(double, double)
-; MSVC-NEXT: declare i64 @__unordsf2(float, float)
-; MSVC-NEXT: declare i64 @__unordtf2(fp128, fp128)
+; MSVC-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare bfloat @__trunctfbf2(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__trunctfdf2(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__trunctfhf2(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__trunctfsf2(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare x86_fp80 @__trunctfxf2(fp128) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare bfloat @__truncxfbf2(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare double @__truncxfdf2(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare half @__truncxfhf2(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare float @__truncxfsf2(x86_fp80) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__udivsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i32 @__umodsi3(i32, i32) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: declare i64 @__unordtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
@@ -437,9 +437,9 @@
 ; MSVC-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; MSVC-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; MSVC-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MSVC-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; MSVC-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
@@ -451,18 +451,18 @@
 ; MINGW-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; MINGW-NEXT: declare void @_Unwind_Resume(ptr)
 ; MINGW-NEXT: declare void @___chkstk_ms()
-; MINGW-NEXT: declare double @__adddf3(double, double)
-; MINGW-NEXT: declare float @__addsf3(float, float)
-; MINGW-NEXT: declare fp128 @__addtf3(fp128, fp128)
-; MINGW-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80)
-; MINGW-NEXT: declare i64 @__ashldi3(i64, i32)
-; MINGW-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32)
-; MINGW-NEXT: declare i32 @__ashlsi3(i32, i32)
-; MINGW-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32)
-; MINGW-NEXT: declare i64 @__ashrdi3(i64, i32)
-; MINGW-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32)
-; MINGW-NEXT: declare i32 @__ashrsi3(i32, i32)
-; MINGW-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32)
+; MINGW-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__ashrdi3(i64, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__ashrsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32, i32)
 ; MINGW-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; MINGW-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, <2 x i64>, i32, i32)
@@ -518,24 +518,24 @@
 ; MINGW-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; MINGW-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
 ; MINGW-NEXT: declare void @__clear_cache(ptr, ptr)
-; MINGW-NEXT: declare i32 @__clzdi2(i64)
-; MINGW-NEXT: declare i32 @__clzsi2(i32)
-; MINGW-NEXT: declare i32 @__clzti2(<2 x i64>)
-; MINGW-NEXT: declare i32 @__ctzdi2(i64)
-; MINGW-NEXT: declare i32 @__ctzsi2(i32)
-; MINGW-NEXT: declare i32 @__ctzti2(<2 x i64>)
+; MINGW-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare void @__cxa_end_cleanup()
-; MINGW-NEXT: declare double @__divdf3(double, double)
-; MINGW-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; MINGW-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; MINGW-NEXT: declare float @__divsf3(float, float)
-; MINGW-NEXT: declare i32 @__divsi3(i32, i32)
-; MINGW-NEXT: declare fp128 @__divtf3(fp128, fp128)
-; MINGW-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>)
-; MINGW-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80)
-; MINGW-NEXT: declare i64 @__eqdf2(double, double)
-; MINGW-NEXT: declare i64 @__eqsf2(float, float)
-; MINGW-NEXT: declare i64 @__eqtf2(fp128, fp128)
+; MINGW-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__divsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__divtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__eqtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare fp128 @__exp10f128_finite(fp128) [[SQRT_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @__exp2f128_finite(fp128) [[SQRT_ATTRS]]
@@ -545,86 +545,86 @@
 ; MINGW-NEXT: declare fp128 @__expf128_finite(fp128) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @__expl_finite(x86_fp80) [[SQRT_ATTRS]]
-; MINGW-NEXT: declare float @__extendbfsf2(bfloat)
-; MINGW-NEXT: declare fp128 @__extenddftf2(double)
-; MINGW-NEXT: declare double @__extendhfdf2(half)
-; MINGW-NEXT: declare float @__extendhfsf2(half)
-; MINGW-NEXT: declare fp128 @__extendhftf2(half)
-; MINGW-NEXT: declare x86_fp80 @__extendhfxf2(half)
-; MINGW-NEXT: declare double @__extendsfdf2(float)
-; MINGW-NEXT: declare fp128 @__extendsftf2(float)
-; MINGW-NEXT: declare fp128 @__extendxftf2(x86_fp80)
-; MINGW-NEXT: declare i64 @__fixdfdi(double)
-; MINGW-NEXT: declare i32 @__fixdfsi(double)
-; MINGW-NEXT: declare <2 x i64> @__fixdfti(double)
-; MINGW-NEXT: declare i64 @__fixhfdi(half)
-; MINGW-NEXT: declare i32 @__fixhfsi(half)
-; MINGW-NEXT: declare <2 x i64> @__fixhfti(half)
-; MINGW-NEXT: declare i64 @__fixsfdi(float)
-; MINGW-NEXT: declare i32 @__fixsfsi(float)
-; MINGW-NEXT: declare <2 x i64> @__fixsfti(float)
-; MINGW-NEXT: declare i64 @__fixtfdi(fp128)
-; MINGW-NEXT: declare i32 @__fixtfsi(fp128)
-; MINGW-NEXT: declare <2 x i64> @__fixtfti(fp128)
-; MINGW-NEXT: declare i64 @__fixunsdfdi(double)
-; MINGW-NEXT: declare i32 @__fixunsdfsi(double)
-; MINGW-NEXT: declare <2 x i64> @__fixunsdfti(double)
-; MINGW-NEXT: declare i64 @__fixunshfdi(half)
-; MINGW-NEXT: declare i32 @__fixunshfsi(half)
-; MINGW-NEXT: declare <2 x i64> @__fixunshfti(half)
-; MINGW-NEXT: declare i64 @__fixunssfdi(float)
-; MINGW-NEXT: declare i32 @__fixunssfsi(float)
-; MINGW-NEXT: declare <2 x i64> @__fixunssfti(float)
-; MINGW-NEXT: declare i64 @__fixunstfdi(fp128)
-; MINGW-NEXT: declare i32 @__fixunstfsi(fp128)
-; MINGW-NEXT: declare <2 x i64> @__fixunstfti(fp128)
-; MINGW-NEXT: declare i64 @__fixunsxfdi(x86_fp80)
-; MINGW-NEXT: declare i32 @__fixunsxfsi(x86_fp80)
-; MINGW-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80)
-; MINGW-NEXT: declare i64 @__fixxfdi(x86_fp80)
-; MINGW-NEXT: declare i32 @__fixxfsi(x86_fp80)
-; MINGW-NEXT: declare <2 x i64> @__fixxfti(x86_fp80)
-; MINGW-NEXT: declare bfloat @__floatdibf(i64)
-; MINGW-NEXT: declare double @__floatdidf(i64)
-; MINGW-NEXT: declare half @__floatdihf(i64)
-; MINGW-NEXT: declare float @__floatdisf(i64)
-; MINGW-NEXT: declare fp128 @__floatditf(i64)
-; MINGW-NEXT: declare x86_fp80 @__floatdixf(i64)
-; MINGW-NEXT: declare double @__floatsidf(i32)
-; MINGW-NEXT: declare half @__floatsihf(i32)
-; MINGW-NEXT: declare float @__floatsisf(i32)
-; MINGW-NEXT: declare fp128 @__floatsitf(i32)
-; MINGW-NEXT: declare x86_fp80 @__floatsixf(i32)
-; MINGW-NEXT: declare double @__floattidf(<2 x i64>)
-; MINGW-NEXT: declare half @__floattihf(<2 x i64>)
-; MINGW-NEXT: declare float @__floattisf(<2 x i64>)
-; MINGW-NEXT: declare fp128 @__floattitf(<2 x i64>)
-; MINGW-NEXT: declare x86_fp80 @__floattixf(<2 x i64>)
-; MINGW-NEXT: declare bfloat @__floatundibf(i64)
-; MINGW-NEXT: declare double @__floatundidf(i64)
-; MINGW-NEXT: declare half @__floatundihf(i64)
-; MINGW-NEXT: declare float @__floatundisf(i64)
-; MINGW-NEXT: declare fp128 @__floatunditf(i64)
-; MINGW-NEXT: declare x86_fp80 @__floatundixf(i64)
-; MINGW-NEXT: declare double @__floatunsidf(i32)
-; MINGW-NEXT: declare half @__floatunsihf(i32)
-; MINGW-NEXT: declare float @__floatunsisf(i32)
-; MINGW-NEXT: declare fp128 @__floatunsitf(i32)
-; MINGW-NEXT: declare x86_fp80 @__floatunsixf(i32)
-; MINGW-NEXT: declare double @__floatuntidf(<2 x i64>)
-; MINGW-NEXT: declare half @__floatuntihf(<2 x i64>)
-; MINGW-NEXT: declare float @__floatuntisf(<2 x i64>)
-; MINGW-NEXT: declare fp128 @__floatuntitf(<2 x i64>)
-; MINGW-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>)
-; MINGW-NEXT: declare i64 @__gedf2(double, double)
-; MINGW-NEXT: declare i64 @__gesf2(float, float)
-; MINGW-NEXT: declare i64 @__getf2(fp128, fp128)
-; MINGW-NEXT: declare i64 @__gtdf2(double, double)
-; MINGW-NEXT: declare i64 @__gtsf2(float, float)
-; MINGW-NEXT: declare i64 @__gttf2(fp128, fp128)
-; MINGW-NEXT: declare i64 @__ledf2(double, double)
-; MINGW-NEXT: declare i64 @__lesf2(float, float)
-; MINGW-NEXT: declare i64 @__letf2(fp128, fp128)
+; MINGW-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__extenddftf2(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__extendhftf2(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__extendhfxf2(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__extendsftf2(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__extendxftf2(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixdfti(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixhfti(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixsfti(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixtfdi(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixtfsi(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixtfti(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixunshfti(half) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixunssfti(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixunstfdi(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixunstfsi(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixunstfti(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixunsxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixunsxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__fixxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__fixxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__fixxfti(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__floatdixf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__floatsidf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__floatsihf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__floatsisf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__floatsitf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__floatsixf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__floattidf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__floattihf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__floattisf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__floattitf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__floattixf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__floatundixf(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__floatunsidf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__floatunsihf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__floatunsisf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__floatunsitf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__floatunsixf(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__floatuntidf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__floatuntihf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__floatuntisf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__floatuntitf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__getf2(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__gttf2(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__letf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare void @__llvm_deoptimize(...)
 ; MINGW-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
 ; MINGW-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
@@ -653,47 +653,47 @@
 ; MINGW-NEXT: declare fp128 @__logf128_finite(fp128) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @__logl_finite(x86_fp80) [[SQRT_ATTRS]]
-; MINGW-NEXT: declare i64 @__lshrdi3(i64, i32)
-; MINGW-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
-; MINGW-NEXT: declare i32 @__lshrsi3(i32, i32)
-; MINGW-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32)
-; MINGW-NEXT: declare i64 @__ltdf2(double, double)
-; MINGW-NEXT: declare i64 @__ltsf2(float, float)
-; MINGW-NEXT: declare i64 @__lttf2(fp128, fp128)
+; MINGW-NEXT: declare i64 @__lshrdi3(i64, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__lshrsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; MINGW-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; MINGW-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
-; MINGW-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; MINGW-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; MINGW-NEXT: declare i32 @__modsi3(i32, i32)
-; MINGW-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>)
-; MINGW-NEXT: declare double @__muldf3(double, double)
-; MINGW-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
+; MINGW-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
-; MINGW-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; MINGW-NEXT: declare float @__mulsf3(float, float)
-; MINGW-NEXT: declare i32 @__mulsi3(i32, i32)
-; MINGW-NEXT: declare fp128 @__multf3(fp128, fp128)
-; MINGW-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>)
-; MINGW-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80)
-; MINGW-NEXT: declare i64 @__nedf2(double, double)
-; MINGW-NEXT: declare i64 @__negdi2(i64)
-; MINGW-NEXT: declare i32 @__negsi2(i32)
-; MINGW-NEXT: declare i64 @__nesf2(float, float)
-; MINGW-NEXT: declare i64 @__netf2(fp128, fp128)
-; MINGW-NEXT: declare i32 @__popcountdi2(i64)
-; MINGW-NEXT: declare i32 @__popcountsi2(i32)
-; MINGW-NEXT: declare i32 @__popcountti2(<2 x i64>)
+; MINGW-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__multf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__negsi2(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__netf2(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__popcountsi2(i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__popcountti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @__powf128_finite(fp128, fp128) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32) [[NOMEM_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
-; MINGW-NEXT: declare double @__subdf3(double, double)
-; MINGW-NEXT: declare float @__subsf3(float, float)
-; MINGW-NEXT: declare fp128 @__subtf3(fp128, fp128)
-; MINGW-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80)
+; MINGW-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; MINGW-NEXT: declare <2 x i64> @__sync_fetch_and_add_16(ptr, <2 x i64>)
 ; MINGW-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -754,31 +754,31 @@
 ; MINGW-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; MINGW-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; MINGW-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; MINGW-NEXT: declare bfloat @__truncdfbf2(double)
-; MINGW-NEXT: declare half @__truncdfhf2(double)
-; MINGW-NEXT: declare float @__truncdfsf2(double)
-; MINGW-NEXT: declare bfloat @__truncsfbf2(float)
-; MINGW-NEXT: declare half @__truncsfhf2(float)
-; MINGW-NEXT: declare bfloat @__trunctfbf2(fp128)
-; MINGW-NEXT: declare double @__trunctfdf2(fp128)
-; MINGW-NEXT: declare half @__trunctfhf2(fp128)
-; MINGW-NEXT: declare float @__trunctfsf2(fp128)
-; MINGW-NEXT: declare x86_fp80 @__trunctfxf2(fp128)
-; MINGW-NEXT: declare bfloat @__truncxfbf2(x86_fp80)
-; MINGW-NEXT: declare double @__truncxfdf2(x86_fp80)
-; MINGW-NEXT: declare half @__truncxfhf2(x86_fp80)
-; MINGW-NEXT: declare float @__truncxfsf2(x86_fp80)
-; MINGW-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; MINGW-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; MINGW-NEXT: declare i32 @__udivsi3(i32, i32)
-; MINGW-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>)
-; MINGW-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; MINGW-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; MINGW-NEXT: declare i32 @__umodsi3(i32, i32)
-; MINGW-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>)
-; MINGW-NEXT: declare i64 @__unorddf2(double, double)
-; MINGW-NEXT: declare i64 @__unordsf2(float, float)
-; MINGW-NEXT: declare i64 @__unordtf2(fp128, fp128)
+; MINGW-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare bfloat @__trunctfbf2(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__trunctfdf2(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__trunctfhf2(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__trunctfsf2(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare x86_fp80 @__trunctfxf2(fp128) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare bfloat @__truncxfbf2(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare double @__truncxfdf2(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare half @__truncxfhf2(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare float @__truncxfsf2(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__udivsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i32 @__umodsi3(i32, i32) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; MINGW-NEXT: declare i64 @__unordtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
 ; MINGW-NEXT: declare fp128 @acosf128(fp128) [[SQRT_ATTRS]]
@@ -988,9 +988,9 @@
 ; MINGW-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare fp128 @truncf128(fp128) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; MINGW-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MINGW-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MINGW-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; MINGW-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; MINGW-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
@@ -1003,18 +1003,18 @@
 ; CYGWIN-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; CYGWIN-NEXT: declare void @_Unwind_Resume(ptr)
 ; CYGWIN-NEXT: declare void @___chkstk_ms()
-; CYGWIN-NEXT: declare double @__adddf3(double, double)
-; CYGWIN-NEXT: declare float @__addsf3(float, float)
-; CYGWIN-NEXT: declare fp128 @__addtf3(fp128, fp128)
-; CYGWIN-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80)
-; CYGWIN-NEXT: declare i64 @__ashldi3(i64, i32)
-; CYGWIN-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32)
-; CYGWIN-NEXT: declare i32 @__ashlsi3(i32, i32)
-; CYGWIN-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32)
-; CYGWIN-NEXT: declare i64 @__ashrdi3(i64, i32)
-; CYGWIN-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32)
-; CYGWIN-NEXT: declare i32 @__ashrsi3(i32, i32)
-; CYGWIN-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32)
+; CYGWIN-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; CYGWIN-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__ashrdi3(i64, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__ashrsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32, i32)
 ; CYGWIN-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; CYGWIN-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, <2 x i64>, i32, i32)
@@ -1070,110 +1070,110 @@
 ; CYGWIN-NEXT: declare void @__atomic_store_4(ptr, i32, i32)
 ; CYGWIN-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
 ; CYGWIN-NEXT: declare void @__clear_cache(ptr, ptr)
-; CYGWIN-NEXT: declare i32 @__clzdi2(i64)
-; CYGWIN-NEXT: declare i32 @__clzsi2(i32)
-; CYGWIN-NEXT: declare i32 @__clzti2(<2 x i64>)
-; CYGWIN-NEXT: declare i32 @__ctzdi2(i64)
-; CYGWIN-NEXT: declare i32 @__ctzsi2(i32)
-; CYGWIN-NEXT: declare i32 @__ctzti2(<2 x i64>)
+; CYGWIN-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare void @__cxa_end_cleanup()
-; CYGWIN-NEXT: declare double @__divdf3(double, double)
-; CYGWIN-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; CYGWIN-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; CYGWIN-NEXT: declare float @__divsf3(float, float)
-; CYGWIN-NEXT: declare i32 @__divsi3(i32, i32)
-; CYGWIN-NEXT: declare fp128 @__divtf3(fp128, fp128)
-; CYGWIN-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>)
-; CYGWIN-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80)
-; CYGWIN-NEXT: declare i64 @__eqdf2(double, double)
-; CYGWIN-NEXT: declare i64 @__eqsf2(float, float)
-; CYGWIN-NEXT: declare i64 @__eqtf2(fp128, fp128)
+; CYGWIN-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__divsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__divtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__eqtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
 ; CYGWIN-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @__exp2l_finite(x86_fp80) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @__expl_finite(x86_fp80) [[SQRT_ATTRS]]
-; CYGWIN-NEXT: declare float @__extendbfsf2(bfloat)
-; CYGWIN-NEXT: declare fp128 @__extenddftf2(double)
-; CYGWIN-NEXT: declare double @__extendhfdf2(half)
-; CYGWIN-NEXT: declare float @__extendhfsf2(half)
-; CYGWIN-NEXT: declare fp128 @__extendhftf2(half)
-; CYGWIN-NEXT: declare x86_fp80 @__extendhfxf2(half)
-; CYGWIN-NEXT: declare double @__extendsfdf2(float)
-; CYGWIN-NEXT: declare fp128 @__extendsftf2(float)
-; CYGWIN-NEXT: declare fp128 @__extendxftf2(x86_fp80)
-; CYGWIN-NEXT: declare i64 @__fixdfdi(double)
-; CYGWIN-NEXT: declare i32 @__fixdfsi(double)
-; CYGWIN-NEXT: declare <2 x i64> @__fixdfti(double)
-; CYGWIN-NEXT: declare i64 @__fixhfdi(half)
-; CYGWIN-NEXT: declare i32 @__fixhfsi(half)
-; CYGWIN-NEXT: declare <2 x i64> @__fixhfti(half)
-; CYGWIN-NEXT: declare i64 @__fixsfdi(float)
-; CYGWIN-NEXT: declare i32 @__fixsfsi(float)
-; CYGWIN-NEXT: declare <2 x i64> @__fixsfti(float)
-; CYGWIN-NEXT: declare i64 @__fixtfdi(fp128)
-; CYGWIN-NEXT: declare i32 @__fixtfsi(fp128)
-; CYGWIN-NEXT: declare <2 x i64> @__fixtfti(fp128)
-; CYGWIN-NEXT: declare i64 @__fixunsdfdi(double)
-; CYGWIN-NEXT: declare i32 @__fixunsdfsi(double)
-; CYGWIN-NEXT: declare <2 x i64> @__fixunsdfti(double)
-; CYGWIN-NEXT: declare i64 @__fixunshfdi(half)
-; CYGWIN-NEXT: declare i32 @__fixunshfsi(half)
-; CYGWIN-NEXT: declare <2 x i64> @__fixunshfti(half)
-; CYGWIN-NEXT: declare i64 @__fixunssfdi(float)
-; CYGWIN-NEXT: declare i32 @__fixunssfsi(float)
-; CYGWIN-NEXT: declare <2 x i64> @__fixunssfti(float)
-; CYGWIN-NEXT: declare i64 @__fixunstfdi(fp128)
-; CYGWIN-NEXT: declare i32 @__fixunstfsi(fp128)
-; CYGWIN-NEXT: declare <2 x i64> @__fixunstfti(fp128)
-; CYGWIN-NEXT: declare i64 @__fixunsxfdi(x86_fp80)
-; CYGWIN-NEXT: declare i32 @__fixunsxfsi(x86_fp80)
-; CYGWIN-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80)
-; CYGWIN-NEXT: declare i64 @__fixxfdi(x86_fp80)
-; CYGWIN-NEXT: declare i32 @__fixxfsi(x86_fp80)
-; CYGWIN-NEXT: declare <2 x i64> @__fixxfti(x86_fp80)
-; CYGWIN-NEXT: declare bfloat @__floatdibf(i64)
-; CYGWIN-NEXT: declare double @__floatdidf(i64)
-; CYGWIN-NEXT: declare half @__floatdihf(i64)
-; CYGWIN-NEXT: declare float @__floatdisf(i64)
-; CYGWIN-NEXT: declare fp128 @__floatditf(i64)
-; CYGWIN-NEXT: declare x86_fp80 @__floatdixf(i64)
-; CYGWIN-NEXT: declare double @__floatsidf(i32)
-; CYGWIN-NEXT: declare half @__floatsihf(i32)
-; CYGWIN-NEXT: declare float @__floatsisf(i32)
-; CYGWIN-NEXT: declare fp128 @__floatsitf(i32)
-; CYGWIN-NEXT: declare x86_fp80 @__floatsixf(i32)
-; CYGWIN-NEXT: declare double @__floattidf(<2 x i64>)
-; CYGWIN-NEXT: declare half @__floattihf(<2 x i64>)
-; CYGWIN-NEXT: declare float @__floattisf(<2 x i64>)
-; CYGWIN-NEXT: declare fp128 @__floattitf(<2 x i64>)
-; CYGWIN-NEXT: declare x86_fp80 @__floattixf(<2 x i64>)
-; CYGWIN-NEXT: declare bfloat @__floatundibf(i64)
-; CYGWIN-NEXT: declare double @__floatundidf(i64)
-; CYGWIN-NEXT: declare half @__floatundihf(i64)
-; CYGWIN-NEXT: declare float @__floatundisf(i64)
-; CYGWIN-NEXT: declare fp128 @__floatunditf(i64)
-; CYGWIN-NEXT: declare x86_fp80 @__floatundixf(i64)
-; CYGWIN-NEXT: declare double @__floatunsidf(i32)
-; CYGWIN-NEXT: declare half @__floatunsihf(i32)
-; CYGWIN-NEXT: declare float @__floatunsisf(i32)
-; CYGWIN-NEXT: declare fp128 @__floatunsitf(i32)
-; CYGWIN-NEXT: declare x86_fp80 @__floatunsixf(i32)
-; CYGWIN-NEXT: declare double @__floatuntidf(<2 x i64>)
-; CYGWIN-NEXT: declare half @__floatuntihf(<2 x i64>)
-; CYGWIN-NEXT: declare float @__floatuntisf(<2 x i64>)
-; CYGWIN-NEXT: declare fp128 @__floatuntitf(<2 x i64>)
-; CYGWIN-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>)
-; CYGWIN-NEXT: declare i64 @__gedf2(double, double)
-; CYGWIN-NEXT: declare i64 @__gesf2(float, float)
-; CYGWIN-NEXT: declare i64 @__getf2(fp128, fp128)
-; CYGWIN-NEXT: declare i64 @__gtdf2(double, double)
-; CYGWIN-NEXT: declare i64 @__gtsf2(float, float)
-; CYGWIN-NEXT: declare i64 @__gttf2(fp128, fp128)
-; CYGWIN-NEXT: declare i64 @__ledf2(double, double)
-; CYGWIN-NEXT: declare i64 @__lesf2(float, float)
-; CYGWIN-NEXT: declare i64 @__letf2(fp128, fp128)
+; CYGWIN-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__extenddftf2(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__extendhftf2(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__extendhfxf2(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__extendsftf2(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__extendxftf2(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixdfti(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixhfti(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixsfti(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixtfdi(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixtfsi(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixtfti(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixunshfti(half) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixunssfti(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixunstfdi(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixunstfsi(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixunstfti(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixunsxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixunsxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__fixxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__fixxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__fixxfti(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__floatdixf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__floatsidf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__floatsihf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__floatsisf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__floatsitf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__floatsixf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__floattidf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__floattihf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__floattisf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__floattitf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__floattixf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__floatundixf(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__floatunsidf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__floatunsihf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__floatunsisf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__floatunsitf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__floatunsixf(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__floatuntidf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__floatuntihf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__floatuntisf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__floatuntitf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__getf2(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__gttf2(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__letf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare void @__llvm_deoptimize(...)
 ; CYGWIN-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
 ; CYGWIN-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
@@ -1199,37 +1199,37 @@
 ; CYGWIN-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @__logl_finite(x86_fp80) [[SQRT_ATTRS]]
-; CYGWIN-NEXT: declare i64 @__lshrdi3(i64, i32)
-; CYGWIN-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
-; CYGWIN-NEXT: declare i32 @__lshrsi3(i32, i32)
-; CYGWIN-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32)
-; CYGWIN-NEXT: declare i64 @__ltdf2(double, double)
-; CYGWIN-NEXT: declare i64 @__ltsf2(float, float)
-; CYGWIN-NEXT: declare i64 @__lttf2(fp128, fp128)
+; CYGWIN-NEXT: declare i64 @__lshrdi3(i64, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__lshrsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; CYGWIN-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; CYGWIN-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
-; CYGWIN-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; CYGWIN-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; CYGWIN-NEXT: declare i32 @__modsi3(i32, i32)
-; CYGWIN-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>)
-; CYGWIN-NEXT: declare double @__muldf3(double, double)
-; CYGWIN-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
+; CYGWIN-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
-; CYGWIN-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; CYGWIN-NEXT: declare float @__mulsf3(float, float)
-; CYGWIN-NEXT: declare i32 @__mulsi3(i32, i32)
-; CYGWIN-NEXT: declare fp128 @__multf3(fp128, fp128)
-; CYGWIN-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>)
-; CYGWIN-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80)
-; CYGWIN-NEXT: declare i64 @__nedf2(double, double)
-; CYGWIN-NEXT: declare i64 @__negdi2(i64)
-; CYGWIN-NEXT: declare i32 @__negsi2(i32)
-; CYGWIN-NEXT: declare i64 @__nesf2(float, float)
-; CYGWIN-NEXT: declare i64 @__netf2(fp128, fp128)
-; CYGWIN-NEXT: declare i32 @__popcountdi2(i64)
-; CYGWIN-NEXT: declare i32 @__popcountsi2(i32)
-; CYGWIN-NEXT: declare i32 @__popcountti2(<2 x i64>)
+; CYGWIN-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__multf3(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__negsi2(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__netf2(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__popcountsi2(i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__popcountti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare double @__powidf2(double, i32) [[NOMEM_ATTRS:#[0-9]+]]
@@ -1238,10 +1238,10 @@
 ; CYGWIN-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
-; CYGWIN-NEXT: declare double @__subdf3(double, double)
-; CYGWIN-NEXT: declare float @__subsf3(float, float)
-; CYGWIN-NEXT: declare fp128 @__subtf3(fp128, fp128)
-; CYGWIN-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80)
+; CYGWIN-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; CYGWIN-NEXT: declare <2 x i64> @__sync_fetch_and_add_16(ptr, <2 x i64>)
 ; CYGWIN-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -1302,31 +1302,31 @@
 ; CYGWIN-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; CYGWIN-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; CYGWIN-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; CYGWIN-NEXT: declare bfloat @__truncdfbf2(double)
-; CYGWIN-NEXT: declare half @__truncdfhf2(double)
-; CYGWIN-NEXT: declare float @__truncdfsf2(double)
-; CYGWIN-NEXT: declare bfloat @__truncsfbf2(float)
-; CYGWIN-NEXT: declare half @__truncsfhf2(float)
-; CYGWIN-NEXT: declare bfloat @__trunctfbf2(fp128)
-; CYGWIN-NEXT: declare double @__trunctfdf2(fp128)
-; CYGWIN-NEXT: declare half @__trunctfhf2(fp128)
-; CYGWIN-NEXT: declare float @__trunctfsf2(fp128)
-; CYGWIN-NEXT: declare x86_fp80 @__trunctfxf2(fp128)
-; CYGWIN-NEXT: declare bfloat @__truncxfbf2(x86_fp80)
-; CYGWIN-NEXT: declare double @__truncxfdf2(x86_fp80)
-; CYGWIN-NEXT: declare half @__truncxfhf2(x86_fp80)
-; CYGWIN-NEXT: declare float @__truncxfsf2(x86_fp80)
-; CYGWIN-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; CYGWIN-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; CYGWIN-NEXT: declare i32 @__udivsi3(i32, i32)
-; CYGWIN-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>)
-; CYGWIN-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; CYGWIN-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; CYGWIN-NEXT: declare i32 @__umodsi3(i32, i32)
-; CYGWIN-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>)
-; CYGWIN-NEXT: declare i64 @__unorddf2(double, double)
-; CYGWIN-NEXT: declare i64 @__unordsf2(float, float)
-; CYGWIN-NEXT: declare i64 @__unordtf2(fp128, fp128)
+; CYGWIN-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare bfloat @__trunctfbf2(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__trunctfdf2(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__trunctfhf2(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__trunctfsf2(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare x86_fp80 @__trunctfxf2(fp128) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare bfloat @__truncxfbf2(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare double @__truncxfdf2(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare half @__truncxfhf2(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare float @__truncxfsf2(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__udivsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i32 @__umodsi3(i32, i32) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: declare i64 @__unordtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @acosl(x86_fp80) [[SQRT_ATTRS]]
@@ -1490,9 +1490,9 @@
 ; CYGWIN-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
+; CYGWIN-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CYGWIN-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CYGWIN-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; CYGWIN-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CYGWIN-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CYGWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
@@ -1504,18 +1504,18 @@
 ; UEFI-NEXT: @__stack_chk_guard = external global ptr
 ; UEFI-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; UEFI-NEXT: declare void @_Unwind_Resume(ptr)
-; UEFI-NEXT: declare double @__adddf3(double, double)
-; UEFI-NEXT: declare float @__addsf3(float, float)
-; UEFI-NEXT: declare fp128 @__addtf3(fp128, fp128)
-; UEFI-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80)
-; UEFI-NEXT: declare i64 @__ashldi3(i64, i32)
-; UEFI-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32)
-; UEFI-NEXT: declare i32 @__ashlsi3(i32, i32)
-; UEFI-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32)
-; UEFI-NEXT: declare i64 @__ashrdi3(i64, i32)
-; UEFI-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32)
-; UEFI-NEXT: declare i32 @__ashrsi3(i32, i32)
-; UEFI-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32)
+; UEFI-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
+; UEFI-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__addxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__ashlti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__ashrdi3(i64, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i16 @__ashrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__ashrsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__ashrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare zeroext i1 @__atomic_compare_exchange(i64, ptr, ptr, ptr, i32, i32)
 ; UEFI-NEXT: declare zeroext i1 @__atomic_compare_exchange_1(ptr, ptr, i8 zeroext, i32, i32)
 ; UEFI-NEXT: declare zeroext i1 @__atomic_compare_exchange_16(ptr, ptr, <2 x i64>, i32, i32)
@@ -1572,108 +1572,108 @@
 ; UEFI-NEXT: declare void @__atomic_store_8(ptr, i64, i32)
 ; UEFI-NEXT: declare void @__chkstk()
 ; UEFI-NEXT: declare void @__clear_cache(ptr, ptr)
-; UEFI-NEXT: declare i32 @__clzdi2(i64)
-; UEFI-NEXT: declare i32 @__clzsi2(i32)
-; UEFI-NEXT: declare i32 @__clzti2(<2 x i64>)
-; UEFI-NEXT: declare i32 @__ctzdi2(i64)
-; UEFI-NEXT: declare i32 @__ctzsi2(i32)
-; UEFI-NEXT: declare i32 @__ctzti2(<2 x i64>)
+; UEFI-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__ctzdi2(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__ctzsi2(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__ctzti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare void @__cxa_end_cleanup()
-; UEFI-NEXT: declare double @__divdf3(double, double)
-; UEFI-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
-; UEFI-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext)
-; UEFI-NEXT: declare float @__divsf3(float, float)
-; UEFI-NEXT: declare i32 @__divsi3(i32, i32)
-; UEFI-NEXT: declare fp128 @__divtf3(fp128, fp128)
-; UEFI-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>)
-; UEFI-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80)
-; UEFI-NEXT: declare i64 @__eqdf2(double, double)
-; UEFI-NEXT: declare i64 @__eqsf2(float, float)
-; UEFI-NEXT: declare i64 @__eqtf2(fp128, fp128)
+; UEFI-NEXT: declare double @__divdf3(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i8 @__divqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__divsf3(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__divsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__divtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__divti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__divxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__eqdf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__eqsf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__eqtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
 ; UEFI-NEXT: declare float @__exp2f_finite(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @__exp_finite(double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @__expf_finite(float) [[SQRT_ATTRS]]
-; UEFI-NEXT: declare float @__extendbfsf2(bfloat)
-; UEFI-NEXT: declare fp128 @__extenddftf2(double)
-; UEFI-NEXT: declare double @__extendhfdf2(half)
-; UEFI-NEXT: declare float @__extendhfsf2(half)
-; UEFI-NEXT: declare fp128 @__extendhftf2(half)
-; UEFI-NEXT: declare x86_fp80 @__extendhfxf2(half)
-; UEFI-NEXT: declare double @__extendsfdf2(float)
-; UEFI-NEXT: declare fp128 @__extendsftf2(float)
-; UEFI-NEXT: declare fp128 @__extendxftf2(x86_fp80)
-; UEFI-NEXT: declare i64 @__fixdfdi(double)
-; UEFI-NEXT: declare i32 @__fixdfsi(double)
-; UEFI-NEXT: declare <2 x i64> @__fixdfti(double)
-; UEFI-NEXT: declare i64 @__fixhfdi(half)
-; UEFI-NEXT: declare i32 @__fixhfsi(half)
-; UEFI-NEXT: declare <2 x i64> @__fixhfti(half)
-; UEFI-NEXT: declare i64 @__fixsfdi(float)
-; UEFI-NEXT: declare i32 @__fixsfsi(float)
-; UEFI-NEXT: declare <2 x i64> @__fixsfti(float)
-; UEFI-NEXT: declare i64 @__fixtfdi(fp128)
-; UEFI-NEXT: declare i32 @__fixtfsi(fp128)
-; UEFI-NEXT: declare <2 x i64> @__fixtfti(fp128)
-; UEFI-NEXT: declare i64 @__fixunsdfdi(double)
-; UEFI-NEXT: declare i32 @__fixunsdfsi(double)
-; UEFI-NEXT: declare <2 x i64> @__fixunsdfti(double)
-; UEFI-NEXT: declare i64 @__fixunshfdi(half)
-; UEFI-NEXT: declare i32 @__fixunshfsi(half)
-; UEFI-NEXT: declare <2 x i64> @__fixunshfti(half)
-; UEFI-NEXT: declare i64 @__fixunssfdi(float)
-; UEFI-NEXT: declare i32 @__fixunssfsi(float)
-; UEFI-NEXT: declare <2 x i64> @__fixunssfti(float)
-; UEFI-NEXT: declare i64 @__fixunstfdi(fp128)
-; UEFI-NEXT: declare i32 @__fixunstfsi(fp128)
-; UEFI-NEXT: declare <2 x i64> @__fixunstfti(fp128)
-; UEFI-NEXT: declare i64 @__fixunsxfdi(x86_fp80)
-; UEFI-NEXT: declare i32 @__fixunsxfsi(x86_fp80)
-; UEFI-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80)
-; UEFI-NEXT: declare i64 @__fixxfdi(x86_fp80)
-; UEFI-NEXT: declare i32 @__fixxfsi(x86_fp80)
-; UEFI-NEXT: declare <2 x i64> @__fixxfti(x86_fp80)
-; UEFI-NEXT: declare bfloat @__floatdibf(i64)
-; UEFI-NEXT: declare double @__floatdidf(i64)
-; UEFI-NEXT: declare half @__floatdihf(i64)
-; UEFI-NEXT: declare float @__floatdisf(i64)
-; UEFI-NEXT: declare fp128 @__floatditf(i64)
-; UEFI-NEXT: declare x86_fp80 @__floatdixf(i64)
-; UEFI-NEXT: declare double @__floatsidf(i32)
-; UEFI-NEXT: declare half @__floatsihf(i32)
-; UEFI-NEXT: declare float @__floatsisf(i32)
-; UEFI-NEXT: declare fp128 @__floatsitf(i32)
-; UEFI-NEXT: declare x86_fp80 @__floatsixf(i32)
-; UEFI-NEXT: declare double @__floattidf(<2 x i64>)
-; UEFI-NEXT: declare half @__floattihf(<2 x i64>)
-; UEFI-NEXT: declare float @__floattisf(<2 x i64>)
-; UEFI-NEXT: declare fp128 @__floattitf(<2 x i64>)
-; UEFI-NEXT: declare x86_fp80 @__floattixf(<2 x i64>)
-; UEFI-NEXT: declare bfloat @__floatundibf(i64)
-; UEFI-NEXT: declare double @__floatundidf(i64)
-; UEFI-NEXT: declare half @__floatundihf(i64)
-; UEFI-NEXT: declare float @__floatundisf(i64)
-; UEFI-NEXT: declare fp128 @__floatunditf(i64)
-; UEFI-NEXT: declare x86_fp80 @__floatundixf(i64)
-; UEFI-NEXT: declare double @__floatunsidf(i32)
-; UEFI-NEXT: declare half @__floatunsihf(i32)
-; UEFI-NEXT: declare float @__floatunsisf(i32)
-; UEFI-NEXT: declare fp128 @__floatunsitf(i32)
-; UEFI-NEXT: declare x86_fp80 @__floatunsixf(i32)
-; UEFI-NEXT: declare double @__floatuntidf(<2 x i64>)
-; UEFI-NEXT: declare half @__floatuntihf(<2 x i64>)
-; UEFI-NEXT: declare float @__floatuntisf(<2 x i64>)
-; UEFI-NEXT: declare fp128 @__floatuntitf(<2 x i64>)
-; UEFI-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>)
-; UEFI-NEXT: declare i64 @__gedf2(double, double)
-; UEFI-NEXT: declare i64 @__gesf2(float, float)
-; UEFI-NEXT: declare i64 @__getf2(fp128, fp128)
-; UEFI-NEXT: declare i64 @__gtdf2(double, double)
-; UEFI-NEXT: declare i64 @__gtsf2(float, float)
-; UEFI-NEXT: declare i64 @__gttf2(fp128, fp128)
-; UEFI-NEXT: declare i64 @__ledf2(double, double)
-; UEFI-NEXT: declare i64 @__lesf2(float, float)
-; UEFI-NEXT: declare i64 @__letf2(fp128, fp128)
+; UEFI-NEXT: declare float @__extendbfsf2(bfloat) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__extenddftf2(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__extendhfdf2(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__extendhfsf2(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__extendhftf2(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__extendhfxf2(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__extendsfdf2(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__extendsftf2(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__extendxftf2(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixdfdi(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixdfsi(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixdfti(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixhfdi(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixhfsi(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixhfti(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixsfdi(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixsfsi(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixsfti(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixtfdi(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixtfsi(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixtfti(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixunsdfdi(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixunsdfsi(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixunsdfti(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixunshfdi(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixunshfsi(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixunshfti(half) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixunssfdi(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixunssfsi(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixunssfti(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixunstfdi(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixunstfsi(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixunstfti(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixunsxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixunsxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixunsxfti(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__fixxfdi(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__fixxfsi(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__fixxfti(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare bfloat @__floatdibf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__floatdidf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__floatdihf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__floatdisf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__floatditf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__floatdixf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__floatsidf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__floatsihf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__floatsisf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__floatsitf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__floatsixf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__floattidf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__floattihf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__floattisf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__floattitf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__floattixf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare bfloat @__floatundibf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__floatundidf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__floatundihf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__floatundisf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__floatunditf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__floatundixf(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__floatunsidf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__floatunsihf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__floatunsisf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__floatunsitf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__floatunsixf(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__floatuntidf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__floatuntihf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__floatuntisf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__floatuntitf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__floatuntixf(<2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__gedf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__gesf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__getf2(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__gtdf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__gtsf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__gttf2(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__ledf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__lesf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__letf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare void @__llvm_deoptimize(...)
 ; UEFI-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_1(ptr, ptr, i64)
 ; UEFI-NEXT: declare void @__llvm_memcpy_element_unordered_atomic_16(ptr, ptr, i64)
@@ -1696,37 +1696,37 @@
 ; UEFI-NEXT: declare float @__log2f_finite(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @__log_finite(double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @__logf_finite(float) [[SQRT_ATTRS]]
-; UEFI-NEXT: declare i64 @__lshrdi3(i64, i32)
-; UEFI-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32)
-; UEFI-NEXT: declare i32 @__lshrsi3(i32, i32)
-; UEFI-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32)
-; UEFI-NEXT: declare i64 @__ltdf2(double, double)
-; UEFI-NEXT: declare i64 @__ltsf2(float, float)
-; UEFI-NEXT: declare i64 @__lttf2(fp128, fp128)
+; UEFI-NEXT: declare i64 @__lshrdi3(i64, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i16 @__lshrhi3(i16 signext, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__lshrsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__lshrti3(<2 x i64>, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__ltdf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__ltsf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__lttf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 ; UEFI-NEXT: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; UEFI-NEXT: declare ptr @__memset_chk(ptr, i32, i64, i64)
-; UEFI-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext)
-; UEFI-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext)
-; UEFI-NEXT: declare i32 @__modsi3(i32, i32)
-; UEFI-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>)
-; UEFI-NEXT: declare double @__muldf3(double, double)
-; UEFI-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
+; UEFI-NEXT: declare signext i16 @__modhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i8 @__modqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__modsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__modti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__muldf3(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
-; UEFI-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
-; UEFI-NEXT: declare float @__mulsf3(float, float)
-; UEFI-NEXT: declare i32 @__mulsi3(i32, i32)
-; UEFI-NEXT: declare fp128 @__multf3(fp128, fp128)
-; UEFI-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>)
-; UEFI-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80)
-; UEFI-NEXT: declare i64 @__nedf2(double, double)
-; UEFI-NEXT: declare i64 @__negdi2(i64)
-; UEFI-NEXT: declare i32 @__negsi2(i32)
-; UEFI-NEXT: declare i64 @__nesf2(float, float)
-; UEFI-NEXT: declare i64 @__netf2(fp128, fp128)
-; UEFI-NEXT: declare i32 @__popcountdi2(i64)
-; UEFI-NEXT: declare i32 @__popcountsi2(i32)
-; UEFI-NEXT: declare i32 @__popcountti2(<2 x i64>)
+; UEFI-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__mulsf3(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__mulsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__multf3(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__multi3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__mulxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__nedf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__negdi2(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__negsi2(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__nesf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__netf2(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__popcountdi2(i64) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__popcountsi2(i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__popcountti2(<2 x i64>) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare double @__pow_finite(double, double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @__powf_finite(float, float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @__powidf2(double, i32) [[NOMEM_ATTRS:#[0-9]+]]
@@ -1734,10 +1734,10 @@
 ; UEFI-NEXT: declare fp128 @__powitf2(fp128, i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
-; UEFI-NEXT: declare double @__subdf3(double, double)
-; UEFI-NEXT: declare float @__subsf3(float, float)
-; UEFI-NEXT: declare fp128 @__subtf3(fp128, fp128)
-; UEFI-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80)
+; UEFI-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__subxf3(x86_fp80, x86_fp80) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare zeroext i8 @__sync_fetch_and_add_1(ptr, i8 zeroext)
 ; UEFI-NEXT: declare <2 x i64> @__sync_fetch_and_add_16(ptr, <2 x i64>)
 ; UEFI-NEXT: declare zeroext i16 @__sync_fetch_and_add_2(ptr, i16 zeroext)
@@ -1798,31 +1798,31 @@
 ; UEFI-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr, i16 zeroext, i16 zeroext)
 ; UEFI-NEXT: declare i32 @__sync_val_compare_and_swap_4(ptr, i32, i32)
 ; UEFI-NEXT: declare i64 @__sync_val_compare_and_swap_8(ptr, i64, i64)
-; UEFI-NEXT: declare bfloat @__truncdfbf2(double)
-; UEFI-NEXT: declare half @__truncdfhf2(double)
-; UEFI-NEXT: declare float @__truncdfsf2(double)
-; UEFI-NEXT: declare bfloat @__truncsfbf2(float)
-; UEFI-NEXT: declare half @__truncsfhf2(float)
-; UEFI-NEXT: declare bfloat @__trunctfbf2(fp128)
-; UEFI-NEXT: declare double @__trunctfdf2(fp128)
-; UEFI-NEXT: declare half @__trunctfhf2(fp128)
-; UEFI-NEXT: declare float @__trunctfsf2(fp128)
-; UEFI-NEXT: declare x86_fp80 @__trunctfxf2(fp128)
-; UEFI-NEXT: declare bfloat @__truncxfbf2(x86_fp80)
-; UEFI-NEXT: declare double @__truncxfdf2(x86_fp80)
-; UEFI-NEXT: declare half @__truncxfhf2(x86_fp80)
-; UEFI-NEXT: declare float @__truncxfsf2(x86_fp80)
-; UEFI-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext)
-; UEFI-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext)
-; UEFI-NEXT: declare i32 @__udivsi3(i32, i32)
-; UEFI-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>)
-; UEFI-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext)
-; UEFI-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext)
-; UEFI-NEXT: declare i32 @__umodsi3(i32, i32)
-; UEFI-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>)
-; UEFI-NEXT: declare i64 @__unorddf2(double, double)
-; UEFI-NEXT: declare i64 @__unordsf2(float, float)
-; UEFI-NEXT: declare i64 @__unordtf2(fp128, fp128)
+; UEFI-NEXT: declare bfloat @__truncdfbf2(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__truncdfhf2(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__truncdfsf2(double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare bfloat @__truncsfbf2(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__truncsfhf2(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare bfloat @__trunctfbf2(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__trunctfdf2(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__trunctfhf2(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__trunctfsf2(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare x86_fp80 @__trunctfxf2(fp128) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare bfloat @__truncxfbf2(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare double @__truncxfdf2(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare half @__truncxfhf2(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare float @__truncxfsf2(x86_fp80) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare zeroext i16 @__udivhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare zeroext i8 @__udivqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__udivsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__udivti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare zeroext i16 @__umodhi3(i16 zeroext, i16 zeroext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare zeroext i8 @__umodqi3(i8 zeroext, i8 zeroext) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i32 @__umodsi3(i32, i32) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare <2 x i64> @__umodti3(<2 x i64>, <2 x i64>) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__unorddf2(double, double) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__unordsf2(float, float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: declare i64 @__unordtf2(fp128, fp128) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare double @acos(double) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare float @acosf(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @asin(double) [[SQRT_ATTRS]]
@@ -1935,9 +1935,9 @@
 ; UEFI-NEXT: declare float @tgammaf(float) [[SQRT_ATTRS]]
 ; UEFI-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
+; UEFI-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; UEFI-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; UEFI-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; UEFI-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; UEFI-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; UEFI-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
