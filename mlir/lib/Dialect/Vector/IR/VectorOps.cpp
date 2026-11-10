@@ -6577,15 +6577,6 @@ LogicalResult GatherOp::verify() {
 
 // MaskableOpInterface methods.
 
-/// Returns the mask type expected by this operation. Mostly used for
-/// verification purposes. It requires the operation to be vectorized."
-Type GatherOp::getExpectedMaskType() {
-  auto vecType = this->getIndexVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1),
-                         vecType.getScalableDims());
-}
-
 std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
