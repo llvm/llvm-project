@@ -35,7 +35,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
   sanitizer_range.cpp
-  sanitizer_report_receiver.cpp
   sanitizer_solaris.cpp
   sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
@@ -95,6 +94,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_markup.cpp
   sanitizer_symbolizer_markup_fuchsia.cpp
   sanitizer_symbolizer_posix_libcdep.cpp
+  sanitizer_report_receiver.cpp
   sanitizer_symbolizer_report.cpp
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
