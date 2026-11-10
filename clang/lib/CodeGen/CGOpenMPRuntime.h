@@ -523,6 +523,10 @@ protected:
   /// \param ParentName Name of the function declaration that is being scanned.
   void scanForTargetRegionsFunctions(const Stmt *S, StringRef ParentName);
 
+  /// Scans the mem-initializers and the body of \a Ctor for target regions.
+  void scanConstructorForTargetRegions(const CXXConstructorDecl *Ctor,
+                                       StringRef ParentName);
+
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
 
@@ -1418,6 +1422,10 @@ public:
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen);
+
+  /// Returns the parent name of the target regions in \a FD; constructors and
+  /// destructors use their complete variant.
+  StringRef getTargetRegionParentName(const FunctionDecl *FD) const;
 
   /// Emit the target offloading code associated with \a D. The emitted
   /// code attempts offloading the execution to the device, an the event of
