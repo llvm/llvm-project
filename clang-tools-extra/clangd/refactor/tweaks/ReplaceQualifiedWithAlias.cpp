@@ -98,12 +98,20 @@ struct UsingDirectiveInfo {
   SourceLocation Loc;           // expansion loc of the directive
 };
 
-/// Collects all file/namespace-scope using-directives of the TU in a single
-/// pass, so that repeated visibility queries do not each re-traverse the AST.
+/// Collects all file/namespace-scope using-directives of the main file in a
+/// single shallow pass, so that repeated visibility queries do not re-walk
+/// top-level declarations.
+///
+/// Performance note: This is NOT a full AST traversal. It only inspects
+/// main-file top-level declarations (skipping all #included headers/preamble)
+/// and only descends into namespace, linkage-specification, and export scopes,
+/// completely skipping classes, function bodies, statements, and expressions.
 llvm::SmallVector<UsingDirectiveInfo> collectUsingDirectives(ParsedAST &AST) {
   auto &SM = AST.getSourceManager();
   llvm::SmallVector<UsingDirectiveInfo> Directives;
   auto ScanDecl = [&](auto &&Self, const Decl *D) -> void {
+    // Record 'using namespace <Nominated>;' along with the enclosing context
+    // where it appears and its expansion location in the main file.
     if (const auto *UDD = llvm::dyn_cast<UsingDirectiveDecl>(D)) {
       if (const auto *Nom = UDD->getNominatedNamespace())
         Directives.push_back({UDD->getDeclContext()->getPrimaryContext(),
@@ -112,12 +120,15 @@ llvm::SmallVector<UsingDirectiveInfo> collectUsingDirectives(ParsedAST &AST) {
       return;
     }
 
+    // Only recurse into file/namespace-level container scopes; skip classes,
+    // functions, enums, and all statement/expression subtrees.
     if (llvm::isa<NamespaceDecl, LinkageSpecDecl, ExportDecl>(D)) {
       for (const Decl *Child : llvm::cast<DeclContext>(D)->decls())
         Self(Self, Child);
     }
   };
 
+  // Only iterate over declarations written in the main file (excludes headers).
   for (const Decl *D : AST.getLocalTopLevelDecls())
     ScanDecl(ScanDecl, D);
   return Directives;
@@ -215,11 +226,13 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
   AliasDeclToSkip = SourceRange();
   RewriteTargets.clear();
 
+  // Inspect only the SelectionTree ancestor chain around the cursor (O(depth),
+  // no AST traversal).
   const auto &Prepared = prepareQualifiedSelection(
       Inputs, QualifiedRewriteClient::ReplaceQualifiedWithAlias);
 
-  // First look for an alias declaration in the current selection or one of
-  // its ancestors. This is the narrowest and most reliable source of truth.
+  // Case 1: The cursor is directly on a using-declaration or type-alias
+  // declaration. Only that single declaration node is inspected.
   if (const auto *Alias = Prepared.SelectedAliasDecl) {
     llvm::DenseSet<const NamedDecl *> Targets;
     if (collectAliasTargets(Alias, Inputs, Targets)) {
@@ -231,12 +244,21 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     }
   }
 
+  // Fast exit when the cursor is not on a namespace-qualified reference.
   if (!Prepared.HasQualifiedRef)
     return false;
 
-  // Search the main file's top-level and namespace declarations for a
-  // using-declaration that is visible at the selection and covers the selected
-  // reference.
+  // Case 2: The cursor is on a qualified reference (e.g. 'ns::Foo').
+  // To decide whether this tweak is available and to populate AliasName for
+  // title(), we must check if a matching using-declaration is visible at the
+  // cursor. NOTE: This does NOT perform a full AST traversal:
+  // - Only main-file top-level declarations (getLocalTopLevelDecls()) are
+  //   visited; preamble/header declarations are never touched.
+  // - Both collectUsingDirectives() and findMatchingUsingDecl() only descend
+  //   into namespace/linkage/export scopes and skip all function bodies,
+  //   classes, statements, and expressions.
+  // The full traversal over function bodies to rewrite references only happens
+  // later in apply().
   auto &SM = Inputs.AST->getSourceManager();
   SourceLocation SelectionLoc =
       SM.getExpansionLoc(Prepared.QualifierToRemove.getBeginLoc());
