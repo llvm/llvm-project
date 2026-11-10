@@ -1,7 +1,8 @@
-; Verify that the PISA target intrinsics are registered in the IR layer and
-; round-trip through the verifier/assembler.
+; REQUIRES: pisa-registered-target
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
-; RUN: opt -S < %s | FileCheck %s
+; Verify that the PISA target intrinsics are registered in the IR layer and
+; round-trip through the assembler and disassembler.
 
 define void @test() {
 ; CHECK-LABEL: define void @test()

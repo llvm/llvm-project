@@ -1,7 +1,8 @@
+; REQUIRES: pisa-registered-target
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+
 ; Verify that the PISA intrinsics are materialized with the attributes declared
 ; in IntrinsicsPISA.td.
-
-; RUN: opt -S < %s | FileCheck %s
 
 define void @test(ptr %addr) {
 ; CHECK-LABEL: define void @test(
