@@ -1296,11 +1296,20 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   for (auto &s : LiveStarts)
     llvm::sort(s);
 
+  auto IsZeroSizedAlloca = [&](int Slot) {
+    const AllocaInst *AI = MFI->getObjectAllocation(Slot);
+    return AI &&
+           AI->getAllocationSize(MF->getDataLayout()) == TypeSize::getZero();
+  };
+
   bool Changed = true;
   while (Changed) {
     Changed = false;
     for (unsigned I = 0; I < NumSlots; ++I) {
-      if (SortedSlots[I] == -1)
+      // Never merge another slot into a zero-sized alloca's slot: its stack
+      // object was extended to one byte, but alias analysis still sees zero
+      // bytes through the IR references to it.
+      if (SortedSlots[I] == -1 || IsZeroSizedAlloca(SortedSlots[I]))
         continue;
 
       for (unsigned J=I+1; J < NumSlots; ++J) {

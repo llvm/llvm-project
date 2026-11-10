@@ -5,8 +5,6 @@
 ;; The lifetime of the zero-size alloca %empty is disjoint from %slot0's, so
 ;; stack coloring can merge their slots. The stores to both slots must stay
 ;; before the load through %p, and the reloads after the store through %p.
-;; FIXME: %slot0 is merged into %empty, and the store to %slot0 is scheduled
-;; after the read-modify-write through %p, which can point to %slot0.
 
 define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; SDAG-LABEL: flip_selected_slot:
@@ -16,31 +14,29 @@ define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; SDAG-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; SDAG-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
 ; SDAG-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
-; SDAG-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; SDAG-NEXT:    mv s1, a2
-; SDAG-NEXT:    mv s0, a1
-; SDAG-NEXT:    andi s3, a0, 1
-; SDAG-NEXT:    addi a0, sp, 23
-; SDAG-NEXT:    addi s2, sp, 23
+; SDAG-NEXT:    mv s0, a2
+; SDAG-NEXT:    mv s1, a1
+; SDAG-NEXT:    andi s2, a0, 1
+; SDAG-NEXT:    addi a0, sp, 31
 ; SDAG-NEXT:    call use
-; SDAG-NEXT:    bnez s3, .LBB0_2
+; SDAG-NEXT:    addi a0, sp, 30
+; SDAG-NEXT:    bnez s2, .LBB0_2
 ; SDAG-NEXT:  # %bb.1: # %pick1
-; SDAG-NEXT:    addi s2, sp, 22
+; SDAG-NEXT:    addi a0, sp, 29
 ; SDAG-NEXT:  .LBB0_2: # %join
-; SDAG-NEXT:    sb s1, 22(sp)
-; SDAG-NEXT:    lbu a0, 0(s2)
-; SDAG-NEXT:    xori a0, a0, 1
-; SDAG-NEXT:    sb a0, 0(s2)
-; SDAG-NEXT:    sb s0, 23(sp)
-; SDAG-NEXT:    lbu a0, 22(sp)
-; SDAG-NEXT:    lbu a1, 23(sp)
+; SDAG-NEXT:    sb s1, 30(sp)
+; SDAG-NEXT:    sb s0, 29(sp)
+; SDAG-NEXT:    lbu a1, 0(a0)
+; SDAG-NEXT:    xori a1, a1, 1
+; SDAG-NEXT:    sb a1, 0(a0)
+; SDAG-NEXT:    lbu a0, 29(sp)
+; SDAG-NEXT:    lbu a1, 30(sp)
 ; SDAG-NEXT:    slli a0, a0, 8
 ; SDAG-NEXT:    or a0, a0, a1
 ; SDAG-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; SDAG-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
 ; SDAG-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; SDAG-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
-; SDAG-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
 ; SDAG-NEXT:    addi sp, sp, 64
 ; SDAG-NEXT:    ret
 ;
@@ -55,21 +51,21 @@ define i16 @flip_selected_slot(i1 %c, i8 %v0, i8 %v1) nounwind {
 ; GISEL-NEXT:    mv s2, a0
 ; GISEL-NEXT:    mv s0, a1
 ; GISEL-NEXT:    mv s1, a2
-; GISEL-NEXT:    addi s3, sp, 23
+; GISEL-NEXT:    addi s3, sp, 22
 ; GISEL-NEXT:    addi a0, sp, 23
 ; GISEL-NEXT:    call use
 ; GISEL-NEXT:    andi a0, s2, 1
 ; GISEL-NEXT:    bnez a0, .LBB0_2
 ; GISEL-NEXT:  # %bb.1: # %pick1
-; GISEL-NEXT:    addi s3, sp, 22
+; GISEL-NEXT:    addi s3, sp, 21
 ; GISEL-NEXT:  .LBB0_2: # %join
-; GISEL-NEXT:    sb s1, 22(sp)
+; GISEL-NEXT:    sb s0, 22(sp)
+; GISEL-NEXT:    sb s1, 21(sp)
 ; GISEL-NEXT:    lbu a0, 0(s3)
 ; GISEL-NEXT:    xori a0, a0, 1
 ; GISEL-NEXT:    sb a0, 0(s3)
-; GISEL-NEXT:    sb s0, 23(sp)
-; GISEL-NEXT:    lbu a0, 22(sp)
-; GISEL-NEXT:    lbu a1, 23(sp)
+; GISEL-NEXT:    lbu a0, 21(sp)
+; GISEL-NEXT:    lbu a1, 22(sp)
 ; GISEL-NEXT:    slli a0, a0, 8
 ; GISEL-NEXT:    or a0, a0, a1
 ; GISEL-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
