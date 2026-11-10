@@ -38,7 +38,7 @@ public:
 
 // This tests for invalid input.
 TEST_F(LlvmLibcPthreadSigmaskTest, PthreadSigmaskInvalid) {
-  sigset_t valid;
+  sigset_t valid{};
   // 17 and -4 are out of the range for pthread_sigmask's how parameter.
   EXPECT_EQ(LIBC_NAMESPACE::pthread_sigmask(17, &valid, nullptr), EINVAL);
   EXPECT_EQ(LIBC_NAMESPACE::pthread_sigmask(-4, &valid, nullptr), EINVAL);

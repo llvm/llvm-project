@@ -22,7 +22,7 @@ int func(void *) {
 }
 
 void thread_local_test() {
-  int retval;
+  int retval = 0;
 
   LIBC_NAMESPACE::Thread th1;
   th1.run(func, nullptr, nullptr, 0);

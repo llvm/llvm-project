@@ -199,16 +199,20 @@ extract_decimal_digit(T &value) {
   constexpr Word HALFWORD_MASK = ((Word(1) << HALFWORD_BITS) - 1);
   // Sum both halves of all words except the low one.
   for (size_t i = 1; i < T::WORD_COUNT; i++) {
-    acc_remainder += value.val[i] >> HALFWORD_BITS;
-    acc_remainder += value.val[i] & HALFWORD_MASK;
+    acc_remainder =
+        static_cast<Word>(acc_remainder + (value.val[i] >> HALFWORD_BITS));
+    acc_remainder =
+        static_cast<Word>(acc_remainder + (value.val[i] & HALFWORD_MASK));
   }
   // Add the high half of the low word. Then we have everything that needs to
   // be multiplied by 6, so do that.
-  acc_remainder += value.val[0] >> HALFWORD_BITS;
-  acc_remainder *= 6;
+  acc_remainder =
+      static_cast<Word>(acc_remainder + (value.val[0] >> HALFWORD_BITS));
+  acc_remainder = static_cast<Word>(acc_remainder * 6);
   // Having multiplied it by 6, add the lowest half-word, and then reduce mod
   // 10 by normal integer division to finish.
-  acc_remainder += value.val[0] & HALFWORD_MASK;
+  acc_remainder =
+      static_cast<Word>(acc_remainder + (value.val[0] & HALFWORD_MASK));
   uint8_t digit = static_cast<uint8_t>(acc_remainder % 10);
 
   // Now we have the output digit. Subtract it from the input value, and shift

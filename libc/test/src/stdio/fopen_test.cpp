@@ -84,8 +84,9 @@ protected:
 
     FILE *existing = LIBC_NAMESPACE::fopen(TEST_FILE, mode);
     EXPECT_THAT(existing, Fails(EEXIST, static_cast<void *>(nullptr)));
-    if (existing != nullptr)
+    if (existing != nullptr) {
       EXPECT_THAT(LIBC_NAMESPACE::fclose(existing), Succeeds(0));
+    }
 
     file = LIBC_NAMESPACE::fopen(TEST_FILE, "r");
     ASSERT_NE(file, nullptr);

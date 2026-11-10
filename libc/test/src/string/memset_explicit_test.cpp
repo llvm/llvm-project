@@ -23,7 +23,7 @@ TEST(LlvmLibcmemsetExplicitTest, SizeSweep) {
   static constexpr size_t kMaxSize = 400;
   Buffer DstBuffer(kMaxSize);
   for (size_t size = 0; size < kMaxSize; ++size) {
-    const char value = size % 10;
+    const uint8_t value = static_cast<uint8_t>(size % 10);
     auto dst = DstBuffer.span().subspan(0, size);
     ASSERT_TRUE((CheckMemset<Adaptor>(dst, value, size)));
   }

@@ -18,6 +18,7 @@
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "src/__support/FPUtil/cast.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -228,32 +229,45 @@ public:
   }
 
   void testRegularExtreme(FModFunc f) {
+    using LIBC_NAMESPACE::fputil::cast;
 
-    TEST_REGULAR(0x1p127L, -0x3p-149L, 0x1p-149L);
-    TEST_REGULAR(0x1p127L, 0x3p-148L, 0x1p-147L);
-    TEST_REGULAR(0x1p127L, -0x3p-148L, 0x1p-147L);
-    TEST_REGULAR(0x1p127L, 0x3p-126L, 0x1p-125L);
-    TEST_REGULAR(0x1p127L, -0x3p-126L, 0x1p-125L);
-    TEST_REGULAR(-0x1p127L, 0x3p-149L, -0x1p-149L);
-    TEST_REGULAR(-0x1p127L, -0x3p-149L, -0x1p-149L);
-    TEST_REGULAR(-0x1p127L, 0x3p-148L, -0x1p-147L);
-    TEST_REGULAR(-0x1p127L, -0x3p-148L, -0x1p-147L);
-    TEST_REGULAR(-0x1p127L, 0x3p-126L, -0x1p-125L);
-    TEST_REGULAR(-0x1p127L, -0x3p-126L, -0x1p-125L);
+    TEST_REGULAR(cast<T>(0x1p127L), cast<T>(-0x3p-149L), cast<T>(0x1p-149L));
+    TEST_REGULAR(cast<T>(0x1p127L), cast<T>(0x3p-148L), cast<T>(0x1p-147L));
+    TEST_REGULAR(cast<T>(0x1p127L), cast<T>(-0x3p-148L), cast<T>(0x1p-147L));
+    TEST_REGULAR(cast<T>(0x1p127L), cast<T>(0x3p-126L), cast<T>(0x1p-125L));
+    TEST_REGULAR(cast<T>(0x1p127L), cast<T>(-0x3p-126L), cast<T>(0x1p-125L));
+    TEST_REGULAR(cast<T>(-0x1p127L), cast<T>(0x3p-149L), cast<T>(-0x1p-149L));
+    TEST_REGULAR(cast<T>(-0x1p127L), cast<T>(-0x3p-149L), cast<T>(-0x1p-149L));
+    TEST_REGULAR(cast<T>(-0x1p127L), cast<T>(0x3p-148L), cast<T>(-0x1p-147L));
+    TEST_REGULAR(cast<T>(-0x1p127L), cast<T>(-0x3p-148L), cast<T>(-0x1p-147L));
+    TEST_REGULAR(cast<T>(-0x1p127L), cast<T>(0x3p-126L), cast<T>(-0x1p-125L));
+    TEST_REGULAR(cast<T>(-0x1p127L), cast<T>(-0x3p-126L), cast<T>(-0x1p-125L));
 
     if constexpr (sizeof(T) >= sizeof(double)) {
-      TEST_REGULAR(0x1p1023L, 0x3p-1074L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1074L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, 0x3p-1073L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1073L, 0x1p-1073L);
-      TEST_REGULAR(0x1p1023L, 0x3p-1022L, 0x1p-1021L);
-      TEST_REGULAR(0x1p1023L, -0x3p-1022L, 0x1p-1021L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1074L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1074L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1073L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1073L, -0x1p-1073L);
-      TEST_REGULAR(-0x1p1023L, 0x3p-1022L, -0x1p-1021L);
-      TEST_REGULAR(-0x1p1023L, -0x3p-1022L, -0x1p-1021L);
+      TEST_REGULAR(cast<T>(0x1p1023L), cast<T>(0x3p-1074L),
+                   cast<T>(0x1p-1073L));
+      TEST_REGULAR(cast<T>(0x1p1023L), cast<T>(-0x3p-1074L),
+                   cast<T>(0x1p-1073L));
+      TEST_REGULAR(cast<T>(0x1p1023L), cast<T>(0x3p-1073L),
+                   cast<T>(0x1p-1073L));
+      TEST_REGULAR(cast<T>(0x1p1023L), cast<T>(-0x3p-1073L),
+                   cast<T>(0x1p-1073L));
+      TEST_REGULAR(cast<T>(0x1p1023L), cast<T>(0x3p-1022L),
+                   cast<T>(0x1p-1021L));
+      TEST_REGULAR(cast<T>(0x1p1023L), cast<T>(-0x3p-1022L),
+                   cast<T>(0x1p-1021L));
+      TEST_REGULAR(cast<T>(-0x1p1023L), cast<T>(0x3p-1074L),
+                   cast<T>(-0x1p-1073L));
+      TEST_REGULAR(cast<T>(-0x1p1023L), cast<T>(-0x3p-1074L),
+                   cast<T>(-0x1p-1073L));
+      TEST_REGULAR(cast<T>(-0x1p1023L), cast<T>(0x3p-1073L),
+                   cast<T>(-0x1p-1073L));
+      TEST_REGULAR(cast<T>(-0x1p1023L), cast<T>(-0x3p-1073L),
+                   cast<T>(-0x1p-1073L));
+      TEST_REGULAR(cast<T>(-0x1p1023L), cast<T>(0x3p-1022L),
+                   cast<T>(-0x1p-1021L));
+      TEST_REGULAR(cast<T>(-0x1p1023L), cast<T>(-0x3p-1022L),
+                   cast<T>(-0x1p-1021L));
     }
   }
 };

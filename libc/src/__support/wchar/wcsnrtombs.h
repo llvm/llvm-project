@@ -35,9 +35,12 @@ wcsnrtombs(char *__restrict dest, const wchar_t **__restrict ptr_to_src,
   if (dest == nullptr)
     dest_len = SIZE_MAX;
 
-  StringConverter<char32_t> str_conv(
-      reinterpret_cast<const char32_t *>(*ptr_to_src), ps, dest_len,
-      num_src_widechars);
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  StringConverter<wchar_t> str_conv(*ptr_to_src, ps, dest_len,
+                                    num_src_widechars);
+#else
+#error "wcsnrtombs is currently only supported when wchar_t is 32-bit UTF-32."
+#endif
   size_t dst_idx = 0;
   ErrorOr<char8_t> converted = str_conv.pop<char8_t>();
   while (converted.has_value()) {

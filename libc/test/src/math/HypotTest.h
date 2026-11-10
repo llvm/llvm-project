@@ -74,7 +74,8 @@ public:
     constexpr unsigned SCALE = (sizeof(T) < 4) ? 1 : 4;
     for (unsigned scale = 0; scale < SCALE; ++scale) {
       StorageType max_value = static_cast<StorageType>(MAX_SUBNORMAL << scale);
-      StorageType step = (max_value - MIN_SUBNORMAL) / COUNT + 1;
+      StorageType step =
+          static_cast<StorageType>((max_value - MIN_SUBNORMAL) / COUNT + 1);
       for (int signs = 0; signs < 4; ++signs) {
         for (StorageType v = MIN_SUBNORMAL, w = max_value;
              v <= max_value && w >= MIN_SUBNORMAL; v += step, w -= step) {

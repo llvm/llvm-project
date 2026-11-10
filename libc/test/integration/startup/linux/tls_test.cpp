@@ -14,7 +14,7 @@
 #include <sys/mman.h>
 
 constexpr int threadLocalDataSize = 101;
-_Thread_local int a[threadLocalDataSize] = {123};
+thread_local int a[threadLocalDataSize] = {123};
 
 TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
           [[maybe_unused]] char **envp) {

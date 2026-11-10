@@ -188,13 +188,13 @@ TEST(LlvmLibcWcsnrtombs, InvalidCharacter) {
   char mbs[11];
 
   // n parameter ignored when dest is null
-  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 5, 7, &state1);
+  auto res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 4, 7, &state1);
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(res.value(), static_cast<size_t>(7));
 
   LIBC_NAMESPACE::internal::mbstate state2;
   cur = src;
-  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 5, 11, &state2);
+  res = LIBC_NAMESPACE::internal::wcsnrtombs(mbs, &cur, 4, 11, &state2);
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), EILSEQ);
 }

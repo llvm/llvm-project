@@ -212,7 +212,7 @@ LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
 template <typename T> LIBC_INLINE T load_unaligned(CPtr ptr) {
-  T out;
+  T out{};
   memcpy_inline<sizeof(T)>(&out, ptr);
   return out;
 }

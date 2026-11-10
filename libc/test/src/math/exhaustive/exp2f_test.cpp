@@ -54,6 +54,8 @@ TEST_F(LlvmLibcExp2fFloatExhaustiveTest, NegativeRange) {
   test_full_range(mpfr::RoundingMode::Nearest, NEG_START, NEG_STOP);
 }
 
+namespace {
+
 // Statically rounded implementation: tested against double_eval across all
 // roundings.
 using LlvmLibcExp2fStaticRoundingExhaustiveTest =
@@ -68,3 +70,5 @@ TEST_F(LlvmLibcExp2fStaticRoundingExhaustiveTest, PositiveRange) {
 TEST_F(LlvmLibcExp2fStaticRoundingExhaustiveTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP);
 }
+
+} // namespace

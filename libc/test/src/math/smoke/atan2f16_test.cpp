@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/atan2f16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -38,10 +39,14 @@ TEST_F(LlvmLibcAtan2f16Test, SpecialNumbers) {
   EXPECT_FP_EQ(THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f16(inf, neg_inf));
   EXPECT_FP_EQ(-THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f16(neg_inf, neg_inf));
 
+  using LIBC_NAMESPACE::fputil::cast;
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(aNaN, zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(1.0, aNaN));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f16(1.0, inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f16(-1.0, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN,
+                            LIBC_NAMESPACE::atan2f16(cast<float16>(1.0), aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero,
+                            LIBC_NAMESPACE::atan2f16(cast<float16>(1.0), inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero,
+                            LIBC_NAMESPACE::atan2f16(cast<float16>(-1.0), inf));
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f16(sNaN, sNaN),
                               FE_INVALID);

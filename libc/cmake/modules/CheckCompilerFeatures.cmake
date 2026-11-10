@@ -60,6 +60,20 @@ function(_intersection output_var list1 list2)
   set(${output_var} ${tmp} PARENT_SCOPE)
 endfunction()
 
+### Compiler Feature Detection ###
+
+# clang-8+, gcc-12+
+check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT)
+
+# clang-6+, gcc-13+
+check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
+
+# clang-3.0+
+check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
+# clang-all, gcc-8+
+check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
+
 set(AVAILABLE_COMPILER_FEATURES "")
 
 # Try compile a C file to check if flag is supported.
@@ -91,6 +105,16 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     # to float16 without calls to compiler runtime functions by trying to link
     # an executable with -nostdlib.
     set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+  endif()
+
+  if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND NOT MSVC)
+    list(APPEND compile_options "-ffreestanding")
+    if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+      list(APPEND compile_options "-nostdlibinc")
+    elseif(COMPILER_RESOURCE_DIR)
+      list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+      list(APPEND compile_options "-nostdinc")
+    endif()
   endif()
 
   if(LIBC_TARGET_OS_IS_GPU)
@@ -154,17 +178,3 @@ set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
 set(link_options "")
 
 message(STATUS "Compiler features available: ${AVAILABLE_COMPILER_FEATURES}")
-
-### Compiler Feature Detection ###
-
-# clang-8+, gcc-12+
-check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT)
-
-# clang-6+, gcc-13+
-check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
-
-# clang-3.0+
-check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
-
-# clang-all, gcc-8+
-check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
