@@ -14576,7 +14576,7 @@ bool TargetLowering::expandMultipleResultFPLibCall(
   LLVMContext &Ctx = *DAG.getContext();
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.

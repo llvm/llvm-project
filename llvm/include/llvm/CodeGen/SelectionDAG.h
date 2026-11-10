@@ -472,9 +472,6 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
-  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
-  LLVM_ABI static unsigned getHasPredecessorMaxSteps();
-
   LLVM_ABI explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
@@ -509,6 +506,9 @@ public:
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
 
   LLVM_ABI bool hasSwiftErrorArg() const;
+
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  LLVM_ABI unsigned getHasPredecessorMaxSteps() const;
 
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
