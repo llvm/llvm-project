@@ -3491,8 +3491,7 @@ void Fortran::lower::mapSymbolAttributes(
 
   // A non-allocatable coarray is lowered as a global.
   // Internal procedures that access it through host association instantiate
-  // the same global, but must not allocate it again and must be executed
-  // exactly once by every image, in the scope that owns the coarray.
+  // the same global, but must not allocate it again.
   bool isHostAssociated = false;
   if (const Fortran::lower::pft::FunctionLikeUnit *funit =
           converter.getCurrentFunctionUnit()) {
