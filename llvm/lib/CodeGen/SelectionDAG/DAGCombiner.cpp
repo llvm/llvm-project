@@ -22860,10 +22860,9 @@ static void adjustCostForPairing(SmallVectorImpl<LoadedSlice> &LoadedSlices,
 ///
 /// FIXME: When the cost model will be mature enough, we can relax
 /// constraints (1) and (2).
-static bool
-isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
-                    const APInt &UsedBits, bool ForCodeSize,
-                    const SelectionDAGOptions &Opts) {
+static bool isSlicingProfitable(SmallVectorImpl<LoadedSlice> &LoadedSlices,
+                                const APInt &UsedBits, bool ForCodeSize,
+                                const SelectionDAGOptions &Opts) {
   unsigned NumberOfSlices = LoadedSlices.size();
   if (Opts.combiner_stress_load_slicing)
     return NumberOfSlices > 1;
