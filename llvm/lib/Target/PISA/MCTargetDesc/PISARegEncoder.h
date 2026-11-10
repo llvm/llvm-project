@@ -70,8 +70,8 @@ public:
   decodeVirtualRegister(MCRegister Reg);
 
 protected:
-  static RegEncoder::RegBank getRegBank(uint8_t TSFlags);
-  static RegEncoder::RegType getRegType(uint8_t TSFlags);
+  static RegEncoder::RegBank getRegBank(uint8_t EncodedBits);
+  static RegEncoder::RegType getRegType(uint8_t EncodedBits);
   static RegEncoder::RegType getRegType(const MCRegisterClass *RC);
 };
 
