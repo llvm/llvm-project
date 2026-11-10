@@ -255,7 +255,7 @@ uint32_t RISCVMachineFunctionInfo::resolveZicfilpLabel(uint32_t Label,
                                     std::optional<uint32_t> PreferredLabel) {
   if (Label == 0) {
     if (Scheme != RISCVCFI::ZicfilpLabelSchemeKind::Unlabeled)
-      report_fatal_error("supplied RISCV landing pad label is 0 but selected "
+      report_fatal_error("supplied RISC-V landing pad label is 0 but selected "
                          "scheme is 'func-sig'");
     if (PreferredLabel) {
       if (!isUInt<20>(*PreferredLabel))
@@ -264,7 +264,7 @@ uint32_t RISCVMachineFunctionInfo::resolveZicfilpLabel(uint32_t Label,
       Label = *PreferredLabel;
     }
   } else if (Scheme == RISCVCFI::ZicfilpLabelSchemeKind::Unlabeled) {
-    report_fatal_error("supplied RISCV landing pad label is not 0 but "
+    report_fatal_error("supplied RISC-V landing pad label is not 0 but "
                        "selected scheme is 'unlabeled'");
   } else if (!isUInt<20>(Label)) {
     report_fatal_error("landing pad Label needs to fit in unsigned 20-bits");
