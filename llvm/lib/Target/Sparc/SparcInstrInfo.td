@@ -1390,18 +1390,18 @@ let hasSideEffects = 1, rd = 0, rs1 = 0b01111, rs2 = 0 in
   def STBAR : F3_1<2, 0b101000, (outs), (ins), "stbar", []>;
 
 
-let Predicates = [HasLeonStbarOptions], hasSideEffects = 1, mayLoad = 1,
-    mayStore = 1 in
+let Predicates = [HasLeonStbarOptions], hasSideEffects = 1 in
 def STBARopt : F3<(outs), (ins LeonStbarTag:$mask), "stbar $mask", [],
                   IIC_iu_instr> {
-  bits<13> mask;
+  bits<9> mask;
   let op = 2;
   let rd = 0;
   let op3 = 0b101000;
   let rs1 = 0b01111;
-  let Inst{13} = 0;
-  let Inst{12-0} = mask;
-  let DecoderMethod = "DecodeLeonStbar";
+  let Inst{13-9} = 0;
+  let Inst{8} = mask{8};
+  let Inst{7} = 0;
+  let Inst{6-0} = mask{6-0};
 }
 
 // Section B.31 - Unimplemented Instruction

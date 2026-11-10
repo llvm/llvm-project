@@ -1244,7 +1244,7 @@ ParseStatus SparcAsmParser::parseBarrierMask(OperandVector &Operands,
   std::unique_ptr<SparcOperand> Mask;
   if (parseSparcAsmOperand(Mask).isSuccess()) {
     if (!Mask->isImm() || !Mask->getImm()->evaluateAsAbsolute(ImmVal) ||
-        ImmVal < 0 || (ImmVal & ~ValidMask))
+        (ImmVal & ~ValidMask))
       return Error(S, LeonStbar ? "invalid stbar mask number"
                                 : "invalid membar mask number");
   }

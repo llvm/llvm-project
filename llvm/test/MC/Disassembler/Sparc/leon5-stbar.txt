@@ -1,0 +1,24 @@
+# RUN: llvm-mc --disassemble %s -triple=sparc -mcpu=leon5 2>%t.err \
+# RUN:   | FileCheck %s --check-prefix=LEON5
+# RUN: FileCheck %s --check-prefix=LEON5-ERR < %t.err
+# RUN: llvm-mc --disassemble %s -triple=sparc 2>&1 >/dev/null \
+# RUN:   | FileCheck %s --check-prefix=V8-ERR
+
+# LEON5: stbar
+0x81 0x43 0xc0 0x00
+
+# LEON5: stbar #StoreLoad
+# V8-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x81 0x43 0xc0 0x02
+
+# LEON5: stbar #StoreLoad | #Lookaside | #MemIssue | #Sync | #WriteCombine
+# V8-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x81 0x43 0xc1 0x72
+
+# LEON5-ERR: [[@LINE+2]]:1: warning: invalid instruction encoding
+# V8-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x81 0x43 0xc0 0x80
+
+# LEON5-ERR: [[@LINE+2]]:1: warning: invalid instruction encoding
+# V8-ERR: [[@LINE+1]]:1: warning: invalid instruction encoding
+0x81 0x43 0xc2 0x00
