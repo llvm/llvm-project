@@ -546,7 +546,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     if (DL.isBigEndian())
       std::reverse(LogicalBytes.begin(), LogicalBytes.end());
     return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian(),
-                     ByteValue::PaddingBitsMode::PaddingFromValue);
+                     ByteValue::CanonicalizeMode::PaddingFromValue);
   }
 
   APInt Bits(NumBitsToExtract, RawBits);
@@ -586,7 +586,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   if (Ty->isByteTy()) {
     unsigned BitWidth = Ty->getByteBitWidth();
     ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
-                  ByteValue::PaddingBitsMode::ValueFromPadding);
+                  ByteValue::CanonicalizeMode::FlushNonCanonicalToPoison);
     bool HasUndefinedBits = false;
     for (Byte &V : Res.mutableBytes()) {
       if (V.ConcreteMask != 255)
@@ -618,8 +618,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     if (VecBits != AlignedVecBits) {
       uint8_t PaddingMask = static_cast<uint8_t>((~0U) << (VecBits & 7));
       Byte &PaddingByte = Data[PaddingByteIndex];
-      if (!PaddingByte.areBitsFilledWithZeroOrPoison(PaddingMask,
-                                                     /*IsPoison=*/false)) {
+      if (!PaddingByte.isCanonicalPaddingByte(PaddingMask)) {
         SavedPaddingByte = PaddingByte;
         PaddingByte = Byte::poison();
         ModifiedPaddingByte = true;
@@ -863,7 +862,7 @@ void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
          "Bit range out of bounds");
   toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
           /*PaddingBits=*/false);
-  Base.canonicalize(ByteValue::PaddingBitsMode::PaddingFromValue);
+  Base.canonicalize(ByteValue::CanonicalizeMode::PaddingFromValue);
 }
 
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
@@ -924,7 +923,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
         V.Value |= (Rng() & 255) & ~OldMask;
     }
     Val.asMutableByte().canonicalize(
-        ByteValue::PaddingBitsMode::PaddingFromValue);
+        ByteValue::CanonicalizeMode::PaddingFromValue);
     return;
   }
   if (Val.isAggregate()) {

@@ -212,6 +212,10 @@ define void @main() {
   %b13_forward_b16 = load b16, ptr %b13_dst
   %b13_forward_b13 = load b13, ptr %b13_dst
 
+  %b = bitinsert b8 0, i4 poison, i32 0
+  store b8 %b, ptr %alloc_byte
+  %v = load b4, ptr %alloc_byte
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -367,5 +371,8 @@ define void @main() {
 ; CHECK-NEXT:   store b13 %b13_val, ptr %b13_dst, align 2
 ; CHECK-NEXT:   %b13_forward_b16 = load b16, ptr %b13_dst, align 2 => b16 000011!! !!!!!101 
 ; CHECK-NEXT:   %b13_forward_b13 = load b13, ptr %b13_dst, align 2 => b13 011!! !!!!!101 
+; CHECK-NEXT:   %b = bitinsert b8 0, i4 poison, i32 0 => b8 0000!!!! 
+; CHECK-NEXT:   store b8 %b, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %v = load b4, ptr %alloc_byte, align 1 => b4 !!!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

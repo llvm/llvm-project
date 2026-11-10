@@ -119,9 +119,11 @@ struct Byte {
 
   /// Padding bits may carry pointer provenance. Only require their value bits
   /// to be concrete zero, or non-concrete for poison.
-  bool areBitsFilledWithZeroOrPoison(uint8_t Mask, bool IsPoison) const {
-    return (ConcreteMask & Mask) == (IsPoison ? 0 : Mask) &&
-           (Value & Mask) == 0;
+  bool isCanonicalPaddingByte(uint8_t PaddingMask) const {
+    bool AreAllValueBitsPoison = (ConcreteMask & ~PaddingMask) == 0;
+    return (ConcreteMask & PaddingMask) ==
+               (AreAllValueBitsPoison ? 0 : PaddingMask) &&
+           (Value & PaddingMask) == 0;
   }
 };
 
@@ -257,25 +259,26 @@ class ByteValue {
   uint32_t IsLittleEndian : 1;
 
 public:
-  enum class PaddingBitsMode {
-    // The input padding bits are already canonical.
+  /// Specify how to treat the input.
+  enum class CanonicalizeMode {
+    // The padding byte is already canonical.
     Canonical,
     // Determine the padding bits from the non-padding bits in the padding
     // byte.
     PaddingFromValue,
-    // Determine the non-padding bits in the padding byte from the padding bits.
-    ValueFromPadding,
+    // Set the padding byte to poison when it is non-canonical.
+    FlushNonCanonicalToPoison,
   };
 
   ByteValue(const APInt &V, bool IsLittleEndian);
   ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
-            PaddingBitsMode Mode = PaddingBitsMode::Canonical)
+            CanonicalizeMode Mode = CanonicalizeMode::Canonical)
       : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian, Mode) {}
   ByteValue(uint32_t BitWidth, std::vector<Byte> Val, bool IsLittleEndian,
-            PaddingBitsMode Mode = PaddingBitsMode::Canonical)
+            CanonicalizeMode Mode = CanonicalizeMode::Canonical)
       : Val(std::move(Val)), BitWidth(BitWidth),
         IsLittleEndian(IsLittleEndian) {
-    if (Mode == PaddingBitsMode::Canonical)
+    if (Mode == CanonicalizeMode::Canonical)
       assert(isValid() && "Input padding bits must be canonical.");
     else
       canonicalize(Mode);
@@ -294,16 +297,16 @@ public:
   /// The caller should call canonicalize after mutation.
   MutableArrayRef<Byte> mutableBytes() { return Val; }
 
-  // Make sure the padding byte is canonical.
-  void canonicalize(PaddingBitsMode Mode) {
-    assert(Mode != PaddingBitsMode::Canonical &&
+  /// Make sure the padding byte is canonical.
+  void canonicalize(CanonicalizeMode Mode) {
+    assert(Mode != CanonicalizeMode::Canonical &&
            "Canonical padding bits should not be canonicalized.");
     if ((BitWidth & 7) == 0)
       return;
     uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
     Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
-    if (Mode == PaddingBitsMode::ValueFromPadding) {
-      if (!MSB.areBitsFilledWithZeroOrPoison(Mask, /*IsPoison=*/false))
+    if (Mode == CanonicalizeMode::FlushNonCanonicalToPoison) {
+      if (!MSB.isCanonicalPaddingByte(Mask))
         MSB = Byte::poison();
     } else {
       if ((MSB.ConcreteMask & ~Mask) == 0)
@@ -319,8 +322,7 @@ public:
       return true;
     uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
     const Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
-    return MSB.areBitsFilledWithZeroOrPoison(Mask,
-                                             (MSB.ConcreteMask & ~Mask) == 0);
+    return MSB.isCanonicalPaddingByte(Mask);
   }
 
   void print(Context &Ctx, raw_ostream &OS) const;
