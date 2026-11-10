@@ -74,6 +74,8 @@ public:
                               PhiIncomingAnalysis &PIA);
   MachineBasicBlock::iterator
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
+  void buildMergeLaneMasksAtEnd(MachineBasicBlock &MBB, Register DstReg,
+                                Register PrevReg, Register CurReg);
 
   void initializeLaneMaskRegisterAttributes(Register LaneMask) {
     LaneMaskRegAttrs = MRI->getVRegAttrs(LaneMask);
