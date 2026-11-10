@@ -90,7 +90,6 @@ def ol_diagnostic_t : Struct {
     StructMember<"ol_diagnostic_kind_t", "Kind", "The kind of problem">,
     StructMember<"int", "HasDeviceId", "Non-zero if DeviceId is known">,
     StructMember<"int32_t", "DeviceId", "The device the problem was detected on, if HasDeviceId is non-zero">,
-    StructMember<"int", "IsFatal", "Non-zero if the detection side judged that the execution cannot continue. This is what ol_diagnostic_response_t::Abort defaults to; the handler has the last word">,
     StructMember<"const char*", "Summary", "A one-line description of the problem. Never null">,
     StructMember<"const char*", "OffendingStackTrace", "The host stack trace at the point of detection. Never null, possibly empty">,
     StructMember<"const struct ol_pointer_info_t*", "Pointer", "The device pointer involved, or null if none is">,
@@ -101,19 +100,18 @@ def ol_diagnostic_t : Struct {
 }
 
 def ol_diagnostic_response_t : Struct {
-  let desc = "What a handler wants done with a diagnostic, beyond whatever messages it printed itself. The detection side pre-fills it with the defaults, the handler only has to touch what it wants to change";
+  let desc = "What a handler did with a diagnostic. The detection side pre-fills it with the defaults, the handler only has to touch what it wants to change";
   let members = [
-    StructMember<"int", "Reported", "Non-zero if the handler reported the diagnostic. Defaults to zero, so a handler that leaves it alone gets the minimal built-in reporting on top of whatever it did itself">,
-    StructMember<"int", "Abort", "Non-zero if the execution must end once the diagnostic is reported. Defaults to ol_diagnostic_t::IsFatal. Clearing it resumes execution; note that the operation the problem was detected in still fails">,
+    StructMember<"int", "Reported", "Non-zero if the handler reported the diagnostic. Defaults to zero, in which case the minimal built-in reporting is printed. The execution ends after the handler returns either way">,
   ];
 }
 
 def ol_diagnostic_cb_t : FptrTypedef {
-  let desc = "Turns a diagnostic into a user-visible message and says in `Response` what should happen next. Must be thread safe, it can be called from plugin-owned threads.";
+  let desc = "Turns a diagnostic into a user-visible message and says in `Response` whether it did so. The execution ends once the callback returns: the reported problems are not recoverable. Must be thread safe, it can be called from plugin-owned threads.";
   let params = [
     Param<"const struct ol_diagnostic_t*", "Diag", "the detected problem", PARAM_IN>,
     Param<"void*", "UserData", "the user data of the handler", PARAM_IN_OPTIONAL>,
-    Param<"struct ol_diagnostic_response_t*", "Response", "what should happen next, pre-filled with the defaults", !or(PARAM_IN, PARAM_OUT)>
+    Param<"struct ol_diagnostic_response_t*", "Response", "what the handler did, pre-filled with the defaults", !or(PARAM_IN, PARAM_OUT)>
   ];
   let return = "void";
 }

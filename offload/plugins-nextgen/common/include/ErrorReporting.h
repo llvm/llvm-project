@@ -43,7 +43,6 @@ class DiagnosticBuilderTy {
 public:
   explicit DiagnosticBuilderTy(ol_diagnostic_kind_t Kind) {
     Diag.Kind = Kind;
-    Diag.IsFatal = 1;
     // The strings in a diagnostic are never null, only possibly empty.
     Diag.Summary = "";
     Diag.OffendingStackTrace = "";
@@ -149,10 +148,10 @@ private:
 };
 
 /// Hand \p Diag to \p Handler, falling back to the built-in minimal reporting
-/// if there is no handler or if the handler asks for it, then end the execution
-/// unless the handler decided otherwise.
-void emitDiagnostic(const ol_diagnostic_handler_t *Handler,
-                    const ol_diagnostic_t &Diag);
+/// if there is no handler or if the handler asks for it, then end the
+/// execution.
+[[noreturn]] void emitDiagnostic(const ol_diagnostic_handler_t *Handler,
+                                 const ol_diagnostic_t &Diag);
 
 class ErrorReporter {
 
@@ -232,32 +231,26 @@ public:
   }                                                                            \
   emitDiagnostic(Device.getDiagnosticHandler(), Builder.Diag);
 
-  static void reportDeallocationOfNonAllocatedPtr(GenericDeviceTy &Device,
-                                                  void *DevicePtr,
-                                                  ol_alloc_type_t Kind,
-                                                  AllocationTraceInfoTy *ATI,
-                                                  std::string &StackTrace) {
+  [[noreturn]] static void reportDeallocationOfNonAllocatedPtr(
+      GenericDeviceTy &Device, void *DevicePtr, ol_alloc_type_t Kind,
+      AllocationTraceInfoTy *ATI, std::string &StackTrace) {
     DEALLOCATION_DIAGNOSTIC(
         OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_NON_ALLOCATED_PTR,
         "deallocation of non-allocated %s: %p", getAllocTyName(Kind).data(),
         DevicePtr);
   }
 
-  static void reportDeallocationOfDeallocatedPtr(GenericDeviceTy &Device,
-                                                 void *DevicePtr,
-                                                 ol_alloc_type_t Kind,
-                                                 AllocationTraceInfoTy *ATI,
-                                                 std::string &StackTrace) {
+  [[noreturn]] static void reportDeallocationOfDeallocatedPtr(
+      GenericDeviceTy &Device, void *DevicePtr, ol_alloc_type_t Kind,
+      AllocationTraceInfoTy *ATI, std::string &StackTrace) {
     DEALLOCATION_DIAGNOSTIC(OL_DIAGNOSTIC_KIND_DOUBLE_FREE,
                             "double-free of %s: %p",
                             getAllocTyName(Kind).data(), DevicePtr);
   }
 
-  static void reportDeallocationOfWrongPtrKind(GenericDeviceTy &Device,
-                                               void *DevicePtr,
-                                               ol_alloc_type_t Kind,
-                                               AllocationTraceInfoTy *ATI,
-                                               std::string &StackTrace) {
+  [[noreturn]] static void reportDeallocationOfWrongPtrKind(
+      GenericDeviceTy &Device, void *DevicePtr, ol_alloc_type_t Kind,
+      AllocationTraceInfoTy *ATI, std::string &StackTrace) {
     DEALLOCATION_DIAGNOSTIC(
         OL_DIAGNOSTIC_KIND_DEALLOCATION_OF_WRONG_PTR_KIND,
         "deallocation requires %s but allocation was %s: %p",
@@ -270,13 +263,13 @@ public:
   /// the known kernel launches are reported alongside the fault. The fault is
   /// asynchronous: there is no call to attribute it to, it is reported with
   /// the handler of the device it happened on like everything else.
-  static void reportMemoryAccessError(GenericDeviceTy &Device, void *DevicePtr,
-                                      std::string &ErrorStr, bool Abort,
-                                      KernelTraceInfoRecordTy *KTIR = nullptr) {
+  [[noreturn]] static void
+  reportMemoryAccessError(GenericDeviceTy &Device, void *DevicePtr,
+                          std::string &ErrorStr,
+                          KernelTraceInfoRecordTy *KTIR = nullptr) {
     DiagnosticBuilderTy Builder(OL_DIAGNOSTIC_KIND_MEMORY_ACCESS_FAULT);
     Builder.Diag.HasDeviceId = 1;
     Builder.Diag.DeviceId = Device.getDeviceId();
-    Builder.Diag.IsFatal = Abort;
     Builder.setSummary("%s", ErrorStr.c_str());
     Builder.setTracking(Device);
 
@@ -294,7 +287,7 @@ public:
   }
 
   /// Report that a kernel encountered a trap instruction.
-  static void reportTrapInKernel(
+  [[noreturn]] static void reportTrapInKernel(
       GenericDeviceTy &Device, KernelTraceInfoRecordTy &KTIR,
       std::function<bool(__tgt_async_info &)> AsyncInfoWrapperMatcher) {
     assert(AsyncInfoWrapperMatcher && "A matcher is required");

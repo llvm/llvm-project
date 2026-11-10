@@ -4590,11 +4590,11 @@ private:
                          (void *)Event->memory_fault.virtual_address,
                          llvm::join(Reasons, ", ").c_str());
       ErrorReporter::reportMemoryAccessError(AMDGPUDevice, DevicePtr, S,
-                                             /*Abort*/ true,
                                              &*KernelTraceInfoRecord);
     }
 
-    // Abort the execution since we do not recover from this error.
+    // No event matched this node, so nothing was reported above. Abort the
+    // execution since we do not recover from this error.
     FATAL_MESSAGE(1,
                   "memory access fault by GPU %" PRIu32 " (agent 0x%" PRIx64
                   ") at virtual address %p. Reasons: %s",

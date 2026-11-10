@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -325,8 +326,7 @@ public:
       return;
     case OL_DIAGNOSTIC_KIND_LAST:
     case OL_DIAGNOSTIC_KIND_FORCE_UINT32:
-      // Not real kinds.
-      return;
+      llvm_unreachable("Not a real diagnostic kind");
     }
   }
 };

@@ -52,13 +52,12 @@ static void reportDefault(const ol_diagnostic_t &Diag) {
 void llvm::omp::target::plugin::emitDiagnostic(
     const ol_diagnostic_handler_t *Handler, const ol_diagnostic_t &Diag) {
   // The handler only has to override what it cares about.
-  ol_diagnostic_response_t Response = {/*Reported=*/0, /*Abort=*/Diag.IsFatal};
+  ol_diagnostic_response_t Response = {/*Reported=*/0};
   if (Handler && Handler->Callback)
     Handler->Callback(&Diag, Handler->UserData, &Response);
 
   if (!Response.Reported)
     reportDefault(Diag);
 
-  if (Response.Abort)
-    abort();
+  abort();
 }
