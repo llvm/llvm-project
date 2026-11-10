@@ -142,8 +142,9 @@ std::vector<ArchSpec> PlatformRemoteAppleBridge::GetSupportedArchitectures(
   return {ArchSpec("arm64-apple-bridgeos")};
 }
 
-llvm::StringRef PlatformRemoteAppleBridge::GetDeviceSupportDirectoryName() {
-  return "BridgeOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteAppleBridge::GetDeviceSupportDirectoryNames() {
+  return {"BridgeOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteAppleBridge::GetPlatformName() {

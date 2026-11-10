@@ -39,7 +39,7 @@ struct __count_if {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter>
+  [[nodiscard]] constexpr iter_difference_t<_Iter>
   operator()(_Iter __first, _Sent __last, _Predicate __pred, _Proj __proj = {}) const {
     return std::__count_if<_RangeAlgPolicy>(std::move(__first), std::move(__last), __pred, __proj);
   }
@@ -47,7 +47,7 @@ struct __count_if {
   template <input_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_Range>
+  [[nodiscard]] constexpr range_difference_t<_Range>
   operator()(_Range&& __r, _Predicate __pred, _Proj __proj = {}) const {
     return std::__count_if<_RangeAlgPolicy>(ranges::begin(__r), ranges::end(__r), __pred, __proj);
   }

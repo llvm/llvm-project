@@ -28,6 +28,10 @@ RegisterType::RegisterType(RegisterTypeKind kind, std::string id)
     : m_kind(kind), m_id(std::move(id)),
       m_uid(g_next_register_type_uid.fetch_add(1, std::memory_order_relaxed)) {}
 
+RegisterTypeComposite::RegisterTypeComposite(RegisterTypeKind kind,
+                                             std::string id)
+    : RegisterType(kind, std::move(id)) {}
+
 void RegisterType::ToXML(Stream &strm,
                          std::unordered_set<std::string> &previously_emitted,
                          const RegisterType *user) const {
@@ -65,7 +69,7 @@ void RegisterTypeBuiltin::ToXMLElement(Stream &, const RegisterType *) const {}
 RegisterTypeVector::RegisterTypeVector(std::string id,
                                        const RegisterType *element_type,
                                        uint32_t count)
-    : RegisterType(eRegisterTypeKindVector, std::move(id)),
+    : RegisterTypeComposite(eRegisterTypeKindVector, std::move(id)),
       m_element_type(element_type), m_count(count) {
   assert(m_element_type && "Vector element type cannot be null");
   assert(m_count && "Vector element count cannot be zero");
@@ -117,7 +121,7 @@ RegisterTypeUnion::Field::Field(std::string name, const RegisterType *type)
 }
 
 RegisterTypeUnion::RegisterTypeUnion(std::string id, std::vector<Field> fields)
-    : RegisterType(eRegisterTypeKindUnion, std::move(id)),
+    : RegisterTypeComposite(eRegisterTypeKindUnion, std::move(id)),
       m_fields(std::move(fields)) {
   assert(!m_fields.empty() && "Union must have at least one field");
 

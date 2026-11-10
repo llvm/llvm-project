@@ -10,9 +10,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> undef, <2 x float> [[TMP3]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 0
 ; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr null, align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP2]], <2 x i32> <i32 3, i32 1>
 ; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -37,14 +38,19 @@ define void @test() {
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr undef, i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr undef, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr undef, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub float [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr undef, i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr undef, i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub float [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[DOTSROA_0_0_VEC_INSERT_I5_I10:%.*]] = insertelement <2 x float> undef, float [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[DOTSROA_0_0_VEC_INSERT_I5_I10]], float [[TMP12]], i64 1
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr null, align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[DOTSROA_0_0_VEC_INSERT_I5_I10]], float [[TMP10]], i64 1
 ; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -64,5 +70,29 @@ define void @test1() {
   %.sroa.0.4.vec.insert.i10.i13.2 = insertelement <2 x float> %.sroa.0.0.vec.insert.i5.i10, float %6, i64 1
   store <2 x float> %.sroa.0.4.vec.insert.i10.i13.2, ptr null, align 4
   ret void
+}
+
+define <5 x i32> @undef_base_lane(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: @undef_base_lane(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[X2:%.*]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 4, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <5 x i32> <i32 0, i32 1, i32 2, i32 4, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <5 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <5 x i32> [[TMP6]], <5 x i32> [[TMP8]], <5 x i32> <i32 0, i32 6, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <5 x i32> [[TMP7]]
+;
+  %b0 = add nsw i32 %x0, 1
+  %b1 = add nsw i32 %x1, 2
+  %b2 = add nsw i32 %x2, 3
+  %b3 = add nsw i32 %x3, 4
+  %v0 = insertelement <5 x i32> undef, i32 %b0, i64 0
+  %v1 = insertelement <5 x i32> %v0, i32 %b1, i64 1
+  %v2 = insertelement <5 x i32> %v1, i32 %b2, i64 4
+  %v3 = insertelement <5 x i32> %v2, i32 %b3, i64 2
+  %v4 = insertelement <5 x i32> %v3, i32 %b1, i64 1
+  ret <5 x i32> %v4
 }
 

@@ -1300,6 +1300,57 @@ gpu.func @convert_layout_repack_innermost_lane_data_3d() {
 }
 
 // -----
+gpu.module @xevm_module {
+// CHECK-LABEL:     gpu.func @convert_layout_via_slm_lane_layout
+// CHECK-NOT:         xegpu.convert_layout
+// CHECK:             %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<16x16xf32> to vector<16x1xf32>
+// CHECK:             %[[SLM:.*]] = memref.alloca() : memref<4096xi8, 3>
+// CHECK:             %[[MD:.*]] = xegpu.create_mem_desc %[[SLM]] : memref<4096xi8, 3> -> !xegpu.mem_desc<64x16xf32>
+// CHECK:             %[[SGID:.*]] = gpu.subgroup_id : index
+// CHECK:             %[[ROWS:.*]] = arith.constant 16 : index
+// CHECK:             %[[BASE:.*]] = arith.muli %[[SGID]], %[[ROWS]] : index
+// CHECK:             gpu.lane_id
+// CHECK-COUNT-16:    xegpu.store_matrix %{{.*}}, %[[MD]]{{\[}}%{{.*}}, %{{.*}}] : vector<1x1xf32>, !xegpu.mem_desc<64x16xf32>, index, index
+// CHECK:             xegpu.fence memory_kind = slm, fence_scope = workgroup
+// CHECK-COUNT-16:    xegpu.load_matrix %[[MD]]{{\[}}%{{.*}}, %{{.*}}] : !xegpu.mem_desc<64x16xf32>, index, index -> vector<1x1xf32>
+// CHECK:             builtin.unrealized_conversion_cast %{{.*}} : vector<1x16xf32> to vector<16x16xf32>
+gpu.func @convert_layout_via_slm_lane_layout() kernel attributes {known_block_size = array<i32: 64, 1, 1>} {
+  %src = "test.some_op"() : () -> vector<16x16xf32>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+    }> : vector<16x16xf32>
+  "test.some_use"(%cvt) : (vector<16x16xf32>) -> ()
+  gpu.return
+}
+}
+
+// -----
+gpu.module @xevm_module {
+// CHECK-LABEL:     gpu.func @convert_layout_via_slm_lane_data
+// CHECK-NOT:         xegpu.convert_layout
+// CHECK:             %[[SRC:.*]] = builtin.unrealized_conversion_cast %{{.*}} : vector<1x2x32xbf16> to vector<1x1x4xbf16>
+// CHECK:             %[[SLM:.*]] = memref.alloca() : memref<512xi8, 3>
+// CHECK:             %[[MD:.*]] = xegpu.create_mem_desc %[[SLM]] : memref<512xi8, 3> -> !xegpu.mem_desc<4x2x32xbf16>
+// CHECK:             gpu.subgroup_id : index
+// CHECK:             xegpu.store_matrix %[[SRC]], %[[MD]]{{\[}}%{{.*}}, %{{.*}}, %{{.*}}] : vector<1x1x4xbf16>, !xegpu.mem_desc<4x2x32xbf16>, index, index, index
+// CHECK:             xegpu.fence memory_kind = slm, fence_scope = workgroup
+// CHECK-COUNT-4:     xegpu.load_matrix %[[MD]]{{\[}}%{{.*}}, %{{.*}}, %{{.*}}] : !xegpu.mem_desc<4x2x32xbf16>, index, index, index -> vector<1x1x1xbf16>
+// CHECK:             builtin.unrealized_conversion_cast %{{.*}} : vector<1x1x4xbf16> to vector<1x2x32xbf16>
+gpu.func @convert_layout_via_slm_lane_data() kernel attributes {known_block_size = array<i32: 64, 1, 1>} {
+  %src = "test.some_op"() : () -> vector<1x2x32xbf16>
+  %cvt = xegpu.convert_layout %src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 4]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 2, 8], lane_data = [1, 1, 1]>
+    }> : vector<1x2x32xbf16>
+  "test.some_use"(%cvt) : (vector<1x2x32xbf16>) -> ()
+  gpu.return
+}
+}
+
+// -----
 // load_matrix and store_matrix with coordinate computation (offsets [0,0])
 gpu.module @xevm_module {
 // CHECK-LABEL: gpu.func @load_store_matrix_1
@@ -1794,6 +1845,51 @@ gpu.func @extract_strided_slice_packed_distributed_dim() {
       input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>,
       target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 4]>
     }> : vector<1x64xbf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_reduction_fastmath
+// CHECK:       vector.reduction <maximumf>, %{{.*}} fastmath<nnan,nsz> : vector<2xf32> into f32
+// CHECK-COUNT-5: arith.maximumf %{{.*}}, %{{.*}} fastmath<nnan,nsz> : f32
+gpu.func @vector_reduction_fastmath() {
+  %acc = arith.constant 1.0 : f32
+  %0 = "test.some_op"() : () -> vector<32xf32>
+  %2 = vector.reduction <maximumf>, %0, %acc fastmath<nnan,nsz> : vector<32xf32> into f32
+  %anchor = xegpu.convert_layout %2
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>
+    }> : f32
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_multi_reduction_cross_lane_fastmath
+// CHECK:       vector.reduction <maximumf>, %{{.*}} fastmath<nnan,nsz> : vector<1xf32> into f32
+// CHECK-COUNT-5: arith.maximumf %{{.*}}, %{{.*}} fastmath<nnan,nsz> : f32
+// CHECK:       vector.reduction <maximumf>, %{{.*}} fastmath<nnan,nsz> : vector<1xf32> into f32
+// CHECK-COUNT-5: arith.maximumf %{{.*}}, %{{.*}} fastmath<nnan,nsz> : f32
+gpu.func @vector_multi_reduction_cross_lane_fastmath(%laneid: index) {
+  %src = "test.some_op"() : () -> vector<2x16xf32>
+  %acc = arith.constant dense<1.0>  : vector<2xf32>
+  %1 = vector.multi_reduction <maximumf>, %src, %acc fastmath<nnan,nsz>
+      [1] : vector<2x16xf32> to vector<2xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [1]>
+    }> : vector<2xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_multi_reduction_lane_local_fastmath
+// CHECK:       vector.reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> : vector<12xf32> into f32
+gpu.func @vector_multi_reduction_lane_local_fastmath(%laneid: index) {
+  %src = "test.some_op"() : () -> vector<16x12xf32>
+  %acc = arith.constant dense<1.0>  : vector<16xf32>
+  %1 = vector.multi_reduction <maximumf>, %src, %acc fastmath<nnan,nsz>
+      [1] : vector<16x12xf32> to vector<16xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>
+    }> : vector<16xf32>
   gpu.return
 }
 }

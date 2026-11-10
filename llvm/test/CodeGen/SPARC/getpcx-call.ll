@@ -21,9 +21,9 @@ define i32 @testCall() nounwind #0 {
 ; SPARC-NEXT:  .Ltmp1:
 ; SPARC-NEXT:    or %i0, %lo(_GLOBAL_OFFSET_TABLE_+(.Ltmp1-.Ltmp0)), %i0
 ; SPARC-NEXT:    add %i0, %o7, %i0
-; SPARC-NEXT:    sethi %hi(value), %i1
-; SPARC-NEXT:    add %i1, %lo(value), %i1
-; SPARC-NEXT:    ld [%i0+%i1], %i0
+; SPARC-NEXT:    sethi %gdop_hix22(value), %i1
+; SPARC-NEXT:    xor %i1, %gdop_lox10(value), %i1
+; SPARC-NEXT:    ld [%i0+%i1], %i0, %gdop(value)
 ; SPARC-NEXT:    ld [%i0], %i0
 ; SPARC-NEXT:    ret
 ; SPARC-NEXT:    restore
@@ -38,9 +38,9 @@ define i32 @testCall() nounwind #0 {
 ; SPARC64-NEXT:  .Ltmp1:
 ; SPARC64-NEXT:    or %i0, %lo(_GLOBAL_OFFSET_TABLE_+(.Ltmp1-.Ltmp0)), %i0
 ; SPARC64-NEXT:    add %i0, %o7, %i0
-; SPARC64-NEXT:    sethi %hi(value), %i1
-; SPARC64-NEXT:    add %i1, %lo(value), %i1
-; SPARC64-NEXT:    ldx [%i0+%i1], %i0
+; SPARC64-NEXT:    sethi %gdop_hix22(value), %i1
+; SPARC64-NEXT:    xor %i1, %gdop_lox10(value), %i1
+; SPARC64-NEXT:    ldx [%i0+%i1], %i0, %gdop(value)
 ; SPARC64-NEXT:    ld [%i0], %i0
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore

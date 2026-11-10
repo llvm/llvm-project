@@ -4,7 +4,7 @@
 ;
 ; Strict fadd reduction with interleaving
 ;
-define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
+define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fadd_strict(
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 2

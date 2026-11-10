@@ -36,6 +36,10 @@ enum FixupKind {
   FK_390_U32Imm,
   FK_390_U48Imm,
 
+  FK_390_X8Imm,
+  FK_390_X16Imm,
+  FK_390_X32Imm,
+
   // Marker
   LastTargetFixupKind,
   NumTargetFixupKinds = LastTargetFixupKind - FirstTargetFixupKind
@@ -61,6 +65,9 @@ const static MCFixupKindInfo MCFixupKindInfos[SystemZ::NumTargetFixupKinds] = {
     {"FK_390_U16Imm",  0, 16, 0},
     {"FK_390_U32Imm",  0, 32, 0},
     {"FK_390_U48Imm",  0, 48, 0},
+    {"FK_390_X8Imm",  0, 8, 0},
+    {"FK_390_X16Imm",  0, 16, 0},
+    {"FK_390_X32Imm",  0, 32, 0},
 };
 // clang-format on
 } // end namespace SystemZ

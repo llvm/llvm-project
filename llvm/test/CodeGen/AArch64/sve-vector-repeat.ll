@@ -188,8 +188,8 @@ define <vscale x 4 x i32> @repeat_v4i64_to_nxv4i64(<vscale x 2 x i64> %a.legal) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
-; CHECK-NEXT:    uzp2 v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    uzp1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    mov z1.q, q2
 ; CHECK-NEXT:    mov z0.q, q0
 ; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
