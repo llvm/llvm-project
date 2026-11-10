@@ -1941,7 +1941,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
         if (IsRAXAlive) {
           MachineInstr *MI =
               addRegOffset(BuildMI(MF, DL, TII.get(X86::MOV64rm), X86::RAX),
-                           StackPtr, false, TailCallArgReserveSize - 8);
+                           StackPtr, TailCallArgReserveSize - 8);
           MI->setFlag(MachineInstr::FrameSetup);
           MBB.insert(MBBI, MI);
         }
@@ -3087,10 +3087,10 @@ void X86FrameLowering::emitWin64ReserveExit(
                              "win64");
         addRegOffset(
             BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64rm), Scratch), Base,
-            false, Disp(0))
+            Disp(0))
             .setMIFlag(MachineInstr::FrameDestroy);
         addRegOffset(BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64mr)), Base,
-                     false, Disp(FPDiff))
+                     Disp(FPDiff))
             .addReg(Scratch, RegState::Kill)
             .setMIFlag(MachineInstr::FrameDestroy);
       }
@@ -3107,7 +3107,7 @@ void X86FrameLowering::emitWin64ReserveExit(
         MachineInstrBuilder Load =
             BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64rm), Scratch);
         if (HasFP && Reg == FramePtr.asMCReg()) {
-          addRegOffset(Load, Base, false, Disp(-R - (int64_t)SlotSize));
+          addRegOffset(Load, Base, Disp(-R - (int64_t)SlotSize));
         } else {
           int FI = 0;
           for (const CalleeSavedInfo &CSI : MFI.getCalleeSavedInfo())
@@ -3117,7 +3117,7 @@ void X86FrameLowering::emitWin64ReserveExit(
         }
         Load.setMIFlag(MachineInstr::FrameDestroy);
         addRegOffset(BuildMI(MBB, Terminator, DL, TII.get(X86::MOV64mr)), Base,
-                     false, Disp(DstOff))
+                     Disp(DstOff))
             .addReg(Scratch, RegState::Kill)
             .setMIFlag(MachineInstr::FrameDestroy);
       }
@@ -3128,7 +3128,7 @@ void X86FrameLowering::emitWin64ReserveExit(
     int64_t K = StackSize + FPDiff - NumPopped * (int64_t)SlotSize;
     if (HasFP) {
       addRegOffset(BuildMI(MBB, Terminator, DL, TII.get(X86::LEA64r), StackPtr),
-                   FramePtr, false, K - SEHFrameOffset)
+                   FramePtr, K - SEHFrameOffset)
           .setMIFlag(MachineInstr::FrameDestroy);
     } else if (K != 0) {
       if (!isInt<32>(K))
