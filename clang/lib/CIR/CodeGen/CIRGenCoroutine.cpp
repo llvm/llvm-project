@@ -909,6 +909,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
           mlir::Value wrapperPointer = cir::GetGlobalOp::create(
               builder, loc, wrapperPointerType, suspendWrapper.getSymName());
 
+          // TODO(cir): Handle exceptions when resuming the returned coroutine.
           cir::CoroAwaitSuspendHandleOp::create(builder, loc, awaiterPointer,
                                                 coro.coroBegin, wrapperPointer);
           cir::CoroSuspendPoint::create(builder, loc);
