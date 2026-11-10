@@ -2133,7 +2133,7 @@ protected:
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
     LLVM_PREFERRED_TYPE(VectorKind)
-    unsigned VecKind : 4;
+    unsigned VecKind : 6;
     /// The number of elements in the vector.
     uint32_t NumElements;
   };
@@ -4255,15 +4255,140 @@ enum class VectorKind {
   SveFixedLengthPredicate,
 
   /// is RISC-V RVV fixed-length data vector
-  RVVFixedLengthData,
+  RVVFixedLengthData_MF8,
+  RVVFixedLengthData_MF4,
+  RVVFixedLengthData_MF2,
+  RVVFixedLengthData_M1,
+  RVVFixedLengthData_M2,
+  RVVFixedLengthData_M4,
+  RVVFixedLengthData_M8,
 
-  /// is RISC-V RVV fixed-length mask vector
-  RVVFixedLengthMask,
-
-  RVVFixedLengthMask_1,
-  RVVFixedLengthMask_2,
-  RVVFixedLengthMask_4
+  /// is RISC-V RVV fixed-length mask vector of vbool<R>_t; the _<L> kinds
+  /// have only L lanes in a single byte
+  RVVFixedLengthMaskRatio1,
+  RVVFixedLengthMaskRatio1_1,
+  RVVFixedLengthMaskRatio1_2,
+  RVVFixedLengthMaskRatio1_4,
+  RVVFixedLengthMaskRatio2,
+  RVVFixedLengthMaskRatio2_1,
+  RVVFixedLengthMaskRatio2_2,
+  RVVFixedLengthMaskRatio2_4,
+  RVVFixedLengthMaskRatio4,
+  RVVFixedLengthMaskRatio4_1,
+  RVVFixedLengthMaskRatio4_2,
+  RVVFixedLengthMaskRatio4_4,
+  RVVFixedLengthMaskRatio8,
+  RVVFixedLengthMaskRatio8_1,
+  RVVFixedLengthMaskRatio8_2,
+  RVVFixedLengthMaskRatio8_4,
+  RVVFixedLengthMaskRatio16,
+  RVVFixedLengthMaskRatio16_1,
+  RVVFixedLengthMaskRatio16_2,
+  RVVFixedLengthMaskRatio16_4,
+  RVVFixedLengthMaskRatio32,
+  RVVFixedLengthMaskRatio32_1,
+  RVVFixedLengthMaskRatio32_2,
+  RVVFixedLengthMaskRatio32_4,
+  RVVFixedLengthMaskRatio64,
+  RVVFixedLengthMaskRatio64_1,
+  RVVFixedLengthMaskRatio64_2,
+  RVVFixedLengthMaskRatio64_4
 };
+
+// The helpers below rely on the order of the RVV fixed-length kinds:
+// RVVFixedLengthData_MF8 .. _M8 by LMUL, then RVVFixedLengthMaskRatio<R>,
+// <R>_1, <R>_2 and <R>_4 for R = 1 .. 64.
+static_assert(unsigned(VectorKind::RVVFixedLengthData_M1) ==
+                      unsigned(VectorKind::RVVFixedLengthData_MF8) + 3 &&
+                  unsigned(VectorKind::RVVFixedLengthData_M8) ==
+                      unsigned(VectorKind::RVVFixedLengthData_MF8) + 6,
+              "unexpected order of the RVV fixed-length data vector kinds");
+static_assert(unsigned(VectorKind::RVVFixedLengthMaskRatio1_4) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 3 &&
+                  unsigned(VectorKind::RVVFixedLengthMaskRatio2) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 4 &&
+                  unsigned(VectorKind::RVVFixedLengthMaskRatio64_4) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 27,
+              "unexpected order of the RVV fixed-length mask vector kinds");
+
+/// True if \p VK is one of the RVV fixed-length data vector kinds, i.e. a
+/// riscv_rvv_vector_bits typedef of a data (non-mask) RVV type.
+inline bool isRVVFixedLengthDataVectorKind(VectorKind VK) {
+  return VK >= VectorKind::RVVFixedLengthData_MF8 &&
+         VK <= VectorKind::RVVFixedLengthData_M8;
+}
+
+/// Return log2 of the LMUL recorded in an RVV fixed-length data vector kind:
+/// MF8 -> -3, ..., M1 -> 0, ..., M8 -> 3.
+inline int getRVVFixedLengthDataLMulLog2(VectorKind VK) {
+  assert(isRVVFixedLengthDataVectorKind(VK) &&
+         "not an RVV fixed-length data vector kind");
+  return int(VK) - int(VectorKind::RVVFixedLengthData_M1);
+}
+
+/// Inverse of getRVVFixedLengthDataLMulLog2().
+inline VectorKind getRVVFixedLengthDataVectorKind(int LMulLog2) {
+  assert(LMulLog2 >= -3 && LMulLog2 <= 3 &&
+         "LMUL out of range for an RVV type");
+  return VectorKind(int(VectorKind::RVVFixedLengthData_M1) + LMulLog2);
+}
+
+/// True if \p VK is one of the RVV fixed-length mask vector kinds, i.e. a
+/// riscv_rvv_vector_bits typedef of a vbool<R>_t type.
+inline bool isRVVFixedLengthMaskVectorKind(VectorKind VK) {
+  return VK >= VectorKind::RVVFixedLengthMaskRatio1 &&
+         VK <= VectorKind::RVVFixedLengthMaskRatio64_4;
+}
+
+/// Return log2 of the R of the vbool<R>_t type recorded in an RVV fixed-length
+/// mask vector kind: Ratio1 -> 0, Ratio2 -> 1, ..., Ratio64 -> 6.
+inline unsigned getRVVFixedLengthMaskRatioLog2(VectorKind VK) {
+  assert(isRVVFixedLengthMaskVectorKind(VK) &&
+         "not an RVV fixed-length mask vector kind");
+  return (unsigned(VK) - unsigned(VectorKind::RVVFixedLengthMaskRatio1)) / 4;
+}
+
+/// True if \p VK is one of the RVV fixed-length data or mask vector kinds.
+inline bool isRVVFixedLengthVectorKind(VectorKind VK) {
+  return isRVVFixedLengthDataVectorKind(VK) ||
+         isRVVFixedLengthMaskVectorKind(VK);
+}
+
+/// Return the LMUL of an RVV fixed-length data vector kind, "mf8" .. "m8", or
+/// the ratio of a mask vector kind, "1" .. "64".
+inline StringRef getRVVFixedLengthString(VectorKind VK) {
+  if (isRVVFixedLengthDataVectorKind(VK)) {
+    static constexpr const char *LMuls[] = {"mf8", "mf4", "mf2", "m1",
+                                            "m2",  "m4",  "m8"};
+    return LMuls[getRVVFixedLengthDataLMulLog2(VK) + 3];
+  }
+  static constexpr const char *Ratios[] = {"1",  "2",  "4", "8",
+                                           "16", "32", "64"};
+  return Ratios[getRVVFixedLengthMaskRatioLog2(VK)];
+}
+
+/// Return the number of lanes (1, 2 or 4) of an RVV fixed-length mask vector
+/// kind that fits in less than one byte, or 0 if its lanes fill whole bytes.
+inline unsigned getRVVFixedLengthMaskSubByteLanes(VectorKind VK) {
+  assert(isRVVFixedLengthMaskVectorKind(VK) &&
+         "not an RVV fixed-length mask vector kind");
+  unsigned Col =
+      (unsigned(VK) - unsigned(VectorKind::RVVFixedLengthMaskRatio1)) % 4;
+  return Col ? 1u << (Col - 1) : 0;
+}
+
+/// Inverse of getRVVFixedLengthMaskRatioLog2() and
+/// getRVVFixedLengthMaskSubByteLanes().
+inline VectorKind getRVVFixedLengthMaskVectorKind(unsigned RatioLog2,
+                                                  unsigned SubByteLanes) {
+  assert(RatioLog2 < 7 && "ratio out of range for an RVV mask type");
+  assert((SubByteLanes == 0 || SubByteLanes == 1 || SubByteLanes == 2 ||
+          SubByteLanes == 4) &&
+         "unexpected sub-byte lane count");
+  unsigned Col = SubByteLanes == 0 ? 0 : llvm::Log2_32(SubByteLanes) + 1;
+  return VectorKind(unsigned(VectorKind::RVVFixedLengthMaskRatio1) +
+                    RatioLog2 * 4 + Col);
+}
 
 /// Represents a GCC generic vector type. This type is created using
 /// __attribute__((vector_size(n)), where "n" specifies the vector size in
@@ -4292,6 +4417,13 @@ public:
 
   VectorKind getVectorKind() const {
     return VectorKind(VectorTypeBits.VecKind);
+  }
+
+  /// Return the number of lanes of an RVV fixed-length mask vector. Its
+  /// elements are bytes, but each lane is a single bit.
+  unsigned getRVVFixedLengthMaskLanes() const {
+    unsigned SubByteLanes = getRVVFixedLengthMaskSubByteLanes(getVectorKind());
+    return SubByteLanes ? SubByteLanes : getNumElements() * 8;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -4862,13 +4994,16 @@ public:
     unsigned HasArmTypeAttributes : 1;
 
     LLVM_PREFERRED_TYPE(bool)
+    unsigned HasRISCVTypeAttributes : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
     unsigned EffectsHaveConditions : 1;
     unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
         : NumExceptionType(0), HasExtraAttributeInfo(false),
-          HasArmTypeAttributes(false), EffectsHaveConditions(false),
-          NumFunctionEffects(0) {}
+          HasArmTypeAttributes(false), HasRISCVTypeAttributes(false),
+          EffectsHaveConditions(false), NumFunctionEffects(0) {}
   };
 
   /// A holder for extra information from attributes which aren't part of an
@@ -4914,12 +5049,57 @@ public:
     ARM_InOut = 4,
   };
 
+  /// RISC-V type attributes for states.
+  enum RISCVTypeAttributes : unsigned {
+    RISCVNormalFunction = 0,
+
+    // Describes the value of the xsfmm tile state using RISCVStateValue.
+    // Each tile gets 3 bits to store its state.
+    RISCVXsfmmShift = 0,
+    RISCVXsfmmMask = 0b111 << RISCVXsfmmShift,
+
+    // Currently using 3 bits for xsfmm
+    RISCVAttributeMask = 0b111
+  };
+
+  enum RISCVStateValue : unsigned {
+    RISCVNone = 0,
+    RISCVIn = 1,
+    RISCVOut = 2,
+    RISCVInOut = 3,
+    RISCVPreserves = 4,
+    RISCVNew = 5,
+  };
+
+  static const char *ToRISCVStateString(RISCVStateValue St) {
+    switch (St) {
+    case RISCVNone:
+      return "none";
+    case RISCVIn:
+      return "__riscv_in";
+    case RISCVOut:
+      return "__riscv_out";
+    case RISCVInOut:
+      return "__riscv_inout";
+    case RISCVPreserves:
+      return "__riscv_preserves";
+    case RISCVNew:
+      return "__riscv_new";
+    }
+    llvm_unreachable("Invalid RISC-V state value");
+  }
+
   static ArmStateValue getArmZAState(unsigned AttrBits) {
     return static_cast<ArmStateValue>((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
   static ArmStateValue getArmZT0State(unsigned AttrBits) {
     return static_cast<ArmStateValue>((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
+  }
+
+  static RISCVStateValue getRISCVXsfmmState(unsigned AttrBits) {
+    return static_cast<RISCVStateValue>((AttrBits & RISCVXsfmmMask) >>
+                                        RISCVXsfmmShift);
   }
 
   /// A holder for Arm type attributes as described in the Arm C/C++
@@ -4932,6 +5112,13 @@ public:
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
+  };
+
+  struct alignas(void *) FunctionTypeRISCVAttributes {
+    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
+    unsigned RISCVAttributes : 3;
+
+    FunctionTypeRISCVAttributes() : RISCVAttributes(RISCVNormalFunction) {}
   };
 
 protected:
@@ -5411,9 +5598,11 @@ class FunctionProtoType final
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeExtraAttributeInfo,
-          FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
-          FunctionEffect, EffectConditionExpr> {
+          FunctionType::FunctionTypeArmAttributes,
+          FunctionType::FunctionTypeRISCVAttributes,
+          FunctionType::ExceptionType, Expr *, FunctionDecl *,
+          FunctionType::ExtParameterInfo, Qualifiers, FunctionEffect,
+          EffectConditionExpr> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -5516,14 +5705,18 @@ public:
     unsigned CFIUncheckedCallee : 1;
     LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
+    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
+    unsigned RISCVAttributes : 3;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
-          AArch64SMEAttributes(SME_NormalFunction) {}
+          AArch64SMEAttributes(SME_NormalFunction),
+          RISCVAttributes(RISCVNormalFunction) {}
 
     ExtProtoInfo(CallingConv CC)
         : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
-          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction) {}
+          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction),
+          RISCVAttributes(RISCVNormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
@@ -5540,6 +5733,7 @@ public:
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
              requiresFunctionProtoTypeArmAttributes() ||
+             requiresFunctionProtoTypeRISCVAttributes() ||
              requiresFunctionProtoTypeExtraAttributeInfo() ||
              !FunctionEffects.empty();
     }
@@ -5558,6 +5752,17 @@ public:
       else
         AArch64SMEAttributes &= ~Kind;
     }
+
+    bool requiresFunctionProtoTypeRISCVAttributes() const {
+      return RISCVAttributes != RISCVNormalFunction;
+    }
+
+    void setRISCVAttribute(RISCVTypeAttributes Kind, bool Enable = true) {
+      if (Enable)
+        RISCVAttributes |= Kind;
+      else
+        RISCVAttributes &= ~Kind;
+    }
   };
 
 private:
@@ -5571,6 +5776,11 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeArmAttributes>) const {
     return hasArmTypeAttributes();
+  }
+
+  unsigned
+  numTrailingObjects(OverloadToken<FunctionTypeRISCVAttributes>) const {
+    return hasRISCVTypeAttributes();
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
@@ -5686,6 +5896,12 @@ private:
                ->HasArmTypeAttributes;
   }
 
+  bool hasRISCVTypeAttributes() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasRISCVTypeAttributes;
+  }
+
   bool hasExtQualifiers() const {
     return FunctionTypeBits.HasExtQuals;
   }
@@ -5715,6 +5931,7 @@ public:
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
     EPI.ExtraAttributeInfo = getExtraAttributeInfo();
     EPI.AArch64SMEAttributes = getAArch64SMEAttributes();
+    EPI.RISCVAttributes = getRISCVAttributes();
     EPI.FunctionEffects = getFunctionEffects();
     return EPI;
   }
@@ -5915,6 +6132,12 @@ public:
       return SME_NormalFunction;
     return getTrailingObjects<FunctionTypeArmAttributes>()
         ->AArch64SMEAttributes;
+  }
+
+  unsigned getRISCVAttributes() const {
+    if (!hasRISCVTypeAttributes())
+      return RISCVNormalFunction;
+    return getTrailingObjects<FunctionTypeRISCVAttributes>()->RISCVAttributes;
   }
 
   ExtParameterInfo getExtParameterInfo(unsigned I) const {

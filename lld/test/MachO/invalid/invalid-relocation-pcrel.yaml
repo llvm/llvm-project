@@ -7,6 +7,7 @@
 # CHECK: error: UNSIGNED relocation must not be PC-relative at offset 1 of __TEXT,__text in {{.*}}test.a(test.o)
 
 !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

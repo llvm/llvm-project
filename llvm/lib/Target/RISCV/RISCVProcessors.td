@@ -780,6 +780,16 @@ def TENSTORRENT_ASCALON_XG : RISCVProcessorModel<"tt-ascalon-xg",
                                                  TTAscalonXGFeatures,
                                                  TTAscalonTuneFeatures>;
 
+def CHIPSALLIANCE_VEER_EH1 : RISCVProcessorModel<"chipsalliance-veer-eh1",
+                                                 NoSchedModel,
+                                                 [Feature32Bit,
+                                                  FeatureStdExtI,
+                                                  FeatureStdExtZicsr,
+                                                  FeatureStdExtZifencei,
+                                                  FeatureStdExtM,
+                                                  FeatureStdExtC,
+                                                  FeatureUnalignedScalarMem]>;
+
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
                                           [Feature64Bit,

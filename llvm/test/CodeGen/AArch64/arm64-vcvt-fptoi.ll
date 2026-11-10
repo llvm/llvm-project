@@ -350,7 +350,7 @@ define <2 x i64> @fcvtms_2d_sat(<2 x double> %A) nounwind {
 define <2 x i32> @fcvtmu_2s(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_2s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.floor.v2f32(<2 x float> %A)
   %tmp2 = fptoui <2 x float> %tmp1 to <2 x i32>
@@ -360,7 +360,7 @@ define <2 x i32> @fcvtmu_2s(<2 x float> %A) nounwind {
 define <2 x i32> @fcvtmu_2s_sat(<2 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_2s_sat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x float> @llvm.floor.v2f32(<2 x float> %A)
   %tmp2 = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %tmp1)
@@ -371,7 +371,7 @@ define <2 x i32> @fcvtmu_2s_sat(<2 x float> %A) nounwind {
 define <4 x i32> @fcvtmu_4s(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_4s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.floor.v4f32(<4 x float> %A)
   %tmp2 = fptoui <4 x float> %tmp1 to <4 x i32>
@@ -381,7 +381,7 @@ define <4 x i32> @fcvtmu_4s(<4 x float> %A) nounwind {
 define <4 x i32> @fcvtmu_4s_sat(<4 x float> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_4s_sat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %tmp1 = call <4 x float> @llvm.floor.v4f32(<4 x float> %A)
   %tmp2 = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %tmp1)
@@ -392,7 +392,7 @@ define <4 x i32> @fcvtmu_4s_sat(<4 x float> %A) nounwind {
 define <2 x i64> @fcvtmu_2d(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_2d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.floor.v2f64(<2 x double> %A)
   %tmp2 = fptoui <2 x double> %tmp1 to <2 x i64>
@@ -402,7 +402,7 @@ define <2 x i64> @fcvtmu_2d(<2 x double> %A) nounwind {
 define <2 x i64> @fcvtmu_2d_sat(<2 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtmu_2d_sat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtmu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %tmp1 = call <2 x double> @llvm.floor.v2f64(<2 x double> %A)
   %tmp2 = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> %tmp1)
@@ -1506,23 +1506,17 @@ define <4 x i16> @fcvtmu_4h(<4 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtmu_4h:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: fcvtmu_4h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fcvtmu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NO16-LABEL: fcvtmu_4h:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    xtn v0.4h, v0.4s
@@ -1530,7 +1524,7 @@ define <4 x i16> @fcvtmu_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtmu_4h:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtmu v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    fcvtzu v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.floor.v4f16(<4 x half> %A)
   %tmp2 = fptoui <4 x half> %tmp1 to <4 x i16>
@@ -1541,23 +1535,17 @@ define <4 x i16> @fcvtmu_4h_sat(<4 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtmu_4h_sat:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
 ; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: fcvtmu_4h_sat:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fcvtmu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NO16-LABEL: fcvtmu_4h_sat:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uqxtn v0.4h, v0.4s
@@ -1565,7 +1553,7 @@ define <4 x i16> @fcvtmu_4h_sat(<4 x half> %A) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtmu_4h_sat:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtmu v0.4h, v0.4h
+; CHECK-GI-FP16-NEXT:    fcvtzu v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ret
   %tmp1 = call <4 x half> @llvm.floor.v4f16(<4 x half> %A)
   %tmp2 = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f16(<4 x half> %tmp1)
@@ -1576,34 +1564,22 @@ define <4 x i16> @fcvtmu_4h_sat(<4 x half> %A) nounwind {
 define <8 x i16> @fcvtmu_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtmu_8h:
 ; CHECK-NO16:       // %bb.0:
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-NEXT:    frintm v1.4s, v1.4s
-; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v0.8h
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: fcvtmu_8h:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fcvtmu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NO16-LABEL: fcvtmu_8h:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NO16-NEXT:    frintm v1.4s, v1.4s
-; CHECK-GI-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-GI-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
@@ -1611,7 +1587,7 @@ define <8 x i16> @fcvtmu_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtmu_8h:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtmu v0.8h, v0.8h
+; CHECK-GI-FP16-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-GI-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.floor.v8f16(<8 x half> %A)
   %tmp2 = fptoui <8 x half> %tmp1 to <8 x i16>
@@ -1622,13 +1598,7 @@ define <8 x i16> @fcvtmu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtmu_8h_sat:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-NEXT:    frintm v1.4s, v1.4s
-; CHECK-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-NO16-NEXT:    fcvtl2 v2.4s, v0.8h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
@@ -1637,19 +1607,13 @@ define <8 x i16> @fcvtmu_8h_sat(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: fcvtmu_8h_sat:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fcvtmu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-GI-NO16-LABEL: fcvtmu_8h_sat:
 ; CHECK-GI-NO16:       // %bb.0:
 ; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-GI-NO16-NEXT:    frintm v1.4s, v1.4s
-; CHECK-GI-NO16-NEXT:    frintm v0.4s, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-GI-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-GI-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NO16-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-GI-NO16-NEXT:    fcvtzu v2.4s, v0.4s
 ; CHECK-GI-NO16-NEXT:    uqxtn v0.4h, v1.4s
@@ -1658,7 +1622,7 @@ define <8 x i16> @fcvtmu_8h_sat(<8 x half> %A) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: fcvtmu_8h_sat:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtmu v0.8h, v0.8h
+; CHECK-GI-FP16-NEXT:    fcvtzu v0.8h, v0.8h
 ; CHECK-GI-FP16-NEXT:    ret
   %tmp1 = call <8 x half> @llvm.floor.v8f16(<8 x half> %A)
   %tmp2 = call <8 x i16> @llvm.fptoui.sat.v8i16.v8f16(<8 x half> %tmp1)
@@ -1998,9 +1962,6 @@ define <4 x i16> @fcvtzs_4h(<4 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzs_4h:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NO16-NEXT:    ret
@@ -2032,9 +1993,6 @@ define <4 x i16> @fcvtzs_4h(<4 x half> %A) nounwind {
 define <4 x i16> @fcvtzs_4h_sat(<4 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzs_4h_sat:
 ; CHECK-NO16:       // %bb.0:
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    sqxtn v0.4h, v0.4s
@@ -2068,17 +2026,11 @@ define <4 x i16> @fcvtzs_4h_sat(<4 x half> %A) nounwind {
 define <8 x i16> @fcvtzs_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzs_8h:
 ; CHECK-NO16:       // %bb.0:
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v0.8h
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NO16-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NO16-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: fcvtzs_8h:
@@ -2114,13 +2066,7 @@ define <8 x i16> @fcvtzs_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzs_8h_sat:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-NO16-NEXT:    fcvtl2 v2.4s, v0.8h
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    sqxtn v0.4h, v1.4s
 ; CHECK-NO16-NEXT:    fcvtzs v1.4s, v2.4s
@@ -2162,9 +2108,6 @@ define <4 x i16> @fcvtzu_4h(<4 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzu_4h:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NO16-NEXT:    ret
@@ -2196,9 +2139,6 @@ define <4 x i16> @fcvtzu_4h(<4 x half> %A) nounwind {
 define <4 x i16> @fcvtzu_4h_sat(<4 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzu_4h_sat:
 ; CHECK-NO16:       // %bb.0:
-; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    uqxtn v0.4h, v0.4s
@@ -2232,17 +2172,11 @@ define <4 x i16> @fcvtzu_4h_sat(<4 x half> %A) nounwind {
 define <8 x i16> @fcvtzu_8h(<8 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzu_8h:
 ; CHECK-NO16:       // %bb.0:
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NO16-NEXT:    fcvtl2 v1.4s, v0.8h
 ; CHECK-NO16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-NO16-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NO16-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NO16-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: fcvtzu_8h:
@@ -2278,13 +2212,7 @@ define <8 x i16> @fcvtzu_8h_sat(<8 x half> %A) nounwind {
 ; CHECK-NO16-LABEL: fcvtzu_8h_sat:
 ; CHECK-NO16:       // %bb.0:
 ; CHECK-NO16-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-NO16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-NO16-NEXT:    frintz v1.4s, v1.4s
-; CHECK-NO16-NEXT:    frintz v0.4s, v0.4s
-; CHECK-NO16-NEXT:    fcvtn v1.4h, v1.4s
-; CHECK-NO16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-NO16-NEXT:    fcvtl v1.4s, v1.4h
-; CHECK-NO16-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-NO16-NEXT:    fcvtl2 v2.4s, v0.8h
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-NO16-NEXT:    uqxtn v0.4h, v1.4s
 ; CHECK-NO16-NEXT:    fcvtzu v1.4s, v2.4s
