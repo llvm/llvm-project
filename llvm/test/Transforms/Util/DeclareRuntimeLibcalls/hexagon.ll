@@ -174,7 +174,7 @@
 ; CHECK-NEXT: declare i64 @__hexagon_moddi3(i64, i64)
 ; CHECK-NEXT: declare i32 @__hexagon_modsi3(i32, i32)
 ; CHECK-NEXT: declare double @__hexagon_muldf3(double, double)
-; CHECK-NEXT: declare float @__hexagon_sqrtf(float)
+; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) float @__hexagon_sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__hexagon_subdf3(double, double)
 ; CHECK-NEXT: declare i64 @__hexagon_udivdi3(i64, i64)
 ; CHECK-NEXT: declare i32 @__hexagon_udivsi3(i32, i32)
@@ -439,11 +439,11 @@
 ; CHECK-NEXT: declare float @tgammaf(float)
 ; CHECK-NEXT: declare double @trunc(double)
 ; CHECK-NEXT: declare float @truncf(float)
+; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
@@ -614,7 +614,7 @@
 ; LINUX-NEXT: declare i64 @__hexagon_moddi3(i64, i64)
 ; LINUX-NEXT: declare i32 @__hexagon_modsi3(i32, i32)
 ; LINUX-NEXT: declare double @__hexagon_muldf3(double, double)
-; LINUX-NEXT: declare float @__hexagon_sqrtf(float)
+; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) float @__hexagon_sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__hexagon_subdf3(double, double)
 ; LINUX-NEXT: declare i64 @__hexagon_udivdi3(i64, i64)
 ; LINUX-NEXT: declare i32 @__hexagon_udivsi3(i32, i32)
@@ -881,8 +881,8 @@
 ; LINUX-NEXT: declare float @tgammaf(float)
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
+; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

@@ -611,26 +611,6 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
     FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
     return {FuncTy, Attrs.addFnAttributes(Ctx, FuncAttrBuilder)};
   }
-  case RTLIB::impl_sqrtf:
-  case RTLIB::impl_sqrt: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::errnoMemOnly(ModRefInfo::Mod));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Type *ScalarTy = LibcallImpl == RTLIB::impl_sqrtf ? Type::getFloatTy(Ctx)
-                                                      : Type::getDoubleTy(Ctx);
-    FunctionType *FuncTy = FunctionType::get(ScalarTy, {ScalarTy}, false);
-
-    Attrs = Attrs.addRetAttribute(
-        Ctx, Attribute::getWithNoFPClass(Ctx, fcNegInf | fcNegSubnormal |
-                                                  fcNegNormal));
-    return {FuncTy, Attrs};
-  }
   default:
     break;
   }
