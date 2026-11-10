@@ -1244,6 +1244,8 @@ Value *VPInstruction::generate(VPTransformState &State,
     applyMetadata(*WideSI);
     return WideSI;
   }
+  case VPInstruction::MaskedCond:
+    llvm_unreachable("Should have been lowered in VPlanPredicator");
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
