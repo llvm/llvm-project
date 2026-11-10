@@ -96,23 +96,22 @@ bool compare_binary_operation_one_output(Operation op,
 template <typename InputType, typename OutputType>
 void explain_unary_operation_single_output_same_type_error(
     Operation op, InputType input, OutputType match_value, double ulp_tolerance,
-    RoundingMode rounding);
+    RoundingMode rounding, MatchResultListener *listener);
 
 template <typename InputType, typename OutputType>
 void explain_unary_operation_single_output_different_type_error(
     Operation op, InputType input, OutputType match_value, double ulp_tolerance,
-    RoundingMode rounding);
+    RoundingMode rounding, MatchResultListener *listener);
 
 template <typename InputType, typename OutputType>
 void explain_binary_operation_one_output_error(
     Operation op, const BinaryInput<InputType> &input, OutputType match_value,
-    double ulp_tolerance, RoundingMode rounding);
+    double ulp_tolerance, RoundingMode rounding, MatchResultListener *listener);
 
 template <Operation op, typename InputType, typename OutputType>
 class MPCMatcher : public testing::Matcher<OutputType> {
 private:
   InputType input;
-  OutputType match_value;
   double ulp_tolerance;
   RoundingMode rounding;
 
@@ -120,18 +119,20 @@ public:
   MPCMatcher(InputType testInput, double ulp_tolerance, RoundingMode rounding)
       : input(testInput), ulp_tolerance(ulp_tolerance), rounding(rounding) {}
 
-  bool match(OutputType libcResult) {
-    match_value = libcResult;
-    return match(input, match_value);
-  }
+  bool match(OutputType libcResult) const { return match(input, libcResult); }
 
-  void explainError() override { // NOLINT
-    explain_error(input, match_value);
+  bool MatchAndExplain(OutputType libcResult,
+                       MatchResultListener *listener) const {
+    if (match(libcResult))
+      return true;
+    if (listener->IsInterested())
+      explain_error(input, libcResult, listener);
+    return false;
   }
 
 private:
   template <typename InType, typename OutType>
-  bool match(InType in, OutType out) {
+  bool match(InType in, OutType out) const {
     if (cpp::is_same_v<InType, OutType>) {
       return compare_unary_operation_single_output_same_type(
           op, in, out, ulp_tolerance, rounding);
@@ -142,26 +143,28 @@ private:
   }
 
   template <typename T, typename U>
-  bool match(const BinaryInput<T> &in, U out) {
+  bool match(const BinaryInput<T> &in, U out) const {
     return compare_binary_operation_one_output(op, in, out, ulp_tolerance,
                                                rounding);
   }
 
   template <typename InType, typename OutType>
-  void explain_error(InType in, OutType out) {
+  void explain_error(InType in, OutType out,
+                     MatchResultListener *listener) const {
     if (cpp::is_same_v<InType, OutType>) {
       explain_unary_operation_single_output_same_type_error(
-          op, in, out, ulp_tolerance, rounding);
+          op, in, out, ulp_tolerance, rounding, listener);
     } else {
       explain_unary_operation_single_output_different_type_error(
-          op, in, out, ulp_tolerance, rounding);
+          op, in, out, ulp_tolerance, rounding, listener);
     }
   }
 
   template <typename T, typename U>
-  void explain_error(const BinaryInput<T> &in, U out) {
+  void explain_error(const BinaryInput<T> &in, U out,
+                     MatchResultListener *listener) const {
     explain_binary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                              rounding);
+                                              rounding, listener);
   }
 };
 

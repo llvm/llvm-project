@@ -115,6 +115,17 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+bool paramIsLifetimeBound(const ParmVarDecl &PVD) {
+  if (PVD.hasAttr<LifetimeBoundAttr>())
+    return true;
+  return isa<CXXConstructorDecl>(PVD.getDeclContext()) &&
+         llvm::any_of(PVD.specific_attrs<LifetimeCaptureByAttr>(),
+                      [](const LifetimeCaptureByAttr *A) {
+                        return llvm::is_contained(A->params(),
+                                                  LifetimeCaptureByAttr::This);
+                      });
+}
+
 const LifetimeCaptureByAttr *
 getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
   return getImplicitObjectParamAttr<LifetimeCaptureByAttr>(FD);
@@ -124,7 +135,7 @@ FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!Call)
     return;
 
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
+  std::optional<AnyCall> AC = AnyCall::forExpr(ignoreParensAndImpCasts(Call));
   if (!AC)
     return;
 
@@ -179,7 +190,7 @@ getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
   }
 
   if (const ParmVarDecl *PVD = getParamForArg(*FD, I);
-      PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+      PVD && paramIsLifetimeBound(*PVD))
     return LifetimeBoundParamInfo(PVD);
 
   return std::nullopt;
@@ -195,7 +206,7 @@ getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
     return std::nullopt;
 
   for (unsigned I = 0; I < Args.size(); ++I)
-    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
+    if (ignoreParensAndImpCasts(Args[I]) == ignoreParensAndImpCasts(Source))
       if (std::optional<LifetimeBoundParamInfo> ParamInfo =
               getTrackedArgInfo(FD, Args, I))
         return ParamInfo;

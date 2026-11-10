@@ -132,3 +132,14 @@ cir.func @bad_return_type_for_vtt_addrpoint() {
   %0 = cir.vtt.address_point @_ZTT1C, offset = 1 -> !cir.ptr<!u8i>
   cir.return
 }
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+cir.global linkonce_odr @_ZTT1C = #cir.const_array<[#cir.global_view<@_ZTV1C, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTC1C0_1B, [0 : i32, 3 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 2> align(8)
+cir.func @vtt_addrpoint_addrspace_mismatch() {
+  // expected-error @below {{'cir.vtt.address_point' op result type address space does not match the address space of the global @_ZTT1C}}
+  %0 = cir.vtt.address_point @_ZTT1C, offset = 1 -> !cir.ptr<!cir.ptr<!void>, target_address_space(1)>
+  cir.return
+}

@@ -557,10 +557,10 @@ static const CFGBlock *findPredBlockForExpr(const CFGBlock *MergeBlock,
                                             const Expr *ArmExpr) {
   if (!ArmExpr)
     return nullptr;
-  const Expr *Target = ArmExpr->IgnoreParenImpCasts();
+  const Expr *Target = ignoreParensAndImpCasts(ArmExpr);
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Target))
     if (const Expr *Src = OVE->getSourceExpr())
-      Target = Src->IgnoreParenImpCasts();
+      Target = ignoreParensAndImpCasts(Src);
 
   for (const CFGBlock *Pred : MergeBlock->preds()) {
     if (!Pred)
@@ -568,7 +568,7 @@ static const CFGBlock *findPredBlockForExpr(const CFGBlock *MergeBlock,
     for (const CFGElement &Elt : *Pred)
       if (auto CS = Elt.getAs<CFGStmt>())
         if (const auto *E = dyn_cast<Expr>(CS->getStmt()))
-          if (E->IgnoreParenImpCasts() == Target)
+          if (ignoreParensAndImpCasts(E) == Target)
             return Pred;
   }
   return nullptr;
@@ -690,7 +690,8 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
       const Expr *Init = cast<VarDecl>(C.getCapturedVar())->getInit();
       if (!Init)
         continue;
-      if (const auto *ME = dyn_cast<MemberExpr>(Init->IgnoreParenImpCasts())) {
+      if (const auto *ME =
+              dyn_cast<MemberExpr>(ignoreParensAndImpCasts(Init))) {
         if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
           FactMgr.addCapturedField(FD);
       }
@@ -935,8 +936,12 @@ void FactsGenerator::handleExitBlock() {
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   assert(isGslPointerType(CCE->getType()));
-  if (CCE->getNumArgs() != 1)
+  // Only lifetimebound parameters propagate for a constructor taking several
+  // arguments; the owner heuristic applies to single-argument construction.
+  if (CCE->getNumArgs() != 1) {
+    handleFunctionCall(CCE, /*IsGslConstruction=*/true);
     return;
+  }
 
   const Expr *Arg = CCE->getArg(0);
   if (isGslPointerType(Arg->getType())) {
@@ -1235,7 +1240,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         assert(!Args[I]->isGLValue() || ArgList->getLength() >= 2);
         ArgList = readValue(Args[I]);
       }
-      if (isGslOwnerType(Args[I]->getType())) {
+      if (isGslOwnerType(Args[I]->getType()) &&
+          (Args.size() == 1 || ShouldTrackArg)) {
         // The constructed gsl::Pointer borrows from the Owner's storage, not
         // from what the Owner itself borrows, so only the outermost origin is
         // needed.
@@ -1280,7 +1286,7 @@ bool FactsGenerator::handleTestPoint(const CXXFunctionalCastExpr *FCE) {
   if (!FCE->getType()->isVoidType())
     return false;
 
-  const auto *SubExpr = FCE->getSubExpr()->IgnoreParenImpCasts();
+  const auto *SubExpr = ignoreParensAndImpCasts(FCE->getSubExpr());
   if (const auto *SL = dyn_cast<StringLiteral>(SubExpr)) {
     llvm::StringRef LiteralValue = SL->getString();
     const std::string Prefix = "__lifetime_test_point_";
