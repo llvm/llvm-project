@@ -3536,9 +3536,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedProp<
-                        EnumProp<CIR_VisibilityKind>,
-                        "cir::VisibilityKind::Default"
+                       DefaultValuedEnumProp<
+                        CIR_VisibilityKind, CIR_VisibilityDefault
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -4448,9 +4447,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    DefaultValuedProp<
-      EnumProp<CIR_VisibilityKind>,
-      "cir::VisibilityKind::Default"
+    DefaultValuedEnumProp<
+      CIR_VisibilityKind, CIR_VisibilityDefault
     >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
