@@ -2387,12 +2387,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
       return false;
 
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
+
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            FindIVPhiR->getRecurrenceKind()))
+      return false;
 
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
