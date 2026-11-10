@@ -1,11 +1,11 @@
-; RUN: opt -module-summary -passes=assign-sections-to-globals %s -o %t
-; RUN: rm -f %t2.0 %t2.0.5.precodegen.bc
-; RUN: llvm-lto2 run %t -O0 -r %t,foo,pxofoo -r %t,g,pxobar -o %t2 -select-save-temps=precodegen -include-local-symbols
-; RUN: llvm-objdump --syms %t2.0 | FileCheck %s
-; RUN: opt -S %t2.0.5.precodegen.bc | FileCheck -check-prefix=IR %s
+; RUN: rm -rf %t && mkdir %t
+; RUN: opt -module-summary -passes=assign-sections-to-globals %s -o %t/input.bc
+; RUN: llvm-lto2 run %t/input.bc -O0 -r %t/input.bc,foo,pxofoo -r %t/input.bc,g,pxobar -o %t/linked.o -select-save-temps=precodegen -include-local-symbols
+; RUN: llvm-objdump --syms %t/linked.o.0 | FileCheck %s
+; RUN: opt -S %t/linked.o.0.5.precodegen.bc | FileCheck -check-prefix=IR %s
 
-; CHECK: 0000000000000000 l O .bss^^{{.*}}lto-linker-scripts-regularlto.ll.tmp 0000000000000004 g
-; CHECK: 0000000000000000 g F .text^^{{.*}}lto-linker-scripts-regularlto.ll.tmp 0000000000000008 foo
+; CHECK: 0000000000000000 l O .bss^^{{.*}}input.bc 0000000000000004 g
+; CHECK: 0000000000000000 g F .text^^{{.*}}input.bc 0000000000000008 foo
 
 ; IR: @g = internal global i32 0, section ".bss^^{{.*}}", !guid !0 #0
 ; IR: define ptr @foo() #1 section ".text^^{{.*}}" !guid !2 {

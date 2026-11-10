@@ -1,16 +1,17 @@
-//===- AssignSectionsToGlobals.cpp ----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// For each global which doesn't have a section, set its section to the
-// default as computed by the backend.  For LTO with a linker script, this is
-// used by the linker before LTO runs to compute the output sections for each
-// global.
-//
+///
+/// \file
+/// For each global which doesn't have a section, set its section to the
+/// default as computed by the backend. For LTO with a linker script, this is
+/// used by the linker before LTO runs to compute the output sections for each
+/// global.
+///
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/AssignSectionsToGlobals.h"

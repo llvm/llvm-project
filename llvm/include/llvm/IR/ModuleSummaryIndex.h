@@ -1727,6 +1727,7 @@ public:
   const MapVector<GlobalValue::GUID, SectionInfo> &sectionInfos() const {
     return SectionInfos;
   }
+
   MapVector<GlobalValue::GUID, SectionInfo> &sectionInfos() {
     return SectionInfos;
   }

@@ -2310,9 +2310,9 @@ define void @f() "no-sse" { ... }
 :   This attribute is set by the linker during LTO to indicate optimization
     boundaries. Globals are grouped based on the value of this attribute.
     Full interprocedural optimizations are allowed across globals with the
-    same value for this attribute.  Optimizations are limited for globals with
+    same value for this attribute. Optimizations are limited for globals with
     different values. Operations with side-effects cannot be moved between
-    functions with different values.  Constants with the same value can be
+    functions with different values. Constants with the same value can be
     merged; constants with different values cannot be merged. This grouping
     overrides the normal rules for optimizing globals with an explicit section
     marking.
