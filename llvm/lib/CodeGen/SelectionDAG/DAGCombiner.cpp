@@ -21026,6 +21026,13 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
   if (N0.getOpcode() == ISD::FTRUNC)
     return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0.getOperand(0));
 
+  // fold (fp_to_uint (ffloor x)) -> (fp_to_uint x)
+  // Flooring agrees with truncation for non-negative inputs. Negative inputs
+  // floor to at most -1, which makes the original conversion poison.
+  if (N0.getOpcode() == ISD::FFLOOR)
+    return DAG.getNode(ISD::FP_TO_UINT, DL, VT, N0.getOperand(0),
+                       N->getFlags());
+
   return FoldIntToFPToInt(N, DL, DAG);
 }
 
@@ -21037,6 +21044,13 @@ SDValue DAGCombiner::visitFP_TO_INT_SAT(SDNode *N) {
   if (N0.getOpcode() == ISD::FTRUNC)
     return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
                        N0.getOperand(0), N->getOperand(1));
+
+  // fold (fp_to_uint_sat (ffloor x)) -> (fp_to_uint_sat x)
+  // Flooring agrees with truncation for non-negative inputs, and both forms
+  // saturate negative inputs and NaN to 0.
+  if (N->getOpcode() == ISD::FP_TO_UINT_SAT && N0.getOpcode() == ISD::FFLOOR)
+    return DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N), N->getValueType(0),
+                       N0.getOperand(0), N->getOperand(1), N->getFlags());
 
   return SDValue();
 }
