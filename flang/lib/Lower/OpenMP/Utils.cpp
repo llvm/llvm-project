@@ -701,12 +701,16 @@ void insertChildMapInfoIntoParent(
       std::stringstream asFortran;
       fir::factory::AddrAndBoundsInfo info;
       const auto &parentRef = indices.first.ref();
-      if (isTargetEnterExitData && parentRef && parentRef->Rank() == 0) {
+      if (isTargetEnterExitData && parentRef && parentRef->Rank() == 0 &&
+          (evaluate::IsArrayElement(*parentRef) ||
+           semantics::IsAllocatableOrPointer(*indices.first.sym()))) {
         // A mapping-only construct needs only the storage of the mapped
         // components. Address the scalar record directly: treating an array
         // element as a section would also map the containing array descriptor
         // and the whole record when its descriptor map is expanded. Those
         // mappings do not match a partial record map through a scalar dummy.
+        // Ordinary scalar records already use the correct storage address in
+        // the regular operand lowering below.
         mlir::Location loc = converter.getCurrentLocation();
         info.rawInput =
             fir::getBase(converter.genExprAddr(loc, *parentRef, stmtCtx));

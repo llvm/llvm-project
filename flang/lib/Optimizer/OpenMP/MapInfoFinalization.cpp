@@ -341,6 +341,14 @@ class MapInfoFinalizationPass
 
     mlir::Type underlyingDescType = fir::unwrapRefType(descriptor.getType());
 
+    // A partial storage map is an implicit container for explicitly mapped
+    // members. It may already have only those members mapped by enter data.
+    // Keep the container implicit so structured regions can reuse that storage,
+    // while still mapping the descriptor they need for device-side addressing.
+    if (parentOp.getPartialMap() &&
+        bitEnumContainsAll(mapType, mlir::omp::ClauseMapFlags::storage))
+      mapType |= mlir::omp::ClauseMapFlags::implicit;
+
     // Member of the descriptor pointing at the allocated data
     return mlir::omp::MapInfoOp::create(
         builder, mapInfoOpLoc, baseAddr.getType(), descriptor,
@@ -1150,9 +1158,10 @@ class MapInfoFinalizationPass
     mapOnlyDescriptor = isHasDeviceAddrFlag | canOptimizeUseDeviceAddr;
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
     // Exclude irregular maps from optimization via privatization; at least for
-    // the moment.
+    // the moment. A partial map needs bounds-aware attachment because the
+    // descriptor's base address may lie outside the mapped component storage.
     if (isHasDeviceAddrFlag || getUseDeviceAddrBlockArg(op, *target) ||
-        isUseDevicePtr(op, *target))
+        isUseDevicePtr(op, *target) || op.getPartialMap())
       canOptimizeDescViaPrivatization = false;
 
     // If we're a derived type descriptor, that's been flagged as ref_ptr,
