@@ -362,7 +362,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     if (auto *F = dyn_cast<Function>(LGV)) {
       if (auto It = VFuncDependencies.find(F); It != VFuncDependencies.end()) {
         for (auto [VTable, VFunc] : It->second) {
-          if (AliveGlobals.count(VTable))
+          if (AliveGlobals.contains(VTable))
             MarkLive(*VFunc, &NewLiveGVs);
           else
             PendingVFuncs[VTable].push_back(VFunc);
