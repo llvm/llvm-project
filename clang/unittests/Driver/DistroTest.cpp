@@ -47,8 +47,12 @@ TEST(DistroTest, DetectUbuntu) {
                                        "BUG_REPORT_URL=\"http://bugs.launchpad.net/ubuntu/\"\n"));
 
   Distro UbuntuTrusty{UbuntuTrustyFileSystem, llvm::Triple("unknown-pc-linux")};
-  ASSERT_EQ(Distro(Distro::UbuntuTrusty), UbuntuTrusty);
+  ASSERT_EQ(Distro(Distro::Ubuntu, 14, 4), UbuntuTrusty);
   ASSERT_TRUE(UbuntuTrusty.IsUbuntu());
+  ASSERT_TRUE(UbuntuTrusty.IsUbuntuAtLeast(14));
+  ASSERT_TRUE(UbuntuTrusty.IsUbuntuAtLeast(14, 4));
+  ASSERT_FALSE(UbuntuTrusty.IsUbuntuAtLeast(14, 5));
+  ASSERT_FALSE(UbuntuTrusty.IsUbuntuAtLeast(15));
   ASSERT_FALSE(UbuntuTrusty.IsRedhat());
   ASSERT_FALSE(UbuntuTrusty.IsOpenSUSE());
   ASSERT_FALSE(UbuntuTrusty.IsDebian());
@@ -80,12 +84,67 @@ TEST(DistroTest, DetectUbuntu) {
                                        "UBUNTU_CODENAME=yakkety\n"));
 
   Distro UbuntuYakkety{UbuntuYakketyFileSystem, llvm::Triple("unknown-pc-linux")};
-  ASSERT_EQ(Distro(Distro::UbuntuYakkety), UbuntuYakkety);
+  ASSERT_EQ(Distro(Distro::Ubuntu, 16, 10), UbuntuYakkety);
   ASSERT_TRUE(UbuntuYakkety.IsUbuntu());
+  ASSERT_TRUE(UbuntuYakkety.IsUbuntuAtLeast(16));
+  ASSERT_TRUE(UbuntuYakkety.IsUbuntuAtLeast(16, 10));
+  ASSERT_FALSE(UbuntuYakkety.IsUbuntuAtLeast(16, 11));
+  ASSERT_FALSE(UbuntuYakkety.IsUbuntuAtLeast(17));
   ASSERT_FALSE(UbuntuYakkety.IsRedhat());
   ASSERT_FALSE(UbuntuYakkety.IsOpenSUSE());
   ASSERT_FALSE(UbuntuYakkety.IsDebian());
   ASSERT_FALSE(UbuntuYakkety.IsGentoo());
+}
+
+TEST(DistroTest, DetectUbuntuUnknownFutureRelease) {
+  llvm::vfs::InMemoryFileSystem FutureUbuntuFileSystem;
+  FutureUbuntuFileSystem.addFile("/etc/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("NAME=\"Ubuntu\"\n"
+                                       "VERSION=\"99.10 (Unknown Unicorn)\"\n"
+                                       "ID=ubuntu\n"
+                                       "VERSION_ID=\"99.10\"\n"));
+
+  Distro FutureUbuntu{FutureUbuntuFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::Ubuntu, 99, 10), FutureUbuntu);
+  ASSERT_TRUE(FutureUbuntu.IsUbuntu());
+  ASSERT_TRUE(FutureUbuntu.IsUbuntuAtLeast(99, 10));
+  ASSERT_EQ(99, FutureUbuntu.getMajorVersion());
+  ASSERT_EQ(10, FutureUbuntu.getMinorVersion());
+}
+
+TEST(DistroTest, DetectUbuntuLsbReleaseOnly) {
+  llvm::vfs::InMemoryFileSystem UbuntuLsbFileSystem;
+  UbuntuLsbFileSystem.addFile("/etc/lsb-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("DISTRIB_ID=Ubuntu\n"
+                                       "DISTRIB_RELEASE=14.04\n"
+                                       "DISTRIB_CODENAME=trusty\n"
+                                       "DISTRIB_DESCRIPTION=\"Ubuntu 14.04 LTS\"\n"));
+
+  Distro UbuntuLsb{UbuntuLsbFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::Ubuntu, 14, 4), UbuntuLsb);
+  ASSERT_TRUE(UbuntuLsb.IsUbuntu());
+
+  llvm::vfs::InMemoryFileSystem UnknownCodenameFileSystem;
+  UnknownCodenameFileSystem.addFile("/etc/lsb-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("DISTRIB_ID=Ubuntu\n"
+                                       "DISTRIB_RELEASE=99.10\n"
+                                       "DISTRIB_CODENAME=unicorn\n"));
+
+  Distro UnknownCodename{UnknownCodenameFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::Ubuntu, 99, 10), UnknownCodename);
+  ASSERT_TRUE(UnknownCodename.IsUbuntu());
+  ASSERT_TRUE(UnknownCodename.IsUbuntuAtLeast(99, 10));
+
+  // DISTRIB_ID is not Ubuntu here.
+  llvm::vfs::InMemoryFileSystem MintLsbFileSystem;
+  MintLsbFileSystem.addFile("/etc/lsb-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("DISTRIB_ID=LinuxMint\n"
+                                       "DISTRIB_RELEASE=20.3\n"
+                                       "DISTRIB_CODENAME=una\n"));
+
+  Distro Mint{MintLsbFileSystem, llvm::Triple("unknown-pc-linux")};
+  ASSERT_EQ(Distro(Distro::UnknownDistro), Mint);
+  ASSERT_FALSE(Mint.IsUbuntu());
 }
 
 TEST(DistroTest, DetectRedhat) {

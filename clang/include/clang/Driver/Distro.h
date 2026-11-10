@@ -46,35 +46,8 @@ public:
     Fedora,
     Gentoo,
     OpenSUSE,
-    UbuntuQuantal,
-    UbuntuRaring,
-    UbuntuSaucy,
-    UbuntuTrusty,
-    UbuntuUtopic,
-    UbuntuVivid,
-    UbuntuWily,
-    UbuntuXenial,
-    UbuntuYakkety,
-    UbuntuZesty,
-    UbuntuArtful,
-    UbuntuBionic,
-    UbuntuCosmic,
-    UbuntuDisco,
-    UbuntuEoan,
-    UbuntuFocal,
-    UbuntuGroovy,
-    UbuntuHirsute,
-    UbuntuImpish,
-    UbuntuJammy,
-    UbuntuKinetic,
-    UbuntuLunar,
-    UbuntuMantic,
-    UbuntuNoble,
-    UbuntuOracular,
-    UbuntuPlucky,
-    UbuntuQuesting,
-    UbuntuResolute,
-    UbuntuStonking,
+    // Ubuntu releases are identified by numeric VERSION_ID, not enum entries.
+    Ubuntu,
     UnknownDistro
   };
 
@@ -82,15 +55,21 @@ private:
   /// The distribution, possibly with specific version.
   DistroType DistroVal;
 
+  /// Release version (e.g. 24 and 4 for Ubuntu 24.04), 0 if unknown.
+  int MajorVersionVal;
+  int MinorVersionVal;
+
 public:
   /// @name Constructors
   /// @{
 
   /// Default constructor leaves the distribution unknown.
-  Distro() : DistroVal() {}
+  Distro() : DistroVal(), MajorVersionVal(), MinorVersionVal() {}
 
   /// Constructs a Distro type for specific distribution.
-  Distro(DistroType D) : DistroVal(D) {}
+  Distro(DistroType D, int MajorVersion = 0, int MinorVersion = 0)
+      : DistroVal(D), MajorVersionVal(MajorVersion),
+        MinorVersionVal(MinorVersion) {}
 
   /// Detects the distribution using specified VFS.
   explicit Distro(llvm::vfs::FileSystem &VFS, const llvm::Triple &TargetOrHost);
@@ -125,13 +104,27 @@ public:
     return DistroVal >= DebianJessie && DistroVal <= DebianDuke;
   }
 
-  bool IsUbuntu() const {
-    return DistroVal >= UbuntuQuantal && DistroVal <= UbuntuStonking;
-  }
+  bool IsUbuntu() const { return DistroVal == Ubuntu; }
 
   bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }
 
   bool IsGentoo() const { return DistroVal == Gentoo; }
+
+  /// @}
+  /// @name Version Queries
+  /// @{
+
+  int getMajorVersion() const { return MajorVersionVal; }
+
+  int getMinorVersion() const { return MinorVersionVal; }
+
+  bool IsUbuntuAtLeast(int Major, int Minor = 0) const {
+    if (DistroVal != Ubuntu)
+      return false;
+    if (MajorVersionVal != Major)
+      return MajorVersionVal > Major;
+    return MinorVersionVal >= Minor;
+  }
 
   /// @}
 };
