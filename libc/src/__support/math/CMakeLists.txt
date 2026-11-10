@@ -4607,9 +4607,18 @@ add_header_library(
   HDRS
     coshbf16.h
   DEPENDS
+    .sinhcoshbf16_utils
+    libc.hdr.fenv_macros
+    libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
