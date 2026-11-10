@@ -26,7 +26,6 @@ class FPExceptMatcher : public Matcher<bool> {
 public:
   explicit FPExceptMatcher(cpp::function_ref<void(void)> func);
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain([[maybe_unused]] bool unused,
                        MatchResultListener *listener) const {
     if (exceptionRaised)

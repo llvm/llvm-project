@@ -87,7 +87,6 @@ class SocketAddressMatcher : public Matcher<SocketAddress> {
 public:
   explicit SocketAddressMatcher(cpp::string_view path) : expected_path(path) {}
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(const SocketAddress &actual,
                        MatchResultListener *listener) const {
     if (actual.addr.sun_family != AF_UNIX) {

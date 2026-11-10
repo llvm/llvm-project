@@ -31,7 +31,6 @@ class StructTmMatcher : public Matcher<::tm> {
 public:
   StructTmMatcher(::tm expectedValue) : expected(expectedValue) {}
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(const ::tm &actual,
                        MatchResultListener *listener) const {
     if (actual.tm_sec == expected.tm_sec && actual.tm_min == expected.tm_min &&

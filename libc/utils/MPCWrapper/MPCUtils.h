@@ -121,7 +121,6 @@ public:
 
   bool match(OutputType libcResult) const { return match(input, libcResult); }
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(OutputType libcResult,
                        MatchResultListener *listener) const {
     if (match(libcResult))

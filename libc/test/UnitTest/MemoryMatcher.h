@@ -51,7 +51,6 @@ class MemoryMatcher : public Matcher<MemoryView> {
 public:
   MemoryMatcher(MemoryView expectedValue) : expected(expectedValue) {}
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(MemoryView actual, MatchResultListener *listener) const;
 };
 

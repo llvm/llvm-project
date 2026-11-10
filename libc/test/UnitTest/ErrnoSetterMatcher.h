@@ -155,6 +155,11 @@ public:
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   Comparator<T> return_cmp;
   ErrnoCheck errno_cmp;
+  // EXPECT_THAT copies the matcher per assertion and calls MatchAndExplain
+  // twice when a match fails: once with an uninterested listener to test the
+  // condition, and again with a live listener to format the explanation. Cache
+  // libc_errno before resetting it on the first call so the explanation pass
+  // sees the original errno value.
   mutable int actual_errno = 0;
   mutable bool has_errno = false;
 
@@ -179,7 +184,6 @@ public:
     return *this;
   }
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(T got, MatchResultListener *listener) const {
     if constexpr (!ignore_errno()) {
       if (!has_errno) {

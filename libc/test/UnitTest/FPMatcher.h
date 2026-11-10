@@ -54,7 +54,6 @@ public:
            (actualBits.uintval() != expectedBits.uintval());
   }
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(T actual, MatchResultListener *listener) const {
     if (match(actual))
       return true;
@@ -150,7 +149,6 @@ public:
 #endif // LIBC_COMPILER_IS_MSVC
   }
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(T actual, MatchResultListener *listener) const {
     if (match(actual))
       return true;

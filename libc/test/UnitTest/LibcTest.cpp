@@ -313,10 +313,11 @@ bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                    RHSStr, Loc);
 }
 
-void mark_match_failure(const char *LHSStr, const char *RHSStr, Location Loc) {
+void mark_match_failure(const char *lhs_str, const char *rhs_str,
+                        Location loc) {
   current_context->markFail();
-  tlog << Loc;
-  tlog << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
+  tlog << loc;
+  tlog << "Failed to match " << lhs_str << " against " << rhs_str << ".\n";
 }
 
 } // namespace internal

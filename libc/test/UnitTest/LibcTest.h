@@ -67,12 +67,10 @@ public:
 struct MatcherBase {
   using is_gtest_matcher = void;
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   template <typename Stream> LIBC_INLINE void DescribeTo(Stream *os) const {
     *os << "matches";
   }
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   template <typename Stream>
   LIBC_INLINE void DescribeNegationTo(Stream *os) const {
     *os << "does not match";
@@ -202,18 +200,18 @@ bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
 bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
 
-void mark_match_failure(const char *LHSStr, const char *RHSStr, Location Loc);
+void mark_match_failure(const char *lhs_str, const char *rhs_str, Location loc);
 
 template <typename MatcherT, typename ValType>
-LIBC_INLINE bool match_and_explain(const MatcherT &Matcher,
-                                   const ValType &Value, const char *MatcherStr,
-                                   const char *ValueStr, Location Loc) {
-  MatchResultListener NullListener(nullptr);
-  if (Matcher.MatchAndExplain(Value, &NullListener))
+LIBC_INLINE bool match_and_explain(MatcherT matcher, const ValType &value,
+                                   const char *matcher_str,
+                                   const char *value_str, Location loc) {
+  MatchResultListener null_listener(nullptr);
+  if (matcher.MatchAndExplain(value, &null_listener))
     return true;
-  mark_match_failure(ValueStr, MatcherStr, Loc);
-  MatchResultListener Listener(&tlog);
-  Matcher.MatchAndExplain(Value, &Listener);
+  mark_match_failure(value_str, matcher_str, loc);
+  MatchResultListener listener(&tlog);
+  matcher.MatchAndExplain(value, &listener);
   return false;
 }
 } // namespace internal

@@ -23,7 +23,6 @@ public:
   FormatSectionMatcher(scanf_core::FormatSection expectedValue)
       : expected(expectedValue) {}
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(const scanf_core::FormatSection &actual,
                        MatchResultListener *listener) const;
 };

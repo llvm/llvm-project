@@ -29,7 +29,6 @@ public:
   FormatSectionMatcher(printf_core::FormatSection<CharT> expectedValue)
       : expected(expectedValue) {}
 
-  // NOLINTNEXTLINE(readability-identifier-naming)
   bool MatchAndExplain(const printf_core::FormatSection<CharT> &actual,
                        MatchResultListener *listener) const {
     if (expected == actual)

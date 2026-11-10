@@ -32,7 +32,6 @@ TEST(LlvmLibcQueueTest, SList) {
   struct Contains : public testing::Matcher<Head> {
     string s;
     Contains(string s) : s(s) {}
-    // NOLINTNEXTLINE(readability-identifier-naming)
     bool MatchAndExplain(Head head,
                          testing::MatchResultListener *listener) const {
       Entry *e;
@@ -40,8 +39,8 @@ TEST(LlvmLibcQueueTest, SList) {
       SLIST_FOREACH(e, &head, entries) { v.append(e->c); }
       if (s == v.c_str())
         return true;
-      *listener << "actual elements: "
-                << cpp::string_view(v.c_str(), v.length());
+      *listener << "expected elements: " << s << "\nactual elements: "
+                << cpp::string_view(v.c_str(), v.length()) << '\n';
       return false;
     }
   };
@@ -105,7 +104,6 @@ TEST(LlvmLibcQueueTest, STailQ) {
   struct Contains : public testing::Matcher<Head> {
     string s;
     Contains(string s) : s(s) {}
-    // NOLINTNEXTLINE(readability-identifier-naming)
     bool MatchAndExplain(Head head,
                          testing::MatchResultListener *listener) const {
       Entry *e;
@@ -113,8 +111,8 @@ TEST(LlvmLibcQueueTest, STailQ) {
       STAILQ_FOREACH(e, &head, entries) { v.append(e->c); }
       if (s == v.c_str())
         return true;
-      *listener << "actual elements: "
-                << cpp::string_view(v.c_str(), v.length());
+      *listener << "expected elements: " << s << "\nactual elements: "
+                << cpp::string_view(v.c_str(), v.length()) << '\n';
       return false;
     }
   };
