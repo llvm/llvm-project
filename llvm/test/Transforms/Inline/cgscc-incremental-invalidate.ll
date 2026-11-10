@@ -1,7 +1,9 @@
 ; Test for a subtle bug when computing analyses during inlining and mutating
 ; the SCC structure. Without care, this can fail to invalidate analyses.
 ;
-; RUN: opt < %s -aa-pipeline= -passes='cgscc(inline,function(verify<domtree>))' -debug-pass-manager -inline-deferral -S 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline= -passes='cgscc(inline,function(verify<domtree>))' \
+; RUN:       -debug-pass-manager -inline-deferral -inline-jump-threading-discount=0 \
+; RUN:       -S 2>&1 | FileCheck %s
 
 ; First we check that the passes run in the way we expect. Otherwise this test
 ; may stop testing anything.
@@ -165,9 +167,8 @@ bb:
 
   %tmp4 = call zeroext i1 @test2_barney(ptr %tmp2)
   %tmp5 = zext i1 %tmp4 to i32
-  %tmp6 = add nuw i32 %tmp5, 4
-  store i32 %tmp6, ptr %tmp2, align 4
-  %tmp7 = call zeroext i1 @test2_barney(ptr null)
+  store i32 %tmp5, ptr %tmp2, align 4
+  %tmp6 = call zeroext i1 @test2_barney(ptr null)
   call void @test2_ham(ptr %tmp1)
 ; CHECK:         call void @test2_ham(
 
