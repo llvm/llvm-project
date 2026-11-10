@@ -601,6 +601,29 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     case llvm::Triple::x86_64:
       ArchName = Triple.isX32() ? "x32" : Triple.getArchName().str();
       break;
+    case llvm::Triple::mips:
+    case llvm::Triple::mipsel:
+    case llvm::Triple::mips64:
+    case llvm::Triple::mips64el: {
+      StringRef CPUName, ABIName;
+      tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
+      if (ABIName == "n32")
+        ArchName = "mipsn32";
+      else if (ABIName == "n64")
+        ArchName = "mips64";
+      else
+        ArchName = "mips";
+      // CPUNames as defined in MipsTargetInfo::getISARev()
+      if (CPUName == "mips32r6" || CPUName == "mips64r6" ||
+          CPUName == "i6400" || CPUName == "i6500")
+        ArchName += "r6";
+      if (Triple.isLittleEndian())
+        ArchName += "el";
+      if (tools::mips::getMipsFloatABI(getDriver(), Args, Triple) ==
+          tools::mips::FloatABI::Soft)
+        ArchName += "-sf";
+      break;
+    }
     default:
       ArchName = Triple.getArchName().str();
     }
