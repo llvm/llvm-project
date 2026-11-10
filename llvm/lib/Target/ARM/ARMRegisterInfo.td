@@ -320,6 +320,7 @@ def GPRwithZRnosp : RegisterClass<"ARM", [i32], 32, (sub GPRwithZR, SP)> {
 // instructions to not have SP an an explicit argument. That makes
 // frame index resolution a bit trickier, though.
 def GPRsp : RegisterClass<"ARM", [i32], 32, (add SP)> {
+  let isAllocatable = 0;
   let DiagnosticString = "operand must be a register sp";
 }
 
