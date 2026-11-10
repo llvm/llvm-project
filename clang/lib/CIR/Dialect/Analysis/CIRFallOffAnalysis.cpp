@@ -102,8 +102,9 @@ private:
   /// address is taken.
   bool reachedIndirectGoto = false;
   bool addedAddressTakenLabels = false;
-  /// The function's labels, collected once a goto makes them matter.
-  std::optional<llvm::SmallVector<LabelOp>> labels;
+  /// The function's labels, collected once a goto makes them matter. Never
+  /// empty after that, since a goto only targets a label of this function.
+  llvm::SmallVector<LabelOp> labels;
   /// The enclosing switches, innermost last. A reachable switch dispatches to
   /// all of its cases, wherever they are nested in its body.
   struct SwitchState {
@@ -301,12 +302,10 @@ void FallOffAnalyzer::addAddressTakenLabels() {
 }
 
 void FallOffAnalyzer::updateLabelAncestors() {
-  if (!labels) {
-    labels.emplace();
-    func.getBody().walk([&](LabelOp label) { labels->push_back(label); });
-  }
+  if (labels.empty())
+    func.getBody().walk([&](LabelOp label) { labels.push_back(label); });
   labelAncestors.clear();
-  for (LabelOp label : *labels) {
+  for (LabelOp label : labels) {
     if (!targetedLabels.contains(label.getLabelAttr()))
       continue;
     for (mlir::Operation *parent = label->getParentOp(); parent != func;
