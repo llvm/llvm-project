@@ -1448,7 +1448,9 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
   if (Depth <= Opts.scalar_evolution_max_cast_depth &&
       match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
     const auto *AR = cast<SCEVAddRecExpr>(Op);
-    if (AR->hasNoUnsignedWrap()) {
+    bool UseNoUnsignedWrap =
+        Op.getNoWrapFlags(SCEVFlags::FlagNUW) != SCEVFlags::FlagNone;
+    if (AR->hasNoUnsignedWrap() || UseNoUnsignedWrap) {
       Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getZeroExtendExpr(Step, Ty, Depth + 1);
       return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
@@ -1805,7 +1807,9 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
   if (Depth <= Opts.scalar_evolution_max_cast_depth &&
       match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
     const auto *AR = cast<SCEVAddRecExpr>(Op);
-    if (AR->hasNoSignedWrap()) {
+    bool UseNoSignedWrap =
+        Op.getNoWrapFlags(SCEVFlags::FlagNSW) != SCEVFlags::FlagNone;
+    if (AR->hasNoSignedWrap() || UseNoSignedWrap) {
       Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getSignExtendExpr(Step, Ty, Depth + 1);
       return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
