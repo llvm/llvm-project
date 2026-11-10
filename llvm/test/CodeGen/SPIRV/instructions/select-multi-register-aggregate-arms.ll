@@ -1,10 +1,6 @@
-; A multi-register aggregate arm of a select (here from llvm.sincos and
-; llvm.frexp) is rebuilt with insertvalue. The rebuilt chain must start from a
-; typed placeholder: starting from a bare poison, every such chain shared one
-; uniqued i32 value, so the second struct got the first one's type. With
-; SPV_KHR_poison_freeze the placeholders are OpPoisonKHR instead of OpUndef.
-; A PHI arm is rebuilt in its incoming block, once even when a switch lists
-; that block twice.
+; Multi-register aggregate arms (llvm.sincos, llvm.frexp) of a select or PHI
+; are rebuilt with insertvalue, each chain from its own typed placeholder, and
+; a PHI arm once per incoming block.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
