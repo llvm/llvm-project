@@ -36,7 +36,9 @@ public:
 
   bool isInitialized() { return !Units.empty(); }
 
-  void addValidRelocs(RelocationMap &RM);
+  /// Add the saved relocations to \p RM. With \p OnlyPlacedUnits, skip the
+  /// units which were never placed with setUnitOffsets().
+  void addValidRelocs(RelocationMap &RM, bool OnlyPlacedUnits);
 
   /// Save \p InRelocs, moved by \p LinkedOffset into \p OutSection, for the
   /// unit at \p UnitOffset in the input.
@@ -44,12 +46,20 @@ public:
                                 const std::vector<ValidReloc> &InRelocs,
                                 uint64_t UnitOffset, int64_t LinkedOffset);
 
+  /// Record where the output of the unit at \p UnitOffset in the input starts
+  /// in .debug_info and .debug_addr, for the relocations saved relative to it.
+  void setUnitOffsets(uint64_t UnitOffset, uint64_t DebugInfoOffset,
+                      uint64_t DebugAddrOffset);
+
   DwarfLinkerForBinaryRelocationMap() = default;
 
 private:
   struct UnitRelocs {
     std::vector<ValidReloc> DebugInfo;
     std::vector<ValidReloc> DebugAddr;
+    /// Where the unit starts in each output section, if its relocations are
+    /// relative to it.
+    std::optional<std::pair<uint64_t, uint64_t>> Offsets;
   };
 
   /// Map compilation unit offset to the valid relocations to store.

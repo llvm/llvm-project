@@ -1,9 +1,8 @@
 The dSYM of a mergeable library holds a relocation map, which lets dsymutil
 carry the debug info of the library into the binaries merging it. Check that
-the classic DWARF linker writes the map, for DWARF 4 and 5, and that merging
-with it puts the debug info at the merged addresses, through two levels of
-merging: libfoo and libbar are merged into libclient, itself merged into
-libtop.
+both DWARF linkers write the map, for DWARF 4 and 5, and that merging with it
+puts the debug info at the merged addresses, through two levels of merging:
+libfoo and libbar are merged into libclient, itself merged into libtop.
 
 Instructions to reproduce
 -------------------------
@@ -29,7 +28,8 @@ $ for V in 4 5; do
       -o $D/libtop.dylib
   done
 
-dsymutil is expected to be silent.
+Every level is linked with the same DWARF linker. dsymutil is expected to be
+silent.
 
 DEFINE: %{version} =
 DEFINE: %{linker} =
@@ -59,9 +59,13 @@ RUN: rm -rf %t
 REDEFINE: %{version} = 4
 REDEFINE: %{linker} = classic
 RUN: %{link}
+REDEFINE: %{linker} = parallel
+RUN: %{link}
 
 REDEFINE: %{version} = 5
 REDEFINE: %{linker} = classic
+RUN: %{link}
+REDEFINE: %{linker} = parallel
 RUN: %{link}
 
 With DWARF 4, the addresses are in .debug_info.

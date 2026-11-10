@@ -98,6 +98,7 @@ void CompileUnit::maybeResetToLoadedStage() {
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
   DebugStringIndexMap.clear();
+  RelocFixups.clear();
   StmtSeqListAttributes.clear();
 
   llvm::fill(OutDieOffsetArray, 0);
@@ -609,10 +610,11 @@ void CompileUnit::emitLocations(DebugSectionKind LocationSectionKind) {
 
         DWARFExpression InputExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format);
-        cloneDieAttrExpression(InputExpression,
-                               LinkedExpression.Expression.Expr,
-                               OutLocationSection, Patch.AddrAdjustmentValue,
-                               LinkedExpression.Patches);
+        cloneDieAttrExpression(
+            InputExpression, LinkedExpression.Expression.Expr,
+            OutLocationSection, Patch.AddrAdjustmentValue,
+            LinkedExpression.Patches, /*Cloned=*/nullptr,
+            getContainingFile().Addresses->needToSaveValidRelocs());
 
         LinkedLocationExpressions.push_back({LinkedExpression});
       }
@@ -772,6 +774,7 @@ Error CompileUnit::emitDebugAddrSection() {
   OutAddrSection.emitIntVal(0, 1);
 
   // Emit addresses.
+  RelocFixups.setDebugAddrTableOffset(OutAddrSection.OS.tell());
   for (uint64_t AddrValue : DebugAddrIndexMap.getValues())
     OutAddrSection.emitIntVal(AddrValue, getFormParams().AddrSize);
 
@@ -783,6 +786,31 @@ Error CompileUnit::emitDebugAddrSection() {
       OutAddrSection.OS.tell() - OffsetAfterSectionLength);
 
   return Error::success();
+}
+
+void CompileUnit::saveRelocations() {
+  if (RelocFixups.empty())
+    return;
+  SavedRelocsUnitOffset = getOrigUnit().getOffset();
+  RelocFixups.save(*getContainingFile().Addresses, *SavedRelocsUnitOffset,
+                   getFormParams().AddrSize);
+  RelocFixups.clear();
+}
+
+void CompileUnit::reportUnitOffsets() {
+  const DWARFFile::UnitOffsetsCallbackTy &Report =
+      getContainingFile().UnitOffsetsFunc;
+  if (!SavedRelocsUnitOffset || !Report)
+    return;
+
+  uint64_t DebugAddrOffset = 0;
+  std::optional<SectionDescriptor *> DebugAddr =
+      tryGetSectionDescriptor(DebugSectionKind::DebugAddr);
+  if (DebugAddr)
+    DebugAddrOffset = (*DebugAddr)->StartOffset;
+  Report(*SavedRelocsUnitOffset,
+         getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset,
+         DebugAddrOffset);
 }
 
 Error CompileUnit::cloneAndEmitRanges() {
@@ -1208,11 +1236,30 @@ void CompileUnit::cloneDieAttrExpression(
     const DWARFExpression &InputExpression,
     SmallVectorImpl<uint8_t> &OutputExpression, SectionDescriptor &Section,
     std::optional<int64_t> VarAddressAdjustment,
-    OffsetsPtrVector &PatchesOffsets) {
+    OffsetsPtrVector &PatchesOffsets,
+    RelocationFixups::ClonedExpression *Cloned, bool KeepAddrIndices) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
   DWARFUnit &OrigUnit = getOrigUnit();
   uint8_t OrigAddressByteSize = OrigUnit.getAddressByteSize();
+
+  auto NoteDebugAddrOperand = [&](const DWARFExpression::Operation &Op) {
+    if (!Cloned)
+      return;
+    std::optional<uint64_t> AddrOffset =
+        OrigUnit.getIndexedAddressOffset(Op.getRawOperand(0));
+    if (AddrOffset)
+      Cloned->noteDebugAddrOperand(*AddrOffset, OrigAddressByteSize,
+                                   OutputExpression.size());
+  };
+
+  auto RelocateAddress = [&](const DWARFExpression::Operation &Op,
+                             uint64_t Address) {
+    AddressesMap &Addresses = *getContainingFile().Addresses;
+    std::optional<int64_t> Adjustment =
+        Addresses.getAddrIndexRelocAdjustment(OrigUnit, Op, /*Verbose=*/false);
+    return Address + Adjustment.value_or(VarAddressAdjustment.value_or(0));
+  };
 
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
@@ -1224,6 +1271,9 @@ void CompileUnit::cloneDieAttrExpression(
       warn("cannot decode a DW_OP, copying the rest of the expression "
            "unmodified.");
       StringRef Bytes = InputExpression.getData().substr(OpOffset);
+      if (Cloned)
+        Cloned->noteCopiedBytes(OpOffset, OpOffset + Bytes.size(),
+                                OutputExpression.size());
       OutputExpression.append(Bytes.begin(), Bytes.end());
       return;
     }
@@ -1287,6 +1337,23 @@ void CompileUnit::cloneDieAttrExpression(
       assert(RealSize == ULEBsize && "padding failed");
       ArrayRef<uint8_t> ULEBbytes(ULEB, ULEBsize);
       OutputExpression.append(ULEBbytes.begin(), ULEBbytes.end());
+    } else if (KeepAddrIndices && (Op.getCode() == dwarf::DW_OP_addrx ||
+                                   Op.getCode() == dwarf::DW_OP_constx)) {
+      std::optional<object::SectionedAddress> SA =
+          OrigUnit.getAddrOffsetSectionItem(Op.getRawOperand(0));
+      if (SA) {
+        uint64_t Index = getDebugAddrIndex(RelocateAddress(Op, SA->Address));
+        OutputExpression.push_back(Op.getCode());
+        uint8_t ULEB[16];
+        unsigned ULEBSize = encodeULEB128(Index, ULEB);
+        OutputExpression.append(ULEB, ULEB + ULEBSize);
+        std::optional<uint64_t> AddrOffset =
+            OrigUnit.getIndexedAddressOffset(Op.getRawOperand(0));
+        if (AddrOffset)
+          RelocFixups.noteDebugAddrEntry({*AddrOffset, Index});
+      } else
+        warn("cannot read " + dwarf::OperationEncodingString(Op.getCode()) +
+             " operand.");
     } else if (!getGlobalData().getOptions().UpdateIndexTablesOnly &&
                Op.getCode() == dwarf::DW_OP_addrx) {
       if (std::optional<object::SectionedAddress> SA =
@@ -1296,16 +1363,13 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress =
-            SA->Address +
-            getContainingFile()
-                .Addresses->getAddrIndexRelocAdjustment(OrigUnit, Op, false)
-                .value_or(VarAddressAdjustment.value_or(0));
+        uint64_t LinkedAddress = RelocateAddress(Op, SA->Address);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
             OrigAddressByteSize);
+        NoteDebugAddrOperand(Op);
         OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
       } else
         warn("cann't read DW_OP_addrx operand.");
@@ -1336,16 +1400,13 @@ void CompileUnit::cloneDieAttrExpression(
 
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
-          uint64_t LinkedAddress =
-              SA->Address +
-              getContainingFile()
-                  .Addresses->getAddrIndexRelocAdjustment(OrigUnit, Op, false)
-                  .value_or(VarAddressAdjustment.value_or(0));
+          uint64_t LinkedAddress = RelocateAddress(Op, SA->Address);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
               OrigAddressByteSize);
+          NoteDebugAddrOperand(Op);
           OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
         }
       } else
@@ -1354,6 +1415,9 @@ void CompileUnit::cloneDieAttrExpression(
       // Copy over everything else unmodified.
       StringRef Bytes =
           InputExpression.getData().slice(OpOffset, Op.getEndOffset());
+      if (Cloned)
+        Cloned->noteCopiedBytes(OpOffset, Op.getEndOffset(),
+                                OutputExpression.size());
       OutputExpression.append(Bytes.begin(), Bytes.end());
     }
     OpOffset = Op.getEndOffset();
