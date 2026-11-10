@@ -319,6 +319,146 @@ EC-AUXIAT:      0x180005000 00000000 00000000 1c200080 01000000
 EC-AUXIAT-NEXT: 0x180005010 00000000 00000000
 
 
+# Unload tables must follow the IAT for both views, including an empty view.
+RUN: lld-link -machine:arm64x -dll -noentry -out:unload-both.dll \
+RUN: loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          arm64-helper.obj arm64ec-helper.obj test-arm64.obj \
+RUN: test-arm64ec.obj test-arm64.lib test-arm64ec.lib -delayload:test.dll \
+RUN: -delay:unload
+RUN: llvm-readobj --coff-imports unload-both.dll > unload-both.txt
+RUN: llvm-readobj --sections --section-data unload-both.dll >> unload-both.txt
+RUN: llvm-readobj --coff-basereloc unload-both.dll >> unload-both.txt
+RUN: FileCheck --check-prefix=UNLOAD-BOTH %s < unload-both.txt
+
+UNLOAD-BOTH: ImportAddressTable: 0x[[#%X,IAT:]]
+UNLOAD-BOTH: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+UNLOAD-BOTH: HybridObject {
+UNLOAD-BOTH: ImportAddressTable: 0x[[#%X,IAT+16]]
+UNLOAD-BOTH: UnloadDelayImportTable: 0x[[#%X,UIAT+16]]
+UNLOAD-BOTH: Name: .rdata (
+UNLOAD-BOTH: VirtualAddress: 0x[[#%X,ROBASE:]]
+UNLOAD-BOTH: Characteristics [ (0x40000040)
+UNLOAD-BOTH: SectionData (
+UNLOAD-BOTH: [[#%X,UIAT-ROBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0:[0-9A-F]{8} [0-9A-F]{8}]]
+UNLOAD-BOTH-NEXT: [[#%X,UIAT-ROBASE+8]]: 00000000 00000000 [[V1_0:[0-9A-F]{8} [0-9A-F]{8}]]
+UNLOAD-BOTH-NEXT: [[#%X,UIAT-ROBASE+24]]: 00000000 00000000
+UNLOAD-BOTH: Name: .data (
+UNLOAD-BOTH: VirtualAddress: 0x[[#%X,RWBASE:]]
+UNLOAD-BOTH: SectionData (
+UNLOAD-BOTH: [[#%X,IAT-RWBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0]]
+UNLOAD-BOTH-NEXT: [[#%X,IAT-RWBASE+8]]: 00000000 00000000 [[V1_0]]
+UNLOAD-BOTH-NEXT: [[#%X,IAT-RWBASE+24]]: 00000000 00000000
+UNLOAD-BOTH: BaseReloc [
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT+16]]
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT+16]]
+UNLOAD-BOTH: HybridObject {
+UNLOAD-BOTH: BaseReloc [
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT+16]]
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+UNLOAD-BOTH: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT+16]]
+
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:unload-native.dll \
+RUN: loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          arm64-helper.obj arm64ec-helper.obj test-arm64.obj \
+RUN: test-arm64.lib test-arm64ec.lib -delayload:test.dll -delay:unload
+RUN: llvm-readobj --coff-imports unload-native.dll > unload-native.txt
+RUN: llvm-readobj --sections --section-data unload-native.dll >> \
+RUN: unload-native.txt
+RUN: llvm-readobj --coff-basereloc unload-native.dll >> unload-native.txt
+RUN: FileCheck --check-prefix=UNLOAD-NATIVE %s < unload-native.txt
+
+UNLOAD-NATIVE: ImportAddressTable: 0x[[#%X,IAT:]]
+UNLOAD-NATIVE: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+UNLOAD-NATIVE: HybridObject {
+UNLOAD-NATIVE: ImportAddressTable: 0x[[#%X,IAT+16]]
+UNLOAD-NATIVE: UnloadDelayImportTable: 0x[[#%X,UIAT+16]]
+UNLOAD-NATIVE: Name: .rdata (
+UNLOAD-NATIVE: VirtualAddress: 0x[[#%X,ROBASE:]]
+UNLOAD-NATIVE: Characteristics [ (0x40000040)
+UNLOAD-NATIVE: SectionData (
+UNLOAD-NATIVE: [[#%X,UIAT-ROBASE]]: [[V0_0:[0-9A-F]{8} [0-9A-F]{8}]] 00000000 00000000
+UNLOAD-NATIVE-NEXT: [[#%X,UIAT-ROBASE+16]]: 00000000 00000000
+UNLOAD-NATIVE: Name: .data (
+UNLOAD-NATIVE: VirtualAddress: 0x[[#%X,RWBASE:]]
+UNLOAD-NATIVE: SectionData (
+UNLOAD-NATIVE: [[#%X,IAT-RWBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0]]
+UNLOAD-NATIVE-NEXT: [[#%X,IAT-RWBASE+8]]: 00000000 00000000 00000000 00000000
+UNLOAD-NATIVE: BaseReloc [
+UNLOAD-NATIVE: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+UNLOAD-NATIVE: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+UNLOAD-NATIVE: HybridObject {
+UNLOAD-NATIVE: BaseReloc [
+UNLOAD-NATIVE: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+UNLOAD-NATIVE: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+
+
+RUN: lld-link -machine:arm64x -dll -noentry -out:unload-ec.dll \
+RUN: loadconfig-arm64.obj loadconfig-arm64ec.obj \
+RUN:          arm64-helper.obj arm64ec-helper.obj test-arm64ec.obj \
+RUN: test-arm64.lib test-arm64ec.lib -delayload:test.dll -delay:unload
+RUN: llvm-readobj --coff-imports unload-ec.dll > unload-ec.txt
+RUN: llvm-readobj --sections --section-data unload-ec.dll >> unload-ec.txt
+RUN: llvm-readobj --coff-basereloc unload-ec.dll >> unload-ec.txt
+RUN: FileCheck --check-prefix=UNLOAD-EC %s < unload-ec.txt
+
+UNLOAD-EC: ImportAddressTable: 0x[[#%X,IAT:]]
+UNLOAD-EC: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+UNLOAD-EC: HybridObject {
+UNLOAD-EC: ImportAddressTable: 0x[[#%X,IAT+8]]
+UNLOAD-EC: UnloadDelayImportTable: 0x[[#%X,UIAT+8]]
+UNLOAD-EC: Name: .rdata (
+UNLOAD-EC: VirtualAddress: 0x[[#%X,ROBASE:]]
+UNLOAD-EC: Characteristics [ (0x40000040)
+UNLOAD-EC: SectionData (
+UNLOAD-EC: [[#%X,UIAT-ROBASE]]: 00000000 00000000 [[V1_0:[0-9A-F]{8} [0-9A-F]{8}]]
+UNLOAD-EC-NEXT: [[#%X,UIAT-ROBASE+16]]: 00000000 00000000
+UNLOAD-EC: Name: .data (
+UNLOAD-EC: VirtualAddress: 0x[[#%X,RWBASE:]]
+UNLOAD-EC: SectionData (
+UNLOAD-EC: [[#%X,IAT-RWBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} 00000000 00000000
+UNLOAD-EC-NEXT: [[#%X,IAT-RWBASE+8]]: [[V1_0]] 00000000 00000000
+UNLOAD-EC: BaseReloc [
+UNLOAD-EC: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT+8]]
+UNLOAD-EC: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT+8]]
+UNLOAD-EC: HybridObject {
+UNLOAD-EC: BaseReloc [
+UNLOAD-EC: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT+8]]
+UNLOAD-EC: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT+8]]
+
+
+# Pure ARM64EC has no native table to skip.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:unload-pure-ec.dll \
+RUN: loadconfig-arm64ec.obj \
+RUN:          arm64ec-helper.obj test-arm64ec.obj test-arm64ec.lib \
+RUN: -delayload:test.dll -delay:unload
+RUN: llvm-readobj --coff-imports unload-pure-ec.dll > unload-pure-ec.txt
+RUN: llvm-readobj --sections --section-data unload-pure-ec.dll >> \
+RUN: unload-pure-ec.txt
+RUN: llvm-readobj --coff-basereloc unload-pure-ec.dll >> unload-pure-ec.txt
+RUN: FileCheck --check-prefix=UNLOAD-PURE-EC %s < unload-pure-ec.txt
+
+UNLOAD-PURE-EC: ImportAddressTable: 0x[[#%X,IAT:]]
+UNLOAD-PURE-EC: UnloadDelayImportTable: 0x[[#%X,UIAT:]]
+UNLOAD-PURE-EC: Name: .rdata (
+UNLOAD-PURE-EC: VirtualAddress: 0x[[#%X,ROBASE:]]
+UNLOAD-PURE-EC: Characteristics [ (0x40000040)
+UNLOAD-PURE-EC: SectionData (
+UNLOAD-PURE-EC: [[#%X,UIAT-ROBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0:[0-9A-F]{8} [0-9A-F]{8}]]
+UNLOAD-PURE-EC-NEXT: [[#%X,UIAT-ROBASE+8]]: 00000000 00000000
+UNLOAD-PURE-EC: Name: .data (
+UNLOAD-PURE-EC: VirtualAddress: 0x[[#%X,RWBASE:]]
+UNLOAD-PURE-EC: SectionData (
+UNLOAD-PURE-EC: [[#%X,IAT-RWBASE-8]]: {{([0-9A-F]{8})}} {{([0-9A-F]{8})}} [[V0_0]]
+UNLOAD-PURE-EC-NEXT: [[#%X,IAT-RWBASE+8]]: 00000000 00000000
+UNLOAD-PURE-EC: BaseReloc [
+UNLOAD-PURE-EC: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,UIAT]]
+UNLOAD-PURE-EC: Type: DIR64{{[[:space:]]+}}Address: 0x[[#%X,IAT]]
+
+
 #--- test-arm64ec.s
     .section .test, "rd"
     .rva __imp_func

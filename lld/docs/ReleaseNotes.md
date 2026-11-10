@@ -36,6 +36,11 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### COFF Improvements
 
+* Added `/delay:unload` to emit unload tables for delay-loaded DLLs.
+  `/delay:unload` and `/delay:nobind` are recognized case-insensitively;
+  `/delay:nobind` remains a no-op because bound delay imports are not
+  emitted. Unknown `/delay:` values now produce a warning.
+
 ### MinGW Improvements
 
 ### MachO Improvements
