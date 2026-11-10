@@ -40,6 +40,18 @@ public:
 private:
   using Value = evaluate::Scalar<T>;
 
+  static bool LessThan(const Value &x, const Value &y) {
+    if constexpr (T::category == TypeCategory::Unsigned) {
+      return x.BLT(y);
+    } else {
+      return x < y;
+    }
+  }
+
+  static bool GreaterThan(const Value &x, const Value &y) {
+    return LessThan(y, x);
+  }
+
   void AddCase(const parser::CaseConstruct::Case &c) {
     const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
     const parser::CaseStmt &caseStmt{stmt.statement};
@@ -49,7 +61,8 @@ private:
             [&](const std::list<parser::CaseValueRange> &ranges) {
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
-                if (pair.first && pair.second && *pair.first > *pair.second) {
+                if (pair.first && pair.second &&
+                    GreaterThan(*pair.first, *pair.second)) {
                   context_.Warn(common::UsageWarning::EmptyCase, stmt.source,
                       "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
@@ -184,7 +197,7 @@ private:
       if (x.IsDefault()) {
         return !y.IsDefault();
       } else {
-        return x.upper && y.lower && *x.upper < *y.lower;
+        return x.upper && y.lower && LessThan(*x.upper, *y.lower);
       }
     }
   };
