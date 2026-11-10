@@ -82,4 +82,20 @@ TEST_F(LlvmLibcVecExpfTest, Borderline) {
   EXPECT_SIMD_EQ(wrap_ref<ExpfOp>(x, 1.0), wrap_vector<ExpfOp>(x, 1.0));
 }
 
+TEST_F(LlvmLibcVecExpfTest, NonFMAHardToRound) {
+  // The middle input needs an explicit correction without double-precision FMA.
+  constexpr uint32_t INPUTS[] = {0xc16912ccU, 0xc16912cdU, 0xc16912ceU};
+  constexpr size_t LANES =
+      LIBC_NAMESPACE::cpp::internal::native_vector_size<float>;
+  for (uint32_t bits : INPUTS) {
+    float x = FPBits(bits).get_val();
+    EXPECT_SIMD_EQ(wrap_ref<ExpfOp>(x), wrap_vector<ExpfOp>(x));
+    for (size_t lane = 0; lane < LANES; ++lane) {
+      LIBC_NAMESPACE::cpp::simd<float> input(1.0f);
+      input[lane] = x;
+      EXPECT_SIMD_EQ(ExpfOp::eval_scalar(input), ExpfOp::eval_vector(input));
+    }
+  }
+}
+
 TEST_F(LlvmLibcVecExpfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(ExpfOp); }
