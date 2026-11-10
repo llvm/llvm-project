@@ -52,79 +52,46 @@ struct X86FCmpInfo {
 /// integer in the range [0, 31]. Predicates for 16-31 repeat the 0-15
 /// predicates and differ only in signaling behavior.
 static X86FCmpInfo getX86FCmpInfo(unsigned cc) {
-  X86FCmpInfo info;
+  bool inverseSig = cc & 0x10;
+  const auto createVal = [inverseSig](cir::FCmpOpKind kind, bool isSignaling) {
+    return X86FCmpInfo{kind, inverseSig ^ isSignaling};
+  };
   switch (cc & 0xf) {
   case 0x00:
-    info.pred = cir::FCmpOpKind::oeq;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::oeq, /*isSignaling=*/false);
   case 0x01:
-    info.pred = cir::FCmpOpKind::olt;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::olt, /*isSignaling=*/true);
   case 0x02:
-    info.pred = cir::FCmpOpKind::ole;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::ole, /*isSignaling=*/true);
   case 0x03:
-    info.pred = cir::FCmpOpKind::uno;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::uno, /*isSignaling=*/false);
   case 0x04:
-    info.pred = cir::FCmpOpKind::une;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::une, /*isSignaling=*/false);
   case 0x05:
-    info.pred = cir::FCmpOpKind::uge;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::uge, /*isSignaling=*/true);
   case 0x06:
-    info.pred = cir::FCmpOpKind::ugt;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::ugt, /*isSignaling=*/true);
   case 0x07:
-    info.pred = cir::FCmpOpKind::ord;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::ord, /*isSignaling=*/false);
   case 0x08:
-    info.pred = cir::FCmpOpKind::ueq;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::ueq, /*isSignaling=*/false);
   case 0x09:
-    info.pred = cir::FCmpOpKind::ult;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::ult, /*isSignaling=*/true);
   case 0x0a:
-    info.pred = cir::FCmpOpKind::ule;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::ule, /*isSignaling=*/true);
   case 0x0b:
-    info.pred = cir::FCmpOpKind::_false;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::_false, /*isSignaling=*/false);
   case 0x0c:
-    info.pred = cir::FCmpOpKind::one;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::one, /*isSignaling=*/false);
   case 0x0d:
-    info.pred = cir::FCmpOpKind::oge;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::oge, /*isSignaling=*/true);
   case 0x0e:
-    info.pred = cir::FCmpOpKind::ogt;
-    info.isSignaling = true;
-    break;
+    return createVal(cir::FCmpOpKind::ogt, /*isSignaling=*/true);
   case 0x0f:
-    info.pred = cir::FCmpOpKind::_true;
-    info.isSignaling = false;
-    break;
+    return createVal(cir::FCmpOpKind::_true, /*isSignaling=*/false);
   default:
     llvm_unreachable("Unhandled cc");
   }
-
-  if (cc & 0x10)
-    info.isSignaling = !info.isSignaling;
-  return info;
 }
 
 /// Returns the legacy x86 intrinsic that implements the given x86 cmppps/cmppd*
