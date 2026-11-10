@@ -4,8 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+avx512bw,+avx512vl | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
 
-; Type legalization of VECTOR_SHUFFLE_VAR. There is no X86 lowering yet, so
-; the legalized nodes use the generic expansion.
+; Type legalization of VECTOR_SHUFFLE_VAR.
 
 ; The only in-range index is 0, so the result is the source.
 define <1 x i32> @scalarize_v1i32(<1 x i32> %v, <1 x i32> %mask) {
@@ -373,59 +372,12 @@ define <8 x i32> @split_v8i32_v8i1(<8 x i32> %v, <8 x i1> %mask) {
 ;
 ; AVX512-LABEL: split_v8i32_v8i1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    pushq %rbp
-; AVX512-NEXT:    .cfi_def_cfa_offset 16
-; AVX512-NEXT:    .cfi_offset %rbp, -16
-; AVX512-NEXT:    movq %rsp, %rbp
-; AVX512-NEXT:    .cfi_def_cfa_register %rbp
-; AVX512-NEXT:    andq $-32, %rsp
-; AVX512-NEXT:    subq $32, %rsp
 ; AVX512-NEXT:    vpsllw $15, %xmm1, %xmm1
-; AVX512-NEXT:    vpmovw2m %xmm1, %k0
-; AVX512-NEXT:    kshiftrw $3, %k0, %k1
-; AVX512-NEXT:    kmovd %k1, %eax
-; AVX512-NEXT:    kshiftrw $2, %k0, %k1
-; AVX512-NEXT:    kmovd %k1, %ecx
-; AVX512-NEXT:    kshiftrw $1, %k0, %k1
-; AVX512-NEXT:    kmovd %k1, %edx
-; AVX512-NEXT:    kshiftrw $7, %k0, %k1
-; AVX512-NEXT:    kshiftrw $6, %k0, %k2
-; AVX512-NEXT:    kshiftrw $4, %k0, %k3
-; AVX512-NEXT:    kshiftrw $5, %k0, %k4
-; AVX512-NEXT:    kmovd %k0, %esi
-; AVX512-NEXT:    kmovd %k1, %edi
-; AVX512-NEXT:    kmovd %k2, %r8d
-; AVX512-NEXT:    kmovd %k3, %r9d
-; AVX512-NEXT:    kmovd %k4, %r10d
-; AVX512-NEXT:    vmovaps %ymm0, (%rsp)
-; AVX512-NEXT:    movzbl %r10b, %r10d
-; AVX512-NEXT:    andl $1, %r10d
-; AVX512-NEXT:    movzbl %r9b, %r9d
-; AVX512-NEXT:    andl $1, %r9d
-; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vpinsrd $1, (%rsp,%r10,4), %xmm0, %xmm0
-; AVX512-NEXT:    movzbl %r8b, %r8d
-; AVX512-NEXT:    andl $1, %r8d
-; AVX512-NEXT:    vpinsrd $2, (%rsp,%r8,4), %xmm0, %xmm0
-; AVX512-NEXT:    movzbl %dil, %edi
-; AVX512-NEXT:    andl $1, %edi
-; AVX512-NEXT:    vpinsrd $3, (%rsp,%rdi,4), %xmm0, %xmm0
-; AVX512-NEXT:    movzbl %sil, %esi
-; AVX512-NEXT:    andl $1, %esi
-; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512-NEXT:    movzbl %dl, %edx
-; AVX512-NEXT:    andl $1, %edx
-; AVX512-NEXT:    vpinsrd $1, (%rsp,%rdx,4), %xmm1, %xmm1
-; AVX512-NEXT:    movzbl %cl, %ecx
-; AVX512-NEXT:    andl $1, %ecx
-; AVX512-NEXT:    vpinsrd $2, (%rsp,%rcx,4), %xmm1, %xmm1
-; AVX512-NEXT:    movzbl %al, %eax
-; AVX512-NEXT:    andl $1, %eax
-; AVX512-NEXT:    vpinsrd $3, (%rsp,%rax,4), %xmm1, %xmm1
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; AVX512-NEXT:    movq %rbp, %rsp
-; AVX512-NEXT:    popq %rbp
-; AVX512-NEXT:    .cfi_def_cfa %rsp, 8
+; AVX512-NEXT:    vpmovw2m %xmm1, %k1
+; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
+; AVX512-NEXT:    vpsrld $31, %ymm1, %ymm1
+; AVX512-NEXT:    vpermd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %res = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i1(<8 x i32> %v, <8 x i1> %mask)
   ret <8 x i32> %res
