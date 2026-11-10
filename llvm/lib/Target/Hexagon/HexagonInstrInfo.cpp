@@ -4535,6 +4535,8 @@ unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
   switch (S) {
     case HexagonII::HVXVectorAccess:
       return HRI.getSpillSize(Hexagon::HvxVRRegClass);
+    case HexagonII::HLXVectorAccess:
+      return HRI.getSpillSize(Hexagon::HlxLRRegClass);
     default:
       llvm_unreachable("Unexpected instruction");
   }

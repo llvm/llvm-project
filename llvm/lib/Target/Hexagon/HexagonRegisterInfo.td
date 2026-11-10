@@ -292,6 +292,23 @@ let Namespace = "Hexagon" in {
   def Q2 : Rq<2, "q2">, DwarfRegNum<[133]>;
   def Q3 : Rq<3, "q3">, DwarfRegNum<[134]>;
 
+  // HLX long-vector registers.
+  foreach i = 0-15 in {
+    def L#i  : Ri<i, "L"#i, ["l"#i]>,  DwarfRegNum<[!add(i, 270)]>;
+  }
+
+  // Aliases of the L* registers used to hold double vec values.
+  let SubRegIndices = [vsub_lo, vsub_hi], CoveredBySubRegs = 1 in {
+  def LL0  : Rd< 0,  "L1:0",  [L0,  L1],  ["l1:0"]>,   DwarfRegNum<[290]>;
+  def LL1  : Rd< 2,  "L3:2",  [L2,  L3],  ["l3:2"]>,   DwarfRegNum<[291]>;
+  def LL2  : Rd< 4,  "L5:4",  [L4,  L5],  ["l5:4"]>,   DwarfRegNum<[292]>;
+  def LL3  : Rd< 6,  "L7:6",  [L6,  L7],  ["l7:6"]>,   DwarfRegNum<[293]>;
+  def LL4  : Rd< 8,  "L9:8",  [L8,  L9],  ["l9:8"]>,   DwarfRegNum<[294]>;
+  def LL5  : Rd<10, "L11:10", [L10, L11], ["l11:10"]>, DwarfRegNum<[295]>;
+  def LL6  : Rd<12, "L13:12", [L12, L13], ["l13:12"]>, DwarfRegNum<[296]>;
+  def LL7  : Rd<14, "L15:14", [L14, L15], ["l15:14"]>, DwarfRegNum<[297]>;
+  }
+
   // System registers.
   def SGP0 : Rs<0, "sgp0", ["s0"]>, DwarfRegNum<[144]>;
   def SGP1 : Rs<1, "sgp1", ["s1"]>, DwarfRegNum<[145]>;
@@ -499,6 +516,8 @@ def VecPI16 : ValueTypeByHwMode<[Hvx64, Hvx128, DefaultMode], [v64i16, v128i16,
                                                                v64i16]>;
 def VecPI32
     : ValueTypeByHwMode<[Hvx64, Hvx128, DefaultMode], [v32i32, v64i32, v32i32]>;
+def VecQI32
+    : ValueTypeByHwMode<[Hvx64, Hvx128, DefaultMode], [v64i32, v128i32, v32i32]>;
 def VecPF16 : ValueTypeByHwMode<[Hvx64, Hvx128, DefaultMode], [v64f16, v128f16,
                                                                v64f16]>;
 def VecPF32
@@ -550,6 +569,34 @@ def HvxVQR
                                                      RegInfo<4096, 4096, 1024>,
                                                      RegInfo<2048, 2048, 512>]>;
 }
+
+// HLX types
+// HLX supports a single 2048-byte vector length, so these types are fixed and
+// do not vary by HwMode.
+
+def HLXVecI8:   ValueTypeByHwMode<[DefaultMode], [v2048i8]>;
+def HLXVecI16:  ValueTypeByHwMode<[DefaultMode], [v1024i16]>;
+def HLXVecI32:  ValueTypeByHwMode<[DefaultMode], [v512i32]>;
+
+def HLXVecPI8:   ValueTypeByHwMode<[DefaultMode], [v4096i8]>;
+def HLXVecPI16:  ValueTypeByHwMode<[DefaultMode], [v2048i16]>;
+def HLXVecPI32:  ValueTypeByHwMode<[DefaultMode], [v1024i32]>;
+
+// HLX predicate types
+// HLX does not have vector predicate registers. To support LLVM vector cmp,
+// which has bool vector return types, allow HLX registers to hold bool vector types.
+// cmp instructions in HLX ISA yield either a 0xFFFF or 0 for each halfword element,
+// which can be treated as a bool vector type.
+def HLXVecQ16:   ValueTypeByHwMode<[DefaultMode], [v1024i1]>;
+def HLXVecPQ16:  ValueTypeByHwMode<[DefaultMode], [v2048i1]>;
+
+// HLX register classes
+
+def HlxLR : RegisterClass<"Hexagon", [HLXVecI8, HLXVecI16, HLXVecI32, HLXVecQ16],
+                          16384, (add (sequence "L%u", 0, 15))>;
+
+def HlxLLR : RegisterClass<"Hexagon", [HLXVecPI8, HLXVecPI16, HLXVecPI32, HLXVecPQ16],
+                           32768, (add (sequence "LL%u", 0, 7))>;
 
 // Core register classes
 
