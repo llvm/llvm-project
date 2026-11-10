@@ -50,3 +50,133 @@ loop:
 exit:
   ret void
 }
+
+; The addrspace(256) loads cannot be compared with the addrspace(0) store to %a
+; (no no-op cast exists), so no run-time checks can be generated and LAA fails
+; with "cannot identify array bounds".
+define void @stencil_no_noop_addrspace_cast(ptr %a, ptr addrspace(256) %b, i64 %s, i64 %n) {
+; CHECK-LABEL: 'stencil_no_noop_addrspace_cast'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %neg.s = sub i64 0, %s
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.b = getelementptr inbounds i32, ptr addrspace(256) %b, i64 %iv
+  %gep.b.minus.s = getelementptr inbounds i32, ptr addrspace(256) %gep.b, i64 %neg.s
+  %gep.b.plus.s = getelementptr inbounds i32, ptr addrspace(256) %gep.b, i64 %s
+  %l.b.minus.s = load i32, ptr addrspace(256) %gep.b.minus.s, align 4
+  %l.b = load i32, ptr addrspace(256) %gep.b, align 4
+  %l.b.plus.s = load i32, ptr addrspace(256) %gep.b.plus.s, align 4
+  %add.0 = add i32 %l.b.minus.s, %l.b
+  %add.1 = add i32 %add.0, %l.b.plus.s
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %add.1, ptr %gep.a, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The loads of %b in addrspace(0) and, via a no-op cast, in addrspace(1) are
+; comparable with %a, but their stencil members must not be merged across
+; address spaces: GRP1/GRP2 (addrspace 0) and GRP3 (addrspace 1) stay separate,
+; each with its own check against %a.
+define void @stencil_members_noop_addrspace_casts(ptr %a, ptr %b, i64 %s, i64 %n) {
+; CHECK-LABEL: 'stencil_members_noop_addrspace_casts'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %neg.s = sub i64 0, %s
+  %b.as1 = addrspacecast ptr %b to ptr addrspace(1)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %gep.b.minus.s = getelementptr inbounds i32, ptr %gep.b, i64 %neg.s
+  %gep.b.as1 = getelementptr inbounds i32, ptr addrspace(1) %b.as1, i64 %iv
+  %gep.b.as1.plus.s = getelementptr inbounds i32, ptr addrspace(1) %gep.b.as1, i64 %s
+  %l.b.minus.s = load i32, ptr %gep.b.minus.s, align 4
+  %l.b = load i32, ptr %gep.b, align 4
+  %l.b.as1.plus.s = load i32, ptr addrspace(1) %gep.b.as1.plus.s, align 4
+  %add.0 = add i32 %l.b.minus.s, %l.b
+  %add.1 = add i32 %add.0, %l.b.as1.plus.s
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %add.1, ptr %gep.a, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Mix of a no-op cast (addrspace 1) and a non-no-op cast (addrspace 256) of %b.
+; The addrspace(256) access cannot be compared with %a, so LAA fails with
+; "cannot identify array bounds" even though the addrspace(1) members alone
+; could be checked.
+define void @stencil_members_noop_and_non_noop_addrspace_casts(ptr %a, ptr %b, i64 %s, i64 %n) {
+; CHECK-LABEL: 'stencil_members_noop_and_non_noop_addrspace_casts'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %neg.s = sub i64 0, %s
+  %b.as1 = addrspacecast ptr %b to ptr addrspace(1)
+  %b.as256 = addrspacecast ptr %b to ptr addrspace(256)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.b = getelementptr inbounds i32, ptr addrspace(1) %b.as1, i64 %iv
+  %gep.b.minus.s = getelementptr inbounds i32, ptr addrspace(1) %gep.b, i64 %neg.s
+  %gep.b.plus.s = getelementptr inbounds i32, ptr addrspace(1) %gep.b, i64 %s
+  %gep.b.as256 = getelementptr inbounds i32, ptr addrspace(256) %b.as256, i64 %iv
+  %gep.b.as256.plus.s = getelementptr inbounds i32, ptr addrspace(256) %gep.b.as256, i64 %s
+  %l.b.minus.s = load i32, ptr addrspace(1) %gep.b.minus.s, align 4
+  %l.b = load i32, ptr addrspace(1) %gep.b, align 4
+  %l.b.plus.s = load i32, ptr addrspace(1) %gep.b.plus.s, align 4
+  %l.b.as256.plus.s = load i32, ptr addrspace(256) %gep.b.as256.plus.s, align 4
+  %add.0 = add i32 %l.b.minus.s, %l.b
+  %add.1 = add i32 %add.0, %l.b.plus.s
+  %add.2 = add i32 %add.1, %l.b.as256.plus.s
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  store i32 %add.2, ptr %gep.a, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
