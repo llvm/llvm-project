@@ -14,14 +14,19 @@
 #include "test/UnitTest/Test.h"
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::TypeList<char32_t, wchar_t>;
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::Types<char32_t, wchar_t>;
 #else
-using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::TypeList<char32_t>;
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::Types<char32_t>;
 #endif
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+template <typename T>
+class LlvmLibcTypedCharacterConverterUTF8To32Test
+    : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedCharacterConverterUTF8To32Test,
+                 TestCharTypesUTF32);
+
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, OneByte) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -37,9 +42,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, OneByte,
   ASSERT_EQ(static_cast<int>(wch.value()), 65);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, TwoBytes) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -56,9 +60,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoBytes,
   ASSERT_EQ(static_cast<int>(wch.value()), 142);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, ThreeBytes) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -76,9 +79,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, ThreeBytes,
   ASSERT_EQ(static_cast<int>(wch.value()), 8721);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, FourBytes,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, FourBytes) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -150,9 +152,9 @@ TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidLastByte) {
   ASSERT_EQ(err, EILSEQ);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test,
+           ValidTwoByteWithExtraRead) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -174,9 +176,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, ValidTwoByteWithExtraRead,
   ASSERT_FALSE(wch.has_value());
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, TwoValidTwoBytes) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;
@@ -203,9 +204,8 @@ TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, TwoValidTwoBytes,
   ASSERT_EQ(static_cast<int>(wch.value()), 460);
 }
 
-TYPED_TEST(LlvmLibcCharacterConverterUTF8To32Test, InvalidPop,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcTypedCharacterConverterUTF8To32Test, InvalidPop) {
+  using CharType32 = TypeParam;
 
   LIBC_NAMESPACE::internal::mbstate state;
   state.bytes_stored = 0;

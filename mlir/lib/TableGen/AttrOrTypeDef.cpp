@@ -320,6 +320,13 @@ StringRef AttrOrTypeParameter::getConvertFromStorage() const {
   return getDefValue<StringInit>("convertFromStorage").value_or("$_self");
 }
 
+std::vector<StringRef> AttrOrTypeParameter::getCppIncludes() const {
+  if (const auto *param = dyn_cast<DefInit>(getDef()))
+    if (param->getDef()->getValue("cppIncludes"))
+      return param->getDef()->getValueAsListOfStrings("cppIncludes");
+  return {};
+}
+
 std::optional<StringRef> AttrOrTypeParameter::getParser() const {
   return getDefValue<StringInit>("parser");
 }

@@ -481,6 +481,7 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
     case Hexagon::CircRegsRegClassID:
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       return VSub[GenIdx];
     case Hexagon::HvxVQRRegClassID:
       return WSub[GenIdx];

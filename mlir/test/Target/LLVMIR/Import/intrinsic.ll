@@ -52,11 +52,11 @@ define void @exp10_test(float %0, <8 x float> %1) {
 }
 
 ; CHECK-LABEL:  llvm.func @ldexp_test
-define void @ldexp_test(float %0, <8 x float> %1, i32 %2) {
+define void @ldexp_test(float %0, <8 x float> %1, i32 %2, <8 x i32> %3) {
   ; CHECK:  llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (f32, i32) -> f32
-  %4 = call float @llvm.ldexp.f32.i32(float %0, i32 %2)
-  ; CHECK:  llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (vector<8xf32>, i32) -> vector<8xf32>
-  %5 = call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %1, i32 %2)
+  %5 = call float @llvm.ldexp.f32.i32(float %0, i32 %2)
+  ; CHECK:  llvm.intr.ldexp(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xi32>) -> vector<8xf32>
+  %7 = call <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float> %1, <8 x i32> %3)
   ret void
 }
 
@@ -1808,7 +1808,7 @@ declare <8 x float> @llvm.exp2.v8f32(<8 x float>)
 declare float @llvm.exp10.f32(float)
 declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
 declare float @llvm.ldexp.f32.i32(float, i32)
-declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
+declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
 declare { float, i32 } @llvm.frexp.f32.i32(float)
 declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 declare { float, float } @llvm.modf.f32(float)

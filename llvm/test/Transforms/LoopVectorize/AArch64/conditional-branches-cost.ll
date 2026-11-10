@@ -62,7 +62,7 @@ define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP2]], i64 2
+; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[WIDE_LOAD]])
@@ -525,9 +525,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = uitofp <vscale x 4 x i16> [[BROADCAST_SPLAT]] to <vscale x 4 x double>
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[TMP2]], 1
 ; DEFAULT-NEXT:    [[TMP11:%.*]] = mul nuw nsw i64 [[TMP2]], 3
-; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP2]]
-; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP10]]
-; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP11]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP2]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP10]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP11]]
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[NEXT_GEP]], align 8
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[TMP12]], align 8
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[TMP13]], align 8
@@ -713,7 +713,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <8 x float> [[BROADCAST_SPLATINSERT4]], <8 x float> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT5]], <8 x float> zeroinitializer, <8 x float> [[TMP16]])
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = fcmp ogt <8 x float> [[TMP18]], [[BROADCAST_SPLAT5]]
-; DEFAULT-NEXT:    [[WIDE_GEP:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
+; DEFAULT-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [16 x i8], ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP19]], i64 0
 ; DEFAULT-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; DEFAULT:       [[PRED_STORE_IF]]:
@@ -864,7 +864,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP17:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[BROADCAST_SPLAT5]], <8 x float> zeroinitializer, <8 x float> [[TMP15]])
 ; PRED-NEXT:    [[TMP18:%.*]] = fcmp ogt <8 x float> [[TMP17]], [[BROADCAST_SPLAT5]]
 ; PRED-NEXT:    [[TMP19:%.*]] = select <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i1> [[TMP18]], <8 x i1> zeroinitializer
-; PRED-NEXT:    [[WIDE_GEP:%.*]] = getelementptr { [4 x float] }, ptr [[DST]], <8 x i64> [[VEC_IND]]
+; PRED-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [16 x i8], ptr [[DST]], <8 x i64> [[VEC_IND]]
 ; PRED-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP19]], i64 0
 ; PRED-NEXT:    br i1 [[TMP20]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; PRED:       [[PRED_STORE_IF]]:

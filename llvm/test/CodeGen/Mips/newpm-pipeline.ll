@@ -95,7 +95,7 @@
 ; MIPS-NEXT:     funclet-layout
 ; MIPS-NEXT:     remove-loads-into-fake-uses
 ; MIPS-NEXT:     StackMapLivenessPass
-; MIPS-NEXT:     live-debug-values<emit-debug-entry-values>
+; MIPS-NEXT:     live-debug-values
 ; MIPS-NEXT:     machine-sanmd
 ; MIPS-NEXT:     stack-frame-layout
 ; MIPS-NEXT:     verify
@@ -194,7 +194,7 @@
 ; MIPS-OS16-NEXT:     funclet-layout
 ; MIPS-OS16-NEXT:     remove-loads-into-fake-uses
 ; MIPS-OS16-NEXT:     StackMapLivenessPass
-; MIPS-OS16-NEXT:     live-debug-values<emit-debug-entry-values>
+; MIPS-OS16-NEXT:     live-debug-values
 ; MIPS-OS16-NEXT:     machine-sanmd
 ; MIPS-OS16-NEXT:     stack-frame-layout
 ; MIPS-OS16-NEXT:     verify
@@ -293,7 +293,7 @@
 ; MIPS-MFIX4300-NEXT:     funclet-layout
 ; MIPS-MFIX4300-NEXT:     remove-loads-into-fake-uses
 ; MIPS-MFIX4300-NEXT:     StackMapLivenessPass
-; MIPS-MFIX4300-NEXT:     live-debug-values<emit-debug-entry-values>
+; MIPS-MFIX4300-NEXT:     live-debug-values
 ; MIPS-MFIX4300-NEXT:     machine-sanmd
 ; MIPS-MFIX4300-NEXT:     stack-frame-layout
 ; MIPS-MFIX4300-NEXT:     verify

@@ -18,41 +18,35 @@ namespace testing {
 
 class StructTmMatcher : public Matcher<::tm> {
   ::tm expected;
-  ::tm actual;
+
+  static void describeValue(MatchResultListener &listener, const char *label,
+                            const ::tm &value) {
+    listener << label << " sec: " << value.tm_sec << " min: " << value.tm_min
+             << " hour: " << value.tm_hour << " mday: " << value.tm_mday
+             << " mon: " << value.tm_mon << " year: " << value.tm_year
+             << " wday: " << value.tm_wday << " yday: " << value.tm_yday
+             << " isdst: " << value.tm_isdst << '\n';
+  }
 
 public:
   StructTmMatcher(::tm expectedValue) : expected(expectedValue) {}
 
-  bool match(::tm actualValue) {
-    actual = actualValue;
-    return (actual.tm_sec == expected.tm_sec &&
-            actual.tm_min == expected.tm_min &&
-            actual.tm_hour == expected.tm_hour &&
-            actual.tm_mday == expected.tm_mday &&
-            actual.tm_mon == expected.tm_mon &&
-            actual.tm_year == expected.tm_year &&
-            actual.tm_wday == expected.tm_wday &&
-            actual.tm_yday == expected.tm_yday &&
-            actual.tm_isdst == expected.tm_isdst);
-  }
-
-  void describeValue(const char *label, ::tm value) {
-    tlog << label;
-    tlog << " sec: " << value.tm_sec;
-    tlog << " min: " << value.tm_min;
-    tlog << " hour: " << value.tm_hour;
-    tlog << " mday: " << value.tm_mday;
-    tlog << " mon: " << value.tm_mon;
-    tlog << " year: " << value.tm_year;
-    tlog << " wday: " << value.tm_wday;
-    tlog << " yday: " << value.tm_yday;
-    tlog << " isdst: " << value.tm_isdst;
-    tlog << '\n';
-  }
-
-  void explainError() override {
-    describeValue("Expected tm_struct value: ", expected);
-    describeValue("  Actual tm_struct value: ", actual);
+  bool MatchAndExplain(const ::tm &actual,
+                       MatchResultListener *listener) const {
+    if (actual.tm_sec == expected.tm_sec && actual.tm_min == expected.tm_min &&
+        actual.tm_hour == expected.tm_hour &&
+        actual.tm_mday == expected.tm_mday &&
+        actual.tm_mon == expected.tm_mon &&
+        actual.tm_year == expected.tm_year &&
+        actual.tm_wday == expected.tm_wday &&
+        actual.tm_yday == expected.tm_yday &&
+        actual.tm_isdst == expected.tm_isdst)
+      return true;
+    if (!listener->IsInterested())
+      return false;
+    describeValue(*listener, "Expected tm_struct value: ", expected);
+    describeValue(*listener, "  Actual tm_struct value: ", actual);
+    return false;
   }
 };
 
