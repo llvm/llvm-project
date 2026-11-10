@@ -200,14 +200,23 @@ public:
     for (Operation *op : llvm::reverse(tempOps))
       op->erase();
 
-    if (converted.empty())
-      return;
+    // Every optimized copyin is moved to the end of each data-operand list
+    // that contains it. This is always legal, even for a derived type and its
+    // components.
+    // ACCImplicitData maps the derived-type object before a component. A
+    // write to a component aliases that object, so the object is not
+    // optimized and stays before the component. A component that is
+    // optimized is appended with the object, in the same order, or behind
+    // an object that stayed. A write to one component does not alias a
+    // different component, but it still keeps the object in front of the
+    // component that moves.
     llvm::SmallPtrSet<Operation *, 16> regions;
-    for (Operation *copyin : converted)
+    for (Operation *copyin : converted) {
+      Value accVar = acc::getAccVar(cast<acc::CopyinOp>(copyin));
       for (Operation *user : copyin->getUsers())
-        if (isa<ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS,
-                acc::KernelEnvironmentOp>(user))
+        if (llvm::is_contained(acc::getDataOperands(user), accVar))
           regions.insert(user);
+    }
     for (Operation *regionOp : regions)
       appendConvertedCopyins(regionOp, converted);
   }
