@@ -433,3 +433,101 @@ define void @minsize(ptr %p, i64 %n) minsize {
   call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 %p, i32 7, i64 range(i64 0, 9) %n, i1 false)
   ret void
 }
+
+; In a function with profile data but without VP metadata on the
+; memset.pattern, the branches of the expansion get explicitly unknown weights.
+define void @profiled(ptr %p, i64 %n) !prof !0 {
+; EXPAND-LABEL: define void @profiled(
+; EXPAND-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
+; EXPAND-NEXT:    [[COUNT_GE2:%.*]] = icmp uge i64 [[N]], 2
+; EXPAND-NEXT:    br i1 [[COUNT_GE2]], label %[[MEMSET_PATTERN_STORE2:.*]], label %[[MEMSET_PATTERN_LT2:.*]], !prof [[PROF1:![0-9]+]]
+; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
+; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[P]], align 4
+; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 2
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[TAIL]], align 4
+; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE:.*]]
+; EXPAND:       [[MEMSET_PATTERN_LT2]]:
+; EXPAND-NEXT:    [[COUNT_GE1:%.*]] = icmp uge i64 [[N]], 1
+; EXPAND-NEXT:    br i1 [[COUNT_GE1]], label %[[MEMSET_PATTERN_STORE1:.*]], label %[[BB1:.*]], !prof [[PROF1]]
+; EXPAND:       [[MEMSET_PATTERN_STORE1]]:
+; EXPAND-NEXT:    store i32 7, ptr [[P]], align 4
+; EXPAND-NEXT:    br label %[[BB1]]
+; EXPAND:       [[BB1]]:
+; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE]]
+; EXPAND:       [[MEMSET_PATTERN_DONE]]:
+; EXPAND-NEXT:    ret void
+;
+; CALL-LABEL: define void @profiled(
+; CALL-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
+; CALL-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N]], 0
+; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]], !prof [[PROF1:![0-9]+]]
+; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
+; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    store i32 7, ptr [[TMP2]], align 4
+; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
+; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
+; CALL-NEXT:    br i1 [[TMP4]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]], label %[[MEMSET_PATTERN_POST_EXPANSION]], !prof [[PROF1]]
+; CALL:       [[MEMSET_PATTERN_POST_EXPANSION]]:
+; CALL-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 %p, i32 7, i64 range(i64 0, 4) %n, i1 false)
+  ret void
+}
+
+; With VP metadata, it's propagated to the branches. The VP values are counts
+; of the pattern, and the value 100 is outside the range so it's ignored.
+define void @profiled2(ptr %p, i64 %n) !prof !0 {
+; EXPAND-LABEL: define void @profiled2(
+; EXPAND-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; EXPAND-NEXT:    [[COUNT_GE2:%.*]] = icmp uge i64 [[N]], 2
+; EXPAND-NEXT:    br i1 [[COUNT_GE2]], label %[[MEMSET_PATTERN_STORE2:.*]], label %[[MEMSET_PATTERN_LT2:.*]], !prof [[PROF2:![0-9]+]]
+; EXPAND:       [[MEMSET_PATTERN_STORE2]]:
+; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[P]], align 4
+; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[N]], 2
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    store <2 x i32> splat (i32 7), ptr [[TAIL]], align 4
+; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE:.*]]
+; EXPAND:       [[MEMSET_PATTERN_LT2]]:
+; EXPAND-NEXT:    [[COUNT_GE1:%.*]] = icmp uge i64 [[N]], 1
+; EXPAND-NEXT:    br i1 [[COUNT_GE1]], label %[[MEMSET_PATTERN_STORE1:.*]], label %[[BB1:.*]], !prof [[PROF3:![0-9]+]]
+; EXPAND:       [[MEMSET_PATTERN_STORE1]]:
+; EXPAND-NEXT:    store i32 7, ptr [[P]], align 4
+; EXPAND-NEXT:    br label %[[BB1]]
+; EXPAND:       [[BB1]]:
+; EXPAND-NEXT:    br label %[[MEMSET_PATTERN_DONE]]
+; EXPAND:       [[MEMSET_PATTERN_DONE]]:
+; EXPAND-NEXT:    ret void
+;
+; CALL-LABEL: define void @profiled2(
+; CALL-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CALL-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[N]], 0
+; CALL-NEXT:    br i1 [[TMP1]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY:.*]], label %[[MEMSET_PATTERN_POST_EXPANSION:.*]], !prof [[PROF2:![0-9]+]]
+; CALL:       [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]]:
+; CALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
+; CALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[LOOP_INDEX]]
+; CALL-NEXT:    store i32 7, ptr [[TMP2]], align 4
+; CALL-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1
+; CALL-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], [[N]]
+; CALL-NEXT:    br i1 [[TMP4]], label %[[MEMSET_PATTERN_EXPANSION_MAIN_BODY]], label %[[MEMSET_PATTERN_POST_EXPANSION]], !prof [[PROF3:![0-9]+]]
+; CALL:       [[MEMSET_PATTERN_POST_EXPANSION]]:
+; CALL-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 %p, i32 7, i64 range(i64 0, 4) %n, i1 false), !prof !1
+  ret void
+}
+
+!0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"VP", i32 1, i32 110, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4, i32 100, i32 100}
+;.
+; EXPAND: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; EXPAND: [[PROF1]] = !{!"unknown", !"lower-mem-intrinsics"}
+; EXPAND: [[PROF2]] = !{!"branch_weights", i32 7, i32 3}
+; EXPAND: [[PROF3]] = !{!"branch_weights", i32 2, i32 1}
+;.
+; CALL: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; CALL: [[PROF1]] = !{!"unknown", !"lower-mem-intrinsics"}
+; CALL: [[PROF2]] = !{!"branch_weights", i32 1048575, i32 1}
+; CALL: [[PROF3]] = !{!"branch_weights", i32 90, i32 1}
+;.
