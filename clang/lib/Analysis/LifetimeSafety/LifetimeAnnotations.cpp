@@ -132,6 +132,25 @@ FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
 }
 
+bool hasObjectArg(const FunctionDecl &FD) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(&FD);
+  return MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD);
+}
+
+bool hasImplicitObjectArg(const FunctionDecl &FD) {
+  return hasObjectArg(FD) &&
+         cast<CXXMethodDecl>(FD).isImplicitObjectMemberFunction();
+}
+
+const ParmVarDecl *getParamForArg(const FunctionDecl &FD, unsigned I) {
+  if (hasImplicitObjectArg(FD)) {
+    if (I == 0)
+      return nullptr;
+    --I;
+  }
+  return I < FD.getNumParams() ? FD.getParamDecl(I) : nullptr;
+}
+
 std::optional<LifetimeBoundParamInfo>
 getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
                   unsigned I) {
@@ -139,31 +158,28 @@ getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
   if (!FD || I >= Args.size())
     return std::nullopt;
 
-  const ParmVarDecl *PVD = nullptr;
-
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-    if (I == 0) {
-      // For the 'this' argument, the attribute is on the method itself.
-      if (implicitObjectParamIsLifetimeBound(Method) ||
-          shouldTrackImplicitObjectArg(*Args[0], Method,
-                                       /*RunningUnderLifetimeSafety=*/true))
-        return LifetimeBoundParamInfo(Method);
-      return std::nullopt;
-    }
-    if ((I - 1) < Method->getNumParams())
-      // For explicit arguments, find the corresponding parameter declaration.
-      PVD = Method->getParamDecl(I - 1);
-  } else if (I == 0 && shouldTrackFirstArgument(FD)) {
-    return LifetimeBoundParamInfo(FD->getParamDecl(I));
-  } else if (I == 1 && shouldTrackSecondArgument(FD)) {
-    return LifetimeBoundParamInfo(FD->getParamDecl(I));
-  } else if (I < FD->getNumParams()) {
-    // For free functions or static methods.
-    PVD = FD->getParamDecl(I);
+  if (I == 0 && hasObjectArg(*FD)) {
+    const auto *Method = cast<CXXMethodDecl>(FD);
+    bool TrackObject =
+        implicitObjectParamIsLifetimeBound(Method) ||
+        shouldTrackImplicitObjectArg(*Args[0], Method,
+                                     /*RunningUnderLifetimeSafety=*/true);
+    if (hasImplicitObjectArg(*FD))
+      return TrackObject ? std::optional(LifetimeBoundParamInfo(Method))
+                         : std::nullopt;
+    // An explicit object parameter is reported as the parameter it is.
+    if (TrackObject)
+      return LifetimeBoundParamInfo(Method->getParamDecl(0));
+  }
+  if (!hasImplicitObjectArg(*FD)) {
+    if (I == 0 && shouldTrackFirstArgument(FD))
+      return LifetimeBoundParamInfo(FD->getParamDecl(I));
+    if (I == 1 && shouldTrackSecondArgument(FD))
+      return LifetimeBoundParamInfo(FD->getParamDecl(I));
   }
 
-  if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+  if (const ParmVarDecl *PVD = getParamForArg(*FD, I);
+      PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
     return LifetimeBoundParamInfo(PVD);
 
   return std::nullopt;
