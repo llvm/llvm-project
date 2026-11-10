@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -685,6 +686,30 @@ TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
 }
 
 TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::getVectorInstrContextHint(ArrayRef<Value *> VL,
+                                               const APInt &DemandedElts) {
+  VectorInstrContext VIC = VectorInstrContext::None;
+  for (unsigned I : seq(VL.size())) {
+    if (!DemandedElts[I])
+      continue;
+    Value *V = VL[I];
+    if (isa<UndefValue>(V))
+      continue;
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      return VectorInstrContext::None;
+    VectorInstrContext IVIC = getVectorInstrContextHint(Inst);
+    if (VIC == VectorInstrContext::None) {
+      VIC = IVIC;
+      continue;
+    }
+    if (VIC != IVIC)
+      return VectorInstrContext::None;
+  }
+  return VIC;
+}
+
+TargetTransformInfo::VectorInstrContext
 TargetTransformInfo::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
     function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
@@ -1075,7 +1100,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
-  // Use call cost for frem intructions that have platform specific vector math
+  // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {
@@ -1379,6 +1404,10 @@ uint64_t TargetTransformInfo::getMaxMemIntrinsicInlineSizeThreshold() const {
   return TTIImpl->getMaxMemIntrinsicInlineSizeThreshold();
 }
 
+uint64_t TargetTransformInfo::getMaxBoundedMemSetInlineSize() const {
+  return TTIImpl->getMaxBoundedMemSetInlineSize();
+}
+
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
     unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
     TTI::TargetCostKind CostKind) const {
@@ -1615,8 +1644,9 @@ bool TargetTransformInfo::hasActiveVectorLength() const {
 }
 
 bool TargetTransformInfo::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
-  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
+    Instruction *I, SmallVectorImpl<Use *> &OpsToSink,
+    const LoopInfo *LI) const {
+  return TTIImpl->isProfitableToSinkOperands(I, OpsToSink, LI);
 }
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {

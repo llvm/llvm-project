@@ -31,10 +31,10 @@
 
 using namespace llvm;
 
-static cl::opt<bool> EnableMachineCombinerPass(
-    "systemz-machine-combiner",
-    cl::desc("Enable the machine combiner pass"),
-    cl::init(true), cl::Hidden);
+cl::opt<bool>
+    EnableMachineCombinerPass("systemz-machine-combiner",
+                              cl::desc("Enable the machine combiner pass"),
+                              cl::init(true), cl::Hidden);
 
 static cl::opt<bool> GenericSched(
     "generic-sched", cl::Hidden, cl::init(false),
@@ -47,6 +47,7 @@ LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
   initializeSystemZElimComparePass(PR);
   initializeSystemZShortenInstPass(PR);
@@ -71,14 +72,19 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
   if (TT.isOSzOS()) {
-    // On z/OS, constant globals whose initializers contain pointer relocations
-    // (e.g. vtables) must be placed in a writable section (C_WSA64) so the
-    // GOFF binder can apply them at link time.  Using DynamicNoPIC causes
+    // z/OS code is always position-independent, so -fpic and -fno-pic have
+    // no effect. Ignore the relocation model requested by the frontend.
+    // This also prevents optimizations (such as relative lookup tables)
+    // that generate 32-bit relative offsets, which are
+    // incompatible with the GOFF binder's requirement for 8-byte relocations
+    // in C_WSA64.
+    //
+    // Constant globals whose initializers contain pointer relocations (e.g.
+    // vtables) must be placed in a writable section (C_WSA64) so the GOFF
+    // binder can apply relocations at link time. Using DynamicNoPIC causes
     // getKindForGlobal() to classify such globals as ReadOnlyWithRel instead
     // of ReadOnly, which routes them to C_WSA64 rather than C_CODE64.
-    if (!RM || *RM == Reloc::DynamicNoPIC)
-      return Reloc::DynamicNoPIC;
-    return *RM;
+    return Reloc::DynamicNoPIC;
   }
   // For ELF/Linux, static code is suitable for use in a dynamic executable;
   // there is no separate DynamicNoPIC model.
@@ -221,7 +227,7 @@ public:
 
 void SystemZPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createSystemZAlignGlobalsPass());
+    addPass(createSystemZAlignGlobalsLegacyPass());
     addPass(createSystemZTDCPass());
     addPass(createLoopDataPrefetchPass());
   }
@@ -232,7 +238,8 @@ void SystemZPassConfig::addIRPasses() {
 }
 
 bool SystemZPassConfig::addInstSelector() {
-  addPass(createSystemZISelDag(getSystemZTargetMachine(), getOptLevel()));
+  addPass(
+      createSystemZISelDagLegacyPass(getSystemZTargetMachine(), getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createSystemZLDCleanupPass(getSystemZTargetMachine()));

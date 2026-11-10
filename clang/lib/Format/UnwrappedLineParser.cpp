@@ -277,7 +277,8 @@ void UnwrappedLineParser::parseFile() {
   ScopedDeclarationState DeclarationState(*Line, DeclarationScopeStack,
                                           MustBeDeclaration);
   if (Style.isTextProto() || (Style.isJson() && FormatTok->IsFirst))
-    parseBracedList();
+    while (!eof())
+      parseBracedList();
   else
     parseLevel();
   // Make sure to format the remaining tokens.
@@ -2670,10 +2671,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       break;
     case tok::semi:
       // JavaScript (or more precisely TypeScript) can have semicolons in braced
-      // lists (in so-called TypeMemberLists). Thus, the semicolon cannot be
+      // lists (in so-called TypeMemberLists). TextProto and Proto options also
+      // allow semicolons as field separators. Thus, the semicolon cannot be
       // used for error recovery if we have otherwise determined that this is
       // a braced list.
-      if (Style.isJavaScript()) {
+      if (Style.isJavaScript() || Style.isProto() || Style.isJson()) {
         nextToken();
         break;
       }
@@ -2925,11 +2927,17 @@ static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
   return nullptr;
 }
 
+static bool containsPPDirective(const UnwrappedLine &Line) {
+  return llvm::any_of(
+      llvm::drop_begin(Line.Tokens),
+      [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
   if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
-      PreprocessorDirectives.empty() && FormatTok->isNot(tok::semi)) {
+      !containsPPDirective(*Line) && FormatTok->isNot(tok::semi)) {
     Tok = Style.BraceWrapping.AfterControlStatement == FormatStyle::BWACS_Never
               ? getLastNonComment(*Line)
               : Line->Tokens.back().Tok;
@@ -4003,19 +4011,23 @@ bool UnwrappedLineParser::parseEnum() {
   if (Style.Language == FormatStyle::LK_Proto && FormatTok->is(tok::equal))
     return false;
 
-  if (IsCpp) {
-    // Eat up enum class ...
-    if (FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
-      nextToken();
-    while (FormatTok->is(tok::l_square))
-      if (!handleCppAttributes())
-        return false;
-  }
+  // Eat up enum class ...
+  if (IsCpp && FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
+    nextToken();
 
   while (FormatTok->Tok.getIdentifierInfo() ||
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
+    if (FormatTok->is(TT_AttributeMacro)) {
+      nextToken();
+      continue;
+    }
+    if (IsCpp && FormatTok->is(tok::l_square)) {
+      if (handleCppAttributes())
+        continue;
+      return false;
+    }
     if (FormatTok->is(tok::colon))
       FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {
@@ -4028,8 +4040,10 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     }
     // We can have macros or attributes in between 'enum' and the enum name.
-    if (FormatTok->is(tok::l_paren))
+    if (FormatTok->is(tok::l_paren)) {
       parseParens();
+      continue;
+    }
     if (FormatTok->is(tok::identifier)) {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate
@@ -4864,8 +4878,6 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
         llvm::dbgs() << "Adding unexpanded line:\n";
         printDebugInfo(Reconstructed);
       });
-      if (CurrentExpandedLines.size() > 1)
-        Reconstructed.Tokens.back().Tok->MacroParent = true;
       ExpandedLines[Reconstructed.Tokens.begin()->Tok] = CurrentExpandedLines;
       Lines.push_back(std::move(Reconstructed));
       CurrentExpandedLines.clear();

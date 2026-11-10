@@ -225,7 +225,10 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
-  return hasVInstructions() &&
+  // Disable fixed length vectors when P is enabled to prevent some
+  // crashes.
+  // FIXME: We need better prioritization.
+  return hasVInstructions() && !hasStdExtP() &&
          getMinRVVVectorSizeInBits() >= RISCV::RVVBitsPerBlock;
 }
 

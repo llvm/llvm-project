@@ -107,24 +107,29 @@ private:
     const auto *MD = dyn_cast<CXXMethodDecl>(FD);
     bool IsInstance = MD && MD->isInstance();
     int Offset = (MD && MD->isImplicitObjectMemberFunction()) ? 1 : 0;
-    for (const auto *Param : FD->parameters()) {
-      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
-        for (int Idx : Attr->params()) {
-          if (Idx == LifetimeCaptureByAttr::Global ||
-              Idx == LifetimeCaptureByAttr::Unknown ||
-              Idx == LifetimeCaptureByAttr::Invalid)
-            continue;
-          if (Idx == LifetimeCaptureByAttr::This) {
-            if (IsInstance)
-              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
-          } else if (int LogicalIdx = Idx - Offset;
-                     LogicalIdx >= 0 &&
-                     (unsigned)LogicalIdx < FD->getNumParams()) {
-            CollectedTypes.push_back(
-                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
-          }
+    auto ProcessAttr = [&](const LifetimeCaptureByAttr *Attr) {
+      for (int Idx : Attr->params()) {
+        if (Idx == LifetimeCaptureByAttr::Global ||
+            Idx == LifetimeCaptureByAttr::Unknown ||
+            Idx == LifetimeCaptureByAttr::Invalid)
+          continue;
+        if (Idx == LifetimeCaptureByAttr::This) {
+          if (IsInstance)
+            CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+        } else if (int LogicalIdx = Idx - Offset;
+                   LogicalIdx >= 0 &&
+                   (unsigned)LogicalIdx < FD->getNumParams()) {
+          CollectedTypes.push_back(
+              FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
         }
       }
+    };
+    if (const auto *MethodAttr =
+            IsInstance ? getCaptureByAttrFromFunctionType(FD) : nullptr)
+      ProcessAttr(MethodAttr);
+    for (const auto *Param : FD->parameters()) {
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>())
+        ProcessAttr(Attr);
     }
   }
 };
@@ -256,6 +261,30 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
   return DeclToList[D] = buildListForType(D->getType(), D);
 }
 
+/// Returns true if the field named by \p ME denotes a subobject of `*this`,
+/// reached as `this->f` or through anonymous-struct/union subobjects.
+static bool isSubobjectOfThis(const MemberExpr *ME) {
+  const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(Base))
+    return true;
+
+  // An arrow access dereferences a pointer, so the field belongs to another
+  // object, not a subobject of `*this`.
+  if (ME->isArrow())
+    return false;
+
+  // Traverse only *anonymous* subobjects: their members are uniquely named
+  // within the class, so the FieldDecl-keyed origin can't conflate two
+  // subobjects. A named subobject (`this->a.f`) could repeat the same inner
+  // type, so it is rejected.
+  if (const auto *BaseAsME = dyn_cast<MemberExpr>(Base)) {
+    const auto *BaseField = dyn_cast<FieldDecl>(BaseAsME->getMemberDecl());
+    if (BaseField && BaseField->isAnonymousStructOrUnion())
+      return isSubobjectOfThis(BaseAsME);
+  }
+  return false;
+}
+
 OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
@@ -288,10 +317,14 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   const ValueDecl *ReferencedDecl = nullptr;
   if (auto *DRE = dyn_cast<DeclRefExpr>(E))
     ReferencedDecl = DRE->getDecl();
-  else if (auto *ME = dyn_cast<MemberExpr>(E))
+  else if (auto *ME = dyn_cast<MemberExpr>(E)) {
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        Field && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+        Field && isSubobjectOfThis(ME))
       ReferencedDecl = Field;
+    // A static data member names the same variable regardless of its base.
+    else if (auto *VD = dyn_cast<VarDecl>(ME->getMemberDecl()))
+      ReferencedDecl = VD;
+  }
   if (ReferencedDecl) {
     OriginList *Head = nullptr;
     // For non-reference declarations (e.g., `int* p`), the expression is an
@@ -302,7 +335,8 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     if (doesDeclHaveStorage(ReferencedDecl)) {
       // `this->f` reaches its field through `this` instead of naming it.
       Head = createNode(E, QualType{},
-                        /*NamesDeclStorage=*/isa<DeclRefExpr>(E));
+                        /*NamesDeclStorage=*/isa<DeclRefExpr>(E) ||
+                            isa<VarDecl>(ReferencedDecl));
       // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
       Head->setInnerOriginList(getOrCreateList(ReferencedDecl));

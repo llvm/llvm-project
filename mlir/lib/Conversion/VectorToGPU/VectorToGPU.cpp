@@ -493,7 +493,7 @@ struct PrepareContractToGPUMMA
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res,
         rewriter.getAffineMapArrayAttr(infer({{m, k}, {k, n}, {m, n}})),
-        op.getIteratorTypes());
+        op.getIteratorTypes(), op.getKind(), op.getFastmath());
     return success();
   }
 };
@@ -1379,6 +1379,12 @@ struct ConvertVectorToGPUPass
 
   explicit ConvertVectorToGPUPass(bool useNvGpu_) {
     useNvGpu.setValue(useNvGpu_);
+  }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ConvertVectorToGPUBase::getDependentDialects(registry);
+    if (useNvGpu)
+      registry.insert<nvgpu::NVGPUDialect>();
   }
 
   void runOnOperation() override {
