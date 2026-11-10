@@ -44,6 +44,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
@@ -1413,6 +1414,18 @@ getDeviceInput(const ArgList &Args) {
   const llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
+  // link.exe options are case-insensitive, but the COFF options in the option
+  // table only match lower case. Returns the value of option \p Name if
+  // \p Input is that option in any case.
+  auto GetCOFFOptionValue = [&](StringRef Input,
+                                StringRef Name) -> std::optional<StringRef> {
+    if (!HostTriple.isOSWindows() ||
+        !(Input.consume_front("/") || Input.consume_front("-")) ||
+        !Input.consume_front_insensitive(Name))
+      return std::nullopt;
+    return Input;
+  };
+
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
@@ -1422,12 +1435,37 @@ getDeviceInput(const ArgList &Args) {
   SmallVector<StringRef> InputPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_libpath))
     InputPaths.push_back(Arg->getValue());
+  for (const opt::Arg *Arg : Args.filtered(OPT_INPUT)) {
+    if (std::optional<StringRef> Path =
+            GetCOFFOptionValue(Arg->getValue(), "libpath:")) {
+      LibraryPaths.push_back(*Path);
+      InputPaths.push_back(*Path);
+    }
+  }
+
+  // link.exe also searches the paths in the LIB environment variable.
+  std::optional<std::string> LibEnv;
+  if (HostTriple.isWindowsMSVCEnvironment())
+    LibEnv = sys::Process::GetEnv("LIB");
+  if (LibEnv) {
+    SmallVector<StringRef> EnvPaths;
+    StringRef(*LibEnv).split(EnvPaths, ';', /*MaxSplit=*/-1,
+                             /*KeepEmpty=*/false);
+    LibraryPaths.append(EnvPaths);
+    InputPaths.append(EnvPaths);
+  }
 
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
   // Try to extract device code from the linker input files.
-  bool WholeArchive = Args.hasArg(OPT_wholearchive_flag);
+  bool WholeArchive =
+      Args.hasArg(OPT_wholearchive_flag) ||
+      llvm::any_of(Args.filtered(OPT_INPUT), [&](const opt::Arg *Arg) {
+        std::optional<StringRef> Rest =
+            GetCOFFOptionValue(Arg->getValue(), "wholearchive");
+        return Rest && Rest->empty();
+      });
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
   DenseMap<StringRef, StringRef> SourceForImage;
@@ -1462,11 +1500,23 @@ getDeviceInput(const ArgList &Args) {
       continue;
     }
 
+    StringRef Input = Arg->getValue();
+    bool IsWholeArchiveFile = Arg->getOption().matches(OPT_wholearchive_file);
+    if (Arg->getOption().matches(OPT_INPUT)) {
+      // Upper-case spellings of the COFF options in the option table.
+      std::optional<StringRef> Rest = GetCOFFOptionValue(Input, "wholearchive");
+      if (Rest && Rest->consume_front(":")) {
+        Input = *Rest;
+        IsWholeArchiveFile = true;
+      } else if (Rest || GetCOFFOptionValue(Input, "libpath:")) {
+        continue;
+      }
+    }
+
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
-            ? searchLibrary(Arg->getValue(), Root, LibraryPaths,
-                            HostTriple.isOSWindows())
-            : searchInput(Arg->getValue(), Root, InputPaths);
+            ? searchLibrary(Input, Root, LibraryPaths, HostTriple.isOSWindows())
+            : searchInput(Input, Root, InputPaths);
 
     if (!Filename && Arg->getOption().matches(OPT_library))
       return createStringError("unable to find library -l%s", Arg->getValue());
@@ -1474,9 +1524,9 @@ getDeviceInput(const ArgList &Args) {
     if (!Filename || !sys::fs::exists(*Filename)) {
       if (ReportMissingInputs &&
           !UnknownOptionIndices.contains(Arg->getIndex() - 1) &&
-          !IsCOFFLinkerOption(Arg->getValue()))
+          !IsCOFFLinkerOption(Input))
         return createFileError(
-            Filename ? *Filename : Arg->getValue(),
+            Filename ? *Filename : Input,
             make_error_code(errc::no_such_file_or_directory));
       continue;
     }
@@ -1484,8 +1534,7 @@ getDeviceInput(const ArgList &Args) {
       continue;
 
     // Unlike `--whole-archive`, `/wholearchive:` applies to a single library.
-    bool ExtractWholeArchive =
-        WholeArchive || Arg->getOption().matches(OPT_wholearchive_file);
+    bool ExtractWholeArchive = WholeArchive || IsWholeArchiveFile;
 
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
         MemoryBuffer::getFileOrSTDIN(*Filename);
