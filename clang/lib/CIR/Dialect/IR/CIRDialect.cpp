@@ -4634,6 +4634,20 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// LdexpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LdexpOp::verify() {
+  auto srcVecTy = mlir::dyn_cast<cir::VectorType>(getSrc().getType());
+  auto expVecTy = mlir::dyn_cast<cir::VectorType>(getExp().getType());
+  if (!srcVecTy != !expVecTy ||
+      (srcVecTy && srcVecTy.getSize() != expVecTy.getSize()))
+    return emitOpError()
+           << "exponent must have the same number of elements as the value";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixTransposeOp
 //===----------------------------------------------------------------------===//
 
