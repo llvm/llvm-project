@@ -14,4 +14,10 @@ body: |
     ; CHECK: Bad machine code: FREEZE operands must be registers
     ; CHECK: - instruction: %2:gr32 = FREEZE 0
     %2:gr32 = FREEZE 0
+
+    ; CHECK: Bad machine code: FREEZE operands must be registers
+    ; CHECK: - instruction: FREEZE 0, %0:gr32
+    ; CHECK: Bad machine code: Explicit definition must be a register
+    ; CHECK: - instruction: FREEZE 0, %0:gr32
+    FREEZE 0, %0
 ...
