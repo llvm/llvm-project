@@ -6074,6 +6074,7 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
   SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
+  SDLoc dl(N);
 
   // A signed type wider than semanticsIntSizeInBits has bounds of at least
   // 2^(MaxExponent + 1) in magnitude, which overflow DstVT in every rounding
@@ -6086,7 +6087,6 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
   unsigned MinIntBits = APFloat::semanticsIntSizeInBits(DstVT.getFltSemantics(),
                                                         /*isSigned=*/true);
   if (MinIntBits < NBits) {
-    SDLoc dl(N);
     unsigned OpBits = OpVT.getScalarSizeInBits();
     // Max is positive, so it is safe to use for unsigned inputs as well.
     SDValue Max =
@@ -6110,14 +6110,14 @@ SDValue DAGTypeLegalizer::ExpandIntOp_XINT_TO_FP(SDNode *N) {
     return SDValue();
   }
 
-  RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(Op.getValueType(), DstVT)
-                               : RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
+  RTLIB::Libcall LC = IsSigned ? RTLIB::getSINTTOFP(OpVT, DstVT)
+                               : RTLIB::getUINTTOFP(OpVT, DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Don't know how to expand this XINT_TO_FP!");
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setIsSigned(true);
   std::pair<SDValue, SDValue> Tmp =
-      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N), Chain);
+      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, dl, Chain);
 
   if (!IsStrict)
     return Tmp.first;
