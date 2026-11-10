@@ -51,7 +51,7 @@ static MCRegisterInfo *createPISAMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createPISAMCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
-  return createPISAMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  return createPISAMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, FS);
 }
 
 static MCInstPrinter *createPISAMCInstPrinter(const Triple &T,
