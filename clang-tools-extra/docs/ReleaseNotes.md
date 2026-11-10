@@ -244,8 +244,8 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives on `bsl::optional` and `bdlb::NullableValue`
     constructed from a value or returned by `bsl::make_optional`.
 
-  - Added the {option}`BoolModel` option to allow use of a "Simple" Boolean
-    model that avoids relying on a SAT solver. Previously, only SAT was
+  - Added the {option}`BoolSolverModel` option to allow use of a "Simple"
+    Boolean model that avoids relying on a SAT solver. Previously, only SAT was
     available. This leads to faster analysis, but the trade-off is more false
     positives (when has value checks involve correlated variables or ORs).
 

@@ -2,7 +2,7 @@
 // RUN:   -I %S/Inputs/unchecked-optional-access
 // RUN: %check_clang_tidy %s bugprone-unchecked-optional-access %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:            {bugprone-unchecked-optional-access.BoolModel: Simple}}" -- \
+// RUN:            {bugprone-unchecked-optional-access.BoolSolverModel: Simple}}" -- \
 // RUN:   -I %S/Inputs/unchecked-optional-access
 
 #include "absl/types/optional.h"

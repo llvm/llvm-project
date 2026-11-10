@@ -47,14 +47,14 @@ UncheckedOptionalAccessCheck::UncheckedOptionalAccessCheck(
     : ClangTidyCheck(Name, Context),
       ModelOptions{Options.get("IgnoreSmartPointerDereference", false),
                    Options.get("IgnoreValueCalls", false)},
-      BoolModel(Options.get("BoolModel", dataflow::BoolModelKind::SAT)) {}
+      BoolModel(Options.get("BoolSolverModel", dataflow::BoolModelKind::SAT)) {}
 
 void UncheckedOptionalAccessCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreSmartPointerDereference",
                 ModelOptions.IgnoreSmartPointerDereference);
   Options.store(Opts, "IgnoreValueCalls", ModelOptions.IgnoreValueCalls);
-  Options.store(Opts, "BoolModel", BoolModel);
+  Options.store(Opts, "BoolSolverModel", BoolModel);
 }
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {

@@ -34,7 +34,7 @@ public:
 
 private:
   dataflow::UncheckedOptionalAccessModelOptions ModelOptions;
-  // Note: The boolean model is an option for the framework, not the checker
+  // Note: The Boolean model is an option for the framework, not the checker
   // model, so we keep separate from ModelOptions.
   dataflow::BoolModelKind BoolModel;
 };
