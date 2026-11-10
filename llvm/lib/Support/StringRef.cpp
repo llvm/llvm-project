@@ -206,12 +206,47 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
   return npos;
 }
 
+// Returns the index of the last C in Data[0, End), or npos. There is no
+// portable memrchr, so this is written for the loop vectorizer instead: each
+// 16-byte chunk is tested with a branch-free OR of compares, which compiles to
+// one vector compare and mask test, and only a matching chunk is scanned
+// bytewise. GCC at -O3 fully unrolls the inner loop before vectorizing, which
+// leaves it scalar; the pragma prevents that.
+static size_t rfindByte(const char *Data, size_t End, char C) {
+  size_t I = End;
+  for (; I >= 16; I -= 16) {
+    const char *Chunk = Data + I - 16;
+    unsigned char Any = 0;
+#if defined(__GNUC__)
+#pragma GCC unroll 1
+#endif
+    for (int J = 0; J != 16; ++J)
+      Any |= Chunk[J] == C;
+    if (Any)
+      break;
+  }
+  while (I) {
+    --I;
+    if (Data[I] == C)
+      return I;
+  }
+  return StringRef::npos;
+}
+
 /// rfind - Search for the last string \arg Str in the string.
 ///
 /// \return - The index of the last occurrence of \arg Str, or npos if not
 /// found.
 size_t StringRef::rfind(StringRef Str) const {
-  return std::string_view(*this).rfind(Str);
+  size_t N = Str.size();
+  if (N > size())
+    return npos;
+  if (N == 0)
+    return size();
+  for (size_t I = size() - N + 1; (I = rfindByte(data(), I, Str[0])) != npos;)
+    if (std::memcmp(data() + I + 1, Str.data() + 1, N - 1) == 0)
+      return I;
+  return npos;
 }
 
 size_t StringRef::rfind_insensitive(StringRef Str) const {
