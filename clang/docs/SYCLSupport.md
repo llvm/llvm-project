@@ -127,9 +127,10 @@ and `b.o` would be linked and registered a second time.
 If the inputs contain no device code, the output is an empty object without
 SYCL runtime registration.
 
-Device code in a static library is only extracted when the host link would
-use the archive member. To device link a whole library, pass it with
-`-Wl,--whole-archive libfoo.a -Wl,--no-whole-archive`.
+Device code in a static library is only extracted for device targets that
+the other inputs already have. If only static libraries provide device code,
+pass them with `-Wl,--whole-archive libfoo.a -Wl,--no-whole-archive`, or with
+`-Wl,/wholearchive:foo.lib` on Windows.
 
 The output of `-fsycl-link` is not yet supported in a static library: nothing
 in it is referenced by the host code, so the host linker does not pull it out

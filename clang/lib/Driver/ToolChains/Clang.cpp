@@ -10150,9 +10150,20 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     const Driver &D = getToolChain().getDriver();
     if (!D.SysRoot.empty())
       CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
-    Args.AddAllArgs(CmdArgs, options::OPT_L);
-    getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+    // MSVC style links search for named inputs only in -libpath: paths.
+    bool IsMSVC = getToolChain().getTriple().isWindowsMSVCEnvironment();
+    auto AddLibraryPath = [&](StringRef Path) {
+      if (!Path.empty())
+        CmdArgs.push_back(
+            Args.MakeArgString((IsMSVC ? "-libpath:" : "-L") + Path));
+    };
+    for (const std::string &Path : Args.getAllArgValues(options::OPT_L))
+      AddLibraryPath(Path);
+    for (const std::string &Path : getToolChain().getFilePaths())
+      AddLibraryPath(Path);
     AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+    // Inputs passed with clang-cl /link.
+    Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
   } else {
     for (const char *LinkArg : LinkCommand->getArguments())
       CmdArgs.push_back(LinkArg);
