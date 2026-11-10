@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,REF
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -fexperimental-new-constant-interpreter -emit-llvm %s -o - | FileCheck %s
 
 // Capture the type and name so matching later is cleaner.
@@ -93,4 +93,30 @@ int compareMyCLH(void) {
 int compound_array_fn(void) {
   int compound_array[] = (int[]){1,2,3,4,5,6,7,8};
   return compound_array[0];
+}
+
+// GH54014: a file-scope compound literal is a modifiable object even when it
+// is only reachable through a const pointer, so reads of it must load from
+// memory instead of being folded to its initial value.
+// FIXME: The bytecode interpreter still folds these reads.
+struct GH54014 { int counter; };
+static struct GH54014 *const GH54014_ptr = &(struct GH54014){255};
+void GH54014_g(void);
+
+// REF-LABEL: define{{.*}} i32 @GH54014_write_then_read()
+// REF:      store i32 252, ptr [[CL:@.compoundliteral[.0-9]*]]
+// REF-NEXT: [[V:%.*]] = load i32, ptr [[CL]]
+// REF-NEXT: ret i32 [[V]]
+int GH54014_write_then_read(void) {
+  GH54014_ptr->counter = 252;
+  return GH54014_ptr->counter;
+}
+
+// REF-LABEL: define{{.*}} i32 @GH54014_read_after_call()
+// REF:      call void @GH54014_g()
+// REF-NEXT: [[V:%.*]] = load i32, ptr @.compoundliteral{{[.0-9]*}}
+// REF-NEXT: ret i32 [[V]]
+int GH54014_read_after_call(void) {
+  GH54014_g();
+  return GH54014_ptr->counter;
 }
