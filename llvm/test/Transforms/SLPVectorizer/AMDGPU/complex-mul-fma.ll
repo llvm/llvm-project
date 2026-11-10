@@ -4,8 +4,8 @@
 ; Print the IR instead of an SLP remark: the remark is emitted only when the tree is vectorized.
 ; The second fmul of each fsub/fadd does not fuse. Packing them needs a
 ; cross-half move the scalar form avoids, so the arithmetic stays scalar. Only
-; the stores pair up: each result's one scalar user is the store, so it is
-; written straight into its lane of the pair.
+; the stores pair up: each result is written straight into its lane of the
+; pair.
 define void @cmul_store(ptr addrspace(1) %out, float %xr, float %xi, float %wr, float %wi) {
 ; CHECK-LABEL: define void @cmul_store(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], float [[XR:%.*]], float [[XI:%.*]], float [[WR:%.*]], float [[WI:%.*]]) {

@@ -75,9 +75,8 @@ define amdgpu_kernel void @load_fed_gather(ptr addrspace(1) %out, ptr addrspace(
   ret void
 }
 
-; Each rcp has one user, the fadd being vectorized, so the insert is free and
-; the tree is kept. A second scalar user of the rcp would cost a v_mov_b32 and
-; the tree would be rejected.
+; Each rcp is defined straight into its lane of the pair, so the insert is free
+; and the tree is kept.
 define amdgpu_kernel void @compute_fed_gather(ptr addrspace(1) %out, float %a, float %b) {
 ; NOPACKED-LABEL: define amdgpu_kernel void @compute_fed_gather(
 ; NOPACKED-SAME: ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float [[B:%.*]]) #[[ATTR0]] {
