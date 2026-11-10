@@ -748,7 +748,6 @@ LogicalResult cir::AssumeOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::AnnotationOp::verify() {
-  // llvm.annotation has no argument operand, unlike var/ptr annotations.
   if (mlir::ArrayAttr args = getAnnotation().getArgs(); args && !args.empty())
     return emitOpError("annotation must not have arguments");
   return mlir::success();

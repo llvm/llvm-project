@@ -1017,7 +1017,7 @@ public:
   /// annotation. Returns the empty ArrayAttr when the annotation has none.
   mlir::ArrayAttr getOrCreateAnnotationArgs(const clang::AnnotateAttr *attr);
 
-  /// Create a cir::AnnotationAttr for a single AnnotateAttr.
+  /// Create cir::AnnotationAttr for a single AnnotateAttr.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
 
   /// Add global annotations for a global value (GlobalOp or FuncOp).

@@ -4825,14 +4825,9 @@ mlir::LogicalResult CIRToLLVMObjSizeOpLowering::matchAndRewrite(
 // @llvm.global.annotations emission
 //===----------------------------------------------------------------------===//
 
-/// The annotation string and argument globals of a module. They are shared by
-/// every annotation, global or local, so equal strings are emitted once, as in
-/// classic codegen.
+/// Annotation strings and arguments, shared by all annotations in a module.
 struct LLVMAnnotationGlobals {
   explicit LLVMAnnotationGlobals(mlir::ModuleOp module) {
-    // Classic codegen places annotation strings and arguments in the constant
-    // globals address space of the language, which differs from the default
-    // globals address space on some targets (e.g. AMDGPU).
     assert(!cir::MissingFeatures::annotationConstantAddrSpace());
     auto asAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
         mlir::DataLayout(module).getGlobalMemorySpace());
@@ -4963,9 +4958,7 @@ std::pair<llvm::StringRef, unsigned> extractFileLine(mlir::Location loc) {
   return {"", 0};
 }
 
-/// The name, file, line, and args operands of the llvm.*annotation intrinsics
-/// for `annotation` at `loc`. Their globals are created at the end of the
-/// module.
+/// The name, file, line, and args operands of the llvm.*annotation intrinsics.
 struct AnnotationOperands {
   mlir::Value name, file, line, args;
 };
@@ -5073,8 +5066,6 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(
   mlir::OpBuilder builder(ctx);
   builder.setInsertionPointToEnd(&module.getBodyRegion().back());
 
-  // The table and the strings it points to live in the annotation globals
-  // address space, as in classic codegen.
   unsigned addrSpace = annotationGlobals.addrSpace;
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx, addrSpace);
   auto i32Ty = builder.getI32Type();
@@ -5116,9 +5107,8 @@ void ConvertCIRToLLVMPass::buildGlobalAnnotationsVar(
     mlir::Value entryVal =
         mlir::LLVM::UndefOp::create(initBuilder, moduleLoc, entryTy);
 
-    // Field 0: ptr to the annotated symbol, cast to the table's address space
-    // when the symbol lives elsewhere (e.g. a function on SPIR-V). (Literal
-    // zero is ambiguous on InsertValueOp::create, wrap in a SmallVector.)
+    // Field 0: ptr to the annotated symbol. (Literal zero is ambiguous on
+    // InsertValueOp::create, wrap in a SmallVector.)
     llvm::SmallVector<int64_t> zero{0};
     unsigned symAddrSpace = 0;
     if (auto global = mlir::dyn_cast_if_present<mlir::LLVM::GlobalOp>(
@@ -5255,7 +5245,6 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   /// Cached symbol table collection used by call lowering patterns to avoid
   /// repeated O(M) module-wide symbol scans for every call site.
   mlir::SymbolTableCollection symbolTables;
-  /// Annotation strings and arguments shared by every annotation in the module.
   LLVMAnnotationGlobals annotationGlobals(module);
   mlir::RewritePatternSet patterns(&getContext());
   patterns.add<CIRToLLVMVarAnnotationOpLowering,

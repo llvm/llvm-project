@@ -1556,7 +1556,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   case Builtin::BI__builtin_annotation: {
     mlir::Value value = emitScalarExpr(e->getArg(0));
-    // Sema requires a non-wide string literal, possibly behind casts.
     StringRef str =
         cast<StringLiteral>(e->getArg(1)->IgnoreParenCasts())->getString();
     auto annotation = cir::AnnotationAttr::get(

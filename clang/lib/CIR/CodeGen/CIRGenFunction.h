@@ -2458,12 +2458,10 @@ public:
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
-  /// Emit a cir.ptr_annotation for each `annotate` attribute on `field`, and
-  /// return the address through which the field must be accessed.
+  /// Annotate the address of `field`; accesses must use the result.
   Address emitFieldAnnotations(const clang::FieldDecl *field, Address addr);
 
-  /// Emit a cir.var_annotation for each `annotate` attribute on `d`, whose
-  /// storage is at `addr`.
+  /// Annotate the storage of `d` at `addr`.
   void emitVarAnnotations(const clang::VarDecl *d, mlir::Value addr);
 
   LValue emitLValueForLambdaField(const FieldDecl *field);
