@@ -1641,7 +1641,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
         CallGraphUpdater CGU;
         CGU.initialize(CG, C, AM, UR);
         ASSERT_NO_FATAL_FAILURE(CGU.replaceFunctionWith(*FnF, *FnewF));
-        ASSERT_TRUE(FnF->isDeclaration());
+        ASSERT_EQ(FnF->size(), 1u);
+        ASSERT_TRUE(isa<UnreachableInst>(FnF->getEntryBlock().front()));
         ASSERT_TRUE(FnF->use_empty());
       }));
 
@@ -1664,6 +1665,11 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses9) {
         CallGraphUpdater CGU;
         CGU.initialize(CG, C, AM, UR);
         ASSERT_NO_FATAL_FAILURE(CGU.removeFunction(*FnF));
+        // The function is erased only at the end of the CGSCC walk; until
+        // then, it stays a definition with an unreachable body.
+        CGU.finalize();
+        ASSERT_EQ(FnF->size(), 1u);
+        ASSERT_TRUE(isa<UnreachableInst>(FnF->getEntryBlock().front()));
         ASSERT_EQ(M->getFunctionList().size(), 6U);
       }));
 
