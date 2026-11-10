@@ -3632,11 +3632,10 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr *> &ErasedInstrs,
         if (LE.isValid()) {
           LiveRange::iterator S = LR.find(Def);
           // Don't extend a LR over a pruned gap, delay repair until after join
-          if (S != LR.begin() && std::prev(S)->end == Def) {
+          if (S != LR.begin() && std::prev(S)->end == Def)
             std::prev(S)->end = NewEnd;
-          } else {
+          else
             EndPoints.push_back(NewEnd);
-          }
         }
       }
       LLVM_DEBUG({
