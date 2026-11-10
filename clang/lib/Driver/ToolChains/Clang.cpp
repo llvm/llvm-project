@@ -18,6 +18,7 @@
 #include "Hexagon.h"
 #include "PS4CPU.h"
 #include "ToolChains/Cuda.h"
+#include "ToolChains/SYCL.h"
 #include "clang/Basic/CLWarnings.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/HeaderInclude.h"
@@ -9965,8 +9966,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
         // target.
         if (Kind == Action::OFK_SYCL)
-          if (OffloadArch ID = StringToOffloadArch(Arg); ID.isIntelGPU())
-            Name = OffloadArchToString(ID.intelGPUIGCATarget());
+          Name = toolchains::getSYCLDeviceArch(Name);
         // Intel GPUs that share an IGCA target ask for it once.
         if (ShouldExtract.insert(Name).second)
           CmdArgs.emplace_back(Args.MakeArgString("--should-extract=" + Name));

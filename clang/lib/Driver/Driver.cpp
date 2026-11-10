@@ -4157,14 +4157,11 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   if (Kind == Action::OFK_SYCL) {
     llvm::DenseSet<StringRef> Targets;
     for (StringRef Arch : Archs) {
-      OffloadArch ID = StringToOffloadArch(Arch);
-      if (!ID.isIntelGPU()) {
-        Targets.insert(Arch);
-        continue;
-      }
-      StringRef Target = OffloadArchToString(ID.intelGPUIGCATarget());
+      StringRef Target = toolchains::getSYCLDeviceArch(Arch);
       Targets.insert(Target);
-      C.addSYCLIGCADevice(&TC, Target, Arch);
+      // An Intel GPU maps to a different name, its IGCA target.
+      if (Target != Arch)
+        C.addSYCLIGCADevice(&TC, Target, Arch);
     }
     Archs = std::move(Targets);
   }

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "SYCL.h"
 #include "SPIRV.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/CommonArgs.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -106,6 +107,11 @@ static ArrayRef<options::ID> getUnsupportedOpts() {
       options::OPT_fcs_profile_generate_EQ,
   };
   return UnsupportedOpts;
+}
+
+StringRef toolchains::getSYCLDeviceArch(StringRef Arch) {
+  OffloadArch ID = StringToOffloadArch(Arch);
+  return ID.isIntelGPU() ? OffloadArchToString(ID.intelGPUIGCATarget()) : Arch;
 }
 
 SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
