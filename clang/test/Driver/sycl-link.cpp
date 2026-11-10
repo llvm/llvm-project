@@ -45,17 +45,18 @@
 // WINDOWS-BINDINGS-NOT: {{.}}
 
 /// MSVC style links search for named inputs in -libpath: paths, and clang-cl
-/// /link values are passed on.
+/// /link values are passed on after -o, so a /link /out: names the output as in
+/// a host link.
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fsycl -fsycl-link \
 // RUN:   %t.a.o -L/foo -Wl,/wholearchive:bar.lib -o dev.obj 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=WINDOWS-LIBPATH
 // WINDOWS-LIBPATH: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o" "dev.obj"
 // WINDOWS-LIBPATH-SAME: "-libpath:/foo" "{{[^"]*}}a.o" "/wholearchive:bar.lib"{{$}}
 // RUN: %clang_cl -### --target=x86_64-pc-windows-msvc -fsycl -fsycl-link \
-// RUN:   %t.a.o /link /wholearchive:bar.lib /libpath:dir 2>&1 \
+// RUN:   %t.a.o /link /wholearchive:bar.lib /libpath:dir /out:dev.obj 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CL-LINK
-// CL-LINK: clang-linker-wrapper"{{.*}} "--sycl-device-link"
-// CL-LINK-SAME: "{{[^"]*}}a.o" "/wholearchive:bar.lib" "/libpath:dir"{{$}}
+// CL-LINK: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o"
+// CL-LINK-SAME: "{{[^"]*}}a.o" "/wholearchive:bar.lib" "/libpath:dir" "/out:dev.obj"{{$}}
 
 /// Without -fsycl-link, the host link is run as usual.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %t.a.o 2>&1 \

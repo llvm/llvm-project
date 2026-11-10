@@ -116,8 +116,12 @@ then used in a later host link, which can be done by any host linker.
 ```console
 clang++ -fsycl -c a.cpp b.cpp
 clang++ -fsycl -fsycl-link a.o b.o -o dev.o
+clang++ -c main.cpp
 clang++ main.o a.o b.o dev.o -L<libsycl dir> -lLLVMSYCL -o app
 ```
+
+Here `main.cpp` has no SYCL device code. Device code that is not in the
+inputs of `-fsycl-link` is not in `dev.o`.
 
 On Windows, the host link uses `LLVMSYCL.lib` instead of `-lLLVMSYCL`. Without
 `-o`, the output is named as for a host link, e.g. `a.out` or `a.exe`.
