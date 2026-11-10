@@ -1415,32 +1415,37 @@ getDeviceInput(const ArgList &Args) {
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // link.exe options are case-insensitive, but the COFF options in the option
-  // table only match lower case. Returns the value of option \p Name if
-  // \p Input is that option in any case.
+  // table only match lower case. A '/' spelling in another case, e.g.
+  // '/LIBPATH:', is parsed as an input. Returns the value of option \p Name if
+  // \p Input is such a spelling of it.
   auto GetCOFFOptionValue = [&](StringRef Input,
                                 StringRef Name) -> std::optional<StringRef> {
-    if (!HostTriple.isOSWindows() ||
-        !(Input.consume_front("/") || Input.consume_front("-")) ||
+    if (!HostTriple.isOSWindows() || !Input.consume_front("/") ||
         !Input.consume_front_insensitive(Name))
       return std::nullopt;
     return Input;
   };
 
+  // Libraries are searched in -L and -libpath: paths. Only `link.exe` style
+  // linkers also search -libpath: paths for other inputs. Paths are searched
+  // in command line order.
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
-  for (const opt::Arg *Arg : Args.filtered(OPT_library_path, OPT_libpath))
-    LibraryPaths.push_back(Arg->getValue());
-
-  // Only `link.exe` style linkers search for their input files.
   SmallVector<StringRef> InputPaths;
-  for (const opt::Arg *Arg : Args.filtered(OPT_libpath))
-    InputPaths.push_back(Arg->getValue());
-  for (const opt::Arg *Arg : Args.filtered(OPT_INPUT)) {
-    if (std::optional<StringRef> Path =
-            GetCOFFOptionValue(Arg->getValue(), "libpath:")) {
-      LibraryPaths.push_back(*Path);
-      InputPaths.push_back(*Path);
+  for (const opt::Arg *Arg :
+       Args.filtered(OPT_library_path, OPT_libpath, OPT_INPUT)) {
+    if (Arg->getOption().matches(OPT_library_path)) {
+      LibraryPaths.push_back(Arg->getValue());
+      continue;
     }
+    std::optional<StringRef> Path =
+        Arg->getOption().matches(OPT_libpath)
+            ? std::optional<StringRef>(Arg->getValue())
+            : GetCOFFOptionValue(Arg->getValue(), "libpath:");
+    if (!Path)
+      continue;
+    LibraryPaths.push_back(*Path);
+    InputPaths.push_back(*Path);
   }
 
   // link.exe also searches the paths in the LIB environment variable.
