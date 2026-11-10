@@ -300,6 +300,8 @@ def F80 : TypeSuffix<"F80", X86FP80>;
 def F128 : TypeSuffix<"F128", FP128>;
 def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FAST_ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -344,8 +346,15 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
-  def REMQUO_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]>;
+  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
+  }
+  def REMQUO_#FPTy.Suffix
+      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, Int];
+  }
   def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
@@ -379,9 +388,18 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
   def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
   def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
-  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
-  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, Int];
+  }
+  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
+  }
+  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type];
+  }
   def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
   def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
   def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -451,8 +469,6 @@ def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
-
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
