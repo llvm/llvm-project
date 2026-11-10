@@ -6,7 +6,6 @@
 ---
 name:            add_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -29,7 +28,6 @@ body:             |
 ---
 name:            sub_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -52,7 +50,6 @@ body:             |
 ---
 name:            shl_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -75,7 +72,6 @@ body:             |
 ---
 name:            ashr_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -98,7 +94,6 @@ body:             |
 ---
 name:            lshr_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -121,7 +116,6 @@ body:             |
 ---
 name:            and_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -144,7 +138,6 @@ body:             |
 ---
 name:            or_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -167,7 +160,6 @@ body:             |
 ---
 name:            xor_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -190,7 +182,6 @@ body:             |
 ---
 name:            mul_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -213,7 +204,6 @@ body:             |
 ---
 name:            sdiv_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -236,7 +226,6 @@ body:             |
 ---
 name:            srem_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -259,7 +248,6 @@ body:             |
 ---
 name:            smulh_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -282,7 +270,6 @@ body:             |
 ---
 name:            udiv_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -305,7 +292,6 @@ body:             |
 ---
 name:            urem_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -328,7 +314,6 @@ body:             |
 ---
 name:            umulh_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -351,7 +336,6 @@ body:             |
 ---
 name:            icmp_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -374,7 +358,6 @@ body:             |
 ---
 name:            icmp_ptr
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -397,7 +380,6 @@ body:             |
 ---
 name:            sext_inreg_i64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -418,7 +400,6 @@ body:             |
 ---
 name:            gep
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -441,7 +422,6 @@ body:             |
 ---
 name:            ptrtoint
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -462,7 +442,6 @@ body:             |
 ---
 name:            inttoprt
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
