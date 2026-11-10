@@ -45,17 +45,6 @@ using HWEvents = AMDGPU::HWEvents;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
-static cl::opt<bool>
-    ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
-                      cl::desc("Force all waitcnt instrs to be emitted as "
-                               "s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)"),
-                      cl::init(false), cl::Hidden);
-
-static cl::opt<bool> ForceEmitZeroLoadFlag(
-    "amdgpu-waitcnt-load-forcezero",
-    cl::desc("Force all waitcnt load counters to wait until 0"),
-    cl::init(false), cl::Hidden);
-
 namespace {
 
 template <typename EmitWaitcntFn>
@@ -244,23 +233,39 @@ public:
 
 class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
   static constexpr const HWEvents
-      WaitEventMaskForInstPreGFX12[AMDGPU::NUM_INST_CNTS] = {
+      WaitEventMaskForInstWithoutVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
           HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
-              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS |
+              HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
+          // DS_CNT
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
               HWEvents::SQ_MESSAGE,
+          // EXP_CNT
           HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
               HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
               HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE};
+
+  // Hardware with VScnt has non-empty STORE_CNT wait events.
+  static constexpr const HWEvents
+      WaitEventMaskForInstWithVscnt[AMDGPU::NUM_INST_CNTS] = {
+          // LOAD_CNT
+          HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
+              HWEvents::VMEM_BVH_READ_ACCESS | HWEvents::VMEM_INV_ACCESS,
+          // DS_CNT
+          HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
+              HWEvents::SQ_MESSAGE,
+          // EXP_CNT
+          HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
+              HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
+              HWEvents::EXP_POS_ACCESS | HWEvents::EXP_LDS_ACCESS,
+          // STORE_CNT
           HWEvents::VMEM_WRITE_ACCESS | HWEvents::SCRATCH_WRITE_ACCESS,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
-          HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
+          HWEvents::NONE, HWEvents::NONE, HWEvents::NONE, HWEvents::NONE,
           HWEvents::NONE};
 
 public:
@@ -276,14 +281,8 @@ public:
                         const WaitcntBrackets &ScoreBrackets) override;
 
   HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
-    // Targets without a separate store counter count stores in LOAD_CNT
-    // (see below), so STORE_CNT has no events of its own there.
-    if (T == AMDGPU::STORE_CNT && !ST.hasVscnt())
-      return HWEvents::NONE;
-    HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
-    if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
-      EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
-    return EVs;
+    return ST.hasVscnt() ? WaitEventMaskForInstWithVscnt[T]
+                         : WaitEventMaskForInstWithoutVscnt[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
@@ -542,8 +541,7 @@ public:
   void simplifyVmemInvOnlyWait(AMDGPU::Waitcnt &Wait) const {
     // LOAD_CNT also includes store events on targets without VScnt.
     HWEvents LoadEvents =
-        PendingEvents & (Context->getWaitEvents(AMDGPU::LOAD_CNT) -
-                         Context->getWaitEvents(AMDGPU::STORE_CNT));
+        PendingEvents & Context->getWaitEvents(AMDGPU::LOAD_CNT);
     if (LoadEvents == HWEvents::VMEM_INV_ACCESS)
       Wait.clear(AMDGPU::LOAD_CNT);
   }
@@ -2606,7 +2604,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
   // When forcing emit, we need to skip terminators because that would break the
   // terminators of the MBB if we emit a waitcnt between terminators.
-  if (ForceEmitZeroFlag && !MI.isTerminator())
+  if (ST.getCLOpts().waitcnt_forcezero && !MI.isTerminator())
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
   // If we force waitcnt then update Wait accordingly.
@@ -2625,7 +2623,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(AMDGPU::DS_CNT))
     Wait.set(AMDGPU::DS_CNT, 0);
 
-  if (ForceEmitZeroLoadFlag && Wait.get(AMDGPU::LOAD_CNT) != ~0u)
+  if (ST.getCLOpts().waitcnt_load_forcezero &&
+      Wait.get(AMDGPU::LOAD_CNT) != ~0u)
     Wait.set(AMDGPU::LOAD_CNT, 0);
 
   return generateWaitcnt(Wait, MI.getIterator(), *MI.getParent(), ScoreBrackets,
