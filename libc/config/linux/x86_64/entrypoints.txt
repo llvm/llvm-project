@@ -1483,6 +1483,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
@@ -1684,6 +1685,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
+    libc.src.threads.mtx_timedlock
     libc.src.threads.mtx_trylock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
