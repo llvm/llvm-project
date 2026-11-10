@@ -493,3 +493,103 @@ define void @interrupt_small() nounwind "interrupt"="machine" "probe-stack"="inl
   store volatile i8 1, ptr %p
   ret void
 }
+
+; With a small probe size, the first SP adjustment needs probing before t1 and
+; t2 are saved, where no temporary is free: it is probed without a loop.
+define void @interrupt_small_probe_size() nounwind "interrupt"="machine" "probe-stack"="inline-asm" "stack-probe-size"="256" {
+; RV64I-LABEL: interrupt_small_probe_size:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -256
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    addi sp, sp, -240
+; RV64I-NEXT:    sd t1, 2024(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd t2, 2016(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a0, 2008(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd a1, 2000(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    lui a0, 24
+; RV64I-NEXT:    addi a0, a0, -512
+; RV64I-NEXT:    sub t1, sp, a0
+; RV64I-NEXT:    li t2, 256
+; RV64I-NEXT:  .LBB7_1: # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sd zero, 0(sp)
+; RV64I-NEXT:    bne sp, t1, .LBB7_1
+; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:    addi sp, sp, -224
+; RV64I-NEXT:    lui a0, 12
+; RV64I-NEXT:    addi a1, sp, 16
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sb a1, 848(a0)
+; RV64I-NEXT:    lui a0, 24
+; RV64I-NEXT:    addi a0, a0, -288
+; RV64I-NEXT:    add sp, sp, a0
+; RV64I-NEXT:    ld t1, 2024(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld t2, 2016(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a0, 2008(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld a1, 2000(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 2032
+; RV64I-NEXT:    mret
+;
+; RV32I-LABEL: interrupt_small_probe_size:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -256
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    addi sp, sp, -240
+; RV32I-NEXT:    sw t1, 2028(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw t2, 2024(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a0, 2020(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw a1, 2016(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lui a0, 24
+; RV32I-NEXT:    addi a0, a0, -512
+; RV32I-NEXT:    sub t1, sp, a0
+; RV32I-NEXT:    li t2, 256
+; RV32I-NEXT:  .LBB7_1: # =>This Inner Loop Header: Depth=1
+; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    bne sp, t1, .LBB7_1
+; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:    addi sp, sp, -208
+; RV32I-NEXT:    lui a0, 12
+; RV32I-NEXT:    addi a1, sp, 16
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    sb a1, 848(a0)
+; RV32I-NEXT:    lui a0, 24
+; RV32I-NEXT:    addi a0, a0, -304
+; RV32I-NEXT:    add sp, sp, a0
+; RV32I-NEXT:    lw t1, 2028(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw t2, 2024(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a0, 2020(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw a1, 2016(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 2032
+; RV32I-NEXT:    mret
+  %a = alloca [100000 x i8], align 1
+  %p = getelementptr i8, ptr %a, i64 50000
+  store volatile i8 1, ptr %p
+  ret void
+}
