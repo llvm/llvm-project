@@ -291,25 +291,45 @@ size_t SBThread::GetStopDescription(char *dst_or_null, size_t dst_len) {
   return thread_stop_desc.size() + 1; // Include the NULL byte for size
 }
 
+/// Get the value of the function the thread stepped out of, and whether it is
+/// an error the function threw rather than a value it returned.
+static ValueObjectSP
+GetStopValueObject(const lldb::ExecutionContextRefSP &exe_ctx_ref_sp,
+                   bool &is_thrown_error) {
+  is_thrown_error = false;
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(exe_ctx_ref_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+    return {};
+  }
+
+  if (!exe_ctx->HasThreadScope())
+    return {};
+  StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
+  if (!stop_info_sp)
+    return {};
+  return StopInfo::GetReturnValueObject(stop_info_sp, &is_thrown_error);
+}
+
 SBValue SBThread::GetStopReturnValue() {
   LLDB_INSTRUMENT_VA(this);
 
-  ValueObjectSP return_valobj_sp;
-  llvm::Expected<StoppedExecutionContext> exe_ctx =
-      GetStoppedExecutionContext(m_opaque_sp);
-  if (!exe_ctx) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
+  bool is_thrown_error;
+  ValueObjectSP valobj_sp = GetStopValueObject(m_opaque_sp, is_thrown_error);
+  if (is_thrown_error)
     return SBValue();
-  }
+  return SBValue(valobj_sp);
+}
 
-  if (exe_ctx->HasThreadScope()) {
-    StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
-    if (stop_info_sp) {
-      return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
-    }
-  }
+SBValue SBThread::GetStopErrorValue() {
+  LLDB_INSTRUMENT_VA(this);
 
-  return SBValue(return_valobj_sp);
+  bool is_thrown_error;
+  ValueObjectSP valobj_sp = GetStopValueObject(m_opaque_sp, is_thrown_error);
+  if (!is_thrown_error)
+    return SBValue();
+  return SBValue(valobj_sp);
 }
 
 void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
