@@ -814,8 +814,12 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 }
 
 // Stack Protector Fail
-def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []>;
-def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]>;
+def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []> {
+  let FnAttrs = [NoReturn, NoUnwind, NoFree];
+}
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]> {
+  let FnAttrs = [NoReturn, NoUnwind, NoFree];
+}
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;

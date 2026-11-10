@@ -4,10 +4,11 @@
 # RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=live-debug-values -mtriple=x86_64-apple-darwin -o %t %s -filetype=obj
 # RUN: llvm-dwarfdump %t | FileCheck %s
 
-# RUN: llc -start-before=live-debug-values -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s > %t.sce.mir
+# RUN: llc -start-before=live-debug-values -mtriple=x86_64-sce-ps4 -o %t1 %t.sce.mir -filetype=obj
 # RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
 
-# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=live-debug-values -debugger-tune=sce -mtriple=x86_64-sce-ps4 -o %t1 %s -filetype=obj
+# RUN: llc -force-instr-ref-livedebugvalues=1 -start-before=live-debug-values -mtriple=x86_64-sce-ps4 -o %t1 %t.sce.mir -filetype=obj
 # RUN: llvm-dwarfdump %t1 | FileCheck %s -check-prefix=SCE
 
 ## Based on:
@@ -45,7 +46,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata)
 
   !llvm.dbg.cu = !{!2}
-  !llvm.module.flags = !{!7, !8, !9}
+  !llvm.module.flags = !{!7, !8, !9, !20}
   !llvm.ident = !{!10}
 
   !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -58,6 +59,7 @@
   !7 = !{i32 2, !"Dwarf Version", i32 4}
   !8 = !{i32 2, !"Debug Info Version", i32 3}
   !9 = !{i32 1, !"wchar_size", i32 4}
+  !20 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
   !10 = !{!"clang version 9.0.0 "}
   !11 = distinct !DISubprogram(name: "foo", scope: !3, file: !3, line: 9, type: !12, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !14)
   !12 = !DISubroutineType(types: !13)

@@ -1854,7 +1854,18 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (const Module *m = fd->getOwningModule();
       m && m->getTopLevelModule()->isNamedModule() &&
       getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
-    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!fd->isTemplateInstantiation() || !fd->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
   }
 
   if (fd->hasAttr<NoInlineAttr>())
