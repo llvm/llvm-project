@@ -15,8 +15,7 @@
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -o dev.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=/usr/bin/ld
-// LINK: "{{.*}}clang{{(.exe)?}}" {{.*}}--target=spirv64-unknown-unknown {{.*}}.o --sycl-link{{$}}
-// LINK-NEXT: "cp" {{.*}}dev.o.sycl.image.wrapper{{.*}}.o dev.o{{$}}
+// LINK: "{{.*}}clang{{(.exe)?}}" {{.*}}--target=spirv64-unknown-unknown {{.*}}sycl-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
 
 // Archive members are only extracted for the host link, so use
 // --whole-archive to device link a static library.
@@ -31,8 +30,8 @@
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -o %t.dev.o
 // RUN: llvm-nm %t.dev.o | FileCheck %s --check-prefix=WRAPPED
 // RUN: llvm-readobj --sections %t.dev.o | FileCheck %s --check-prefix=SECTIONS
-// WRAPPED-DAG: .sycl_offloading.binary
-// WRAPPED-DAG: U __sycl_register_lib
+// WRAPPED-DAG: {{^[0-9a-f]+}} r .sycl_offloading.binary{{$}}
+// WRAPPED-DAG: {{^ +}}U __sycl_register_lib{{$}}
 // SECTIONS-NOT: Name: .llvm.offloading
 // SECTIONS: Name: .sycl_fatbin
 // SECTIONS-NOT: Name: .llvm.offloading
@@ -44,10 +43,17 @@
 // RUN:   | FileCheck %s --check-prefix=RELINK --implicit-check-not=--sycl-link
 // RELINK: "/usr/bin/ld" {{.*}}dev.o -o a.out
 
-// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
-// RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -o dev.obj 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=WIN --implicit-check-not=/usr/bin/ld
-// WIN: "copy" {{.*}}dev.obj.sycl.image.wrapper{{.*}}.o dev.obj{{$}}
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
+// RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o -o %t.dev.obj
+// RUN: llvm-readobj --file-header %t.dev.obj | FileCheck %s --check-prefix=WIN
+// WIN: Format: COFF-x86-64
+
+// With -v and --save-temps, the wrapping is still done in-process, because the
+// image must be embedded as finalized.
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run -v \
+// RUN:   --save-temps --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o \
+// RUN:   -o dev.o 2>&1 | FileCheck %s --check-prefix=LINK \
+// RUN:   --implicit-check-not=/usr/bin/ld --implicit-check-not=llvm-offload-wrapper
 
 // No device code: an empty host object without SYCL runtime registration is
 // written to the output.
@@ -80,6 +86,12 @@
 // RUN:   %t.missing.o --no-whole-archive -o dev.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
 // MISSING: error: '[[FILE]]': {{[Nn]}}o such file or directory
+
+// A value of a host linker option is not reported as a missing input.
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -z now \
+// RUN:   -Map out.map -o dev.o 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LINK --implicit-check-not=/usr/bin/ld
 
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --emit-fatbin-only --linker-path=/usr/bin/ld \

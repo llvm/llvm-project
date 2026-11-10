@@ -36,6 +36,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -793,7 +794,7 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
   bool IsFinalizedImage = Kind == OFK_SYCL && Args.hasArg(OPT_sycl_device_link);
 
   // We use the discrete tools if we are in verbose mode with '--save-temps'.
-  // llvm-offload-wrapper cannot embed finalized images.
+  // llvm-offload-wrapper has no option to embed finalized images.
   if (Verbose && SaveTemps && !Args.hasArg(OPT_print_wrapped_module) &&
       !IsFinalizedImage)
     return wrapDeviceImagesVerbose(Buffers, Args, Kind);
@@ -1104,17 +1105,15 @@ Error handleOverrideImages(
 Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
                                ArrayRef<StringRef> WrappedFiles,
                                const ArgList &Args) {
-  if (WrappedFiles.size() > 1)
-    return createStringError("expected a single wrapped SYCL device object, "
-                             "got %zu",
-                             WrappedFiles.size());
+  // All inputs are SYCL device code, which is wrapped into a single object.
+  assert(WrappedFiles.size() <= 1 && "expected one wrapped SYCL object");
 
-  Triple HostTriple(
-      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   StringRef File;
   if (WrappedFiles.empty()) {
     // No device code was linked. Emit an empty host object with no runtime
     // registration, so the output can still be used in the host link.
+    Triple HostTriple(Args.getLastArgValue(OPT_host_triple_EQ,
+                                           sys::getDefaultTargetTriple()));
     LLVMContext Context;
     Module M("offload.wrapper.module", Context);
     M.setTargetTriple(HostTriple);
@@ -1127,9 +1126,6 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
     File = WrappedFiles.front();
   }
 
-  if (Verbose || DryRun)
-    printCommands(
-        {HostTriple.isOSWindows() ? "copy" : "cp", File, ExecutableName});
   if (DryRun)
     return Error::success();
 
@@ -1435,6 +1431,16 @@ getDeviceInput(const ArgList &Args) {
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
   DenseMap<StringRef, StringRef> SourceForImage;
+
+  // With --sycl-device-link no host link runs to report missing inputs, so
+  // report them here. An input right after an option that is not known here
+  // may be the value of a host linker option (e.g. '-z now'), so it is skipped
+  // as in a host link.
+  bool ReportMissingInputs = Args.hasArg(OPT_sycl_device_link);
+  DenseSet<unsigned> UnknownOptionIndices;
+  for (const opt::Arg *Arg : Args.filtered(OPT_UNKNOWN))
+    UnknownOptionIndices.insert(Arg->getIndex());
+
   for (const opt::Arg *Arg :
        Args.filtered(OPT_INPUT, OPT_library, OPT_wholearchive_file,
                      OPT_whole_archive, OPT_no_whole_archive)) {
@@ -1454,12 +1460,11 @@ getDeviceInput(const ArgList &Args) {
       return createStringError("unable to find library -l%s", Arg->getValue());
 
     if (!Filename || !sys::fs::exists(*Filename)) {
-      // With --sycl-device-link there is no host link to report missing
-      // inputs.
-      if (Args.hasArg(OPT_sycl_device_link))
+      if (ReportMissingInputs &&
+          !UnknownOptionIndices.contains(Arg->getIndex() - 1))
         return createFileError(
-            Arg->getValue(),
-            std::make_error_code(std::errc::no_such_file_or_directory));
+            Filename ? *Filename : Arg->getValue(),
+            make_error_code(errc::no_such_file_or_directory));
       continue;
     }
     if (sys::fs::is_directory(*Filename))
@@ -1676,8 +1681,8 @@ int main(int Argc, char **Argv) {
       auto CheckKind = [](OffloadKind Kind) {
         if (Kind != OFK_SYCL)
           reportError(createStringError(
-              "--sycl-device-link requires SYCL device code, got '%s'",
-              getOffloadKindName(Kind).str().c_str()));
+              "--sycl-device-link requires SYCL device code, got '" +
+              getOffloadKindName(Kind) + "'"));
       };
       for (const SmallVector<OffloadFile> &Files : *DeviceInputFiles)
         for (const OffloadFile &File : Files)
