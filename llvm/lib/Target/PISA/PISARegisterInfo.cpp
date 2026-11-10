@@ -21,7 +21,7 @@
 
 using namespace llvm;
 
-PISARegisterInfo::PISARegisterInfo() : PISAGenRegisterInfo(PISA::DummyReg) {}
+PISARegisterInfo::PISARegisterInfo() : PISAGenRegisterInfo(0) {}
 
 const MCPhysReg *
 PISARegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {

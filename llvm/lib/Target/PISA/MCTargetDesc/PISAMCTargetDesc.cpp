@@ -40,7 +40,7 @@ static MCInstrInfo *createPISAMCInstrInfo() {
 
 static MCRegisterInfo *createPISAMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitPISAMCRegisterInfo(X, PISA::DummyReg);
+  InitPISAMCRegisterInfo(X, 0);
   return X;
 }
 

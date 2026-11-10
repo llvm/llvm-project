@@ -27,8 +27,6 @@ let Namespace = "PISA" in {
   class PredRegisterClass<list<ValueType> regTypes, int alignment, dag regList>
       : PISARegisterClass<regTypes, alignment, regList> {}
 
-  def DummyReg : Register<"%null">;
-
   foreach Index = 0-63 in {
     def Reg32b_#Index : Register<"">;
   }
@@ -38,9 +36,9 @@ let Namespace = "PISA" in {
   }
 
   def Pred : PredRegisterClass<[i1], 8,
-    (add DummyReg, (sequence "Pred_%u", 0, 3))>;
+    (add (sequence "Pred_%u", 0, 3))>;
   def Reg32b : GeneralRegisterClass<[i32, f32], 32,
-    (add DummyReg, (sequence "Reg32b_%u", 0, 63))>;
+    (add (sequence "Reg32b_%u", 0, 63))>;
   def Reg64b : GeneralRegisterClass<[i64, f64], 64,
     (add (sequence "Reg64b_%u", 0, 3))>;
 }
