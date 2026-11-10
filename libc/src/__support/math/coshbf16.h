@@ -35,14 +35,29 @@ namespace math {
 LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits x_bits(x);
-  // cosh is an even function, so only |x| matters.
-  uint16_t x_abs = x_bits.uintval() & 0x7fff;
 
-  // |x| <= 0x1.68p-4 (~0.0879)
-  // cosh(x) = 1 + x^2/2 + ..., and for these inputs the excess over 1 is less
-  // than half an ulp of 1 in bfloat16 (2^-8), so the result rounds to 1 (or to
-  // the next value above 1 when rounding upward, since cosh(x) > 1 for x != 0).
-  if (x_abs <= 0x3db4) {
+  // We first check for NaN
+  if (LIBC_UNLIKELY(x_bits.is_nan())) {
+    // If it is a signaling NaN, then we raise an FE_INVALID exception
+    // and return a quiet NaN
+    if (x_bits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+    // If not, just return the NaN
+    return x;
+  }
+
+  // cosh is an even function, cosh(-x) = cosh(x), so we only need to look at
+  // |x|, and we can compare it as an integer.
+  uint16_t x_abs = x_bits.abs().uintval();
+
+  // For small |x|, cosh(x) = 1 + x^2/2 + ... lies strictly between 1 and
+  // the next bfloat16 above 1, and is closer to 1. So the result is 1 in all
+  // rounding modes except for round-up, where it is the next value above 1.
+  // x = 0 is the exception, since cosh(0) = 1 exactly.
+  constexpr uint16_t SMALL_ABS_BOUND = 0x3DB4; // 0x1.68p-4 = 0.0879
+  if (LIBC_UNLIKELY(x_abs <= SMALL_ABS_BOUND)) {
     if (x_abs == 0U)
       return FPBits::one().get_val();
 
@@ -54,35 +69,32 @@ LIBC_INLINE bfloat16 coshbf16(bfloat16 x) {
     return FPBits::one().get_val();
   }
 
-  // |x| >= 89.5 (or inf / NaN)
-  if (LIBC_UNLIKELY(x_abs >= 0x42b3)) {
-    // cosh(+-inf) = +inf
+  // cosh(x) overflows bfloat16 for |x| >= 89.5. cosh(x) > 0 for all x, so the
+  // overflow is always to +Inf, regardless of the sign of x.
+  constexpr uint16_t OVERFLOW_ABS_BOUND = 0x42B3; // 0x1.66p6 = 89.5
+  if (LIBC_UNLIKELY(x_abs >= OVERFLOW_ABS_BOUND)) {
+    // cosh(+-Inf) = +Inf
     if (x_bits.is_inf())
       return FPBits::inf().get_val();
 
-    // cosh(NaN) = NaN
-    if (x_bits.is_nan()) {
-      if (x_bits.is_signaling_nan()) {
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
-      }
-      return x;
-    }
-
-    // cosh(x) is positive for all x, so the overflow is always to +inf.
     return fputil::set_overflow<bfloat16>();
   }
 
-  // |x| >= 6.875
-  // e^(-|x|) is negligible, so cosh(x) ~ e^|x| / 2.
-  if (x_abs >= 0x40dc)
-    return fputil::cast<bfloat16>(
-        math::sinhcoshbf16_internal::exp_half(x_bits.abs().get_val()));
+  // For |x| >= 6.875, e^(-|x|) / e^|x| = e^(-2|x|) < 2^-19 is far below the
+  // precision of bfloat16, so we can use
+  //   cosh(x) = (e^|x| + e^(-|x|)) / 2 ~ e^|x| / 2.
+  constexpr uint16_t EXP_HALF_ABS_BOUND = 0x40DC; // 0x1.b8p2 = 6.875
+  if (x_abs >= EXP_HALF_ABS_BOUND)
+    return fputil::cast<bfloat16>(math::sinhcoshbf16_internal::exp_half(
+        fputil::cast<float>(x_bits.abs().get_val())));
 
-  // cosh(x) = (e^x + e^(-x)) / 2.
+  // For the remaining inputs, we compute
+  //   cosh(x) = (e^x + e^(-x)) / 2
+  // with the range reduction and the shared polynomial in
+  // sinhcoshbf16_utils.h.
   return fputil::cast<bfloat16>(
       math::sinhcoshbf16_internal::eval_sinh_or_cosh</*IsSinh=*/false>(
-          static_cast<float>(x)));
+          fputil::cast<float>(x)));
 }
 
 } // namespace math
