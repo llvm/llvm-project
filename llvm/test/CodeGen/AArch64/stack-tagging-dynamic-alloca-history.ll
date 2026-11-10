@@ -62,6 +62,8 @@ define void @loop(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP26]], i64 [[TMP27]], i64 0
 ; CHECK-NEXT:    [[TMP28:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP28]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP34:%.*]] = select i1 [[TMP26]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP34]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]

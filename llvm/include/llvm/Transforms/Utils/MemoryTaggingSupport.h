@@ -78,7 +78,7 @@ enum class AllocaInterestingness {
 class StackInfoBuilder {
 public:
   StackInfoBuilder(const StackSafetyGlobalInfo *SSI, const char *DebugType,
-                   bool InstrumentDynamicAllocas = false)
+                   bool InstrumentDynamicAllocas)
       : SSI(SSI), DebugType(DebugType),
         InstrumentDynamicAllocas(InstrumentDynamicAllocas) {}
 

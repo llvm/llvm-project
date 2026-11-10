@@ -155,6 +155,8 @@ define void @scoped_vla(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP9]], i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP11]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP9]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP17]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[UNTAG_END:%.*]] = ptrtoint ptr [[DYNAMIC_ALLOCA_LAYOUT]] to i64
 ; CHECK-NEXT:    [[LAST_ALLOCA:%.*]] = load i64, ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
@@ -208,6 +210,8 @@ define void @scoped_vla_slot(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP9]], i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP11]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP9]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP17]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[RESTORED]])
 ; CHECK-NEXT:    [[UNTAG_END:%.*]] = ptrtoint ptr [[DYNAMIC_ALLOCA_LAYOUT]] to i64
 ; CHECK-NEXT:    [[LAST_ALLOCA:%.*]] = load i64, ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
@@ -261,6 +265,8 @@ define void @unknown_restore(i32 %n, ptr %saved) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP9]], i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP11]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP9]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP17]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SAVED]])
 ; CHECK-NEXT:    [[UNTAG_END:%.*]] = ptrtoint ptr [[DYNAMIC_ALLOCA_LAYOUT]] to i64
 ; CHECK-NEXT:    [[LAST_ALLOCA:%.*]] = load i64, ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
@@ -329,6 +335,8 @@ define void @nested_scopes(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP14]], i64 [[TMP15]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP16]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP14]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP29]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP_INNER]])
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
@@ -343,6 +351,8 @@ define void @nested_scopes(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE6:%.*]] = select i1 [[TMP21]], i64 [[TMP22]], i64 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[LAST_ALLOCA5]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP23]], i64 [[UNTAG_SIZE6]])
+; CHECK-NEXT:    [[TMP30:%.*]] = select i1 [[TMP21]], i64 [[UNTAG_END4]], i64 [[LAST_ALLOCA5]]
+; CHECK-NEXT:    store i64 [[TMP30]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP_OUTER]])
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
@@ -518,6 +528,8 @@ define void @early_exit_in_scope(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP9]], i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP11]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP9]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP17]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    [[UNTAG_END:%.*]] = ptrtoint ptr [[DYNAMIC_ALLOCA_LAYOUT]] to i64
 ; CHECK-NEXT:    [[LAST_ALLOCA:%.*]] = load i64, ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
@@ -571,6 +583,8 @@ define void @stacksave_reexecuted(i32 %n) sanitize_memtag {
 ; CHECK-NEXT:    [[UNTAG_SIZE3:%.*]] = select i1 [[TMP4]], i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[LAST_ALLOCA2]] to ptr
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[TMP6]], i64 [[UNTAG_SIZE3]])
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP4]], i64 [[UNTAG_END1]], i64 [[LAST_ALLOCA2]]
+; CHECK-NEXT:    store i64 [[TMP17]], ptr [[DYNAMIC_ALLOCA_LAYOUT]], align 8
 ; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[SP]])
 ; CHECK-NEXT:    br label %[[MAKE:.*]]
 ; CHECK:       [[MAKE]]:
