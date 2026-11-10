@@ -483,21 +483,33 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
 
 Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
                               bool KeyImportedAliasesByAliasGUID) {
-  for (Function &F : M) {
-    // Function may not have a name: like using asm("") to overwrite the name.
-    // Ignore in this case.
-    if (!F.hasName())
-      continue;
-    auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
-    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical,
-                                  KeyImportedAliasesByAliasGUID))
-      return E;
-    // Also use getPGOFuncName() so that we can find records from older profiles
-    auto PGOFuncName = getPGOFuncName(F, InLTO);
-    if (PGOFuncName != IRPGOFuncName)
-      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical,
+  auto IsPreferredDef = [](const Function &F) {
+    return !F.isDeclaration() && !F.hasFnAttribute(Attribute::Naked);
+  };
+  // Process non-naked definitions before declarations and naked jump-table
+  // stubs so that when both share a canonical name or GUID (for example, a CFI
+  // function definition @foo.cfi and its jump-table declaration or stub @foo),
+  // finalizeSymtab()'s stable_sort keeps the real definition first.
+  for (bool VisitPreferred : {true, false}) {
+    for (Function &F : M) {
+      if (IsPreferredDef(F) != VisitPreferred)
+        continue;
+      // Function may not have a name: like using asm("") to overwrite the name.
+      // Ignore in this case.
+      if (!F.hasName())
+        continue;
+      auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
+      if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical,
                                     KeyImportedAliasesByAliasGUID))
         return E;
+      // Also use getPGOFuncName() so that we can find records from older
+      // profiles
+      auto PGOFuncName = getPGOFuncName(F, InLTO);
+      if (PGOFuncName != IRPGOFuncName)
+        if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical,
+                                      KeyImportedAliasesByAliasGUID))
+          return E;
+    }
   }
 
   for (GlobalVariable &G : M.globals()) {
@@ -616,7 +628,7 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   //
   // ".__uniq." suffix is used to differentiate internal linkage functions in
   // different modules and should be kept. This is the only suffix with the
-  // pattern ".xxx" which is kept before matching, other suffixes ".llvm." and
+  // pattern ".xxx" which is kept before matching; ".cfi", ".llvm.", and
   // ".part." will be stripped.
   //
   // Leverage the common canonicalization logic from FunctionSamples. Instead of
@@ -628,7 +640,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // and its post-split clones (foo.resume, foo.cleanup) are all canonicalized
   // to "foo" otherwise, which can make the symtab lookup return unexpected
   // result.
-  const SmallVector<StringRef> SuffixesToRemove{FunctionSamples::LLVMSuffix,
+  const SmallVector<StringRef> SuffixesToRemove{FunctionSamples::CfiSuffix,
+                                                FunctionSamples::LLVMSuffix,
                                                 FunctionSamples::PartSuffix};
   return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);
 }

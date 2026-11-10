@@ -814,12 +814,79 @@ TEST_F(InstrProfTest, test_symtab_lookup_vtable_with_assigned_guid) {
 TEST_F(InstrProfTest, test_symtab_get_canonical_name) {
   EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.llvm.1234"), "foo");
   EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.part.1"), "foo");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.cfi"), "foo");
   EXPECT_EQ(
       InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999"),
       "foo.__uniq.123");
-  // Coroutine clone suffixes are preserved.
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName(
+                "foo.__uniq.123.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"),
+            "foo.__uniq.123");
+  EXPECT_EQ(
+      InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999.cfi"),
+      "foo.__uniq.123");
+  // Coroutine clone and non-canonical jump-table suffixes are preserved.
   EXPECT_EQ(InstrProfSymtab::getCanonicalName("coro.llvm.1234.resume"),
             "coro.llvm.1234.resume");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.cfi_jt"), "foo.cfi_jt");
+}
+
+// Verify that non-naked definitions take precedence over CFI jump-table
+// declarations and naked jump-table stubs in InstrProfSymtab regardless of
+// symbol order in the module, while standalone declarations remain reachable.
+TEST_F(InstrProfTest, test_symtab_cfi_def_precedence) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+
+  // Place jump-table declaration BEFORE the .cfi definition in module order.
+  auto *JTDecl = Function::Create(
+      FTy, Function::ExternalLinkage,
+      "InternalLambda.__uniq.42.llvm.13757e0fb71915e385efa4dc9d1e08fd",
+      M.get());
+  (void)JTDecl;
+
+  auto *CfiDef = Function::Create(
+      FTy, Function::ExternalLinkage,
+      "InternalLambda.__uniq.42.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi",
+      M.get());
+  IRBuilder<> Builder(BasicBlock::Create(Ctx, "entry", CfiDef));
+  Builder.CreateRetVoid();
+
+  // Simulate PreLink !guid metadata assigned while linkage was internal.
+  const uint64_t PreLinkGUID = Function::getGUIDAssumingExternalLinkage(
+      "MyModule.cpp;InternalLambda.__uniq.42");
+  CfiDef->setMetadata(
+      LLVMContext::MD_guid,
+      MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                           Type::getInt64Ty(Ctx), PreLinkGUID))}));
+
+  // Place a naked jump-table stub BEFORE its .cfi definition in module order.
+  auto *NakedStub =
+      Function::Create(FTy, Function::ExternalLinkage, "NakedStub", M.get());
+  NakedStub->addFnAttr(Attribute::Naked);
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", NakedStub)).CreateUnreachable();
+
+  auto *NakedCfiDef = Function::Create(FTy, Function::ExternalLinkage,
+                                       "NakedStub.cfi", M.get());
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", NakedCfiDef)).CreateRetVoid();
+
+  // Standalone declaration without a local definition must still be found.
+  auto *ExtOnly =
+      Function::Create(FTy, Function::ExternalLinkage, "ExtOnly", M.get());
+
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M, /*InLTO=*/true), Succeeded());
+
+  const uint64_t CanonicalGUID =
+      Function::getGUIDAssumingExternalLinkage("InternalLambda.__uniq.42");
+  EXPECT_EQ(Symtab.getFunction(CanonicalGUID), CfiDef);
+  EXPECT_EQ(Symtab.getFunction(PreLinkGUID), CfiDef);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("NakedStub")),
+      NakedCfiDef);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("ExtOnly")),
+      ExtOnly);
 }
 
 // callee1 to callee6 are from vtable1 to vtable6 respectively.
