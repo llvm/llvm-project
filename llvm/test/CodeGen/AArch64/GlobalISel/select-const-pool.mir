@@ -4,7 +4,6 @@ name:            test_constant_vec_pool_v2f64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:

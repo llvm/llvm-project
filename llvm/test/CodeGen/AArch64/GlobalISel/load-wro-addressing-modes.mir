@@ -6,7 +6,6 @@ name:            shl_gep_sext_ldrwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -41,7 +40,6 @@ name:            shl_gep_zext_ldrwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -76,7 +74,6 @@ name:            shl_gep_anyext_ldrwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -111,7 +108,6 @@ name:            mul_gep_sext_ldrwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -144,7 +140,6 @@ name:            mul_gep_zext_ldrwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -177,7 +172,6 @@ name:            mul_gep_anyext_ldrwrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -210,7 +204,6 @@ name:            ldrdrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -243,7 +236,6 @@ name:            ldrxrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -276,7 +268,6 @@ name: ldrbbrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -308,7 +299,6 @@ name: ldrhrow
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -341,7 +331,6 @@ name:            bad_and_mask_1
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 body:             |
@@ -376,7 +365,6 @@ name:            bad_and_mask_2
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 body:             |
@@ -411,7 +399,6 @@ name:            and_uxtw
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    1
 body:             |
@@ -446,7 +433,6 @@ name:            zext_shl_LDRWroW
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }

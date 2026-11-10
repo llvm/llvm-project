@@ -6,7 +6,6 @@
 ---
 name:            or_combine_sext
 # or (sext X), (sext Y) --> sext (or X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            or_combine_zext
 # or (zext X), (zext Y) --> zext (or X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -58,7 +56,6 @@ body:             |
 ---
 name:            or_combine_anyext
 # or (anyext X), (anyext Y) --> anyext (or X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -84,7 +81,6 @@ body:             |
 ---
 name:            and_combine_sext
 # and (sext X), (sext Y) --> sext (and X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -110,7 +106,6 @@ body:             |
 ---
 name:            and_combine_zext
 # and (zext X), (zext Y) --> zext (and X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -136,7 +131,6 @@ body:             |
 ---
 name:            and_combine_anyext
 # and (anyext X), (anyext Y) --> anyext (and X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -162,7 +156,6 @@ body:             |
 ---
 name:            xor_combine_sext
 # xor (sext X), (sext Y) --> sext (xor X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -188,7 +181,6 @@ body:             |
 ---
 name:            xor_combine_zext
 # xor (zext X), (zext Y) --> zext (xor X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -214,7 +206,6 @@ body:             |
 ---
 name:            xor_combine_anyext
 # xor (anyext X), (anyext Y) --> anyext (xor X, Y)
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -240,7 +231,6 @@ body:             |
 ---
 name:            dont_combine_different_types
 # When %x and %y don't have the same type, don't perform the combine.
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -269,7 +259,6 @@ body:             |
 ---
 name:            illegal_ty
 # Pre-legalization, it's okay to produce illegal types.
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -311,7 +300,6 @@ body:             |
 ---
 name:            or_combine_and
 # or (and x, z), (and y, z) --> and (or x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -339,7 +327,6 @@ body:             |
 ---
 name:            or_combine_ashr
 # or (ashr x, z), (ashr y, z) --> ashr (or x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -367,7 +354,6 @@ body:             |
 ---
 name:            or_combine_lshr
 # or (lshr x, z), (lshr y, z) --> lshr (or x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -395,7 +381,6 @@ body:             |
 ---
 name:            or_combine_shl
 # or (shl x, z), (shl y, z) --> shl (or x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -423,7 +408,6 @@ body:             |
 ---
 name:            xor_combine_and
 # xor (and x, z), (and y, z) --> and (xor x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -451,7 +435,6 @@ body:             |
 ---
 name:            xor_combine_ashr
 # xor (ashr x, z), (ashr y, z) --> ashr (xor x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -479,7 +462,6 @@ body:             |
 ---
 name:            xor_combine_lshr
 # xor (lshr x, z), (lshr y, z) --> lshr (xor x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -507,7 +489,6 @@ body:             |
 ---
 name:            xor_combine_shl
 # xor (shl x, z), (shl y, z) --> shl (xor x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -535,7 +516,6 @@ body:             |
 ---
 name:            and_combine_and
 # and (and x, z), (and y, z) --> and (and x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -563,7 +543,6 @@ body:             |
 ---
 name:            and_combine_ashr
 # and (ashr x, z), (ashr y, z) --> ashr (and x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -591,7 +570,6 @@ body:             |
 ---
 name:            and_combine_lshr
 # and (lshr x, z), (lshr y, z) --> lshr (and x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -619,7 +597,6 @@ body:             |
 ---
 name:            and_combine_shl
 # and (shl x, z), (shl y, z) --> shl (and x, y), z
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -647,7 +624,6 @@ body:             |
 ---
 name:            dont_combine_different_defs_on_binop
 # z1 != z2, so don't combine.
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -678,7 +654,6 @@ body:             |
 ---
 name: dont_combine_more_than_one_use
 # The LHS register is used more than once. Don't combine.
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -707,7 +682,6 @@ body:             |
 ---
 name:           combine_vector
 # Show that we can combine vector types.
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -732,7 +706,6 @@ body:             |
 ...
 ---
 name:           combine_vector_implicitdef
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:

@@ -105,7 +105,6 @@
 ---
 name:            indexed_2s
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -170,7 +169,6 @@ body:             |
 ---
 name:            indexed_2s_rev
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -235,7 +233,6 @@ body:             |
 ---
 name:            indexed_2d
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -294,7 +291,6 @@ body:             |
 ---
 name:            indexed_4s
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -353,7 +349,6 @@ body:             |
 ---
 name:            indexed_4h
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -412,7 +407,6 @@ body:             |
 ---
 name:            indexed_8h
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -465,7 +459,6 @@ body:             |
 ---
 name:            kill_state
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -552,7 +545,6 @@ body:             |
 ---
 name:            extracopy
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }

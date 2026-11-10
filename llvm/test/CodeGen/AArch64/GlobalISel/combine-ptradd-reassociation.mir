@@ -5,7 +5,6 @@
 ---
 name:            test1_noreassoc_legal_already_new_is_illegal
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -165,7 +164,6 @@ body:             |
 ---
 name:            walk_through_inttoptr
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -202,7 +200,6 @@ body:             |
 ---
 name:            reassoc_cst_inner_lhs
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -241,7 +238,6 @@ body:             |
 ---
 name:            reassoc_cst_inner_lhs_multiuse
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }
@@ -282,7 +278,6 @@ body:             |
 ---
 name:            reassoc_cst_inner_lhs_const_lhs
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$x1' }

@@ -5,7 +5,6 @@
 ---
 name:            loop2
 alignment:       4
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $w0
@@ -31,7 +30,6 @@ body: |
 ...
 ---
 name:            pr63777
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $q0, $x0
@@ -70,7 +68,6 @@ body:             |
 ...
 ---
 name:            killed_replace
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -112,7 +109,6 @@ body:             |
 ...
 ---
 name:            INSvi64lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -141,7 +137,6 @@ body:             |
 ...
 ---
 name:            INSvi64lane_wronglane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -171,7 +166,6 @@ body:             |
 ...
 ---
 name:            INSvi32lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -197,7 +191,6 @@ body:             |
 ...
 ---
 name:            INSvi16lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -223,7 +216,6 @@ body:             |
 ...
 ---
 name:            INSvi8lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -249,7 +241,6 @@ body:             |
 ...
 ---
 name:            INSvi32lane_notcopy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0
@@ -275,7 +266,6 @@ body:             |
 ...
 ---
 name:            INSvi32lane_wronglane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -301,7 +291,6 @@ body:             |
 ...
 ---
 name:            INSvi32lane_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: INSvi32lane_phi
   ; CHECK: bb.0:
@@ -355,7 +344,6 @@ body:             |
 ...
 ---
 name:            INSvi16lane_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: INSvi16lane_phi
   ; CHECK: bb.0:
@@ -409,7 +397,6 @@ body:             |
 ...
 ---
 name:            INSvi8lane_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: INSvi8lane_phi
   ; CHECK: bb.0:

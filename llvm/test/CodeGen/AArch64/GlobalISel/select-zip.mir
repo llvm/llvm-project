@@ -10,7 +10,6 @@ name:            zip1_v2s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -34,7 +33,6 @@ name:            zip1_v2s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -58,7 +56,6 @@ name:            zip1_v4s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -81,7 +78,6 @@ name:            zip2_v2s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -105,7 +101,6 @@ name:            zip2_v2s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -129,7 +124,6 @@ name:            zip2_v4s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1

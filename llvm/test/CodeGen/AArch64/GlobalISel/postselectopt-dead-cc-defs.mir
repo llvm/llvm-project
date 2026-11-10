@@ -7,7 +7,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -52,7 +51,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -97,7 +95,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -146,7 +143,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -170,7 +166,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1
@@ -194,7 +189,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -218,7 +212,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1
@@ -242,7 +235,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -274,7 +266,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1, $w2, $w3
@@ -306,7 +297,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -338,7 +328,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1, $w2, $w3

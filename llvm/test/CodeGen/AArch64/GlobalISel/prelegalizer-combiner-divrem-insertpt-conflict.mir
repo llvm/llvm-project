@@ -4,7 +4,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test
@@ -35,7 +34,6 @@ body:             |
 ---
 name:            test_inverted_div_rem
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_inverted_div_rem

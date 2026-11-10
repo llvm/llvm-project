@@ -193,7 +193,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 stack:
   - { id: 0, name: ret.i.i55, size: 8, alignment: 8, local-offset: -8 }
   - { id: 1, name: ret.i.i, size: 8, alignment: 8, local-offset: -16 }

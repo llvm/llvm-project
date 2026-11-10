@@ -24,7 +24,6 @@
 ...
 ---
 name:            bar
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8
@@ -88,7 +87,6 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8

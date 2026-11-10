@@ -73,7 +73,6 @@
 ---
 name:            test
 alignment:       4
-tracksRegLiveness: true
 hasWinCFI: true
 liveins:
   - { reg: '$w0' }

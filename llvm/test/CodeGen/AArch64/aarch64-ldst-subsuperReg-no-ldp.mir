@@ -15,7 +15,6 @@
 # CHECK: RET
 ---
 name:            test1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x9
@@ -29,7 +28,6 @@ body:             |
 # CHECK: RET
 ---
 name:            test2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x9

@@ -6,7 +6,6 @@
 ---
 name:            test_64
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -23,7 +22,6 @@ body:             |
 ---
 name:            test_32
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

@@ -13,7 +13,6 @@
 ...
 ---
 name:            func
-tracksRegLiveness: true
 frameInfo:
   stackSize:       4096
   maxAlignment:    8
