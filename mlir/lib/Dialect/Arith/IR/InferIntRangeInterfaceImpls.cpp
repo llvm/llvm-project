@@ -68,7 +68,8 @@ void arith::ConstantOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     return;
   }
 
-  auto range = IntegerValueRange::getMaxRange(getResult());
+  auto range = IntegerValueRange::getMaxRange(
+      getResult(), indexBitwidth.value_or(IndexType::kInternalStorageBitWidth));
   setResultRange(getResult(), range.getValue());
 }
 

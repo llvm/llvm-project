@@ -166,8 +166,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
            << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      IntegerValueRange range =
-          getLattice(value)->getValue();
+      IntegerValueRange range = getLattice(value)->getValue();
       if (indexBitwidth && getElementTypeOrSelf(value.getType()).isIndex() &&
           !range.isUninitialized() &&
           range.getValue().umin().getBitWidth() != *indexBitwidth)
@@ -203,8 +202,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       if (auto bound = dyn_cast<IntegerAttr>(attr))
         return bound.getValue().sextOrTrunc(width);
     } else if (auto value = llvm::dyn_cast<Value>(loopBound)) {
-      const IntegerValueRangeLattice *lattice =
-          getLattice(value);
+      const IntegerValueRangeLattice *lattice = getLattice(value);
       if (lattice != nullptr && !lattice->getValue().isUninitialized() &&
           lattice->getValue().getValue().umin().getBitWidth() == width)
         return getUpper ? lattice->getValue().getValue().smax()

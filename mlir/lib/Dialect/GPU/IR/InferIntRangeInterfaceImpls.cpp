@@ -336,10 +336,8 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
         return;
       }
       unsigned clusterOperandIndex = kNumConfigOperands + dim;
-      if (argRanges[dim].umin().getBitWidth() !=
-              *indexBitwidth ||
-          argRanges[clusterOperandIndex].umin().getBitWidth() !=
-              *indexBitwidth)
+      if (argRanges[dim].umin().getBitWidth() != *indexBitwidth ||
+          argRanges[clusterOperandIndex].umin().getBitWidth() != *indexBitwidth)
         return;
       // Cluster arguments count clusters per grid. The launch operands specify
       // blocks per cluster, so the cluster count is grid size / cluster size.
@@ -348,8 +346,8 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
       ConstantIntRanges clusterRange =
           argRanges[clusterOperandIndex].intersection(
               getIndexRange(indexBitwidth, 1, kMaxClusterDim));
-      setRange(intrange::inferDivU({gridRange, clusterRange}, indexBitwidth), dimResult,
-               idxResult);
+      setRange(intrange::inferDivU({gridRange, clusterRange}, indexBitwidth),
+               dimResult, idxResult);
     };
     setClusterRange(0, clusterDims.x, clusterIds->x);
     setClusterRange(1, clusterDims.y, clusterIds->y);

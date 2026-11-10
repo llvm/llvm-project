@@ -1038,7 +1038,8 @@ TestWithBoundsRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor) {
 }
 
 void TestWithBoundsRegionBranchOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+    ArrayRef<ConstantIntRanges> argRanges, std::optional<unsigned>,
+    SetIntRangeFn setResultRanges) {
   setResultRanges(getInferredResult(), argRanges[1]);
   setResultRanges(getBody().getArgument(1), argRanges[1]);
 }
