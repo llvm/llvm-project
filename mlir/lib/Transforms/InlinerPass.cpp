@@ -140,8 +140,12 @@ void InlinerPass::runOnOperation() {
   }
 
   // By default, assume that any inlining is profitable.
-  auto profitabilityCb = [this](const Inliner::ResolvedCall &call) {
-    return isProfitableToInline(call, inliningThreshold);
+  InlinerInterface inlinerIface(op->getContext());
+  auto profitabilityCb = [this,
+                          &inlinerIface](const Inliner::ResolvedCall &call) {
+    Operation *callable = call.targetNode->getCallableRegion()->getParentOp();
+    return inlinerIface.isProfitableToInline(call.call, callable) &&
+           isProfitableToInline(call, inliningThreshold);
   };
 
   // Get an instance of the inliner.
