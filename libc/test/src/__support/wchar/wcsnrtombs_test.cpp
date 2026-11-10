@@ -11,15 +11,15 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/null_check.h"
-#include "src/__support/macros/properties/os.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/__support/wchar/wcsnrtombs.h"
 #include "test/UnitTest/Test.h"
 
 // TODO: add support for 16-bit widechars to remove this macro
-#ifdef LIBC_TARGET_OS_IS_WINDOWS
-TEST(LlvmLibcStringConverterTest, Windows) {
-  // pass on windows for now
+#if !defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+TEST(LlvmLibcWcsnrtombs, UTF16) {
+  // pass on 16-bit wchar_t platforms (e.g. Windows) for now
 }
 
 #else
