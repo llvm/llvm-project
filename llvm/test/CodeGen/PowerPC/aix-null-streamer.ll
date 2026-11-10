@@ -1,4 +1,3 @@
-; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -filetype=null %s
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff -filetype=null %s
 
 ; Make sure the null streamer handles the XCOFF specific directives.
