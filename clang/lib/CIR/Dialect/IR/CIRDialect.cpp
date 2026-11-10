@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
@@ -329,6 +330,40 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                        /*trailingZerosNum=*/0);
   }
 
+  if (attrName == getTripleAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError()
+             << "expects '" << getTripleAttrName() << "' attribute to be "
+             << "attached to '" << mlir::ModuleOp::getOperationName() << "'";
+
+    auto tripleStr = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!tripleStr)
+      return op->emitOpError() << "expects '" << getTripleAttrName() << "' to "
+                               << "be a string";
+    llvm::Triple triple(tripleStr.getValue());
+    // "Validate" our triple by checking if it has a known architecture;
+    // although not all triples have a corresponding clang TargetInfo.
+    if (triple.getArch() == llvm::Triple::UnknownArch)
+      return op->emitOpError()
+             << "unknown triple '" << tripleStr.getValue() << "' in '"
+             << getTripleAttrName() << "' attribute";
+  }
+
+  if (attrName == getOptInfoAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError()
+             << "expects '" << getOptInfoAttrName() << "' attribute to be "
+             << "attached to '" << mlir::ModuleOp::getOperationName() << "'";
+
+    auto optInfo = mlir::dyn_cast<cir::OptInfoAttr>(attr.getValue());
+    // Checks whether or not OptInfoAttr is even parseable; opt info range
+    // sanity checks are done in OptInfoAttr::verify.
+    if (!optInfo)
+      return op->emitOpError()
+             << "malformed " << cir::CIRDialect::getOptInfoAttrName()
+             << " attribute";
+  }
+
   return success();
 }
 
@@ -442,6 +477,18 @@ static LogicalResult verifyProducedBy(Operation *op, Value operand,
            << "operand '" << operandName << "' must be produced by '"
            << ExpectedProducerOp::getOperationName() << "'";
   return success();
+}
+
+std::optional<llvm::Triple> cir::getTripleFromModule(mlir::ModuleOp mod) {
+  auto tripleAttr =
+      mod->getAttrOfType<mlir::StringAttr>(CIRDialect::getTripleAttrName());
+  if (!tripleAttr)
+    return std::nullopt;
+
+  // Verifying the validity of the triple attribute happens in
+  // cir::CIRDialect::verifyOperationAttribute; verifyOperationAttribute
+  // should error first if we have an invalid attribute.
+  return llvm::Triple{tripleAttr.getValue()};
 }
 
 //===----------------------------------------------------------------------===//
@@ -573,6 +620,10 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
       return op.emitOpError(
           "block argument pointee type must match the innermost array "
           "element type");
+
+    if (expectedEltPtrTy.getAddrSpace() != ptrTy.getAddrSpace())
+      return op.emitOpError(
+          "block argument address space must match the 'addr' address space");
   }
 
   return success();
@@ -2744,7 +2795,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
 
-  if (symAddrSpaceAttr != resultType.getAddrSpace()) {
+  // A function address may also be taken in the program address space.
+  auto targetAS =
+      dyn_cast_if_present<TargetAddressSpaceAttr>(resultType.getAddrSpace());
+  bool isProgramAS =
+      isa<FuncOp>(op) && targetAS &&
+      targetAS.getValue() ==
+          CIRDataLayout(getOperation()->getParentOfType<ModuleOp>())
+              .getProgramAddressSpace();
+  if (!isProgramAS && symAddrSpaceAttr != resultType.getAddrSpace()) {
     return emitOpError()
            << "result type address space does not match the address "
               "space of the global @"
@@ -2894,6 +2953,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       getPreferredAlignmentAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+  mlir::StringAttr unnamedAddrNameAttr = getUnnamedAddrAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
 
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
@@ -2977,6 +3037,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
     state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalKeyword(unnamedAddrNameAttr).succeeded())
+    state.addAttribute(unnamedAddrNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, getSymNameAttrName(state.name),
@@ -3292,6 +3355,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getDsoLocal())
     p << " dso_local";
 
+  if (getUnnamedAddr())
+    p << " unnamed_addr";
+
   p << ' ';
   p.printSymbolName(getSymName());
   cir::FuncType fnType = getFunctionType();
@@ -3418,28 +3484,6 @@ mlir::LogicalResult cir::FuncOp::verify() {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// AddOp / SubOp
-//===----------------------------------------------------------------------===//
-
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
-}
-
-LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -4079,6 +4123,9 @@ LogicalResult cir::GetRuntimeMemberOp::verify() {
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
+  if (getType().getAddrSpace() != getAddr().getType().getAddrSpace())
+    return emitError()
+           << "result address space does not match the object address space";
   return mlir::success();
 }
 
@@ -5120,7 +5167,7 @@ LogicalResult cir::AtomicFetchOp::verify() {
        getBinop() == cir::AtomicFetchKind::Minimum ||
        getBinop() == cir::AtomicFetchKind::MaximumNum ||
        getBinop() == cir::AtomicFetchKind::MinimumNum) &&
-      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+      !cir::isFPOrVectorOfFPType(getVal().getType()))
     return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
                      "operation could only operate on floating-point values");
 

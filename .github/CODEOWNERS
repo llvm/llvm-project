@@ -168,6 +168,13 @@
 /mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
 /mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
 
+# SPIR-V backend.
+/llvm/lib/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/test/CodeGen/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/unittests/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/lib/Target/SPIRV/SPIRVNonSemanticDebugHandler.* @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
+/llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
+
 # MLIR Sparsifier.
 /mlir/**/*SparseTensor*/ @aartbik @PeimingLiu @yinying-lisa-li @matthias-springer
 
