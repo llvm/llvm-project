@@ -1377,6 +1377,20 @@ private:
   friend struct Attributor;
 };
 
+/// A set of kinds of abstract attributes, given by their IDs. The kinds
+/// declared here are tested with a bit mask, others with a list of IDs.
+class AAKindSet {
+public:
+  template <size_t N> constexpr AAKindSet(const char *const (&IDs)[N]);
+
+  /// Return true if abstract attributes of type \p AAType are in the set.
+  template <typename AAType> bool contains() const;
+
+private:
+  uint64_t Mask = 0;
+  ArrayRef<const char *> IDs;
+};
+
 /// Configuration for the Attributor.
 struct AttributorConfig {
 
@@ -1421,8 +1435,8 @@ struct AttributorConfig {
   /// Helper to update an underlying call graph and to delete functions.
   CallGraphUpdater &CGUpdater;
 
-  /// If not null, a set limiting the attribute opportunities.
-  DenseSet<const char *> *Allowed = nullptr;
+  /// If set, the only kinds of abstract attributes to create.
+  std::optional<AAKindSet> Allowed;
 
   /// Maximum number of iterations to run until fixpoint.
   std::optional<unsigned> MaxFixpointIterations;
@@ -1752,7 +1766,7 @@ struct Attributor {
     if (!AAType::isValidIRPositionForInit(*this, IRP))
       return false;
 
-    if (Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID))
+    if (Configuration.Allowed && !Configuration.Allowed->contains<AAType>())
       return false;
 
     // For now we skip anything in naked and optnone functions.
@@ -6383,6 +6397,81 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
   };
 }
 } // namespace AA
+
+namespace detail {
+/// The IDs of the abstract attributes declared here, by their bit in
+/// AAKindSet.
+constexpr const char *AAKindIDs[] = {
+    &AANoUnwind::ID,
+    &AANoSync::ID,
+    &AAMustProgress::ID,
+    &AANonNull::ID,
+    &AANoRecurse::ID,
+    &AAWillReturn::ID,
+    &AAUndefinedBehavior::ID,
+    &AAIntraFnReachability::ID,
+    &AANoAlias::ID,
+    &AANoFree::ID,
+    &AANoReturn::ID,
+    &AAIsDead::ID,
+    &AADereferenceable::ID,
+    &AAAlign::ID,
+    &AAInstanceInfo::ID,
+    &AANoCapture::ID,
+    &AAValueSimplify::ID,
+    &AAHeapToStack::ID,
+    &AAPrivatizablePtr::ID,
+    &AAMemoryBehavior::ID,
+    &AAMemoryLocation::ID,
+    &AAValueConstantRange::ID,
+    &AAPotentialConstantValues::ID,
+    &AAPotentialValues::ID,
+    &AANoUndef::ID,
+    &AANoFPClass::ID,
+    &AACallEdges::ID,
+    &AAExecutionDomain::ID,
+    &AAInterFnReachability::ID,
+    &AANonConvergent::ID,
+    &AAPointerInfo::ID,
+    &AAAssumptionInfo::ID,
+    &AAUnderlyingObjects::ID,
+    &AAInvariantLoadPointer::ID,
+    &AAAddressSpace::ID,
+    &AANoAliasAddrSpace::ID,
+    &AAAllocationInfo::ID,
+    &AAGlobalValueInfo::ID,
+    &AAIndirectCallInfo::ID,
+    &AADenormalFPMath::ID,
+};
+static_assert(std::size(AAKindIDs) <= 64, "Too many kinds for the mask");
+
+/// Return the bit of \p ID in AAKindSet, or the number of kinds if it has
+/// none.
+constexpr size_t getAAKindBit(const char *ID) {
+  for (size_t I = 0; I != std::size(AAKindIDs); ++I) {
+    if (AAKindIDs[I] == ID)
+      return I;
+  }
+  return std::size(AAKindIDs);
+}
+} // namespace detail
+
+template <size_t N>
+constexpr AAKindSet::AAKindSet(const char *const (&IDs)[N]) : IDs(IDs) {
+  for (const char *ID : IDs) {
+    if (size_t Bit = detail::getAAKindBit(ID);
+        Bit < std::size(detail::AAKindIDs))
+      Mask |= uint64_t(1) << Bit;
+  }
+}
+
+template <typename AAType> bool AAKindSet::contains() const {
+  constexpr size_t Bit = detail::getAAKindBit(&AAType::ID);
+  if constexpr (Bit < std::size(detail::AAKindIDs))
+    return Mask & (uint64_t(1) << Bit);
+  else
+    return is_contained(IDs, &AAType::ID);
+}
 
 } // end namespace llvm
 

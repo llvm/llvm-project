@@ -936,8 +936,12 @@ void FactsGenerator::handleExitBlock() {
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   assert(isGslPointerType(CCE->getType()));
-  if (CCE->getNumArgs() != 1)
+  // Only lifetimebound parameters propagate for a constructor taking several
+  // arguments; the owner heuristic applies to single-argument construction.
+  if (CCE->getNumArgs() != 1) {
+    handleFunctionCall(CCE, /*IsGslConstruction=*/true);
     return;
+  }
 
   const Expr *Arg = CCE->getArg(0);
   if (isGslPointerType(Arg->getType())) {
@@ -1236,7 +1240,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         assert(!Args[I]->isGLValue() || ArgList->getLength() >= 2);
         ArgList = readValue(Args[I]);
       }
-      if (isGslOwnerType(Args[I]->getType())) {
+      if (isGslOwnerType(Args[I]->getType()) &&
+          (Args.size() == 1 || ShouldTrackArg)) {
         // The constructed gsl::Pointer borrows from the Owner's storage, not
         // from what the Owner itself borrows, so only the outermost origin is
         // needed.
