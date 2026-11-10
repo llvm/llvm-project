@@ -842,10 +842,10 @@ ExprResult Sema::LookupInlineAsmIdentifier(CXXScopeSpec &SS,
         ReuseLambdaContextDecl);
 
   ExprResult Result = ActOnIdExpression(getCurScope(), SS, TemplateKWLoc, Id,
-                                        /*trailing lparen*/ false,
+                                        /*IsCall=*/false,
                                         /*is & operand*/ false,
                                         /*CorrectionCandidateCallback=*/nullptr,
-                                        /*IsInlineAsmIdentifier=*/ true);
+                                        /*IsInlineAsmIdentifier=*/true);
 
   if (IsUnevaluatedContext)
     PopExpressionEvaluationContext();

@@ -5065,7 +5065,7 @@ ExprResult SemaObjC::BuildIvarRefExpr(Scope *S, SourceLocation Loc,
   SourceLocation TemplateKWLoc;
   ExprResult SelfExpr =
       SemaRef.ActOnIdExpression(S, SelfScopeSpec, TemplateKWLoc, SelfName,
-                                /*HasTrailingLParen=*/false,
+                                /*IsCall=*/false,
                                 /*IsAddressOfOperand=*/false);
   if (SelfExpr.isInvalid())
     return ExprError();

@@ -1108,7 +1108,7 @@ ExprResult Sema::DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
     Name.setIdentifier(PP.getIdentifierInfo("__builtin_trap"),
                        E->getBeginLoc());
     ExprResult TrapFn = ActOnIdExpression(TUScope, SS, TemplateKWLoc, Name,
-                                          /*HasTrailingLParen=*/true,
+                                          /*IsCall=*/true,
                                           /*IsAddressOfOperand=*/false);
     if (TrapFn.isInvalid())
       return ExprError();
@@ -2886,12 +2886,12 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
 
 ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                    SourceLocation TemplateKWLoc,
-                                   UnqualifiedId &Id, bool HasTrailingLParen,
+                                   UnqualifiedId &Id, bool IsCall,
                                    bool IsAddressOfOperand,
                                    CorrectionCandidateCallback *CCC,
                                    bool IsInlineAsmIdentifier) {
-  assert(!(IsAddressOfOperand && HasTrailingLParen) &&
-         "cannot be direct & operand and have a trailing lparen");
+  assert(!(IsAddressOfOperand && IsCall) &&
+         "cannot be direct & operand and a function call");
   if (SS.isInvalid())
     return ExprError();
 
@@ -2990,15 +2990,14 @@ ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
   // This could be an implicitly declared function reference if the language
   // mode allows it as a feature.
-  if (R.empty() && HasTrailingLParen && II &&
-      getLangOpts().implicitFunctionsAllowed()) {
+  if (R.empty() && IsCall && II && getLangOpts().implicitFunctionsAllowed()) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }
 
   // Determine whether this name might be a candidate for
   // argument-dependent lookup.
-  bool ADL = UseArgumentDependentLookup(SS, R, HasTrailingLParen);
+  bool ADL = UseArgumentDependentLookup(SS, R, IsCall);
 
   if (R.empty() && !ADL) {
     if (SS.isEmpty() && getLangOpts().MSVCCompat) {
@@ -3321,10 +3320,9 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
 }
 
 bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
-                                      const LookupResult &R,
-                                      bool HasTrailingLParen) {
+                                      const LookupResult &R, bool IsCall) {
   // Only when used directly as the postfix-expression of a call.
-  if (!HasTrailingLParen)
+  if (!IsCall)
     return false;
 
   // Never if a scope specifier was provided.
@@ -3370,7 +3368,6 @@ bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
 
   return true;
 }
-
 
 /// Diagnoses obvious problems with the use of the given declaration
 /// as an expression.  This is only actually called for lookups that
@@ -7425,11 +7422,10 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   CallExpr *TheCall;
   if (Config) {
-    assert(UsesADL == ADLCallKind::NotADL &&
-           "CUDAKernelCallExpr should not use ADL");
     TheCall = CUDAKernelCallExpr::Create(Context, Fn, cast<CallExpr>(Config),
                                          Args, ResultTy, VK_PRValue, RParenLoc,
                                          CurFPFeatureOverrides(), NumParams);
+    TheCall->setADLCallKind(UsesADL);
   } else {
     TheCall =
         CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
