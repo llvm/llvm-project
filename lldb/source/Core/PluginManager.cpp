@@ -28,6 +28,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -954,21 +955,111 @@ static LanguageInstances &GetLanguageInstances() {
   return g_instances;
 }
 
+namespace {
+/// The Language instances that the language plugins create. Callers cache
+/// these instances, so they are never destroyed.
+class LanguageInstanceCache {
+public:
+  Language *Get(lldb::LanguageType language) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    auto it = m_active.find(language);
+    if (it != m_active.end())
+      return it->second;
+    return Create(language, GetLanguageInstances().GetCreateCallbacks());
+  }
+
+  std::vector<Language *> GetAll() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (!m_complete) {
+      llvm::SmallVector<LanguageCreateInstance> create_callbacks =
+          GetLanguageInstances().GetCreateCallbacks();
+      for (unsigned lang = eLanguageTypeUnknown; lang < eNumLanguageTypes;
+           ++lang) {
+        auto language = static_cast<lldb::LanguageType>(lang);
+        if (!m_active.count(language))
+          Create(language, create_callbacks);
+      }
+      m_complete = true;
+    }
+
+    std::vector<Language *> instances;
+    instances.reserve(m_active.size());
+    for (const auto &entry : m_active)
+      instances.push_back(entry.second);
+    return instances;
+  }
+
+  /// Call this whenever a language plugin is registered, unregistered,
+  /// enabled, or disabled.
+  void Invalidate() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    m_active.clear();
+    m_complete = false;
+  }
+
+private:
+  /// Returns the instance of the first plugin in \p create_callbacks that
+  /// supports \p language. The caller must hold m_mutex.
+  Language *Create(lldb::LanguageType language,
+                   llvm::ArrayRef<LanguageCreateInstance> create_callbacks) {
+    for (LanguageCreateInstance create_callback : create_callbacks) {
+      auto key = std::make_pair(create_callback, language);
+      auto it = m_created.find(key);
+      Language *instance =
+          it != m_created.end() ? it->second : create_callback(language);
+      if (!instance)
+        continue;
+      m_created[key] = instance;
+      m_active[language] = instance;
+      return instance;
+    }
+    return nullptr;
+  }
+
+  std::mutex m_mutex;
+  /// The instance of the enabled plugin that supports each language.
+  std::map<lldb::LanguageType, Language *> m_active;
+  /// Whether m_active has an entry for every language that an enabled plugin
+  /// supports.
+  bool m_complete = false;
+  /// Every instance that a plugin created, so that a plugin that is
+  /// unregistered and registered again, or disabled and enabled again,
+  /// gets the same instances.
+  std::map<std::pair<LanguageCreateInstance, lldb::LanguageType>, Language *>
+      m_created;
+};
+} // namespace
+
+// Language instances are never destroyed, so neither is this cache.
+static LanguageInstanceCache &GetLanguageInstanceCache() {
+  static LanguageInstanceCache *g_cache = new LanguageInstanceCache();
+  return *g_cache;
+}
+
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     LanguageCreateInstance create_callback,
     DebuggerInitializeCallback debugger_init_callback) {
-  return GetLanguageInstances().RegisterPlugin(
+  bool registered = GetLanguageInstances().RegisterPlugin(
       name, description, create_callback, debugger_init_callback);
+  if (registered)
+    GetLanguageInstanceCache().Invalidate();
+  return registered;
 }
 
 bool PluginManager::UnregisterPlugin(LanguageCreateInstance create_callback) {
-  return GetLanguageInstances().UnregisterPlugin(create_callback);
+  bool unregistered = GetLanguageInstances().UnregisterPlugin(create_callback);
+  if (unregistered)
+    GetLanguageInstanceCache().Invalidate();
+  return unregistered;
 }
 
-llvm::SmallVector<LanguageCreateInstance>
-PluginManager::GetLanguageCreateCallbacks() {
-  return GetLanguageInstances().GetCreateCallbacks();
+Language *PluginManager::GetLanguageInstance(lldb::LanguageType language) {
+  return GetLanguageInstanceCache().Get(language);
+}
+
+std::vector<Language *> PluginManager::GetAllLanguageInstances() {
+  return GetLanguageInstanceCache().GetAll();
 }
 
 #pragma mark LanguageRuntime
@@ -2667,7 +2758,10 @@ llvm::SmallVector<RegisteredPluginInfo> PluginManager::GetLanguagePluginInfo() {
 }
 bool PluginManager::SetLanguagePluginEnabled(llvm::StringRef name,
                                              bool enable) {
-  return GetLanguageInstances().SetInstanceEnabled(name, enable);
+  bool found = GetLanguageInstances().SetInstanceEnabled(name, enable);
+  if (found)
+    GetLanguageInstanceCache().Invalidate();
+  return found;
 }
 
 llvm::SmallVector<RegisteredPluginInfo>
