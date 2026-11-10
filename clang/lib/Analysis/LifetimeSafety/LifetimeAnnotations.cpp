@@ -124,7 +124,7 @@ FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!Call)
     return;
 
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
+  std::optional<AnyCall> AC = AnyCall::forExpr(ignoreParensAndImpCasts(Call));
   if (!AC)
     return;
 
@@ -195,7 +195,7 @@ getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
     return std::nullopt;
 
   for (unsigned I = 0; I < Args.size(); ++I)
-    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
+    if (ignoreParensAndImpCasts(Args[I]) == ignoreParensAndImpCasts(Source))
       if (std::optional<LifetimeBoundParamInfo> ParamInfo =
               getTrackedArgInfo(FD, Args, I))
         return ParamInfo;
