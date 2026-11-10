@@ -609,7 +609,6 @@ static bool isCBranchReadEXECZ(const MachineInstr &MI) {
 unsigned
 GCNHazardRecognizer::checkVASSrcVASDstHazards(const MachineInstr &MI) const {
   // Model the scheduling va_ssrc and va_sdst hazard on gfx1250 chips.
-  // These are only relevant when not using SCHED_MODE 1.
   if (!ST.hasGFX1250Insts())
     return 0;
 
