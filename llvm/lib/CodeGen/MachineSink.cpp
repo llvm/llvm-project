@@ -1483,8 +1483,7 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
 /// check optimization is legal over MI, and this returning false does not
 /// guarantee MI cannot possibly be used to do a null check.
 static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
-                                             const TargetInstrInfo *TII,
-                                             const TargetRegisterInfo *TRI) {
+                                             const TargetInstrInfo *TII) {
   using MachineBranchPredicate = TargetInstrInfo::MachineBranchPredicate;
 
   auto *MBB = MI.getParent();
@@ -1817,7 +1816,7 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
 
   // Don't break implicit null checks.  This is a performance heuristic, and not
   // required for correctness.
-  if (SinkingPreventsImplicitNullCheck(MI, TII, TRI))
+  if (SinkingPreventsImplicitNullCheck(MI, TII))
     return false;
 
   // FIXME: This should include support for sinking instructions within the
