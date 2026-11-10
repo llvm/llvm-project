@@ -145,12 +145,11 @@ static bool compareData(const ConcatInputSection *ia,
 static Defined *getDirectCallTarget(const Relocation &r) {
   if (r.getAddend() || !target->hasAttr(r.type, RelocAttrBits::BRANCH))
     return nullptr;
-  auto *sym = dyn_cast_if_present<Symbol *>(r.referent);
-  auto *d = dyn_cast_if_present<Defined>(sym);
-  if (!d || d->value || !d->originalIsec || !isCodeSection(d->originalIsec) ||
-      needsBinding(sym))
-    return nullptr;
-  return d;
+  if (auto *sym = dyn_cast<Symbol *>(r.referent))
+    if (auto *d = dyn_cast<Defined>(sym))
+      if (!d->value && !needsBinding(sym))
+        return d;
+  return nullptr;
 }
 
 // Compare "non-moving" parts of two ConcatInputSections, namely everything
