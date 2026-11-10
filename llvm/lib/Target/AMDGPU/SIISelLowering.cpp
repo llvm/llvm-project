@@ -13673,8 +13673,16 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getMergeValues(Ops, DL);
     }
 
-    if (MemVT == MVT::i16 && isTypeLegal(MVT::i16))
+    if (MemVT == MVT::i16 && isTypeLegal(MVT::i16)) {
+      if (!allowsMemoryAccessForAlignment(*DAG.getContext(),
+                                          DAG.getDataLayout(), MemVT, *MMO)) {
+        SDValue Ops[2];
+        std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
+
+        return DAG.getMergeValues(Ops, DL);
+      }
       return SDValue();
+    }
 
     // FIXME: Copied from PPC
     // First, load into 32 bits, then truncate to 1 bit.
@@ -13752,7 +13760,9 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
       AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) {
-    if (NumElements > 4)
+    if (NumElements > 4 ||
+        !allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                        MemVT, *MMO))
       return SplitVectorLoad(Op, DAG);
     // v3 loads not supported on SI.
     if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
