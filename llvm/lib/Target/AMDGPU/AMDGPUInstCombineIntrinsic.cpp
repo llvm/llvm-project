@@ -565,23 +565,6 @@ static bool canContractSqrtToRsq(const FPMathOperator *SqrtOp) {
          SqrtOp->getType()->isHalfTy();
 }
 
-/// Return true if we can easily prove that use U is uniform.
-static bool isTriviallyUniform(const Use &U) {
-  Value *V = U.get();
-  if (isa<Constant>(V))
-    return true;
-  if (const auto *A = dyn_cast<Argument>(V))
-    return AMDGPU::isArgPassedInSGPR(A);
-  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
-    if (!AMDGPU::isIntrinsicAlwaysUniform(II->getIntrinsicID()))
-      return false;
-    // If II and U are in different blocks then there is a possibility of
-    // temporal divergence.
-    return II->getParent() == cast<Instruction>(U.getUser())->getParent();
-  }
-  return false;
-}
-
 /// Simplify a lane index operand (e.g. llvm.amdgcn.readlane src1).
 ///
 /// The instruction only reads the low 5 bits for wave32, and 6 bits for wave64.
@@ -751,9 +734,9 @@ GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
   if (isa<BinaryOperator>(OpInst)) {
     // FIXME: If we had access to UniformityInfo here we could just check
     // if the operand is uniform.
-    if (isTriviallyUniform(OpInst->getOperandUse(0)))
+    if (AMDGPU::isTriviallyUniform(OpInst->getOperandUse(0)))
       return DoIt(1, II.getCalledFunction());
-    if (isTriviallyUniform(OpInst->getOperandUse(1)))
+    if (AMDGPU::isTriviallyUniform(OpInst->getOperandUse(1)))
       return DoIt(0, II.getCalledFunction());
   }
 
@@ -1935,7 +1918,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // If the data argument is uniform these intrinsics return it unchanged.
     unsigned SrcIdx = IID == Intrinsic::amdgcn_ds_bpermute ? 1 : 0;
     const Use &Src = II.getArgOperandUse(SrcIdx);
-    if (isTriviallyUniform(Src))
+    if (AMDGPU::isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
 
     if (IID == Intrinsic::amdgcn_readlane &&
@@ -1947,7 +1930,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // readlane is AlwaysUniform.
     if (IID == Intrinsic::amdgcn_ds_bpermute) {
       const Use &Lane = II.getArgOperandUse(0);
-      if (isTriviallyUniform(Lane)) {
+      if (AMDGPU::isTriviallyUniform(Lane)) {
         Value *NewLane = IC.Builder.CreateLShr(Lane, 2);
         Function *NewDecl = Intrinsic::getOrInsertDeclaration(
             II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
@@ -1969,7 +1952,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_wave_match_b32: {
     const Use &Src0 = II.getArgOperandUse(0);
     const Use &Src1 = II.getArgOperandUse(1);
-    if (Src0.get() == Src1.get() && isTriviallyUniform(Src0)) {
+    if (Src0.get() == Src1.get() && AMDGPU::isTriviallyUniform(Src0)) {
       Function *NewF = Intrinsic::getOrInsertDeclaration(
           II.getModule(), Intrinsic::amdgcn_ballot, II.getType());
       CallInst *NewCall =
