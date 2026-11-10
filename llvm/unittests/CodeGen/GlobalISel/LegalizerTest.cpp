@@ -9,8 +9,10 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/LegalizationArtifactCombiner.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "legalizer-test"
 
 using namespace LegalizeActions;
@@ -224,6 +226,96 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckString)) << *MF;
+}
+
+TEST_F(AArch64GISelMITest, TruncTruncArtifactLegality) {
+  for (LegalizeAction Action : {Legal, Lower, Custom, Unsupported}) {
+    SCOPED_TRACE(Action);
+    setUp();
+    if (!TM)
+      GTEST_SKIP();
+
+    LLT S16 = LLT::scalar(16);
+    LLT S32 = LLT::scalar(32);
+    LLT S64 = LLT::scalar(64);
+    LegalizerInfo LI;
+    auto &Rules = LI.getActionDefinitionsBuilder(TargetOpcode::G_TRUNC)
+                      .legalFor({{S32, S64}, {S16, S32}});
+    switch (Action) {
+    case Legal:
+      Rules.alwaysLegal();
+      break;
+    case Lower:
+      Rules.lower();
+      break;
+    case Custom:
+      Rules.customFor({{S16, S64}});
+      break;
+    case Unsupported:
+      Rules.unsupported();
+      break;
+    default:
+      llvm_unreachable("unexpected test action");
+    }
+
+    auto Src = B.buildCopy(S64, Copies[0]);
+    auto Inner = B.buildTrunc(S32, Src);
+    auto Outer = B.buildTrunc(S16, Inner);
+    LegalizationArtifactCombiner Combiner(B, *MRI, LI);
+    SmallVector<MachineInstr *> DeadInsts;
+    SmallVector<Register> UpdatedDefs;
+    GISelObserverWrapper Observer;
+
+    bool Changed =
+        Combiner.tryCombineTrunc(*Outer, DeadInsts, UpdatedDefs, Observer);
+    ASSERT_EQ(Action == Legal, Changed);
+    if (Action == Legal) {
+      ASSERT_EQ(1u, UpdatedDefs.size());
+      EXPECT_EQ(Outer.getReg(0), UpdatedDefs.front());
+      EXPECT_EQ(Src.getReg(0),
+                std::prev(Outer->getIterator())->getOperand(1).getReg());
+    } else {
+      EXPECT_TRUE(DeadInsts.empty());
+      EXPECT_TRUE(UpdatedDefs.empty());
+      EXPECT_EQ(Inner.getReg(0), Outer->getOperand(1).getReg());
+    }
+  }
+}
+
+TEST_F(AArch64GISelMITest, TruncTruncBuildVectorArtifact) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32);
+  LLT S64 = LLT::scalar(64);
+  LLT V2S32 = LLT::fixed_vector(2, S32);
+  LLT V2S48 = LLT::fixed_vector(2, 48);
+  LLT V2S64 = LLT::fixed_vector(2, S64);
+  LegalizerInfo LI;
+  LI.getActionDefinitionsBuilder(TargetOpcode::G_TRUNC)
+      .legalFor({{S32, S64}, {V2S48, V2S64}, {V2S32, V2S48}});
+  LI.getActionDefinitionsBuilder(TargetOpcode::G_BUILD_VECTOR)
+      .legalFor({{V2S32, S32}});
+
+  auto Src = B.buildCopy(S64, Copies[0]);
+  auto Vector = B.buildBuildVector(V2S64, {Src.getReg(0), Src.getReg(0)});
+  auto Inner = B.buildTrunc(V2S48, Vector);
+  auto Outer = B.buildTrunc(V2S32, Inner);
+  LegalizationArtifactCombiner Combiner(B, *MRI, LI);
+  SmallVector<MachineInstr *> DeadInsts;
+  SmallVector<Register> UpdatedDefs;
+  GISelObserverWrapper Observer;
+
+  ASSERT_TRUE(
+      Combiner.tryCombineTrunc(*Outer, DeadInsts, UpdatedDefs, Observer));
+  auto &Result = cast<GBuildVector>(*std::prev(Outer->getIterator()));
+  EXPECT_EQ(Outer.getReg(0), Result.getReg(0));
+  for (unsigned I = 0; I != Result.getNumSources(); ++I) {
+    auto *Trunc = MRI->getVRegDef(Result.getSourceReg(I));
+    EXPECT_EQ(Src.getReg(0), cast<GTrunc>(Trunc)->getSrcReg());
+    EXPECT_EQ(S32, MRI->getType(Result.getSourceReg(I)));
+  }
 }
 
 } // namespace
