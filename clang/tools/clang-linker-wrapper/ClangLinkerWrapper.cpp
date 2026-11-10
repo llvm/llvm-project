@@ -1698,10 +1698,21 @@ int main(int Argc, char **Argv) {
 
   llvm::Triple Triple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
+  // link.exe options are case-insensitive, but the option table only matches
+  // '/out:' in lower case. Another spelling, e.g. '/OUT:', is parsed as an
+  // input.
+  StringRef COFFOutput;
+  for (const opt::Arg *Arg : Args.filtered(OPT_out, OPT_INPUT)) {
+    StringRef Value = Arg->getValue();
+    if (Arg->getOption().matches(OPT_out) ||
+        (Triple.isOSWindows() && Value.consume_front("/") &&
+         Value.consume_front_insensitive("out:")))
+      COFFOutput = Value;
+  }
   if (Args.hasArg(OPT_o))
     ExecutableName = Args.getLastArgValue(OPT_o, "a.out");
-  else if (Args.hasArg(OPT_out))
-    ExecutableName = Args.getLastArgValue(OPT_out, "a.exe");
+  else if (!COFFOutput.empty())
+    ExecutableName = COFFOutput;
   else
     ExecutableName = Triple.isOSWindows() ? "a.exe" : "a.out";
 
