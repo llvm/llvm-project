@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
-# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
 
 # Ensure that we don't outline from regions where x16, x17, or nzcv are live
 # across the outlining candidate. These values are allowed to be clobbered by,

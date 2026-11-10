@@ -53,7 +53,7 @@ void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                                StringRef StringValue) {}
 
 void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
-  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
+  assert(ABI != RISCVABI::ABI::Unknown && "Improperly initialized target ABI");
   TargetABI = ABI;
 }
 
@@ -64,16 +64,9 @@ void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
-  if (EmitStackAlign) {
-    unsigned StackAlign;
-    if (TargetABI == RISCVABI::ABI_ILP32E)
-      StackAlign = 4;
-    else if (TargetABI == RISCVABI::ABI_LP64E)
-      StackAlign = 8;
-    else
-      StackAlign = 16;
-    emitAttribute(RISCVAttrs::STACK_ALIGN, StackAlign);
-  }
+  if (EmitStackAlign && TargetABI != RISCVABI::ABI::Unknown)
+    emitAttribute(RISCVAttrs::STACK_ALIGN,
+                  RISCVABI::getStackAlignment(TargetABI).value());
 
   auto ParseResult = RISCVFeatures::parseFeatureBits(STI);
   if (!ParseResult) {

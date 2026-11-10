@@ -630,7 +630,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
 //   ...
 //   %add = getelementptr %phinode, %inc
 //
-// First returned instruciton is %phinode (or a type cast to %phinode), caller
+// First returned instruction is %phinode (or a type cast to %phinode), caller
 // needs this value to rewrite other load/stores in the same chain.
 // Second returned instruction is %add, caller needs this value to rewrite other
 // load/stores in the same chain.

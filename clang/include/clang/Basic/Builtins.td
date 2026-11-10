@@ -4861,7 +4861,7 @@ def Assume : Builtin {
 
 def AssumeSeparateStorage : Builtin {
   let Spellings = ["__builtin_assume_separate_storage"];
-  let Attributes = [NoThrow, Constexpr];
+  let Attributes = [NoThrow];
   let Prototype = "void(void const volatile*, void const volatile*)";
 }
 
@@ -5579,12 +5579,6 @@ def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
-def HLSLAll : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_all"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "bool(...)";
-}
-
 def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_and"];
   let Attributes = [NoThrow, Const];
@@ -5595,12 +5589,6 @@ def HLSLOr : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_or"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
-}
-
-def HLSLAny : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_any"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "bool(...)";
 }
 
 def HLSLAsDouble : LangBuiltin<"HLSL_LANG"> {
@@ -5789,10 +5777,52 @@ def HLSLWavePrefixSum : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveMultiPrefixBitAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_and"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixBitOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_or"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixBitXor : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_bit_xor"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool, _ExtVector<4, unsigned int>)";
+}
+
+def HLSLWaveMultiPrefixProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_product"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWaveMultiPrefixSum : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_multi_prefix_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_prefix_product"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
+}
+
+def HLSLQuadAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_quad_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(bool)";
 }
 
 def HLSLQuadReadAcrossX : LangBuiltin<"HLSL_LANG"> {
@@ -6092,3 +6122,8 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+//===----------------------------------------------------------------------===//
+// C++26 reflection metafunctions.
+//===----------------------------------------------------------------------===//
+include "clang/Basic/BuiltinsMeta.td"

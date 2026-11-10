@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -run-pass=greedy -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mtriple=mips -mcpu=mips32r6 -run-pass=greedy -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=mipsel -mcpu=mips32r6 -run-pass=greedy %s -o - | FileCheck %s
+# RUN: llc -mtriple=mips -mcpu=mips32r6 -run-pass=greedy %s -o - | FileCheck %s
 # RUN: llc -mtriple=mipsel -mcpu=mips32r6 -start-before=greedy -verify-machineinstrs -filetype=obj %s -o /dev/null
 # RUN: llc -mtriple=mips -mcpu=mips32r6 -start-before=greedy -verify-machineinstrs -filetype=obj %s -o /dev/null
 

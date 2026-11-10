@@ -528,11 +528,11 @@ union M retM(const union M *p) { return *p; }
 
 char takeM(union M m) { return m.buf[31]; }
 
-// CIR-LABEL: cir.func {{.*}} @takeM(%arg0: !cir.ptr<!rec_M> {llvm.align = 16 : i64, llvm.byval = !rec_M, llvm.noundef} loc({{[^)]+}})) -> (!s8i {llvm.signext})
+// CIR-LABEL: cir.func {{.*}} @takeM(%arg0: !cir.ptr<!rec_M> {llvm.align = 16 : i64, llvm.byval = !rec_M, llvm.noundef} loc({{[^)]+}})) -> !s8i
 // CIR:   %[[M:.+]] = cir.alloca "m" align(16) init : !cir.ptr<!rec_M>
 // CIR:   cir.copy %arg0 align(16) to %[[M]] align(16) : !cir.ptr<!rec_M>
 
-// LLVM-LABEL: define dso_local signext i8 @takeM(ptr noundef byval(%union.M) align 16 %{{[^,)]+}})
+// LLVM-LABEL: define dso_local i8 @takeM(ptr noundef byval(%union.M) align 16 %{{[^,)]+}})
 
 // NOMOVE-LABEL: define {{.*}}@takeM(
 // NOMOVE-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<[0-9]+ x x86_fp80>|<?\{ ?x86_fp80|%struct\.|%union\.)}}
@@ -550,13 +550,13 @@ void storeM(union M *q, const union M *p) { *q = retM(p); }
 
 char passM(const union M *p) { return takeM(*p); }
 
-// CIR-LABEL: cir.func {{.*}} @passM(%arg0: !cir.ptr<!rec_M> {llvm.noundef} loc({{[^)]+}})) -> (!s8i {llvm.signext})
+// CIR-LABEL: cir.func {{.*}} @passM(%arg0: !cir.ptr<!rec_M> {llvm.noundef} loc({{[^)]+}})) -> !s8i
 // CIR:   %[[BYVAL:.+]] = cir.alloca "byval" align(16) : !cir.ptr<!rec_M>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[BYVAL]] align(16) : !cir.ptr<!rec_M>
-// CIR:   cir.call @takeM(%[[BYVAL]]) : (!cir.ptr<!rec_M> {llvm.align = 16 : i64, llvm.byval = !rec_M, llvm.noundef}) -> (!s8i {llvm.signext})
+// CIR:   cir.call @takeM(%[[BYVAL]]) : (!cir.ptr<!rec_M> {llvm.align = 16 : i64, llvm.byval = !rec_M, llvm.noundef}) -> !s8i
 
-// LLVM-LABEL: define dso_local signext i8 @passM(ptr noundef %{{[^,)]+}})
-// LLVM:   call signext i8 @takeM(ptr noundef byval(%union.M) align 16 %{{[^,)]+}})
+// LLVM-LABEL: define dso_local i8 @passM(ptr noundef %{{[^,)]+}})
+// LLVM:   call i8 @takeM(ptr noundef byval(%union.M) align 16 %{{[^,)]+}})
 
 // NOMOVE-LABEL: define {{.*}}@passM(
 // NOMOVE-NOT: {{(load|store)( volatile| atomic)* (x86_fp80|<[0-9]+ x x86_fp80>|<?\{ ?x86_fp80|%struct\.|%union\.)}}

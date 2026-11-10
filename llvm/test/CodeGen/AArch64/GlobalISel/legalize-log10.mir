@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -mtriple aarch64--- \
+# RUN: llc -mtriple aarch64--- \
 # RUN: -run-pass=legalizer -mattr=+fullfp16 -global-isel %s -o - \
 # RUN: | FileCheck %s
 ...

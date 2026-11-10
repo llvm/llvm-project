@@ -1,4 +1,4 @@
-add_custom_target(libc-rpc-tests)
+add_libc_testsuite(libc-rpc-tests PARENT libc-support-tests)
 
 add_libc_test(
   rpc_smoke_test

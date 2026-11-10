@@ -1,3 +1,4 @@
+c-reference-root: thread
 functions:
   call_once:
     c-definition: 7.28.2.1
@@ -77,9 +78,11 @@ functions:
 macros:
   ONCE_FLAG_INIT:
     c-definition: 7.28.1
+    c-reference: thread/call_once
     in-latest-posix: ''
   TSS_DTOR_ITERATIONS:
     c-definition: 7.28.1
+    c-reference: thread/TSS_DTOR_ITERATIONS
     in-latest-posix: ''
   __STDC_NO_THREADS__:
     c-definition: 7.28.1

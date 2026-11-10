@@ -1,12 +1,16 @@
+c-reference-root: error/errno
 macros:
   EDOM:
     c-definition: '7.5'
+    c-reference: error/errno_macros
     in-latest-posix: ''
   EILSEQ:
     c-definition: '7.5'
+    c-reference: error/errno_macros
     in-latest-posix: ''
   ERANGE:
     c-definition: '7.5'
+    c-reference: error/errno_macros
     in-latest-posix: ''
   errno:
     c-definition: '7.5'

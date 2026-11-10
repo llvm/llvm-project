@@ -65,12 +65,12 @@ define void @tc5_forced_ic2_vectorize(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[WIDE_LOAD1]], splat (i32 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[B]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]

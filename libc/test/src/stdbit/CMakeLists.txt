@@ -1,4 +1,4 @@
-add_custom_target(libc-stdbit-tests)
+add_libc_testsuite(libc-stdbit-tests)
 
 set(prefixes
   leading_zeros

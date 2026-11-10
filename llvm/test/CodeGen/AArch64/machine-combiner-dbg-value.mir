@@ -37,7 +37,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
   ; CHECK-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[COPY]], [[COPY]], implicit $fpcr
   ; CHECK-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[COPY1]], [[COPY]], implicit $fpcr
-  ; CHECK-NEXT:   [[FADDSrr2:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[FADDSrr]], killed [[FADDSrr1]], implicit $fpcr
+  ; CHECK-NEXT:   [[FADDSrr2:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[FADDSrr]], [[FADDSrr1]], implicit $fpcr
   ; CHECK-NEXT:   [[FADDSrr3:%[0-9]+]]:fpr32 = nsz reassoc FADDSrr [[FADDSrr2]], [[COPY1]], implicit $fpcr
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[FADDSrr3]]
   ; CHECK-NEXT: {{  $}}

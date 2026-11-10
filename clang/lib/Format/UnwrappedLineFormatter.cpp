@@ -226,10 +226,17 @@ public:
         if (Next[i + 1]->First->NewlinesBefore > 0)
           MergedLines = 0;
     }
-    for (unsigned i = 0; i <= MergedLines; ++i) {
-      if (cannotMergeMacroLine(Next[i])) {
-        MergedLines = 0;
-        break;
+    if (MergedLines > 0) {
+      bool MergingEmptyBlock = MergedLines == 1 &&
+                               Next[0]->endsWith(tok::l_brace) &&
+                               Next[1]->startsWith(tok::r_brace);
+      for (unsigned i = 0; i <= MergedLines; ++i) {
+        if (cannotMergeMacroLine(Next[i],
+                                 /*AllowMultiLine=*/i == 0 &&
+                                     MergingEmptyBlock)) {
+          MergedLines = 0;
+          break;
+        }
       }
     }
     if (!DryRun)
@@ -288,6 +295,20 @@ private:
                                 TT_UnionLBrace)) {
       if (unsigned MergedLines = tryMergeRecord(I, E, Limit))
         return MergedLines;
+    }
+
+    // Optionally merge preceding `break` or `[[fallthrough]]` with case label
+    // when at compatible levels, preserving label's indent.
+    if (Style.CompactCaseLabels &&
+        NextLine.First->isOneOf(tok::kw_case, tok::kw_default) &&
+        TheLine->Level <= NextLine.Level + 1 &&
+        canJoinWithCaseLabel(TheLine, *NextLine.First)) {
+      IndentTracker.nextLine(NextLine);
+      unsigned MergedLinesInCaseBody =
+          Style.AllowShortCaseLabelsOnASingleLine
+              ? tryMergeShortCaseLabels(I + 1, E, Limit)
+              : 0;
+      return 1 + MergedLinesInCaseBody;
     }
 
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
@@ -672,6 +693,19 @@ private:
     return 0;
   }
 
+  bool canJoinWithCaseLabel(const AnnotatedLine *Line,
+                            const FormatToken &LabelTok) {
+    if (Line->endsWith(tok::semi, tok::kw_break))
+      return true;
+
+    if (Line->startsWith(TT_AttributeLSquare) &&
+        Line->endsWith(tok::semi, TT_AttributeRSquare)) {
+      return !LabelTok.mustBreakAfterAttributes(Style);
+    }
+
+    return false;
+  }
+
   unsigned
   tryMergeSimplePPDirective(ArrayRef<AnnotatedLine *>::const_iterator I,
                             ArrayRef<AnnotatedLine *>::const_iterator E,
@@ -841,10 +875,16 @@ private:
           EndsWithComment) {
         return 0;
       }
+      const auto *J = I + 2 + NumStmts;
+      if (Style.CompactCaseLabels && J != E &&
+          (*J)->First->isOneOf(tok::kw_case, tok::kw_default) &&
+          canJoinWithCaseLabel(Line, *(*J)->First)) {
+        break;
+      }
+
       if (Line->First->is(tok::comment)) {
         if (Level != Line->Level)
           return 0;
-        const auto *J = I + 2 + NumStmts;
         for (; J != E; ++J) {
           Line = *J;
           if (Line->InPPDirective != InPPDirective)
@@ -1019,9 +1059,10 @@ private:
           Tok = Tok->Next;
         } while (Tok);
 
-        // Last, check that the third line starts with a closing brace.
+        // Last, check that the third line starts with a closing brace at the
+        // same level as the opening line.
         Tok = I[2]->First;
-        if (Tok->isNot(tok::r_brace))
+        if (Tok->isNot(tok::r_brace) || I[2]->Level != Line.Level)
           return 0;
 
         // Don't merge "if (a) { .. } else {".
@@ -1118,10 +1159,12 @@ private:
     return false;
   }
 
-  bool cannotMergeMacroLine(const AnnotatedLine *Line) {
+  bool cannotMergeMacroLine(const AnnotatedLine *Line, bool AllowMultiLine) {
     assert(Line->First);
     if (Line->Last->MacroParent)
       return true;
+    if (AllowMultiLine)
+      return false;
     for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next) {
       if (Tok->MacroParent && !Tok->Children.empty())
         return true;
@@ -1210,7 +1253,7 @@ public:
   /// Formats an \c AnnotatedLine and returns the penalty.
   ///
   /// If \p DryRun is \c false, directly applies the changes.
-  virtual unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  virtual uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                               unsigned FirstStartColumn, bool DryRun) = 0;
 
 protected:
@@ -1235,7 +1278,7 @@ protected:
   /// \c UnwrappedLineFormatter, where we only have two options for each token:
   /// break or don't break.
   bool formatChildren(LineState &State, bool NewLine, bool DryRun,
-                      unsigned &Penalty) {
+                      uint64_t &Penalty) {
     const FormatToken *LBrace = State.NextToken->getPreviousNonComment();
     bool HasLBrace = LBrace && LBrace->is(tok::l_brace) && LBrace->is(BK_Block);
     FormatToken &Previous = *State.NextToken->Previous;
@@ -1315,7 +1358,7 @@ public:
 
   /// Formats the line, simply keeping all of the input's line breaking
   /// decisions.
-  unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       unsigned FirstStartColumn, bool DryRun) override {
     assert(!DryRun);
     LineState State = Indenter->getInitialState(FirstIndent, FirstStartColumn,
@@ -1324,7 +1367,7 @@ public:
       bool Newline =
           Indenter->mustBreak(State) ||
           (Indenter->canBreak(State) && State.NextToken->NewlinesBefore > 0);
-      unsigned Penalty = 0;
+      uint64_t Penalty = 0;
       formatChildren(State, Newline, /*DryRun=*/false, Penalty);
       Indenter->addTokenToState(State, Newline, /*DryRun=*/false);
     }
@@ -1341,9 +1384,9 @@ public:
       : LineFormatter(Indenter, Whitespaces, Style, BlockFormatter) {}
 
   /// Puts all tokens into a single line.
-  unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       unsigned FirstStartColumn, bool DryRun) override {
-    unsigned Penalty = 0;
+    uint64_t Penalty = 0;
     LineState State =
         Indenter->getInitialState(FirstIndent, FirstStartColumn, &Line, DryRun);
     while (State.NextToken) {
@@ -1366,7 +1409,7 @@ public:
 
   /// Formats the line by finding the best line breaks with line lengths
   /// below the column limit.
-  unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+  uint64_t formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
                       unsigned FirstStartColumn, bool DryRun) override {
     LineState State =
         Indenter->getInitialState(FirstIndent, FirstStartColumn, &Line, DryRun);
@@ -1392,7 +1435,7 @@ private:
   /// In case of equal penalties, we want to prefer states that were inserted
   /// first. During state generation we make sure that we insert states first
   /// that break the line as late as possible.
-  typedef std::pair<unsigned, unsigned> OrderedPenalty;
+  typedef std::pair<uint64_t, unsigned> OrderedPenalty;
 
   /// An edge in the solution space from \c Previous->State to \c State,
   /// inserting a newline dependent on the \c NewLine.
@@ -1421,7 +1464,7 @@ private:
   /// to a state where all tokens are placed. Returns the penalty.
   ///
   /// If \p DryRun is \c false, directly applies the changes.
-  unsigned analyzeSolutionSpace(LineState &InitialState, bool DryRun) {
+  uint64_t analyzeSolutionSpace(LineState &InitialState, bool DryRun) {
     std::set<LineState *, CompareLineStatePointers> Seen;
 
     // Increasing count of \c StateNode items we have created. This is used to
@@ -1435,7 +1478,7 @@ private:
     Queue.push(QueueItem(OrderedPenalty(0, Count), RootNode));
     ++Count;
 
-    unsigned Penalty = 0;
+    uint64_t Penalty = 0;
 
     // While not empty, take first element and follow edges.
     while (!Queue.empty()) {
@@ -1491,7 +1534,7 @@ private:
   ///
   /// Assume the current state is \p PreviousNode and has been reached with a
   /// penalty of \p Penalty. Insert a line break if \p NewLine is \c true.
-  void addNextStateToQueue(unsigned Penalty, StateNode *PreviousNode,
+  void addNextStateToQueue(uint64_t Penalty, StateNode *PreviousNode,
                            bool NewLine, unsigned *Count, QueueType *Queue) {
     if (NewLine && !Indenter->canBreak(PreviousNode->State))
       return;
@@ -1519,7 +1562,7 @@ private:
       Best = Best->Previous;
     }
     for (const auto &Node : llvm::reverse(Path)) {
-      unsigned Penalty = 0;
+      uint64_t Penalty = 0;
       formatChildren(State, Node->NewLine, /*DryRun=*/false, Penalty);
       Penalty += Indenter->addTokenToState(State, Node->NewLine, false);
 
@@ -1539,7 +1582,7 @@ private:
 
 } // anonymous namespace
 
-unsigned UnwrappedLineFormatter::format(
+uint64_t UnwrappedLineFormatter::format(
     const SmallVectorImpl<AnnotatedLine *> &Lines, bool DryRun,
     int AdditionalIndent, bool FixBadIndentation, unsigned FirstStartColumn,
     unsigned NextStartColumn, unsigned LastStartColumn) {
@@ -1553,7 +1596,7 @@ unsigned UnwrappedLineFormatter::format(
     return CacheIt->second;
 
   assert(!Lines.empty());
-  unsigned Penalty = 0;
+  uint64_t Penalty = 0;
   LevelIndentTracker IndentTracker(Style, Keywords, Lines[0]->Level,
                                    AdditionalIndent);
   const AnnotatedLine *PrevPrevLine = nullptr;

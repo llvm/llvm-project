@@ -718,15 +718,14 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   using namespace Hexagon;
 
   static const MCPhysReg CtrlRegDecoderTable[] = {
-    /*  0 */  SA0,        LC0,        SA1,        LC1,
-    /*  4 */  P3_0,       C5,         M0,         M1,
-    /*  8 */  USR,        PC,         UGP,        GP,
-    /* 12 */  CS0,        CS1,        UPCYCLELO,  UPCYCLEHI,
-    /* 16 */  FRAMELIMIT, FRAMEKEY,   PKTCOUNTLO, PKTCOUNTHI,
-    /* 20 */  0,          0,          0,          0,
-    /* 24 */  0,          0,          0,          0,
-    /* 28 */  0,          0,          UTIMERLO,   UTIMERHI
-  };
+      /*  0 */ SA0,         LC0,      SA1,        LC1,
+      /*  4 */ P3_0,        C5,       M0,         M1,
+      /*  8 */ USR,         PC,       UGP,        GP,
+      /* 12 */ CS0,         CS1,      UPCYCLELO,  UPCYCLEHI,
+      /* 16 */ FRAMELIMIT,  FRAMEKEY, PKTCOUNTLO, PKTCOUNTHI,
+      /* 20 */ 0,           0,        0,          0,
+      /* 24 */ 0,           0,        0,          0,
+      /* 28 */ VFRAMELIMIT, VSP,      UTIMERLO,   UTIMERHI};
 
   if (RegNo >= std::size(CtrlRegDecoderTable))
     return MCDisassembler::Fail;
@@ -746,15 +745,14 @@ DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
   using namespace Hexagon;
 
   static const MCPhysReg CtrlReg64DecoderTable[] = {
-    /*  0 */  C1_0,       0,          C3_2,       0,
-    /*  4 */  C5_4,       0,          C7_6,       0,
-    /*  8 */  C9_8,       0,          C11_10,     0,
-    /* 12 */  CS,         0,          UPCYCLE,    0,
-    /* 16 */  C17_16,     0,          PKTCOUNT,   0,
-    /* 20 */  0,          0,          0,          0,
-    /* 24 */  0,          0,          0,          0,
-    /* 28 */  0,          0,          UTIMER,     0
-  };
+      /*  0 */ C1_0,   0, C3_2,     0,
+      /*  4 */ C5_4,   0, C7_6,     0,
+      /*  8 */ C9_8,   0, C11_10,   0,
+      /* 12 */ CS,     0, UPCYCLE,  0,
+      /* 16 */ C17_16, 0, PKTCOUNT, 0,
+      /* 20 */ 0,      0, 0,        0,
+      /* 24 */ 0,      0, 0,        0,
+      /* 28 */ C29_28, 0, UTIMER,   0};
 
   if (RegNo >= std::size(CtrlReg64DecoderTable))
     return MCDisassembler::Fail;

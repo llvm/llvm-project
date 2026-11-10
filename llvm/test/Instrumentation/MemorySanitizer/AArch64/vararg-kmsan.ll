@@ -42,7 +42,7 @@ define i32 @foo(i32 %guard, ...) {
 
 ; Copy the remaining shadow values on the va_list::__stack position (it is
 ; on the constant offset of 192 from __msan_va_arg_tls).
-; CHECK: [[STACK:%.*]] = getelementptr inbounds i8, ptr {{%.*}}, i32 192
+; CHECK: [[STACK:%.*]] = getelementptr inbounds i8, ptr {{%.*}}, i64 192
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 {{%.*}}, ptr align 16 [[STACK]], i64 {{%.*}}, i1 false)
 
 declare void @llvm.lifetime.start.p0(ptr nocapture) #1

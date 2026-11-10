@@ -7361,7 +7361,7 @@ multiclass VRINT_FPI<string op, bits<3> op9_7, SDPatternOperator Int> {
 }
 
 defm VRINTNN : VRINT_FPI<"n", 0b000, any_froundeven>;
-defm VRINTXN : VRINT_FPI<"x", 0b001, any_frint>;
+defm VRINTXN : VRINT_FPI<"x", 0b001, frint>; // vector VRINTX ignores FPSCR.RM
 defm VRINTAN : VRINT_FPI<"a", 0b010, any_fround>;
 defm VRINTZN : VRINT_FPI<"z", 0b011, any_ftrunc>;
 defm VRINTMN : VRINT_FPI<"m", 0b101, any_ffloor>;

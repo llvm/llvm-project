@@ -34,7 +34,7 @@
 ; FIXME: s390x crashes
 ; FIXME: ve crashes
 ; FIXME: wasm crashes
-; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,BAD %}
+; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=i686-unknown-linux-gnu          | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-pc-windows-msvc          | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if x86-registered-target         %{ llc %s -o - -mtriple=x86_64-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if xcore-registered-target       %{ llc %s -o - -mtriple=xcore-unknown-unknown           | FileCheck %s --check-prefixes=ALL,CHECK %}
@@ -63,7 +63,6 @@ define i16 @to_bits(bfloat %f) nounwind {
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
 ; CHECK-NOT: __gnu
-; BAD:       __truncsfbf2
     %bits = bitcast bfloat %f to i16
     ret i16 %bits
 }

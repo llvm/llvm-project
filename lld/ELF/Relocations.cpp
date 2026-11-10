@@ -244,7 +244,7 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
   uint16_t versionId = sym.versionId;
-  Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
+  Defined(sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
@@ -361,7 +361,7 @@ public:
         ++i;
       if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
         Err(ctx) << ".eh_frame: relocation is not in any piece";
-        return 0;
+        return -1;
       }
       it = i;
     }
@@ -1143,33 +1143,31 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    auto type = it->getType(false);
-    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  for (const RelTy &rel : rels) {
+    RelType type = rel.getType(false);
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelExpr expr = getRelExpr(type, sym, sec.content().data() + offset);
+
+    // Error if the target symbol is undefined. Symbol index 0 may be used by
+    // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    rs.process(expr, type, offset, sym, rs.getAddend<ELFT>(rel, type));
   }
 }
 
-template <class ELFT>
-void TargetInfo::scanSection1(InputSectionBase &sec, unsigned shard) {
-  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
-  if (rels.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, rels.crels, shard);
-  else if (rels.areRelocsRel())
-    scanSectionImpl<ELFT>(sec, rels.rels, shard);
-  else
-    scanSectionImpl<ELFT>(sec, rels.relas, shard);
-}
-
 void TargetInfo::scanSection(InputSectionBase &sec, unsigned shard) {
-  invokeELFT(scanSection1, sec, shard);
+  invokeELFT(elf::scanSection1, *this, sec, shard);
 }
 
 void RelocScan::scanEhSection(EhInputSection &s) {
   sec = &s;
   OffsetGetter getter(s);
-  auto rels = s.rels;
-  s.relocations.reserve(rels.size());
-  for (auto &r : rels) {
+  s.relocations.reserve(s.rels.size());
+  for (const Relocation &r : s.rels) {
     // Ignore R_*_NONE and other marker relocations.
     if (r.expr == R_NONE)
       continue;
@@ -1199,12 +1197,13 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
                           ? 1
                           : std::min<size_t>(ctx.arg.threadCount, numFiles + 1);
   parallelFor(0, numWorkers, [&](unsigned shard) {
-    // Tasks claim work items off a shared counter: item i < numFiles scans
-    // ctx.objectFiles[i] while the last item scans special sections.
+    // Tasks claim work items off a shared counter: item 0 scans special
+    // sections (claimed first since .eh_frame is large) while item i scans
+    // ctx.objectFiles[i - 1].
     for (size_t i;
          (i = next.fetch_add(1, std::memory_order_relaxed)) <= numFiles;) {
-      if (i != numFiles) {
-        for (InputSectionBase *s : ctx.objectFiles[i]->getSections())
+      if (i != 0) {
+        for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
           if (s && s->kind() == SectionBase::Regular && s->isLive() &&
               (s->flags & SHF_ALLOC) &&
               !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))

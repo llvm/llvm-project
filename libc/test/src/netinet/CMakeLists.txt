@@ -1,11 +1,11 @@
-add_custom_target(libc_netinet_unittests)
+add_libc_testsuite(libc-netinet-tests)
 
 add_subdirectory(ether)
 
 add_libc_test(
   in_test
   SUITE
-    libc_netinet_unittests
+    libc-netinet-tests
   SRCS
     in_test.cpp
   DEPENDS
@@ -30,7 +30,7 @@ add_libc_test(
 add_libc_test(
   udp_test
   SUITE
-    libc_netinet_unittests
+    libc-netinet-tests
   SRCS
     udp_test.cpp
   DEPENDS

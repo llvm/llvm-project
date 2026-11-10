@@ -1049,6 +1049,14 @@ struct CompileUnit {
 
   /// Path of compile unit.
   String compileUnitPath;
+
+  /// The language of the compile unit, with its version where known, for
+  /// example `c11` or `c++17`.
+  std::optional<String> language;
+
+  /// True if the compile unit was compiled with optimization, false if it was
+  /// unoptimized or unknown. Optional so a debugger can omit it when unknown.
+  std::optional<bool> isOptimized;
 };
 llvm::json::Value toJSON(const CompileUnit &);
 
@@ -1123,6 +1131,9 @@ struct StackFrame {
   /// defaults to `true` if the property is absent.
   bool canRestart = false;
 
+  /// True if the frame is optimized.
+  bool isOptimized = false;
+
   /// A memory reference for the current instruction pointer in this frame.
   lldb::addr_t instructionPointerReference = LLDB_INVALID_ADDRESS;
 
@@ -1131,6 +1142,11 @@ struct StackFrame {
 
   /// The compile unit associated with this frame, if any.
   std::optional<uint32_t> compileUnitId;
+
+  /// What the language runtime of the frame's compile unit reports about the
+  /// frame, as returned by `SBFrame::GetLanguageSpecificData`. The keys are
+  /// defined by each runtime. Omitted if the runtime reports nothing.
+  std::optional<llvm::json::Value> languageSpecificData;
 
   /// A hint for how to present this frame in the UI. A value of `label` can be
   /// used to indicate that the frame is an artificial frame that is used as a

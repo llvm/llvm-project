@@ -635,11 +635,10 @@ define hidden void @i32_i8_madd(ptr noalias nofree noundef writeonly captures(no
 ; CHECK-NEXT:    local.get 9
 ; CHECK-NEXT:    local.get 7
 ; CHECK-NEXT:    v128.load32_zero 0:p2align=0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    v128.load32_zero 0:p2align=0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    v128.load32_zero 0:p2align=0
 ; CHECK-NEXT:    i16x8.extend_low_i8x16_s
@@ -653,13 +652,12 @@ define hidden void @i32_i8_madd(ptr noalias nofree noundef writeonly captures(no
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0:p2align=0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.get 6
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0:p2align=0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 8
 ; CHECK-NEXT:    i32.const 4
 ; CHECK-NEXT:    i32.add

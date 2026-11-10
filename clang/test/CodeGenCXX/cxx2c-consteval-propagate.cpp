@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -std=c++20 -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -std=c++20 -triple x86_64-unknown-linux-gnu -o - | FileCheck %s %}
 
 namespace GH63742 {
 

@@ -1,3 +1,4 @@
+c-reference-root: string/byte
 functions:
   isalnum:
     c-definition: 7.4.1.1

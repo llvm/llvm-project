@@ -7,38 +7,38 @@ define dso_local arm_aapcscc void @complex_dot_prod(ptr nocapture readonly %pSrc
 ; CHECK-LLC-LABEL: complex_dot_prod:
 ; CHECK-LLC:       @ %bb.0: @ %entry
 ; CHECK-LLC-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; CHECK-LLC-NEXT:    ldr r5, [r0]
-; CHECK-LLC-NEXT:    ldr r7, [r1]
-; CHECK-LLC-NEXT:    ldr.w r10, [r0, #4]
-; CHECK-LLC-NEXT:    ldr.w r8, [r0, #8]
-; CHECK-LLC-NEXT:    ldr.w r12, [r0, #12]
-; CHECK-LLC-NEXT:    ldr r4, [r1, #4]
-; CHECK-LLC-NEXT:    ldr.w r9, [r1, #8]
-; CHECK-LLC-NEXT:    ldr.w lr, [r1, #12]
+; CHECK-LLC-NEXT:    ldr.w r12, [r0]
+; CHECK-LLC-NEXT:    ldr r5, [r1]
+; CHECK-LLC-NEXT:    ldr.w lr, [r0, #4]
+; CHECK-LLC-NEXT:    ldr.w r10, [r0, #8]
+; CHECK-LLC-NEXT:    ldr.w r8, [r0, #12]
+; CHECK-LLC-NEXT:    ldr r6, [r1, #4]
+; CHECK-LLC-NEXT:    ldr r7, [r1, #8]
+; CHECK-LLC-NEXT:    ldr.w r9, [r1, #12]
 ; CHECK-LLC-NEXT:    movs r0, #0
 ; CHECK-LLC-NEXT:    movs r1, #0
-; CHECK-LLC-NEXT:    smlaldx r0, r1, r5, r7
-; CHECK-LLC-NEXT:    smulbb r6, r7, r5
-; CHECK-LLC-NEXT:    smultt r5, r7, r5
-; CHECK-LLC-NEXT:    asr.w r11, r6, #31
-; CHECK-LLC-NEXT:    subs r6, r6, r5
+; CHECK-LLC-NEXT:    smlaldx r0, r1, r12, r5
+; CHECK-LLC-NEXT:    smulbb r4, r5, r12
+; CHECK-LLC-NEXT:    smultt r5, r5, r12
+; CHECK-LLC-NEXT:    asr.w r11, r4, #31
+; CHECK-LLC-NEXT:    subs r4, r4, r5
 ; CHECK-LLC-NEXT:    sbc.w r5, r11, r5, asr #31
-; CHECK-LLC-NEXT:    smlaldx r0, r1, r10, r4
-; CHECK-LLC-NEXT:    smlalbb r6, r5, r4, r10
-; CHECK-LLC-NEXT:    smultt r4, r4, r10
-; CHECK-LLC-NEXT:    subs r6, r6, r4
-; CHECK-LLC-NEXT:    sbc.w r4, r5, r4, asr #31
-; CHECK-LLC-NEXT:    smlalbb r6, r4, r9, r8
-; CHECK-LLC-NEXT:    smultt r5, r9, r8
-; CHECK-LLC-NEXT:    subs r6, r6, r5
-; CHECK-LLC-NEXT:    sbc.w r4, r4, r5, asr #31
+; CHECK-LLC-NEXT:    smlaldx r0, r1, lr, r6
+; CHECK-LLC-NEXT:    smlalbb r4, r5, r6, lr
+; CHECK-LLC-NEXT:    smultt r6, r6, lr
+; CHECK-LLC-NEXT:    subs r4, r4, r6
+; CHECK-LLC-NEXT:    sbc.w r6, r5, r6, asr #31
+; CHECK-LLC-NEXT:    smlaldx r0, r1, r10, r7
+; CHECK-LLC-NEXT:    smlalbb r4, r6, r7, r10
+; CHECK-LLC-NEXT:    smultt r7, r7, r10
+; CHECK-LLC-NEXT:    subs r5, r4, r7
+; CHECK-LLC-NEXT:    sbc.w r7, r6, r7, asr #31
+; CHECK-LLC-NEXT:    smlalbb r5, r7, r9, r8
+; CHECK-LLC-NEXT:    smultt r6, r9, r8
 ; CHECK-LLC-NEXT:    smlaldx r0, r1, r8, r9
-; CHECK-LLC-NEXT:    smlalbb r6, r4, lr, r12
-; CHECK-LLC-NEXT:    smultt r7, lr, r12
-; CHECK-LLC-NEXT:    smlaldx r0, r1, r12, lr
-; CHECK-LLC-NEXT:    subs r6, r6, r7
-; CHECK-LLC-NEXT:    sbc.w r7, r4, r7, asr #31
-; CHECK-LLC-NEXT:    lsrs r6, r6, #6
+; CHECK-LLC-NEXT:    subs r5, r5, r6
+; CHECK-LLC-NEXT:    sbc.w r7, r7, r6, asr #31
+; CHECK-LLC-NEXT:    lsrs r6, r5, #6
 ; CHECK-LLC-NEXT:    lsrs r0, r0, #6
 ; CHECK-LLC-NEXT:    orr.w r7, r6, r7, lsl #26
 ; CHECK-LLC-NEXT:    orr.w r0, r0, r1, lsl #26

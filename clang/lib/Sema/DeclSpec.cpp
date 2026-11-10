@@ -905,6 +905,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
 
   if (isPipe) {
     TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
+    TQ_pipeLoc = Loc;
   }
   return false;
 }

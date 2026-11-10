@@ -518,6 +518,10 @@ public:
   void handleAttrWithDelayedArgs(Sema &S, Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Stmt *St) const;
+  // This function stub exists for parity with the declaration and statement
+  // checking code so that checkCommonAttributeFeatures() can work generically
+  // on types.
+  bool diagnoseAppertainsTo(class Sema &S, QualType T) const { return true; }
   bool diagnoseMutualExclusion(class Sema &S, const Decl *D) const;
   // This function stub exists for parity with the declaration checking code so
   // that checkCommonAttributeFeatures() can work generically on declarations
@@ -525,6 +529,10 @@ public:
   bool diagnoseMutualExclusion(class Sema &S, const Stmt *St) const {
     return true;
   }
+  // This function stub exists for parity with the declaration and statement
+  // checking code so that checkCommonAttributeFeatures() can work generically
+  // on types.
+  bool diagnoseMutualExclusion(class Sema &S, QualType T) const { return true; }
   bool appliesToDecl(const Decl *D, attr::SubjectMatchRule MatchRule) const;
   void getMatchRules(const LangOptions &LangOpts,
                      SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>>

@@ -303,6 +303,27 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+bool RISCVTTIImpl::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  if (!ST->hasStdExtZibi())
+    return false;
+
+  // Relational comparisons against zero and some adjacent constants can
+  // already lower to a single branch against x0.
+  const auto Pred = Cond.getPredicate();
+  const auto *C = dyn_cast<ConstantInt>(Cond.getOperand(1));
+  if (C && (C->isZero() ||
+            (C->isMinusOne() &&
+             (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE)) ||
+            (C->isOne() &&
+             (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE ||
+              Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE))))
+    return false;
+
+  int64_t Imm = PostIncExitValue.getSExtValue();
+  return Imm == -1 || (Imm >= 1 && Imm <= 31);
+}
+
 InstructionCost
 RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                   const APInt &Imm, Type *Ty,
@@ -3097,6 +3118,9 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
+    if (ISDOpcode == ISD::MUL && !ST->hasStdExtZmmul())
+      return TTI::TCC_Expensive * LT.first;
+
     static const CostTblEntry DivTbl[]{
         {ISD::UDIV, MVT::i32, TTI::TCC_Expensive},
         {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},
@@ -4022,6 +4046,18 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
     return false;
 
   return BaseT::shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
+}
+
+bool RISCVTTIImpl::areInlineCompatible(const Function *Caller,
+                                       const Function *Callee) const {
+  // riscv_new is the only function that can be called in an non-attributed
+  // function, we need to prevent inlining this kind of function in case any
+  // compiler generated non-attributed call in attributed function is inlined so
+  // it passes the check silently.
+  if (Callee->hasFnAttribute("riscv_new"))
+    return false;
+
+  return BaseT::areInlineCompatible(Caller, Callee);
 }
 
 std::optional<Instruction *>

@@ -267,6 +267,25 @@ public:
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
+    // See
+    // https://www.ibm.com/docs/en/hla-and-tf/1.6.0?topic=statements-amode-instruction#amode__modcomb,
+    // Table 2. HLASM sets the AMODE based on the RMODE if no AMODE is given.
+    GOFF::ESDAmode Amode;
+    switch (EDAttr.Rmode) {
+    case GOFF::ESD_RMODE_24:
+      Amode = GOFF::ESD_AMODE_24;
+      break;
+    case GOFF::ESD_RMODE_31:
+      Amode = GOFF::ESD_AMODE_31;
+      break;
+    case GOFF::ESD_RMODE_64:
+      Amode = GOFF::ESD_AMODE_64;
+      break;
+    default:
+      Amode = GOFF::ESD_AMODE_None;
+      break;
+    }
+    BehavAttrs.setAmode(Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
   }
@@ -795,6 +814,19 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
   if (B) {
     FixedValue -= B->isTemporary() ? Asm->getSymbolOffset(*B) : 0;
     B->setUsedInReloc();
+  }
+
+  // The z/OS binder requires all ADCONs in C_WSA64 to be exactly 8 bytes; a
+  // sub-pointer-width address constant in the writable static area cannot be
+  // relocated by the binder (it would produce IEW2572E at bind time).
+  if ((RelocType == MCGOFFObjectTargetWriter::Reloc_Type_ACon ||
+       RelocType == MCGOFFObjectTargetWriter::Reloc_Type_VCon) &&
+      Length != 8 && PSection->getParent() &&
+      PSection->getParent()->getName() == GOFF::CLASS_WSA) {
+    Asm->reportError(Fixup.getLoc(),
+                     "address constant in C_WSA64 must be 8 bytes "
+                     "(z/OS binder restriction IEW2572E)");
+    return;
   }
 
   // UseQCon causes class offsets versus absolute addresses to be used. This

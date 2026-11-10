@@ -10,5 +10,5 @@ add_lldb_library(lldbPluginObjectFileMachO PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginProcessUtility
+    lldbPluginRegisterDarwin
   )
