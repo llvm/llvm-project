@@ -18,6 +18,7 @@
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialectDecl.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
@@ -912,6 +913,156 @@ struct TestVectorShuffleLowering
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
+
+/// Test pass to show which canonicalizations of vector.transpose,
+/// vector.broadcast and vector.shape_cast drop per-dim information. It
+/// attaches a `test.dim_map` attribute to these ops and to each return. The
+/// attribute says where the information of each dim comes from:
+///   * d1: argument dim d1.
+///   * n: a new dim, added by a broadcast or a shape_cast.
+///   * 0: undefined.
+struct TestVectorDimInfoPropagation
+    : public PassWrapper<TestVectorDimInfoPropagation,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDimInfoPropagation)
+
+  static constexpr StringLiteral kDimMapAttrName = "test.dim_map";
+  static constexpr StringLiteral kNewDimInfo = "n";
+  static constexpr StringLiteral kUndefDimInfo = "0";
+
+  StringRef getArgument() const final {
+    return "test-vector-dim-info-propagation";
+  }
+  StringRef getDescription() const final {
+    return "Attach a 'test.dim_map' attribute to vector ops and returns to "
+           "show which canonicalizations drop per-dim information";
+  }
+
+  /// Returns the dim map of `dimInfos` as a string, such as "(n, d1, d0)".
+  static std::string getDimMap(ArrayRef<std::string> dimInfos) {
+    return "(" + llvm::join(dimInfos, ", ") + ")";
+  }
+
+  /// Returns the dim information of a shape_cast result. A shape_cast only
+  /// defines the order of the elements, so:
+  ///   * Non-unit dims keep their information if they are the same on both
+  ///     sides. Otherwise all information is undefined.
+  ///   * Unit dims are new if the source has none: (d0) to (d0, n).
+  ///   * The unit dim keeps its information if both sides have one:
+  ///     (d0, d1) to (d1, d0).
+  ///   * Other unit dims are undefined: (d0, d1) to (d0, 0, 0).
+  static SmallVector<std::string>
+  propagateThroughShapeCast(ArrayRef<std::string> sourceInfos,
+                            ArrayRef<int64_t> sourceShape,
+                            ArrayRef<int64_t> resultShape) {
+    SmallVector<std::string> resultInfos(resultShape.size(),
+                                         kUndefDimInfo.str());
+
+    auto isNonUnitDim = [](int64_t dimSize) { return dimSize != 1; };
+
+    if (!llvm::equal(llvm::make_filter_range(sourceShape, isNonUnitDim),
+                     llvm::make_filter_range(resultShape, isNonUnitDim)))
+      return resultInfos;
+
+    SmallVector<std::string> nonUnitDimInfos, unitDimInfos;
+
+    for (auto [info, dimSize] : llvm::zip_equal(sourceInfos, sourceShape))
+      (isNonUnitDim(dimSize) ? nonUnitDimInfos : unitDimInfos).push_back(info);
+
+    bool addsUnitDims = unitDimInfos.empty();
+    bool movesUnitDim =
+        unitDimInfos.size() == 1 && llvm::count(resultShape, 1) == 1;
+    auto nonUnitDimInfoIt = nonUnitDimInfos.begin();
+
+    for (auto [dim, dimSize] : llvm::enumerate(resultShape)) {
+      if (isNonUnitDim(dimSize))
+        resultInfos[dim] = *nonUnitDimInfoIt++;
+      else if (addsUnitDims)
+        resultInfos[dim] = kNewDimInfo.str();
+      else if (movesUnitDim)
+        resultInfos[dim] = unitDimInfos.front();
+    }
+
+    return resultInfos;
+  }
+
+  void runOnOperation() override {
+    func::FuncOp func = getOperation();
+
+    // The dims of the vector arguments are d0, d1, ... in order.
+    DenseMap<Value, SmallVector<std::string>> valueToDimInfos;
+    unsigned numArgDims = 0;
+
+    for (BlockArgument arg : func.getArguments()) {
+      auto vectorType = dyn_cast<VectorType>(arg.getType());
+
+      if (!vectorType)
+        continue;
+
+      SmallVector<std::string> &dimInfos = valueToDimInfos[arg];
+
+      for (int64_t dim = 0, rank = vectorType.getRank(); dim < rank; ++dim)
+        dimInfos.push_back(("d" + Twine(numArgDims++)).str());
+    }
+
+    func.walk([&](Operation *op) {
+      // TODO: Propagate the dim information through other ops when needed.
+      if (!isa<vector::TransposeOp, vector::BroadcastOp, vector::ShapeCastOp>(
+              op))
+        return;
+
+      auto sourceInfosIt = valueToDimInfos.find(op->getOperand(0));
+
+      if (sourceInfosIt == valueToDimInfos.end())
+        return;
+
+      ArrayRef<std::string> sourceInfos = sourceInfosIt->second;
+      SmallVector<std::string> resultInfos;
+
+      if (auto transposeOp = dyn_cast<vector::TransposeOp>(op)) {
+        resultInfos =
+            applyPermutation(sourceInfos, transposeOp.getPermutation());
+      } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
+        // The leading dims are new. The other dims keep their information,
+        // expanded or not.
+        size_t numNewDims =
+            broadcastOp.getResultVectorType().getRank() - sourceInfos.size();
+
+        resultInfos.assign(numNewDims, kNewDimInfo.str());
+        llvm::append_range(resultInfos, sourceInfos);
+      } else {
+        auto shapeCastOp = cast<vector::ShapeCastOp>(op);
+
+        resultInfos = propagateThroughShapeCast(
+            sourceInfos, shapeCastOp.getSourceVectorType().getShape(),
+            shapeCastOp.getResultVectorType().getShape());
+      }
+
+      op->setAttr(kDimMapAttrName,
+                  StringAttr::get(&getContext(), getDimMap(resultInfos)));
+      valueToDimInfos[op->getResult(0)] = std::move(resultInfos);
+    });
+
+    // Attach the dim maps of the tracked operands to each return.
+    func.walk([&](func::ReturnOp returnOp) {
+      SmallVector<std::string> dimMaps;
+
+      for (Value operand : returnOp.getOperands()) {
+        auto dimInfosIt = valueToDimInfos.find(operand);
+
+        if (dimInfosIt != valueToDimInfos.end())
+          dimMaps.push_back(getDimMap(dimInfosIt->second));
+      }
+
+      if (dimMaps.empty())
+        return;
+
+      returnOp->setAttr(
+          kDimMapAttrName,
+          StringAttr::get(&getContext(), llvm::join(dimMaps, ", ")));
+    });
+  }
+};
 } // namespace
 
 namespace mlir {
@@ -956,6 +1107,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestFoldArithExtensionIntoVectorContractPatterns>();
 
   PassRegistration<TestVectorEmulateMaskedLoadStore>();
+
+  PassRegistration<TestVectorDimInfoPropagation>();
 }
 } // namespace test
 } // namespace mlir
