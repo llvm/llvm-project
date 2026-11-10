@@ -12,13 +12,38 @@ target datalayout = "p270:32:32-ni:2"
 define void @stencil_merged_group_addrspace_0_and_1(ptr %a, ptr addrspace(1) %b, i64 %s, i64 %n) {
 ; CHECK-LABEL: 'stencil_merged_group_addrspace_0_and_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.b.cast.plus.s = getelementptr inbounds i32, ptr %gep.b.cast, i64 %s
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.b.plus.s = getelementptr inbounds i32, ptr addrspace(1) %gep.b, i64 %s
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr addrspace(1) %b, i64 %iv
+; CHECK-NEXT:          %gep.b.minus.s = getelementptr inbounds i32, ptr addrspace(1) %gep.b, i64 %neg.s
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((4 * %s)<nsw> + %b.cast) High: ((4 * %s)<nsw> + (4 * %n) + %b.cast))
+; CHECK-NEXT:            Member: {((4 * %s)<nsw> + %b.cast),+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((-4 * %s) + %b) High: ((4 * %s)<nsw> + (4 * %n) + %b))
+; CHECK-NEXT:            Member: {((4 * %s)<nsw> + %b),+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
+; CHECK-NEXT:            Member: {((-4 * %s) + %b),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Compare predicate: %s sgt) 0
+; CHECK-NEXT:      Compare predicate: %s sle) 1152921504606846975
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -98,10 +123,37 @@ exit:
 define void @stencil_members_noop_addrspace_casts(ptr %a, ptr %b, i64 %s, i64 %n) {
 ; CHECK-LABEL: 'stencil_members_noop_addrspace_casts'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.b.minus.s = getelementptr inbounds i32, ptr %gep.b, i64 %neg.s
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.b.as1.plus.s = getelementptr inbounds i32, ptr addrspace(1) %gep.b.as1, i64 %s
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
+; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((-4 * %s) + %b) High: ((4 * %n) + (-4 * %s) + %b))
+; CHECK-NEXT:            Member: {((-4 * %s) + %b),+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: ((4 * %s)<nsw> + %b.as1) High: ((4 * %s)<nsw> + (4 * %n) + %b.as1))
+; CHECK-NEXT:            Member: {((4 * %s)<nsw> + %b.as1),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
