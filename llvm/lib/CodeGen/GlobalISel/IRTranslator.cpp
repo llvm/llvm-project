@@ -5139,6 +5139,15 @@ static bool checkForMustTailInVarArgFn(bool IsVarArg, const BasicBlock &BB) {
   });
 }
 
+/// Returns true if a BasicBlock \p BB contains a call to a function that can
+/// return twice.
+static bool checkForReturnsTwiceCall(const BasicBlock &BB) {
+  return llvm::any_of(BB, [](const Instruction &I) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    return CB && CB->hasFnAttr(Attribute::ReturnsTwice);
+  });
+}
+
 bool IRTranslatorImpl::runOnMachineFunction(
     MachineFunction &CurMF, function_ref<GISelCSEInfo *()> GetCSEInfo,
     bool ShouldSkipOpts, function_ref<AAResults *()> GetAAResults,
@@ -5234,6 +5243,7 @@ bool IRTranslatorImpl::runOnMachineFunction(
 
   bool IsVarArg = F.isVarArg();
   bool HasMustTailInVarArgFn = false;
+  bool HasReturnsTwiceCall = false;
   // Use arguments and instructions to estimate the number of mapped values and
   // virtual registers.
   unsigned NumValues = F.arg_size();
@@ -5258,12 +5268,15 @@ bool IRTranslatorImpl::runOnMachineFunction(
 
     if (!HasMustTailInVarArgFn)
       HasMustTailInVarArgFn = checkForMustTailInVarArgFn(IsVarArg, BB);
+    if (!HasReturnsTwiceCall)
+      HasReturnsTwiceCall = checkForReturnsTwiceCall(BB);
   }
 
   VMap.reserveVRegs(NumValues);
   MRI->reserveVirtRegs(NumValues);
 
   MF->getFrameInfo().setHasMustTailInVarArgFunc(HasMustTailInVarArgFn);
+  MF->setExposesReturnsTwice(HasReturnsTwiceCall);
 
   // Make our arguments/constants entry block fallthrough to the IR entry block.
   EntryBB->addSuccessor(&getMBB(F.front()));
