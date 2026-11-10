@@ -1197,8 +1197,12 @@ InstructionCost PPCTTIImpl::getPartialReductionCost(
 
   if (AVT == MVT::v16i8) {
     // For v16i8 PPC supports vmsumubm (zext/zext) and vmsummbm (sext/zext)
-    if (OpBExtend != TTI::PR_ZeroExtend)
+    if (OpAExtend == TTI::PR_ZeroExtend && OpBExtend != TTI::PR_ZeroExtend)
       return Invalid;
+    // The (sext/sext) case will be custom lowered using multiply even/odd and
+    // v8i16 reductions.
+    if (OpBExtend == TTI::PR_SignExtend)
+      return 4 * vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
   } else if (AVT == MVT::v8i16) {
     // For v8i16 PPC supports vmsumuhm (zext/zext) and vmsumshm (sext/sext)
     if (OpAExtend != OpBExtend)
