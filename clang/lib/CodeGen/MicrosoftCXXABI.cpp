@@ -497,7 +497,7 @@ public:
 
   friend struct MSRTTIBuilder;
 
-  bool isImageRelative() const {
+  bool isRTTIImageRelative() const {
     return CGM.getTarget().getPointerWidth(LangAS::Default) == 64;
   }
 
@@ -506,7 +506,7 @@ public:
   // not.
   bool isThrowInfoImageRelative() const {
     const llvm::Triple &T = CGM.getTarget().getTriple();
-    return isImageRelative() || T.isARM() || T.isThumb();
+    return isRTTIImageRelative() || T.isARM() || T.isThumb();
   }
 
   // 5 routines for constructing the llvm types for MS RTTI structs.
@@ -527,7 +527,7 @@ public:
   }
 
   llvm::Type *getImageRelativeType(llvm::Type *PtrType) {
-    if (!isImageRelative())
+    if (!isRTTIImageRelative())
       return PtrType;
     return CGM.IntTy;
   }
@@ -572,7 +572,7 @@ public:
         getImageRelativeType(CGM.VoidTy),
     };
     llvm::ArrayRef<llvm::Type *> FieldTypesRef(FieldTypes);
-    if (!isImageRelative())
+    if (!isRTTIImageRelative())
       FieldTypesRef = FieldTypesRef.drop_back();
     CompleteObjectLocatorType =
         llvm::StructType::create(FieldTypesRef, "rtti.CompleteObjectLocator");
@@ -593,7 +593,7 @@ public:
   }
 
   llvm::Constant *getImageRelativeConstant(llvm::Constant *PtrVal) {
-    if (!isImageRelative())
+    if (!isRTTIImageRelative())
       return PtrVal;
     return getImageRelativeOffset(PtrVal);
   }
@@ -611,9 +611,6 @@ public:
   }
 
   llvm::Constant *getImageRelativeOffset(llvm::Constant *PtrVal) {
-    if (PtrVal->isNullValue())
-      return llvm::Constant::getNullValue(CGM.IntTy);
-
     llvm::Constant *ImageBaseAsInt =
         llvm::ConstantExpr::getPtrToInt(getImageBase(), CGM.IntPtrTy);
     llvm::Constant *PtrValAsInt =
@@ -3992,7 +3989,7 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo &Info) {
 
   // Initialize the CompleteObjectLocator.
   llvm::Constant *Fields[] = {
-      llvm::ConstantInt::get(CGM.IntTy, ABI.isImageRelative()),
+      llvm::ConstantInt::get(CGM.IntTy, ABI.isRTTIImageRelative()),
       llvm::ConstantInt::get(CGM.IntTy, OffsetToTop),
       llvm::ConstantInt::get(CGM.IntTy, VFPtrOffset),
       ABI.getImageRelativeConstant(
@@ -4001,7 +3998,7 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo &Info) {
       ABI.getImageRelativeConstant(COL),
   };
   llvm::ArrayRef<llvm::Constant *> FieldsRef(Fields);
-  if (!ABI.isImageRelative())
+  if (!ABI.isRTTIImageRelative())
     FieldsRef = FieldsRef.drop_back();
   COL->setInitializer(llvm::ConstantStruct::get(Type, FieldsRef));
   if (COL->isWeakForLinker())
@@ -4317,10 +4314,11 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
       CopyCtor = getAddrOfCXXCtorClosure(CD, Ctor_CopyingClosure);
     else
       CopyCtor = CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
+    CopyCtor = getThrowInfoRelativeConstant(CopyCtor);
   } else {
-    CopyCtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+    CopyCtor =
+        llvm::Constant::getNullValue(getThrowInfoRelativeType(CGM.Int8PtrTy));
   }
-  CopyCtor = getThrowInfoRelativeConstant(CopyCtor);
 
   bool IsScalar = !RD;
   bool HasVirtualBases = false;
@@ -4521,19 +4519,21 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
 
   // The cleanup-function (a destructor) must be called when the exception
   // object's lifetime ends.
-  llvm::Constant *CleanupFn = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  llvm::Constant *CleanupFn =
+      llvm::Constant::getNullValue(getThrowInfoRelativeType(CGM.Int8PtrTy));
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DtorD = RD->getDestructor())
       if (!DtorD->isTrivial())
-        CleanupFn = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
+        CleanupFn = getThrowInfoRelativeConstant(
+            CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete)));
   // This is unused as far as we can tell, initialize it to null.
   llvm::Constant *ForwardCompat =
-      getThrowInfoRelativeConstant(llvm::Constant::getNullValue(CGM.Int8PtrTy));
+      llvm::Constant::getNullValue(getThrowInfoRelativeType(CGM.Int8PtrTy));
   llvm::Constant *PointerToCatchableTypes = getThrowInfoRelativeConstant(CTA);
   llvm::StructType *TIType = getThrowInfoType();
   llvm::Constant *Fields[] = {
       llvm::ConstantInt::get(CGM.IntTy, Flags), // Flags
-      getThrowInfoRelativeConstant(CleanupFn),  // CleanupFn
+      CleanupFn,                                // CleanupFn
       ForwardCompat,                            // ForwardCompat
       PointerToCatchableTypes                   // CatchableTypeArray
   };
