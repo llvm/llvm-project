@@ -2380,7 +2380,9 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                             {3}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
-  setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
+  // NEON has no 64-bit multiply to form the byte indices.
+  if (VT.getScalarSizeInBits() < 64)
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -16314,30 +16316,13 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
   EVT IdxVT = VT.changeVectorElementTypeToInteger();
   SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
 
-  unsigned NumElts = VT.getVectorNumElements();
-  // The only in-range index is 0; any other index gives poison.
-  if (NumElts == 1)
-    return V;
-
-  if (NumElts == 2) {
-    // Select between V and V with its lanes swapped.
-    SDValue Keep =
-        DAG.getSetCC(DL, IdxVT, Idx, DAG.getStepVector(DL, IdxVT), ISD::SETEQ);
-    SDValue Swapped = DAG.getVectorShuffle(VT, DL, V, V, {1, 0});
-    return DAG.getNode(ISD::VSELECT, DL, VT, Keep, V, Swapped);
-  }
-
   // TBL indexes bytes. Multiplying by EltBytes splatted into each byte puts
   // Idx * EltBytes in every byte of the lane; adding <0, 1, ...> gives the
   // byte indices. In-range indices never carry between bytes.
-  unsigned EltBytes = VT.getScalarSizeInBits() / 8;
-  assert(EltBytes <= 4 && "Expected i64 elements to have at most 2 lanes");
-  if (EltBytes > 1) {
-    uint64_t RepEltBytes = 0, ByteOffsets = 0;
-    for (unsigned I = 0; I < EltBytes; ++I) {
-      RepEltBytes |= (uint64_t)EltBytes << (8 * I);
-      ByteOffsets |= (uint64_t)I << (8 * I);
-    }
+  unsigned EltBits = VT.getScalarSizeInBits();
+  if (EltBits > 8) {
+    APInt RepEltBytes = APInt::getSplat(EltBits, APInt(8, EltBits / 8));
+    APInt ByteOffsets = APInt(32, 0x03020100).trunc(EltBits);
     Idx = DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
                       DAG.getConstant(RepEltBytes, DL, IdxVT));
     Idx = DAG.getNode(ISD::ADD, DL, IdxVT, Idx,

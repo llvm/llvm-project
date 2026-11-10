@@ -192,23 +192,25 @@ define <2 x i32> @shuffle_v2i32(<2 x i32> %v, <2 x i32> %mask) nounwind {
 ;
 ; LE-LABEL: shuffle_v2i32:
 ; LE:       // %bb.0:
-; LE-NEXT:    mov x8, #4294967296 // =0x100000000
-; LE-NEXT:    rev64 v3.2s, v0.2s
-; LE-NEXT:    fmov d2, x8
-; LE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; LE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; LE-NEXT:    mov w8, #256 // =0x100
+; LE-NEXT:    movi v2.8b, #4
+; LE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; LE-NEXT:    movk w8, #770, lsl #16
+; LE-NEXT:    dup v3.2s, w8
+; LE-NEXT:    mla v3.2s, v1.2s, v2.2s
+; LE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v2i32:
 ; BE:       // %bb.0:
-; BE-NEXT:    rev64 v0.2s, v0.2s
+; BE-NEXT:    mov w8, #256 // =0x100
 ; BE-NEXT:    rev64 v1.2s, v1.2s
-; BE-NEXT:    adrp x8, .LCPI7_0
-; BE-NEXT:    add x8, x8, :lo12:.LCPI7_0
-; BE-NEXT:    ld1 { v2.2s }, [x8]
-; BE-NEXT:    rev64 v3.2s, v0.2s
-; BE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; BE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; BE-NEXT:    movi v2.8b, #4
+; BE-NEXT:    movk w8, #770, lsl #16
+; BE-NEXT:    rev64 v0.2s, v0.2s
+; BE-NEXT:    dup v3.2s, w8
+; BE-NEXT:    mla v3.2s, v1.2s, v2.2s
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v3.8b
 ; BE-NEXT:    rev64 v0.2s, v0.2s
 ; BE-NEXT:    ret
   %res = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %v, <2 x i32> %mask)
@@ -622,26 +624,28 @@ define <2 x i16> @shuffle_v2i16(<2 x i16> %v, <2 x i16> %mask) nounwind {
 ; LE-LABEL: shuffle_v2i16:
 ; LE:       // %bb.0:
 ; LE-NEXT:    movi d2, #0x00ffff0000ffff
-; LE-NEXT:    mov x8, #4294967296 // =0x100000000
-; LE-NEXT:    rev64 v3.2s, v0.2s
+; LE-NEXT:    mov w8, #256 // =0x100
+; LE-NEXT:    movi v3.8b, #4
+; LE-NEXT:    movk w8, #770, lsl #16
+; LE-NEXT:    // kill: def $d0 killed $d0 def $q0
+; LE-NEXT:    dup v4.2s, w8
 ; LE-NEXT:    and v1.8b, v1.8b, v2.8b
-; LE-NEXT:    fmov d2, x8
-; LE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; LE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; LE-NEXT:    mla v4.2s, v1.2s, v3.2s
+; LE-NEXT:    tbl v0.8b, { v0.16b }, v4.8b
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v2i16:
 ; BE:       // %bb.0:
 ; BE-NEXT:    movi d2, #0x00ffff0000ffff
 ; BE-NEXT:    rev64 v1.2s, v1.2s
-; BE-NEXT:    adrp x8, .LCPI12_0
-; BE-NEXT:    add x8, x8, :lo12:.LCPI12_0
+; BE-NEXT:    mov w8, #256 // =0x100
+; BE-NEXT:    movk w8, #770, lsl #16
+; BE-NEXT:    movi v3.8b, #4
 ; BE-NEXT:    rev64 v0.2s, v0.2s
+; BE-NEXT:    dup v4.2s, w8
 ; BE-NEXT:    and v1.8b, v1.8b, v2.8b
-; BE-NEXT:    ld1 { v2.2s }, [x8]
-; BE-NEXT:    rev64 v3.2s, v0.2s
-; BE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; BE-NEXT:    bif v0.8b, v3.8b, v1.8b
+; BE-NEXT:    mla v4.2s, v1.2s, v3.2s
+; BE-NEXT:    tbl v0.8b, { v0.16b }, v4.8b
 ; BE-NEXT:    rev64 v0.2s, v0.2s
 ; BE-NEXT:    ret
   %res = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %v, <2 x i16> %mask)
@@ -650,27 +654,9 @@ define <2 x i16> @shuffle_v2i16(<2 x i16> %v, <2 x i16> %mask) nounwind {
 
 define <1 x i32> @shuffle_v1i32(<1 x i32> %v, <1 x i32> %mask) nounwind {
 ;
-; LE-LABEL: shuffle_v1i32:
-; LE:       // %bb.0:
-; LE-NEXT:    mov x8, #4294967296 // =0x100000000
-; LE-NEXT:    rev64 v3.2s, v0.2s
-; LE-NEXT:    fmov d2, x8
-; LE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; LE-NEXT:    bif v0.8b, v3.8b, v1.8b
-; LE-NEXT:    ret
-;
-; BE-LABEL: shuffle_v1i32:
-; BE:       // %bb.0:
-; BE-NEXT:    rev64 v0.2s, v0.2s
-; BE-NEXT:    rev64 v1.2s, v1.2s
-; BE-NEXT:    adrp x8, .LCPI13_0
-; BE-NEXT:    add x8, x8, :lo12:.LCPI13_0
-; BE-NEXT:    ld1 { v2.2s }, [x8]
-; BE-NEXT:    rev64 v3.2s, v0.2s
-; BE-NEXT:    cmeq v1.2s, v1.2s, v2.2s
-; BE-NEXT:    bif v0.8b, v3.8b, v1.8b
-; BE-NEXT:    rev64 v0.2s, v0.2s
-; BE-NEXT:    ret
+; CHECK-LABEL: shuffle_v1i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
   %res = call <1 x i32> @llvm.vector.shuffle.v1i32.v1i32(<1 x i32> %v, <1 x i32> %mask)
   ret <1 x i32> %res
 }
