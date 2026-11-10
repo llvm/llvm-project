@@ -113,6 +113,24 @@ private:
   };
   llvm::SmallVector<SwitchState> switches;
 
+  /// Makes a switch the innermost one while it is in scope.
+  class SwitchScope {
+  public:
+    SwitchScope(FallOffAnalyzer &analyzer, bool entered)
+        : switches(analyzer.switches) {
+      switches.push_back({entered, /*hasDefault=*/false});
+    }
+    SwitchScope(const SwitchScope &) = delete;
+    SwitchScope &operator=(const SwitchScope &) = delete;
+    ~SwitchScope() { switches.pop_back(); }
+
+    /// Whether a default case was dispatched to so far.
+    bool hasDefault() const { return switches.back().hasDefault; }
+
+  private:
+    llvm::SmallVector<SwitchState> &switches;
+  };
+
   bool inEnteredSwitch() const {
     return !switches.empty() && switches.back().entered;
   }
@@ -537,17 +555,16 @@ Exits FallOffAnalyzer::visitLoop(LoopOpInterface loop, bool entered) {
 Exits FallOffAnalyzer::visitSwitch(SwitchOp op, bool entered) {
   // The switch body is entered through its cases only, so code ahead of the
   // first case is dead.
-  switches.push_back({entered, /*hasDefault=*/false});
+  SwitchScope scope(*this, entered);
   Exits bodyExits = visitRegion(op.getBody(), /*entered=*/false);
-  bool hasDefault = switches.pop_back_val().hasDefault;
 
-  // As in the CFG check, a switch listing every enumerator has no implicit
-  // default edge.
   // Breaks stop at the switch; continues and returns leave it.
   Exits exits = bodyExits & (Exits::Continue | Exits::ExplicitReturn |
                              Exits::ImplicitReturn);
+  // As in the CFG check, a switch listing every enumerator has no implicit
+  // default edge.
   if (mayExitVia(bodyExits, Exits::Normal | Exits::Break) ||
-      (entered && !hasDefault && !op.getAllEnumCasesCovered()))
+      (entered && !scope.hasDefault() && !op.getAllEnumCasesCovered()))
     exits |= Exits::Normal;
   return exits;
 }
