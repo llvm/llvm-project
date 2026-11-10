@@ -33,6 +33,10 @@ protected:
 public:
   OffloadTargetInfo(const llvm::Triple &Triple) : TargetInfo(Triple) {}
 
+  bool isValidCPUName(StringRef Name) const override {
+    return isSupportedOffloadArch(StringToOffloadArch(Name));
+  }
+
   bool setCPU(StringRef Name) override {
     OffloadArch Arch = StringToOffloadArch(Name);
     if (!isSupportedOffloadArch(Arch))
