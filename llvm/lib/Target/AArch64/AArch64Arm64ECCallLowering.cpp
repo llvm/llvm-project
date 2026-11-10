@@ -30,6 +30,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -106,10 +107,42 @@ private:
 
 } // end anonymous namespace
 
+[[noreturn]] static void reportUnsupportedScalableType() {
+  reportFatalUsageError("scalable types are not supported for Arm64EC thunks");
+}
+
+// Reject scalable return, parameter, and sret types before querying fixed
+// DataLayout alignments or sizes (heterogeneous scalable structs are unsized).
+static void checkNoScalableTypes(const FunctionType *FT, AttributeList Attrs) {
+  if (FT->getReturnType()->isScalableTy())
+    reportUnsupportedScalableType();
+  for (unsigned I = 0, E = FT->getNumParams(); I != E; ++I) {
+    if (FT->getParamType(I)->isScalableTy())
+      reportUnsupportedScalableType();
+    if (Type *SRetTy = Attrs.getParamStructRetType(I);
+        SRetTy && SRetTy->isScalableTy())
+      reportUnsupportedScalableType();
+  }
+}
+
+static void checkNoScalableTypes(const CallBase &CB) {
+  checkNoScalableTypes(CB.getFunctionType(), CB.getAttributes());
+  AttributeList Attrs = CB.getAttributes();
+  for (unsigned I = CB.getFunctionType()->getNumParams(), E = CB.arg_size();
+       I < E; ++I) {
+    if (CB.getArgOperand(I)->getType()->isScalableTy())
+      reportUnsupportedScalableType();
+    if (Type *SRetTy = Attrs.getParamStructRetType(I);
+        SRetTy && SRetTy->isScalableTy())
+      reportUnsupportedScalableType();
+  }
+}
+
 void AArch64Arm64ECCallLowering::getThunkType(
     FunctionType *FT, AttributeList AttrList, Arm64ECThunkType TT,
     raw_ostream &Out, FunctionType *&Arm64Ty, FunctionType *&X64Ty,
     SmallVector<ThunkArgTranslation> &ArgTranslations) {
+  checkNoScalableTypes(FT, AttrList);
   Out << (TT == Arm64ECThunkType::Entry ? "$ientry_thunk$cdecl$"
                                         : "$iexit_thunk$cdecl$");
 
@@ -297,6 +330,8 @@ void AArch64Arm64ECCallLowering::getThunkRetType(
 ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     Type *T, Align Alignment, bool Ret, uint64_t ArgSizeBytes,
     raw_ostream &Out) {
+  if (T->isScalableTy())
+    reportUnsupportedScalableType();
 
   auto direct = [](Type *T) {
     return ThunkArgInfo{T, T, ThunkArgTranslation::Direct};
@@ -358,7 +393,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
   if (T->isArrayTy()) {
     Type *ElementTy = T->getArrayElementType();
     uint64_t ElementCnt = T->getArrayNumElements();
-    uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
+    uint64_t ElementSizePerBytes =
+        DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
     if (ElementTy->isHalfTy() || ElementTy->isBFloatTy() ||
         ElementTy->isFloatTy() || ElementTy->isDoubleTy() ||
@@ -394,14 +430,15 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     }
   }
 
-  if ((T->isIntegerTy() || T->isPointerTy()) && DL.getTypeSizeInBits(T) <= 64) {
+  if ((T->isIntegerTy() || T->isPointerTy()) &&
+      DL.getTypeSizeInBits(T).getFixedValue() <= 64) {
     Out << "i8";
     return direct(I64Ty);
   }
 
   unsigned TypeSize = ArgSizeBytes;
   if (TypeSize == 0)
-    TypeSize = DL.getTypeSizeInBits(T) / 8;
+    TypeSize = DL.getTypeSizeInBits(T).getFixedValue() / 8;
   Out << "m";
   if (TypeSize != 4)
     Out << TypeSize;
@@ -473,7 +510,7 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
     // If the return type is an array or struct, translate it. Values of size
     // 8 or less go into RAX; bigger values go into memory, and we pass a
     // pointer.
-    if (DL.getTypeStoreSize(RetTy) > 8) {
+    if (DL.getTypeStoreSize(RetTy).getFixedValue() > 8) {
       Args.push_back(IRB.CreateAlloca(RetTy));
       X64TyOffset++;
     }
@@ -501,7 +538,8 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
       Value *Mem = IRB.CreateAlloca(Arg.getType());
       IRB.CreateStore(&Arg, Mem);
       if (ArgTranslation == ThunkArgTranslation::Bitcast) {
-        Type *IntTy = IRB.getIntNTy(DL.getTypeStoreSizeInBits(Arg.getType()));
+        Type *IntTy = IRB.getIntNTy(
+            DL.getTypeStoreSizeInBits(Arg.getType()).getFixedValue());
         Args.push_back(IRB.CreateLoad(IntTy, Mem));
       } else {
         assert(ArgTranslation == ThunkArgTranslation::PointerIndirection);
@@ -521,7 +559,7 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   if (RetTy != X64Ty->getReturnType()) {
     // If we rewrote the return type earlier, convert the return value to
     // the proper type.
-    if (DL.getTypeStoreSize(RetTy) > 8) {
+    if (DL.getTypeStoreSize(RetTy).getFixedValue() > 8) {
       RetVal = IRB.CreateLoad(RetTy, Args[1]);
     } else {
       Value *CastAlloca = IRB.CreateAlloca(RetTy);
@@ -779,6 +817,7 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
 
 // Lower an indirect call with inline code.
 void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
+  checkNoScalableTypes(*CB);
   IRBuilder<> B(CB);
   Value *CalledOperand = CB->getCalledOperand();
 
@@ -1038,6 +1077,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
             F->isIntrinsic() || !F->isDeclarationForLinker())
           continue;
 
+        checkNoScalableTypes(*CB);
         DirectCalledFns.insert(F);
         continue;
       }
@@ -1046,6 +1086,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
       if (GlobalAlias *A = dyn_cast<GlobalAlias>(CB->getCalledOperand())) {
         auto I = FnsMap.find(A);
         if (I != FnsMap.end()) {
+          checkNoScalableTypes(*CB);
           CB->setCalledOperand(I->second);
           DirectCalledFns.insert(I->first);
           continue;
