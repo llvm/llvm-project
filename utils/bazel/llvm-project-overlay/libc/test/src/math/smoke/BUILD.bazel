@@ -645,9 +645,6 @@ math_test(
     name = "exp2bf16",
     deps = [
         "//libc:__support_fputil_bfloat16",
-        "//libc:__support_fputil_fenv_impl",
-        "//libc:hdr_errno_macros",
-        "//libc:hdr_fenv_macros",
     ],
 )
 
