@@ -43638,12 +43638,14 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     // 32-bit targets have to bitcast i64 to f64, so better to bitcast upward.
     if (Src.getOpcode() == ISD::BITCAST &&
         SrcVT.getScalarSizeInBits() == BCVT.getScalarSizeInBits() &&
-        TLI.isTypeLegal(BCVT) &&
-        FixedVectorType::isValidElementType(
-            BCVT.getScalarType().getTypeForEVT(*DAG.getContext()))) {
-      EVT NewVT = EVT::getVectorVT(*DAG.getContext(), BCVT.getScalarType(),
+        TLI.isTypeLegal(BCVT)) {
+      MVT NewVT = MVT::getVectorVT(BCVT.getSimpleVT().getScalarType(),
                                    VT.getVectorNumElements());
-      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
+      // NewVT can be invalid (e.g. for x86mmx) or illegal (e.g. v16bf16 when
+      // only v8bf16 is legal).
+      if (TLI.isTypeLegal(NewVT))
+        return DAG.getBitcast(VT,
+                              DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
     }
 
     // vbroadcast(bitcast(vbroadcast(src))) -> bitcast(vbroadcast(src))
@@ -43658,7 +43660,9 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       MVT NewVT =
           MVT::getVectorVT(BCVT.getSimpleVT().getScalarType(),
                            VT.getSizeInBits() / BCVT.getScalarSizeInBits());
-      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
+      if (TLI.isTypeLegal(NewVT))
+        return DAG.getBitcast(VT,
+                              DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
     }
 
     // Reduce broadcast source vector to lowest 128-bits.
