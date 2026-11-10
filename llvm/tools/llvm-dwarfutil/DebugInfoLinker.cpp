@@ -148,11 +148,10 @@ public:
 
   bool needToSaveValidRelocs() override { return false; }
 
-  void updateAndSaveValidRelocs(bool, uint64_t, int64_t, uint64_t,
-                                uint64_t) override {}
-
-  void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                       uint64_t OutputUnitOffset) override {}
+  bool updateAndSaveValidRelocs(RelocSectionKind, RelocSectionKind, uint64_t,
+                                int64_t, uint64_t, uint64_t) override {
+    return false;
+  }
 
   void clear() override {}
 
