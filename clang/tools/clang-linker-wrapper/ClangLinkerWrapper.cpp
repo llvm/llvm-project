@@ -1513,7 +1513,10 @@ getDeviceInput(const ArgList &Args) {
       if (Rest && Rest->consume_front(":")) {
         Input = *Rest;
         IsWholeArchiveFile = true;
-      } else if (Rest || GetCOFFOptionValue(Input, "libpath:")) {
+      } else if ((Rest && Rest->empty()) ||
+                 GetCOFFOptionValue(Input, "libpath:")) {
+        // '/WHOLEARCHIVE' or '/LIBPATH:', both handled above. Anything else,
+        // e.g. '/wholearchive-dir/a.obj', is an input path.
         continue;
       }
     }

@@ -65,6 +65,11 @@
 // RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
 // RUN:   --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE:nope.lib \
 // RUN:   -o dev.obj 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=nope.lib
+// A path that starts like a COFF option is still an input.
+// RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --sycl-device-link --linker-path=link.exe /wholearchive-dir/missing.obj \
+// RUN:   -o dev.obj 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MISSING -DFILE=/wholearchive-dir/missing.obj
 
 // With --wrapper-verbose and --save-temps, the wrapping is still done
 // in-process, because the image must be embedded as finalized.
