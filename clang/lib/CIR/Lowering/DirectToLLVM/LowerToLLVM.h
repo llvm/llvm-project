@@ -104,6 +104,18 @@ mlir::LogicalResult lowerConstrainableFPOp(
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
 
+// Convert the value of a CIR attribute or property to the LLVM property that
+// a generated lowering forwards it to (`llvmOpProps`). The overload is picked
+// by the C++ type of the CIR value.
+mlir::LLVM::IntegerOverflowFlags
+convertToLLVMProperty(mlir::MLIRContext *ctx, cir::OverflowFlags flags);
+mlir::LLVM::FastmathFlagsAttr
+convertToLLVMProperty(mlir::MLIRContext *ctx,
+                      std::optional<cir::FastMathFlags> flags);
+mlir::IntegerAttr convertToLLVMProperty(mlir::MLIRContext *ctx,
+                                        cir::FPClassTest flags);
+mlir::IntegerAttr convertToLLVMProperty(mlir::MLIRContext *ctx, bool flag);
+
 #define GET_LLVM_LOWERING_PATTERNS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"
 #undef GET_LLVM_LOWERING_PATTERNS

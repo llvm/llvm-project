@@ -727,6 +727,23 @@ mlir::LogicalResult lowerConstrainableFPOp(
                                        fastmathFlags);
 }
 
+mlir::LLVM::FastmathFlagsAttr
+convertToLLVMProperty(mlir::MLIRContext *ctx,
+                      std::optional<cir::FastMathFlags> flags) {
+  return mlir::LLVM::FastmathFlagsAttr::get(
+      ctx, flags ? convertFastMathFlags(*flags) : mlir::LLVM::FastmathFlags{});
+}
+
+mlir::IntegerAttr convertToLLVMProperty(mlir::MLIRContext *ctx,
+                                        cir::FPClassTest flags) {
+  return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 32),
+                                static_cast<uint32_t>(flags));
+}
+
+mlir::IntegerAttr convertToLLVMProperty(mlir::MLIRContext *ctx, bool flag) {
+  return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 1), flag);
+}
+
 static mlir::LLVM::FastmathFlags
 convertFastMathFlags(cir::FastMathFlags cirFlags) {
   mlir::LLVM::FastmathFlags llvmFlags{};
@@ -1393,18 +1410,6 @@ private:
   llvm::SmallVector<CollectedAnnotation> collectedAnnotations;
 };
 
-mlir::LogicalResult CIRToLLVMIsFPClassOpLowering::matchAndRewrite(
-    cir::IsFPClassOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value src = adaptor.getSrc();
-  cir::FPClassTest flags = adaptor.getFlags();
-  mlir::IntegerType retTy = rewriter.getI1Type();
-
-  rewriter.replaceOpWithNewOp<mlir::LLVM::IsFPClass>(
-      op, retTy, src, static_cast<uint32_t>(flags));
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
     cir::SignBitOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1858,26 +1863,6 @@ mlir::LogicalResult CIRToLLVMBitClrsbOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-mlir::LogicalResult CIRToLLVMBitClzOpLowering::matchAndRewrite(
-    cir::BitClzOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto resTy = getTypeConverter()->convertType(op.getType());
-  auto llvmOp = mlir::LLVM::CountLeadingZerosOp::create(
-      rewriter, op.getLoc(), resTy, adaptor.getInput(), op.getPoisonZero());
-  rewriter.replaceOp(op, llvmOp);
-  return mlir::LogicalResult::success();
-}
-
-mlir::LogicalResult CIRToLLVMBitCtzOpLowering::matchAndRewrite(
-    cir::BitCtzOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto resTy = getTypeConverter()->convertType(op.getType());
-  auto llvmOp = mlir::LLVM::CountTrailingZerosOp::create(
-      rewriter, op.getLoc(), resTy, adaptor.getInput(), op.getPoisonZero());
-  rewriter.replaceOp(op, llvmOp);
-  return mlir::LogicalResult::success();
-}
-
 mlir::LogicalResult CIRToLLVMBitFfsOpLowering::matchAndRewrite(
     cir::BitFfsOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1917,16 +1902,6 @@ mlir::LogicalResult CIRToLLVMBitParityOpLowering::matchAndRewrite(
       mlir::LLVM::AndOp::create(rewriter, op.getLoc(), popcnt, one);
   rewriter.replaceOp(op, popcntMod2);
 
-  return mlir::LogicalResult::success();
-}
-
-mlir::LogicalResult CIRToLLVMBitPopcountOpLowering::matchAndRewrite(
-    cir::BitPopcountOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto resTy = getTypeConverter()->convertType(op.getType());
-  auto llvmOp = mlir::LLVM::CtPopOp::create(rewriter, op.getLoc(), resTy,
-                                            adaptor.getInput());
-  rewriter.replaceOp(op, llvmOp);
   return mlir::LogicalResult::success();
 }
 
@@ -3112,17 +3087,6 @@ mlir::LogicalResult CIRToLLVMExpectOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
-    cir::AbsOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type resTy = typeConverter->convertType(op.getType());
-  auto absOp = mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
-                                         adaptor.getOperands()[0],
-                                         adaptor.getMinIsPoison());
-  rewriter.replaceOp(op, absOp);
-  return mlir::success();
-}
-
 /// Return true for discardable CIR markers handled explicitly below.
 static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
   return attr.getName() == CIRDialect::getNoReturnAttrName() ||
@@ -3931,8 +3895,8 @@ static bool isIntTypeUnsigned(mlir::Type type) {
 // Binary Op Lowering
 //===----------------------------------------------------------------------===//
 
-static mlir::LLVM::IntegerOverflowFlags
-convertOverflowFlags(cir::OverflowFlags flags) {
+mlir::LLVM::IntegerOverflowFlags
+convertToLLVMProperty(mlir::MLIRContext *, cir::OverflowFlags flags) {
   mlir::LLVM::IntegerOverflowFlags result =
       mlir::LLVM::IntegerOverflowFlags::none;
   if (bitEnumContainsAny(flags, cir::OverflowFlags::NoSignedWrap))
@@ -3940,33 +3904,6 @@ convertOverflowFlags(cir::OverflowFlags flags) {
   if (bitEnumContainsAny(flags, cir::OverflowFlags::NoUnsignedWrap))
     result = result | mlir::LLVM::IntegerOverflowFlags::nuw;
   return result;
-}
-
-mlir::LogicalResult CIRToLLVMAddOpLowering::matchAndRewrite(
-    cir::AddOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(
-      op, adaptor.getLhs(), adaptor.getRhs(),
-      convertOverflowFlags(op.getOverflowFlags()));
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMSubOpLowering::matchAndRewrite(
-    cir::SubOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
-      op, adaptor.getLhs(), adaptor.getRhs(),
-      convertOverflowFlags(op.getOverflowFlags()));
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMMulOpLowering::matchAndRewrite(
-    cir::MulOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MulOp>(
-      op, adaptor.getLhs(), adaptor.getRhs(),
-      convertOverflowFlags(op.getOverflowFlags()));
-  return mlir::success();
 }
 
 /// Lower an integer op to its signed or unsigned LLVM counterpart.
@@ -5705,70 +5642,6 @@ mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
 
   rewriter.replaceOp(op, result);
   return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMVecExtractOpLowering::matchAndRewrite(
-    cir::VecExtractOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractElementOp>(
-      op, adaptor.getVec(), adaptor.getIndex());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
-    cir::VecInsertOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
-      op, adaptor.getVec(), adaptor.getValue(), adaptor.getIndex());
-  return mlir::success();
-}
-
-template <typename LLVMOp, typename CIROp>
-static mlir::LogicalResult
-lowerFPVectorReduction(CIROp op, typename CIROp::Adaptor adaptor,
-                       const mlir::TypeConverter &typeConverter,
-                       mlir::ConversionPatternRewriter &rewriter) {
-  mlir::Type resultTy = typeConverter.convertType(op.getType());
-  mlir::LLVM::FastmathFlags fastmathFlags{};
-  if (std::optional<cir::FastMathFlags> fastmath = op.getFastmathFlags())
-    fastmathFlags = convertFastMathFlags(*fastmath);
-
-  typename LLVMOp::Properties properties =
-      cir::getDefaultProperties<LLVMOp>(op.getContext());
-  properties.setFastmathFlags(
-      mlir::LLVM::FastmathFlagsAttr::get(op.getContext(), fastmathFlags));
-  rewriter.replaceOpWithNewOp<LLVMOp>(op, mlir::TypeRange{resultTy},
-                                      adaptor.getOperands(), properties);
-
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMVecReduceFAddOpLowering::matchAndRewrite(
-    cir::VecReduceFAddOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fadd>(
-      op, adaptor, *getTypeConverter(), rewriter);
-}
-
-mlir::LogicalResult CIRToLLVMVecReduceFMulOpLowering::matchAndRewrite(
-    cir::VecReduceFMulOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fmul>(
-      op, adaptor, *getTypeConverter(), rewriter);
-}
-
-mlir::LogicalResult CIRToLLVMVecReduceFMaxOpLowering::matchAndRewrite(
-    cir::VecReduceFMaxOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fmax>(
-      op, adaptor, *getTypeConverter(), rewriter);
-}
-
-mlir::LogicalResult CIRToLLVMVecReduceFMinOpLowering::matchAndRewrite(
-    cir::VecReduceFMinOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  return lowerFPVectorReduction<mlir::LLVM::vector_reduce_fmin>(
-      op, adaptor, *getTypeConverter(), rewriter);
 }
 
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
