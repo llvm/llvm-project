@@ -4181,6 +4181,11 @@ mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getTxcount()));
 
+  if (isClusterSpace) {
+    args.push_back(builder.getInt32(0));
+    args.push_back(builder.getFalse());
+  }
+
   return {IDs[index], std::move(args)};
 }
 
@@ -4204,6 +4209,11 @@ mlir::NVVM::IDArgPair MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getTxcount()));
+
+  if (isClusterSpace) {
+    args.push_back(builder.getInt32(0));
+    args.push_back(builder.getFalse());
+  }
 
   return {IDs[index], std::move(args)};
 }
@@ -4250,6 +4260,9 @@ mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  if (isClusterSpace)
+    return {id, {mbar, count, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, count}};
 }
 
@@ -4297,6 +4310,9 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
+
+  if (isClusterSpace)
+    return {id, {mbar, count, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, count}};
 }
 
@@ -4344,6 +4360,8 @@ mlir::NVVM::IDArgPair MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  if (isClusterSpace)
+    return {id, {mbar, txcount, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, txcount}};
 }
 
@@ -4378,6 +4396,8 @@ mlir::NVVM::IDArgPair MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  if (isClusterSpace)
+    return {id, {mbar, txcount, builder.getInt32(0), builder.getFalse()}};
   return {id, {mbar, txcount}};
 }
 

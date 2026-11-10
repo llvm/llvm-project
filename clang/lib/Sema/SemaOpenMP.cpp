@@ -7239,6 +7239,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     Res = ActOnOpenMPTargetParallelGenericLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     break;
+  case OMPD_target_loop:
+    Res = ActOnOpenMPTargetGenericLoopDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_threadprivate:
@@ -12115,17 +12119,21 @@ StmtResult SemaOpenMP::ActOnOpenMPParallelGenericLoopDirective(
       getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
 
-StmtResult SemaOpenMP::ActOnOpenMPTargetParallelGenericLoopDirective(
+/// Shared by 'target loop' and 'target parallel loop'.
+template <typename DirectiveTy>
+static StmtResult actOnTargetGenericLoopDirective(
+    SemaOpenMP &S, DSAStackTy *Stack, OpenMPDirectiveKind DKind,
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
-    SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+    SourceLocation EndLoc,
+    SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA) {
   if (!AStmt)
     return StmtError();
 
-  if (validateMultidimClauses(*this, Clauses))
+  if (validateMultidimClauses(S, Clauses))
     return StmtError();
 
-  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_parallel_loop,
-                                            Clauses))
+  Sema &SemaRef = S.SemaRef;
+  if (checkClausesForDecompositionConflicts(SemaRef, DKind, Clauses))
     return StmtError();
 
   if (checkOriginalVarMappedButOnlyBindingsUsed(SemaRef, Clauses, AStmt))
@@ -12134,27 +12142,54 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelGenericLoopDirective(
   // OpenMP 5.1 [2.11.7, loop construct, Restrictions]
   // A list item may not appear in a lastprivate clause unless it is the
   // loop iteration variable of a loop that is associated with the construct.
-  if (checkGenericLoopLastprivate(SemaRef, Clauses, OMPD_target_parallel_loop,
-                                  DSAStack))
+  if (checkGenericLoopLastprivate(SemaRef, Clauses, DKind, Stack))
     return StmtError();
 
-  CapturedStmt *CS =
-      setBranchProtectedScope(SemaRef, OMPD_target_parallel_loop, AStmt);
+  CapturedStmt *CS = setBranchProtectedScope(SemaRef, DKind, AStmt);
 
   OMPLoopDirective::HelperExprs B;
   // In presence of clause 'collapse', it will define the nested loops number.
-  unsigned NestedLoopCount =
-      checkOpenMPLoop(OMPD_target_parallel_loop, getCollapseNumberExpr(Clauses),
-                      /*OrderedLoopCountExpr=*/nullptr, CS, SemaRef, *DSAStack,
-                      VarsWithImplicitDSA, B);
+  unsigned NestedLoopCount = checkOpenMPLoop(
+      DKind, getCollapseNumberExpr(Clauses), /*OrderedLoopCountExpr=*/nullptr,
+      CS, SemaRef, *Stack, VarsWithImplicitDSA, B);
   if (NestedLoopCount == 0)
     return StmtError();
 
   assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
          "omp loop exprs were not built");
 
-  return OMPTargetParallelGenericLoopDirective::Create(
-      getASTContext(), StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+  return DirectiveTy::Create(S.getASTContext(), StartLoc, EndLoc,
+                             NestedLoopCount, Clauses, AStmt, B);
+}
+
+StmtResult SemaOpenMP::ActOnOpenMPTargetParallelGenericLoopDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+  return actOnTargetGenericLoopDirective<OMPTargetParallelGenericLoopDirective>(
+      *this, DSAStack, OMPD_target_parallel_loop, Clauses, AStmt, StartLoc,
+      EndLoc, VarsWithImplicitDSA);
+}
+
+StmtResult SemaOpenMP::ActOnOpenMPTargetGenericLoopDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+  // OpenMP 5.1 [2.11.7, loop Construct, Restrictions]
+  // If the bind clause is present on the loop construct and binding is teams
+  // then the corresponding loop region must be strictly nested inside a teams
+  // region.
+  if (const auto *BC =
+          OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses);
+      BC && BC->getBindKind() == OMPC_BIND_teams) {
+    llvm::omp::Version OMPVersion = getLangOpts().getOpenMPVersion();
+    Diag(StartLoc, diag::err_omp_prohibited_region)
+        << /*IsClose=*/true << getOpenMPDirectiveName(OMPD_target, OMPVersion)
+        << /*ShouldBeInTeamsRegion=*/4
+        << getOpenMPDirectiveName(OMPD_loop, OMPVersion);
+    return StmtError();
+  }
+  return actOnTargetGenericLoopDirective<OMPTargetGenericLoopDirective>(
+      *this, DSAStack, OMPD_target_loop, Clauses, AStmt, StartLoc, EndLoc,
+      VarsWithImplicitDSA);
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPSingleDirective(ArrayRef<OMPClause *> Clauses,
