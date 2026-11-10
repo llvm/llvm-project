@@ -304,10 +304,10 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 8 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[J]], <vscale x 8 x i64> [[VEC_IND]]
+; CHECK-TF-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [8 x i8], ptr [[J]], <vscale x 8 x i64> [[VEC_IND]]
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i64> @llvm.masked.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr> align 8 [[WIDE_GEP]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i64> poison)
 ; CHECK-TF-NEXT:    [[TMP5:%.*]] = trunc <vscale x 8 x i64> [[WIDE_MASKED_GATHER]] to <vscale x 8 x i16>
-; CHECK-TF-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr i16, ptr [[K]], <vscale x 8 x i64> [[VEC_IND]]
+; CHECK-TF-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr [2 x i8], ptr [[K]], <vscale x 8 x i64> [[VEC_IND]]
 ; CHECK-TF-NEXT:    call void @llvm.masked.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> [[TMP5]], <vscale x 8 x ptr> align 2 [[WIDE_GEP1]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-TF-NEXT:    store i64 0, ptr [[A]], align 8
 ; CHECK-TF-NEXT:    store i64 0, ptr [[B]], align 8
@@ -1003,16 +1003,16 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[TMP5]]
 ; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 [[TMP3]], 1
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], -4
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP8]]
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP8]]
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = mul i64 -4, [[TMP3]]
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = add i64 [[TMP8]], [[TMP10]]
-; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP11]]
+; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP11]]
 ; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = mul i64 -8, [[TMP3]]
 ; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = add i64 [[TMP8]], [[TMP13]]
-; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP14]]
+; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP14]]
 ; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = mul i64 -12, [[TMP3]]
 ; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = add i64 [[TMP8]], [[TMP16]]
-; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 [[TMP17]]
+; CHECK-NOTF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP6]], i64 [[TMP17]]
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <vscale x 16 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[WIDE_VEC]])
 ; CHECK-NOTF-NEXT:    [[TMP19:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[STRIDED_VEC]], 0
@@ -1083,7 +1083,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI26:%.*]] = phi <4 x i32> [ [[TMP47]], %[[VEC_EPILOG_PH]] ], [ [[TMP53:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = sub i64 [[N]], [[INDEX25]]
 ; CHECK-NOTF-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[TMP48]]
-; CHECK-NOTF-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i32, ptr [[TMP49]], i64 -12
+; CHECK-NOTF-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i8, ptr [[TMP49]], i64 -48
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC27:%.*]] = load <16 x i32>, ptr [[TMP50]], align 4
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC28:%.*]] = shufflevector <16 x i32> [[WIDE_VEC27]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NOTF-NEXT:    [[REVERSE29:%.*]] = shufflevector <4 x i32> [[STRIDED_VEC28]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

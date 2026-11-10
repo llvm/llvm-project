@@ -54,13 +54,13 @@ define void @bfloat_loop_bf16(ptr noalias nocapture %a, ptr noalias nocapture re
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds bfloat, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds bfloat, ptr [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x bfloat>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x bfloat>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <8 x bfloat> [[WIDE_LOAD]], splat (bfloat 1.000000e+00)
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <8 x bfloat> [[WIDE_LOAD1]], splat (bfloat 1.000000e+00)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds bfloat, ptr [[TMP4]], i64 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    store <8 x bfloat> [[TMP2]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    store <8 x bfloat> [[TMP3]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -164,13 +164,13 @@ define void @bfloat_loop_sve_bf16(ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds bfloat, ptr [[TMP3]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8], ptr [[TMP3]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x bfloat>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x bfloat>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <vscale x 8 x bfloat> [[WIDE_LOAD]], splat (bfloat 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <vscale x 8 x bfloat> [[WIDE_LOAD1]], splat (bfloat 1.000000e+00)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds bfloat, ptr [[TMP7]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x i8], ptr [[TMP7]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 8 x bfloat> [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    store <vscale x 8 x bfloat> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]

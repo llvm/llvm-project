@@ -229,7 +229,7 @@
 ; SPARC32-NEXT: declare float @__powisf2(float, i32)
 ; SPARC32-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; SPARC32-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; SPARC32-NEXT: declare void @__stack_chk_fail()
+; SPARC32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SPARC32-NEXT: declare double @__subdf3(double, double)
 ; SPARC32-NEXT: declare float @__subsf3(float, float)
 ; SPARC32-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -479,6 +479,7 @@
 ; SPARC32-NEXT: declare double @trunc(double)
 ; SPARC32-NEXT: declare float @truncf(float)
 ; SPARC32-NEXT: declare fp128 @truncl(fp128)
+; SPARC32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SPARC32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -711,7 +712,7 @@
 ; SPARC64-NEXT: declare float @__powisf2(float, i32 signext)
 ; SPARC64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; SPARC64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; SPARC64-NEXT: declare void @__stack_chk_fail()
+; SPARC64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SPARC64-NEXT: declare double @__subdf3(double, double)
 ; SPARC64-NEXT: declare float @__subsf3(float, float)
 ; SPARC64-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -963,6 +964,7 @@
 ; SPARC64-NEXT: declare double @trunc(double)
 ; SPARC64-NEXT: declare float @truncf(float)
 ; SPARC64-NEXT: declare fp128 @truncl(fp128)
+; SPARC64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SPARC64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

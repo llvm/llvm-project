@@ -29,6 +29,7 @@ include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 
 class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<CIR_Dialect, name, traits> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRAttrs.h"];
   let mnemonic = attrMnemonic;
   // Setting this to 0 will make the CXXABILowering always consider this
   // attribute 'legal', so that it won't require any transformation. This should
@@ -1678,6 +1679,28 @@ def CIR_FramePointerKindAttr
     }
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// MaxWorkGroupSizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MaxWorkGroupSizeAttr
+    : CIR_Attr<"MaxWorkGroupSize", "max_work_group_size"> {
+  let summary = "Maximum kernel work-group size";
+  let description = [{
+    Stores the maximum work-group size of a kernel, emitted to LLVM IR as
+    `max_work_group_size` function metadata.
+  }];
+
+  let parameters = (ins
+    "uint32_t":$x,
+    "uint32_t":$y,
+    "uint32_t":$z
+  );
+
+  let assemblyFormat = "`<` $x `,` $y `,` $z `>`";
+  let canHaveIllegalCXXABIType = 0;
 }
 
 //===----------------------------------------------------------------------===//

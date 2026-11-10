@@ -274,7 +274,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail()
+; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
@@ -474,6 +474,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double)
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float)
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -746,7 +747,7 @@
 ; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
 ; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail()
+; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
@@ -946,6 +947,7 @@
 ; DWARF-NEXT: declare arm_aapcscc double @trunc(double)
 ; DWARF-NEXT: declare arm_aapcscc float @truncf(float)
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

@@ -343,7 +343,7 @@
 ; LINUX-NEXT: declare float @__powisf2(float, i32)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; LINUX-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; LINUX-NEXT: declare void @__stack_chk_fail()
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -595,6 +595,7 @@
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncl(fp128)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -929,7 +930,7 @@
 ; DARWIN-NEXT: declare double @__powidf2(double, i32)
 ; DARWIN-NEXT: declare float @__powisf2(float, i32)
 ; DARWIN-NEXT: declare fp128 @__powitf2(fp128, i32)
-; DARWIN-NEXT: declare void @__stack_chk_fail()
+; DARWIN-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; DARWIN-NEXT: declare double @__subdf3(double, double)
 ; DARWIN-NEXT: declare float @__subsf3(float, float)
 ; DARWIN-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1130,6 +1131,7 @@
 ; DARWIN-NEXT: declare float @tgammaf(float)
 ; DARWIN-NEXT: declare double @trunc(double)
 ; DARWIN-NEXT: declare float @truncf(float)
+; DARWIN-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; DARWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; DARWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; DARWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -1992,7 +1994,7 @@
 ; MINGW-NEXT: declare double @__pow_finite(double, double)
 ; MINGW-NEXT: declare float @__powf_finite(float, float)
 ; MINGW-NEXT: declare fp128 @__powitf2(fp128, i32)
-; MINGW-NEXT: declare void @__stack_chk_fail()
+; MINGW-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare double @__subdf3(double, double)
 ; MINGW-NEXT: declare float @__subsf3(float, float)
 ; MINGW-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -2192,6 +2194,7 @@
 ; MINGW-NEXT: declare float @tgammaf(float)
 ; MINGW-NEXT: declare double @trunc(double)
 ; MINGW-NEXT: declare float @truncf(float)
+; MINGW-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -2533,7 +2536,7 @@
 ; ANDROID-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; ANDROID-NEXT: declare fp128 @__powl_finite(fp128, fp128)
 ; ANDROID-NEXT: declare ptr @__safestack_pointer_address()
-; ANDROID-NEXT: declare void @__stack_chk_fail()
+; ANDROID-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; ANDROID-NEXT: declare double @__subdf3(double, double)
 ; ANDROID-NEXT: declare float @__subsf3(float, float)
 ; ANDROID-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -2785,6 +2788,7 @@
 ; ANDROID-NEXT: declare double @trunc(double)
 ; ANDROID-NEXT: declare float @truncf(float)
 ; ANDROID-NEXT: declare fp128 @truncl(fp128)
+; ANDROID-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; ANDROID-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; ANDROID-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; ANDROID-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

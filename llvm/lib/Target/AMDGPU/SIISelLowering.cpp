@@ -18164,10 +18164,10 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
         Src1s.begin()->SrcOp.getValueSizeInBits() >= 32) {
       SmallVector<unsigned, 4> SrcBytes;
       auto Src0Mask = Src0s.begin()->PermMask;
-      SrcBytes.push_back(Src0Mask & 0xFF000000);
+      SrcBytes.push_back((Src0Mask >> 24) & 0xFF);
       bool UniqueEntries = true;
       for (auto I = 1; I < 4; I++) {
-        auto NextByte = Src0Mask & (0xFF << ((3 - I) * 8));
+        auto NextByte = (Src0Mask >> ((3 - I) * 8)) & 0xFF;
 
         if (is_contained(SrcBytes, NextByte)) {
           UniqueEntries = false;
@@ -20725,16 +20725,20 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
 
       KnownBits RHSKnown;
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
-      if (RHSKnown.isUnknown())
-        break;
 
+      bool SelfMultiply = LHS == RHS;
+
+      // For a self-multiply both operands are the same value, so RHSKnown also
+      // describes the LHS; avoid the duplicated query.
       KnownBits LHSKnown;
-      VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
-      if (LHSKnown.isUnknown())
-        break;
+      if (SelfMultiply)
+        LHSKnown = RHSKnown;
+      else
+        VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
 
-      bool SelfMultiply =
-          LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+      if (SelfMultiply)
+        SelfMultiply &= isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
+
       Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
                                        IID == Intrinsic::amdgcn_mul_i24,
                                        SelfMultiply);

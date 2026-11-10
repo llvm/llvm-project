@@ -251,7 +251,7 @@
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; LINUX-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; LINUX-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; LINUX-NEXT: declare void @__stack_chk_fail()
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -550,6 +550,7 @@
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncf128(fp128)
 ; LINUX-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -793,7 +794,7 @@
 ; FREEBSD-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; FREEBSD-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; FREEBSD-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; FREEBSD-NEXT: declare void @__stack_chk_fail()
+; FREEBSD-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; FREEBSD-NEXT: declare double @__subdf3(double, double)
 ; FREEBSD-NEXT: declare float @__subsf3(float, float)
 ; FREEBSD-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1046,6 +1047,7 @@
 ; FREEBSD-NEXT: declare double @trunc(double)
 ; FREEBSD-NEXT: declare float @truncf(float)
 ; FREEBSD-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; FREEBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; FREEBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -1289,7 +1291,7 @@
 ; OPENBSD-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; OPENBSD-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; OPENBSD-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; OPENBSD-NEXT: declare void @__stack_smash_handler(ptr, i32)
+; OPENBSD-NEXT: declare void @__stack_smash_handler(ptr, i32) [[NORETURN_ATTRS:#[0-9]+]]
 ; OPENBSD-NEXT: declare double @__subdf3(double, double)
 ; OPENBSD-NEXT: declare float @__subsf3(float, float)
 ; OPENBSD-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1542,6 +1544,7 @@
 ; OPENBSD-NEXT: declare double @trunc(double)
 ; OPENBSD-NEXT: declare float @truncf(float)
 ; OPENBSD-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; OPENBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; OPENBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

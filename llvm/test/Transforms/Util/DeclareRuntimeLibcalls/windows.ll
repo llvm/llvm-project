@@ -685,7 +685,7 @@
 ; MINGW-NEXT: declare float @__powf_finite(float, float)
 ; MINGW-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; MINGW-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; MINGW-NEXT: declare void @__stack_chk_fail()
+; MINGW-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; MINGW-NEXT: declare double @__subdf3(double, double)
 ; MINGW-NEXT: declare float @__subsf3(float, float)
 ; MINGW-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -984,6 +984,7 @@
 ; MINGW-NEXT: declare float @truncf(float)
 ; MINGW-NEXT: declare fp128 @truncf128(fp128)
 ; MINGW-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; MINGW-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -1228,7 +1229,7 @@
 ; CYGWIN-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; CYGWIN-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; CYGWIN-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; CYGWIN-NEXT: declare void @__stack_chk_fail()
+; CYGWIN-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; CYGWIN-NEXT: declare double @__subdf3(double, double)
 ; CYGWIN-NEXT: declare float @__subsf3(float, float)
 ; CYGWIN-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1481,6 +1482,7 @@
 ; CYGWIN-NEXT: declare double @trunc(double)
 ; CYGWIN-NEXT: declare float @truncf(float)
 ; CYGWIN-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; CYGWIN-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CYGWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -1719,7 +1721,7 @@
 ; UEFI-NEXT: declare float @__powisf2(float, i32)
 ; UEFI-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; UEFI-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
-; UEFI-NEXT: declare void @__stack_chk_fail()
+; UEFI-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; UEFI-NEXT: declare double @__subdf3(double, double)
 ; UEFI-NEXT: declare float @__subsf3(float, float)
 ; UEFI-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1921,6 +1923,7 @@
 ; UEFI-NEXT: declare float @tgammaf(float)
 ; UEFI-NEXT: declare double @trunc(double)
 ; UEFI-NEXT: declare float @truncf(float)
+; UEFI-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; UEFI-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

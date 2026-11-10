@@ -282,14 +282,14 @@ CIRGenItaniumCXXABI::buildStructorSignature(
   // All parameters are already in place except VTT, which goes after 'this'.
   // These are clang types, so we don't need to worry about sret yet.
 
-  // Check if we need to add a VTT parameter (which has type void **).
+  // Check if we need to add a VTT parameter (which has type global void **).
   if ((isa<CXXConstructorDecl>(gd.getDecl()) ? gd.getCtorType() == Ctor_Base
                                              : gd.getDtorType() == Dtor_Base) &&
       cast<CXXMethodDecl>(gd.getDecl())->getParent()->getNumVBases() != 0) {
-    assert(!cir::MissingFeatures::addressSpace());
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
     argTys.insert(argTys.begin() + 1,
-                  astContext.getPointerType(
-                      CanQualType::CreateUnsafe(astContext.VoidPtrTy)));
+                  astContext.getPointerType(CanQualType::CreateUnsafe(q)));
     return AddedStructorArgCounts::withPrefix(1);
   }
 
@@ -418,8 +418,9 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
     ASTContext &astContext = cgm.getASTContext();
 
     // FIXME: avoid the fake decl
-    assert(!cir::MissingFeatures::addressSpace());
-    QualType t = astContext.getPointerType(astContext.VoidPtrTy);
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+    QualType t = astContext.getPointerType(q);
     auto *vttDecl = ImplicitParamDecl::Create(
         astContext, /*DC=*/nullptr, md->getLocation(),
         &astContext.Idents.get("vtt"), t, ImplicitParamKind::CXXVTT);
@@ -471,9 +472,10 @@ CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
   // some targets.
   mlir::Value vtt =
       cgf.getVTTParameter(GlobalDecl(d, type), forVirtualBase, delegating);
-  QualType vttTy =
-      cgm.getASTContext().getPointerType(cgm.getASTContext().VoidPtrTy);
-  assert(!cir::MissingFeatures::addressSpace());
+  ASTContext &astContext = cgm.getASTContext();
+  LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+  QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+  QualType vttTy = astContext.getPointerType(q);
   return AddedStructorArgs::withPrefix({{vtt, vttTy}});
 }
 
