@@ -66,53 +66,53 @@ define hidden void @variance_8x16(ptr noundef readonly captures(none) %a, ptr no
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add12> = add ir<%mul3>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add13> = add ir<%add12>, ir<%mul11>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr> = lshr ir<%add13>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv14> = trunc ir<%shr> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv14> = trunc ir<%shr> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul24> = mul ir<%4>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul32> = mul ir<%6>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add33> = add ir<%mul24>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add34> = add ir<%add33>, ir<%mul32>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr35> = lshr ir<%add34>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv36> = trunc ir<%shr35> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv36> = trunc ir<%shr35> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul46> = mul ir<%8>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul54> = mul ir<%10>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add55> = add ir<%mul46>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add56> = add ir<%add55>, ir<%mul54>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr57> = lshr ir<%add56>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv58> = trunc ir<%shr57> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv58> = trunc ir<%shr57> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul68> = mul ir<%12>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul76> = mul ir<%14>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add77> = add ir<%mul68>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add78> = add ir<%add77>, ir<%mul76>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr79> = lshr ir<%add78>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv80> = trunc ir<%shr79> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv80> = trunc ir<%shr79> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul90> = mul ir<%16>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul98> = mul ir<%18>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add99> = add ir<%mul90>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add100> = add ir<%add99>, ir<%mul98>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr101> = lshr ir<%add100>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv102> = trunc ir<%shr101> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv102> = trunc ir<%shr101> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul112> = mul ir<%20>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul120> = mul ir<%22>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add121> = add ir<%mul112>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add122> = add ir<%add121>, ir<%mul120>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr123> = lshr ir<%add122>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv124> = trunc ir<%shr123> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv124> = trunc ir<%shr123> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul134> = mul ir<%24>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul142> = mul ir<%26>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add143> = add ir<%mul134>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add144> = add ir<%add143>, ir<%mul142>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr145> = lshr ir<%add144>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv146> = trunc ir<%shr145> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv146> = trunc ir<%shr145> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul156> = mul ir<%28>, ir<%conv2>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%mul164> = mul ir<%30>, ir<%conv10>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add165> = add ir<%mul156>, ir<64>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%add166> = add ir<%add165>, ir<%mul164>
 ; CHECK:  Cost of 2 for VF 4: WIDEN ir<%shr167> = lshr ir<%add166>, ir<7>
-; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv168> = trunc ir<%shr167> to i8
+; CHECK:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv168> = trunc ir<%shr167> to i8
 ; CHECK:  Cost of 66 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%arrayidx17>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i16
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv10> = zext ir<%3> to i16
-; CHECK:  Cost for VF 4: 256 (Estimated cost per lane: 64)
+; CHECK:  Cost for VF 4: 272 (Estimated cost per lane: 68)
 ; CHECK:  Cost of 136 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
 ; CHECK:  Cost of 1 for VF 8: WIDEN ir<%mul3> = mul ir<%0>, ir<%conv2>
 ; CHECK:  Cost of 136 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx7>
@@ -231,53 +231,53 @@ define hidden void @variance_8x16(ptr noundef readonly captures(none) %a, ptr no
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add12> = add ir<%mul3>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add13> = add ir<%add12>, ir<%mul11>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr> = lshr ir<%add13>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv14> = trunc ir<%shr> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv14> = trunc ir<%shr> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul24> = mul ir<%4>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul32> = mul ir<%6>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add33> = add ir<%mul24>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add34> = add ir<%add33>, ir<%mul32>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr35> = lshr ir<%add34>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv36> = trunc ir<%shr35> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv36> = trunc ir<%shr35> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul46> = mul ir<%8>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul54> = mul ir<%10>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add55> = add ir<%mul46>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add56> = add ir<%add55>, ir<%mul54>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr57> = lshr ir<%add56>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv58> = trunc ir<%shr57> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv58> = trunc ir<%shr57> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul68> = mul ir<%12>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul76> = mul ir<%14>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add77> = add ir<%mul68>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add78> = add ir<%add77>, ir<%mul76>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr79> = lshr ir<%add78>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv80> = trunc ir<%shr79> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv80> = trunc ir<%shr79> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul90> = mul ir<%16>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul98> = mul ir<%18>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add99> = add ir<%mul90>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add100> = add ir<%add99>, ir<%mul98>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr101> = lshr ir<%add100>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv102> = trunc ir<%shr101> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv102> = trunc ir<%shr101> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul112> = mul ir<%20>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul120> = mul ir<%22>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add121> = add ir<%mul112>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add122> = add ir<%add121>, ir<%mul120>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr123> = lshr ir<%add122>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv124> = trunc ir<%shr123> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv124> = trunc ir<%shr123> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul134> = mul ir<%24>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul142> = mul ir<%26>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add143> = add ir<%mul134>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add144> = add ir<%add143>, ir<%mul142>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr145> = lshr ir<%add144>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv146> = trunc ir<%shr145> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv146> = trunc ir<%shr145> to i8
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul156> = mul ir<%28>, ir<%conv2>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%mul164> = mul ir<%30>, ir<%conv10>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add165> = add ir<%mul156>, ir<64>
 ; MAX:  Cost of 1 for VF 4: WIDEN ir<%add166> = add ir<%add165>, ir<%mul164>
 ; MAX:  Cost of 2 for VF 4: WIDEN ir<%shr167> = lshr ir<%add166>, ir<7>
-; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv168> = trunc ir<%shr167> to i8
+; MAX:  Cost of 2 for VF 4: WIDEN-CAST ir<%conv168> = trunc ir<%shr167> to i8
 ; MAX:  Cost of 66 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%arrayidx17>
 ; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv2> = zext ir<%1> to i16
 ; MAX:  Cost of 0 for VF 4: WIDEN-CAST ir<%conv10> = zext ir<%3> to i16
-; MAX:  Cost for VF 4: 256 (Estimated cost per lane: 64)
+; MAX:  Cost for VF 4: 272 (Estimated cost per lane: 68)
 ; MAX:  Cost of 136 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
 ; MAX:  Cost of 1 for VF 8: WIDEN ir<%mul3> = mul ir<%0>, ir<%conv2>
 ; MAX:  Cost of 136 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%arrayidx7>

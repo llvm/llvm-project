@@ -5,7 +5,6 @@
 
 define hidden void @quantize_3d(ptr nofree noundef readonly captures(none) %input,
 ; CHECK-LABEL: 'quantize_3d'
-; CHECK:  LV: Scalar loop costs: 25.
 ; CHECK:  Cost of 2 for VF 2: WIDEN ir<%value> = load vp<[[VP9:%[0-9]+]]>, align 4 (!alias.scope !3)
 ; CHECK:  Cost of 2 for VF 2: WIDEN ir<%scaled> = fmul fast ir<%value>, ir<%scale>
 ; CHECK:  Cost of 24 for VF 2: WIDEN-INTRINSIC ir<%rounded> = call fast llvm.round(ir<%scaled>)
@@ -21,13 +20,12 @@ define hidden void @quantize_3d(ptr nofree noundef readonly captures(none) %inpu
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%converted> = fptosi ir<%rounded> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%max> = call llvm.smax(ir<%converted>, ir<-127>)
 ; CHECK:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%min> = call llvm.smin(ir<%max>, ir<127>)
-; CHECK:  Cost of 4 for VF 4: WIDEN-CAST ir<%truncated> = trunc nsw ir<%min> to i8
+; CHECK:  Cost of 3 for VF 4: WIDEN-CAST ir<%truncated> = trunc nsw ir<%min> to i8
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP10]]>, ir<%truncated>, align 1 (!alias.scope !4, !noalias !3)
-; CHECK:  Cost for VF 4: 65 (Estimated cost per lane: 16.3)
+; CHECK:  Cost for VF 4: 64 (Estimated cost per lane: 16)
 ; CHECK:  LV: Selecting VF: 4.
 ;
 ; MAX-LABEL: 'quantize_3d'
-; MAX:  LV: Scalar loop costs: 25.
 ; MAX:  Cost of 2 for VF 2: WIDEN ir<%value> = load vp<[[VP9:%[0-9]+]]>, align 4 (!alias.scope !3)
 ; MAX:  Cost of 2 for VF 2: WIDEN ir<%scaled> = fmul fast ir<%value>, ir<%scale>
 ; MAX:  Cost of 24 for VF 2: WIDEN-INTRINSIC ir<%rounded> = call fast llvm.round(ir<%scaled>)
@@ -43,9 +41,9 @@ define hidden void @quantize_3d(ptr nofree noundef readonly captures(none) %inpu
 ; MAX:  Cost of 1 for VF 4: WIDEN-CAST ir<%converted> = fptosi ir<%rounded> to i32
 ; MAX:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%max> = call llvm.smax(ir<%converted>, ir<-127>)
 ; MAX:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%min> = call llvm.smin(ir<%max>, ir<127>)
-; MAX:  Cost of 4 for VF 4: WIDEN-CAST ir<%truncated> = trunc nsw ir<%min> to i8
+; MAX:  Cost of 3 for VF 4: WIDEN-CAST ir<%truncated> = trunc nsw ir<%min> to i8
 ; MAX:  Cost of 2 for VF 4: WIDEN store vp<[[VP10]]>, ir<%truncated>, align 1 (!alias.scope !4, !noalias !3)
-; MAX:  Cost for VF 4: 65 (Estimated cost per lane: 16.3)
+; MAX:  Cost for VF 4: 64 (Estimated cost per lane: 16)
 ; MAX:  Cost of 2 for VF 8: WIDEN ir<%value> = load vp<[[VP9]]>, align 4 (!alias.scope !3)
 ; MAX:  Cost of 4 for VF 8: WIDEN ir<%scaled> = fmul fast ir<%value>, ir<%scale>
 ; MAX:  Cost of 96 for VF 8: WIDEN-INTRINSIC ir<%rounded> = call fast llvm.round(ir<%scaled>)
