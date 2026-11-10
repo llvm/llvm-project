@@ -10,6 +10,9 @@
 
 #include "../common/Fixtures.hpp"
 
+#include <thread>
+#include <vector>
+
 using olGetQueueInfoSizeTest = OffloadQueueTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetQueueInfoSizeTest);
 
@@ -53,4 +56,60 @@ TEST_P(olGetQueueInfoSizeTest, SuccessNativeHandle) {
   ASSERT_SUCCESS_OR_UNSUPPORTED(
       olGetQueueInfoSize(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, &Size));
   ASSERT_EQ(Size, sizeof(void *));
+}
+
+// olGetQueueInfoSize and olGetQueueInfo agree on whether NATIVE_HANDLE is
+// supported.
+TEST_P(olGetQueueInfoSizeTest, NativeHandleSupportAgreesWithInfo) {
+  size_t Size = 0;
+  ol_result_t SizeRes =
+      olGetQueueInfoSize(Queue, OL_QUEUE_INFO_NATIVE_HANDLE, &Size);
+  void *Handle = nullptr;
+  ol_result_t InfoRes = olGetQueueInfo(Queue, OL_QUEUE_INFO_NATIVE_HANDLE,
+                                       sizeof(Handle), &Handle);
+  bool SizeUnsupported = SizeRes && SizeRes->Code == OL_ERRC_UNSUPPORTED;
+  bool InfoUnsupported = InfoRes && InfoRes->Code == OL_ERRC_UNSUPPORTED;
+  ASSERT_EQ(SizeUnsupported, InfoUnsupported);
+  if (!SizeUnsupported) {
+    ASSERT_SUCCESS(SizeRes);
+    ASSERT_SUCCESS(InfoRes);
+  }
+}
+
+// olGetQueueInfoSize is thread safe; concurrent queries return the same sizes.
+TEST_P(olGetQueueInfoSizeTest, ConcurrentQueries) {
+  constexpr size_t NumThreads = 4;
+  struct Result {
+    ol_result_t Res = nullptr;
+    size_t DeviceSize = 0;
+    size_t ContextSize = 0;
+    size_t EmptySize = 0;
+  };
+  std::vector<Result> Results(NumThreads);
+  std::vector<std::thread> Threads;
+  for (size_t I = 0; I < NumThreads; ++I)
+    Threads.emplace_back([&, I] {
+      Result &R = Results[I];
+      for (int Iter = 0; Iter < 100; ++Iter) {
+        R.Res = olGetQueueInfoSize(Queue, OL_QUEUE_INFO_DEVICE, &R.DeviceSize);
+        if (R.Res)
+          return;
+        R.Res =
+            olGetQueueInfoSize(Queue, OL_QUEUE_INFO_CONTEXT, &R.ContextSize);
+        if (R.Res)
+          return;
+        R.Res = olGetQueueInfoSize(Queue, OL_QUEUE_INFO_EMPTY, &R.EmptySize);
+        if (R.Res)
+          return;
+      }
+    });
+  for (std::thread &T : Threads)
+    T.join();
+
+  for (const Result &R : Results) {
+    ASSERT_SUCCESS(R.Res);
+    ASSERT_EQ(R.DeviceSize, sizeof(ol_device_handle_t));
+    ASSERT_EQ(R.ContextSize, sizeof(ol_context_handle_t));
+    ASSERT_EQ(R.EmptySize, sizeof(bool));
+  }
 }
