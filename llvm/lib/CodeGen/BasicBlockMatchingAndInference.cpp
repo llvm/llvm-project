@@ -28,13 +28,13 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
 
@@ -320,7 +320,7 @@ bool BasicBlockMatchingAndInference::doInitialization(Module &M) {
     return false;
   }
   auto ReaderOrErr = SampleProfileReader::create(
-      ProfileFile, Ctx, *vfs::getRealFileSystem(),
+      ProfileFile, Ctx, Ctx.getVirtualFileSystem(),
       EnableFSDiscriminator ? FSDiscriminatorPass::PassLast
                             : FSDiscriminatorPass::Base,
       Opts.sample_profile_supplement_remapping_file);
