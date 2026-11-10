@@ -22,7 +22,6 @@ typedef void *id;
 #endif
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
 
@@ -85,11 +84,7 @@ public:
 
   std::string GetName();
 
-  lldb_private::ConstString GetIdentifier();
-
   ModelIdentifier GetModelIdentifier();
-
-  lldb_private::ConstString GetProductFamily();
 
   ProductFamilyID GetProductFamilyID();
 
