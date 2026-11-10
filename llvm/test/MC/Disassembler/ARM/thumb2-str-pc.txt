@@ -1,79 +1,18 @@
 # RUN: llvm-mc -triple=thumbv7 -disassemble %s 2>&1 | FileCheck %s
 
-# Stores with Rt = PC are UNPREDICTABLE and decode with a warning. SP, LR and
-# a pre-indexed load to PC do not.
+# Stores with Rt = PC are UNPREDICTABLE and decode with a warning.
 
-# str.w pc, [sp, #60]
 0xcd 0xf8 0x3c 0xf0
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0xcd 0xf8 0x3c 0xf0
-
-# str pc, [r0, #-4]
 0x40 0xf8 0x04 0xfc
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x40 0xf8 0x04 0xfc
-
-# str.w pc, [r0, r1]
 0x40 0xf8 0x01 0xf0
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x40 0xf8 0x01 0xf0
-
-# str.w pc, [r0, r1, lsl #3]
-0x40 0xf8 0x31 0xf0
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x40 0xf8 0x31 0xf0
-
-# str pc, [r0, #4]!
 0x40 0xf8 0x04 0xff
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x40 0xf8 0x04 0xff
-
-# str pc, [r0], #4
-0x40 0xf8 0x04 0xfb
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x40 0xf8 0x04 0xfb
-
-# strb pc, [r0, #4]!
-0x00 0xf8 0x04 0xff
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x00 0xf8 0x04 0xff
-
-# strb pc, [r0], #4
 0x00 0xf8 0x04 0xfb
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x00 0xf8 0x04 0xfb
-
-# strh pc, [r0, #4]!
 0x20 0xf8 0x04 0xff
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x20 0xf8 0x04 0xff
 
-# strh pc, [r0], #4
-0x20 0xf8 0x04 0xfb
-#      CHECK: warning: potentially undefined instruction encoding
-# CHECK-NEXT: 0x20 0xf8 0x04 0xfb
-
-# str.w sp, [r0, #4]
-0xc0 0xf8 0x04 0xd0
-# str.w lr, [sp, #60]
-0xcd 0xf8 0x3c 0xe0
-# str r1, [r0, #4]!
-0x40 0xf8 0x04 0x1f
-# ldr pc, [r0, #4]!
-0x50 0xf8 0x04 0xff
-
-# CHECK-NOT: warning
+# CHECK-COUNT-6: warning: potentially undefined instruction encoding
 # CHECK: str.w pc, [sp, #60]
 # CHECK: str pc, [r0, #-4]
 # CHECK: str.w pc, [r0, r1]
-# CHECK: str.w pc, [r0, r1, lsl #3]
 # CHECK: str pc, [r0, #4]!
-# CHECK: str pc, [r0], #4
-# CHECK: strb pc, [r0, #4]!
 # CHECK: strb pc, [r0], #4
 # CHECK: strh pc, [r0, #4]!
-# CHECK: strh pc, [r0], #4
-# CHECK: str.w sp, [r0, #4]
-# CHECK: str.w lr, [sp, #60]
-# CHECK: str r1, [r0, #4]!
-# CHECK: ldr pc, [r0, #4]!

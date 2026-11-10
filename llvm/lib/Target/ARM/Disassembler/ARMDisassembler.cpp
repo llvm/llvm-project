@@ -6147,7 +6147,7 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
     case ARM::t2STRB_POST:
     case ARM::t2STRH_PRE:
     case ARM::t2STRH_POST:
-      // The same for the pre- and post-indexed forms, where Rt is operand 1.
+      // Here Rt is operand 1.
       if (MI.getOperand(1).getReg() == ARM::PC)
         return MCDisassembler::SoftFail;
       return Result;

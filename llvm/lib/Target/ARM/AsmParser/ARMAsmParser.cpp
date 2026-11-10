@@ -7828,7 +7828,7 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   case ARM::t2STRi12:
   case ARM::t2STRi8:
   case ARM::t2STRs:
-    // Rt == PC is UNPREDICTABLE. These take a GPR, so check it here.
+    // Rt == PC is UNPREDICTABLE.
     if (Inst.getOperand(0).getReg() == ARM::PC)
       return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                    "operand must be a register in range [r0, r14]");
