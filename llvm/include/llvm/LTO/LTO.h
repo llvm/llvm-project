@@ -26,7 +26,6 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
@@ -42,6 +41,7 @@ class IRMover;
 class LLVMContext;
 class MemoryBufferRef;
 class Module;
+class PassPlugin;
 class raw_pwrite_stream;
 class ToolOutputFile;
 
