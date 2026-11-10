@@ -10143,8 +10143,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
              Args.hasArg(options::OPT_fsycl_link)) {
     // With -fsycl-link, the wrapper writes the wrapped SYCL device object to
     // the output and no host link runs. Pass only what is needed to find the
-    // device code: the sysroot, library paths and link inputs. Other host link
-    // options, startup files and default libraries are not used.
+    // device code: the sysroot, library paths and link inputs, which include
+    // -Wl and -Xlinker values. Startup files and default libraries are not
+    // added.
     CmdArgs.push_back("--sycl-device-link");
     CmdArgs.append({"-o", Output.getFilename()});
     const Driver &D = getToolChain().getDriver();

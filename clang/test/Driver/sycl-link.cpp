@@ -37,7 +37,7 @@
 
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fsycl -fsycl-link \
 // RUN:   %t.a.o -o dev.obj 2>&1 | FileCheck %s --check-prefix=WINDOWS
-// WINDOWS: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o" "dev.obj" "{{.*}}a.o"{{$}}
+// WINDOWS: clang-linker-wrapper"{{.*}} "--sycl-device-link" "-o" "dev.obj" "{{[^"]*}}a.o"{{$}}
 // RUN: %clang -ccc-print-bindings --target=x86_64-pc-windows-msvc -fsycl \
 // RUN:   -fsycl-link %t.a.o -o dev.obj 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=WINDOWS-BINDINGS
@@ -84,6 +84,9 @@
 // ONLY: error: invalid argument '-fsycl-link' not allowed with '[[OPT]]'
 
 /// The last of the mode options selects the mode.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-link \
+// RUN:   -fsycl-device-only -fsycl-host-only %t.a.o 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ONLY -DOPT=-fsycl-host-only
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsycl-link \
 // RUN:   --offload-device-only --offload-host-device %t.a.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=HOST-DEVICE
