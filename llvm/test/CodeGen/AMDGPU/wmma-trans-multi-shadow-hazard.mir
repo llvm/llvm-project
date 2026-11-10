@@ -33,17 +33,17 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   dead early-clobber %5:vreg_256_align2 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr [[DEF]], [[DEF1]], 8, [[DEF2]], 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   dead early-clobber %5:vreg_256_align2 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr [[DEF1]], [[DEF2]], 8, [[DEF3]], 0, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   SCHED_BARRIER 1
-  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[DEF3]], [[DEF3]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[DEF]], [[DEF]], implicit-def dead $scc
   ; CHECK-NEXT:   [[V_EXP_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_EXP_F32_e32 [[DEF4]], implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e32 [[V_EXP_F32_e32_]], [[V_EXP_F32_e32_]], implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[DEF4]], implicit [[V_EXP_F32_e32_]], implicit [[V_ADD_F32_e32_]], implicit [[S_ADD_I32_]]

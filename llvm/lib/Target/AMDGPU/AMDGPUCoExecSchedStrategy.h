@@ -71,7 +71,7 @@ private:
   /// dependencies for a SU on critical resource, then schedule that same SU on
   /// the critical resource. This agreement results in shorter live ranges and
   /// more regular HardwareUnit access patterns. SUs are prioritized by how
-  /// many registers scheduling them frees; see countRegFrees().
+  /// net registers scheduling them frees; see getRegFreeDelta().
   SmallSetVector<SUnit *, 16> PrioritySUs;
   /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
@@ -107,10 +107,10 @@ private:
   /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
-  /// Cached countRegFrees() of the head of PrioritySUs, valid only while
+  /// Cached getRegFreeDelta() of the head of PrioritySUs, valid only while
   /// PriorityHeadFreesFor is still the head.
   const SUnit *PriorityHeadFreesFor = nullptr;
-  unsigned PriorityHeadFrees = 0;
+  int PriorityHeadFrees = 0;
 
   /// Try to update PrioritySUs with a new \p SU.
   void updatePrioritySUsWith(SUnit *SU);

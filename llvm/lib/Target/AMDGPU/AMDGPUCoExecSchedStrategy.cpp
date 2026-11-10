@@ -467,20 +467,51 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
   return TargetSU;
 }
 
-/// Counts the registers scheduling \p SU frees, i.e. those it reads whose
-/// defining SU has \p SU as its only remaining unscheduled data successor.
+/// The net number of VGPRs/AGPRs scheduling \p SU frees: the width of the
+/// registers it reads whose defining SU has \p SU as its only remaining
+/// unscheduled data successor, minus the width of the registers it defines. An
+/// instruction that redefines a register in place, like an accumulating WMMA,
+/// frees nothing and defines nothing: its tied use and def are left out, so it
+/// nets zero whether the accumulator was defined in the region or before it.
 ///
-/// TODO: weight by register size and split per bank (ArchVGPR/AGPR/SGPR have
-/// separate budgets), charging SU for its own defs, so the result is a signed
-/// pressure delta rather than a count.
-static unsigned countRegFrees(const SUnit *SU) {
+/// A def is charged at the width of the whole register, also when it writes
+/// only a subregister: a wide register built piece by piece is allocated whole
+/// from its first piece on.
+///
+/// TODO: SGPRs have a separate budget and are not counted yet.
+static int getRegFreeDelta(const SUnit *SU) {
+  const MachineInstr *MI = SU->getInstr();
+  if (!MI)
+    return 0;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(
+      MI->getMF()->getSubtarget().getRegisterInfo());
+  // Width in 32-bit registers of a VGPR/AGPR virtual register.
+  auto Width = [&](Register Reg) -> int {
+    if (!Reg.isVirtual())
+      return 0;
+    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+    if (!TRI->isVGPRClass(RC) && !TRI->isAGPRClass(RC))
+      return 0;
+    return TRI->getRegSizeInBits(*RC) / 32;
+  };
+
+  // A def tied to a use rewrites that register in place: the old value dies
+  // and the new one takes its registers, so the pair neither frees nor grows
+  // anything, wherever the old value came from.
+  auto IsTiedUse = [MI](Register Reg) {
+    return any_of(MI->uses(), [Reg](const MachineOperand &Use) {
+      return Use.isReg() && Use.isTied() && Use.getReg() == Reg;
+    });
+  };
+
   SmallDenseMap<Register, unsigned, 8> RegMaxUnsched;
 
   for (const SDep &Pred : SU->Preds) {
     if (Pred.getKind() != SDep::Data)
       continue;
     Register Reg = Pred.getReg();
-    if (!Reg)
+    if (!Reg || IsTiedUse(Reg))
       continue;
     const SUnit *PredSU = Pred.getSUnit();
     unsigned Unscheduled = 0;
@@ -507,13 +538,16 @@ static unsigned countRegFrees(const SUnit *SU) {
   }
 
   // SU itself is always counted, so MaxUnsched >= 1 and freed means == 1.
-  unsigned Frees = 0;
+  int Delta = 0;
   for (const auto &[Reg, MaxUnsched] : RegMaxUnsched)
     if (MaxUnsched < 2)
-      ++Frees;
-  LLVM_DEBUG(dbgs() << "        => frees=" << Frees
+      Delta += Width(Reg);
+  for (const MachineOperand &Def : MI->defs())
+    if (Def.isReg() && !Def.isTied())
+      Delta -= Width(Def.getReg());
+  LLVM_DEBUG(dbgs() << "        => delta=" << Delta
                     << " (regs=" << RegMaxUnsched.size() << ")\n");
-  return Frees;
+  return Delta;
 }
 
 void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
@@ -528,10 +562,10 @@ void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
                     << ") vs existing SU(" << Existing->NodeNum << ")\n");
 
   if (PriorityHeadFreesFor != Existing) {
-    PriorityHeadFrees = countRegFrees(Existing);
+    PriorityHeadFrees = getRegFreeDelta(Existing);
     PriorityHeadFreesFor = Existing;
   }
-  unsigned CandFrees = countRegFrees(Cand);
+  int CandFrees = getRegFreeDelta(Cand);
   LLVM_DEBUG(dbgs() << "      Existing: frees=" << PriorityHeadFrees
                     << "  Candidate: frees=" << CandFrees << "\n");
 
@@ -1257,7 +1291,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
     }
   }
 
-  // countRegFrees() depends on what is already scheduled, so the ranking goes
+  // getRegFreeDelta() depends on what is already scheduled, so the ranking goes
   // stale after every pick.
   Heurs.rebuildAllPrioritySUs();
 

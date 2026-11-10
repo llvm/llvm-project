@@ -641,14 +641,13 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; COEXEC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; COEXEC-NEXT:    s_wait_dscnt 0x4
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
-; COEXEC-NEXT:    v_nop
+; COEXEC-NEXT:    v_mov_b32_e32 v72, s0
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
-; COEXEC-NEXT:    v_mov_b32_e32 v72, s0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s0, s1
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v72
@@ -940,18 +939,18 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[80:87], v[64:71], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[88:95], v[64:71], v[32:39]
+; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:  .LBB3_1: ; %loop
 ; COEXEC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; COEXEC-NEXT:    s_wait_dscnt 0x4
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[56:63], v[0:7], v[8:15], v[56:63]
-; COEXEC-NEXT:    v_nop
+; COEXEC-NEXT:    v_mov_b32_e32 v72, s0
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
-; COEXEC-NEXT:    v_mov_b32_e32 v72, s0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s0, s1
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[56:63], v[0:7], v[8:15], v[56:63]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v72
@@ -1215,12 +1214,12 @@ define amdgpu_kernel void @ds_wmma_no_block_carried(ptr addrspace(3) %base, ptr 
 ; COEXEC-NEXT:    s_load_b32 s0, s[4:5], 0x0 nv
 ; COEXEC-NEXT:    s_load_b32 s1, s[4:5], 0x10 nv
 ; COEXEC-NEXT:    s_mov_b32 s9, s8
-; COEXEC-NEXT:    s_mov_b32 s15, s8
 ; COEXEC-NEXT:    s_mov_b32 s10, s8
 ; COEXEC-NEXT:    s_mov_b32 s11, s8
 ; COEXEC-NEXT:    s_mov_b32 s12, s8
 ; COEXEC-NEXT:    s_mov_b32 s13, s8
 ; COEXEC-NEXT:    s_mov_b32 s14, s8
+; COEXEC-NEXT:    s_mov_b32 s15, s8
 ; COEXEC-NEXT:    v_mov_b64_e32 v[102:103], s[14:15]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[100:101], s[12:13]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[98:99], s[10:11]

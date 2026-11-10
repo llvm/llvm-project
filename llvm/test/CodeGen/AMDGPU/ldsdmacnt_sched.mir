@@ -31,12 +31,12 @@ body: |
     ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_load_tensor_load
@@ -80,12 +80,12 @@ body: |
     ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_wait_tensor_load
@@ -129,12 +129,12 @@ body: |
     ; DEFAULT-NEXT: dead [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_wait_tensor_wait
@@ -179,12 +179,12 @@ body: |
     ; DEFAULT-NEXT: S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_load_tensor_wait
@@ -227,12 +227,12 @@ body: |
     ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
     ; DEFAULT-NEXT: S_WAIT_TENSORCNT 0, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -278,12 +278,12 @@ body: |
     ; DEFAULT-NEXT: S_WAIT_TENSORCNT 1, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF2]], implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: tensor_load_tensor_wait2
@@ -324,20 +324,20 @@ body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_load
     ; DEFAULT: SCHED_GROUP_BARRIER 32, 1, 0
-    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: async_load_async_load
@@ -382,18 +382,18 @@ body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_wait_async_load
     ; DEFAULT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
-    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: async_wait_async_load
@@ -435,16 +435,16 @@ body: |
     ; DEFAULT-LABEL: name: async_wait_async_wait
     ; DEFAULT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 1, implicit-def dead $asynccnt, implicit $asynccnt
-    ; DEFAULT-NEXT: dead [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: dead [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF2]], implicit $exec
+    ; DEFAULT-NEXT: dead [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -486,19 +486,19 @@ body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait
     ; DEFAULT: SCHED_GROUP_BARRIER 32, 1, 0
-    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -544,19 +544,19 @@ body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait1
     ; DEFAULT: SCHED_GROUP_BARRIER 32, 1, 0
-    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 0, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -601,20 +601,20 @@ body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait2
     ; DEFAULT: SCHED_GROUP_BARRIER 32, 1, 0
-    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF1]], [[DEF]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF4]], [[DEF3]], implicit $exec
+    ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
