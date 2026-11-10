@@ -113,11 +113,23 @@ private:
   /// getRegFreeDelta() of the head of PrioritySUs, once computed.
   std::optional<int> PriorityHeadFrees;
 
+  /// getRegFreeDelta() of every SU in the region, indexed by NodeNum and owned
+  /// by CandidateHeuristics. An entry is cleared when an SU that shares an
+  /// operand with it is scheduled.
+  SmallVectorImpl<std::optional<int>> *RegFreeCache = nullptr;
+
+  /// \returns getRegFreeDelta(\p SU), from RegFreeCache when it is valid.
+  int getCachedRegFreeDelta(const SUnit *SU);
+
   /// Try to update PrioritySUs with a new \p SU.
   void updatePrioritySUsWith(SUnit *SU);
 
 public:
   HardwareUnitInfo() {}
+
+  void setRegFreeCache(SmallVectorImpl<std::optional<int>> *Cache) {
+    RegFreeCache = Cache;
+  }
 
   /// Rebuild PrioritySUs from AllSUs.
   void rebuildPrioritySUs();
@@ -241,6 +253,12 @@ protected:
   const TargetSchedModel *SchedModel;
   SmallVector<HardwareUnitInfo, 8> HWUInfo;
   DenseMap<MachineInstr *, unsigned> CarriedLatencies;
+  /// See HardwareUnitInfo::RegFreeCache.
+  SmallVector<std::optional<int>, 0> RegFreeCache;
+
+  /// Clear the cached register-free delta of every SU whose delta changes
+  /// because \p SU was scheduled: the other readers of the registers it reads.
+  void invalidateRegFreeDeltas(const SUnit *SU);
 
   /// Walk over the region and collect characteristics for the various
   /// heuristics.
