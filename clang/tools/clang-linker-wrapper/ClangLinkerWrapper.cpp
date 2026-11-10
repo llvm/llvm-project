@@ -389,15 +389,19 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
   const Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   ArgStringList NewLinkerArgs;
+  bool AddedFiles = false;
   for (const opt::Arg *Arg : Args) {
     // Do not forward arguments only intended for the linker wrapper.
     if (Arg->getOption().hasFlag(WrapperOnlyOption))
       continue;
 
     Arg->render(Args, NewLinkerArgs);
-    if (isOutputArg(Arg, HostTriple))
+    // Add the image once, even if the output is named more than once.
+    if (!AddedFiles && isOutputArg(Arg, HostTriple)) {
       llvm::transform(Files, std::back_inserter(NewLinkerArgs),
                       [&](StringRef A) { return Args.MakeArgString(A); });
+      AddedFiles = true;
+    }
   }
 
   SmallVector<StringRef> LinkerArgs({LinkerPath});

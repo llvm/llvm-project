@@ -71,6 +71,11 @@
 // RUN:   --linker-path=link.exe %t.win.obj /OUT:app.exe 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=WIN-LINK
 // WIN-LINK: "link.exe" {{.*}}win.obj /OUT:app.exe {{.*}}app.exe.sycl.image.wrapper{{[^ ]*}}.o{{$}}
+// The image is added once, even if the output is named more than once.
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --linker-path=link.exe %t.win.obj -o app.exe /OUT:app.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WIN-ONCE
+// WIN-ONCE: "link.exe" {{.*}}win.obj -o app.exe {{[^ ]*}}app.exe.sycl.image.wrapper{{[^ ]*}}.o /OUT:app.exe{{$}}
 // WINLIB: --target=spirv64-unknown-unknown {{.*}}win-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
 // RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
 // RUN:   --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE:nope.lib \
