@@ -73,6 +73,29 @@ body:             |
     RET_ReallyLR
 ...
 
+# An implicit def partially overlapping the copy result only defines the part
+# outside the copy result.
+---
+name:            split_copy_partial_overlap_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q4_q5, $q6, $x0
+
+    ; CHECK-LABEL: name: split_copy_partial_overlap_def
+    ; CHECK: liveins: $q4_q5, $q6, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $q1 = ORRv16i8 $q4, $q4
+    ; CHECK-NEXT: $q2 = ORRv16i8 $q5, $q5, implicit-def dead $q0
+    ; CHECK-NEXT: $q0 = ORRv16i8 $q6, $q6
+    ; CHECK-NEXT: ST3Threev4s $q0_q1_q2, $x0
+    ; CHECK-NEXT: RET_ReallyLR
+    $q1_q2 = COPY $q4_q5, implicit-def $q0_q1
+    $q0 = COPY $q6
+    ST3Threev4s $q0_q1_q2, $x0
+    RET_ReallyLR
+...
+
 # A copy lowered to a single instruction keeps the super-register def.
 ---
 name:            single_copy_super_reg_def
