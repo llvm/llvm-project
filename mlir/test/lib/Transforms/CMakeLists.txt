@@ -47,15 +47,9 @@ add_mlir_library(MLIRTestTransforms
   MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRTestTransforms PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRFuncDialect
   MLIRInferIntRangeInterface
   MLIRTransforms
   MLIRTransformDialect
-  )
-
-target_include_directories(MLIRTestTransforms
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )

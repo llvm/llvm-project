@@ -24,7 +24,7 @@
 
 ; QUIET:         *** IR Dump After IRTranslator (ir-translator) on foo ***
 ; QUIET-NOT:     ***
-; QUIET:         *** IR Dump After Localizer (localizer) on foo ***
+; QUIET:         *** IR Dump After Legalizer (legalizer) on foo ***
 
 ; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed -filter-passes=ir-translator,legalizer %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefixes=VERBOSE-FILTER
@@ -60,7 +60,8 @@
 ; RUN:   FileCheck %s --check-prefix=MODULE
 ; MODULE:      *** IR Dump After Pre-ISel Intrinsic Lowering (pre-isel-intrinsic-lowering) on {{.*}} ***
 ; MODULE:      define ptr @lr(ptr %p, i32 %n) {
-; MODULE-NEXT:   %1 = getelementptr i8, ptr %p, i32 %n
+; MODULE-NEXT:   [[SEXT:%.*]] = sext i32 %n to i64
+; MODULE-NEXT:   %{{.*}} = getelementptr i8, ptr %p, i64 [[SEXT]]
 
 @var = global i32 0
 

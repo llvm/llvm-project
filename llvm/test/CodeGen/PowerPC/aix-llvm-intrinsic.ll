@@ -78,12 +78,14 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKRELOC32-NEXT:        8: 80 62 00 00                      lwz 3, 0(2)
 ; CHECKRELOC32-NEXT:    0000000a:  R_TOC        (idx: [[#NFA+13]]) s[TC]
 ; CHECKRELOC32-NEXT:        c: 90 01 00 48                      stw 0, 72(1)
+; CHECKRELOC32-NEXT:       10: 80 83 00 04                      lwz 4, 4(3)
+; CHECKRELOC32-NEXT:       14: 7c 85 23 78                      mr 5, 4
 ; CHECKRELOC64-NEXT:        4: f8 21 ff 91                      stdu 1, -112(1)
 ; CHECKRELOC64-NEXT:        8: e8 62 00 00                      ld 3, 0(2)
 ; CHECKRELOC64-NEXT:    000000000000000a:  R_TOC	(idx: [[#NFA+13]]) s[TC]
 ; CHECKRELOC64-NEXT:        c: f8 01 00 80                      std 0, 128(1)
-; CHECKRELOC-NEXT:       10: 80 83 00 04                        lwz 4, 4(3)
-; CHECKRELOC-NEXT:       14: 7c 85 23 78                        mr 5, 4
+; CHECKRELOC64-NEXT:     10: e8 83 00 06                        lwa 4, 4(3)
+; CHECKRELOC64-NEXT:     14: 78 85 00 20                        clrldi 5, 4, 32
 ; CHECKRELOC-NEXT:       18: 4b ff ff e9                        bl 0x0
 ; CHECKRELOC32-NEXT:    00000018:  R_RBR        (idx: [[#NFA+1]]) .___memset[PR]
 ; CHECKRELOC64-NEXT:    0000000000000018:  R_RBR	(idx: [[#NFA+1]]) .___memset64[PR]

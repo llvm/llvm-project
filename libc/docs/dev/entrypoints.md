@@ -87,6 +87,12 @@ add_entrypoint_object(
 For redirecting entrypoints (e.g., when one function is a simple alias for
 another), the `REDIRECTED` option can be specified to the rule.
 
+Entrypoint objects are generally forbidden from depending on other entrypoint
+objects. The single allowed exception is `libc.src.errno.errno`: entrypoints
+that read or set `errno` should declare both `libc.src.__support.libc_errno`
+(the internal header) and `libc.src.errno.errno` (the compiled runtime storage)
+in their `DEPENDS` list. See {ref}`setting_errno` for detailed rules.
+
 ### `add_entrypoint_library`
 
 Standard library files like `libc.a` and `libm.a` are produced by

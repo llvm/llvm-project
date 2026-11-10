@@ -22,7 +22,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Driver.h"
-#include "llvm/Support/Path.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -108,7 +108,8 @@ static int convert_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS, LazyLoading);
+  auto ReaderOrErr = CodeGenDataReader::create(cl::LibraryOptionsContext(),
+                                               Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -206,7 +207,7 @@ static int merge_main(int argc, const char *argv[]) {
   if (!Result)
     exitWithError("failed to merge codegen data files.");
 
-  GlobalFunctionMapRecord.finalize(SkipTrim);
+  GlobalFunctionMapRecord.finalize(cl::LibraryOptionsContext(), SkipTrim);
 
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
@@ -240,7 +241,8 @@ static int show_main(int argc, const char *argv[]) {
     exitWithErrorCode(EC, OutputFilename);
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = CodeGenDataReader::create(Filename, *FS, LazyLoading);
+  auto ReaderOrErr = CodeGenDataReader::create(cl::LibraryOptionsContext(),
+                                               Filename, *FS, LazyLoading);
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 

@@ -1,0 +1,26 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! A generic whose only matching specific is a user-defined DEVICE procedure
+! must not resolve from host code.
+
+module m
+  interface only_dev
+    module procedure s_dev
+  end interface
+  real(8), managed, allocatable :: a(:)
+contains
+  attributes(device) subroutine s_dev(x)
+    real(8), device :: x
+  end subroutine
+
+  subroutine host_caller(i)
+    integer :: i
+    !ERROR: No specific subroutine of generic 'only_dev' matches the actual arguments
+    call only_dev(a(i))
+  end subroutine
+
+  attributes(device) subroutine device_caller(x)
+    real(8), device :: x
+    call only_dev(x)
+  end subroutine
+end module

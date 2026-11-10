@@ -11,6 +11,7 @@ set(CLANG_LIBS_TO_LINK
 else()
 set(LLVM_COMPONENTS_TO_LINK
   ${LLVM_TARGETS_TO_BUILD}
+  BitWriter
   Core
   MC
   OrcJIT
@@ -35,8 +36,13 @@ set(CLANG_REPL_TEST_SOURCES
   InterpreterTest.cpp
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
-  DeviceOffloadTest.cpp
 )
+
+if(NOT EMSCRIPTEN)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    DeviceOffloadTest.cpp
+    )
+endif()
 
 if(TARGET compiler-rt AND LLVM_ON_UNIX)
   list(APPEND CLANG_REPL_TEST_SOURCES
@@ -94,8 +100,8 @@ set_target_properties(ClangReplInterpreterTests PROPERTIES
 )
 endif()
 
-# Exceptions on Windows are not yet supported.
-if(NOT WIN32)
+# Interpreter exception tests are not supported on Windows or Emscripten.
+if(NOT WIN32 AND NOT EMSCRIPTEN)
   add_subdirectory(ExceptionTests)
 endif()
 

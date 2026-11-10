@@ -1,7 +1,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -169,7 +169,8 @@ static void testHandleMoveIntoNewBundle(MachineFunction &MF, LiveIntervals &LIS,
 
 /**
  * Split block numbered \p BlockNum at instruction \p SplitAt using
- * MachineBasicBlock::splitAt updating liveness intervals.
+ * MachineBasicBlock::splitAt updating liveness intervals and the dominator
+ * tree.
  */
 static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
                         unsigned SplitAt, unsigned BlockNum) {
@@ -177,7 +178,19 @@ static void testSplitAt(MachineFunction &MF, LiveIntervals &LIS,
   MachineBasicBlock &MBB = *SplitInstr.getParent();
 
   // Split block and update live intervals
-  MBB.splitAt(SplitInstr, false, &LIS);
+  MachineBasicBlock *SplitBB = MBB.splitAt(SplitInstr, false, &LIS);
+  if (SplitBB == &MBB)
+    return;
+
+  // Update the dominator tree
+  using DomTreeT = DomTreeBase<MachineBasicBlock>;
+  SmallVector<DomTreeT::UpdateType, 4> DTUpdates;
+  for (MachineBasicBlock *Succ : SplitBB->successors()) {
+    DTUpdates.push_back({DomTreeT::Insert, SplitBB, Succ});
+    DTUpdates.push_back({DomTreeT::Delete, &MBB, Succ});
+  }
+  DTUpdates.push_back({DomTreeT::Insert, &MBB, SplitBB});
+  LIS.getDomTree().applyUpdates(DTUpdates);
 }
 
 /**
@@ -228,30 +241,15 @@ static void liveIntervalTest(StringRef MIRFunc,
 ---
 ...
 name: func
+tracksRegLiveness: false
 registers:
   - { id: 0, class: sreg_64 }
 body: |
   bb.0:
-)MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
+)MIR") + Twine(MIRFunc) + Twine("...\n"))
+                            .toNullTerminatedStringRef(S);
 
   doTest<LiveIntervalsWrapperPass>(MIRString, T, ShouldPass);
-}
-
-static void liveVariablesTest(StringRef MIRFunc,
-                              TestPassT<LiveVariablesWrapperPass>::TestFx T,
-                              bool ShouldPass = true) {
-  SmallString<160> S;
-  StringRef MIRString = (Twine(R"MIR(
----
-...
-name: func
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: sreg_64 }
-body: |
-  bb.0:
-)MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
-  doTest<LiveVariablesWrapperPass>(MIRString, T, ShouldPass);
 }
 
 } // End of anonymous namespace.
@@ -917,50 +915,77 @@ TEST(LiveIntervalTest, LiveThroughSegments) {
       false);
 }
 
-TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef1) {
-  liveVariablesTest(
-      R"MIR(
+static const char *PhiOnlyClassMIR = R"MIR(
     %0 = IMPLICIT_DEF
-    S_NOP 0, implicit %0
-    S_NOP 0, implicit undef %0
-)MIR",
-      [](MachineFunction &MF, LiveVariablesWrapperPass &LVWrapper) {
-        auto &LV = LVWrapper.getLV();
-        auto &FirstNop = getMI(MF, 1, 0);
-        auto &SecondNop = getMI(MF, 2, 0);
-        EXPECT_TRUE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+    S_BRANCH %bb.1
+  bb.1:
+    S_ENDPGM 0
+  bb.2:
+    S_ENDPGM 0
+  bb.3:
+    S_ENDPGM 0
+)MIR";
 
-        Register R = Register::index2VirtReg(0);
-        LV.recomputeForSingleDefVirtReg(R);
-
-        EXPECT_TRUE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-      });
+static VNInfo *addPhiOnlyValue(LiveRange &LR, LiveIntervals &LIS,
+                               MachineFunction &MF, unsigned BlockNum,
+                               VNInfo::Allocator &Alloc) {
+  SlotIndex Start = LIS.getMBBStartIdx(MF.getBlockNumbered(BlockNum));
+  SlotIndex End = LIS.getInstructionIndex(getMI(MF, 0, BlockNum)).getRegSlot();
+  VNInfo *VNI = LR.getNextValue(Start, Alloc);
+  LR.addSegment(LiveRange::Segment(Start, End, VNI));
+  return VNI;
 }
 
-TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef2) {
-  liveVariablesTest(
-      R"MIR(
-    %0 = IMPLICIT_DEF
-    S_NOP 0, implicit %0
-    S_NOP 0, implicit undef %0, implicit %0
-)MIR",
-      [](MachineFunction &MF, LiveVariablesWrapperPass &LVWrapper) {
-        auto &LV = LVWrapper.getLV();
-        auto &FirstNop = getMI(MF, 1, 0);
-        auto &SecondNop = getMI(MF, 2, 0);
-        EXPECT_FALSE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-        EXPECT_TRUE(SecondNop.getOperand(2).isKill());
+static VNInfo *addDefinedValue(LiveRange &LR, LiveIntervals &LIS,
+                               MachineFunction &MF, VNInfo::Allocator &Alloc) {
+  SlotIndex Def = LIS.getInstructionIndex(getMI(MF, 0, 0)).getRegSlot();
+  VNInfo *VNI = LR.getNextValue(Def, Alloc);
+  LR.addSegment(LiveRange::Segment(Def, Def.getDeadSlot(), VNI));
+  return VNI;
+}
 
-        Register R = Register::index2VirtReg(0);
-        LV.recomputeForSingleDefVirtReg(R);
+TEST(LiveIntervalTest, ClassifyJoinsUnreachablePhiOnlyClass) {
+  liveIntervalTest(PhiOnlyClassMIR, [](MachineFunction &MF,
+                                       LiveIntervalsWrapperPass &LISWrapper) {
+    auto &LIS = LISWrapper.getLIS();
+    VNInfo::Allocator Alloc;
+    LiveRange LR;
+    addDefinedValue(LR, LIS, MF, Alloc);
+    VNInfo *Phi = addPhiOnlyValue(LR, LIS, MF, 2, Alloc);
+    ASSERT_TRUE(Phi->isPHIDef());
 
-        EXPECT_FALSE(FirstNop.getOperand(1).isKill());
-        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-        EXPECT_TRUE(SecondNop.getOperand(2).isKill());
-      });
+    ConnectedVNInfoEqClasses ConEQ(LIS);
+    EXPECT_EQ(ConEQ.Classify(LR), 1u);
+  });
+}
+
+TEST(LiveIntervalTest, ClassifyKeepsReachablePhiOnlyClass) {
+  liveIntervalTest(PhiOnlyClassMIR, [](MachineFunction &MF,
+                                       LiveIntervalsWrapperPass &LISWrapper) {
+    auto &LIS = LISWrapper.getLIS();
+    VNInfo::Allocator Alloc;
+    LiveRange LR;
+    addDefinedValue(LR, LIS, MF, Alloc);
+    VNInfo *Phi = addPhiOnlyValue(LR, LIS, MF, 1, Alloc);
+    ASSERT_TRUE(Phi->isPHIDef());
+
+    ConnectedVNInfoEqClasses ConEQ(LIS);
+    EXPECT_EQ(ConEQ.Classify(LR), 2u);
+  });
+}
+
+TEST(LiveIntervalTest, ClassifyPhiOnlyClassesWithoutDef) {
+  liveIntervalTest(PhiOnlyClassMIR, [](MachineFunction &MF,
+                                       LiveIntervalsWrapperPass &LISWrapper) {
+    auto &LIS = LISWrapper.getLIS();
+    VNInfo::Allocator Alloc;
+    LiveRange LR;
+    addPhiOnlyValue(LR, LIS, MF, 2, Alloc);
+    addPhiOnlyValue(LR, LIS, MF, 3, Alloc);
+
+    ConnectedVNInfoEqClasses ConEQ(LIS);
+    EXPECT_EQ(ConEQ.Classify(LR), 2u);
+  });
 }
 
 int main(int argc, char **argv) {

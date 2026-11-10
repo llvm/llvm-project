@@ -30,9 +30,11 @@
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -659,7 +661,8 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
 /// \param DestAddr Address of the array.
 /// \param Type Type of array.
 /// \param Init Initial expression of array.
-/// \param SrcAddr Address of the original array.
+/// \param SrcAddr Address of the original array, required only if the declare
+/// reduction has an initializer.
 static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
                                  QualType Type, bool EmitDeclareReductionInit,
                                  const Expr *Init,
@@ -668,14 +671,19 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   // Perform element-by-element initialization.
   QualType ElementTy;
 
+  // Only the initializer of a declare reduction reads the original item.
+  bool UseSrc = DRD && DRD->getInitializer();
+  assert((!UseSrc || SrcAddr.isValid()) &&
+         "Declare reduction initializer requires the original item address.");
+
   // Drill down to the base element type on both arrays.
   const ArrayType *ArrayTy = Type->getAsArrayTypeUnsafe();
   llvm::Value *NumElements = CGF.emitArrayLength(ArrayTy, ElementTy, DestAddr);
-  if (DRD)
+  if (UseSrc)
     SrcAddr = SrcAddr.withElementType(DestAddr.getElementType());
 
   llvm::Value *SrcBegin = nullptr;
-  if (DRD)
+  if (UseSrc)
     SrcBegin = SrcAddr.emitRawPointer(CGF);
   llvm::Value *DestBegin = DestAddr.emitRawPointer(CGF);
   // Cast from pointer to array type to pointer to single element.
@@ -696,7 +704,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
 
   llvm::PHINode *SrcElementPHI = nullptr;
   Address SrcElementCurrent = Address::invalid();
-  if (DRD) {
+  if (UseSrc) {
     SrcElementPHI = CGF.Builder.CreatePHI(SrcBegin->getType(), 2,
                                           "omp.arraycpy.srcElementPast");
     SrcElementPHI->addIncoming(SrcBegin, EntryBB);
@@ -722,7 +730,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
                            /*IsInitializer=*/false);
   }
 
-  if (DRD) {
+  if (UseSrc) {
     // Shift the address forward by one element.
     llvm::Value *SrcElementNext = CGF.Builder.CreateConstGEP1_32(
         SrcAddr.getElementType(), SrcElementPHI, /*Idx0=*/1,
@@ -1332,7 +1340,11 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
     HasCancel = TD->hasCancel();
   else if (const auto *TD = dyn_cast<OMPMasterTaskLoopDirective>(&D))
     HasCancel = TD->hasCancel();
+  else if (const auto *TD = dyn_cast<OMPMaskedTaskLoopDirective>(&D))
+    HasCancel = TD->hasCancel();
   else if (const auto *TD = dyn_cast<OMPParallelMasterTaskLoopDirective>(&D))
+    HasCancel = TD->hasCancel();
+  else if (const auto *TD = dyn_cast<OMPParallelMaskedTaskLoopDirective>(&D))
     HasCancel = TD->hasCancel();
 
   CodeGenFunction CGF(CGM, true);
@@ -1999,6 +2011,25 @@ void CGOpenMPRuntime::emitParallelCall(
     OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
+
+  // The caller waits for the parallel region to finish, so its captured stack
+  // variables remain alive until the region completes. Global variables also
+  // remain alive. Record this lifetime guarantee on the outlined function's
+  // parameters, even if other code has access to the same storage.
+  // The storage may still be modified or accessed through other pointers.
+  // For a captured pointer variable, this guarantees the lifetime of the
+  // variable itself, not the object it points to.
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice) {
+    assert(OutlinedFn->arg_size() == CapturedVars.size() + 2 &&
+           "Expected tid and bound tid before the captured arguments");
+    for (auto [I, Captured] : llvm::enumerate(CapturedVars)) {
+      if (Captured->getType()->isPointerTy() &&
+          llvm::isa<llvm::AllocaInst, llvm::GlobalVariable>(
+              llvm::getUnderlyingObject(Captured)))
+        OutlinedFn->addParamAttr(I + 2, llvm::Attribute::NoFreeObj);
+    }
+  }
+
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
   auto &M = CGM.getModule();
   auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
@@ -6727,6 +6758,7 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_target_parallel_for_simd:
   case OMPD_target_parallel_loop:
   case OMPD_target_simd:
+  case OMPD_target_loop:
     MinTeamsVal = MaxTeamsVal = 1;
     return nullptr;
   case OMPD_parallel:
@@ -7113,6 +7145,7 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
   }
   case OMPD_target_teams_distribute_simd:
   case OMPD_target_simd:
+  case OMPD_target_loop:
     return ReturnSequential();
   default:
     break;
@@ -10710,6 +10743,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
       return nullptr;
     case OMPD_target_parallel:
     case OMPD_target_simd:
+    case OMPD_target_loop:
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
       return nullptr;
@@ -11461,8 +11495,9 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
           CGM, ParentName, cast<OMPTargetParallelForSimdDirective>(E));
       break;
     case OMPD_target_simd:
+    case OMPD_target_loop:
       CodeGenFunction::EmitOMPTargetSimdDeviceFunction(
-          CGM, ParentName, cast<OMPTargetSimdDirective>(E));
+          CGM, ParentName, cast<OMPLoopDirective>(E));
       break;
     case OMPD_target_teams_distribute_parallel_for:
       CodeGenFunction::EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
@@ -11546,6 +11581,13 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     default:
       llvm_unreachable("Unknown target directive for OpenMP device codegen.");
     }
+    return;
+  }
+
+  // A metadirective has no associated statement; look into its variants.
+  if (const auto *MD = dyn_cast<OMPMetaDirective>(S)) {
+    for (const Stmt *V : MD->variants())
+      scanForTargetRegionsFunctions(V, ParentName);
     return;
   }
 
