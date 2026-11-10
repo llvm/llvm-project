@@ -20,6 +20,7 @@ void bad_vector1(bool1 s : SV_IsFrontFace) {}
 [shader("pixel")]
 void bad_matrix(bool2x2 s : SV_IsFrontFace) {}
 // expected-error@-1 {{semantic 'SV_IsFrontFace' must be a scalar of bool or 32 bit integer type (was 'bool2x2' (aka 'matrix<bool, 2, 2>'))}}
+// expected-error@-2 {{semantic 'SV_IsFrontFace' does not allow indexing}}
 // Only 32-bit integers are allowed, so 16-bit types are rejected.
 [shader("pixel")]
 void bad_uint16(uint16_t s : SV_IsFrontFace) {}
@@ -33,6 +34,10 @@ void bad_half(half s : SV_IsFrontFace) {}
 [shader("pixel")]
 void bad_array(bool s[1] : SV_IsFrontFace) {}
 // expected-error@-1 {{semantic 'SV_IsFrontFace' must be a scalar of bool or 32 bit integer type (was 'bool[1]'}}
+[shader("pixel")]
+void bad_array2(bool s[2] : SV_IsFrontFace) {}
+// expected-error@-1 {{semantic 'SV_IsFrontFace' must be a scalar of bool or 32 bit integer type (was 'bool[2]'}}
+// expected-error@-2 {{semantic 'SV_IsFrontFace' does not allow indexing}}
 
 [shader("pixel")]
 void bad_index(bool s : SV_IsFrontFace1) {}
