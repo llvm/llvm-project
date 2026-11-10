@@ -68,14 +68,15 @@ exit:
 ; OpFunctionCall type.
 ; CHECK-SPIRV-LABEL: Begin function store_call_result_then_icmp
 ; CHECK-SPIRV: %[[#StoreCall:]] = OpFunctionCall %[[#]]
+; CHECK-SPIRV: %[[#StoreCast:]] = OpBitcast %[[#StorePtr:]] %[[#StoreCall]]
 ; CHECK-SPIRV: OpStore %[[#]] %[[#StoreCall]] Aligned 8
-; CHECK-SPIRV: %[[#StoreLoc:]] = OpPtrCastToGeneric %[[#]] %[[#]]
+; CHECK-SPIRV: %[[#StoreLoc:]] = OpPtrCastToGeneric %[[#StorePtr]] %[[#]]
 ; CHECK-COMPAT64: %[[#StoreLocInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#StoreLoc]]
-; CHECK-COMPAT64: %[[#StoreCallInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#StoreCall]]
+; CHECK-COMPAT64: %[[#StoreCastInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#StoreCast]]
 ; CHECK-COMPAT32: %[[#StoreLocInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#StoreLoc]]
-; CHECK-COMPAT32: %[[#StoreCallInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#StoreCall]]
-; CHECK-COMPAT: OpINotEqual %[[#BoolTy]] %[[#StoreLocInt]] %[[#StoreCallInt]]
-; CHECK-DEFVER: OpPtrNotEqual %[[#]] %[[#StoreLoc]] %[[#StoreCall]]
+; CHECK-COMPAT32: %[[#StoreCastInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#StoreCast]]
+; CHECK-COMPAT: OpINotEqual %[[#BoolTy]] %[[#StoreLocInt]] %[[#StoreCastInt]]
+; CHECK-DEFVER: OpPtrNotEqual %[[#]] %[[#StoreLoc]] %[[#StoreCast]]
 
 declare spir_func ptr addrspace(4) @f()
 define spir_func i1 @store_call_result_then_icmp() {
@@ -91,13 +92,14 @@ entry:
 ; The same comparison, with no store.
 ; CHECK-SPIRV-LABEL: Begin function icmp_call_result_only
 ; CHECK-SPIRV: %[[#IcmpCall:]] = OpFunctionCall %[[#]]
-; CHECK-SPIRV: %[[#IcmpLoc:]] = OpPtrCastToGeneric %[[#]] %[[#]]
+; CHECK-SPIRV: %[[#IcmpCast:]] = OpBitcast %[[#IcmpPtr:]] %[[#IcmpCall]]
+; CHECK-SPIRV: %[[#IcmpLoc:]] = OpPtrCastToGeneric %[[#IcmpPtr]] %[[#]]
 ; CHECK-COMPAT64: %[[#IcmpLocInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#IcmpLoc]]
-; CHECK-COMPAT64: %[[#IcmpCallInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#IcmpCall]]
+; CHECK-COMPAT64: %[[#IcmpCastInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#IcmpCast]]
 ; CHECK-COMPAT32: %[[#IcmpLocInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#IcmpLoc]]
-; CHECK-COMPAT32: %[[#IcmpCallInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#IcmpCall]]
-; CHECK-COMPAT: OpINotEqual %[[#BoolTy]] %[[#IcmpLocInt]] %[[#IcmpCallInt]]
-; CHECK-DEFVER: OpPtrNotEqual %[[#]] %[[#IcmpLoc]] %[[#IcmpCall]]
+; CHECK-COMPAT32: %[[#IcmpCastInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#IcmpCast]]
+; CHECK-COMPAT: OpINotEqual %[[#BoolTy]] %[[#IcmpLocInt]] %[[#IcmpCastInt]]
+; CHECK-DEFVER: OpPtrNotEqual %[[#]] %[[#IcmpLoc]] %[[#IcmpCast]]
 
 define spir_func i1 @icmp_call_result_only() {
 entry:

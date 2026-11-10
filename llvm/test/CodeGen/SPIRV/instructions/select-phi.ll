@@ -67,9 +67,11 @@ exit: ; preds = %sw2, %sw1, %entry
 ; CHECK-LABEL: Begin function select_call_result
 ; CHECK: %[[SelVar:.*]] = OpVariable %[[#]]
 ; CHECK: %[[SelCall:.*]] = OpFunctionCall %[[#]]
-; CHECK: %[[SelCast:.*]] = OpPtrCastToGeneric %[[SelPtr:.*]] %[[SelVar]]
-; CHECK: %[[Sel:.*]] = OpSelect %[[SelPtr]] %[[#]] %[[SelCast]] %[[SelCall]]
-; CHECK: OpPtrEqual %[[#]] %[[Sel]] %[[SelCall]]
+; CHECK: %[[SelBCast1:.*]] = OpBitcast %[[SelPtr:.*]] %[[SelCall]]
+; CHECK: %[[SelBCast2:.*]] = OpBitcast %[[SelPtr]] %[[SelCall]]
+; CHECK: %[[SelCast:.*]] = OpPtrCastToGeneric %[[SelPtr]] %[[SelVar]]
+; CHECK: %[[Sel:.*]] = OpSelect %[[SelPtr]] %[[#]] %[[SelCast]] %[[SelBCast1]]
+; CHECK: OpPtrEqual %[[#]] %[[Sel]] %[[SelBCast2]]
 
 declare spir_func ptr addrspace(4) @f()
 define spir_func i1 @select_call_result(i1 %c) {

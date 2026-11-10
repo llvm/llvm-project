@@ -573,6 +573,12 @@ static bool tracesToPointerAlloca(Value *V) {
       V, m_AnyIntrinsic<Intrinsic::spv_alloca, Intrinsic::spv_alloca_array>());
 }
 
+// A non-intrinsic call keeps the result type fixed by its callee.
+static bool isFixedTypeCallResult(Value *V) {
+  auto *CI = dyn_cast<CallInst>(V);
+  return CI && !isa<IntrinsicInst>(CI);
+}
+
 // Maybe restore original function return type.
 static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
                                        Type *Ty) {
@@ -1597,7 +1603,9 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     bool WouldClobberPtrWithNonPtr = Ty && isPointerTyOrWrapper(Ty) &&
                                      !isPointerTyOrWrapper(KnownElemTy) &&
                                      tracesToPointerAlloca(Op);
+    // Do not retype a call result, instead cast the use to the needed pointee.
     if (Op->hasUseList() && !WouldClobberPtrWithNonPtr &&
+        !isFixedTypeCallResult(Op) &&
         (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(

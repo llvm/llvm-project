@@ -52,9 +52,11 @@ entry:
 ; CHECK-LABEL: Begin function phi_call_result
 ; CHECK: %[[#PhiVar:]] = OpVariable %[[#]]
 ; CHECK: %[[#PhiCall:]] = OpFunctionCall %[[#]]
-; CHECK: %[[#PhiCast:]] = OpPtrCastToGeneric %[[#PhiPtr:]] %[[#PhiVar]]
-; CHECK: %[[#Phi:]] = OpPhi %[[#PhiPtr]] %[[#PhiCast]] %[[#]] %[[#]]
-; CHECK: OpPtrNotEqual %[[#]] %[[#Phi]] %[[#PhiCall]]
+; CHECK: %[[#PhiBCast1:]] = OpBitcast %[[#PhiPtr:]] %[[#PhiCall]]
+; CHECK: %[[#PhiBCast2:]] = OpBitcast %[[#PhiPtr]] %[[#PhiCall]]
+; CHECK: %[[#PhiCast:]] = OpPtrCastToGeneric %[[#PhiPtr]] %[[#PhiVar]]
+; CHECK: %[[#Phi:]] = OpPhi %[[#PhiPtr]] %[[#PhiCast]] %[[#]] %[[#PhiBCast1]]
+; CHECK: OpPtrNotEqual %[[#]] %[[#Phi]] %[[#PhiBCast2]]
 
 declare ptr addrspace(4) @f()
 define i1 @phi_call_result(i1 %c) {
