@@ -50,11 +50,11 @@ llvm.func @exp10_test(%arg0: f32, %arg1: vector<8xf32>) {
 }
 
 // CHECK-LABEL: @ldexp_test
-llvm.func @ldexp_test(%arg0: f32, %arg1: vector<8xf32>, %arg2: i32) {
+llvm.func @ldexp_test(%arg0: f32, %arg1: vector<8xf32>, %arg2: i32, %arg3: vector<8xi32>) {
   // CHECK: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
   "llvm.intr.ldexp"(%arg0, %arg2) : (f32, i32) -> f32
-  // CHECK: call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %{{.*}}, i32 %{{.*}})
-  "llvm.intr.ldexp"(%arg1, %arg2) : (vector<8xf32>, i32) -> vector<8xf32>
+  // CHECK: call <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
+  "llvm.intr.ldexp"(%arg1, %arg3) : (vector<8xf32>, vector<8xi32>) -> vector<8xf32>
   llvm.return
 }
 
@@ -2067,7 +2067,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare float @llvm.exp10.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.ldexp.f32.i32(float, i32)
-// CHECK-DAG: declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
+// CHECK-DAG: declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
 // CHECK-DAG: declare { float, i32 } @llvm.frexp.f32.i32(float)
 // CHECK-DAG: declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 // CHECK-DAG: declare { float, float } @llvm.modf.f32(float)

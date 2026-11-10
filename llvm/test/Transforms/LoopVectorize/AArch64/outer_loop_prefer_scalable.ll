@@ -25,7 +25,7 @@ define void @foo() {
 ; CHECK:       [[INNER_LOOP1]]:
 ; CHECK-NEXT:    [[J2:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_LOOP1]] ]
 ; CHECK-NEXT:    [[X3:%.*]] = phi <vscale x 4 x float> [ [[WIDE_LOAD]], %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_LOOP1]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [512 x float], ptr @B, i64 0, <vscale x 4 x i64> [[J2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @B, <vscale x 4 x i64> [[J2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP3]] = fmul <vscale x 4 x float> [[X3]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <vscale x 4 x i64> [[J2]], splat (i64 1)
@@ -120,7 +120,7 @@ define void @col_major_m8(ptr noalias %A, i64 %N) {
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi <vscale x 4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP7:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw <vscale x 4 x i64> [[INNER_IV2]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[TMP3]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <vscale x 4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <vscale x 4 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <vscale x 4 x i64> [[VEC_IND]] to <vscale x 4 x float>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub <vscale x 4 x float> [[TMP5]], [[WIDE_MASKED_GATHER]]

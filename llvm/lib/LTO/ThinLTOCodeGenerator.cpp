@@ -60,6 +60,7 @@
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
@@ -85,7 +86,6 @@ extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
 extern cl::opt<std::string> RemarksFormat;
 extern cl::opt<bool> LTORunCSIRInstr;
 extern cl::opt<std::string> LTOCSIRProfile;
-extern cl::opt<std::string> SampleProfileFile;
 }
 
 // Default to using all available threads in the system, but using only one
@@ -250,9 +250,12 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
     PGOOpt = PGOOptions(LTOCSIRProfile, "", "",
                         /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default);
-  } else if (!SampleProfileFile.empty()) {
+  } else if (StringRef SampleProfileFile =
+                 SampleProfileLoaderPass::getSampleProfileFile(
+                     TheModule.getContext());
+             !SampleProfileFile.empty()) {
     PGOOpt =
-        PGOOptions(SampleProfileFile, "", "",
+        PGOOptions(SampleProfileFile.str(), "", "",
                    /*MemoryProfile=*/"", PGOOptions::SampleUse,
                    PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default);
   }

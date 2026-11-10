@@ -25,6 +25,8 @@ include "HexagonDepArch.td"
 
 def ProcTinyCore: SubtargetFeature<"tinycore", "HexagonProcFamily",
       "TinyCore", "Hexagon Tiny Core">;
+def ProcHLX2048B: SubtargetFeature<"hlx-length2048b", "HexagonProcFamily",
+      "HLX2048B", "Hexagon HLX 2048B Instructions">;
 
 // Hexagon ISA Extensions
 def ExtensionZReg: SubtargetFeature<"zreg", "UseZRegOps", "true",
@@ -107,6 +109,9 @@ def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
 def ExtensionAudio: SubtargetFeature<"audio", "UseAudioOps", "true",
       "Hexagon Audio extension instructions">;
 
+def ExtensionHLX: SubtargetFeature<"hlx", "UseHLXOps", "true",
+      "Hexagon eLementwise eXtension instructions">;
+
 def ExtensionHVXIEEEFP: SubtargetFeature<"hvx-ieee-fp", "UseHVXIEEEFPOps",
       "true", "Hexagon HVX IEEE floating point instructions">;
 
@@ -159,6 +164,7 @@ def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
                          AssemblerPredicate<(all_of ExtensionHVX128B)>;
 def UseHVX             : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXV60)>;
+def NoHVX              : Predicate<"!HST->useHVXOps()">;
 def UseHVXV60          : Predicate<"HST->useHVXV60Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV60)>;
 def UseHVXV62          : Predicate<"HST->useHVXV62Ops()">,
@@ -196,6 +202,12 @@ def HasPreV65          : Predicate<"HST->hasPreV65()">,
                          AssemblerPredicate<(all_of FeaturePreV65)>;
 def UseHVXIEEEFP       : Predicate<"HST->useHVXIEEEFPOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXIEEEFP)>;
+def NoHLX              : Predicate<"!HST->useHLXOps()">;
+def UseHLX             : Predicate<"HST->useHLXOps()">,
+                         AssemblerPredicate<(all_of ExtensionHLX), "hlx">;
+def UseHLX2048B        : Predicate<"HST->useHLX2048BOps()">,
+                         AssemblerPredicate<(all_of ExtensionHLX),
+                                            "hlx-length2048b">;
 def UseHVXQFloat       : Predicate<"HST->useHVXQFloatOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXQFloat)>;
 def UseHVXFloatingPoint: Predicate<"HST->useHVXFloatingPoint()">;
@@ -429,6 +441,7 @@ include "HexagonCallingConv.td"
 include "HexagonPseudo.td"
 include "HexagonPatterns.td"
 include "HexagonPatternsHVX.td"
+include "HexagonPatternsHLX.td"
 include "HexagonPatternsV65.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
@@ -532,7 +545,7 @@ def : Proc<"hexagonv83", HexagonModelV83,
 def : Proc<"hexagonv85", HexagonModelV85,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
             ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
-            ArchV83, ArchV85,
+            ArchV83, ArchV85, ProcHLX2048B,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 

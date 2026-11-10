@@ -24,18 +24,22 @@ using LIBC_NAMESPACE::printf_core::WRITE_OK;
 using LIBC_NAMESPACE::printf_core::WriteBuffer;
 using LIBC_NAMESPACE::printf_core::Writer;
 
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char, wchar_t>;
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, Constructor, TestCharTypes) {
-  using CharT = ParamType;
+template <typename T>
+class LlvmLibcPrintfWriterTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcPrintfWriterTest, TestCharTypes);
+
+TYPED_TEST(LlvmLibcPrintfWriterTest, Constructor) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 10;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
   EXPECT_EQ(writer.get_write_buffer().buff, str);
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, Write, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, Write) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 4;
   CharT str[BUFFER_SIZE] = {ENCODED(CharT, 'D'), ENCODED(CharT, 'E'),
                             ENCODED(CharT, 'F'), ENCODED(CharT, 'G')};
@@ -53,8 +57,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, Write, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 10;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -69,8 +73,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteMultipleTimes, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{9});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteChars, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteChars) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 4;
   CharT str[BUFFER_SIZE] = {ENCODED(CharT, 'D'), ENCODED(CharT, 'E'),
                             ENCODED(CharT, 'F'), ENCODED(CharT, 'G')};
@@ -85,8 +89,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteChars, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 10;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -101,8 +105,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsMultipleTimes, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{9});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteManyChars, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteManyChars) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 100;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -125,8 +129,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteManyChars, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{99});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWrites, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWrites) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 13;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -142,8 +146,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWrites, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLength, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLength) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 11;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -156,8 +160,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLength, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLength, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLength) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 11;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -170,8 +174,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLength, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{15});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength) {
+  using CharT = TypeParam;
   constexpr size_t BUFFER_SIZE = 11;
   CharT str[BUFFER_SIZE];
   Writer writer = make_drop_overflow_writer(str, BUFFER_SIZE - 1);
@@ -187,8 +191,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLength, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne) {
+  using CharT = TypeParam;
   CharT str[1];
   // This is because the max length should be at most 1 less than the size of
   // the buffer it's writing to.
@@ -205,9 +209,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, StringWithMaxLengthOne, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLength,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLength) {
+  using CharT = TypeParam;
   Writer writer = make_drop_overflow_writer<CharT>(nullptr, 0);
   writer.write(ENCODED(CharT, 'a'), 3);
   writer.write(ENCODED(CharT, "DEF"));
@@ -233,9 +236,8 @@ int copy_to_out(basic_string_view<CharT> new_str, void *raw_out_buff) {
   return WRITE_OK;
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLengthWithCallback,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLengthWithCallback) {
+  using CharT = TypeParam;
   CharT str[16];
 
   OutBuff<CharT> out_buff = {str, 0};
@@ -254,9 +256,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteWithMaxLengthWithCallback,
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback) {
+  using CharT = TypeParam;
   CharT str[16];
 
   OutBuff<CharT> out_buff = {str, 0};
@@ -275,9 +276,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, WriteCharsWithMaxLengthWithCallback,
   ASSERT_EQ(writer.get_chars_written(), size_t{15});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback) {
+  using CharT = TypeParam;
   CharT str[16];
 
   OutBuff<CharT> out_buff = {str, 0};
@@ -299,9 +299,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, MixedWriteWithMaxLengthWithCallback,
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback) {
+  using CharT = TypeParam;
   CharT str[16];
 
   OutBuff<CharT> out_buff = {str, 0};
@@ -323,9 +322,8 @@ TYPED_TEST(LlvmLibcPrintfWriterTest, ZeroLengthBufferWithCallback,
   ASSERT_EQ(writer.get_chars_written(), size_t{12});
 }
 
-TYPED_TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
+  using CharT = TypeParam;
   CharT str[16];
 
   OutBuff<CharT> out_buff = {str, 0};
