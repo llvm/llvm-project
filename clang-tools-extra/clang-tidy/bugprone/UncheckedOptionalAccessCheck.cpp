@@ -27,10 +27,8 @@ template <> struct OptionEnumMapping<dataflow::BoolModelKind> {
   static llvm::ArrayRef<std::pair<dataflow::BoolModelKind, llvm::StringRef>>
   getEnumMapping() {
     static constexpr std::pair<dataflow::BoolModelKind, llvm::StringRef>
-        Mapping[] = {
-            {dataflow::BoolModelKind::SAT, "SAT"},
-            {dataflow::BoolModelKind::Simple, "Simple"},
-        };
+        Mapping[] = {{dataflow::BoolModelKind::SAT, "SAT"},
+                     {dataflow::BoolModelKind::Simple, "Simple"}};
     return {Mapping};
   }
 };
