@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC_SEARCH_HCREATE_R_H
 
 #include "hdr/types/hsearch_data.h"
-#include <stddef.h> // size_t
 #include "src/__support/macros/config.h"
+#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
 int hcreate_r(size_t capacity, struct hsearch_data *htab);
