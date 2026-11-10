@@ -793,9 +793,15 @@ class VoidMemSetLibcall<list<FuncArgType> ArgTypes>
   let ParamAttrs = [[WriteOnly]];
 }
 
+def UninitAllocKind
+    : AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">;
+def AlignedUninitAllocKind
+    : AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized | "
+                    "AllocFnKind::Aligned">;
+
 class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
-                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
+                 UninitAllocKind,
                  AllocSizeAttr<0>, AllocFamilyAttr<family>];
   let Memory = InaccessibleMemOrErrnoWrite;
   let RetAttrs = [NoAlias, NoUndef];
@@ -1158,18 +1164,73 @@ def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
 def OBJC_SYNC_ENTER : RuntimeLibcall<Int, [Ptr]>;
 def OBJC_SYNC_EXIT : RuntimeLibcall<Int, [Ptr]>;
 
+class PrintfLibcall : RuntimeLibcall<Int, [Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+class SPrintfLibcall : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoAlias, NoUndef, WriteOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+class FPrintfLibcall : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef, ReadOnly]];
+}
+
 def ABORT : RuntimeLibcall<Void, []> {
   let FnAttrs = [Cold, NoFree, NoReturn, NoUnwind];
 }
 
 def ABS : PureLibcall<Int, [Int]>;
-def ACCESS : RuntimeLibcall<Int, [Ptr, Int]>;
-def ALIGNED_ALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def ATEXIT : RuntimeLibcall<Int, [Ptr]>;
-def ATOF : RuntimeLibcall<Dbl, [Ptr]>;
-def ATOI : RuntimeLibcall<Int, [Ptr]>;
-def ATOL : RuntimeLibcall<Long, [Ptr]>;
-def ATOLL : RuntimeLibcall<LLong, [Ptr]>;
+def ACCESS : RuntimeLibcall<Int, [Ptr, Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def ALIGNED_ALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AlignedUninitAllocKind,
+                 AllocSizeAttr<1>, AllocFamilyAttr<"malloc">];
+  let Memory = InaccessibleMemOrErrnoWrite;
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[AllocAlign, NoUndef], [NoUndef]];
+}
+
+def ATEXIT : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def ATOF : RuntimeLibcall<Dbl, [Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone]];
+}
+
+def ATOI : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone]];
+}
+
+def ATOL : RuntimeLibcall<Long, [Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone]];
+}
+
+def ATOLL : RuntimeLibcall<LLong, [Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone]];
+}
+
 def BCMP : MemCmpLibcall;
 def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
   let FnAttrs = CommonFnAttrs;
@@ -1177,11 +1238,35 @@ def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
   let ParamAttrs = [ReadPtrAttrs, [WriteOnly, CapturesNone]];
 }
 
-def CHMOD : RuntimeLibcall<Int, [Ptr, IntX]>;
-def CHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
-def CLEARERR : RuntimeLibcall<Void, [Ptr]>;
-def CLOSEDIR : RuntimeLibcall<Int, [Ptr]>;
-def CTERMID : RuntimeLibcall<Ptr, [Ptr]>;
+def CHMOD : RuntimeLibcall<Int, [Ptr, IntX]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def CHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef], [NoUndef]];
+}
+
+def CLEARERR : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def CLOSEDIR : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def CTERMID : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
 def CXA_ATEXIT : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def CXA_GUARD_ABORT : RuntimeLibcall<Void, [Ptr]>;
 def CXA_GUARD_ACQUIRE : RuntimeLibcall<Int, [Ptr]>;
@@ -1190,70 +1275,317 @@ def CXA_THROW : RuntimeLibcall<Void, [Ptr, Ptr, Ptr]> {
   let FnAttrs = [Cold, NoReturn];
 }
 
-def DUNDER_ISOC99_SCANF : RuntimeLibcall<Int, [Ptr, Ellip]>;
-def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
-def DUNDER_STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
-def DUNDER_STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
-def EXECL : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def EXECLE : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def EXECLP : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def EXECV : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def EXECVE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def EXECVP : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def EXECV_P : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def EXECVPE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
+def DUNDER_ISOC99_SCANF : RuntimeLibcall<Int, [Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn];
+  let RetAttrs = [NoAlias];
+  let ParamAttrs = [[CapturesNone, ReadOnly]];
+}
+
+def DUNDER_STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn];
+  let RetAttrs = [NoAlias];
+  let ParamAttrs = [[CapturesNone, ReadOnly], [NoUndef]];
+}
+
+def DUNDER_STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind];
+  let ParamAttrs = [[], [CapturesNone, ReadOnly]];
+}
+
+def EXECL : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECLE : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECLP : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECV : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECVE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECVP : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECV_P : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def EXECVPE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
 def EXIT : RuntimeLibcall<Void, [Int]> {
   let FnAttrs = [NoReturn];
 }
 
-def FCLOSE : RuntimeLibcall<Int, [Ptr]>;
-def FDOPEN : RuntimeLibcall<Ptr, [Int, Ptr]>;
-def FEOF : RuntimeLibcall<Int, [Ptr]>;
-def FERROR : RuntimeLibcall<Int, [Ptr]>;
-def FFLUSH : RuntimeLibcall<Int, [Ptr]>;
+def FCLOSE : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FDOPEN : RuntimeLibcall<Ptr, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def FEOF : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FERROR : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let Memory = ReadOnlyMemory;
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FFLUSH : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
 def FFS : PureLibcall<Int, [Int]>;
 def FFSL : PureLibcall<Int, [Long]>;
 def FFSLL : PureLibcall<Int, [LLong]>;
-def FGETC : RuntimeLibcall<Int, [Ptr]>;
-def FGETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]>;
-def FGETPOS : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def FGETS : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]>;
-def FGETS_UNLOCKED : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]>;
-def FILENO : RuntimeLibcall<Int, [Ptr]>;
+def FGETC : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FGETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FGETPOS : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FGETS : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef, WriteOnly], [NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FGETS_UNLOCKED : RuntimeLibcall<Ptr, [Ptr, Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef, WriteOnly], [NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FILENO : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
 def FIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def FLOCKFILE : RuntimeLibcall<Void, [Ptr]>;
+def FLOCKFILE : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
 def FLS : PureLibcall<Int, [Int]>;
 def FLSL : PureLibcall<Int, [Long]>;
 def FLSLL : PureLibcall<Int, [LLong]>;
-def FOPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def FOPEN64 : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def FORK : RuntimeLibcall<Int, []>;
-def FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def FPUTC : RuntimeLibcall<Int, [Int, Ptr]>;
-def FPUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]>;
-def FPUTS : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def FPUTS_UNLOCKED : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def FREAD : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
-def FREAD_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
-def FSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def FSEEK : RuntimeLibcall<Int, [Ptr, Long, Int]>;
-def FSEEKO : RuntimeLibcall<Int, [Ptr, IntX, Int]>;
-def FSEEKO64 : RuntimeLibcall<Int, [Ptr, Int64, Int]>;
-def FSETPOS : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def FSTAT : RuntimeLibcall<Int, [Int, Ptr]>;
-def FSTAT64 : RuntimeLibcall<Int, [Int, Ptr]>;
-def FSTATVFS : RuntimeLibcall<Int, [Int, Ptr]>;
-def FSTATVFS64 : RuntimeLibcall<Int, [Int, Ptr]>;
-def FTELL : RuntimeLibcall<Long, [Ptr]>;
-def FTELLO : RuntimeLibcall<IntPlus, [Ptr]>;
-def FTELLO64 : RuntimeLibcall<Int64, [Ptr]>;
-def FTRYLOCKFILE : RuntimeLibcall<Int, [Ptr]>;
-def FUNLOCKFILE : RuntimeLibcall<Void, [Ptr]>;
-def FWRITE : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
-def FWRITE_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]>;
-def GETC : RuntimeLibcall<Int, [Ptr]>;
-def GETCHAR : RuntimeLibcall<Int, []>;
+def FOPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def FOPEN64 : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def FORK : RuntimeLibcall<Int, []> {
+  let FnAttrs = [NoFree];
+}
+
+def FPRINTF : FPrintfLibcall;
+
+def FPUTC : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FPUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FPUTS : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def FPUTS_UNLOCKED : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def FREAD : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, WriteOnly], [NoUndef], [NoUndef],
+                    [CapturesNone, NoUndef]];
+}
+
+def FREAD_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, WriteOnly], [NoUndef], [NoUndef],
+                    [CapturesNone, NoUndef]];
+}
+
+def FSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def FSEEK : RuntimeLibcall<Int, [Ptr, Long, Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef], [NoUndef]];
+}
+
+def FSEEKO : RuntimeLibcall<Int, [Ptr, IntX, Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef], [NoUndef]];
+}
+
+def FSEEKO64 : RuntimeLibcall<Int, [Ptr, Int64, Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef], [NoUndef]];
+}
+
+def FSETPOS : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef]];
+}
+
+def FSTAT : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FSTAT64 : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FSTATVFS : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FSTATVFS64 : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def FTELL : RuntimeLibcall<Long, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FTELLO : RuntimeLibcall<IntPlus, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FTELLO64 : RuntimeLibcall<Int64, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FTRYLOCKFILE : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FUNLOCKFILE : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def FWRITE : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef], [NoUndef],
+                    [CapturesNone, NoUndef]];
+}
+
+def FWRITE_UNLOCKED : RuntimeLibcall<SizeT, [Ptr, SizeT, SizeT, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef], [NoUndef],
+                    [CapturesNone, NoUndef]];
+}
+
+def GETC : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def GETCHAR : RuntimeLibcall<Int, []> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+}
+
 def GETCHAR_UNLOCKED : RuntimeLibcall<Int, []> {
   let FnAttrs = [NoFree, NoUnwind];
   let RetAttrs = [NoUndef];
@@ -1265,12 +1597,43 @@ def GETC_UNLOCKED : RuntimeLibcall<Int, [Ptr]> {
   let ParamAttrs = [[NoUndef, CapturesNone]];
 }
 
-def GETENV : RuntimeLibcall<Ptr, [Ptr]>;
-def GETITIMER : RuntimeLibcall<Int, [Int, Ptr]>;
-def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]>;
-def GETPWNAM : RuntimeLibcall<Ptr, [Ptr]>;
-def GETS : RuntimeLibcall<Ptr, [Ptr]>;
-def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def GETENV : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let Memory = ReadOnlyMemory;
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def GETITIMER : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def GETLOGIN_R : RuntimeLibcall<Int, [Ptr, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef]];
+}
+
+def GETPWNAM : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def GETS : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def GETTIMEOFDAY : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef]];
+}
+
 def HTONL : PureLibcall<UInt32, [UInt32]>;
 def HTONS : PureLibcall<UInt16, [UInt16]>;
 def IPRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
@@ -1283,17 +1646,64 @@ def ISDIGIT : RuntimeLibcall<Int, [Int]> {
 }
 
 def LABS : PureLibcall<Long, [Same]>;
-def LCHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
+def LCHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef], [NoUndef]];
+}
+
 def LLABS : PureLibcall<LLong, [LLong]>;
-def LSTAT : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def LSTAT64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def MEMALIGN : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def MEMCCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, Int, SizeT]>;
-def MEMCCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, Int, SizeT, SizeT]>;
-def MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
-def MEMPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def MEMPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def MEMRCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
+def LSTAT : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def LSTAT64 : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def MEMALIGN : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AlignedUninitAllocKind,
+                 AllocSizeAttr<1>, AllocFamilyAttr<"malloc">];
+  let Memory = InaccessibleMemOrErrnoWrite;
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[AllocAlign]];
+}
+
+def MEMCCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, Int, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def MEMCCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, Int, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+}
+
+def MEMPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def MEMPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def MEMRCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+}
+
 foreach Size = [4, 8, 16] in {
   def MEMSET_PATTERN#Size : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
     let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
@@ -1301,8 +1711,19 @@ foreach Size = [4, 8, 16] in {
     let ParamAttrs = [[CapturesNone, WriteOnly], [CapturesNone, ReadOnly]];
   }
 }
-def MKDIR : RuntimeLibcall<Int, [Ptr, IntX]>;
-def MKTIME : RuntimeLibcall<IntPlus, [Ptr]>;
+
+def MKDIR : RuntimeLibcall<Int, [Ptr, IntX]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def MKTIME : RuntimeLibcall<IntPlus, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
 def MSVC_DELETE_ARRAY_PTR32 : RuntimeLibcall<Void, [Ptr]>;
 def MSVC_DELETE_ARRAY_PTR32_INT : RuntimeLibcall<Void, [Ptr, UInt]>;
 def MSVC_DELETE_ARRAY_PTR32_NOTHROW : RuntimeLibcall<Void, [Ptr, Ptr]>;
@@ -1325,17 +1746,69 @@ def MSVC_NEW_LONGLONG : RuntimeLibcall<Ptr, [ULLong]>;
 def MSVC_NEW_LONGLONG_NOTHROW : RuntimeLibcall<Ptr, [ULLong, Ptr]>;
 def NTOHL : PureLibcall<UInt32, [UInt32]>;
 def NTOHS : PureLibcall<UInt16, [UInt16]>;
-def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
-def OPEN64 : RuntimeLibcall<Int, [Ptr, Int, Ellip]>;
-def OPENDIR : RuntimeLibcall<Ptr, [Ptr]>;
-def PCLOSE : RuntimeLibcall<Int, [Ptr]>;
-def PERROR : RuntimeLibcall<Void, [Ptr]>;
-def POPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def POSIX_MEMALIGN : RuntimeLibcall<Int, [Ptr, SizeT, SizeT]>;
-def PREAD : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
-def PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
-def PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
-def PUTCHAR : RuntimeLibcall<Int, [Int]>;
+def OPEN : RuntimeLibcall<Int, [Ptr, Int, Ellip]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def OPEN64 : RuntimeLibcall<Int, [Ptr, Int, Ellip]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def OPENDIR : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def PCLOSE : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def PERROR : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def POPEN : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def POSIX_MEMALIGN : RuntimeLibcall<Int, [Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn];
+  let Memory = InaccessibleOrArgMem;
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, WriteOnly], [NoUndef], [NoUndef]];
+}
+
+def PREAD : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef], [NoUndef], [NoUndef]];
+}
+
+def PRINTF : PrintfLibcall;
+
+def PUTC : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def PUTCHAR : RuntimeLibcall<Int, [Int]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
 def PUTCHAR_UNLOCKED : RuntimeLibcall<Int, [Int]> {
   let FnAttrs = [NoFree, NoUnwind];
   let RetAttrs = [NoUndef];
@@ -1348,25 +1821,104 @@ def PUTC_UNLOCKED : RuntimeLibcall<Int, [Int, Ptr]> {
   let ParamAttrs = [[NoUndef], [NoUndef, CapturesNone]];
 }
 
-def PUTS : RuntimeLibcall<Int, [Ptr]>;
-def PVALLOC : RuntimeLibcall<Ptr, [SizeT]>;
-def PWRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]>;
-def QSORT : RuntimeLibcall<Void, [Ptr, SizeT, SizeT, Ptr]>;
-def READ : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
-def READLINK : RuntimeLibcall<SSizeT, [Ptr, Ptr, SizeT]>;
+def PUTS : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def PVALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 UninitAllocKind,
+                 AllocFamilyAttr<"malloc">];
+  let Memory = InaccessibleMemOrErrnoWrite;
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def PWRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT, IntPlus]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef, ReadOnly], [NoUndef],
+                    [NoUndef]];
+}
+
+def QSORT : RuntimeLibcall<Void, [Ptr, SizeT, SizeT, Ptr]> {
+  let FnAttrs = [NoFree];
+  let ParamAttrs = [[NoUndef], [NoUndef], [NoUndef], [CapturesNone, NoUndef]];
+}
+
+def READ : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef], [NoUndef]];
+}
+
+def READLINK : RuntimeLibcall<SSizeT, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef],
+                    [NoUndef]];
+}
+
 def REALLOC : ReallocLibcall<"malloc", [SizeT], AllocSizeAttr<1>>;
 def REALLOCARRAY
     : ReallocLibcall<"malloc", [SizeT, SizeT], AllocSizeAttr<1, "2">>;
 def REALLOCF : ReallocLibcall<"malloc", [SizeT], AllocSizeAttr<1>>;
-def REALPATH : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def REMOVE : RuntimeLibcall<Int, [Ptr]>;
-def RENAME : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def REWIND : RuntimeLibcall<Void, [Ptr]>;
-def RMDIR : RuntimeLibcall<Int, [Ptr]>;
-def SCANF : RuntimeLibcall<Int, [Ptr, Ellip]>;
-def SETBUF : RuntimeLibcall<Void, [Ptr, Ptr]>;
-def SETITIMER : RuntimeLibcall<Int, [Int, Ptr, Ptr]>;
-def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]>;
+def REALPATH : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def REMOVE : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def RENAME : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def REWIND : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def RMDIR : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def SCANF : RuntimeLibcall<Int, [Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def SETBUF : RuntimeLibcall<Void, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef]];
+}
+
+def SETITIMER : RuntimeLibcall<Int, [Int, Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef]];
+}
+
+def SETVBUF : RuntimeLibcall<Int, [Ptr, Ptr, Int, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef], [NoUndef], [NoUndef]];
+}
+
 def SIPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def SizedPtr : StructFuncArgType<[Ptr, SizeT]>;
 def SIZE_RETURNING_NEW : RuntimeLibcall<SizedPtr, [SizeT]>;
@@ -1377,89 +1929,427 @@ def SIZE_RETURNING_NEW_HOT_COLD : RuntimeLibcall<SizedPtr, [SizeT, UInt8]>;
 def SMALL_FPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def SMALL_PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
 def SMALL_SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def SNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ellip]>;
-def SNPRINTF_CHK : RuntimeLibcall<Int, [Ptr, SizeT, Int, SizeT, Ptr, Ellip]>;
-def SPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def SPRINTF_CHK : RuntimeLibcall<Int, [Ptr, Int, SizeT, Ptr, Ellip]>;
-def SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
-def STAT : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STAT64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STATVFS : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STATVFS64 : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def STPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def STPNCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def STPNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def STRCASECMP : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STRCAT : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def STRCAT_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def STRCHR : RuntimeLibcall<Ptr, [Ptr, Int]>;
-def STRCMP : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STRCOLL : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def STRCPY : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def STRCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def STRCSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]>;
-def STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
-def STRLCAT : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
-def STRLCAT_CHK : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT, SizeT]>;
-def STRLCPY : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
-def STRLCPY_CHK : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT, SizeT]>;
-def STRLEN_CHK : RuntimeLibcall<SizeT, [Ptr, SizeT]>;
-def STRNCASECMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
-def STRNCAT : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def STRNCAT_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def STRNCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
-def STRNCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
-def STRNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
-def STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
-def STRNLEN : RuntimeLibcall<SizeT, [Ptr, SizeT]>;
-def STRPBRK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def STRRCHR : RuntimeLibcall<Ptr, [Ptr, Int]>;
-def STRSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]>;
-def STRSTR : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def STRTOD : RuntimeLibcall<Dbl, [Ptr, Ptr]>;
-def STRTOF : RuntimeLibcall<Flt, [Ptr, Ptr]>;
-def STRTOK : RuntimeLibcall<Ptr, [Ptr, Ptr]>;
-def STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
-def STRTOL : RuntimeLibcall<Long, [Ptr, Ptr, Int]>;
-def STRTOLD : RuntimeLibcall<LDbl, [Ptr, Ptr]>;
-def STRTOLL : RuntimeLibcall<LLong, [Ptr, Ptr, Int]>;
-def STRTOUL : RuntimeLibcall<ULong, [Ptr, Ptr, Int]>;
-def STRTOULL : RuntimeLibcall<ULLong, [Ptr, Ptr, Int]>;
-def STRXFRM : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]>;
-def SYSTEM : RuntimeLibcall<Int, [Ptr]>;
+def SNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoAlias, NoUndef, WriteOnly], [NoUndef],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def SNPRINTF_CHK : RuntimeLibcall<Int, [Ptr, SizeT, Int, SizeT, Ptr, Ellip]> {
+  let FnAttrs = [NoFree];
+}
+
+def SPRINTF : SPrintfLibcall;
+
+def SPRINTF_CHK : RuntimeLibcall<Int, [Ptr, Int, SizeT, Ptr, Ellip]> {
+  let FnAttrs = [NoFree];
+}
+
+def SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def STAT : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def STAT64 : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def STATVFS : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def STATVFS64 : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [CapturesNone, NoUndef]];
+}
+
+def STPCPY : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def STPCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STPNCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, WriteOnly], [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def STPNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRCASECMP : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRCAT : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned], [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def STRCAT_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRCHR : RuntimeLibcall<Ptr, [Ptr, Int]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+}
+
+def STRCMP : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRCOLL : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRCPY : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned, WriteOnly],
+                    [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def STRCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRCSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRDUP : RuntimeLibcall<Ptr, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn, AllocFamilyAttr<"malloc">];
+  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let RetAttrs = [NoAlias];
+  let ParamAttrs = [[CapturesNone, ReadOnly]];
+}
+
+def STRLCAT : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRLCAT_CHK : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRLCPY : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRLCPY_CHK : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRLEN_CHK : RuntimeLibcall<SizeT, [Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRNCASECMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let Memory = ReadOnlyMemory;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRNCAT : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned], [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def STRNCAT_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRNCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRNCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [[NoAlias, Returned, WriteOnly],
+                    [CapturesNone, NoAlias, ReadOnly]];
+}
+
+def STRNCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]> {
+  let FnAttrs = [NoFree];
+}
+
+def STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn, AllocFamilyAttr<"malloc">];
+  let Memory = InaccessibleOrArgMemOrErrnoWrite;
+  let RetAttrs = [NoAlias];
+  let ParamAttrs = [[CapturesNone, ReadOnly], [NoUndef]];
+}
+
+def STRNLEN : RuntimeLibcall<SizeT, [Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[CapturesNone]];
+}
+
+def STRPBRK : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[], [CapturesNone]];
+}
+
+def STRRCHR : RuntimeLibcall<Ptr, [Ptr, Int]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+}
+
+def STRSPN : RuntimeLibcall<SizeT, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[CapturesNone], [CapturesNone]];
+}
+
+def STRSTR : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[], [CapturesNone]];
+}
+
+def STRTOD : RuntimeLibcall<Dbl, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRTOF : RuntimeLibcall<Flt, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRTOK : RuntimeLibcall<Ptr, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[], [CapturesNone, ReadOnly]];
+}
+
+def STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[], [CapturesNone, ReadOnly]];
+}
+
+def STRTOL : RuntimeLibcall<Long, [Ptr, Ptr, Int]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRTOLD : RuntimeLibcall<LDbl, [Ptr, Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRTOLL : RuntimeLibcall<LLong, [Ptr, Ptr, Int]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRTOUL : RuntimeLibcall<ULong, [Ptr, Ptr, Int]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRTOULL : RuntimeLibcall<ULLong, [Ptr, Ptr, Int]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[ReadOnly], [CapturesNone]];
+}
+
+def STRXFRM : RuntimeLibcall<SizeT, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = [NoCallback, NoFree, NoUnwind, WillReturn];
+  let ParamAttrs = [[CapturesNone], [CapturesNone, ReadOnly]];
+}
+
+def SYSTEM : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
 def TERMINATE : RuntimeLibcall<Void, []> {
   let FnAttrs = [Cold, NoFree, NoReturn];
 }
 
-def TIMES : RuntimeLibcall<IntPlus, [Ptr]>;
-def TMPFILE : RuntimeLibcall<Ptr, []>;
-def TMPFILE64 : RuntimeLibcall<Ptr, []>;
+def TIMES : RuntimeLibcall<IntPlus, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def TMPFILE : RuntimeLibcall<Ptr, []> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+}
+
+def TMPFILE64 : RuntimeLibcall<Ptr, []> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoAlias, NoUndef];
+}
+
 def TOASCII : PureLibcall<Int, [Int]>;
-def UNAME : RuntimeLibcall<Int, [Ptr]>;
-def UNDER_IO_GETC : RuntimeLibcall<Int, [Ptr]>;
-def UNDER_IO_PUTC : RuntimeLibcall<Int, [Int, Ptr]>;
-def UNGETC : RuntimeLibcall<Int, [Int, Ptr]>;
-def UNLINK : RuntimeLibcall<Int, [Ptr]>;
-def UNSETENV : RuntimeLibcall<Int, [Ptr]>;
-def UTIME : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def UTIMES : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def VALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def UNAME : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def UNDER_IO_GETC : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef]];
+}
+
+def UNDER_IO_PUTC : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def UNGETC : RuntimeLibcall<Int, [Int, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef]];
+}
+
+def UNLINK : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def UNSETENV : RuntimeLibcall<Int, [Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly]];
+}
+
+def UTIME : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def UTIMES : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly]];
+}
+
+def VALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 UninitAllocKind,
+                 AllocSizeAttr<0>, AllocFamilyAttr<"malloc">];
+  let Memory = InaccessibleMemOrErrnoWrite;
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
 def VEC_CALLOC : CallocLibcall<"vec_malloc">;
 def VEC_FREE : FreeLibcall<"vec_malloc">;
 def VEC_MALLOC : MallocLibcall<"vec_malloc">;
 def VEC_REALLOC : ReallocLibcall<"vec_malloc", [SizeT], AllocSizeAttr<1>>;
-def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def VPRINTF : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def VSCANF : RuntimeLibcall<Int, [Ptr, Ptr]>;
-def VSNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ptr]>;
-def VSNPRINTF_CHK : RuntimeLibcall<Int, [Ptr, SizeT, Int, SizeT, Ptr, Ptr]>;
-def VSPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def VSPRINTF_CHK : RuntimeLibcall<Int, [Ptr, Int, SizeT, Ptr, Ptr]>;
-def VSSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
-def WCSLEN : RuntimeLibcall<SizeT, [Ptr]>;
-def WRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]>;
+def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef, ReadOnly],
+                    [NoUndef]];
+}
+
+def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef, ReadOnly],
+                    [NoUndef]];
+}
+
+def VPRINTF : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def VSCANF : RuntimeLibcall<Int, [Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def VSNPRINTF : RuntimeLibcall<Int, [Ptr, SizeT, Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [NoUndef],
+                    [CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def VSNPRINTF_CHK : RuntimeLibcall<Int, [Ptr, SizeT, Int, SizeT, Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def VSPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef], [CapturesNone, NoUndef, ReadOnly],
+                    [NoUndef]];
+}
+
+def VSPRINTF_CHK : RuntimeLibcall<Int, [Ptr, Int, SizeT, Ptr, Ptr]> {
+  let FnAttrs = [NoFree];
+}
+
+def VSSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]> {
+  let FnAttrs = [NoFree, NoUnwind];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[CapturesNone, NoUndef, ReadOnly],
+                    [CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
+def WCSLEN : RuntimeLibcall<SizeT, [Ptr]> {
+  let FnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [[CapturesNone]];
+}
+
+def WRITE : RuntimeLibcall<SSizeT, [Int, Ptr, SizeT]> {
+  let FnAttrs = [NoFree];
+  let RetAttrs = [NoUndef];
+  let ParamAttrs = [[NoUndef], [CapturesNone, NoUndef, ReadOnly], [NoUndef]];
+}
+
 def ZDAPV : RuntimeLibcall<Void, [Ptr]>;
 def ZDAPVJ : RuntimeLibcall<Void, [Ptr, UInt]>;
 def ZDAPVJST11ALIGN_VAL_T : RuntimeLibcall<Void, [Ptr, UInt, AlignValT]>;
