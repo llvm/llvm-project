@@ -797,8 +797,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     UnitAttr:$init,
     UnitAttr:$constant,
     UnitAttr:$cleanup_dest_slot,
-    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
-    OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -837,7 +836,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
           | `const`             $constant
           | `cleanup_dest_slot` $cleanup_dest_slot)
     (`size` `(` $dynAllocSize^ `)`)? `:` qualified(type($addr))
-    ($annotations^)? attr-dict
+    attr-dict
   }];
 
   let hasCXXABILowering = true;
@@ -8196,6 +8195,118 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
   let hasVerifier = 1;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Annotation operations
+//===----------------------------------------------------------------------===//
+
+def CIR_VarAnnotationOp : CIR_Op<"var_annotation"> {
+  let summary = "Annotate the storage of a local variable or parameter";
+  let description = [{
+    The `cir.var_annotation` operation attaches an
+    `__attribute__((annotate(...)))` annotation to the storage of a local
+    variable or a function parameter. `addr` is the address of that storage.
+
+    The annotation's source file and line are taken from the operation's
+    location.
+
+    This operation lowers to `llvm.var.annotation`. The annotation strings and
+    arguments are emitted as globals in the `llvm.metadata` section during
+    lowering.
+
+    Example:
+
+    ```
+    // int x __attribute__((annotate("on_local", 7)));
+    %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+    cir.var_annotation %0 [#cir.annotation<"on_local", [7 : i32]>]
+        : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$addr,
+                       CIR_AnnotationAttr:$annotation);
+
+  let assemblyFormat = [{
+    $addr ` ` `[` qualified($annotation) `]` `:` qualified(type($addr))
+    attr-dict
+  }];
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
+
+def CIR_PtrAnnotationOp : CIR_Op<"ptr_annotation", [
+  AllTypesMatch<["addr", "result"]>
+]> {
+  let summary = "Annotate a pointer to an annotated record field";
+  let description = [{
+    The `cir.ptr_annotation` operation attaches an
+    `__attribute__((annotate(...)))` annotation to a pointer to a record
+    field. The result is the same pointer, and later accesses to the field must
+    use the result.
+
+    The annotation's source file and line are taken from the operation's
+    location.
+
+    This operation lowers to `llvm.ptr.annotation`. The annotation strings and
+    arguments are emitted as globals in the `llvm.metadata` section during
+    lowering.
+
+    Example:
+
+    ```
+    // struct S { int v __attribute__((annotate("on_field"))); };
+    %1 = cir.get_member %0[0] {name = "v"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+    %2 = cir.ptr_annotation %1 [#cir.annotation<"on_field">] : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$addr,
+                       CIR_AnnotationAttr:$annotation);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $addr ` ` `[` qualified($annotation) `]` `:` qualified(type($addr))
+    attr-dict
+  }];
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
+
+def CIR_AnnotationOp : CIR_Op<"annotation", [
+  AllTypesMatch<["value", "result"]>
+]> {
+  let summary = "Annotate an integer value";
+  let description = [{
+    The `cir.annotation` operation attaches an annotation string to an integer
+    value. The result is the same value. It corresponds to the
+    `__builtin_annotation` builtin.
+
+    The annotation's source file and line are taken from the operation's
+    location. The annotation carries no arguments.
+
+    This operation lowers to `llvm.annotation`.
+
+    Example:
+
+    ```
+    // __builtin_annotation(x, "on_builtin")
+    %1 = cir.annotation %0 [#cir.annotation<"on_builtin">] : !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyIntType:$value,
+                       CIR_AnnotationAttr:$annotation);
+  let results = (outs CIR_AnyIntType:$result);
+
+  let assemblyFormat = [{
+    $value ` ` `[` qualified($annotation) `]` `:` type($value) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let customLLVMLoweringConstructorDecl = LoweringBuilders<(
+      ins "LLVMAnnotationGlobals &":$annotationGlobals)>;
+}
 //===----------------------------------------------------------------------===//
 // Branch Probability Operations
 //===----------------------------------------------------------------------===//
