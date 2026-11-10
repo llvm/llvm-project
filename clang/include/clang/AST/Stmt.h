@@ -378,7 +378,7 @@ protected:
 
     /// The kind of Result as defined by APValue::ValueKind.
     LLVM_PREFERRED_TYPE(APValue::ValueKind)
-    unsigned APValueKind : 4;
+    unsigned APValueKind : 5;
 
     /// When ResultKind == ConstantResultStorageKind::Int64, true if the
     /// tail-allocated integer is unsigned.

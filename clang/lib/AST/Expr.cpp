@@ -309,6 +309,7 @@ ConstantResultStorageKind ConstantExpr::getStorageKind(const APValue &Value) {
   switch (Value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
     return ConstantResultStorageKind::None;
   case APValue::Int:
     if (!Value.getInt().needsCleanup())
