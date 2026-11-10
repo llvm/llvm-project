@@ -13,10 +13,12 @@
 
 namespace llvm {
 
+class AVRSubtarget;
+
 /// Utilities for creating function call frames.
 class AVRFrameLowering : public TargetFrameLowering {
 public:
-  explicit AVRFrameLowering();
+  explicit AVRFrameLowering(const AVRSubtarget &STI);
 
 public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;

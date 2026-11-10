@@ -15,6 +15,7 @@
 #include "AVR.h"
 #include "AVRInstrInfo.h"
 #include "AVRMachineFunctionInfo.h"
+#include "AVRSubtarget.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
@@ -29,8 +30,9 @@
 
 namespace llvm {
 
-AVRFrameLowering::AVRFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1), -2) {}
+AVRFrameLowering::AVRFrameLowering(const AVRSubtarget &STI)
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1),
+                          STI.hasELPM() ? -3 : -2) {}
 
 bool AVRFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {

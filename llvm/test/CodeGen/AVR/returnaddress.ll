@@ -32,8 +32,8 @@ define ptr @returnaddress_0() {
 ; AVR6-NEXT:    push r29
 ; AVR6-NEXT:    in r28, 61
 ; AVR6-NEXT:    in r29, 62
-; AVR6-NEXT:    ldd r24, Y+5
-; AVR6-NEXT:    ldd r25, Y+4
+; AVR6-NEXT:    ldd r24, Y+6
+; AVR6-NEXT:    ldd r25, Y+5
 ; AVR6-NEXT:    pop r29
 ; AVR6-NEXT:    pop r28
 ; AVR6-NEXT:    ret
@@ -112,8 +112,8 @@ define ptr @returnaddress_alloca() {
 ; AVR6-NEXT:    movw r24, r28
 ; AVR6-NEXT:    adiw r24, 1
 ; AVR6-NEXT:    call use
-; AVR6-NEXT:    ldd r24, Y+9
-; AVR6-NEXT:    ldd r25, Y+8
+; AVR6-NEXT:    ldd r24, Y+10
+; AVR6-NEXT:    ldd r25, Y+9
 ; AVR6-NEXT:    adiw r28, 4
 ; AVR6-NEXT:    in r0, 63
 ; AVR6-NEXT:    cli
