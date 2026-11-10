@@ -166,14 +166,14 @@ exit:
 define void @rewrite_masked_load_store_i8_i32_induction(ptr %x, i32 %n) #0 {
 ; CHECK-LABEL: rewrite_masked_load_store_i8_i32_induction:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, w1
-; CHECK-NEXT:    rdvl x9, #2
-; CHECK-NEXT:    whilelo pn8.b, xzr, x8, vlx2
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    whilelo pn8.b, xzr, x9, vlx2
 ; CHECK-NEXT:  .LBB3_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov x10, x9
-; CHECK-NEXT:    mov w11, w9
-; CHECK-NEXT:    incb x9, all, mul #2
+; CHECK-NEXT:    mov x10, x8
+; CHECK-NEXT:    mov w11, w8
+; CHECK-NEXT:    incb x8, all, mul #2
 ; CHECK-NEXT:    decb x10, all, mul #2
 ; CHECK-NEXT:    sxtw x10, w10
 ; CHECK-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [x0, x10]
@@ -181,7 +181,7 @@ define void @rewrite_masked_load_store_i8_i32_induction(ptr %x, i32 %n) #0 {
 ; CHECK-NEXT:    add z1.b, z1.b, #1 // =0x1
 ; CHECK-NEXT:    add z0.b, z0.b, #1 // =0x1
 ; CHECK-NEXT:    st1b { z0.b, z1.b }, pn8, [x10]
-; CHECK-NEXT:    whilelo pn8.b, x11, x8, vlx2
+; CHECK-NEXT:    whilelo pn8.b, x11, x9, vlx2
 ; CHECK-NEXT:    b.mi .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret

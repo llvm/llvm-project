@@ -35,7 +35,7 @@ body: |
 ...
 
 # Using a mix of SUBREG_TO_REG and REG_SEQUENCE/INSERT_SUBREG (both lowered to
-# COPY) in patterns can prevent coalescing due to our existing shouldCoalesce rules.
+# COPY) in patterns should not prevent coalescing.
 ---
 name: subreg_copy_mix_subreg_to_reg
 tracksRegLiveness: true
@@ -45,10 +45,9 @@ body: |
     ; CHECK-LABEL: name: subreg_copy_mix_subreg_to_reg
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: undef %src_as_64b_2.sub_32:gpr64common = COPY $w0
-    ; CHECK-NEXT: undef %src_as_64b.sub_32:gpr64 = COPY %src_as_64b_2.sub_32
+    ; CHECK-NEXT: undef %src_as_64b.sub_32:gpr64common = COPY $w0
     ; CHECK-NEXT: %result2:gpr64common = UBFMXri %src_as_64b, 63, 31
-    ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b_2, 1, 0
+    ; CHECK-NEXT: %result:gpr64common = ADDXri %src_as_64b, 1, 0
     ; CHECK-NEXT: $x1 = COPY %result2
     ; CHECK-NEXT: $x0 = COPY %result
     ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1
