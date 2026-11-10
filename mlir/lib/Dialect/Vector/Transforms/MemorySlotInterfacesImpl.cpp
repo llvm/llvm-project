@@ -196,7 +196,7 @@ struct TransferWriteOpMemOpModel
 struct MaskOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<MaskOpMemOpModel,
                                                      vector::MaskOp> {
-  bool ownsEmbeddedBlockingUses(Operation *op) const {
+  bool ownsWrappedBlockingUses(Operation *op) const {
     return isa_and_nonnull<vector::TransferReadOp, vector::TransferWriteOp>(
         cast<vector::MaskOp>(op).getMaskableOp());
   }

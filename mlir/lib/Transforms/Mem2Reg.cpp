@@ -355,10 +355,11 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
   return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 
-/// Returns `op`'s parent if it owns embedded blocking uses, or `op` otherwise.
+/// Returns `op`'s parent if it owns the blocking uses of `op` as a wrapped
+/// access, or `op` otherwise.
 static Operation *getBlockingUseOwner(Operation *op) {
   auto memOp = dyn_cast_or_null<PromotableMemOpInterface>(op->getParentOp());
-  return memOp && memOp.ownsEmbeddedBlockingUses() ? memOp : op;
+  return memOp && memOp.ownsWrappedBlockingUses() ? memOp : op;
 }
 
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
@@ -379,14 +380,14 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
           RegionKind::Graph)
     return failure();
 
-  auto addBlockingUse = [&](OpOperand *use) {
-    Operation *owner = getBlockingUseOwner(use->getOwner());
-    userToBlockingUses[owner->getParentRegion()][owner].insert(use);
-  };
-
-  // Register all direct uses of the slot pointer as blocking.
-  for (OpOperand &use : slot.ptr.getUses())
-    addBlockingUse(&use);
+  // First insert that all immediate users of the slot pointer must no longer
+  // use it.
+  for (OpOperand &use : slot.ptr.getUses()) {
+    Operation *useOwner = getBlockingUseOwner(use.getOwner());
+    SmallPtrSet<OpOperand *, 4> &blockingUses =
+        userToBlockingUses[useOwner->getParentRegion()][useOwner];
+    blockingUses.insert(&use);
+  }
 
   // Regions that immediately contain a slot memory use that is not a store.
   RegionSet regionsWithDirectUse;
@@ -400,9 +401,13 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // pointer.
   SetVector<Operation *> forwardSlice;
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
+  SmallPtrSet<Operation *, 4> visitedWrappers;
   for (Operation *op : forwardSlice) {
-    // Each owner wraps a single access, so replacing it preserves slice order.
     Operation *user = getBlockingUseOwner(op);
+    // Both a wrapped access and the terminator yielding its results map to
+    // the wrapper. Only process the wrapper once.
+    if (user != op && !visitedWrappers.insert(user).second)
+      continue;
     // If the next operation has no blocking uses, everything is fine.
     auto *blockingUsesMapIt = userToBlockingUses.find(user->getParentRegion());
     if (blockingUsesMapIt == userToBlockingUses.end())
@@ -454,11 +459,19 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
       return failure();
     }
 
+    // A wrapper wraps a memory access, not an alias op, so it creates no new
+    // blocking uses.
+    assert((user == op || newBlockingUses.empty()) &&
+           "an op owning wrapped blocking uses must not add new blocking uses");
+
     // Then, register any new blocking uses for coming operations.
     for (OpOperand *blockingUse : newBlockingUses) {
       assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
-      addBlockingUse(blockingUse);
+      Operation *useOwner = getBlockingUseOwner(blockingUse->getOwner());
+      SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
+          userToBlockingUses[useOwner->getParentRegion()][useOwner];
+      newUserBlockingUseSet.insert(blockingUse);
     }
   }
 
@@ -559,7 +572,6 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   DenseMap<Region *, SmallPtrSet<Block *, 16>> definingBlocks;
   auto collectStoringBlocks = [&](Value ptr, const MemorySlot &ptrSlot) {
     for (OpOperand &use : ptr.getUses()) {
-      // Attribute an embedded store to its blocking-use owner's block.
       Operation *user = getBlockingUseOwner(use.getOwner());
       if (auto storeOp = dyn_cast<PromotableMemOpInterface>(user))
         if (storeOp.storesTo(ptrSlot))

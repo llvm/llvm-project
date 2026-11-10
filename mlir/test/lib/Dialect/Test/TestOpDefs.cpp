@@ -2181,7 +2181,7 @@ static PromotableMemOpInterface getOwnedAccess(TestOwningAccess op) {
   return dyn_cast<PromotableMemOpInterface>(body.front());
 }
 
-bool TestOwningAccess::ownsEmbeddedBlockingUses() {
+bool TestOwningAccess::ownsWrappedBlockingUses() {
   return !getDisown() && getOwnedAccess(*this);
 }
 

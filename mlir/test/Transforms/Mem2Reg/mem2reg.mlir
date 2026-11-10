@@ -555,6 +555,11 @@ func.func @tracker_inside_nested_region(%a: i32, %b: i32, %c: i32, %cond: i1) {
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// Operations owning wrapped blocking uses (`ownsWrappedBlockingUses`), e.g.
+// `vector.mask` wrapping a `vector.transfer_read`/`vector.transfer_write`.
+//===----------------------------------------------------------------------===//
+
 // Promote the wrapper as a whole, replacing its load result with the reaching
 // definition.
 
@@ -672,8 +677,8 @@ func.func @negative_owning_access_declines(%a: i32) -> i32 {
 
 // -----
 
-// Keep the slot in memory when the wrapper disowns its embedded uses, leaving
-// the load in an unpromotable region.
+// Keep the slot in memory when the wrapper disowns the wrapped access uses,
+// leaving the load in an unpromotable region.
 
 // CHECK-LABEL: func.func @negative_owning_access_disowned
 // CHECK: test.multi_slot_alloca

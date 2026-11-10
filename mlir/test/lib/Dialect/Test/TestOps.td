@@ -4686,12 +4686,12 @@ def TestPartialAlias : TEST_Op<"partial_alias",
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
 }
 
-// Tests `ownsEmbeddedBlockingUses` by wrapping a single memory access and
+// Tests `ownsWrappedBlockingUses` by wrapping a single memory access and
 // forwarding promotion methods to it. `disown` disables ownership; `decline`
 // rejects removal of blocking uses.
 def TestOwningAccess : TEST_Op<"owning_access",
     [DeclareOpInterfaceMethods<PromotableMemOpInterface,
-                               ["ownsEmbeddedBlockingUses"]>,
+                               ["ownsWrappedBlockingUses"]>,
      SingleBlock]> {
   let arguments = (ins UnitAttr:$disown, UnitAttr:$decline);
   let results = (outs Variadic<AnyType>:$results);
