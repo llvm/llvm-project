@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O2 -stop-after=branch-folder -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O2 -stop-after=branch-folder -enable-fallthrough-folding -o - %s | FileCheck %s
 
 define void @true_likely(i1 noundef zeroext %0) {
 
