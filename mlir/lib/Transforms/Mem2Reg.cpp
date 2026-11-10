@@ -401,8 +401,13 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
   // pointer.
   SetVector<Operation *> forwardSlice;
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
+  SmallPtrSet<Operation *, 4> visitedWrappers;
   for (Operation *op : forwardSlice) {
     Operation *user = getBlockingUseOwner(op);
+    // Both a wrapped access and the terminator yielding its results map to
+    // the wrapper. Only process the wrapper once.
+    if (user != op && !visitedWrappers.insert(user).second)
+      continue;
     // If the next operation has no blocking uses, everything is fine.
     auto *blockingUsesMapIt = userToBlockingUses.find(user->getParentRegion());
     if (blockingUsesMapIt == userToBlockingUses.end())
@@ -453,6 +458,11 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
       // promotable, promotion must fail.
       return failure();
     }
+
+    // A wrapper wraps a memory access, not an alias op, so it creates no new
+    // blocking uses.
+    assert((user == op || newBlockingUses.empty()) &&
+           "an op owning wrapped blocking uses must not add new blocking uses");
 
     // Then, register any new blocking uses for coming operations.
     for (OpOperand *blockingUse : newBlockingUses) {

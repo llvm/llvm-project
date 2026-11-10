@@ -197,6 +197,8 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
         `PromotableRegionOpInterface` for its region. The builder inserts IR
         outside the region, before or after this operation.
 
+        The results of this operation must not alias the slot.
+
         No IR mutation is allowed in this method.
       }],
       "bool", "ownsWrappedBlockingUses", (ins), [{}],

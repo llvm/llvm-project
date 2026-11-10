@@ -555,6 +555,11 @@ func.func @tracker_inside_nested_region(%a: i32, %b: i32, %c: i32, %cond: i1) {
 
 // -----
 
+//===----------------------------------------------------------------------===//
+// Operations owning wrapped blocking uses (`ownsWrappedBlockingUses`), e.g.
+// `vector.mask` wrapping a `vector.transfer_read`/`vector.transfer_write`.
+//===----------------------------------------------------------------------===//
+
 // Promote the wrapper as a whole, replacing its load result with the reaching
 // definition.
 
