@@ -77,7 +77,7 @@ public:
                                             AllocKind, MPropList);
 
     if (!Result)
-      throw exception(make_error_code(errc::memory_allocation),
+      throw exception(MContext, make_error_code(errc::memory_allocation),
                       "USM allocation failed");
 
     return Result;
@@ -89,6 +89,22 @@ public:
   void deallocate(value_type *Ptr, std::size_t count) {
     if (Ptr)
       free(Ptr, MContext);
+  }
+
+  /// \return true if the allocator was constructed with property \p Property.
+  // TODO: implement
+  template <typename Property> bool has_property() const noexcept {
+    return false;
+  }
+
+  /// \return a copy of the property \p Property the allocator was constructed
+  /// with.
+  /// \throw sycl::exception with errc::invalid if the allocator was not
+  /// constructed with \p Property.
+  // TODO: implement
+  template <typename Property> Property get_property() const {
+    throw exception(MContext, make_error_code(errc::invalid),
+                    "usm_allocator does not have the requested property");
   }
 
   template <class U, usm::alloc AllocKindU, std::size_t AlignmentU>

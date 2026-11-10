@@ -176,12 +176,14 @@ TEST_F(USMAllocatorTest, ThrowException) {
       .WillRepeatedly(Return(Mock.makeEmptyStrError(OL_ERRC_OUT_OF_RESOURCES)));
   EXPECT_CALL(Mock, olMemFree(_, _)).Times(0);
 
-  auto ExpectMemoryAllocationError = [](auto &&Allocate) {
+  auto ExpectMemoryAllocationError = [this](auto &&Allocate) {
     try {
       Allocate();
       FAIL() << "Expected sycl::exception";
     } catch (const sycl::exception &E) {
       EXPECT_EQ(E.code(), make_error_code(errc::memory_allocation));
+      ASSERT_TRUE(E.has_context());
+      EXPECT_EQ(E.get_context(), Q.get_context());
     }
   };
 
@@ -261,6 +263,22 @@ TEST_F(USMAllocatorTest, Propagation) {
   Dst = std::move(Src);
   EXPECT_TRUE(Dst.get_allocator() == AllocB);
   EXPECT_EQ(Dst.data(), SrcData);
+}
+
+struct UnsupportedProperty {};
+
+TEST_F(USMAllocatorTest, Properties) {
+  usm_allocator<int, usm::alloc::host> Alloc(Q);
+  EXPECT_FALSE(Alloc.has_property<UnsupportedProperty>());
+
+  try {
+    Alloc.get_property<UnsupportedProperty>();
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    ASSERT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
+  }
 }
 
 TEST_F(USMAllocatorTest, ZeroCount) {
