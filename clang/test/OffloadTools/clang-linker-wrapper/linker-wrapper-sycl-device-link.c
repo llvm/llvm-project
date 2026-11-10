@@ -30,8 +30,19 @@
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -o %t.dev.o
 // RUN: llvm-nm %t.dev.o | FileCheck %s --check-prefix=WRAPPED
+// RUN: llvm-readobj --sections %t.dev.o | FileCheck %s --check-prefix=SECTIONS
 // WRAPPED-DAG: .sycl_offloading.binary
 // WRAPPED-DAG: U __sycl_register_lib
+// SECTIONS-NOT: Name: .llvm.offloading
+// SECTIONS: Name: .sycl_fatbin
+// SECTIONS-NOT: Name: .llvm.offloading
+
+// The device image is already linked, so a later wrapped host link does not
+// link it again.
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.dev.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=RELINK --implicit-check-not=--sycl-link
+// RELINK: "/usr/bin/ld" {{.*}}dev.o -o a.out
 
 // RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o -o dev.obj 2>&1 \
@@ -54,7 +65,21 @@
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.openmp.o -o dev.o 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NOT-SYCL
+// RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --sycl-device-link --override-image=openmp=%t.elf.o \
+// RUN:   --linker-path=/usr/bin/ld %t.elf.o -o dev.o 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NOT-SYCL
 // NOT-SYCL: error: --sycl-device-link requires SYCL device code, got 'openmp'
+
+// Without a host link, a missing input must be diagnosed here.
+// RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o %t.missing.o \
+// RUN:   -o dev.o 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
+// RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --sycl-device-link --linker-path=/usr/bin/ld --whole-archive \
+// RUN:   %t.missing.o --no-whole-archive -o dev.o 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
+// MISSING: error: '[[FILE]]': {{[Nn]}}o such file or directory
 
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --emit-fatbin-only --linker-path=/usr/bin/ld \
