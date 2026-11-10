@@ -4860,7 +4860,8 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
   bool IsFloatTy =
       GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypeFloat);
   bool IsPtrTy =
-      GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer);
+      GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer) ||
+      GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypeUntypedPointerKHR);
 
   Register CondReg = I.getOperand(1).getReg();
   bool IsScalarBool = GR.isScalarOfType(CondReg, SPIRV::OpTypeBool);
