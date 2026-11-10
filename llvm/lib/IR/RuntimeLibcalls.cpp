@@ -501,6 +501,8 @@ RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
 
 FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
     Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(!isVariable(LibcallImpl) && "not a function declaration");
+
   const DataLayout &DL = M.getDataLayout();
   auto [FuncTy, FuncAttrs] =
       getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
@@ -524,13 +526,14 @@ FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
 
 GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
     Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(isVariable(LibcallImpl) && "not a variable declaration");
+
   StringRef Name = getLibcallImplName(LibcallImpl);
   if (GlobalValue *GV = M.getNamedValue(Name))
     return GV;
 
   Type *VarTy = getVariableType(M.getContext(), M.getTargetTriple(),
                                 M.getDataLayout(), LibcallImpl);
-  assert(VarTy && "libcall is not a variable");
   return new GlobalVariable(
       M, VarTy, /*isConstant=*/false, GlobalValue::ExternalLinkage, nullptr,
       Name, nullptr,
