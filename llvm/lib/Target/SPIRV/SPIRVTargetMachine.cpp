@@ -274,7 +274,6 @@ bool SPIRVPassConfig::addRegBankSelect() {
 
 // Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelectLegacy(getOptLevel(),
-                                      /*RequireRegBankSelection=*/false));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }

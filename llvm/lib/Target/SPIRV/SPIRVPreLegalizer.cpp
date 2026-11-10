@@ -936,6 +936,12 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             const MDNode *TypeMD = cast<MDNode>(MD->getOperand(0));
             Type *ValueTy = getMDOperandAsType(TypeMD, 0);
             GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName.str()));
+            // Type results that nothing extracts.
+            auto *STy = dyn_cast<StructType>(ValueTy);
+            if (STy && STy->getNumElements() == Def->getNumDefs())
+              for (auto [Op, ElemTy] : zip(Def->defs(), STy->elements()))
+                if (!GR->getSPIRVTypeForVReg(Op.getReg()))
+                  updateRegType(Op.getReg(), ElemTy, nullptr, GR, MIB, MRI);
           }
           ToErase.push_back(MdMI);
         }
