@@ -5,9 +5,9 @@
 ; RUN: cd %t.dir && clang-nvlink-wrapper --dry-run --save-temps --plugin-opt=lto-partitions=2 -arch sm_90 %t.bc -o multi 2>&1 | FileCheck %s --check-prefix=MULTI
 ; RUN: cd %t.dir && clang-nvlink-wrapper --dry-run --save-temps -arch sm_90 %t.bc -o single 2>&1 | FileCheck %s --check-prefix=SINGLE
 ;
-; MULTI: ptxas{{.*}} -c multi.0.s {{.*}} -o multi.0.cubin
+; MULTI: ptxas{{.*}} -c multi.s {{.*}} -o multi.cubin
 ; MULTI: ptxas{{.*}} -c multi.1.s {{.*}} -o multi.1.cubin
-; MULTI: nvlink{{.*}} -o multi multi.0.cubin multi.1.cubin
+; MULTI: nvlink{{.*}} -o multi multi.cubin multi.1.cubin
 ; SINGLE: ptxas{{.*}} -c single.s {{.*}} -o single.cubin
 ; SINGLE: nvlink{{.*}} -o single single.cubin
 

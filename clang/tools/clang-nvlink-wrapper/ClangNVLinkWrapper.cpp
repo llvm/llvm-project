@@ -48,6 +48,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 
+#include <list>
 #include <mutex>
 
 using namespace llvm;
@@ -96,8 +97,11 @@ static void printVersion(raw_ostream &OS) {
 /// The value of `argv[0]` when run.
 static const char *Executable;
 
+/// Mutex lock to protect writes to shared TempFiles in parallel.
+static std::mutex TempFilesMutex;
+
 /// Temporary files to be cleaned up.
-static SmallVector<SmallString<128>> TempFiles;
+static std::list<SmallString<128>> TempFiles;
 
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
@@ -173,6 +177,7 @@ bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
 
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
+  std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
   if (Args.hasArg(OPT_save_temps)) {
     (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
@@ -329,8 +334,7 @@ struct Symbol {
   bool UsedInRegularObj;
 };
 
-Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args, size_t Task,
-                             size_t MaxTasks) {
+Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
   SmallVector<StringRef, 1> SearchPaths;
   if (Arg *A = Args.getLastArg(OPT_cuda_path_EQ))
     SearchPaths.push_back(Args.MakeArgString(A->getValue() + Twine("/bin")));
@@ -345,11 +349,7 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args, size_t Task,
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
-  std::string Prefix =
-      sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")).str();
-  if (MaxTasks > 1)
-    Prefix += "." + std::to_string(Task);
-  auto TempFileOrErr = createTempFile(Args, Prefix, "cubin");
+  auto TempFileOrErr = createTempFile(Args, sys::path::stem(File), "cubin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -691,7 +691,6 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
     // Run the LTO job to compile the bitcode.
     size_t MaxTasks = LTOBackend.getMaxTasks();
     SmallVector<StringRef> LTOFiles(MaxTasks);
-    std::mutex TempFilesMutex;
     auto AddStream =
         [&](size_t Task,
             const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
@@ -700,12 +699,10 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
       if (Args.hasArg(OPT_lto_emit_asm))
         TempFile = Args.getLastArgValue(OPT_o, "a.out");
       else {
-        std::lock_guard<std::mutex> Lock(TempFilesMutex);
-        std::string Prefix =
-            sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")).str();
-        if (MaxTasks > 1)
-          Prefix += "." + std::to_string(Task);
-        auto TempFileOrErr = createTempFile(Args, Prefix, "s");
+        StringRef Stem = sys::path::stem(Args.getLastArgValue(OPT_o, "a.out"));
+        auto TempFileOrErr = createTempFile(
+            Args, Stem + (Task == 0 ? Twine("") : Twine('.') + Twine(Task)),
+            "s");
         if (!TempFileOrErr)
           reportError(TempFileOrErr.takeError());
         TempFile = Args.MakeArgString(*TempFileOrErr);
@@ -722,10 +719,10 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
     if (Args.hasArg(OPT_lto_emit_llvm) || Args.hasArg(OPT_lto_emit_asm))
       return Files;
 
-    for (auto [Task, LTOFile] : enumerate(LTOFiles)) {
+    for (StringRef LTOFile : LTOFiles) {
       if (LTOFile.empty())
         continue;
-      auto FileOrErr = runPTXAs(LTOFile, Args, Task, MaxTasks);
+      auto FileOrErr = runPTXAs(LTOFile, Args);
       if (!FileOrErr)
         return FileOrErr.takeError();
       Files.emplace_back(*FileOrErr);
