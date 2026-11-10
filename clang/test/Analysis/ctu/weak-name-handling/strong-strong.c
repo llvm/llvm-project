@@ -6,8 +6,8 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -x c -emit-pch -o %/t/b.c.ast %/t/b.c
 
 // RUN: %clang_extdef_map %/t/a.c.ast %/t/b.c.ast > %t/externalDefMap.tmp.txt 2> %/t/extdef_err.txt
-// RUN: sed -e 's|%t\/||g' %/t/externalDefMap.tmp.txt > %/t/externalDefMap.txt
-// RUN: sed -e 's|%t\/||g' %/t/extdef_err.txt | FileCheck %/t/extdef_check
+// RUN: sed -e 's|%/t\/||g' %/t/externalDefMap.tmp.txt > %/t/externalDefMap.txt
+// RUN: sed -e 's|%/t\/||g' %/t/extdef_err.txt | FileCheck %/t/extdef_check
 
 // RUN: %clang_cc1 -analyze -triple x86_64-pc-linux-gnu \
 // RUN:   -analyzer-checker=core \
