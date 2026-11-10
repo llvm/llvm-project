@@ -465,6 +465,32 @@ func.func @no_coalesce_zero_step(%lb: index, %ub: index) {
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/226067:
+// coalescing must bail out instead of crashing when a loop's upper bound is a
+// non-integer constant such as ub.poison.
+
+// CHECK-LABEL: @no_coalesce_poison_upper_bound
+func.func @no_coalesce_poison_upper_bound() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c42 = arith.constant 42 : index
+  %c56 = arith.constant 56 : index
+  %poison = ub.poison : index
+  // CHECK: scf.for
+  // CHECK: scf.for
+  // CHECK: scf.for
+  scf.for %i = %c0 to %c42 step %c1 {
+    scf.for %j = %c0 to %c56 step %c1 {
+      scf.for %k = %c0 to %poison step %c1 {
+        "use"(%i, %j, %k) : (index, index, index) -> ()
+      }
+    }
+  }
+  return
+}
+
+// -----
+
 // Regression test for https://github.com/llvm/llvm-project/issues/216903:
 // coalescing must not crash when the inner loop yields its own induction
 // variable. The yielded induction variable has to be rewritten to its

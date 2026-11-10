@@ -1014,6 +1014,16 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
         return failure();
       }
     }
+
+    // Bail out if the upper bound is a non-integer constant such as ub.poison
+    // since computing the coalesced upper bound below assumes integer
+    // constants, and such a loop has no meaningful trip count anyway.
+    if (auto ub = loop.getUpperBound()) {
+      if (matchPattern(ub, m_Constant()) &&
+          !getConstantIntValue(ub).has_value()) {
+        return failure();
+      }
+    }
   }
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
