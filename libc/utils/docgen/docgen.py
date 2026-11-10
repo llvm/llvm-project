@@ -8,12 +8,15 @@
 # ===----------------------------------------------------------------------===##
 from argparse import ArgumentParser, Namespace
 import html
-from pathlib import Path
-from typing import Callable, Dict
 import os
+from pathlib import Path
+import re
 import sys
+from typing import Callable, Dict, Optional
 
 from header import Header
+
+_CPPREFERENCE_BASE = "https://en.cppreference.com/w/c"
 
 
 class DocgenAPIFormatError(Exception):
@@ -51,6 +54,8 @@ def check_api(header: Header, api: Dict):
     :param api: docgen yaml file contents parsed into a dict
     """
     errors = []
+    if "c-reference-root" in api and not isinstance(api["c-reference-root"], str):
+        errors.append("error: c-reference-root must be a string")
     # We require entries to have at least one of these.
     possible_keys = [
         "c-definition",
@@ -75,6 +80,8 @@ def check_api(header: Header, api: Dict):
             if not any(k in obj for k in possible_keys):
                 err = f"error: Macro {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
+            if "c-reference" in obj and not isinstance(obj["c-reference"], str):
+                errors.append(f"error: Macro {name} c-reference must be a string")
 
     # Validate functions
     if "functions" in api:
@@ -91,6 +98,8 @@ def check_api(header: Header, api: Dict):
             if not any(k in obj for k in possible_keys):
                 err = f"error: function {name} does not contain at least one required property: {possible_keys}"
                 errors.append(err)
+            if "c-reference" in obj and not isinstance(obj["c-reference"], str):
+                errors.append(f"error: function {name} c-reference must be a string")
 
     if errors:
         raise DocgenAPIFormatError("\n".join(errors))
@@ -110,29 +119,84 @@ def _status_badge_html(implemented: bool) -> str:
     )
 
 
-def _c_section_html(item: Dict) -> str:
-    sec = item.get("c-definition")
-    if sec:
-        return f'<span class="hc-sec-badge">{html.escape(str(sec))}</span>'
-    return '<span class="hc-status-no" aria-label="Not in C23">&ndash;</span>'
+def cppreference_url(
+    header: Header,
+    symbol_name: str = "",
+    kind: str = "function",
+    item: Optional[Dict] = None,
+    api: Optional[Dict] = None,
+) -> str:
+    if item and "c-reference" in item:
+        ref = item["c-reference"]
+        return f"{_CPPREFERENCE_BASE}/{ref}" if ref else ""
+    root = (api if api is not None else header.api).get("c-reference-root")
+    if not root:
+        return ""
+    if (
+        not symbol_name
+        or symbol_name.startswith("__")
+        or kind not in ("function", "family")
+    ):
+        return f"{_CPPREFERENCE_BASE}/{root}"
+    return f"{_CPPREFERENCE_BASE}/{root}/{symbol_name}"
 
 
-def _posix_link_html(header: Header, name: str, kind: str, item: Dict) -> str:
-    base = (
-        f"functions/{name}.html"
-        if kind == "function"
+def posix_url(header: Header, symbol_name: str, kind: str, item: Dict) -> str:
+    subpath = (
+        f"functions/{symbol_name}.html"
+        if kind in ("function", "family") and symbol_name
         else f"basedefs/{header.name.replace('/', '_')}.html"
     )
     if "in-latest-posix" in item:
-        url = f"https://pubs.opengroup.org/onlinepubs/9799919799/{base}"
-        return f'<a class="hc-posix-link" href="{url}">POSIX.1-2024 &#8599;</a>'
+        return f"https://pubs.opengroup.org/onlinepubs/9799919799/{subpath}"
     if "removed-in-posix-2008" in item:
-        url = f"https://pubs.opengroup.org/onlinepubs/007904875/{base}"
-        return f'<a class="hc-posix-link" href="{url}">Removed (2008) &#8599;</a>'
+        return f"https://pubs.opengroup.org/onlinepubs/007904875/{subpath}"
     if "removed-in-posix-2024" in item:
-        url = f"https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/{base}"
-        return f'<a class="hc-posix-link" href="{url}">Removed (2024) &#8599;</a>'
-    return '<span class="hc-status-no" aria-label="Not in POSIX">&ndash;</span>'
+        return f"https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/{subpath}"
+    return ""
+
+
+_C_SECTION_RE = re.compile(r"^([0-9]+|[FGHJK])\.")
+
+
+def _c_section_html(
+    header: Header,
+    name: str,
+    kind: str,
+    item: Dict,
+    api: Optional[Dict] = None,
+) -> str:
+    sec = item.get("c-definition")
+    if not sec:
+        return '<span class="hc-status-no" aria-label="Not in C23">&ndash;</span>'
+    label = html.escape(str(sec))
+    if _C_SECTION_RE.match(str(sec)):
+        url = cppreference_url(header, name, kind, item, api)
+        if url:
+            href = html.escape(url, quote=True)
+            return (
+                f'<a class="hc-c-link" href="{href}" '
+                f'title="C23 section {label} on cppreference.com">'
+                f'{label} <span aria-hidden="true">&#8599;</span></a>'
+            )
+    return f'<span class="hc-sec-badge">{label}</span>'
+
+
+def _posix_link_html(header: Header, name: str, kind: str, item: Dict) -> str:
+    url = posix_url(header, name, kind, item)
+    if not url:
+        return '<span class="hc-status-no" aria-label="Not in POSIX">&ndash;</span>'
+    if "removed-in-posix-2008" in item:
+        label = "Removed (2008)"
+    elif "removed-in-posix-2024" in item:
+        label = "Removed (2024)"
+    else:
+        label = "POSIX.1-2024"
+    href = html.escape(url, quote=True)
+    return (
+        f'<a class="hc-posix-link" href="{href}">'
+        f'{label} <span aria-hidden="true">&#8599;</span></a>'
+    )
 
 
 def print_symbol_table_md(
@@ -142,6 +206,7 @@ def print_symbol_table_md(
     items: Dict,
     is_implemented_fn: Callable[[str], bool],
     kind: str,
+    api: Optional[Dict] = None,
 ):
     print(
         f"## {section_title}\n\n```{{raw}} html\n"
@@ -156,7 +221,7 @@ def print_symbol_table_md(
         obj = items[name] or {}
         row_id = html.escape(f"{kind}-{name.replace(' ', '-')}", quote=True)
         status = _status_badge_html(is_implemented_fn(name))
-        c_sec = _c_section_html(obj)
+        c_sec = _c_section_html(header, name, kind, obj, api)
         posix = _posix_link_html(header, name, kind, obj)
         print(
             f'    <tr id="{row_id}">'
@@ -179,6 +244,7 @@ def print_header_status_md(header: Header, api: Dict):
             api["macros"],
             header.implements_macro,
             "macro",
+            api,
         )
 
     if api.get("functions"):
@@ -189,6 +255,7 @@ def print_header_status_md(header: Header, api: Dict):
             api["functions"],
             header.implements_fn,
             "function",
+            api,
         )
 
 
