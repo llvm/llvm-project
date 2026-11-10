@@ -72,7 +72,20 @@ public:
   bool inConstantContext() const;
 
   /// Deallocates a pointer.
-  void deallocate(Block *B);
+  void deallocate(Block *B) {
+    // The block might have a pointer saved in a field in its data
+    // that points to the block itself. We call the dtor first,
+    // which will destroy all the data but leave InlineDescriptors
+    // intact. If the block THEN still has pointers, we create a
+    // DeadBlock for it in deallocateWithPointers().
+    if (B->IsInitialized)
+      B->invokeDtor();
+
+    if (LLVM_LIKELY(!B->hasPointers()))
+      return;
+
+    deallocateWithPointers(B);
+  }
 
   /// Delegates source mapping to the mapper.
   SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
@@ -244,6 +257,9 @@ private:
   bool diagnoseStepLimitExceeded(CodePtr OpPC);
 
   FrameAllocator &FrameAlloc;
+
+  /// Deallocate a block that still has pointers pointing to it.
+  void deallocateWithPointers(Block *B);
 
 public:
   CodePtr PC;

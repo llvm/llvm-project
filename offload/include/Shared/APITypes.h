@@ -58,27 +58,6 @@ struct __tgt_target_table {
 
 // clang-format on
 
-/// This struct contains information exchanged between different asynchronous
-/// operations for device-dependent optimization and potential synchronization
-struct __tgt_async_info {
-  // A pointer to a queue-like structure where offloading operations are issued.
-  // We assume to use this structure to do synchronization. In CUDA backend, it
-  // is CUstream.
-  void *Queue = nullptr;
-
-  /// A collection of allocations that are associated with this stream and that
-  /// should be freed after finalization. Also store the type of the allocation.
-  llvm::SmallVector<std::pair<void *, TargetAllocTy>, 2> AssociatedAllocations;
-
-  /// Mutex to guard access to AssociatedAllocations and the Queue.
-  std::mutex Mutex;
-
-  /// Opaque handle for profiler-specific data (e.g., OMPT trace record info).
-  /// Owned by the profiler; the runtime threads this pointer through the plugin
-  /// layer to associate async operations with trace records.
-  void *ProfilerData = nullptr;
-};
-
 /// This struct contains all of the arguments to a target kernel region launch.
 struct KernelArgsTy {
   uint32_t Version = 0; // Version of this struct for ABI compatibility.

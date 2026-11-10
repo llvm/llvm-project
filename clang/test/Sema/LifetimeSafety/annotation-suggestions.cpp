@@ -920,3 +920,18 @@ struct Derived : Mid, virtual Base {
 };
 
 } // namespace field_origin_escape
+
+namespace static_subscript_operator {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++23-extensions"
+struct Table {
+  static const int &operator[](const int &key [[clang::lifetimebound]]);
+};
+#pragma clang diagnostic pop
+
+// The suggestion goes to `key`, not to the object argument `table`.
+const int &lookup(const Table &table,
+                  const int &key) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
+  return table[key];                // expected-note {{param returned here}}
+}
+} // namespace static_subscript_operator

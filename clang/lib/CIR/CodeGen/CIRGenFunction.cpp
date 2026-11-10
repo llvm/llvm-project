@@ -432,15 +432,16 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     if (shouldEmitUnreachable) {
       assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
-        cir::TrapOp::create(builder, localScope->endLoc);
+        cir::TrapOp::create(builder, localScope->endLoc, /*implicit=*/true);
       else
-        cir::UnreachableOp::create(builder, localScope->endLoc);
+        cir::UnreachableOp::create(builder, localScope->endLoc,
+                                   /*implicit=*/true);
       builder.clearInsertionPoint();
       return;
     }
   }
 
-  (void)emitReturn(localScope->endLoc);
+  emitReturn(localScope->endLoc).setImplicit(true);
 }
 
 cir::TryOp CIRGenFunction::LexicalScope::getClosestTryParent() {
@@ -1619,7 +1620,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (numVLAElements)
     numElements =
         builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
-                          cir::OverflowBehavior::NoUnsignedWrap);
+                          cir::OverflowFlags::NoUnsignedWrap);
 
   return numElements;
 }
@@ -1675,7 +1676,7 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
       numElements =
           builder.createMul(numElements.getLoc(), numElements, vlaSize,
-                            cir::OverflowBehavior::NoUnsignedWrap);
+                            cir::OverflowFlags::NoUnsignedWrap);
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 

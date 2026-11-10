@@ -95,7 +95,7 @@ class DebuggerAPITestCase(TestBase):
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
         process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         # This should change the value of a process's local property.
         new_cache_line_size = global_cache_line_size + 512

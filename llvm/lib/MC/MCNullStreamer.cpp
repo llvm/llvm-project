@@ -41,9 +41,18 @@ public:
   void emitCOFFSymbolStorageClass(int StorageClass) override {}
   void emitCOFFSymbolType(int Type) override {}
   void endCOFFSymbolDef() override {}
+  void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+                                  MCSymbol *CsectSym,
+                                  Align Alignment) override {}
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linkage,
                                             MCSymbolAttr Visibility) override {}
+  void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
+                                unsigned Lang, unsigned Reason,
+                                unsigned FunctionSize, bool hasDebug) override {
+  }
+  void emitXCOFFRefDirective(const MCSymbol *Symbol) override {}
+  void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override {}
 };
 
 } // namespace

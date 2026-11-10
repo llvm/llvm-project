@@ -101,11 +101,14 @@ static const Loan *createLoan(FactManager &FactMgr, const ValueDecl &VD,
 
 /// Creates a loan for the storage location of a temporary object.
 /// \param MTE The MaterializeTemporaryExpr that represents the temporary
-/// binding. \return The new Loan.
+/// binding.
+/// \param IssueExpr The expression the loan is reported at, if not \p MTE.
+/// \return The new Loan.
 static const Loan *createLoan(FactManager &FactMgr,
-                              const MaterializeTemporaryExpr *MTE) {
-  AccessPath Path(MTE);
-  return FactMgr.getLoanMgr().createLoan(Path, MTE);
+                              const MaterializeTemporaryExpr *MTE,
+                              const Expr *IssueExpr = nullptr) {
+  return FactMgr.getLoanMgr().createLoan(AccessPath(MTE),
+                                         IssueExpr ? IssueExpr : MTE);
 }
 
 /// Creates a loan for an allocation through 'new'
@@ -114,6 +117,16 @@ static const Loan *createLoan(FactManager &FactMgr,
 static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
   AccessPath Path(NE);
   return FactMgr.getLoanMgr().createLoan(Path, NE);
+}
+
+/// Creates a loan for a heap allocation made by a call (e.g. a function
+/// annotated with `ownership_returns`, like `malloc`).
+/// \param CE The CallExpr that represents the allocation
+/// \return The new Loan on success, nullptr otherwise
+static const Loan *createNewAllocLoan(FactManager &FactMgr,
+                                      const CallExpr *CE) {
+  AccessPath Path(CE);
+  return FactMgr.getLoanMgr().createLoan(Path, CE);
 }
 
 void FactsGenerator::run() {
@@ -231,6 +244,21 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     }
   }
   handleFunctionCall(CCE, /*IsGslConstruction=*/false);
+}
+
+void FactsGenerator::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *DAE) {
+  // The CFG does not visit a default argument's expression (GH13757), but it
+  // does expire the temporaries it materializes.
+  // Issue the loan here, reported at the call.
+  // FIXME: Model temporaries nested deeper in the default argument.
+  const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(
+      DAE->getExpr()->IgnoreParenBaseCasts());
+  OriginList *List = getOriginsList(*DAE);
+  if (!MTE || !List)
+    return;
+  const Loan *L = createLoan(FactMgr, MTE, /*IssueExpr=*/DAE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
 }
 
 void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
@@ -432,7 +460,7 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
 void FactsGenerator::handleAssignment(const Expr *TargetExpr,
                                       const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
-  LHSExpr = LHSExpr->IgnoreParenImpCasts();
+  LHSExpr = ignoreParensAndImpCasts(LHSExpr);
   handleAccess(LHSExpr);
   OriginList *RHSList = readValue(RHSExpr);
   OriginList *LHSList = nullptr;
@@ -642,12 +670,16 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   OriginList *RValMTEList = MTEList->peelOuterOrigin();
   flow(RValMTEList, SubExprList, /*Kill=*/true);
   OriginID OuterMTEID = MTEList->getOuterOriginID();
-  if (MTE->getStorageDuration() == SD_FullExpression) {
-    // Issue a loan to MTE for the storage location represented by MTE.
-    const Loan *L = createLoan(FactMgr, MTE);
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
-  }
+  const Loan *L = createLoan(FactMgr, MTE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
+  // A temporary extended to static or thread storage duration does not expire
+  // within the function.
+  // Thread termination is not modeled; a thread-local value used after its
+  // thread exits is not diagnosed.
+  if (MTE->getStorageDuration() == SD_Automatic)
+    if (const ValueDecl *ExtendingDecl = MTE->getExtendingDecl())
+      ExtendedTemporaries[ExtendingDecl].push_back(MTE);
 }
 
 void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
@@ -829,6 +861,7 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  SourceLocation EndLoc = LifetimeEnds.getTriggerStmt()->getEndLoc();
   // A cleanup callback or a non-trivial destructor (other than an owner's) run
   // at scope exit may read the borrows the variable holds.
   QualType Ty = LifetimeEndsVD->getType();
@@ -840,9 +873,9 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   if (HasCleanup || IsDestructorUse)
     if (OriginList *List = getOriginsList(*LifetimeEndsVD))
       CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
-          UseSite::scopeExit(
-              LifetimeEnds.getTriggerStmt()->getEndLoc(), *LifetimeEndsVD,
-              HasCleanup ? UseKind::Cleanup : UseKind::Destructor),
+          UseSite::scopeExit(EndLoc, *LifetimeEndsVD,
+                             HasCleanup ? UseKind::Cleanup
+                                        : UseKind::Destructor),
           List));
   // Expire the origin when its variable's lifetime ends to ensure liveness
   // doesn't persist through loop back-edges.
@@ -855,8 +888,12 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
       ExpiredOID = OID;
   }
   CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
-      AccessPath(LifetimeEndsVD), LifetimeEnds.getTriggerStmt()->getEndLoc(),
-      ExpiredOID));
+      AccessPath(LifetimeEndsVD), EndLoc, ExpiredOID));
+  if (auto It = ExtendedTemporaries.find(LifetimeEndsVD);
+      It != ExtendedTemporaries.end())
+    for (const MaterializeTemporaryExpr *MTE : It->second)
+      CurrentBlockFacts.push_back(
+          FactMgr.createFact<ExpireFact>(AccessPath(MTE), EndLoc));
 }
 
 void FactsGenerator::handleFullExprCleanup(
@@ -987,7 +1024,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   // Heuristics to turn-down false positives. Skip member field expressions for
   // now. This is not a perfect filter and will still surface some false
   // positives (e.g. `auto& r = s.v`). Static data members are not fields.
-  const Expr *Obj = Args[0]->IgnoreImpCasts();
+  const Expr *Obj = ignoreParensAndImpCasts(Args[0]);
   if (const auto *ME = dyn_cast<MemberExpr>(Obj);
       !isa<DeclRefExpr>(Obj) && !(ME && isa<VarDecl>(ME->getMemberDecl())))
     return;
@@ -1016,7 +1053,7 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
     return;
 
   if (!isa_and_present<CXXThisExpr>(
-          MemberCall->getImplicitObjectArgument()->IgnoreImpCasts()))
+          ignoreParensAndImpCasts(MemberCall->getImplicitObjectArgument())))
     return;
 
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -1117,6 +1154,54 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   }
 }
 
+void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
+                                       ArrayRef<const Expr *> Args) {
+  if (!isFreeingFunction(*FD))
+    return;
+  auto InvalidateArg = [&](unsigned ArgIndex) {
+    assert(ArgIndex < Args.size() && "Arg index should be in bounds");
+
+    OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
+    if (!ArgList)
+      return;
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ArgList->getOuterOriginID(), Call));
+  };
+
+  bool HasOwnershipTakesAttr = false;
+  for (const OwnershipAttr *Attr : FD->specific_attrs<OwnershipAttr>()) {
+    if (Attr->getOwnKind() != OwnershipAttr::Takes)
+      continue;
+    HasOwnershipTakesAttr = true;
+    for (const ParamIdx &Idx : Attr->args()) {
+      // Attribute indices count implicit 'this', but constructor Args omits it:
+      // the first explicit parameter (2) maps to Args[0], not Args[1].
+      InvalidateArg(Idx.getLLVMIndex() - isa<CXXConstructorDecl>(FD));
+    }
+  }
+  // Allocating/freeing builtins (e.g. `free`, `realloc`) free their first
+  // argument.
+  if (!HasOwnershipTakesAttr) {
+    assert(!Args.empty() && "freeing builtins take at least one argument");
+    InvalidateArg(0);
+  }
+}
+
+void FactsGenerator::handleAllocatingCall(const Expr *Call,
+                                          const FunctionDecl *FD) {
+  if (!isAllocatingFunction(*FD))
+    return;
+  const auto *CE = dyn_cast<CallExpr>(Call);
+  if (!CE)
+    return;
+  OriginList *CallList = getOriginsList(*Call);
+  if (!CallList)
+    return;
+  const Loan *L = createNewAllocLoan(FactMgr, CE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), CallList->getOuterOriginID()));
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         bool IsGslConstruction) {
   FunctionCallInfo CallInfo(Call);
@@ -1136,6 +1221,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
   handleLifetimeCaptureBy(FD, Args);
+  handleAllocatingCall(Call, FD);
+  handleFreeingCall(Call, FD, Args);
   if (!CallList)
     return;
   if (isStdReferenceCast(FD)) {

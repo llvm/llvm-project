@@ -10,7 +10,7 @@
 
 ; Tests for selecting the interleave count for loops with reductions.
 
-define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
+define i32 @interleave_integer_reduction(ptr %src, i64 %N) vscale_range(1,16) {
 ; INTERLEAVE-4-LABEL: @interleave_integer_reduction(
 ; INTERLEAVE-4-NEXT:  iter.check:
 ; INTERLEAVE-4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
