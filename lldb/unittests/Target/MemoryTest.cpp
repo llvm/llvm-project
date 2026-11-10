@@ -1887,6 +1887,21 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   ASSERT_TRUE(process_sp);
 
   auto *dummy_process = static_cast<DummyProcess *>(process_sp.get());
+  // When the process has not published address spaces (m_address_spaces is
+  // empty), non-default address space pointers fall back to flat identity
+  // mapping in the default address space.
+  llvm::Expected<ProcessAddress> empty_pa =
+      process_sp->PointerToLoadAddress(0x1234, 3);
+  ASSERT_THAT_EXPECTED(empty_pa, llvm::Succeeded());
+  EXPECT_EQ(empty_pa->GetValue(), 0x1234ULL);
+  EXPECT_TRUE(empty_pa->IsInDefaultAddressSpace());
+
+  llvm::Expected<ProcessAddress> empty_ptr =
+      process_sp->LoadAddressToPointer(0x1234, 3);
+  ASSERT_THAT_EXPECTED(empty_ptr, llvm::Succeeded());
+  EXPECT_EQ(empty_ptr->GetValue(), 0x1234ULL);
+  EXPECT_EQ(empty_ptr->GetAddressSpace(), 3U);
+
   dummy_process->SetAddressSpaces({
       // Byte-addressed bounded aperture for address space 3.
       {"local", 3, /*is_thread_specific=*/false,
@@ -1987,4 +2002,9 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
       process_sp->LoadAddressToPointer(0x200028, 5);
   ASSERT_THAT_EXPECTED(vmem_ptr, llvm::Succeeded());
   EXPECT_EQ(vmem_ptr->GetValue(), 10ULL);
+
+  // Unaligned load address (offset 0x2a is not a multiple of pointer_unit 4)
+  // returns an error instead of silently truncating.
+  EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x20002a, 5),
+                       llvm::Failed());
 }

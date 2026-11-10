@@ -7275,7 +7275,8 @@ Process::PointerToLoadAddress(lldb::addr_t pointer,
   if (pointer == LLDB_INVALID_ADDRESS)
     return llvm::createStringError(std::errc::invalid_argument,
                                    "invalid pointer address");
-  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID)
+  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID ||
+      m_address_spaces.empty())
     return ProcessAddress(pointer, LLDB_DEFAULT_ADDRESS_SPACE_ID);
   llvm::Expected<AddressSpaceInfo> info = GetAddressSpaceInfo(address_space);
   if (!info)
@@ -7317,8 +7318,9 @@ Process::LoadAddressToPointer(lldb::addr_t address,
   if (address == LLDB_INVALID_ADDRESS)
     return llvm::createStringError(std::errc::invalid_argument,
                                    "invalid load address");
-  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID)
-    return ProcessAddress(address, LLDB_DEFAULT_ADDRESS_SPACE_ID);
+  if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID ||
+      m_address_spaces.empty())
+    return ProcessAddress(address, address_space);
   llvm::Expected<AddressSpaceInfo> info = GetAddressSpaceInfo(address_space);
   if (!info)
     return info.takeError();
@@ -7337,6 +7339,12 @@ Process::LoadAddressToPointer(lldb::addr_t address,
                                    " is outside address space %" PRIu64
                                    " flat aperture",
                                    address, address_space);
-  return ProcessAddress((address - aperture.base) / aperture.pointer_unit,
-                        address_space);
+  lldb::addr_t offset = address - aperture.base;
+  if (offset % aperture.pointer_unit != 0)
+    return llvm::createStringError(
+        std::errc::invalid_argument,
+        "load address 0x%" PRIx64 " is not aligned to address space %" PRIu64
+        " pointer_unit %" PRIu64,
+        address, address_space, aperture.pointer_unit);
+  return ProcessAddress(offset / aperture.pointer_unit, address_space);
 }

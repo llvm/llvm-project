@@ -1726,10 +1726,17 @@ ValueObject::MapPointerToLoadAddress(AddrAndType pointer) {
   if (Process *process = exe_ctx.GetProcessPtr()) {
     llvm::Expected<ProcessAddress> load_addr = process->PointerToLoadAddress(
         pointer.address, GetPointeeAddressSpace(type));
-    if (load_addr)
-      pointer.address = load_addr->GetValue();
-    else {
-      llvm::consumeError(load_addr.takeError());
+    if (load_addr) {
+      // AddrAndType represents a flat load address in the default address
+      // space. If the target address space has no flat aperture into the
+      // default address space, it cannot be dereferenced as a flat load
+      // address.
+      pointer.address = load_addr->IsInDefaultAddressSpace()
+                            ? load_addr->GetValue()
+                            : LLDB_INVALID_ADDRESS;
+    } else {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), load_addr.takeError(),
+                     "Unable to map pointer to load address: {0}");
       pointer.address = LLDB_INVALID_ADDRESS;
     }
   }
