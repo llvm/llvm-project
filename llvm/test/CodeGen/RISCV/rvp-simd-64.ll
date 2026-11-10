@@ -1165,16 +1165,8 @@ define i16 @test_extract_vector_16(<4 x i16> %a) {
 define i16 @test_extract_vector_16_variable(<4 x i16> %a, i32 %idx) {
 ; RV32-LABEL: test_extract_vector_16_variable:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    andi a2, a2, 3
-; RV32-NEXT:    addi a3, sp, 8
-; RV32-NEXT:    sh1add a2, a2, a3
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    lh a0, 0(a2)
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    nsrl a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_extract_vector_16_variable:
@@ -1197,16 +1189,8 @@ define i8 @test_extract_vector_8(<8 x i8> %a) {
 define i8 @test_extract_vector_8_variable(<8 x i8> %a, i32 %idx) {
 ; RV32-LABEL: test_extract_vector_8_variable:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    andi a2, a2, 7
-; RV32-NEXT:    addi a3, sp, 8
-; RV32-NEXT:    or a2, a3, a2
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    lbu a0, 0(a2)
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    slli a2, a2, 3
+; RV32-NEXT:    nsrl a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_extract_vector_8_variable:
@@ -1243,16 +1227,8 @@ define i32 @test_extract_vector_32_elem1(<2 x i32> %a) {
 define i32 @test_extract_vector_32_variable(<2 x i32> %a, i32 %idx) {
 ; RV32-LABEL: test_extract_vector_32_variable:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    addi a3, sp, 8
-; RV32-NEXT:    sh2add a2, a2, a3
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    lw a0, 0(a2)
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    slli a2, a2, 5
+; RV32-NEXT:    nsrl a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_extract_vector_32_variable:
