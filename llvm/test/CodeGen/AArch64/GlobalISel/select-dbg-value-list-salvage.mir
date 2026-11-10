@@ -39,7 +39,7 @@ body: |
     ; CHECK-LABEL: name: list_trunc
     ; CHECK: liveins: $w1, $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY $w1
     ; CHECK-NEXT: DBG_VALUE_LIST !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $x0, [[COPY]], debug-location !DILocation(line: 1, column: 1, scope: !4)
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
