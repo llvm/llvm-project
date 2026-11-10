@@ -167,7 +167,7 @@ namespace mlir {
 /// class can be created for an operation implementing DataLayoutOpInterface.
 /// Upon construction, a layout spec combining that of the given operation with
 /// all its ancestors will be computed and used to handle further requests. For
-/// efficiency, results to all requests will be cached in this object.
+/// efficiency, query results may be cached in this object.
 /// Therefore, if the data layout spec for the scoping operation, or any of the
 /// enclosing operations, changes, the cache is no longer valid. The user is
 /// responsible creating a new DataLayout object after any spec change. In debug
@@ -180,6 +180,11 @@ public:
 
   /// Returns the layout of the closest parent operation carrying layout info.
   static DataLayout closest(Operation *op);
+
+  /// Returns true if the layout in the current scope has an entry whose key is
+  /// exactly the given type. This includes entries from enclosing scopes.
+  /// A type can have a known size even if this returns false.
+  bool hasTypeEntry(Type type) const;
 
   /// Returns the size of the given type in the current scope.
   llvm::TypeSize getTypeSize(Type t) const;
