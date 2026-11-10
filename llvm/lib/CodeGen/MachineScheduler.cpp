@@ -2393,7 +2393,7 @@ bool BaseMemOpClusterMutation::canCluster(ScheduleDAGInstrs *DAG, SUnit *SUa,
                                           SUnit *SUb,
                                           bool ReorderWhileClustering) {
   bool AReachesB = DAG->IsReachable(SUb, SUa);
-  bool BReachesA = !AReachesB && DAG->IsReachable(SUa, SUb);
+  bool BReachesA = DAG->IsReachable(SUa, SUb);
 
   if (!BReachesA && !AReachesB)
     return true;
