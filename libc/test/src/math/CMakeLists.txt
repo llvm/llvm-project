@@ -1403,7 +1403,7 @@ add_fp_unittest(
   coshbf16_test
   NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-tests
   SRCS
     coshbf16_test.cpp
   DEPENDS

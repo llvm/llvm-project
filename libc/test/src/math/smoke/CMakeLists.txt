@@ -1544,8 +1544,11 @@ add_fp_unittest(
   SRCS
     coshbf16_test.cpp
   DEPENDS
-    libc.src.math.coshbf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.bfloat16
+    libc.src.math.coshbf16
 )
 
 add_fp_unittest(
