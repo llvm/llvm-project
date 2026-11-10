@@ -18,6 +18,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
@@ -3383,6 +3384,25 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
 
 bool isIntrinsicAlwaysUniform(unsigned IntrID) {
   return lookupAlwaysUniform(IntrID);
+}
+
+bool isTriviallyUniform(const Value *V, const Instruction *CtxI) {
+  if (isa<Constant>(V))
+    return true;
+  if (const auto *A = dyn_cast<Argument>(V))
+    return isArgPassedInSGPR(A);
+  if (const auto *II = dyn_cast<IntrinsicInst>(V)) {
+    if (!isIntrinsicAlwaysUniform(II->getIntrinsicID()))
+      return false;
+    // If II and CtxI are in different blocks then there is a possibility of a
+    // temporal divergence.
+    return II->getParent() == CtxI->getParent();
+  }
+  return false;
+}
+
+bool isTriviallyUniform(const Use &U) {
+  return isTriviallyUniform(U.get(), cast<Instruction>(U.getUser()));
 }
 
 bool isLDSDMAIntrinsic(unsigned IntrID) {

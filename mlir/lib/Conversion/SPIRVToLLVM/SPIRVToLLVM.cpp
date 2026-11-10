@@ -346,21 +346,30 @@ collectAttrsForConversion(SourceOp op,
   return success();
 }
 
-class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
+template <typename SPIRVOp, bool InBounds>
+class AccessChainPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::AccessChainOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto dstType =
-        getTypeConverter()->convertType(op.getComponentPtr().getType());
+        this->getTypeConverter()->convertType(op.getComponentPtr().getType());
     if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+    if (op.getIndices().empty()) {
+      rewriter.replaceOp(op, adaptor.getBasePtr());
+      return success();
+    }
+    auto elementType = this->getTypeConverter()->convertType(
+        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
+    if (!elementType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     // To use GEP we need to add a first 0 index to go through the pointer.
     auto indices = llvm::to_vector<4>(adaptor.getIndices());
     Type indexType = op.getIndices().front().getType();
-    auto llvmIndexType = getTypeConverter()->convertType(indexType);
+    auto llvmIndexType = this->getTypeConverter()->convertType(indexType);
     if (!llvmIndexType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
     Value zero =
@@ -368,12 +377,9 @@ public:
                                  rewriter.getIntegerAttr(llvmIndexType, 0));
     indices.insert(indices.begin(), zero);
 
-    auto elementType = getTypeConverter()->convertType(
-        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
-    if (!elementType)
-      return rewriter.notifyMatchFailure(op, "type conversion failed");
-    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, elementType,
-                                             adaptor.getBasePtr(), indices);
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(
+        op, dstType, elementType, adaptor.getBasePtr(), indices,
+        InBounds ? LLVM::GEPNoWrapFlags::inbounds : LLVM::GEPNoWrapFlags::none);
     return success();
   }
 };
@@ -2012,6 +2018,32 @@ public:
   }
 };
 
+/// Converts `spirv.CL.sincos` to `llvm.intr.sincos`, storing the cosine to
+/// `cosval` and returning the sine.
+class CLSincosPattern : public SPIRVToLLVMConversion<spirv::CLSincosOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CLSincosOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CLSincosOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    auto structType = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                       {dstType, dstType});
+    Value sincos =
+        LLVM::SincosOp::create(rewriter, loc, structType, adaptor.getX());
+    Value sin = LLVM::ExtractValueOp::create(rewriter, loc, sincos, 0);
+    Value cos = LLVM::ExtractValueOp::create(rewriter, loc, sincos, 1);
+    LLVM::StoreOp::create(rewriter, loc, cos, adaptor.getCosval());
+    rewriter.replaceOp(op, sin);
+    return success();
+  }
+};
+
 // Converts spirv.GL.Radians (scale = pi/180) and spirv.GL.Degrees
 // (scale = 180/pi) by multiplying the operand by a compile-time constant.
 template <typename SPIRVOp>
@@ -2448,6 +2480,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLNMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLNMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLLdexpOp, LLVM::LoadExpOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::GLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::GLPowOp, LLVM::PowOp>,
@@ -2483,6 +2516,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLFmaOp, LLVM::FMAOp>,
       DirectConversionPattern<spirv::CLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::CLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::CLLdexpOp, LLVM::LoadExpOp>,
       DirectConversionPattern<spirv::CLLogOp, LLVM::LogOp>,
       DirectConversionPattern<spirv::CLLog2Op, LLVM::Log2Op>,
       DirectConversionPattern<spirv::CLLog10Op, LLVM::Log10Op>,
@@ -2506,7 +2540,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
-      InverseSqrtPattern<spirv::CLRsqrtOp>, SAbsPattern<spirv::CLSAbsOp>,
+      CLSincosPattern, InverseSqrtPattern<spirv::CLRsqrtOp>,
+      SAbsPattern<spirv::CLSAbsOp>,
       ClampPattern<spirv::CLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
       ClampPattern<spirv::CLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
       ClampPattern<spirv::CLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
@@ -2525,9 +2560,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       FPClassPattern<spirv::IsNormalOp, llvm::fcNormal>,
 
       // Memory ops
-      AccessChainPattern, AddressOfPattern, CopyMemoryPattern,
-      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
-      VariablePattern,
+      AccessChainPattern<spirv::AccessChainOp, /*InBounds=*/false>,
+      AccessChainPattern<spirv::InBoundsAccessChainOp, /*InBounds=*/true>,
+      AddressOfPattern, CopyMemoryPattern, LoadStorePattern<spirv::LoadOp>,
+      LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
       CompositeExtractPattern, CompositeInsertPattern,

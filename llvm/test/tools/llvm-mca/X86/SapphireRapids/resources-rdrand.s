@@ -14,7 +14,7 @@ rdrand   %rax
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  25     1386   7.00                  U     rdrandw	%ax
+# CHECK-NEXT:  25     1386  7.00                  U     rdrandw	%ax
 # CHECK-NEXT:  25     100   7.00                  U     rdrandl	%eax
 # CHECK-NEXT:  25     100   7.00                  U     rdrandq	%rax
 

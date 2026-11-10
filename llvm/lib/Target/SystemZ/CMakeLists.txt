@@ -21,6 +21,7 @@ add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
   SystemZAlignGlobals.cpp
   SystemZCallingConv.cpp
+  SystemZCodeGenPassBuilder.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
   SystemZELFAsmPrinter.cpp
@@ -53,6 +54,7 @@ add_llvm_target(SystemZCodeGen
   CodeGenTypes
   Core
   MC
+  Passes
   Scalar
   SelectionDAG
   Support

@@ -953,6 +953,7 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.shmatt_t
     .llvm-libc-types.size_t
+    .llvm-libc-types.struct_shmid_ds
     .llvm-libc-types.time_t
     .stdint
     .sys_ipc

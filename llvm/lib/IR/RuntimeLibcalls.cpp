@@ -304,6 +304,8 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
     return Type::getPPC_FP128Ty(Ctx);
   case Ptr:
     return PointerType::get(Ctx, 0);
+  case AllocaPtr:
+    return DL.getAllocaPtrType(Ctx);
   case V2F32:
     return FixedVectorType::get(Type::getFloatTy(Ctx), 2);
   case V4F32:
@@ -414,7 +416,8 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   const FuncArgTypeID *ProtoTypes =
       &SignatureTable[SignatureOffset[LibcallImpl]];
 
-  if (ProtoTypes[0] == NoFuncArgType)
+  if (ProtoTypes[0] == NoFuncArgType || ProtoTypes[0] == Variable ||
+      ProtoTypes[0] == ThreadLocalVariable)
     return {};
 
   FuncArgTypeID LastID = ProtoTypes[0];
@@ -483,6 +486,59 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   return {FunctionType::get(RetTy, ArgTys, IsVarArg),
           AttributeList::get(Ctx, getLibcallImplFnAttributes(Ctx, LibcallImpl),
                              RetAttrs, ArgAttrs)};
+}
+
+Type *
+RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                     const DataLayout &DL,
+                                     RTLIB::LibcallImpl LibcallImpl) const {
+  const FuncArgTypeID *ProtoTypes =
+      &SignatureTable[SignatureOffset[LibcallImpl]];
+  if (ProtoTypes[0] != Variable && ProtoTypes[0] != ThreadLocalVariable)
+    return nullptr;
+  return convertToIRType(ProtoTypes[1], Ctx, TT, DL, LongDoubleFmt);
+}
+
+FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(!isVariable(LibcallImpl) && "not a function declaration");
+
+  const DataLayout &DL = M.getDataLayout();
+  auto [FuncTy, FuncAttrs] =
+      getFunctionTy(M.getContext(), M.getTargetTriple(), DL, LibcallImpl);
+
+  // TODO: Every libcall should have a known signature.
+  if (!FuncTy) {
+    FuncTy = FunctionType::get(Type::getVoidTy(M.getContext()), {},
+                               /*IsVarArg=*/true);
+  }
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return {FuncTy, GV};
+
+  Function *F = Function::Create(FuncTy, GlobalValue::ExternalLinkage,
+                                 DL.getProgramAddressSpace(), Name, &M);
+  F->setAttributes(FuncAttrs);
+  F->setCallingConv(getLibcallImplCallingConv(LibcallImpl));
+  return {FuncTy, F};
+}
+
+GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(isVariable(LibcallImpl) && "not a variable declaration");
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return GV;
+
+  Type *VarTy = getVariableType(M.getContext(), M.getTargetTriple(),
+                                M.getDataLayout(), LibcallImpl);
+  return new GlobalVariable(
+      M, VarTy, /*isConstant=*/false, GlobalValue::ExternalLinkage, nullptr,
+      Name, nullptr,
+      isThreadLocalVariable(LibcallImpl) ? GlobalValue::InitialExecTLSModel
+                                         : GlobalValue::NotThreadLocal);
 }
 
 std::pair<FunctionType *, AttributeList>

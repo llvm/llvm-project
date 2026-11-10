@@ -44,13 +44,10 @@ using namespace llvm::omp::target::ompt;
 #endif
 
 using namespace llvm::omp::target::error;
-using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::rr;
 using namespace llvm::omp::target::debug;
 
 namespace llvm::offload::tmp {
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform);
-int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
                                          ol_device_handle_t Device,
                                          TargetAllocTy Kind, int64_t Size,
@@ -155,8 +152,6 @@ llvm::Error DeviceTy::init() {
                        "failed to create context for device %d: %s", DeviceID,
                        Res->Details);
 
-  RTL = llvm::offload::tmp::__ol_tgt_GetPluginFromPlatform(Platform);
-  RTLDeviceID = llvm::offload::tmp::__ol_tgt_GetPluginDeviceId(DeviceHandle);
 
   // Needs to be initialized before the GeometryProps.
   if (olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
@@ -217,7 +212,7 @@ llvm::Error DeviceTy::init() {
     BoolEnvar OMPX_EmitRecordReport("LIBOMPTARGET_RECORD_REPORT", false);
     StringEnvar OMPX_RecordReportFilename("LIBOMPTARGET_RECORD_REPORT_FILENAME",
                                           "");
-    if (OMPX_RecordDevice != RTLDeviceID)
+    if (OMPX_RecordDevice != DeviceID)
       return llvm::Error::success();
 
     if (OMPX_RecordMemSize <= 0) {
@@ -671,7 +666,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          DeviceID, SrcPtr, DstDev.DeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   ol_queue_handle_t queue = AsyncInfo.getQueue();
@@ -679,8 +674,8 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
     return OFFLOAD_FAIL;
   if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
                           DeviceHandle, Size)) {
-    REPORT() << "Failure to copy data from device (" << RTLDeviceID
-             << ") to device (" << DstDev.RTLDeviceID
+    REPORT() << "Failure to copy data from device (" << DeviceID
+             << ") to device (" << DstDev.DeviceID
              << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
              << ", size = " << Size << ": " << Res->Details;
     return OFFLOAD_FAIL;
