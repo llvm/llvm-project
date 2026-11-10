@@ -7,7 +7,7 @@ llvm.func @empty_positive(%x: !llvm.ptr) {
   %c3 = llvm.mlir.constant(3 : i64) : i64
   %it = omp.iterator(%i: i64) = (%c3 to %c2 step %c2) {
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -24,7 +24,7 @@ llvm.func @empty_negative(%x: !llvm.ptr) {
   %step = llvm.mlir.constant(-2 : i64) : i64
   %it = omp.iterator(%i: i64) = (%c2 to %c3 step %step) {
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
@@ -42,7 +42,7 @@ llvm.func @empty_product(%x: !llvm.ptr) {
   %it = omp.iterator(%i: i64, %j: i64) =
       (%c3 to %c1 step %c1, %c3 to %c1 step %c1) {
     omp.yield(%x : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
   omp.taskwait depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>)
   llvm.return
 }
