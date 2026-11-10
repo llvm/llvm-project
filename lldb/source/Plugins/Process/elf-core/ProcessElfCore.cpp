@@ -1121,13 +1121,12 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
       const lldb::addr_t page_size =
-+          note.data.GetAddress(&offset); // Skip page size
+          +note.data.GetAddress(&offset); // Skip page size
       for (uint64_t i = 0; i < count; ++i) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
         entry.end = note.data.GetAddress(&offset);
-        entry.file_ofs = note.data.GetAddress(&offset);
-        entry.file_bytes_ofs = entry.file_ofs * page_size;
+        entry.file_ofs = note.data.GetAddress(&offset) * page_size;
         m_nt_file_entries.push_back(entry);
       }
       for (uint64_t i = 0; i < count; ++i) {
