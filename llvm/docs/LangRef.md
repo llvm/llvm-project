@@ -12450,6 +12450,8 @@ larger multiple of the byte size, reading a value of byte type. If any
 padding bit is non-zero or poison, all value bits in the byte containing that
 padding become poison. Then, the value bits are extracted from bit 0 using
 `bitextract`, and the extracted value is finally `bitcast` to the loaded type.
+As such, a non-byte-sized load behaves like a byte-sized load followed by a
+`trunc nuw` operation.
 
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
