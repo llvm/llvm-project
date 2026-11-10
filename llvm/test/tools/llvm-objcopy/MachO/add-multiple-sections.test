@@ -1,6 +1,4 @@
 ## This test verifies that llvm-objcopy can add multiple sections to a Mach-O binary.
-## The input is a linked image (MH_EXECUTE), so a new segment name creates a new
-## segment. Object files (MH_OBJECT) are covered by add-section-{32,64}.test.
 
 # RUN: yaml2obj %s -o %t
 # RUN: echo -n FOOabcdefg > %t.foo.data
@@ -17,7 +15,7 @@
 # RUN: llvm-readobj --sections --section-data %t.foo.bar.2 \
 # RUN:   | FileCheck %s -check-prefix=CASE1
 
-## Case 3: Add two new sections with two new segment names.
+## Case 3: Add two new sections into two different segments.
 # RUN: llvm-objcopy --add-section __FOO,__foo=%t.foo.data --add-section __BAR,__bar=%t.bar.data %t %t.foo.bar.3
 # RUN: llvm-readobj --sections --section-data %t.foo.bar.3 \
 # RUN:   | FileCheck %s -check-prefix=CASE3
@@ -52,7 +50,7 @@ LoadCommands:
         content:         'AABBCCDD'
         size:            4
         offset:          1024
-        align:           2
+        align:           0
         reloff:          0x00000000
         nreloc:          0
         flags:           0x80000400
@@ -90,7 +88,7 @@ LinkEditData:
 # CASE1-NEXT:      Address: 0x100000400
 # CASE1-NEXT:      Size: 0x4
 # CASE1-NEXT:      Offset: 1024
-# CASE1-NEXT:      Alignment: 2
+# CASE1-NEXT:      Alignment: 0
 # CASE1-NEXT:      RelocationOffset: 0x0
 # CASE1-NEXT:      RelocationCount: 0
 # CASE1-NEXT:      Type: Regular (0x0)
@@ -155,7 +153,7 @@ LinkEditData:
 # CASE3-NEXT:      Address: 0x100000400
 # CASE3-NEXT:      Size: 0x4
 # CASE3-NEXT:      Offset: 1024
-# CASE3-NEXT:      Alignment: 2
+# CASE3-NEXT:      Alignment: 0
 # CASE3-NEXT:      RelocationOffset: 0x0
 # CASE3-NEXT:      RelocationCount: 0
 # CASE3-NEXT:      Type: Regular (0x0)
