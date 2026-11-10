@@ -8,52 +8,21 @@
 define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-LABEL: func_6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $-1, %ecx
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    # implicit-def: $si
-; X86-NEXT:    .p2align 4
-; X86-NEXT:  .LBB0_1: # %for.body612
-; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    testb %bl, %bl
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.3: # %if.end1401
-; X86-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X86-NEXT:    addl %eax, %esi
-; X86-NEXT:    movw %si, s_2
-; X86-NEXT:    movw %dx, s_0
-; X86-NEXT:    incl %ecx
-; X86-NEXT:    incl %edx
-; X86-NEXT:    cmpw $73, %cx
-; X86-NEXT:    jl .LBB0_1
-; X86-NEXT:  # %bb.4: # %for.body1703
-; X86-NEXT:  .LBB0_2: # %if.then671
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    testb %al, %al
+; X86-NEXT:    jne .LBB0_2
+; X86-NEXT:  # %bb.1: # %if.then671
+; X86-NEXT:  .LBB0_2: # %if.end1401
+; X86-NEXT:    movw $0, s_0
 ;
 ; X64-LABEL: func_6:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl $23090, %eax # imm = 0x5A32
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    # implicit-def: $dx
-; X64-NEXT:    .p2align 4
-; X64-NEXT:  .LBB0_1: # %for.body612
-; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    testb %cl, %cl
-; X64-NEXT:    je .LBB0_2
-; X64-NEXT:  # %bb.3: # %if.end1401
-; X64-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; X64-NEXT:    addl %esi, %edx
-; X64-NEXT:    movw %dx, s_2(%rip)
-; X64-NEXT:    leal -23090(%rax), %edi
-; X64-NEXT:    movw %di, s_0(%rip)
-; X64-NEXT:    incq %rax
-; X64-NEXT:    leal -23091(%rax), %edi
-; X64-NEXT:    cmpw $73, %di
-; X64-NEXT:    jl .LBB0_1
-; X64-NEXT:  # %bb.4: # %for.body1703
-; X64-NEXT:  .LBB0_2: # %if.then671
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    testb %al, %al
+; X64-NEXT:    jne .LBB0_2
+; X64-NEXT:  # %bb.1: # %if.then671
+; X64-NEXT:  .LBB0_2: # %if.end1401
+; X64-NEXT:    movw $0, s_0(%rip)
 entry:
   %conv649 = zext i8 %uc_8 to i64
   %xor650 = xor i64 %conv649, 296357731680175678

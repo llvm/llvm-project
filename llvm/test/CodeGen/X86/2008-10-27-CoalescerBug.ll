@@ -12,12 +12,12 @@ bb:		; preds = %bb, %entry
 	%indvar93 = phi i32 [ 0, %entry ], [ %idim.030, %bb ]		; <i32> [#uses=2]
 	%idim.030 = add i32 %indvar93, 1		; <i32> [#uses=1]
 	%0 = add i32 %indvar93, 2		; <i32> [#uses=1]
-	%1 = icmp sgt i32 %0, 2		; <i1> [#uses=1]
+	%1 = icmp sgt i32 %0, %isign		; <i1> [#uses=1]
 	br i1 %1, label %bb30.loopexit, label %bb
 
 ; CHECK: %bb30.loopexit
 ; CHECK: divsd %xmm0
-; CHECK: movsd %xmm0, 16(%esp)
+; CHECK: movsd %xmm0, {{[0-9]+}}(%esp)
 ; CHECK: %bb3
 bb3:		; preds = %bb30.loopexit, %bb25, %bb3
 	%2 = load i32, ptr null, align 4		; <i32> [#uses=1]

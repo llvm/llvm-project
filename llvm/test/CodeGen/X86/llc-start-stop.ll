@@ -16,14 +16,16 @@
 ; STOP-BEFORE-NOT: Loop Strength Reduction
 
 ; RUN: llc < %s -debug-pass=Structure -start-after=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-AFTER
-; START-AFTER: -gc-lowering
+; START-AFTER: -loop-deletion
 ; START-AFTER: FunctionPass Manager
+; START-AFTER: Delete dead loops
 ; START-AFTER-NEXT: Lower Garbage Collection Instructions
 
 ; RUN: llc < %s -debug-pass=Structure -start-before=loop-reduce -o /dev/null 2>&1 | FileCheck %s -check-prefix=START-BEFORE
 ; START-BEFORE: -machine-branch-prob -regalloc-evict -regalloc-priority -domtree
 ; START-BEFORE: FunctionPass Manager
 ; START-BEFORE: Loop Strength Reduction
+; START-BEFORE: Delete dead loops
 ; START-BEFORE-NEXT: Lower Garbage Collection Instructions
 
 ; RUN: not llc < %s -start-before=nonexistent -o /dev/null 2>&1 | FileCheck %s -check-prefix=NONEXISTENT-START-BEFORE

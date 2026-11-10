@@ -11,7 +11,7 @@ define i32 @sink_freqinfo(i32 %a, i32 %b) nounwind uwtable ssp !prof !14 {
 ; MSINK_BFI-LABEL: sink_freqinfo
 ; MSINK_BFI: jl
 ; MSINK_BFI-NEXT: ## %bb.
-; MSINK_BFI-NEXT: imull
+; MSINK_BFI: imull
 
 ; MSINK_NOBFI-LABEL: sink_freqinfo
 ; MSINK_NOBFI: imull
@@ -20,7 +20,7 @@ entry:
   br label %B
 
 B:
-  %ee = phi i32 [ 0, %entry ], [ %inc, %F ]
+  %ee = phi i32 [ 0, %entry ], [ %inc, %F ], [ 0, %G ]
   %xx = sub i32 %a, %ee
   %cond0 = icmp slt i32 %xx, 0
   br i1 %cond0, label %F, label %exit, !prof !15
@@ -35,7 +35,7 @@ G:
   %ii = add nsw i32 %aa, %a
   %ll = add i32 %b, 45
   %exitcond2 = icmp sge i32 %ii, %b
-  br i1 %exitcond2, label %G, label %exit, !prof !17
+  br i1 %exitcond2, label %B, label %exit, !prof !17
 
 exit:
   ret i32 0

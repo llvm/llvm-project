@@ -31,7 +31,7 @@ bb1:                                              ; preds = %bb1, %bb
   %fadd2 = fadd float %fadd1, %sel1
   %fadd3 = fadd float %fadd2, %sel2
   %iv.next = add i32 %iv, 1
-  %icmp = icmp eq i32 %iv, 0
+  %icmp = icmp eq i32 %iv, 100
   br i1 %icmp, label %exit, label %bb1
 
 exit:                                             ; preds = %bb1

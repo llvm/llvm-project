@@ -8,7 +8,7 @@ target triple = "x86_64-apple-darwin9"
 ; CHECK-LABEL: foo:
 ; CHECK: align
 ; CHECK: incl  %eax
-; CHECK-NEXT: decl  %ecx
+; CHECK: decl  %ecx
 ; CHECK-NEXT: jne
 
 define void @foo() nounwind {
@@ -18,6 +18,7 @@ entry:
 loop:
 	%indvar = phi i32 [ 0, %entry ], [ %i.2.0.us1534, %loop ]		; <i32> [#uses=1]
 	%i.2.0.us1534 = add i32 %indvar, 1		; <i32> [#uses=3]
+	call void asm sideeffect "", ""()
 	%tmp611.us1535 = icmp eq i32 %i.2.0.us1534, 4		; <i1> [#uses=2]
 	%tmp623.us1538 = select i1 %tmp611.us1535, i32 6, i32 0		; <i32> [#uses=0]
 	%tmp628.us1540 = shl i32 %i.2.0.us1534, 1		; <i32> [#uses=1]

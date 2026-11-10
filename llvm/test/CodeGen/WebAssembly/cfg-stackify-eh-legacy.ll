@@ -1217,6 +1217,7 @@ invoke.cont:                                      ; preds = %if.then
   ret i32 %call
 
 for.inc:                                          ; preds = %for.body
+  store volatile i8 0, ptr %t
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 

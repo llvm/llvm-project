@@ -28,7 +28,7 @@ entry:
   br label %loop
 loop:
   %conv11.i.i = phi i64 [ 0, %entry ], [ %inc.i.i, %loop ]
-  %i = phi i64 [ undef, %entry ], [ %inc.i.i, %loop ]
+  %i = phi i64 [ -100, %entry ], [ %inc.i.i, %loop ]
   %x = load ptr, ptr @a, align 8
   %arrayidx.i.i.i = getelementptr inbounds %class.D, ptr %x, i64 %conv11.i.i
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 nonnull %tmp.i.i, ptr align 8 %arrayidx.i.i.i, i64 24, i1 false)

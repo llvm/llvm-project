@@ -9,53 +9,18 @@ define void @phi3(ptr) nounwind {
 ; CHECK-LABEL: phi3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu 1, -64(1)
-; CHECK-NEXT:    std 0, 80(1)
+; CHECK-NEXT:    stdu 1, -48(1)
+; CHECK-NEXT:    std 0, 64(1)
+; CHECK-NEXT:    bl malloc
+; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    bl malloc
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    mr 29, 3
-; CHECK-NEXT:    bl malloc
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 7, 30, -4
-; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    addi 4, 29, -8
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    bdz .LBB0_5
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    extswsli 6, 5, 5
-; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    bdz .LBB0_4
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    add 6, 3, 6
-; CHECK-NEXT:    stdu 6, 8(4)
-; CHECK-NEXT:    extswsli 6, 5, 5
-; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    bdz .LBB0_4
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    add 9, 3, 6
-; CHECK-NEXT:    extswsli 6, 5, 5
-; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    stdu 9, 8(4)
-; CHECK-NEXT:    bdnz .LBB0_3
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    add 6, 3, 6
-; CHECK-NEXT:    stdu 6, 8(4)
-; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    extswsli 5, 5, 5
-; CHECK-NEXT:    add 3, 3, 5
-; CHECK-NEXT:    stdu 3, 8(4)
-; CHECK-NEXT:    addi 1, 1, 64
+; CHECK-NEXT:    std 3, 0(30)
+; CHECK-NEXT:    addi 1, 1, 48
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
   %2 = tail call noalias ptr @malloc()

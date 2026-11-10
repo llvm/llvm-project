@@ -93,8 +93,6 @@ return:                                           ; preds = %for.body
 ; CHECK-LABEL: @test4
 ; CHECK: __tls_get_addr
 ; CHECK-NOT: mtctr
-; CHECK: addi {{[0-9]+}}
-; CHECK: cmpldi
 ; CHECK-NOT: bdnz
-; CHECK: bc
+; CHECK: blr
 }

@@ -14,7 +14,7 @@ entry:
 
 outer_loop:
   %cnt = phi i32 [0, %entry], [%cnt_incr, %inner_loop]
-  %cond = icmp eq i32 %cnt, 16
+  %cond = icmp ne i32 %cnt, 16
   br i1 %cond, label %outer_loop_body, label %exit
 
 outer_loop_body:

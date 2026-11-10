@@ -5,20 +5,13 @@
 define void @phi5() unnamed_addr {
 ; CHECK-LABEL: phi5:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    crxor 20, 20, 20
+; CHECK-NEXT:    bclr 12, 20, 0
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    slw 3, 4, 3
 ; CHECK-NEXT:    andi. 3, 3, 6336
-; CHECK-NEXT:    beqlr 0
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    lhz 3, 0(3)
-; CHECK-NEXT:    slwi 3, 3, 15
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    rlwinm 4, 3, 31, 17, 31
-; CHECK-NEXT:    or 3, 3, 4
-; CHECK-NEXT:    rlwimi 3, 3, 15, 0, 16
-; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    blr
   switch i12 undef, label %21 [
     i12 6, label %1

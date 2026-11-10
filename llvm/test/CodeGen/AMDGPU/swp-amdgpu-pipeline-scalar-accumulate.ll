@@ -4,15 +4,16 @@
 ; such a loop software-pipelines.
 ; CHECK: Schedule found with Initiation Interval
 
-define amdgpu_kernel void @swp_amdgpu_pipeline_scalar_accumulate(i1 %arg) {
+define amdgpu_kernel void @swp_amdgpu_pipeline_scalar_accumulate(i1 %arg, i32 %n, ptr addrspace(1) %out) {
 bb:
   %call = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
   %phi = phi float [ 0.000000e+00, %bb ], [ %select6, %bb1 ]
-  %phi2 = phi i32 [ 0, %bb ], [ 1, %bb1 ]
+  %phi2 = phi i32 [ 0, %bb ], [ %phi2.next, %bb1 ]
   %phi3 = phi i32 [ %call, %bb ], [ %add, %bb1 ]
+  %phi2.next = add i32 %phi2, 1
   %add = add i32 %phi3, -8
   %call4 = tail call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) null, i32 %phi2, i32 0, i32 0)
   %icmp = icmp slt i32 %add, 0
@@ -25,9 +26,11 @@ bb1:                                              ; preds = %bb1, %bb
   %fcmp = fcmp uno float %call5, 0.000000e+00
   %fadd = fadd float %phi, 1.000000e+00
   %select6 = select i1 %fcmp, float %phi, float %fadd
-  %icmp7 = icmp eq i32 %phi2, 0
+  %icmp7 = icmp eq i32 %phi2, %n
   br i1 %icmp7, label %bb8, label %bb1
 
 bb8:                                              ; preds = %bb1
+  %lcssa = phi float [ %select6, %bb1 ]
+  store float %lcssa, ptr addrspace(1) %out
   ret void
 }

@@ -38,7 +38,7 @@ define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg,
 ; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[10:11]
 ; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[6:7]
-; CHECK-NEXT:  .LBB0_1: ; %.loopexit145
+; CHECK-NEXT:  .LBB0_1: ; %bb12
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_3 Depth 2
 ; CHECK-NEXT:    ; Child Loop BB0_4 Depth 3

@@ -18,20 +18,16 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movabsq $-2305847407260205056, %r14 # imm = 0xDFFFFC0000000000
+; CHECK-NEXT:    movabsq $-2305847407260205056, %r13 # imm = 0xDFFFFC0000000000
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %bb5
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movslq %edi, %rbp
-; CHECK-NEXT:    leaq (,%rbp,8), %rax
-; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
-; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
-; CHECK-NEXT:    xorl %r13d, %r13d
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB0_2: # %bb8
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    shlq $3, %rbp
+; CHECK-NEXT:    leaq global(%rbp,%rbp,2), %r14
+; CHECK-NEXT:    leaq global+4(%rbp,%rbp,2), %r15
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %rax, %r12
 ; CHECK-NEXT:    movq %rax, %rdi
@@ -40,20 +36,15 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    callq hoge@PLT
 ; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    callq hoge@PLT
-; CHECK-NEXT:    testb %r13b, %r13b
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %bb15
-; CHECK-NEXT:    leaq (%rbp,%rbp,2), %rax
-; CHECK-NEXT:    movq %r12, global+16(,%rax,8)
-; CHECK-NEXT:    movabsq $-2305847407260205056, %r14 # imm = 0xDFFFFC0000000000
+; CHECK-NEXT:    movq %r12, global+16(%rbp,%rbp,2)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:  # %bb.4: # %bb17
+; CHECK-NEXT:  # %bb.2: # %bb17
 ; CHECK-NEXT:    callq widget@PLT
-; CHECK-NEXT:  .LBB0_5: # Inline asm indirect target
+; CHECK-NEXT:  .LBB0_3: # Inline asm indirect target
 ; CHECK-NEXT:    # %bb18
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:    movw $0, 14(%r14)
+; CHECK-NEXT:    movw $0, 14(%r13)
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12

@@ -13,7 +13,10 @@ declare void @llvm.debugtrap()
 ; CHECK-NEXT: .LBB0_1:
 ; CHECK-NEXT: loop
 ; CHECK-NEXT: unreachable
-; CHECK-NEXT: i32.const       0
+; CHECK-NEXT: local.get       0
+; CHECK-NEXT: i32.const       -1
+; CHECK-NEXT: i32.add
+; CHECK-NEXT: local.tee       0
 ; CHECK-NEXT: br_if           0
 ; CHECK-NEXT: end_loop
 ; CHECK-NEXT: end_function
@@ -22,8 +25,10 @@ entry:
   br label %for.body
 
 for.body:
+  %iv = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   call void @llvm.debugtrap()
-  %exitcond = icmp eq i32 undef, %g
+  %inc = add i32 %iv, 1
+  %exitcond = icmp eq i32 %inc, %g
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:

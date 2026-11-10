@@ -4,7 +4,7 @@
 ; Verifies such a loop software-pipelines.
 ; CHECK: Schedule found with Initiation Interval
 
-define amdgpu_kernel void @swp_amdgpu_pipeline_vector_accumulate(i32 %arg, ptr addrspace(8) %arg1, i1 %arg2, i1 %arg3) {
+define amdgpu_kernel void @swp_amdgpu_pipeline_vector_accumulate(i32 %arg, ptr addrspace(8) %arg1, i1 %arg2, i1 %arg3, i32 %n) {
 bb:
   %call = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb4
@@ -14,7 +14,8 @@ bb4:                                              ; preds = %bb4, %bb
   %phi5 = phi i32 [ %call, %bb ], [ %add, %bb4 ]
   %phi6 = phi <2 x float> [ zeroinitializer, %bb ], [ %fadd, %bb4 ]
   %phi7 = phi <2 x float> [ zeroinitializer, %bb ], [ %fadd19, %bb4 ]
-  %phi8 = phi i32 [ 0, %bb ], [ 2, %bb4 ]
+  %phi8 = phi i32 [ 0, %bb ], [ %phi8.next, %bb4 ]
+  %phi8.next = add i32 %phi8, 2
   %shl = shl i32 %phi5, 1
   %call9 = tail call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) %arg1, i32 %shl, i32 0, i32 0)
   %insertelement = insertelement <2 x i32> zeroinitializer, i32 %call9, i64 0
@@ -35,7 +36,7 @@ bb4:                                              ; preds = %bb4, %bb
   %fadd19 = fadd <2 x float> %phi7, %select18
   %or = or i32 %phi, 1
   %add = add i32 %phi5, 1
-  %icmp20 = icmp eq i32 %phi8, 0
+  %icmp20 = icmp eq i32 %phi8, %n
   br i1 %icmp20, label %bb21, label %bb4
 
 bb21:                                             ; preds = %bb4

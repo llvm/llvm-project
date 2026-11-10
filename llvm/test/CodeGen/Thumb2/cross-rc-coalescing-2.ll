@@ -25,9 +25,10 @@ bb8:                                              ; preds = %bb8, %bb7
 ; CHECK: %bb8
 ; CHECK-NOT: vmov.f32
 ; CHECK: blt
-  %tmp54 = add i32 0, %tmp53                      ; <i32> [#uses=0]
+  %tmp54 = phi i32 [ 0, %bb7 ], [ %tmp54.next, %bb8 ]
+  %tmp54.next = add i32 %tmp54, 1
   %fi.1 = getelementptr float, ptr %fz, i32 undef     ; <ptr> [#uses=2]
-  %tmp80 = add i32 0, %tmp79                      ; <i32> [#uses=1]
+  %tmp80 = add i32 0, 100
   %scevgep81 = getelementptr float, ptr %fz, i32 %tmp80 ; <ptr> [#uses=1]
   %2 = load float, ptr undef, align 4                 ; <float> [#uses=1]
   %3 = fmul float %2, %1                          ; <float> [#uses=1]
@@ -64,7 +65,7 @@ bb8:                                              ; preds = %bb8, %bb7
   %32 = fsub float %30, %31                       ; <float> [#uses=1]
   %33 = fsub float %10, %32                       ; <float> [#uses=1]
   store float %33, ptr undef, align 4
-  %34 = icmp slt i32 %tmp54, %tmp80               ; <i1> [#uses=1]
+  %34 = icmp slt i32 %tmp54.next, %tmp80               ; <i1> [#uses=1]
   br i1 %34, label %bb8, label %bb9
 
 bb9:                                              ; preds = %bb8

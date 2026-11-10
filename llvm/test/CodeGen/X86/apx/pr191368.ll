@@ -108,48 +108,33 @@ define i64 @bar(ptr %a, i64 %b, ptr %f, ptr %c, ptr %d, i8 %e, i64 %g, ptr %h, p
 ; CHECK:       # %bb.0: # %b3
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rsi
 ; CHECK-NEXT:    pushq %rdi
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %r11d
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; CHECK-NEXT:    xorl %r12d, %r12d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
+; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %b4
-; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_2 Depth 2
-; CHECK-NEXT:    movq (%rsp), %rax # 8-byte Reload
-; CHECK-NEXT:    imulq %rax, %r12
-; CHECK-NEXT:    xorl %r13d, %r13d
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_2: # %b6
-; CHECK-NEXT:    # Parent Loop BB1_1 Depth=1
-; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    subb (%rsi), %al
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movb $1, %r12b
+; CHECK-NEXT:    subb (%rsi), %r12b
 ; CHECK-NEXT:    movb %r10b, (%rdi)
-; CHECK-NEXT:    movb %bl, (%r15)
-; CHECK-NEXT:    movb %al, (%r8)
+; CHECK-NEXT:    movb %bl, (%r14)
+; CHECK-NEXT:    movb %r12b, (%r8)
 ; CHECK-NEXT:    movb %r11b, 0
-; CHECK-NEXT:    movb %dl, (%rcx,%r12)
+; CHECK-NEXT:    imulq %rdx, %r15
+; CHECK-NEXT:    movb %al, (%rcx,%r15)
 ; CHECK-NEXT:    movb %bpl, (%r9)
-; CHECK-NEXT:    testq %r13, %r13
-; CHECK-NEXT:    movq %r14, %r13
-; CHECK-NEXT:    jne .LBB1_2
-; CHECK-NEXT:  # %bb.3: # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    movl $1, %r12d
+; CHECK-NEXT:    movl $1, %r15d
 ; CHECK-NEXT:    jmp .LBB1_1
 b3:
   br label %b4

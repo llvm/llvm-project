@@ -12,13 +12,16 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL: foldCallOper:
 ; CHECK: callq *{{.*}}(%rbp)
 ; CHECK: callq *{{.*}}(%rbp)
-define void @foldCallOper(ptr nocapture %p1) #0 {
+define void @foldCallOper(ptr nocapture %p1, i32 %n) #0 {
 entry:
   %0 = load ptr, ptr @a, align 8
   br label %for.body.i
 
 for.body.i:                                       ; preds = %for.body.i, %entry
-  %exitcond5.i = icmp eq i32 undef, undef
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %for.body.i ]
+  call void asm sideeffect "", ""()
+  %iv.next = add i32 %iv, 1
+  %exitcond5.i = icmp eq i32 %iv.next, %n
   br i1 %exitcond5.i, label %for.body3.lr.ph.i, label %for.body.i
 
 for.body3.lr.ph.i:                                ; preds = %for.body.i

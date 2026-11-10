@@ -927,15 +927,13 @@ bb50:
 %0 = type { i8, i32 }
 declare void @test15_callee0()
 declare void @test15_callee1()
-define void @test15() {
+define void @test15(i1 %a, i1 %b) {
 bb:
-  %tmp1 = icmp eq i8 1, 0
-  br i1 %tmp1, label %bb2, label %bb14
+  br i1 %a, label %bb2, label %bb14
 
 bb2:
   %tmp3 = phi ptr [ %tmp6, %bb5 ], [ null, %bb ]
-  %tmp4 = icmp eq i32 0, 11
-  br i1 %tmp4, label %bb5, label %bb8
+  br i1 %b, label %bb5, label %bb8
 
 bb5:
   %tmp = bitcast ptr null to ptr

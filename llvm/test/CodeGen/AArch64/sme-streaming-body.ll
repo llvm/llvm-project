@@ -247,11 +247,6 @@ define float @test_arg_survives_loop(float %arg, i32 %N) nounwind "aarch64_pstat
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    str s0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB9_1: // %for.body
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    subs w0, w0, #1
-; CHECK-NEXT:    b.ne .LBB9_1
-; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
 ; CHECK-NEXT:    fmov s0, #1.00000000
 ; CHECK-NEXT:    ldr s1, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    fadd s0, s1, s0

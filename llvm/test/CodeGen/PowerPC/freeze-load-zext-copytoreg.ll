@@ -91,13 +91,6 @@ define i32 @freeze_i8_load_loop(ptr %p, i32 %n) {
 ; CHECK-NEXT:    lbz 3, 0(3)
 ; CHECK-NEXT:    iselgt 4, 4, 5
 ; CHECK-NEXT:    mullw 3, 4, 3
-; CHECK-NEXT:    clrldi 4, 4, 32
-; CHECK-NEXT:    mtctr 4
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_1: # %loop
-; CHECK-NEXT:    #
-; CHECK-NEXT:    bdnz .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    blr
   %load = load i8, ptr %p
   %freeze = freeze i8 %load

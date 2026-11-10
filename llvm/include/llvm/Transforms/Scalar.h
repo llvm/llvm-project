@@ -70,6 +70,13 @@ LLVM_ABI Pass *createLoopTermFoldPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopDeletion - This pass performs DCE of non-infinite loops that it
+// can prove are dead.
+//
+LLVM_ABI Pass *createLoopDeletionPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopUnroll - This pass is a simple loop unrolling pass.
 //
 LLVM_ABI Pass *createLoopUnrollPass(int OptLevel = 2,

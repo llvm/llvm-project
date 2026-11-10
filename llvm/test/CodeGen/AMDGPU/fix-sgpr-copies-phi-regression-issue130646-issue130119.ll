@@ -9,24 +9,6 @@ define double @issue130646(i64 %arg) {
 ; CHECK-LABEL: issue130646:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
-; CHECK-NEXT:  .LBB0_1: ; %for.body.5
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_lshr_b64 s[6:7], s[4:5], 1
-; CHECK-NEXT:    v_or_b32_e32 v3, s7, v3
-; CHECK-NEXT:    v_or_b32_e32 v2, s6, v2
-; CHECK-NEXT:    s_lshr_b64 s[6:7], s[4:5], 5
-; CHECK-NEXT:    s_or_b32 s6, s6, 1
-; CHECK-NEXT:    v_or3_b32 v3, v3, v1, s7
-; CHECK-NEXT:    v_or3_b32 v2, v2, v0, s6
-; CHECK-NEXT:    s_lshr_b64 s[4:5], s[4:5], 8
-; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
-; CHECK-NEXT:  .LBB0_2: ; %for.cond.cleanup
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

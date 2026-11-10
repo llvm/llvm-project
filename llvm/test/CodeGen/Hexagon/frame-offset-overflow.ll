@@ -28,7 +28,7 @@ entry:
   %incdec.ptr16 = getelementptr inbounds i16, ptr %p0, i32 32
   %incdec.ptr15 = getelementptr inbounds i16, ptr %add.ptr2, i32 32
   %incdec.ptr = getelementptr inbounds i16, ptr %add.ptr, i32 32
-  br i1 undef, label %for.end.loopexit.unr-lcssa, label %for.body
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %optr.0102 = phi ptr [ %incdec.ptr24.3, %for.body ], [ %p3, %entry ]
@@ -38,7 +38,7 @@ for.body:                                         ; preds = %for.body, %entry
   %iptr1.098 = phi ptr [ %incdec.ptr20.3, %for.body ], [ %incdec.ptr15, %entry ]
   %iptr0.097 = phi ptr [ %incdec.ptr19.3, %for.body ], [ %incdec.ptr, %entry ]
   %dVsumv1.096 = phi <32 x i32> [ %60, %for.body ], [ undef, %entry ]
-  %niter = phi i32 [ %niter.nsub.3, %for.body ], [ undef, %entry ]
+  %niter = phi i32 [ %niter.nsub.3, %for.body ], [ 1000, %entry ]
   %0 = load <16 x i32>, ptr %iptr0.097, align 64, !tbaa !1
   %1 = load <16 x i32>, ptr %iptr1.098, align 64, !tbaa !1
   %2 = load <16 x i32>, ptr %iptr2.099, align 64, !tbaa !1

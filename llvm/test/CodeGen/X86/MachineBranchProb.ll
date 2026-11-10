@@ -23,6 +23,7 @@ for.cond2:                                        ; preds = %for.inc, %for.cond
 ; CHECK: successors: %bb.3(0x01fb92cf), %bb.2(0x7e046d31)
 
 for.inc:                                          ; preds = %for.cond2
+  store volatile i32 %i.1, ptr %old
   %shl = shl i32 %bit.0, 1
   %inc19 = add nsw i32 %i.1, 1
   br label %for.cond2

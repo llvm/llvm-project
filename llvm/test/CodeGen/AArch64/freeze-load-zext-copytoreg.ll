@@ -87,13 +87,6 @@ define i32 @freeze_i8_load_loop(ptr %p, i32 %n) {
 ; CHECK-NEXT:    cmp w1, #1
 ; CHECK-NEXT:    csinc w9, w1, wzr, gt
 ; CHECK-NEXT:    mul w0, w9, w8
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:  LBB1_1: ; %loop
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add w8, w8, #1
-; CHECK-NEXT:    cmp w8, w1
-; CHECK-NEXT:    b.lt LBB1_1
-; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
   %load = load i8, ptr %p
   %freeze = freeze i8 %load

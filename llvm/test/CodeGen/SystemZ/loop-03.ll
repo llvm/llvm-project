@@ -99,24 +99,24 @@ define void @fun0(ptr) {
 
 declare fp128 @llvm.pow.f128(fp128, fp128)
 
-define void @fun1(ptr) {
-; CHECK-LABEL: .LBB1_2
+define void @fun1(ptr, i64 %n) {
+; CHECK-LABEL: .LBB1_1
 ; CHECK: =>This Inner Loop Header: Depth=1
 ; CHECK-NOT: 16-byte Folded Spill
 ; CHECK-NOT: 16-byte Folded Reload
-; CHECK-LABEL: .LBB1_3
+; CHECK-LABEL: # %bb.2
 
-  br i1 undef, label %7, label %2
+  br label %2
 
 ; <label>:2:                                      ; preds = %2, %1
   %3 = phi fp128 [ %5, %2 ], [ 0xL00000000000000000000000000000000, %1 ]
   %4 = tail call fp128 @llvm.pow.f128(fp128 0xL00000000000000000000000000000000, fp128 0xL00000000000000000000000000000000) #2
   %5 = fadd fp128 %3, %4
-  %6 = icmp eq i64 undef, 0
+  %6 = icmp eq i64 %n, 0
   br i1 %6, label %7, label %2
 
-; <label>:7:                                      ; preds = %2, %1
-  %8 = phi fp128 [ 0xL00000000000000000000000000000000, %1 ], [ %5, %2 ]
+; <label>:7:                                      ; preds = %2
+  %8 = phi fp128 [ %5, %2 ]
   %9 = fadd fp128 0xL00000000000000000000000000000000, %8
   %10 = fadd fp128 0xL00000000000000000000000000000000, %9
   %11 = fadd fp128 0xL00000000000000000000000000000000, %10

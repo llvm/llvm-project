@@ -5,10 +5,11 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define void @main() #0 {
 entry:
-  br i1 undef, label %for.end, label %for.body
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %entry ]
+  call void asm sideeffect "", ""()
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 0
@@ -26,10 +27,11 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @main1() #0 {
 entry:
-  br i1 undef, label %for.end, label %for.body
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %entry ]
+  call void asm sideeffect "", ""()
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 0
   br i1 %exitcond, label %for.end, label %for.body
@@ -45,10 +47,11 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @main2() #0 {
 entry:
-  br i1 undef, label %for.end, label %for.body
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %entry ]
+  call void asm sideeffect "", ""()
   %indvars.iv.next = add i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, -100000
   br i1 %exitcond, label %for.end, label %for.body
@@ -65,10 +68,11 @@ for.end:                                          ; preds = %for.body, %entry
 
 define void @main3() #0 {
 entry:
-  br i1 undef, label %for.end, label %for.body
+  br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 127984, %entry ]
+  call void asm sideeffect "", ""()
   %indvars.iv.next = add i64 %indvars.iv, -16
   %exitcond = icmp eq i64 %indvars.iv.next, -16
   br i1 %exitcond, label %for.end, label %for.body
