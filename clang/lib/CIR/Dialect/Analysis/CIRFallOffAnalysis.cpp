@@ -189,6 +189,15 @@ static std::optional<bool> getConstantBool(mlir::Value value) {
   return std::nullopt;
 }
 
+/// The outcomes `cond` may have, as `CondTrue` and `CondFalse`: both, unless it
+/// folds to a constant.
+static Exits getCondExits(mlir::Value cond) {
+  std::optional<bool> value = getConstantBool(cond);
+  if (!value)
+    return Exits::CondTrue | Exits::CondFalse;
+  return *value ? Exits::CondTrue : Exits::CondFalse;
+}
+
 static bool isNoReturnCall(mlir::Operation *op) {
   return mlir::isa<CallOp>(op) &&
          op->hasAttr(CIRDialect::getNoReturnAttrName());
@@ -401,11 +410,7 @@ void FallOffAnalyzer::visitTerminator(
   if (mlir::isa<YieldOp>(op)) {
     exits |= Exits::Normal;
   } else if (auto condOp = mlir::dyn_cast<ConditionOp>(op)) {
-    std::optional<bool> cond = getConstantBool(condOp.getCondition());
-    if (cond.value_or(true))
-      exits |= Exits::CondTrue;
-    if (!cond.value_or(false))
-      exits |= Exits::CondFalse;
+    exits |= getCondExits(condOp.getCondition());
   } else if (mlir::isa<CoReturnOp>(op)) {
     exits |= Exits::ExplicitReturn;
   } else if (auto retOp = mlir::dyn_cast<ReturnOp>(op)) {
@@ -425,10 +430,10 @@ void FallOffAnalyzer::visitTerminator(
   } else if (mlir::isa<ContinueOp>(op)) {
     exits |= Exits::Continue;
   } else if (auto brCond = mlir::dyn_cast<BrCondOp>(op)) {
-    std::optional<bool> cond = getConstantBool(brCond.getCond());
-    if (cond.value_or(true))
+    Exits outcomes = getCondExits(brCond.getCond());
+    if (mayExitVia(outcomes, Exits::CondTrue))
       liveSuccessors.push_back(brCond.getDestTrue());
-    if (!cond.value_or(false))
+    if (mayExitVia(outcomes, Exits::CondFalse))
       liveSuccessors.push_back(brCond.getDestFalse());
   } else if (auto gotoOp = mlir::dyn_cast<GotoOp>(op)) {
     reachedGotoTargets.insert(gotoOp.getLabelAttr());
@@ -459,11 +464,11 @@ Exits FallOffAnalyzer::visitStructured(mlir::Operation *op, bool entered) {
   }
 
   if (auto ifOp = mlir::dyn_cast<IfOp>(op)) {
-    std::optional<bool> cond = getConstantBool(ifOp.getCondition());
-    Exits thenExits =
-        visitRegion(ifOp.getThenRegion(), entered && cond.value_or(true));
-    Exits elseExits =
-        visitRegion(ifOp.getElseRegion(), entered && !cond.value_or(false));
+    Exits outcomes = getCondExits(ifOp.getCondition());
+    bool thenEntered = entered && mayExitVia(outcomes, Exits::CondTrue);
+    bool elseEntered = entered && mayExitVia(outcomes, Exits::CondFalse);
+    Exits thenExits = visitRegion(ifOp.getThenRegion(), thenEntered);
+    Exits elseExits = visitRegion(ifOp.getElseRegion(), elseEntered);
     return (thenExits | elseExits) & (Exits::Normal | escapingExits);
   }
 
