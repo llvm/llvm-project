@@ -640,8 +640,6 @@ define float @fabs_sqrt_nsz(float %a) {
   ret float %fabs
 }
 
-; TODO: The fabs could be eliminated because the sqrt is nsz and nnan, but the
-; nsz of the source is no longer folded into its known fpclass.
 define float @fabs_sqrt_nnan_nsz(float %a) {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
@@ -664,6 +662,8 @@ define float @fabs_sqrt_nnan_nsz__no_pzero(float nofpclass(pzero) %a) {
   ret float %fabs
 }
 
+; TODO: The fabs could be folded if the sqrt dropped nsz, but it is unclear
+; whether that is profitable.
 define float @fabs_sqrt_nnan_nsz__no_nzero(float nofpclass(nzero) %a) {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz__no_nzero(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.sqrt.f32(float [[A:%.*]])
