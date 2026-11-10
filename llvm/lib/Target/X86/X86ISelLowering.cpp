@@ -51627,10 +51627,11 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   if (EltSizeInBits > 32) {
     SDValue Res = DAG.getNode(ExtOpc, DL, VT, Mulh);
-    if (N->getOpcode() == ISD::SRA || ExtOpc == ISD::ZERO_EXTEND)
-      return Res;
-    APInt Mask = APInt::getLowBitsSet(EltSizeInBits, EltSizeInBits - 16);
-    return DAG.getNode(ISD::AND, DL, VT, Res, DAG.getConstant(Mask, DL, VT));
+    if (N->getOpcode() == ISD::SRL && ExtOpc == ISD::SIGN_EXTEND) {
+      APInt Mask = APInt::getLowBitsSet(EltSizeInBits, EltSizeInBits - 16);
+      Res = DAG.getNode(ISD::AND, DL, VT, Res, DAG.getConstant(Mask, DL, VT));
+    }
+    return Res;
   }
 
   ExtOpc = N->getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
