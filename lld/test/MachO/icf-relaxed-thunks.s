@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
-# RUN: %lld -arch arm64 -dylib --icf=safe_thunks -interposable %t.o -map - -o %t.dylib | FileCheck %s
+# RUN: %lld -arch arm64 -dylib --icf=relaxed_thunks -interposable %t.o -map - -o %t.dylib | FileCheck %s
 # RUN: llvm-objdump --macho --disassemble %t.dylib | FileCheck %s --check-prefix=DISASM
 
 ## Taking the leaves' addresses must still produce different code. A caller of
@@ -19,6 +19,9 @@
 # CHECK-DAG: [[TAIL:0x[0-9A-Fa-f]+]] 0x00000008 {{.*}} _tail_a
 # CHECK-DAG: [[TAIL]] 0x00000000 {{.*}} _tail_b
 
+## An equivalent caller of an interposable leaf must keep its own body.
+# CHECK-DAG: 0x00000018 {{.*}} _call_interposable
+
 ## Address-significant callers must retain unique entrypoints too.
 # CHECK-DAG: 0x00000018 {{.*}} _unique_a
 # CHECK-DAG: 0x00000004 {{.*}} _unique_b
@@ -26,6 +29,14 @@
 ## Recursive bodies can be equivalent while their entrypoints remain distinct.
 # CHECK-DAG: 0x00000010 {{.*}} _recursive_a
 # CHECK-DAG: 0x00000004 {{.*}} _recursive_b
+
+## Alternate entries prevent the targets from folding. Both callers reference
+## the same targets in opposite order, so their initial hashes are equal.
+## The first variable pass must distinguish their targets using icfEqClass[1].
+# CHECK-DAG: 0x00000008 {{.*}} _non_foldable_a
+# CHECK-DAG: 0x00000008 {{.*}} _non_foldable_b
+# CHECK-DAG: 0x00000014 {{.*}} _call_non_foldable_ab
+# CHECK-DAG: 0x00000014 {{.*}} _call_non_foldable_ba
 
 ## Address-significant leaves share a body through a unique entry thunk.
 # DISASM-LABEL: _leaf_a:
@@ -61,17 +72,8 @@
 # DISASM-LABEL: _unique_b:
 # DISASM-NEXT: {{.*}} b _unique_a
 
-.subsections_via_symbols
 .text
-.p2align 2
-.globl _leaf_a, _leaf_b, _leaf_c, _leaf_d
-.globl _call_a, _call_b, _call_c, _call_only_b, _tail_a, _tail_b
-.globl _unique_a, _unique_b, _address_a, _address_b
-.globl _recursive_a, _recursive_b
-.globl _call_direct_and_indirect_b
-.private_extern _leaf_a, _leaf_b, _leaf_c, _leaf_d
-.private_extern _unique_a, _unique_b, _recursive_a, _recursive_b
-.globl _interposable_leaf, _call_interposable
+.globl _interposable_leaf
 
 _leaf_a:
   add w0, w0, #7
@@ -195,13 +197,41 @@ _interposable_leaf:
 
 _call_interposable:
   stp x29, x30, [sp, #-16]!
+  mov x29, sp
   bl _interposable_leaf
+  add w0, w0, #3
+  ldp x29, x30, [sp], #16
+  ret
+
+.alt_entry _non_foldable_alt_a
+_non_foldable_a:
+  add w0, w0, #1
+  nop
+_non_foldable_alt_a:
+  ret
+
+.alt_entry _non_foldable_alt_b
+_non_foldable_b:
+  lsl w0, w0, #1
+  nop
+_non_foldable_alt_b:
+  ret
+
+_call_non_foldable_ab:
+  stp x29, x30, [sp, #-16]!
+  bl _non_foldable_a
+  bl _non_foldable_b
+  ldp x29, x30, [sp], #16
+  ret
+
+_call_non_foldable_ba:
+  stp x29, x30, [sp, #-16]!
+  bl _non_foldable_b
+  bl _non_foldable_a
   ldp x29, x30, [sp], #16
   ret
 
 .data
-.p2align 3
-.globl _addresses
 _addresses:
   .quad _leaf_a, _leaf_b, _leaf_c, _leaf_d, _unique_a, _unique_b, _recursive_a, _recursive_b
 
@@ -217,3 +247,7 @@ _addresses:
 .addrsig_sym _recursive_step_a
 .addrsig_sym _recursive_step_b
 .addrsig_sym _interposable_leaf
+.addrsig_sym _non_foldable_a
+.addrsig_sym _non_foldable_b
+
+.subsections_via_symbols

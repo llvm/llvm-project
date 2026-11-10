@@ -18,16 +18,15 @@
 # BODY-MAP:     .thunk.0
 # BODY-MAP-NOT: .thunk.0
 
-## With safe_thunks, direct calls share a branch-extension thunk to the body.
-## The unique entrypoint still needs its own branch-extension thunk.
+## Verify that safe_thunks ICF still creates separate branch-extension thunks
+## when needed.
 # RUN: %lld -arch arm64 -lSystem -o %t/icf-safe %t/input.o --icf=safe_thunks
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/icf-safe | FileCheck %s --check-prefix=SAFE
 
+## Each call gets its own branch-extension thunk.
 # SAFE-LABEL: <_main>:
 # SAFE:       bl 0x[[#%x, THUNK_A:]] <_target_a.thunk.0>
-# SAFE-NEXT:  bl 0x[[#%x, THUNK_A]] <_target_a.thunk.0>
-# SAFE-LABEL: <_target_b>:
-# SAFE-NEXT:  b 0x[[#%x, THUNK_B:]] <_target_a.thunk.1>
+# SAFE-NEXT:  bl 0x[[#%x, THUNK_B:]] <_target_b.thunk.0>
 
 .subsections_via_symbols
 
@@ -72,7 +71,7 @@ _main:
 
 ## With safe_thunks, _target_b's ICF thunk is a synthetic section appended
 ## after all regular inputs. This spacer pushes it out of branch range from
-## _target_a so it also needs a branch-extension thunk.
+## _main so it also needs a branch-extension thunk.
 .globl _spacer2
 .p2align 2
 _spacer2:

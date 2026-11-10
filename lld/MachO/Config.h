@@ -71,6 +71,7 @@ enum class ICFLevel {
   none,
   safe,
   safe_thunks,
+  relaxed_thunks,
   all,
 };
 
