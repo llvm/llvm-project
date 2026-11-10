@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=live-debug-values -debugger-tune=gdb --filetype=obj -o - \
+# RUN: llc %s -start-after=live-debug-values --filetype=obj -o - \
 # RUN: | llvm-dwarfdump - | FileCheck %s
 
 # Generated from IR crash reproducer with `llc -stop-after=live-debug-values -simplify-mir`.
@@ -18,7 +18,7 @@
   }
 
   !llvm.dbg.cu = !{!0}
-  !llvm.module.flags = !{!3, !4}
+  !llvm.module.flags = !{!3, !4, !8}
 
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2, splitDebugInlining: false)
   !1 = !DIFile(filename: "test.cpp", directory: ".")
@@ -28,6 +28,7 @@
   !5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 479, type: !6, scopeLine: 479, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2, keyInstructions: true)
   !6 = distinct !DISubroutineType(types: !7)
   !7 = !{null}
+  !8 = !{i32 2, !"debugger-tuning", !"gdb"}
 ...
 ---
 name:            foo

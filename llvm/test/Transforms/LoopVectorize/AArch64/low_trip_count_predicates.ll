@@ -35,7 +35,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG: LV: can fold tail by masking.
 ; DEBUG: Executing best plan with VF=vscale x 16, UF=1
 
-define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) {
+define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-VS1-LABEL: define void @low_vf_ic_is_better(
 ; CHECK-VS1-SAME: ptr noundef captures(none) [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-VS1-NEXT:  [[ENTRY:.*:]]
@@ -243,7 +243,7 @@ while.end:
   ret void
 }
 
-define void @trip_count_too_small(ptr nocapture noundef %p, i32 noundef %tc, i16 noundef %val) {
+define void @trip_count_too_small(ptr nocapture noundef %p, i32 noundef %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @trip_count_too_small(
 ; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -294,7 +294,7 @@ while.end:
   ret void
 }
 
-define void @too_many_runtime_checks(ptr nocapture noundef %p, ptr nocapture noundef %p1, ptr nocapture noundef readonly %p2, ptr nocapture noundef readonly %p3, i32 noundef %tc, i16 noundef %val) {
+define void @too_many_runtime_checks(ptr nocapture noundef %p, ptr nocapture noundef %p1, ptr nocapture noundef readonly %p2, ptr nocapture noundef readonly %p3, i32 noundef %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @too_many_runtime_checks(
 ; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], ptr noundef captures(none) [[P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], ptr noundef readonly captures(none) [[P3:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
