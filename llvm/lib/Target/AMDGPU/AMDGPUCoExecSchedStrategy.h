@@ -17,6 +17,7 @@
 #include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineScheduler.h"
+#include <optional>
 
 namespace llvm {
 
@@ -71,7 +72,9 @@ private:
   /// dependencies for a SU on critical resource, then schedule that same SU on
   /// the critical resource. This agreement results in shorter live ranges and
   /// more regular HardwareUnit access patterns. SUs are prioritized by how
-  /// net registers scheduling them frees; see getRegFreeDelta().
+  /// net registers scheduling them frees; see getRegFreeDelta(). The ranking
+  /// goes stale after every pick, so it is only valid after
+  /// rebuildPrioritySUs().
   SmallSetVector<SUnit *, 16> PrioritySUs;
   /// All the SUs in the region that consume this resource.
   SmallSetVector<SUnit *, 16> AllSUs;
@@ -107,10 +110,8 @@ private:
   /// behavior which is not modelled in the compiler.
   unsigned BufferCycles = 0;
 
-  /// Cached getRegFreeDelta() of the head of PrioritySUs, valid only while
-  /// PriorityHeadFreesFor is still the head.
-  const SUnit *PriorityHeadFreesFor = nullptr;
-  int PriorityHeadFrees = 0;
+  /// getRegFreeDelta() of the head of PrioritySUs, once computed.
+  std::optional<int> PriorityHeadFrees;
 
   /// Try to update PrioritySUs with a new \p SU.
   void updatePrioritySUsWith(SUnit *SU);
@@ -183,7 +184,7 @@ public:
   void reset() {
     AllSUs.clear();
     PrioritySUs.clear();
-    PriorityHeadFreesFor = nullptr;
+    PriorityHeadFrees.reset();
     ScheduledSUs.clear();
     TotalCycles = 0;
     Type = AMDGPU::InstructionFlavor::Other;
@@ -203,11 +204,10 @@ public:
   /// dependencies, it is beneficial to enable SUs multiple levels ahead.
   SUnit *getNextTargetSU(bool LookDeep = false) const;
   /// Insert the \p SU into AllSUs and account its \p BlockingCycles into
-  /// the TotalCycles. This maintains the list of PrioritySUs.
+  /// the TotalCycles.
   void insert(SUnit *SU, unsigned BlockingCycles);
   /// Update the state for \p SU being scheduled by removing it from the AllSUs
-  /// and reducing its \p BlockingCycles from the TotalCycles. This maintains
-  /// the list of PrioritySUs.
+  /// and reducing its \p BlockingCycles from the TotalCycles.
   void markScheduled(SUnit *SU, unsigned BlockingCycles);
   /// After we've collected all the region pressure for this HWUI, correct for
   /// any specifics of the behavior of this resource. For example, if the

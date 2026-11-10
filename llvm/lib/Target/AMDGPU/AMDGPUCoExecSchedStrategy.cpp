@@ -522,17 +522,6 @@ static int getRegFreeDelta(const SUnit *SU) {
           !Succ.getSUnit()->isScheduled)
         ++Unscheduled;
 
-    LLVM_DEBUG({
-      dbgs() << "        pred SU(" << PredSU->NodeNum
-             << ") reg=" << printReg(Reg) << " unschedSuccs=" << Unscheduled
-             << " ";
-      if (PredSU->getInstr())
-        PredSU->getInstr()->print(dbgs(), /*IsStandalone=*/true,
-                                  /*SkipOpers=*/false, /*SkipDebugLoc=*/true);
-      else
-        dbgs() << "<no instr>";
-      dbgs() << "\n";
-    });
     auto &MaxUnsched = RegMaxUnsched[Reg];
     MaxUnsched = std::max(MaxUnsched, Unscheduled);
   }
@@ -545,14 +534,13 @@ static int getRegFreeDelta(const SUnit *SU) {
   for (const MachineOperand &Def : MI->defs())
     if (Def.isReg() && !Def.isTied())
       Delta -= Width(Def.getReg());
-  LLVM_DEBUG(dbgs() << "        => delta=" << Delta
-                    << " (regs=" << RegMaxUnsched.size() << ")\n");
   return Delta;
 }
 
 void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
   if (PrioritySUs.empty()) {
     PrioritySUs.insert(Cand);
+    PriorityHeadFrees.reset();
     return;
   }
 
@@ -561,19 +549,17 @@ void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
   LLVM_DEBUG(dbgs() << "    updatePrioritySUs: SU(" << Cand->NodeNum
                     << ") vs existing SU(" << Existing->NodeNum << ")\n");
 
-  if (PriorityHeadFreesFor != Existing) {
+  if (!PriorityHeadFrees)
     PriorityHeadFrees = getRegFreeDelta(Existing);
-    PriorityHeadFreesFor = Existing;
-  }
   int CandFrees = getRegFreeDelta(Cand);
-  LLVM_DEBUG(dbgs() << "      Existing: frees=" << PriorityHeadFrees
+  LLVM_DEBUG(dbgs() << "      Existing: frees=" << *PriorityHeadFrees
                     << "  Candidate: frees=" << CandFrees << "\n");
 
-  if (CandFrees < PriorityHeadFrees)
+  if (CandFrees < *PriorityHeadFrees)
     return;
 
   // Keep every tied SU so the candidate heuristics can pick among them.
-  if (CandFrees == PriorityHeadFrees) {
+  if (CandFrees == *PriorityHeadFrees) {
     PrioritySUs.insert(Cand);
     return;
   }
@@ -582,14 +568,13 @@ void HardwareUnitInfo::updatePrioritySUsWith(SUnit *Cand) {
   PrioritySUs.insert(Cand);
   // Cand is the new head; reuse the count just computed for it.
   PriorityHeadFrees = CandFrees;
-  PriorityHeadFreesFor = Cand;
 }
 
 void HardwareUnitInfo::rebuildPrioritySUs() {
   if (AllSUs.empty())
     return;
   PrioritySUs.clear();
-  PriorityHeadFreesFor = nullptr;
+  PriorityHeadFrees.reset();
   for (auto *SU : AllSUs)
     updatePrioritySUsWith(SU);
 }
@@ -599,8 +584,6 @@ void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
     llvm_unreachable("HardwareUnit already contains SU!");
 
   TotalCycles += BlockingCycles;
-
-  updatePrioritySUsWith(SU);
 }
 
 void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
@@ -612,19 +595,11 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 
   ScheduledSUs.push_back(SU);
   AllSUs.remove(SU);
-  PrioritySUs.remove(SU);
-  // The cached count was derived from unscheduled-successor counts SU changes.
-  PriorityHeadFreesFor = nullptr;
 
   // BufferSize 0 is unlimited, while size 1 has no parallel buffering. In
   // either case, each SU uses the HardwareUnit for BlockingCycles.
   if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
     TotalCycles -= std::min(TotalCycles, BlockingCycles);
-
-  if (AllSUs.empty())
-    return;
-  if (PrioritySUs.empty())
-    rebuildPrioritySUs();
 }
 
 void HardwareUnitInfo::finalizeCycles() {
