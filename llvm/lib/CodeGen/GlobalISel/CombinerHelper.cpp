@@ -2388,22 +2388,13 @@ bool CombinerHelper::matchCombineUnmergeConstant(
   unsigned SrcIdx = MI.getNumOperands() - 1;
   Register SrcReg = MI.getOperand(SrcIdx).getReg();
   // Break down the big constant in smaller ones.
-  APInt Val;
-  while (!mi_match(SrcReg, MRI, m_GConstantOrFConstantBits(Val))) {
+  auto MaybeConstant =
+      getAnyConstantVRegValWithLookThrough(SrcReg, MRI);
 
-    if (!Register::isVirtualRegister(SrcReg))
-      return false;
-    MachineInstr *Def = MRI.getVRegDef(SrcReg);
+  if (!MaybeConstant)
+    return false;
 
-    if (!Def || Def->getOpcode() != TargetOpcode::COPY)
-      return false;
-
-    Register NextReg = Def->getOperand(1).getReg();
-    if (!Register::isVirtualRegister(NextReg))
-      return false;
-
-    SrcReg = NextReg;
-  }
+  APInt Val = MaybeConstant->Value;
 
   LLT Dst0Ty = MRI.getType(MI.getOperand(0).getReg());
   unsigned ShiftAmt = Dst0Ty.getSizeInBits();
