@@ -7330,15 +7330,32 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
 void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Record &rec) {
   const auto &typeName{rec.v};
   if (auto spec{ResolveDerivedType(typeName)}) {
+    if (!spec->typeSymbol().get<DerivedTypeDetails>().isDECStructure()) {
+      Say(typeName.source, "%s is not a known STRUCTURE"_err_en_US,
+          typeName.source);
+      return;
+    }
     spec->CookParameters(GetFoldingContext());
     spec->EvaluateParameters(context());
     if (const DeclTypeSpec *
         extant{currScope().FindInstantiatedDerivedType(
             *spec, DeclTypeSpec::TypeDerived)}) {
       SetDeclTypeSpec(*extant);
-    } else {
+    } else if (&currScope() == spec->typeSymbol().scope()) {
+      // Direct recursive use of a STRUCTURE in the definition of one of its
+      // own components is not supported.
       Say(typeName.source, "%s is not a known STRUCTURE"_err_en_US,
           typeName.source);
+    } else {
+      // The STRUCTURE was not yet instantiated in this scope (e.g. it was
+      // brought in via USE association).  Instantiate it now.
+      DeclTypeSpec &type{currScope().MakeDerivedType(
+          DeclTypeSpec::TypeDerived, std::move(*spec))};
+      DerivedTypeSpec &derived{type.derivedTypeSpec()};
+      auto restorer{
+          GetFoldingContext().messages().SetLocation(currStmtSource().value())};
+      derived.Instantiate(currScope());
+      SetDeclTypeSpec(type);
     }
   }
 }
