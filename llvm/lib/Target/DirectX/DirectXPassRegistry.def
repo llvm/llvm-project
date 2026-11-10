@@ -24,9 +24,9 @@ MODULE_ANALYSIS("dxil-signature-analysis", dxil::SignatureAnalysis())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("dx-container-globals", DXContainerGlobalsPass())
-MODULE_PASS("dx-container-pdb", DXContainerPDBPass())
 MODULE_PASS("dxil-cbuffer-access", DXILCBufferAccessPass())
+MODULE_PASS("dxil-container-globals", DXILContainerGlobalsPass())
+MODULE_PASS("dxil-container-pdb", DXILContainerPDBPass())
 MODULE_PASS("dxil-finalize-linkage", DXILFinalizeLinkagePass())
 MODULE_PASS("dxil-data-scalarization", DXILDataScalarizationPass())
 MODULE_PASS("dxil-flatten-arrays", DXILFlattenArraysPass())
@@ -40,7 +40,7 @@ MODULE_PASS("dxil-pretty-printer", DXILPrettyPrinterPass(dbgs()))
 MODULE_PASS("dxil-translate-metadata", DXILTranslateMetadataPass())
 MODULE_PASS("dxil-resource-implicit-binding", DXILResourceImplicitBindingPass())
 MODULE_PASS("dxil-post-optimization-validation", DXILPostOptimizationValidationPass())
-MODULE_PASS("dxil-writer", DXILWriterPass());
+MODULE_PASS("dxil-writer", DXILWriterPass())
 // TODO: rename to print<foo> after NPM switch
 MODULE_PASS("print-dx-shader-flags", dxil::ShaderFlagsAnalysisPrinterPass(dbgs()))
 MODULE_PASS("print<dxil-root-signature>", dxil::RootSignatureAnalysisPrinterPass(dbgs()))

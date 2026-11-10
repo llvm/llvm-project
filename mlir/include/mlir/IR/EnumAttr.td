@@ -362,14 +362,15 @@ class BitEnumBase<list<BitEnumCaseBase> cases> {
   // Determine "valid" bits from enum cases for error checking
   int validBits = !foldl(0, cases, value, bitcase, !or(value, bitcase.value));
 
-  // The delimiter used to separate bit enum cases in strings. Only "|" and
-  // "," (along with optional spaces) are supported due to the use of the
-  // parseSeparatorFn in parameterParser below.
-  // Spaces in the separator string are used for printing, but will be optional
-  // for parsing.
+  // The delimiter used to separate bit enum cases in strings: "|", ",", or a
+  // space " ". Spaces around "|" or ",", e.g. " | ", are used for printing but
+  // are optional for parsing. With a space separator, the cases are printed as
+  // a sequence of keywords and parsed until the next token is not a case
+  // keyword. Only BitEnum supports a space separator; BitEnumAttr requires "|"
+  // or ",".
   string separator = "|";
-  assert !or(!ge(!find(separator, "|"), 0), !ge(!find(separator, ","), 0)),
-      "separator must contain '|' or ',' for parameter parsing";
+  assert !match(separator, "^( *[|,] *| +)$"),
+      "separator must be '|', ',', or a space ' '";
 
   // Print the "primary group" only for bits that are members of case groups
   // that have all bits present. When the value is 0, printing will display both
@@ -440,7 +441,11 @@ class BitEnumAttr<I intType, string name, string summary,
   let symbolToStringFnRetType = "std::string";
 
   // Parsing function that corresponds to the enum separator. Only
-  // "," and "|" are supported by this definition.
+  // "," and "|" are supported by this definition; use BitEnum for a space
+  // separator.
+  assert !ne(!subst(" ", "", separator), ""),
+      "BitEnumAttr separator must contain '|' or ','; use BitEnum for a "
+      "space separator";
   string parseSeparatorFn = !if(!ge(!find(separator, "|"), 0),
                                 "parseOptionalVerticalBar",
                                 "parseOptionalComma");
@@ -641,6 +646,16 @@ class EnumProp<EnumInfo enumInfo> : Property<enumInfo.cppType, enumInfo.summary>
       return std::nullopt;
     $_storage = std::move(**value);
   }];
+}
+
+// An `EnumProp` whose default is the given enum case. A property holding its
+// default is elided from `prop-dict` and from an optional group it anchors,
+// `($flags^)?`.
+class DefaultValuedEnumProp<EnumInfo enumInfo, EnumCase case>
+    : EnumProp<enumInfo> {
+  assert !not(!empty(!filter(c, enumInfo.enumerants, !eq(c, case)))),
+      "default `" # case.symbol # "` is not a case of " # enumInfo.cppType;
+  let defaultValue = enumInfo.cppType # "::" # case.symbol;
 }
 
 // Enum property that can have been (or, if `storeInCustomAttribute` is true, will also

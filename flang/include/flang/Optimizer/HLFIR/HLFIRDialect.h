@@ -15,7 +15,6 @@
 #define FORTRAN_OPTIMIZER_HLFIR_HLFIRDIALECT_H
 
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/IR/Dialect.h"
 
 namespace hlfir {
 /// Is this a type that can be used for an HLFIR variable ?
