@@ -413,6 +413,7 @@ defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, En
 defm SPV_EXT_shader_subgroup_partitioned : ExtensionOperand<143, [EnvVulkan]>;
 defm SPV_KHR_quad_control : ExtensionOperand<144, [EnvVulkan]>;
 defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
+defm SPV_INTEL_device_barrier : ExtensionOperand<146, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -616,6 +617,7 @@ defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
 defm BFloat16ArithmeticINTEL : CapabilityOperand<6226, 0, 0, [SPV_INTEL_bfloat16_arithmetic], []>;
 defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
+defm DeviceBarrierINTEL : CapabilityOperand<6185, 0, 0, [SPV_INTEL_device_barrier], []>;
 defm GlobalVariableHostAccessINTEL : CapabilityOperand<6187, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm HostAccessINTEL : CapabilityOperand<6188, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INTEL_global_variable_fpga_decorations], []>;
@@ -1586,6 +1588,7 @@ defm WorldToObjectNV : BuiltInOperand<5331, 0, 0, [], [RayTracingNV]>;
 defm HitTNV : BuiltInOperand<5332, 0, 0, [], [RayTracingNV]>;
 defm HitKindNV : BuiltInOperand<5333, 0, 0, [], [RayTracingNV]>;
 defm IncomingRayFlagsNV : BuiltInOperand<5351, 0, 0, [], [RayTracingNV]>;
+defm DeviceBarrierValidINTEL : BuiltInOperand<6186, 0, 0, [SPV_INTEL_device_barrier], [DeviceBarrierINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SelectionControl enum values and at the same time

@@ -1189,6 +1189,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
           "Barycentric built-ins require the following SPIR-V extension: "
           "SPV_KHR_fragment_shader_barycentric",
           false);
+    if (BuiltIn == SPIRV::BuiltIn::DeviceBarrierValidINTEL &&
+        !ST.canUseExtension(SPIRV::Extension::SPV_INTEL_device_barrier))
+      report_fatal_error(
+          "DeviceBarrierValidINTEL built-in requires the following SPIR-V "
+          "extension: SPV_INTEL_device_barrier",
+          false);
     switch (BuiltIn) {
     case SPIRV::BuiltIn::BaseVertex:
     case SPIRV::BuiltIn::BaseInstance:
@@ -2320,6 +2326,24 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
     }
     break;
+  case SPIRV::OpControlBarrier: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_device_barrier))
+      break;
+    // DeviceBarrierINTEL allows Device as the Execution scope. Require it when
+    // the Execution scope is the constant Device or is not a constant at all.
+    // The extension is OpenCL-only, so OpConstantNull is not special-cased:
+    // it is scope 0 (CrossDevice), which is not a valid Execution scope in the
+    // OpenCL environment.
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    const MachineInstr *ExecScopeDef =
+        MRI.getVRegDef(MI.getOperand(0).getReg());
+    if (ExecScopeDef->getOpcode() != SPIRV::OpConstantI ||
+        ExecScopeDef->getOperand(2).getImm() == SPIRV::Scope::Device) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_device_barrier);
+      Reqs.addCapability(SPIRV::Capability::DeviceBarrierINTEL);
+    }
+    break;
+  }
   case SPIRV::OpCooperativeMatrixMulAddKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error("Cooperative matrix instructions require the "
