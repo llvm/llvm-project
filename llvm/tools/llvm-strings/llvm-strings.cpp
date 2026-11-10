@@ -52,12 +52,16 @@
 // we should not.
 #define MBTOC MBTOC_UCHAR
 
-// glibc supports mbrtoc32() and c32rtomb() since version 2.16.
+// glibc supports mbrtoc32() and c32rtomb() since version 2.16. However, if
+// libstdc++ was built against an older glibc, it may not wrap its functions by
+// default.
 // On glibc, mbrtoc32() is a wrapper for mbrtowc() and never returns (size_t)-3,
 // instead it handles this case by returning 0 but setting Ch to a non-null
 // character. This is worked around later.
 #ifdef __GLIBC__
-#if !__GLIBC_PREREQ(2, 16)
+#if __GLIBC_PREREQ(2, 16)
+#define _GLIBCXX_USE_C11_UCHAR_CXX11 1
+#else
 #undef MBTOC
 #define MBTOC MBTOC_WCHAR
 #endif
