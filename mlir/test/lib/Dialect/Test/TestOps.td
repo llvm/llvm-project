@@ -3677,6 +3677,20 @@ def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
   let hasCustomAssemblyFormat = 1;
 }
 
+def TestWithBoundsRegionBranchOp : TEST_Op<"with_bounds_region_branch", [
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Forward the first input to the first region argument, and yield it to the
+    first result. The second region argument and second result have the range
+    of the second input.
+  }];
+  let arguments = (ins I32:$forwarded, I32:$value);
+  let results = (outs I32:$forwardedResult, I32:$inferredResult);
+  let regions = (region SizedRegion<1>:$body);
+}
+
 def TestIncrementOp : TEST_Op<"increment",
                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                          NoMemoryEffect, AllTypesMatch<["value", "result"]>]> {
@@ -4684,6 +4698,28 @@ def TestPartialAlias : TEST_Op<"partial_alias",
   let arguments = (ins AnyMemRef:$source);
   let results = (outs AnyMemRef:$result);
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Tests `ownsWrappedBlockingUses` by wrapping a single memory access and
+// forwarding promotion methods to it. `disown` disables ownership; `decline`
+// rejects removal of blocking uses.
+def TestOwningAccess : TEST_Op<"owning_access",
+    [DeclareOpInterfaceMethods<PromotableMemOpInterface,
+                               ["ownsWrappedBlockingUses"]>,
+     SingleBlock]> {
+  let arguments = (ins UnitAttr:$disown, UnitAttr:$decline);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    (`disown` $disown^)? (`decline` $decline^)? attr-dict-with-keyword $body
+    (`:` type($results)^)?
+  }];
+}
+
+def TestOwningAccessYield : TEST_Op<"owning_access_yield",
+    [Pure, Terminator, HasParent<"TestOwningAccess">]> {
+  let arguments = (ins Variadic<AnyType>:$values);
+  let assemblyFormat = "attr-dict ($values^ `:` type($values))?";
 }
 
 //===----------------------------------------------------------------------===//
