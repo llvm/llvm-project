@@ -21,6 +21,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -364,7 +365,7 @@ public:
 
     /// The largest number of operands that a flag can describe.
     static constexpr unsigned getMaxNumOperandRegisters() {
-      return (1u << NumOperands::Bits) - 1;
+      return maskTrailingOnes<unsigned>(NumOperands::Bits);
     }
 
     /// Set the number of operands that follow the flag. (The MIR parser reads
