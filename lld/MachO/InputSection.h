@@ -125,12 +125,10 @@ public:
   uint64_t getVA() const { return InputSection::getVA(0); }
   // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
   bool isLive(uint64_t off) const override {
-    return reinterpret_cast<const std::atomic<bool> &>(live).load(
-        std::memory_order_relaxed);
+    return utils::atomicRef(live).load(std::memory_order_relaxed);
   }
   void markLive(uint64_t off) override {
-    reinterpret_cast<std::atomic<bool> &>(live).store(
-        true, std::memory_order_relaxed);
+    utils::atomicRef(live).store(true, std::memory_order_relaxed);
   }
   bool isCoalescedWeak() const { return wasCoalesced && symbols.empty(); }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
@@ -201,19 +199,20 @@ struct StringPiece {
   StringPiece(uint64_t off, uint32_t hash)
       : inSecOff(off), live(!config->deadStrip), hash(hash) {}
 
+  // Thread-safe iff `hash` is not modified concurrently.
   bool isLive() const {
-    auto *word = reinterpret_cast<const std::atomic<uint32_t> *>(&inSecOff + 1);
-    return word->load(std::memory_order_relaxed) & liveBit;
+    auto &word = utils::atomicRef(*(&inSecOff + 1));
+    return word.load(std::memory_order_relaxed) & liveBit;
   }
 
   void markLive() {
-    auto *word = reinterpret_cast<std::atomic<uint32_t> *>(&inSecOff + 1);
-    uint32_t w = word->load(std::memory_order_relaxed);
+    auto &word = utils::atomicRef(*(&inSecOff + 1));
+    uint32_t w = word.load(std::memory_order_relaxed);
     // No atomic OR is needed: while markLive runs, `hash` does not change and
     // `live` only goes from false to true, so threads racing here all store the
     // same value.
     if (!(w & liveBit))
-      word->store(w | liveBit, std::memory_order_relaxed);
+      word.store(w | liveBit, std::memory_order_relaxed);
   }
 
   // The bit of the word after inSecOff that holds `live`.

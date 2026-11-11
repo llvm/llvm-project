@@ -13,6 +13,7 @@
 #include "InputFiles.h"
 #include "Target.h"
 
+#include "lld/Common/Utils.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
@@ -52,8 +53,7 @@ public:
   StringRef getName() const { return {nameData, nameSize}; }
 
   bool isLive() const {
-    return reinterpret_cast<const std::atomic<bool> &>(used).load(
-        std::memory_order_relaxed);
+    return utils::atomicRef(used).load(std::memory_order_relaxed);
   }
   bool isLazy() const {
     return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;

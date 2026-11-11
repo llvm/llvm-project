@@ -44,10 +44,9 @@ public:
   virtual ~MarkLive() = default;
 };
 
-// Sets `flag` and returns true if no other thread set it first. C++17 has no
-// std::atomic_ref, so the plain bool is accessed as an atomic.
+// Sets `flag` and returns true if no other thread set it first.
 static bool tryClaim(bool &flag) {
-  auto &atomicFlag = reinterpret_cast<std::atomic<bool> &>(flag);
+  std::atomic<bool> &atomicFlag = utils::atomicRef(flag);
   // Most claims find the flag already set, and the load lets those skip the
   // more expensive atomic exchange.
   return !atomicFlag.load(std::memory_order_relaxed) &&
@@ -176,13 +175,18 @@ void MarkLiveImpl<RecordWhyLive>::visit(WorklistEntry *entry,
 // Visits the sections in nextLevel, one level at a time. Workers take chunks of
 // a level, small enough that every worker gets some, and visit them depth-first
 // to take advantage of memory locality. Once one worker has run out of chunks,
-// the others finish their current visit and move the rest of their stacks to
-// nextLevel, so that the level ends and all workers share the rest in the next
-// one. With one thread, this reduces to a single depth-first walk. The last
-// join makes every live bit visible to the live-support scan, which reads them
-// with plain loads.
+// the others move the rest of their stacks to nextLevel if they have already
+// visited a minimum number of sections. Thus the level quickly ends and all
+// workers share the rest in the next one. With one thread, this reduces to a
+// single depth-first walk. The last join makes every live bit visible to the
+// live-support scan, which reads them with plain loads.
 template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
   const size_t numThreads = parallel::getThreadCount();
+  // The minimum number of visits a worker makes in a level before it may hand
+  // back its stack. This keeps levels with fewer sections than workers from
+  // ending after a visit or two, which would result in a lot of fork-join
+  // overhead.
+  constexpr size_t minVisitsPerLevel = 256;
   while (!nextLevel.empty()) {
     Worklist level = std::move(nextLevel);
     nextLevel.clear();
@@ -195,13 +199,15 @@ template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
     std::atomic<size_t> next{numThreads * chunkSize};
     parallelFor(0, numThreads, [&](size_t shard) {
       Worklist stack;
+      size_t visited = 0;
       for (size_t begin = shard * chunkSize; begin < level.size();
            begin = next.fetch_add(chunkSize, std::memory_order_relaxed)) {
         size_t end = std::min(begin + chunkSize, level.size());
         stack.append(level.begin() + begin, level.begin() + end);
         while (!stack.empty()) {
           visit(stack.pop_back_val(), stack);
-          if (anyWorkerIdle.load(std::memory_order_relaxed)) {
+          if (++visited >= minVisitsPerLevel && !stack.empty() &&
+              anyWorkerIdle.load(std::memory_order_relaxed)) {
             std::lock_guard<std::mutex> lock(nextLevelMutex);
             nextLevel.append(stack.begin(), stack.end());
             stack.clear();
