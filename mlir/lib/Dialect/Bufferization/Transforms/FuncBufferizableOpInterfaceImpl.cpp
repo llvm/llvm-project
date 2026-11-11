@@ -37,15 +37,19 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
       aliasingReturnVals.try_emplace(funcOp, IndexToIndexListMapping());
   auto createdRead = readBbArgs.try_emplace(funcOp, BbArgIndexSet());
   auto createdWritten = writtenBbArgs.try_emplace(funcOp, BbArgIndexSet());
+  auto createdWritable = writableReturnVals.try_emplace(funcOp);
   (void)createdEquiv;
   (void)createdAliasingResults;
   (void)createdRead;
   (void)createdWritten;
+  (void)createdWritable;
 #ifndef NDEBUG
   assert(createdEquiv.second && "equivalence info exists already");
   assert(createdAliasingResults.second && "aliasing info exists already");
   assert(createdRead.second && "bbarg access info exists already");
   assert(createdWritten.second && "bbarg access info exists already");
+  assert(createdWritable.second &&
+         "return value writability info exists already");
 #endif // NDEBUG
 }
 
@@ -223,6 +227,21 @@ struct CallOpInterface
                                               : BufferRelation::Unknown,
                        /*isDefinite=*/equivalent.has_value()});
     return result;
+  }
+
+  bool isWritable(Operation *op, Value value,
+                  const AnalysisState &state) const {
+    auto callOp = cast<func::CallOp>(op);
+    FuncOp funcOp = getCalledFunction(callOp, state);
+    assert(funcOp && "expected CallOp to a FuncOp");
+
+    // Unknown or not yet analyzed functions may return read-only buffers.
+    if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
+      return false;
+
+    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
+    return funcState.writableReturnVals.lookup(funcOp).contains(
+        cast<OpResult>(value).getResultNumber());
   }
 
   FailureOr<BufferLikeType>

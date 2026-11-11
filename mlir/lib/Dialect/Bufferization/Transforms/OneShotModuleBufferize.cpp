@@ -25,6 +25,8 @@
 //   each tensor return value (if any).
 // * `funcOpBbArgReadWriteAnalysis` determines whether or not a tensor bbArg is
 //   read/written.
+// * `funcOpReturnValueWritabilityAnalysis` determines whether returned buffers
+//   are writable.
 //
 // Module Bufferization implements the following calling convention.
 //
@@ -276,6 +278,31 @@ funcOpBbArgReadWriteAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
 
   return success();
 }
+
+/// Determine which tensor return values are writable at every return site.
+static void funcOpReturnValueWritabilityAnalysis(FuncOp funcOp,
+                                                 OneShotAnalysisState &state,
+                                                 FuncAnalysisState &funcState) {
+  // Without a body, none of the returned buffers are known to be writable.
+  if (funcOp.isExternal())
+    return;
+
+  SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
+  for (auto [index, type] : llvm::enumerate(funcOp.getResultTypes())) {
+    if (!isa<TensorLikeType>(type))
+      continue;
+    bool isWritable = true;
+    for (func::ReturnOp returnOp : returnOps) {
+      // A view or a forwarded value may itself be writable but alias a
+      // read-only buffer, such as an arith.constant or a callee result.
+      state.applyOnAliases(returnOp.getOperand(index), [&](Value alias) {
+        isWritable &= state.isWritable(alias);
+      });
+    }
+    if (isWritable)
+      funcState.writableReturnVals[funcOp].insert(index);
+  }
+}
 } // namespace
 
 /// Remove bufferization attributes on FuncOp arguments.
@@ -507,6 +534,7 @@ mlir::bufferization::analyzeModuleOp(Operation *moduleOp,
     if (failed(aliasingFuncOpBBArgsAnalysis(funcOp, state, funcState)) ||
         failed(funcOpBbArgReadWriteAnalysis(funcOp, state, funcState)))
       return failure();
+    funcOpReturnValueWritabilityAnalysis(funcOp, state, funcState);
 
     // Mark op as fully analyzed.
     funcState.analyzedFuncOps[funcOp] = FuncOpAnalysisState::Analyzed;
