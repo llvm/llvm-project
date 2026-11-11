@@ -563,7 +563,8 @@ define ptr @nonlocalWalkSameBlockDef(ptr %o, i1 %c) {
 ; CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[O]], align 8, !invariant.group [[META0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[VTABLE]], getelementptr inbounds (i8, ptr @zeroVtable, i64 8)
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    [[RES:%.*]] = load ptr, ptr [[O]], align 8, !invariant.group [[META0]]
+; CHECK-NEXT:    ret ptr [[RES]]
 ; CHECK:       [[OTHER]]:
 ; CHECK-NEXT:    ret ptr null
 ;
@@ -589,14 +590,17 @@ other:
 define ptr @nonlocalWalkSameBlockDefLoop(ptr %o, i1 %c) {
 ; CHECK-LABEL: define ptr @nonlocalWalkSameBlockDefLoop(
 ; CHECK-SAME: ptr [[O:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[RES_PRE:%.*]] = load ptr, ptr [[O]], align 8, !invariant.group [[META0]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    call void @llvm.assume(i1 poison)
-; CHECK-NEXT:    call void @foo(ptr poison)
+; CHECK-NEXT:    [[RES:%.*]] = phi ptr [ getelementptr inbounds (i8, ptr @zeroVtable, i64 8), %[[LOOP]] ], [ [[RES_PRE]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[RES_PRE]], getelementptr inbounds (i8, ptr @zeroVtable, i64 8)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @foo(ptr [[RES]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
 entry:
   br label %loop
