@@ -58,7 +58,7 @@ public:
   /// searching the symbol table for specific symbols without needing to
   /// iterate over all of the symbols themselves. The values are calculated
   /// the first time either is requested, and are recalculated after symbols
-  /// are added with AddSymbol() or Resize(). 
+  /// are added with AddSymbol() or Resize().
   ///
   /// \return
   ///   True if any symbol is an eSymbolTypeObjectFile symbol whose flags are
