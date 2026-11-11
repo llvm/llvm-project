@@ -9581,13 +9581,21 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
       ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
       MVT MemVT = VA.getValVT();
+      MVT LoadVT = VA.getLocVT();
 
       switch (VA.getLocInfo()) {
       default:
         break;
       case CCValAssign::Trunc:
+        MemVT = VA.getLocVT();
+        break;
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
+        if (Ins[i].isOrigArg() && Ins[i].ArgVT.isVector() &&
+            Ins[i].ArgVT.getSizeInBits() < VA.getValVT().getSizeInBits()) {
+          MemVT = VA.getValVT();
+          LoadVT = MemVT;
+        }
         break;
       case CCValAssign::Indirect:
         assert(
@@ -9606,8 +9614,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
 
-      ArgValue = DAG.getExtLoad(ExtType, DL, VA.getLocVT(), Chain, FIN, PtrInfo,
-                                MemVT);
+      ArgValue =
+          DAG.getExtLoad(ExtType, DL, LoadVT, Chain, FIN, PtrInfo, MemVT);
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
