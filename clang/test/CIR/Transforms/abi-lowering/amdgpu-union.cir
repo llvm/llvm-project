@@ -1,0 +1,114 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// A union wider than 64 bits is passed Direct with no coerce type. The
+// argument is passed as the union's LLVM type, its storage member and then its
+// tail padding. A return is not flattened and stays the union.
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_u_pad_t = !cir.union<"u_pad_t" {data !cir.array<!s32i x 3>, data !cir.double}, padding = {!cir.array<!u8i x 8>}>
+!rec_u_one_t = !cir.union<"u_one_t" {data !cir.float}>
+
+// CHECK: ![[FLAT:rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.array<!u8i x 8>}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<f64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  // The double storage member and the 8 padding bytes are passed separately.
+  cir.func @arg_u_pad(%arg0: !rec_u_pad_t) requires_call_conv_lowering {
+    %0 = cir.alloca "u" align(8) init : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+    cir.store %arg0, %1 : !rec_u_pad_t, !cir.ptr<!rec_u_pad_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_u_pad(%[[STORAGE:[^:]+]]: !cir.double, %[[PAD:[^:]+]]: !cir.array<!u8i x 8>) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[FLAT]], target_address_space(5)>
+  // CHECK-NEXT:   %[[F0:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!cir.double, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[STORAGE]], %[[F0]] : !cir.double, !cir.ptr<!cir.double, target_address_space(5)>
+  // CHECK-NEXT:   %[[F1:.*]] = cir.get_member %[[COERCE]][1] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!cir.array<!u8i x 8>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[PAD]], %[[F1]] : !cir.array<!u8i x 8>, !cir.ptr<!cir.array<!u8i x 8>, target_address_space(5)>
+  // CHECK-NEXT:   %[[AS_UNION:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U_CAST:.*]] = cir.cast address_space %[[U]] : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   cir.copy %[[AS_UNION]] align(8) to %[[U_CAST]] align(8) : !cir.ptr<!rec_u_pad_t, target_address_space(5)>, !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   cir.return
+
+  // The caller passes the storage member and the padding bytes.
+  cir.func @call_u_pad(%arg0: !rec_u_pad_t) requires_call_conv_lowering {
+    %0 = cir.alloca "u" align(8) init : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+    cir.store %arg0, %1 : !rec_u_pad_t, !cir.ptr<!rec_u_pad_t>
+    %2 = cir.load align(8) %1 : !cir.ptr<!rec_u_pad_t>, !rec_u_pad_t
+    cir.call @arg_u_pad(%2) : (!rec_u_pad_t) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func @call_u_pad(%[[STORAGE:[^:]+]]: !cir.double, %[[PAD:[^:]+]]: !cir.array<!u8i x 8>) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[FLAT]], target_address_space(5)>
+  // CHECK-NEXT:   %[[F0:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!cir.double, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[STORAGE]], %[[F0]] : !cir.double, !cir.ptr<!cir.double, target_address_space(5)>
+  // CHECK-NEXT:   %[[F1:.*]] = cir.get_member %[[COERCE]][1] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!cir.array<!u8i x 8>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[PAD]], %[[F1]] : !cir.array<!u8i x 8>, !cir.ptr<!cir.array<!u8i x 8>, target_address_space(5)>
+  // CHECK-NEXT:   %[[AS_UNION:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U_CAST:.*]] = cir.cast address_space %[[U]] : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   cir.copy %[[AS_UNION]] align(8) to %[[U_CAST]] align(8) : !cir.ptr<!rec_u_pad_t, target_address_space(5)>, !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   %[[U_FLAT:.*]] = cir.cast bitcast %[[U_CAST]] : !cir.ptr<!rec_u_pad_t> -> !cir.ptr<![[FLAT]]>
+  // CHECK-NEXT:   %[[U_F0:.*]] = cir.get_member %[[U_FLAT]][0] {name = ""} : !cir.ptr<![[FLAT]]> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT:   %[[ARG_STORAGE:.*]] = cir.load align(8) %[[U_F0]] : !cir.ptr<!cir.double>, !cir.double
+  // CHECK-NEXT:   %[[U_F1:.*]] = cir.get_member %[[U_FLAT]][1] {name = ""} : !cir.ptr<![[FLAT]]> -> !cir.ptr<!cir.array<!u8i x 8>>
+  // CHECK-NEXT:   %[[ARG_PAD:.*]] = cir.load align(8) %[[U_F1]] : !cir.ptr<!cir.array<!u8i x 8>>, !cir.array<!u8i x 8>
+  // CHECK-NEXT:   cir.call @arg_u_pad(%[[ARG_STORAGE]], %[[ARG_PAD]]) : (!cir.double, !cir.array<!u8i x 8>) -> ()
+  // CHECK-NEXT:   cir.return
+
+  // The argument is flattened, but the return stays the union.
+  cir.func @ret_u_pad(%arg0: !rec_u_pad_t) -> !rec_u_pad_t requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+    %1 = cir.alloca "u" align(8) init : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+    %2 = cir.cast address_space %1 : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+    %3 = cir.cast address_space %0 : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+    cir.store %arg0, %2 : !rec_u_pad_t, !cir.ptr<!rec_u_pad_t>
+    cir.copy %2 align(8) to %3 align(8) : !cir.ptr<!rec_u_pad_t>
+    %4 = cir.load %0 : !cir.ptr<!rec_u_pad_t, target_address_space(5)>, !rec_u_pad_t
+    cir.return %4 : !rec_u_pad_t
+  }
+
+  // CHECK: cir.func @ret_u_pad(%[[STORAGE:[^:]+]]: !cir.double, %[[PAD:[^:]+]]: !cir.array<!u8i x 8>) -> !rec_u_pad_t {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<![[FLAT]], target_address_space(5)>
+  // CHECK-NEXT:   %[[F0:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!cir.double, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[STORAGE]], %[[F0]] : !cir.double, !cir.ptr<!cir.double, target_address_space(5)>
+  // CHECK-NEXT:   %[[F1:.*]] = cir.get_member %[[COERCE]][1] {name = ""} : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!cir.array<!u8i x 8>, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[PAD]], %[[F1]] : !cir.array<!u8i x 8>, !cir.ptr<!cir.array<!u8i x 8>, target_address_space(5)>
+  // CHECK-NEXT:   %[[AS_UNION:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<![[FLAT]], target_address_space(5)> -> !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_u_pad_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U_CAST:.*]] = cir.cast address_space %[[U]] : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   %[[RETVAL_CAST:.*]] = cir.cast address_space %[[RETVAL]] : !cir.ptr<!rec_u_pad_t, target_address_space(5)> -> !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   cir.copy %[[AS_UNION]] align(8) to %[[U_CAST]] align(8) : !cir.ptr<!rec_u_pad_t, target_address_space(5)>, !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   cir.copy %[[U_CAST]] align(8) to %[[RETVAL_CAST]] align(8) : !cir.ptr<!rec_u_pad_t>
+  // CHECK-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_u_pad_t, target_address_space(5)>, !rec_u_pad_t
+  // CHECK-NEXT:   cir.return %[[RET]] : !rec_u_pad_t
+
+  // A union of one member is passed as that member.
+  cir.func @arg_u_one(%arg0: !rec_u_one_t) requires_call_conv_lowering {
+    %0 = cir.alloca "u" align(4) init : !cir.ptr<!rec_u_one_t, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_u_one_t, target_address_space(5)> -> !cir.ptr<!rec_u_one_t>
+    cir.store %arg0, %1 : !rec_u_one_t, !cir.ptr<!rec_u_one_t>
+    cir.return
+  }
+
+  // CHECK: cir.func @arg_u_one(%[[ARG:.*]]: !cir.float) {
+  // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.float, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[ARG]], %[[COERCE]] : !cir.float, !cir.ptr<!cir.float, target_address_space(5)>
+  // CHECK-NEXT:   %[[AS_UNION:.*]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!cir.float, target_address_space(5)> -> !cir.ptr<!rec_u_one_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!rec_u_one_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[U_CAST:.*]] = cir.cast address_space %[[U]] : !cir.ptr<!rec_u_one_t, target_address_space(5)> -> !cir.ptr<!rec_u_one_t>
+  // CHECK-NEXT:   cir.copy %[[AS_UNION]] align(4) to %[[U_CAST]] align(4) : !cir.ptr<!rec_u_one_t, target_address_space(5)>, !cir.ptr<!rec_u_one_t>
+  // CHECK-NEXT:   cir.return
+}
