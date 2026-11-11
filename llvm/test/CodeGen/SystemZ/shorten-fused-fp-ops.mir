@@ -24,7 +24,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$f0d' }
   - { reg: '$f2d' }
