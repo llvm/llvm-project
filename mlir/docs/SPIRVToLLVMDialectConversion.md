@@ -484,9 +484,10 @@ resulting `llvm.getelementptr`.
 
 The element stride is the size of the converted pointee type. The SPIR-V
 specification lets an `ArrayStride` decoration on the base pointer override the
-stride for the Uniform, StorageBuffer and PushConstant storage classes; the
-SPIR-V dialect does not model such a decoration on pointer types, so the natural
-stride of the pointee is always used.
+stride for the Uniform, StorageBuffer and PushConstant storage classes. Since
+the SPIR-V dialect does not model this decoration on pointer types, conversion
+of these two ops rejects base pointers in those storage classes rather than
+assuming a natural stride.
 
 #### `spirv.CopyMemory`
 

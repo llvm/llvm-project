@@ -385,12 +385,8 @@ public:
 };
 
 /// Converts `spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain` to
-/// `llvm.getelementptr`. Unlike `spirv.AccessChain`, the base pointer is
-/// treated as pointing into an array of its pointee type and the `element`
-/// operand selects the array element, so it becomes the first GEP index (in
-/// place of the constant 0 used for `spirv.AccessChain`). The remaining
-/// indices then descend into the pointee exactly as for `spirv.AccessChain`.
-/// The in-bounds variant additionally sets the `inbounds` flag on the GEP.
+/// `llvm.getelementptr`, using `element` as the first index and preserving
+/// `inbounds` for the latter.
 template <typename SPIRVOp, bool InBounds>
 class PtrAccessChainPattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
@@ -399,12 +395,25 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto baseType = cast<spirv::PointerType>(op.getBasePtr().getType());
+    // These storage classes may use a pointer ArrayStride decoration, which
+    // the SPIR-V dialect cannot represent.
+    switch (baseType.getStorageClass()) {
+    case spirv::StorageClass::Uniform:
+    case spirv::StorageClass::StorageBuffer:
+    case spirv::StorageClass::PushConstant:
+      return rewriter.notifyMatchFailure(
+          op, "pointer ArrayStride is not supported for this storage class");
+    default:
+      break;
+    }
+
     auto dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    auto elementType = this->getTypeConverter()->convertType(
-        cast<spirv::PointerType>(op.getBasePtr().getType()).getPointeeType());
+    auto elementType =
+        this->getTypeConverter()->convertType(baseType.getPointeeType());
     if (!elementType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
