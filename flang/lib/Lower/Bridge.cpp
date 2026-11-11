@@ -6575,13 +6575,21 @@ private:
          !assumptionScope->IsGlobal() && assumptionScope != assumptionScopeEnd;
          assumptionScope = &assumptionScope->parent()) {
       if (const auto *symbol = assumptionScope->symbol()) {
-        noOpenmp |=
-            symbol->test(Fortran::semantics::Symbol::Flag::OmpAssumesNoOpenmp);
-        noParallelism |= symbol->test(
-            Fortran::semantics::Symbol::Flag::OmpAssumesNoParallelism);
+        Fortran::common::visit(
+            [&](const auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                                  const Fortran::semantics::
+                                                      WithOmpDeclarative &>) {
+                noOpenmp |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_openmp);
+                noParallelism |= details.ompAssumes().test(
+                    llvm::omp::Clause::OMPC_no_parallelism);
+                const auto &directives = details.ompAssumesAbsent();
+                absent.insert(directives.begin(), directives.end());
+              }
+            },
+            symbol->details());
       }
-      const auto &directives = assumptionScope->ompAssumesAbsent();
-      absent.insert(directives.begin(), directives.end());
     }
     if (!noOpenmp && !noParallelism && absent.empty())
       return;

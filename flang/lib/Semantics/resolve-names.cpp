@@ -1859,9 +1859,11 @@ public:
 
   void Post(const parser::OmpAssumesDirective &x) {
     if (Symbol * symbol{currScope().symbol()}) {
+      llvm::omp::Clauses clauses;
+      std::set<llvm::omp::Directive> absent;
       for (const parser::OmpClause &clause : x.v.Clauses().v) {
         if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
-          symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+          clauses.set(clause.Id());
         } else if (const auto *noParallelism{
                        std::get_if<parser::OmpClause::NoParallelism>(
                            &clause.u)}) {
@@ -1869,18 +1871,28 @@ public:
             specPartState_.ompAssumesNoParallelismConditions.push_back(
                 &condition->v);
           } else {
-            symbol->set(Symbol::Flag::OmpAssumesNoParallelism);
+            clauses.set(clause.Id());
+          }
+        } else if (const auto *absentClause{
+                       std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+          clauses.set(clause.Id());
+          for (llvm::omp::Directive directive : absentClause->v.v) {
+            absent.insert(directive);
           }
         }
       }
-    }
-    for (const parser::OmpClause &clause : x.v.Clauses().v) {
-      if (const auto *absent{
-              std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
-        for (llvm::omp::Directive directive : absent->v.v) {
-          currScope().add_ompAssumesAbsent(directive);
-        }
-      }
+      common::visit(
+          [&](auto &details) {
+            if constexpr (std::is_convertible_v<decltype(details),
+                              WithOmpDeclarative &>) {
+              details.set_version(context().langOptions().getOpenMPVersion());
+              details.set_ompAssumes(details.ompAssumes() | clauses);
+              for (llvm::omp::Directive directive : absent) {
+                details.add_ompAssumesAbsent(directive);
+              }
+            }
+          },
+          symbol->details());
     }
   }
 
@@ -11160,7 +11172,16 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       Walk(*condition);
       if (auto value{EvaluateExpr(*condition)};
           value && omp::GetLogicalValue(*value).value_or(false)) {
-        symbol->set(Symbol::Flag::OmpAssumesNoParallelism);
+        common::visit(
+            [&](auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                WithOmpDeclarative &>) {
+                llvm::omp::Clauses clauses{details.ompAssumes()};
+                clauses.set(llvm::omp::Clause::OMPC_no_parallelism);
+                details.set_ompAssumes(clauses);
+              }
+            },
+            symbol->details());
       }
     }
   }

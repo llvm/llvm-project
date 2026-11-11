@@ -14,17 +14,18 @@
 ! SIMD-NOT: "llvm.assume"
 
 ! SYMBOLS-DAG: assume_block (Subroutine): Subprogram
-! SYMBOLS-DAG: assumes_module (OmpAssumesNoOpenmp): Module
-! SYMBOLS-DAG: assumes_no_openmp (Subroutine, OmpAssumesNoOpenmp): Subprogram
-! SYMBOLS-DAG: assumes_no_openmp_parallel (Subroutine, OmpAssumesNoOpenmp): Subprogram
-! SYMBOLS-DAG: assumes_no_openmp_host (Subroutine, OmpAssumesNoOpenmp): Subprogram
-! SYMBOLS-DAG: uses_assumes_module (Subroutine, OmpAssumesNoOpenmp): Subprogram
-! SYMBOLS-DAG: assumes_no_parallelism (Subroutine, OmpAssumesNoParallelism): Subprogram
-! SYMBOLS-DAG: parallelism_module (OmpAssumesNoParallelism): Module
-! SYMBOLS-DAG: reexport_parallelism (OmpAssumesNoParallelism): Module
-! SYMBOLS-DAG: uses_parallelism_module (Subroutine, OmpAssumesNoParallelism): Subprogram
-! SYMBOLS-DAG: assumes_mixed (Subroutine, OmpAssumesNoOpenmp, OmpAssumesNoParallelism): Subprogram
-! SYMBOLS-DAG: assumes_mixed_reverse (Subroutine, OmpAssumesNoOpenmp, OmpAssumesNoParallelism): Subprogram
+! SYMBOLS-DAG: assumes_module: Module OmpAssumptions:(no_openmp)
+! SYMBOLS-DAG: assumes_no_openmp (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp)
+! SYMBOLS-DAG: assumes_no_openmp_parallel (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp)
+! SYMBOLS-DAG: assumes_no_openmp_host (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp)
+! SYMBOLS-DAG: uses_assumes_module (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp)
+! SYMBOLS-DAG: assumes_no_parallelism (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_parallelism)
+! SYMBOLS-DAG: parallelism_module: Module OmpAssumptions:(no_parallelism)
+! SYMBOLS-DAG: reexport_parallelism: Module OmpAssumptions:(no_parallelism)
+! SYMBOLS-DAG: uses_parallelism_module (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_parallelism)
+! SYMBOLS-DAG: assumes_mixed (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp no_parallelism)
+! SYMBOLS-DAG: assumes_mixed_reverse (Subroutine): Subprogram{{.*}} OmpAssumptions:(no_openmp no_parallelism)
+! SYMBOLS-DAG: scoped_assumes: Module OmpAssumptions:(absent(barrier, parallel) no_openmp no_parallelism)
 
 !--- bare.f90
 ! Lowering of the OpenMP ASSUME construct. The HOLDS clause asserts a scalar
@@ -193,9 +194,7 @@ module use_parent
   end interface
 end module use_parent
 
-! USE-MODFILE: !$omp assumes no_openmp
-! USE-MODFILE-NEXT: !$omp assumes no_parallelism
-! USE-MODFILE-NEXT: !$omp assumes absent(barrier, parallel)
+! USE-MODFILE: !$omp assumes absent(barrier, parallel) no_openmp no_parallelism
 submodule (use_parent) use_child
   use scoped_assumes, only:
   implicit none
