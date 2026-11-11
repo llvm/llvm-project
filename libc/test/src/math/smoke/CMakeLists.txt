@@ -2523,6 +2523,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ldexpf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ldexpf80_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.src.math.ldexpf80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   ldexpf128_test
   SUITE
     libc-math-smoke-tests
@@ -5600,6 +5613,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  scalblnf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalblnf80_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalblnf80
+    libc.src.__support.FPUtil.float80
+)
+
+add_fp_unittest(
   scalblnf128_test
   SUITE
     libc-math-smoke-tests
@@ -5689,6 +5715,19 @@ add_fp_unittest(
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  scalbnf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    scalbnf80_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf80
+    libc.src.__support.FPUtil.float80
 )
 
 add_fp_unittest(

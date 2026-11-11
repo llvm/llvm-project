@@ -9417,6 +9417,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_scalblnf80",
+    hdrs = ["src/__support/math/scalblnf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+        ":llvm_libc_macros_float_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_scalblnf16",
     hdrs = ["src/__support/math/scalblnf16.h"],
     deps = [
@@ -9476,6 +9489,19 @@ libc_support_library(
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
         ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbnf80",
+    hdrs = ["src/__support/math/scalbnf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+        ":llvm_libc_macros_float_macros",
     ],
 )
 
@@ -11138,6 +11164,18 @@ libc_support_library(
         ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ldexpf80",
+    hdrs = ["src/__support/math/ldexpf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
     ],
 )
 
@@ -15757,6 +15795,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "ldexpf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_ldexpf80",
+    ],
+)
+
+libc_math_function(
     name = "ldexpf16",
     additional_deps = [
         ":__support_math_ldexpf16",
@@ -16721,6 +16768,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "scalblnf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_scalblnf80",
+    ],
+)
+
+libc_math_function(
     name = "scalblnf16",
     additional_deps = [
         ":__support_math_scalblnf16",
@@ -16761,6 +16817,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_scalbnf128",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_scalbnf80",
     ],
 )
 
