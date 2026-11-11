@@ -59,29 +59,29 @@
 // ERR-PARSE: error: failed to parse input file
 
 //--- host.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @host_fn() {
     cir.return
   }
 }
 
 //--- device-sm80.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
   cir.func @device_fn() {
     cir.return
   }
 }
 
 //--- device-sm90.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
 }
 
 //--- host-hip.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = true, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = true, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
 }
 
 //--- device-gfx90a.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = true, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = true, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
 }
 
 //--- no-lowering-options.cir
@@ -89,7 +89,7 @@ module {
 }
 
 //--- not-offload.cir
-module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = false, cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = false, cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
 }
 
 //--- invalid.cir
