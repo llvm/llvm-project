@@ -12,7 +12,6 @@
 ---
 # The first copy defines the whole register, so the undef source needs none.
 name: undef_source
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $x0
@@ -31,7 +30,6 @@ body: |
 # dsub1 is read on its own, so dropping the copy would read an undefined
 # subregister.
 name: undef_source_lane_read
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $d0, $x0
@@ -51,7 +49,6 @@ body: |
 ...
 ---
 name: all_sources_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0

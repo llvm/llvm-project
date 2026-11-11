@@ -225,14 +225,11 @@ enum class SPIRVAddressSpace : unsigned {
 };
 } // namespace
 
-bool AA::isGPU(const Module &M) {
-  Triple T(M.getTargetTriple());
-  return T.isGPU();
-}
+bool AA::isGPU(const Module &M) { return M.getTargetTriple().isGPU(); }
 
 bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
 
   if (T.isSPIRV())
     return AS == static_cast<unsigned>(SPIRVAddressSpace::Shared);
@@ -242,7 +239,7 @@ bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
 
 bool AA::isGPUConstantAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
 
   if (T.isSPIRV())
     return AS == static_cast<unsigned>(SPIRVAddressSpace::Constant);
@@ -252,7 +249,7 @@ bool AA::isGPUConstantAddressSpace(const Module &M, unsigned AS) {
 
 bool AA::isGPULocalAddressSpace(const Module &M, unsigned AS) {
   assert(AA::isGPU(M) && "Only callable on GPU targets");
-  Triple T(M.getTargetTriple());
+  const Triple &T = M.getTargetTriple();
 
   if (T.isSPIRV())
     return AS == static_cast<unsigned>(SPIRVAddressSpace::Local);
@@ -1410,8 +1407,8 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   }
 }
 
-void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
+void IRPosition::verify() {
   switch (getPositionKind()) {
   case IRP_INVALID:
     assert((CBContext == nullptr) &&
@@ -1475,8 +1472,8 @@ void IRPosition::verify() {
     return;
   }
   }
-#endif
 }
+#endif
 
 std::optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
@@ -2205,6 +2202,7 @@ void Attributor::runTillFixpoint() {
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
+  Worklist.reserve(DG.SyntheticRoot.Deps.size());
   Worklist.insert_range(DG.SyntheticRoot);
 
   do {
@@ -3426,7 +3424,7 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
                                      bool SkipHasAttrCheck) {
   bool IsKnown;
   if (SkipHasAttrCheck || !Attrs.hasAttribute(AK))
-    if (!Configuration.Allowed || Configuration.Allowed->count(&AAType::ID))
+    if (!Configuration.Allowed || Configuration.Allowed->contains<AAType>())
       if (!AA::hasAssumedIRAttr<AK>(*this, nullptr, IRP, DepClassTy::NONE,
                                     IsKnown))
         getOrCreateAAFor<AAType>(IRP);
@@ -3717,16 +3715,20 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                              UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAInvariantLoadPointer>(
           IRPosition::value(*LI->getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*LI->getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      }
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
       getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
                            UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*SI.getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI.getPointerOperand()));
+      }
     }
     return true;
   };
@@ -4026,14 +4028,15 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
   AttributorConfig AC(CGUpdater);
   AC.IsModulePass = IsModulePass;
   AC.DeleteFns = false;
-  DenseSet<const char *> Allowed(
-      {&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID, &AANoSync::ID,
-       &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
-       &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
-       &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
-       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID,
-       &AADenormalFPMath::ID});
-  AC.Allowed = &Allowed;
+  static constexpr AAKindSet Allowed =
+      AAKindSet::get<&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID,
+                     &AANoSync::ID, &AANoFree::ID, &AANoReturn::ID,
+                     &AAMemoryLocation::ID, &AAMemoryBehavior::ID,
+                     &AAUnderlyingObjects::ID, &AANoCapture::ID,
+                     &AAInterFnReachability::ID, &AAIntraFnReachability::ID,
+                     &AACallEdges::ID, &AANoFPClass::ID, &AAMustProgress::ID,
+                     &AANonNull::ID, &AADenormalFPMath::ID>();
+  AC.Allowed = Allowed;
   AC.UseLiveness = false;
 
   Attributor A(Functions, InfoCache, AC);
@@ -4208,7 +4211,7 @@ PreservedAnalyses AttributorLightPass::run(Module &M,
                                     /* IsModulePass */ true)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.
-    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
     // We already invalidated all relevant function analyses above.
     PA.preserveSet<AllAnalysesOn<Function>>();
     return PA;

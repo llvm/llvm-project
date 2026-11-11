@@ -496,6 +496,27 @@ def TestMemrefType : Test_Type<"TestMemref",
   }];
 }
 
+// A type that is tensor-like and buffer-like but not shaped. As a tensor-like
+// type, its buffer is a builtin memref of the same element type.
+def TestUnshapedType : Test_Type<"TestUnshaped",
+    [DeclareTypeInterfaceMethods<Bufferization_TensorLikeTypeInterface,
+        ["verifyCompatibleBufferType"]>,
+     Bufferization_BufferLikeTypeInterface]> {
+  let mnemonic = "test_unshaped";
+  let parameters = (ins "mlir::Type":$elementType);
+  let assemblyFormat = "`<` $elementType `>`";
+}
+
+// A type that is tensor-like exactly when its inner type is. As a tensor-like
+// type, its buffer is the buffer of its inner type.
+def TestTensorLikeWrapperType : Test_Type<"TestTensorLikeWrapper",
+    [DeclareTypeInterfaceMethods<Bufferization_TensorLikeTypeInterface,
+        ["verifyCompatibleBufferType", "isTensorLike"]>]> {
+  let mnemonic = "tensor_like_wrapper";
+  let parameters = (ins "mlir::Type":$inner);
+  let assemblyFormat = "`<` $inner `>`";
+}
+
 // Test implementation of an interface with methods specifying a
 // method body
 def TestBaseBody : Test_Type<"TestBaseBody",

@@ -9,8 +9,6 @@
 #error Do not know unconditional branch mnemonic for this architecture.
 #endif
 
-volatile int always_false;
-
 int foo() {
   asm volatile(BRANCH_FWD
                // This is dead code that we are allowed to corrupt.
