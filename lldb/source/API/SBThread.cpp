@@ -305,7 +305,7 @@ SBValue SBThread::GetStopReturnValue() {
   if (exe_ctx->HasThreadScope()) {
     StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
     if (stop_info_sp) {
-      return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
+      return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp).value_sp;
     }
   }
 

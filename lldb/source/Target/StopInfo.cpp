@@ -1478,13 +1478,11 @@ public:
 
 class StopInfoThreadPlan : public StopInfo {
 public:
-  StopInfoThreadPlan(ThreadPlanSP &plan_sp, ValueObjectSP &return_valobj_sp,
-                     ExpressionVariableSP &expression_variable_sp,
-                     bool return_value_is_thrown_error)
+  StopInfoThreadPlan(ThreadPlanSP &plan_sp, ThreadPlanReturnValue return_value,
+                     ExpressionVariableSP &expression_variable_sp)
       : StopInfo(plan_sp->GetThread(), LLDB_INVALID_UID), m_plan_sp(plan_sp),
-        m_return_valobj_sp(return_valobj_sp),
-        m_expression_variable_sp(expression_variable_sp),
-        m_return_value_is_thrown_error(return_value_is_thrown_error) {}
+        m_return_value(std::move(return_value)),
+        m_expression_variable_sp(expression_variable_sp) {}
 
   ~StopInfoThreadPlan() override = default;
 
@@ -1499,11 +1497,7 @@ public:
     return m_description.c_str();
   }
 
-  ValueObjectSP GetReturnValueObject() { return m_return_valobj_sp; }
-
-  bool IsReturnValueThrownError() const {
-    return m_return_value_is_thrown_error;
-  }
+  ThreadPlanReturnValue GetReturnValueObject() { return m_return_value; }
 
   ExpressionVariableSP GetExpressionVariable() {
     return m_expression_variable_sp;
@@ -1519,9 +1513,8 @@ protected:
 
 private:
   ThreadPlanSP m_plan_sp;
-  ValueObjectSP m_return_valobj_sp;
+  ThreadPlanReturnValue m_return_value;
   ExpressionVariableSP m_expression_variable_sp;
-  bool m_return_value_is_thrown_error;
 };
 
 // StopInfoExec
@@ -1754,14 +1747,11 @@ StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
   return std::make_shared<StopInfoTrace>(thread);
 }
 
-StopInfoSP
-StopInfo::CreateStopReasonWithPlan(ThreadPlanSP &plan_sp,
-                                   ValueObjectSP return_valobj_sp,
-                                   ExpressionVariableSP expression_variable_sp,
-                                   bool return_value_is_thrown_error) {
-  return std::make_shared<StopInfoThreadPlan>(plan_sp, return_valobj_sp,
-                                              expression_variable_sp,
-                                              return_value_is_thrown_error);
+StopInfoSP StopInfo::CreateStopReasonWithPlan(
+    ThreadPlanSP &plan_sp, ThreadPlanReturnValue return_value,
+    ExpressionVariableSP expression_variable_sp) {
+  return std::make_shared<StopInfoThreadPlan>(plan_sp, std::move(return_value),
+                                              expression_variable_sp);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
@@ -1805,18 +1795,14 @@ StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
   return std::make_shared<StopInfoVForkDone>(thread);
 }
 
-ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp,
-                                             bool *is_thrown_error) {
-  if (!stop_info_sp ||
-      stop_info_sp->GetStopReason() != eStopReasonPlanComplete) {
-    if (is_thrown_error)
-      *is_thrown_error = false;
+ThreadPlanReturnValue StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
+  if (stop_info_sp &&
+      stop_info_sp->GetStopReason() == eStopReasonPlanComplete) {
+    StopInfoThreadPlan *plan_stop_info =
+        static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
+    return plan_stop_info->GetReturnValueObject();
+  } else
     return {};
-  }
-  auto *plan_stop_info = static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
-  if (is_thrown_error)
-    *is_thrown_error = plan_stop_info->IsReturnValueThrownError();
-  return plan_stop_info->GetReturnValueObject();
 }
 
 ExpressionVariableSP StopInfo::GetExpressionVariable(StopInfoSP &stop_info_sp) {

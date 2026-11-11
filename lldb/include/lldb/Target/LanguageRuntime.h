@@ -185,23 +185,23 @@ public:
     return {};
   }
 
-  /// Where to find the error a function throws, as recorded by
-  /// GetThrownErrorLocation before the function returns.
+  /// A description of how to find an error thrown by a function.
   struct ThrownErrorLocation {
-    /// The location of the error, if it is known before the function returns.
     std::optional<Value> location;
-    /// Whether the location can only be read after the function returns, for
-    /// example from a register in the caller.
+    /// Whether the error can only be found in the caller's frame, for example
+    /// in a register, so \c location is not known until the function returns.
     bool read_after_return = false;
   };
 
-  /// Called with \p frame stopped in a function that a step out is about to
-  /// leave, to record where an error thrown by that function will be found.
+  /// Given a frame, compute the location where its function would place an
+  /// error, if one is thrown by the function.
   virtual ThrownErrorLocation GetThrownErrorLocation(StackFrame &frame) {
     return {};
   }
 
-  /// Called with \p frame stopped in the caller once the step out completes.
+  /// Given \p frame, the frame a function returned to, and \p location,
+  /// computed by GetThrownErrorLocation from the function's frame, get the
+  /// error the function threw.
   ///
   /// \return
   ///     std::nullopt if the function did not throw. Otherwise the thrown

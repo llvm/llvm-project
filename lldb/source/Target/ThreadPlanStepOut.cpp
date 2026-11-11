@@ -209,10 +209,8 @@ void ThreadPlanStepOut::SetupReturnAddress(
   StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
   if (!frame_sp)
     return;
-  lldb::LanguageType language = frame_sp->GuessLanguage().AsLanguageType();
-  if (language == eLanguageTypeUnknown)
-    return;
-  m_thrown_error_runtime = m_process.GetLanguageRuntime(language);
+  m_thrown_error_runtime =
+      m_process.GetLanguageRuntime(frame_sp->GuessLanguage().AsLanguageType());
   if (m_thrown_error_runtime)
     m_thrown_error_location =
         m_thrown_error_runtime->GetThrownErrorLocation(*frame_sp);

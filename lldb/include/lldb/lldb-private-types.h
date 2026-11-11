@@ -29,6 +29,15 @@ typedef llvm::SmallString<256> PathSmallString;
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
 
+/// The value a completed thread plan computed for the function it stepped out
+/// of or called.
+struct ThreadPlanReturnValue {
+  /// What the function returned or, if \c is_thrown_error, the error it
+  /// threw. Null if there is no value.
+  lldb::ValueObjectSP value_sp;
+  bool is_thrown_error = false;
+};
+
 /// A type-erased pair of llvm::dwarf::SourceLanguageName and version.
 struct SourceLanguage {
   SourceLanguage() = default;

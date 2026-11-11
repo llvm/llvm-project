@@ -1538,7 +1538,7 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
           ValueObjectSP return_valobj_sp =
-              StopInfo::GetReturnValueObject(stop_info_sp);
+              StopInfo::GetReturnValueObject(stop_info_sp).value_sp;
           if (return_valobj_sp) {
             if (llvm::Error error = return_valobj_sp->Dump(s)) {
               s << "error: " << toString(std::move(error));

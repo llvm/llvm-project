@@ -386,11 +386,8 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   if (have_valid_stop_info && !plan_overrides_trace && !plan_failed) {
     return m_stop_info_sp;
   } else if (completed_plan_sp) {
-    bool is_thrown_error = false;
-    ValueObjectSP return_valobj_sp = GetReturnValueObject(&is_thrown_error);
     return StopInfo::CreateStopReasonWithPlan(
-        completed_plan_sp, return_valobj_sp, GetExpressionVariable(),
-        is_thrown_error);
+        completed_plan_sp, GetReturnValueObject(), GetExpressionVariable());
   } else {
     GetPrivateStopInfo();
     return m_stop_info_sp;
@@ -1201,8 +1198,8 @@ ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }
 
-ValueObjectSP Thread::GetReturnValueObject(bool *is_thrown_error) const {
-  return GetPlans().GetReturnValueObject(is_thrown_error);
+ThreadPlanReturnValue Thread::GetReturnValueObject() const {
+  return GetPlans().GetReturnValueObject();
 }
 
 ExpressionVariableSP Thread::GetExpressionVariable() const {
