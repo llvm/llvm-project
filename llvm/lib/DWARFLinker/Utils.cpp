@@ -83,7 +83,7 @@ bool isIdentifyingChild(const DWARFDie &Die) {
 static uint32_t hashFullyQualifiedName(
     DWARFDie Die,
     function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
-    bool SkipModules, bool IsScope) {
+    bool IsScope) {
   const char *Name = nullptr;
   if (Error Err = finiteLoop([&]() -> Expected<bool> {
         if (const char *CurrentName = Die.getName(DINameKind::ShortName))
@@ -111,21 +111,20 @@ static uint32_t hashFullyQualifiedName(
 
   DWARFDie Parent = Die.getParent();
   if (!Parent || dwarf::isUnitType(Parent.getTag()) ||
-      (SkipModules && Parent.getTag() == dwarf::DW_TAG_module))
+      Parent.getTag() == dwarf::DW_TAG_module)
     return djbHash(Name ? Name : "", djbHash(IsScope ? "" : "::"));
 
-  return djbHash(Name ? Name : "",
-                 djbHash(Name ? "::" : "",
-                         hashFullyQualifiedName(Parent, ResolveRef, SkipModules,
-                                                /*IsScope=*/true)));
+  return djbHash(
+      Name ? Name : "",
+      djbHash(Name ? "::" : "", hashFullyQualifiedName(Parent, ResolveRef,
+                                                       /*IsScope=*/true)));
 }
 
 uint32_t hashFullyQualifiedName(
     DWARFDie Die,
-    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)> ResolveRef,
-    bool SkipModules) {
-  return hashFullyQualifiedName(Die, ResolveRef, SkipModules,
-                                /*IsScope=*/false);
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)>
+        ResolveRef) {
+  return hashFullyQualifiedName(Die, ResolveRef, /*IsScope=*/false);
 }
 
 void buildStmtSeqOffsetToFirstRowIndex(

@@ -9,7 +9,6 @@
 name:            gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -33,7 +32,6 @@ body:             |
 name:            gpr_vector
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -57,7 +55,6 @@ body:             |
 name:            fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -81,7 +78,6 @@ body:             |
 name:            fpr_vector
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -105,7 +101,6 @@ body:             |
 name:            in_between_cross_bank_copy
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $w1
@@ -127,7 +122,6 @@ body:             |
 name:            fpr_feeding_store
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $s0, $s1
@@ -154,7 +148,6 @@ body:             |
 name:            fpr_feeding_select
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -186,7 +179,6 @@ body:             |
 name:            fpr_feeding_phi
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fpr_feeding_phi
   ; CHECK: bb.0:
@@ -239,7 +231,6 @@ body:             |
 name:            fed_by_fpr_phi
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fed_by_fpr_phi
   ; CHECK: bb.0:
@@ -290,7 +281,6 @@ body:             |
 name:            different_blocks_gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: different_blocks_gpr
   ; CHECK: bb.0:
@@ -320,7 +310,6 @@ body:             |
 name:            different_blocks_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: different_blocks_fpr
   ; CHECK: bb.0:
@@ -351,7 +340,6 @@ body:             |
 name:            different_blocks_fpr_backedge
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: different_blocks_fpr_backedge
   ; CHECK: bb.0:

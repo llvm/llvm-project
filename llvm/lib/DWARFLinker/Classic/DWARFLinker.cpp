@@ -2004,14 +2004,11 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
             .value_or(0);
     if (Success && AttrInfo.Name && !AttrInfo.Name.getString().empty()) {
       uint32_t Hash = hashFullyQualifiedName(
-          InputDIE,
-          [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
+          InputDIE, [&](const DWARFDie &Referrer, const DWARFFormValue &Ref) {
             CompileUnit *RefCU;
             return Linker.resolveDIEReference(File, CompileUnits, Ref, Referrer,
                                               RefCU);
-          },
-          // FIXME: dsymutil-classic compatibility. Ignore modules.
-          /*SkipModules=*/true);
+          });
       Unit.addTypeAccelerator(Die, AttrInfo.Name, ObjCClassIsImplementation,
                               Hash);
     }

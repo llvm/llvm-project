@@ -168,6 +168,8 @@ features cannot lower the translation-unit ABI level;
   This affects the ABI of `std::strong_ordering` in some versions of the
   Microsoft STL. (#GH237188)
 
+- On MSP430, `wint_t` is now `unsigned int`, matching msp430-gcc.
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
@@ -843,6 +845,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
+- Fixed a crash in an implicit assignment operator when a `noreturn` member or base `operator=` is followed by trivially copyable members. (#GH111612)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
@@ -1412,11 +1415,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   link-time failures. `dynamic_cast<void*>` is still allowed because it does not
   use RTTI.
 
-- The HIP math header now provides `__exp2f`, a fast `exp2` intrinsic that
-  lowers to a single `v_exp_f32` without the denormal handling that `exp2f`
-  adds, so results in the denormal range may be flushed to zero. CUDA has no
-  `__exp2f`, so it is a HIP-only extension.
-
 #### CUDA Support
 
 - Fixed missing diagnostics for wrong-side functions reached through constructor
@@ -1563,6 +1561,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Added the `ompx_fast_fp_atomics` (alias `ompx_unsafe_fp_atomics`) and
+  `ompx_safe_fp_atomics` hints for the `atomic` construct. They override
+  `-f[no-]atomic-ignore-denormal-mode` (`-m[no-]unsafe-fp-atomics`) for a
+  single construct.
 - Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
   semantic checks, which caused spurious `reverse_offload` errors.
 - Fixed a crash on `cancel taskgroup` inside a `masked taskloop` directive. (#GH154552)
