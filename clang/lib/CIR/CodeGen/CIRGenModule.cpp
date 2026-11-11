@@ -169,6 +169,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   getModule()->setAttr(cir::CIRDialect::getTargetABIAttrName(),
                        builder.getStringAttr(getTarget().getABI()));
 
+  // Assign the target-cpu and target-features as attributes to the module. This
+  // will allow subsequent passes to use this to ensure that 'generated'
+  // functions get the correct behavior for the model.
+  llvm::StringMap<std::string> defaultCPUAndFeatures;
+  if (getCPUAndFeaturesAttributes(GlobalDecl(), defaultCPUAndFeatures))
+    for (const auto &[key, val] : defaultCPUAndFeatures)
+      getModule()->setAttr(key, builder.getStringAttr(val));
+
   // If cxxabi was overridden via -fc++-abi, record it.
   if (langOpts.CXXABI)
     getModule()->setAttr(
@@ -202,6 +210,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
           /*hlsl=*/langOpts.HLSL,
+          /*sycl_is_device=*/langOpts.SYCLIsDevice,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
@@ -1846,7 +1855,18 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (const Module *m = fd->getOwningModule();
       m && m->getTopLevelModule()->isNamedModule() &&
       getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
-    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!fd->isTemplateInstantiation() || !fd->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
   }
 
   if (fd->hasAttr<NoInlineAttr>())
@@ -3185,7 +3205,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
     // dso_local on the function if using a local alias is preferable (can avoid
     // PLT indirection).
-    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+    auto func = dyn_cast<cir::FuncOp>(gv.getOperation());
+    if (!func || func.getAliasee() || !gv.canBenefitFromLocalAlias())
       return false;
     return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }
@@ -3457,6 +3478,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
                   mlir::UnitAttr::get(&getMLIRContext()));
   }
+
+  if (isa<CXXConstructorDecl>(funcDecl) || isa<CXXDestructorDecl>(funcDecl))
+    func.setUnnamedAddr(true);
+  else if (const auto *md = dyn_cast<CXXMethodDecl>(funcDecl))
+    if (md->isVirtual())
+      func.setUnnamedAddr(true);
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
@@ -4306,10 +4333,11 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
-                                      mlir::Operation *op, GlobalDecl aliasGD,
-                                      cir::FuncOp aliasee,
-                                      cir::GlobalLinkageKind linkage) {
+cir::FuncOp CIRGenModule::emitAliasForGlobal(StringRef mangledName,
+                                             mlir::Operation *op,
+                                             GlobalDecl aliasGD,
+                                             cir::FuncOp aliasee,
+                                             cir::GlobalLinkageKind linkage) {
 
   auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
   assert(aliasFD && "expected FunctionDecl");
@@ -4332,9 +4360,6 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   mlir::SymbolTable::setSymbolVisibility(
       alias, mlir::SymbolTable::Visibility::Private);
 
-  // Alias constructors and destructors are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
-
   if (op) {
     // Any existing users of the existing function declaration will be
     // referencing the function by flat symbol reference (i.e. the name), so
@@ -4351,6 +4376,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
 
   // Finally, set up the alias with its proper name and attributes.
   setCommonAttributes(aliasGD, alias);
+  return alias;
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {

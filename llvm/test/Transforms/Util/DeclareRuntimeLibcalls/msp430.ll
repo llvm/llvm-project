@@ -259,7 +259,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i16)
 ; CHECK-NEXT: declare float @__powisf2(float, i16)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16)
-; CHECK-NEXT: declare void @__stack_chk_fail()
+; CHECK-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double)
 ; CHECK-NEXT: declare float @__subsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -397,8 +397,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double)
 ; CHECK-NEXT: declare float @fmodf(float, float)
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr)
-; CHECK-NEXT: declare float @frexpf(float, ptr)
+; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 2 dereferenceable(2))
+; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 2 dereferenceable(2))
 ; CHECK-NEXT: declare double @ldexp(double, i16)
 ; CHECK-NEXT: declare float @ldexpf(float, i16)
 ; CHECK-NEXT: declare i64 @llrint(double)
@@ -419,8 +419,8 @@
 ; CHECK-NEXT: declare ptr @memcpy(ptr, ptr, i16)
 ; CHECK-NEXT: declare ptr @memmove(ptr, ptr, i16)
 ; CHECK-NEXT: declare ptr @memset(ptr, i16, i16)
-; CHECK-NEXT: declare double @modf(double, ptr)
-; CHECK-NEXT: declare float @modff(float, ptr)
+; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 2 dereferenceable(8))
+; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 2 dereferenceable(4))
 ; CHECK-NEXT: declare double @nan(ptr)
 ; CHECK-NEXT: declare float @nanf(ptr)
 ; CHECK-NEXT: declare double @nearbyint(double)
@@ -431,8 +431,8 @@
 ; CHECK-NEXT: declare float @powf(float, float)
 ; CHECK-NEXT: declare double @remainder(double, double)
 ; CHECK-NEXT: declare float @remainderf(float, float)
-; CHECK-NEXT: declare double @remquo(double, double, ptr)
-; CHECK-NEXT: declare float @remquof(float, float, ptr)
+; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 2 dereferenceable(2))
+; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 2 dereferenceable(2))
 ; CHECK-NEXT: declare double @rint(double)
 ; CHECK-NEXT: declare float @rintf(float)
 ; CHECK-NEXT: declare double @round(double)
@@ -457,6 +457,7 @@
 ; CHECK-NEXT: declare float @tgammaf(float)
 ; CHECK-NEXT: declare double @trunc(double)
 ; CHECK-NEXT: declare float @truncf(float)
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

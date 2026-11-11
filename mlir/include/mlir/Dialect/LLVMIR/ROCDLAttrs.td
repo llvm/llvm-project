@@ -20,6 +20,7 @@ include "mlir/IR/EnumAttr.td"
 
 class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<ROCDL_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/ROCDLDialect.h"];
   let mnemonic = attrMnemonic;
 }
 

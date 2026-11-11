@@ -82,7 +82,6 @@
 ...
 ---
 name:            store_common_value_half
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11, $x12
@@ -103,7 +102,6 @@ body:             |
 ...
 ---
 name:            store_common_ptr_half
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -150,7 +148,6 @@ body:             |
 ...
 ---
 name:            store_large_offset_half
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -180,7 +177,6 @@ body:             |
 ...
 ---
 name:            load_large_offset_half
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -203,7 +199,6 @@ body:             |
 ...
 ---
 name:            store_large_offset_no_opt_half
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16
@@ -229,7 +224,6 @@ body:             |
 ...
 ---
 name:            load_large_offset_no_opt_half
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x16

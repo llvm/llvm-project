@@ -927,6 +927,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_shmid_ds
+  HDRS
+    struct_shmid_ds.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_shmid_ds
+)
+
+add_proxy_header_library(
   gid_t
   HDRS
     gid_t.h

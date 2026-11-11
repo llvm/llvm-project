@@ -33,7 +33,6 @@
 ---
 name:            reg
 alignment:       2
-tracksRegLiveness: true
 registers:
   - { id: 0, class: mqpr, preferred-register: '' }
   - { id: 1, class: mqpr, preferred-register: '' }
