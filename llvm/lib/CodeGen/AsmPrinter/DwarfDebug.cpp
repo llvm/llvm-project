@@ -339,21 +339,13 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
       IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
+      DebuggerTuning(MMI->getModule()->getDebuggerTuning()),
       InfoHolder(A, "info_string", DIEValueAllocator) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
-  // Make sure we know our "debugger tuning".  The target option takes
-  // precedence; fall back to triple-based defaults.
-  if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
-    DebuggerTuning = Asm->TM.Options.DebuggerTuning;
-  else if (IsDarwin)
-    DebuggerTuning = DebuggerKind::LLDB;
-  else if (TT.isPS())
-    DebuggerTuning = DebuggerKind::SCE;
-  else if (TT.isOSAIX())
-    DebuggerTuning = DebuggerKind::DBX;
-  else
-    DebuggerTuning = DebuggerKind::GDB;
+  // Emit call-site-param debug info for GDB and LLDB, if the target supports
+  // the debug entry values feature. It can also be enabled explicitly.
+  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues(DebuggerTuning);
 
   if (DwarfInlinedStrings == Default)
     UseInlineStrings = tuneForDBX();
@@ -423,10 +415,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // offsets table used by the pre-DWARF v5 split-DWARF implementation uses
   // a monolithic string offsets table without any header.
   UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
-
-  // Emit call-site-param debug info for GDB and LLDB, if the target supports
-  // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
 
   // It is unclear if the GCC .debug_macro extension is well-specified
   // for split DWARF. For now, do not allow LLVM to emit it.

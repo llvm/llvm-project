@@ -200,7 +200,7 @@ if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
   libc_add_definition(sprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
-  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   libc_add_definition(sprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
@@ -248,6 +248,7 @@ add_libc_test(
   SRCS
     snprintf_test.cpp
   DEPENDS
+    libc.src.__support.CPP.limits
     libc.src.stdio.snprintf
 )
 

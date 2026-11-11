@@ -7556,8 +7556,8 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   // Lower fixed length gather to a scalable equivalent.
   if (VT.isFixedLengthVector()) {
-    assert(Subtarget->useSVEForFixedLengthVectors() &&
-           "Cannot lower when not using SVE for fixed vectors!");
+    assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+           "Cannot lower when SVE is unavailable!");
 
     // NOTE: Handle floating-point as if integer then bitcast the result.
     EVT DataVT = VT.changeVectorElementTypeToInteger();
@@ -7645,8 +7645,8 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
 
   // Lower fixed length scatter to a scalable equivalent.
   if (VT.isFixedLengthVector()) {
-    assert(Subtarget->useSVEForFixedLengthVectors() &&
-           "Cannot lower when not using SVE for fixed vectors!");
+    assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+           "Cannot lower when SVE is unavailable!");
 
     // Once bitcast we treat floating-point scatters as if integer.
     if (VT.isFloatingPoint()) {
@@ -9581,13 +9581,21 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
       ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
       MVT MemVT = VA.getValVT();
+      MVT LoadVT = VA.getLocVT();
 
       switch (VA.getLocInfo()) {
       default:
         break;
       case CCValAssign::Trunc:
+        MemVT = VA.getLocVT();
+        break;
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
+        if (Ins[i].isOrigArg() && Ins[i].ArgVT.isVector() &&
+            Ins[i].ArgVT.getSizeInBits() < VA.getValVT().getSizeInBits()) {
+          MemVT = VA.getValVT();
+          LoadVT = MemVT;
+        }
         break;
       case CCValAssign::Indirect:
         assert(
@@ -9606,8 +9614,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
 
-      ArgValue = DAG.getExtLoad(ExtType, DL, VA.getLocVT(), Chain, FIN, PtrInfo,
-                                MemVT);
+      ArgValue =
+          DAG.getExtLoad(ExtType, DL, LoadVT, Chain, FIN, PtrInfo, MemVT);
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -20098,6 +20106,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
   Value *Pred = nullptr;
   if (UseScalable)
     Pred =
@@ -20178,6 +20187,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
                                                  UseScalable, StTy, PtrTy);
 
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   Value *BaseAddr = SI->getPointerOperand();
   Value *Pred = nullptr;
