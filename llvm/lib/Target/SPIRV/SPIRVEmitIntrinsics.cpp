@@ -34,6 +34,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -196,6 +197,8 @@ class SPIRVEmitIntrinsicsImpl
   SmallPtrSet<Instruction *, 0> AggrStores;
   GlobalVariableUsers GVUsers;
   SmallPtrSet<Value *, 0> Named;
+  Error AccessChainErrors = Error::success();
+  SmallPtrSet<GetElementPtrInst *, 4> InvalidGEPs;
 
   // map of function declarations to <pointer arg index => element type>
   DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
@@ -335,7 +338,7 @@ class SPIRVEmitIntrinsicsImpl
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
   bool processMaskedMemIntrinsic(IntrinsicInst &I);
   bool convertMaskedMemIntrinsics(Module &M);
-  bool foldStaticArrayAllocas(Module &M);
+  bool preprocessModule(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
@@ -354,8 +357,8 @@ class SPIRVEmitIntrinsicsImpl
   //      ElementType: the type of the elements stored in the parent array.
   //      Offset: the Value* containing the byte offset into the array.
   //      Multiplier: a scaling factor for the offset.
-  // Return true if an error occurred during the walk, false otherwise.
-  bool walkLogicalAccessChain(
+  // Return true for a fallback, false for a complete walk, or an error.
+  Expected<bool> walkLogicalAccessChain(
       GetElementPtrInst &GEP,
       const std::function<void(Type *PointedType, uint64_t Index)>
           &OnLiteralIndexing,
@@ -367,9 +370,11 @@ class SPIRVEmitIntrinsicsImpl
       const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
       const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing);
 
-  bool walkLogicalAccessChainConstant(
+  Expected<bool> walkLogicalAccessChainConstant(
       Type *CurType, uint64_t Offset,
       const std::function<void(Type *, uint64_t)> &OnLiteralIndexing);
+
+  void recordAccessChainError(GetElementPtrInst &GEP, Error Err);
 
   // Returns the type accessed using the given GEP instruction by relying
   // on the GEP type.
@@ -826,7 +831,7 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainDynamic(
   return AT == nullptr;
 }
 
-bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainConstant(
+Expected<bool> SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainConstant(
     Type *CurType, uint64_t Offset,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing) {
   auto &DL = CurrF->getDataLayout();
@@ -856,9 +861,8 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainConstant(
              "Element type size in bits must be a multiple of 8.");
       uint32_t EltTypeSize = EltSizeBits / 8;
       if (Offset >= VT->getNumElements() * EltTypeSize)
-        report_fatal_error(
-            "Cannot lower an access to vector padding for Logical SPIR-V",
-            false);
+        return createStringError(
+            "Cannot lower an access to vector padding for Logical SPIR-V");
       uint64_t Index = Offset / EltTypeSize;
       Offset -= Index * EltTypeSize;
       CurType = EltTy;
@@ -866,17 +870,16 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainConstant(
     } else {
       if (CurType == BaseType && Offset >= DL.getTypeAllocSize(CurType))
         return true;
-      report_fatal_error(
+      return createStringError(
           "Cannot lower a byte offset within a scalar or padding for "
-          "Logical SPIR-V",
-          false);
+          "Logical SPIR-V");
     }
   } while (Offset > 0);
 
   return false;
 }
 
-bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChain(
+Expected<bool> SPIRVEmitIntrinsicsImpl::walkLogicalAccessChain(
     GetElementPtrInst &GEP,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing,
     const std::function<void(Type *, Value *, uint64_t)> &OnDynamicIndexing) {
@@ -891,9 +894,8 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChain(
   Value *Src = getPointerRoot(GEP.getPointerOperand());
   Type *CurType = deduceElementType(Src, true);
   if (!CurType->isSized())
-    report_fatal_error(
-        "Cannot lower byte addressing with an unsized type for Logical SPIR-V",
-        false);
+    return createStringError(
+        "Cannot lower byte addressing with an unsized type for Logical SPIR-V");
 
   Value *Operand = *GEP.idx_begin();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Operand))
@@ -904,8 +906,20 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChain(
                                        OnLiteralIndexing, OnDynamicIndexing);
 }
 
+void SPIRVEmitIntrinsicsImpl::recordAccessChainError(GetElementPtrInst &GEP,
+                                                     Error Err) {
+  InvalidGEPs.insert(&GEP);
+  AccessChainErrors = joinErrors(
+      std::move(AccessChainErrors),
+      createStringError(Twine(toString(std::move(Err))) + " (in function '" +
+                        GEP.getFunction()->getName() + "')"));
+}
+
 Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
     GetElementPtrInst &GEP) {
+  if (InvalidGEPs.contains(&GEP))
+    return nullptr;
+
   auto &DL = CurrF->getDataLayout();
   IRBuilder<> B(GEP.getParent());
   B.SetInsertPoint(&GEP);
@@ -913,7 +927,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
   std::vector<Value *> Indices;
   Indices.push_back(ConstantInt::get(
       IntegerType::getInt32Ty(CurrF->getContext()), 0, /* Signed= */ false));
-  walkLogicalAccessChain(
+  auto Result = walkLogicalAccessChain(
       GEP,
       [&Indices, &B](Type *EltType, uint64_t Index) {
         Indices.push_back(
@@ -943,6 +957,10 @@ Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
         insertAssignTypeIntrs(cast<Instruction>(Index), B);
         Indices.push_back(Index);
       });
+  if (!Result) {
+    recordAccessChainError(GEP, Result.takeError());
+    return nullptr;
+  }
 
   B.SetInsertPoint(&GEP);
   SmallVector<Type *, 2> Types = {GEP.getType(), GEP.getOperand(0)->getType()};
@@ -957,14 +975,20 @@ Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
 }
 
 Type *SPIRVEmitIntrinsicsImpl::getGEPTypeLogical(GetElementPtrInst *GEP) {
+  if (InvalidGEPs.contains(GEP))
+    return nullptr;
 
   Type *CurType = GEP->getResultElementType();
 
-  bool Interrupted = walkLogicalAccessChain(
+  auto Result = walkLogicalAccessChain(
       *GEP, [&CurType](Type *EltType, uint64_t Index) { CurType = EltType; },
       [&CurType](Type *EltType, Value *Index, uint64_t) { CurType = EltType; });
+  if (!Result) {
+    recordAccessChainError(*GEP, Result.takeError());
+    return nullptr;
+  }
 
-  return Interrupted ? GEP->getResultElementType() : CurType;
+  return *Result ? GEP->getResultElementType() : CurType;
 }
 
 Type *SPIRVEmitIntrinsicsImpl::getGEPType(GetElementPtrInst *Ref) {
@@ -2068,6 +2092,8 @@ SPIRVEmitIntrinsicsImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
     SmallVector<Type *, 2> GepTypes = {ResultPtrTy, ScalarPtrTy};
     Value *InBounds = B.getInt1(I.isInBounds());
     Type *LanePointeeTy = getGEPType(&I);
+    if (!LanePointeeTy)
+      return nullptr;
     Type *SrcElemTy = I.getSourceElementType();
 
     // Pin the lane pointee type on the vector operand and on each extracted
@@ -3892,6 +3918,8 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     assert(I->use_empty() && "Dead instruction should not have any uses left");
     I->eraseFromParent();
   }
+  if (AccessChainErrors)
+    return true;
 
   B.SetInsertPoint(Func.getEntryBlock().begin());
   for (auto &GV : Func.getParent()->globals())
@@ -3964,6 +3992,8 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     // Visitors return either the original/newly created instruction for
     // further processing, nullptr otherwise.
     I = visit(*I);
+    if (AccessChainErrors)
+      return true;
     if (!I)
       continue;
 
@@ -4325,16 +4355,24 @@ bool SPIRVEmitIntrinsicsImpl::convertMaskedMemIntrinsics(Module &M) {
   return Changed;
 }
 
-bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
+bool SPIRVEmitIntrinsicsImpl::preprocessModule(Module &M) {
   bool Changed = false;
+  bool IsLogical = TM.getSubtargetImpl()->isLogicalSPIRV();
+  SmallVector<Constant *> GEPs;
   Type *I32Ty = Type::getInt32Ty(M.getContext());
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
-    // Only entry-block allocations execute once per call, so a single array
-    // object has the same meaning as the counted allocation. Allocations in
-    // other blocks keep their lowering.
-    for (Instruction &I : F.getEntryBlock()) {
+    for (Instruction &I : instructions(F)) {
+      if (IsLogical)
+        for (Value *Op : I.operands())
+          if (auto *CE = dyn_cast<ConstantExpr>(Op);
+              CE && CE->getOpcode() == Instruction::GetElementPtr)
+            GEPs.push_back(CE);
+
+      // Only entry-block allocations execute once per call, so a single array
+      // object has the same meaning as the counted allocation. Allocations in
+      // other blocks keep their lowering.
       auto *AI = dyn_cast<AllocaInst>(&I);
       if (!AI || !AI->isStaticAlloca() || !AI->isArrayAllocation() ||
           AI->getAddressSpace() !=
@@ -4350,27 +4388,21 @@ bool SPIRVEmitIntrinsicsImpl::foldStaticArrayAllocas(Module &M) {
       Changed = true;
     }
   }
-  return Changed;
-}
-
-bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
-  // Fold static allocation counts before pointer type inference.
-  bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
 
-  if (TM.getSubtargetImpl()->isLogicalSPIRV()) {
-    SmallVector<Constant *> GEPs;
-    for (Function &F : M)
-      for (Instruction &I : instructions(F))
-        for (Value *Op : I.operands())
-          if (auto *CE = dyn_cast<ConstantExpr>(Op);
-              CE && CE->getOpcode() == Instruction::GetElementPtr)
-            GEPs.push_back(CE);
-    // Let pointer type inference and GEP lowering handle constant expressions.
+  // Materialize GEPs before pointer type inference so logical targets use
+  // the typed access-chain lowering. Physical targets keep the existing
+  // constant-expression handling.
+  if (IsLogical) {
     // The list can contain both a constant and its users.
     Changed |= convertUsersOfConstantsToInstructions(
         GEPs, nullptr, /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
   }
+  return Changed;
+}
+
+bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
+  bool Changed = preprocessModule(M);
 
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
@@ -4379,6 +4411,8 @@ bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
   TodoType.clear();
   for (auto &F : M)
     Changed |= runOnFunction(F);
+  if (AccessChainErrors)
+    report_fatal_error(Twine(toString(std::move(AccessChainErrors))), false);
 
   // Specify function parameters after all functions were processed.
   for (auto &F : M) {

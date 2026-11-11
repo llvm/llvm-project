@@ -357,9 +357,7 @@ class SPIRVLegalizePointerCastImpl {
   }
 
   static bool canReinterpretType(Type *FromTy, Type *ToTy) {
-    return FromTy && ToTy &&
-           (FromTy->isIntOrIntVectorTy() || FromTy->isFPOrFPVectorTy()) &&
-           CastInst::isBitCastable(FromTy, ToTy);
+    return FromTy && ToTy && CastInst::isBitCastable(FromTy, ToTy);
   }
 
   bool tryReinterpretLoad(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
