@@ -22,9 +22,7 @@ define ptr @elide_with_claimRV(ptr %x) nounwind {
 ; CHECK-LABEL: define ptr @elide_with_claimRV(
 ; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = call ptr @llvm.objc.autorelease(ptr [[X]]) #[[ATTR0]]
-; CHECK-NEXT:    [[C:%.*]] = call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr [[B]]) #[[ATTR0]]
-; CHECK-NEXT:    ret ptr [[C]]
+; CHECK-NEXT:    ret ptr [[X]]
 ;
 entry:
   %b = call ptr @llvm.objc.autoreleaseReturnValue(ptr %x) nounwind
@@ -36,7 +34,7 @@ entry:
 define void @claimRV_not_return_value(ptr %p) {
 ; CHECK-LABEL: define void @claimRV_not_return_value(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr [[P]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @llvm.objc.retain(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr %p)
@@ -48,7 +46,7 @@ define void @claimRV_not_adjacent() {
 ; CHECK-LABEL: define void @claimRV_not_adjacent() {
 ; CHECK-NEXT:    [[P:%.*]] = call ptr @returner()
 ; CHECK-NEXT:    call void @use_pointer(ptr [[P]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr [[P]])
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @llvm.objc.retain(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %p = call ptr @returner()
@@ -62,7 +60,7 @@ define void @claimRV_not_adjacent() {
 define void @claimRV_adjacent() {
 ; CHECK-LABEL: define void @claimRV_adjacent() {
 ; CHECK-NEXT:    [[P:%.*]] = call ptr @returner()
-; CHECK-NEXT:    [[C:%.*]] = call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr [[P]])
+; CHECK-NEXT:    [[C:%.*]] = tail call ptr @llvm.objc.claimAutoreleasedReturnValue(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @use_pointer(ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[P]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
@@ -77,9 +75,7 @@ define void @claimRV_adjacent() {
 ; Remove the attached claimRV and the autoreleaseRV if the call is a tail call.
 define ptr @bundled_claimRV_tail_call() {
 ; CHECK-LABEL: define ptr @bundled_claimRV_tail_call() {
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @returner() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
-; CHECK-NEXT:    call void (...) @llvm.objc.clang.arc.noop.use(ptr [[CALL]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[CALL]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @returner()
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %call = tail call ptr @returner() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
@@ -93,7 +89,7 @@ define ptr @bundled_claimRV_no_tail_call() {
 ; CHECK-LABEL: define ptr @bundled_claimRV_no_tail_call() {
 ; CHECK-NEXT:    [[CALL:%.*]] = call ptr @returner() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
 ; CHECK-NEXT:    call void (...) @llvm.objc.clang.arc.noop.use(ptr [[CALL]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[CALL]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr [[CALL]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %call = call ptr @returner() [ "clang.arc.attachedcall"(ptr @llvm.objc.claimAutoreleasedReturnValue) ]
