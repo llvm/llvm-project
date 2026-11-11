@@ -1394,45 +1394,44 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-NOTF-LABEL: define void @reverse(
 ; CHECK-NOTF-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NOTF-NEXT:  [[ENTRY:.*:]]
-; CHECK-NOTF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NOTF-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-NOTF:       [[VECTOR_PH]]:
-; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = sub i64 1023, [[N_VEC]]
-; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NOTF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NOTF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
+; CHECK-NOTF-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
+; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = sub i64 1024, [[N_VEC]]
+; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = shl i64 [[N_VEC]], 3
+; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = sub i64 1023, [[INDEX]]
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-NOTF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
-; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP2]], 1
-; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
-; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP10]]
-; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP10]], [[TMP2]]
-; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP12]]
-; CHECK-NOTF-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP11]], align 8
-; CHECK-NOTF-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP13]], align 8
-; CHECK-NOTF-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
-; CHECK-NOTF-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
-; CHECK-NOTF-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP14]])
-; CHECK-NOTF-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP15]])
-; CHECK-NOTF-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP2]]
+; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = sub i64 1024, [[INDEX]]
+; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NOTF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP1]], 1
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
+; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP7]]
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP1]]
+; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP9]]
+; CHECK-NOTF-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP8]], align 8
+; CHECK-NOTF-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP10]], align 8
+; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
+; CHECK-NOTF-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP11]])
+; CHECK-NOTF-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP12]])
+; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP1]]
 ; CHECK-NOTF-NEXT:    store <vscale x 2 x double> [[REVERSE]], ptr [[NEXT_GEP]], align 8
-; CHECK-NOTF-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP16]], align 8
-; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NOTF-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP13]], align 8
+; CHECK-NOTF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NOTF-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-NOTF:       [[MIDDLE_BLOCK]]:
-; CHECK-NOTF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NOTF-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
-; CHECK-NOTF:       [[SCALAR_PH]]:
+; CHECK-NOTF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
+; CHECK-NOTF-NEXT:    br i1 [[CMP_N]], [[FOR_END1:label %.*]], label %[[FOR_END:.*]]
+; CHECK-NOTF:       [[FOR_END]]:
 ;
 ; CHECK-TF-LABEL: define void @reverse(
 ; CHECK-TF-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
@@ -1441,28 +1440,26 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF:       [[VECTOR_PH]]:
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
-; CHECK-TF-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP1]])
 ; CHECK-TF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[TMP2:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-NEXT:    [[TMP2:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-TF-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-TF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-TF-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-TF-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-TF-NEXT:    [[TMP6:%.*]] = sub i64 0, [[TMP5]]
-; CHECK-TF-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[TMP4]], i64 [[TMP6]]
-; CHECK-TF-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE]], <vscale x 2 x double> poison)
-; CHECK-TF-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
-; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE1]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-TF-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP4]], i64 [[TMP6]]
+; CHECK-TF-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE1]], <vscale x 2 x double> poison)
+; CHECK-TF-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
+; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; CHECK-TF-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-TF-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NEXT:    br label %[[FOR_END:.*]]
@@ -1476,28 +1473,26 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-SIMPLE:       [[VECTOR_PH]]:
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-SIMPLE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
-; CHECK-TF-SIMPLE-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP1]])
 ; CHECK-TF-SIMPLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-SIMPLE:       [[VECTOR_BODY]]:
 ; CHECK-TF-SIMPLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-SIMPLE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP2:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-TF-SIMPLE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-SIMPLE-NEXT:    [[TMP2:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-TF-SIMPLE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP6:%.*]] = sub i64 0, [[TMP5]]
-; CHECK-TF-SIMPLE-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[TMP4]], i64 [[TMP6]]
-; CHECK-TF-SIMPLE-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-SIMPLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE]], <vscale x 2 x double> poison)
-; CHECK-TF-SIMPLE-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-SIMPLE-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
-; CHECK-TF-SIMPLE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE1]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-SIMPLE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-TF-SIMPLE-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP4]], i64 [[TMP6]]
+; CHECK-TF-SIMPLE-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-SIMPLE-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE1]], <vscale x 2 x double> poison)
+; CHECK-TF-SIMPLE-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-SIMPLE-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
+; CHECK-TF-SIMPLE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-SIMPLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-SIMPLE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-SIMPLE-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-TF-SIMPLE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-SIMPLE-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TF-SIMPLE:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-SIMPLE-NEXT:    br label %[[FOR_END:.*]]
@@ -1511,28 +1506,26 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-DEFAULT:       [[VECTOR_PH]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-DEFAULT-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
-; CHECK-TF-DEFAULT-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP1]])
 ; CHECK-TF-DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-DEFAULT:       [[VECTOR_BODY]]:
 ; CHECK-TF-DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP2:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-TF-DEFAULT-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-DEFAULT-NEXT:    [[TMP2:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-TF-DEFAULT-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 0, [[TMP5]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[TMP4]], i64 [[TMP6]]
-; CHECK-TF-DEFAULT-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-DEFAULT-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE]], <vscale x 2 x double> poison)
-; CHECK-TF-DEFAULT-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-DEFAULT-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
-; CHECK-TF-DEFAULT-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE1]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-DEFAULT-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-TF-DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP4]], i64 [[TMP6]]
+; CHECK-TF-DEFAULT-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE1]], <vscale x 2 x double> poison)
+; CHECK-TF-DEFAULT-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-DEFAULT-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
+; CHECK-TF-DEFAULT-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-DEFAULT-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-TF-DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-DEFAULT-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-TF-DEFAULT:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-DEFAULT-NEXT:    br label %[[FOR_END:.*]]
@@ -1546,28 +1539,26 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-NORED:       [[VECTOR_PH]]:
 ; CHECK-TF-NORED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NORED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-NORED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
-; CHECK-TF-NORED-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP1]])
 ; CHECK-TF-NORED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NORED:       [[VECTOR_BODY]]:
 ; CHECK-TF-NORED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NORED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NORED-NEXT:    [[TMP2:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-TF-NORED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-NORED-NEXT:    [[TMP2:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-TF-NORED-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-TF-NORED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-TF-NORED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-TF-NORED-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-TF-NORED-NEXT:    [[TMP6:%.*]] = sub i64 0, [[TMP5]]
-; CHECK-TF-NORED-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[TMP4]], i64 [[TMP6]]
-; CHECK-TF-NORED-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-NORED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE]], <vscale x 2 x double> poison)
-; CHECK-TF-NORED-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-NORED-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
-; CHECK-TF-NORED-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE1]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-NORED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-TF-NORED-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP4]], i64 [[TMP6]]
+; CHECK-TF-NORED-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NORED-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE1]], <vscale x 2 x double> poison)
+; CHECK-TF-NORED-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-NORED-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
+; CHECK-TF-NORED-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NORED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-NORED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; CHECK-TF-NORED-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NORED-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-TF-NORED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NORED-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-TF-NORED:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NORED-NEXT:    br label %[[FOR_END:.*]]
@@ -1581,28 +1572,26 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-NOREC:       [[VECTOR_PH]]:
 ; CHECK-TF-NOREC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NOREC-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-NOREC-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 1024)
-; CHECK-TF-NOREC-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 1024, i64 [[TMP1]])
 ; CHECK-TF-NOREC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NOREC:       [[VECTOR_BODY]]:
 ; CHECK-TF-NOREC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREC-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREC-NEXT:    [[TMP2:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-TF-NOREC-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ splat (i1 true), %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TF-NOREC-NEXT:    [[TMP2:%.*]] = sub i64 1024, [[INDEX]]
 ; CHECK-TF-NOREC-NEXT:    [[TMP3:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-TF-NOREC-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-TF-NOREC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-TF-NOREC-NEXT:    [[TMP5:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-TF-NOREC-NEXT:    [[TMP6:%.*]] = sub i64 0, [[TMP5]]
-; CHECK-TF-NOREC-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[TMP4]], i64 [[TMP6]]
-; CHECK-TF-NOREC-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-NOREC-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE]], <vscale x 2 x double> poison)
-; CHECK-TF-NOREC-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-NOREC-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
-; CHECK-TF-NOREC-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE1]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-TF-NOREC-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; CHECK-TF-NOREC-NEXT:    [[TMP7:%.*]] = getelementptr [8 x i8], ptr [[TMP4]], i64 [[TMP6]]
+; CHECK-TF-NOREC-NEXT:    [[REVERSE1:%.*]] = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NOREC-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[REVERSE1]], <vscale x 2 x double> poison)
+; CHECK-TF-NOREC-NEXT:    [[TMP8:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-NOREC-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP8]])
+; CHECK-TF-NOREC-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[REVERSE]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-TF-NOREC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-NOREC-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 1025)
 ; CHECK-TF-NOREC-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TF-NOREC-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
-; CHECK-TF-NOREC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TF-NOREC-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-TF-NOREC:       [[MIDDLE_BLOCK]]:
 ; CHECK-TF-NOREC-NEXT:    br label %[[FOR_END:.*]]
@@ -1612,137 +1601,134 @@ define void @reverse(ptr noalias %dst, ptr noalias %src) #0 {
 ; CHECK-TF-NOREV-LABEL: define void @reverse(
 ; CHECK-TF-NOREV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-NOREV-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-NOREV-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-TF-NOREV-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-TF-NOREV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-TF-NOREV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-TF-NOREV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TF-NOREV:       [[VECTOR_PH]]:
-; CHECK-TF-NOREV-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-NOREV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-TF-NOREV-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-TF-NOREV-NEXT:    [[TMP3:%.*]] = sub i64 1023, [[N_VEC]]
-; CHECK-TF-NOREV-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; CHECK-TF-NOREV-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-TF-NOREV-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-TF-NOREV-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-TF-NOREV-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
+; CHECK-TF-NOREV-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
+; CHECK-TF-NOREV-NEXT:    [[TMP14:%.*]] = sub i64 1024, [[N_VEC]]
+; CHECK-TF-NOREV-NEXT:    [[TMP15:%.*]] = shl i64 [[N_VEC]], 3
+; CHECK-TF-NOREV-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
 ; CHECK-TF-NOREV-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-NOREV:       [[VECTOR_BODY]]:
 ; CHECK-TF-NOREV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NOREV-NEXT:    [[TMP6:%.*]] = sub i64 1023, [[INDEX]]
-; CHECK-TF-NOREV-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-TF-NOREV-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
-; CHECK-TF-NOREV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-NOREV-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP2]], 1
-; CHECK-TF-NOREV-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
-; CHECK-TF-NOREV-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP10]]
-; CHECK-TF-NOREV-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP10]], [[TMP2]]
-; CHECK-TF-NOREV-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP12]]
-; CHECK-TF-NOREV-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP11]], align 8
-; CHECK-TF-NOREV-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP13]], align 8
-; CHECK-TF-NOREV-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-NOREV-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
-; CHECK-TF-NOREV-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP14]])
-; CHECK-TF-NOREV-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP15]])
-; CHECK-TF-NOREV-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP2]]
+; CHECK-TF-NOREV-NEXT:    [[TMP3:%.*]] = sub i64 1024, [[INDEX]]
+; CHECK-TF-NOREV-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-TF-NOREV-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-TF-NOREV-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-TF-NOREV-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP1]], 1
+; CHECK-TF-NOREV-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
+; CHECK-TF-NOREV-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP7]]
+; CHECK-TF-NOREV-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP1]]
+; CHECK-TF-NOREV-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP9]]
+; CHECK-TF-NOREV-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP8]], align 8
+; CHECK-TF-NOREV-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP10]], align 8
+; CHECK-TF-NOREV-NEXT:    [[TMP11:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-NOREV-NEXT:    [[TMP12:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
+; CHECK-TF-NOREV-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP11]])
+; CHECK-TF-NOREV-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP12]])
+; CHECK-TF-NOREV-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP1]]
 ; CHECK-TF-NOREV-NEXT:    store <vscale x 2 x double> [[REVERSE]], ptr [[NEXT_GEP]], align 8
-; CHECK-TF-NOREV-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP16]], align 8
-; CHECK-TF-NOREV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-NOREV-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP13]], align 8
+; CHECK-TF-NOREV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-TF-NOREV-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-TF-NOREV-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TF-NOREV:       [[MIDDLE_BLOCK]]:
-; CHECK-TF-NOREV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-TF-NOREV-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
-; CHECK-TF-NOREV:       [[SCALAR_PH]]:
+; CHECK-TF-NOREV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
+; CHECK-TF-NOREV-NEXT:    br i1 [[CMP_N]], [[FOR_END1:label %.*]], label %[[FOR_END:.*]]
+; CHECK-TF-NOREV:       [[FOR_END]]:
 ;
 ; CHECK-TF-ONLYRED-LABEL: define void @reverse(
 ; CHECK-TF-ONLYRED-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-TF-ONLYRED-NEXT:  [[ENTRY:.*:]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-TF-ONLYRED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-TF-ONLYRED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-TF-ONLYRED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-TF-ONLYRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-TF-ONLYRED:       [[VECTOR_PH]]:
-; CHECK-TF-ONLYRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-TF-ONLYRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-TF-ONLYRED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP3:%.*]] = sub i64 1023, [[N_VEC]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; CHECK-TF-ONLYRED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-TF-ONLYRED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-TF-ONLYRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
+; CHECK-TF-ONLYRED-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP14:%.*]] = sub i64 1024, [[N_VEC]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP15:%.*]] = shl i64 [[N_VEC]], 3
+; CHECK-TF-ONLYRED-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
 ; CHECK-TF-ONLYRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-TF-ONLYRED:       [[VECTOR_BODY]]:
 ; CHECK-TF-ONLYRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP6:%.*]] = sub i64 1023, [[INDEX]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-TF-ONLYRED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP2]], 1
-; CHECK-TF-ONLYRED-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP10]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP10]], [[TMP2]]
-; CHECK-TF-ONLYRED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP12]]
-; CHECK-TF-ONLYRED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP11]], align 8
-; CHECK-TF-ONLYRED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP13]], align 8
-; CHECK-TF-ONLYRED-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
-; CHECK-TF-ONLYRED-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
-; CHECK-TF-ONLYRED-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP14]])
-; CHECK-TF-ONLYRED-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP15]])
-; CHECK-TF-ONLYRED-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP2]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP3:%.*]] = sub i64 1024, [[INDEX]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-TF-ONLYRED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP1]], 1
+; CHECK-TF-ONLYRED-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP7]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP1]]
+; CHECK-TF-ONLYRED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP9]]
+; CHECK-TF-ONLYRED-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP8]], align 8
+; CHECK-TF-ONLYRED-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP10]], align 8
+; CHECK-TF-ONLYRED-NEXT:    [[TMP11:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-TF-ONLYRED-NEXT:    [[TMP12:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
+; CHECK-TF-ONLYRED-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP11]])
+; CHECK-TF-ONLYRED-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP12]])
+; CHECK-TF-ONLYRED-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP1]]
 ; CHECK-TF-ONLYRED-NEXT:    store <vscale x 2 x double> [[REVERSE]], ptr [[NEXT_GEP]], align 8
-; CHECK-TF-ONLYRED-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP16]], align 8
-; CHECK-TF-ONLYRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-TF-ONLYRED-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP13]], align 8
+; CHECK-TF-ONLYRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-TF-ONLYRED-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-TF-ONLYRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-TF-ONLYRED:       [[MIDDLE_BLOCK]]:
-; CHECK-TF-ONLYRED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-TF-ONLYRED-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
-; CHECK-TF-ONLYRED:       [[SCALAR_PH]]:
+; CHECK-TF-ONLYRED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
+; CHECK-TF-ONLYRED-NEXT:    br i1 [[CMP_N]], [[FOR_END1:label %.*]], label %[[FOR_END:.*]]
+; CHECK-TF-ONLYRED:       [[FOR_END]]:
 ;
 ; CHECK-NEOVERSE-V1-LABEL: define void @reverse(
 ; CHECK-NEOVERSE-V1-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEOVERSE-V1-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEOVERSE-V1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-NEOVERSE-V1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEOVERSE-V1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-NEOVERSE-V1:       [[VECTOR_PH]]:
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-NEOVERSE-V1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP3:%.*]] = sub i64 1023, [[N_VEC]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 3
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEOVERSE-V1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
+; CHECK-NEOVERSE-V1-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP14:%.*]] = sub i64 1024, [[N_VEC]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP15:%.*]] = shl i64 [[N_VEC]], 3
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
 ; CHECK-NEOVERSE-V1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NEOVERSE-V1:       [[VECTOR_BODY]]:
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP6:%.*]] = sub i64 1023, [[INDEX]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-NEOVERSE-V1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP6]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP2]], 1
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP10]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP10]], [[TMP2]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP12]]
-; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP11]], align 8
-; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP13]], align 8
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
-; CHECK-NEOVERSE-V1-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP14]])
-; CHECK-NEOVERSE-V1-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP15]])
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP2]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP3:%.*]] = sub i64 1024, [[INDEX]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP4:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEOVERSE-V1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP1]], 1
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP7]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP7]], [[TMP1]]
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP9]]
+; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x double>, ptr [[TMP8]], align 8
+; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x double>, ptr [[TMP10]], align 8
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP11:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP12:%.*]] = fadd <vscale x 2 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
+; CHECK-NEOVERSE-V1-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP11]])
+; CHECK-NEOVERSE-V1-NEXT:    [[REVERSE2:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[TMP12]])
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[NEXT_GEP]], i64 [[TMP1]]
 ; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 2 x double> [[REVERSE]], ptr [[NEXT_GEP]], align 8
-; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP16]], align 8
-; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NEOVERSE-V1-NEXT:    store <vscale x 2 x double> [[REVERSE2]], ptr [[TMP13]], align 8
+; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-NEOVERSE-V1:       [[MIDDLE_BLOCK]]:
-; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
-; CHECK-NEOVERSE-V1:       [[SCALAR_PH]]:
+; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, [[N_VEC]]
+; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N]], [[FOR_END1:label %.*]], label %[[FOR_END:.*]]
+; CHECK-NEOVERSE-V1:       [[FOR_END]]:
 ;
 entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
+  %indvars.iv = phi i64 [ 1024, %entry ], [ %indvars.iv.next, %for.body ]
   %indvars.ptr = phi ptr [ %dst, %entry ], [ %indvars.ptr.next, %for.body ]
   %arrayidx = getelementptr inbounds double, ptr %src, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 8
@@ -1757,7 +1743,7 @@ for.end:
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}

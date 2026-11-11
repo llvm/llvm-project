@@ -177,9 +177,7 @@ Error SPIRVCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
 
 Error SPIRVCodeGenPassBuilder::addGlobalInstructionSelect(
     PassManagerWrapper &PMW) {
-  addMachineFunctionPass(
-      InstructionSelectPass(getOptLevel(), /*RequireRegBankSelection=*/false),
-      PMW);
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
   return Error::success();
 }
 

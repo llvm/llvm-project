@@ -3250,19 +3250,6 @@ let append Predicates = [IsRV32] in {
             (BuildGPRPair GPR:$rs2, GPR:$rs2)>;
 
   // Build vector patterns
-  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d),
-                                (XLenVT GPR:$e), (XLenVT GPR:$f),
-                                (XLenVT GPR:$g), (XLenVT GPR:$h))),
-            (BuildGPRPair (PACK (PPAIRE_B GPR:$a, GPR:$b),
-                                (PPAIRE_B GPR:$c, GPR:$d)),
-                          (PACK (PPAIRE_B GPR:$e, GPR:$f),
-                                (PPAIRE_B GPR:$g, GPR:$h)))>;
-
-  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                 (XLenVT GPR:$c), (XLenVT GPR:$d))),
-            (BuildGPRPair (PACK GPR:$a, GPR:$b), (PACK GPR:$c, GPR:$d))>;
-
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b))),
             (BuildGPRPair GPR:$a, GPR:$b)>;
 
@@ -3799,27 +3786,6 @@ let append Predicates = [IsRV64] in {
   def : LdPat<load, LD, v2i32>;
 
   // Build vector patterns
-  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d),
-                                (XLenVT undef), (XLenVT undef),
-                                (XLenVT undef), (XLenVT undef))),
-            (PPAIRE_H (PPAIRE_B GPR:$a, GPR:$b), (PPAIRE_B GPR:$c, GPR:$d))>;
-
-  def : Pat<(v8i8 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                (XLenVT GPR:$c), (XLenVT GPR:$d),
-                                (XLenVT GPR:$e), (XLenVT GPR:$f),
-                                (XLenVT GPR:$g), (XLenVT GPR:$h))),
-            (PACK (PPAIRE_H (PPAIRE_B GPR:$a, GPR:$b), (PPAIRE_B GPR:$c, GPR:$d)),
-                  (PPAIRE_H (PPAIRE_B GPR:$e, GPR:$f), (PPAIRE_B GPR:$g, GPR:$h)))>;
-
-  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                 (XLenVT undef), (XLenVT undef))),
-            (PPAIRE_H GPR:$a, GPR:$b)>;
-
-  def : Pat<(v4i16 (build_vector (XLenVT GPR:$a), (XLenVT GPR:$b),
-                                 (XLenVT GPR:$c), (XLenVT GPR:$d))),
-            (PACK (PPAIRE_H GPR:$a, GPR:$b), (PPAIRE_H GPR:$c, GPR:$d))>;
-
   // PPAIREO.W packs the low word of rs1 with the high word of rs2.
   def : Pat<(v2i32 (build_vector (XLenVT GPR:$a),
                                  (XLenVT (srl GPR:$x, (XLenVT 32))))),

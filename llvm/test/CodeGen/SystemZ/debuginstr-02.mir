@@ -53,7 +53,6 @@
 ---
 name:            fun
 alignment:       16
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: gr32bit }
   - { id: 1, class: fp32bit }
