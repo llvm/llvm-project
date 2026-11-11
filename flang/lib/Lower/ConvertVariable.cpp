@@ -3500,11 +3500,10 @@ void Fortran::lower::mapSymbolAttributes(
                        Fortran::semantics::IsHostAssociated(sym, curScope);
   }
   if (Fortran::evaluate::IsCoarray(sym) && !isHostAssociated) {
-    assert(!Fortran::semantics::IsAllocatable(sym) &&
-           "must be a non-ALLOCATABLE coarray");
-    if (Fortran::semantics::IsSaved(sym) &&
-        (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
-         var.isModuleOrSubmoduleVariable()))
+    assert(Fortran::semantics::IsSaved(sym) &&
+           "Non-ALLOCATABLE coarray variable must be save.");
+    if (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+        var.isModuleOrSubmoduleVariable())
       Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
                                                            addr);
     else
