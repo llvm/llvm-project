@@ -1040,3 +1040,50 @@ module attributes {
       requires_call_conv_lowering attributes { test_classify = #byval_arg }
 
 }
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
+
+  // The operand is loaded through an address_space cast of a slot that already
+  // has the rewritten parameter's type, so the slot itself is handed on.
+  cir.func @caller_non_byval_through_addrspace(%s: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+    %slot = cir.cast address_space %raw
+        : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %asload = cir.load %slot
+        : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.call @takes_big_non_byval(%asload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_non_byval_through_addrspace(%[[S:.*]]: !rec_Big)
+  // CHECK-NEXT:   %[[RAW:.*]] = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[AS:.*]] = cir.cast address_space %[[RAW]] : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[S]], %[[AS]] : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[RAW]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-NEXT:   cir.return
+
+}

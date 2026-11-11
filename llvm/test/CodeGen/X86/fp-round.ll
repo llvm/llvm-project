@@ -1104,3 +1104,101 @@ declare <16 x float> @llvm.round.v16f32(<16 x float>)
 declare <8 x double> @llvm.round.v8f64(<8 x double>)
 declare float @llvm.trunc.f32(float)
 declare double @llvm.trunc.f64(double)
+
+; Bypassing a shared floorf libcall can spill the input, but also enable a
+; tail call when returning the floor and storing the converted value.
+define i32 @fptoui_floor_multi_use(float %x, ptr %p) nounwind {
+; SSE2-LABEL: fptoui_floor_multi_use:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    subq $16, %rsp
+; SSE2-NEXT:    movq %rdi, %rbx
+; SSE2-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:    callq floorf@PLT
+; SSE2-NEXT:    cvttss2si {{[-0-9]+}}(%r{{[sb]}}p), %rax # 4-byte Folded Reload
+; SSE2-NEXT:    movss %xmm0, (%rbx)
+; SSE2-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE2-NEXT:    addq $16, %rsp
+; SSE2-NEXT:    popq %rbx
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: fptoui_floor_multi_use:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm1
+; SSE41-NEXT:    cvttss2si %xmm0, %rax
+; SSE41-NEXT:    movss %xmm1, (%rdi)
+; SSE41-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: fptoui_floor_multi_use:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vcvttss2si %xmm0, %rax
+; AVX1-NEXT:    vmovss %xmm1, (%rdi)
+; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: fptoui_floor_multi_use:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm1
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512F-NEXT:    vmovss %xmm1, (%rdi)
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: fptoui_floor_multi_use:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm1
+; AVX512FP16-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512FP16-NEXT:    vmovss %xmm1, (%rdi)
+; AVX512FP16-NEXT:    retq
+  %floor = call float @llvm.floor.f32(float %x)
+  %cvt = fptoui float %floor to i32
+  store float %floor, ptr %p
+  ret i32 %cvt
+}
+
+define float @fptoui_floor_tailcall(float %x, ptr %p) nounwind {
+; SSE2-LABEL: fptoui_floor_tailcall:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    cvttss2si %xmm0, %rax
+; SSE2-NEXT:    movl %eax, (%rdi)
+; SSE2-NEXT:    jmp floorf@PLT # TAILCALL
+;
+; SSE41-LABEL: fptoui_floor_tailcall:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm1
+; SSE41-NEXT:    cvttss2si %xmm0, %rax
+; SSE41-NEXT:    movl %eax, (%rdi)
+; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: fptoui_floor_tailcall:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vcvttss2si %xmm0, %rax
+; AVX1-NEXT:    movl %eax, (%rdi)
+; AVX1-NEXT:    vmovaps %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512F-LABEL: fptoui_floor_tailcall:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm1
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512F-NEXT:    movl %eax, (%rdi)
+; AVX512F-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512FP16-LABEL: fptoui_floor_tailcall:
+; AVX512FP16:       ## %bb.0:
+; AVX512FP16-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm1
+; AVX512FP16-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512FP16-NEXT:    movl %eax, (%rdi)
+; AVX512FP16-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512FP16-NEXT:    retq
+  %floor = call float @llvm.floor.f32(float %x)
+  %cvt = fptoui float %floor to i32
+  store i32 %cvt, ptr %p
+  ret float %floor
+}
+
+declare float @llvm.floor.f32(float)
