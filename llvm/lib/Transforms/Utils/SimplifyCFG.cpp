@@ -7769,17 +7769,15 @@ static bool foldSwitchOnConstTableLoad(SwitchInst *SI, IRBuilder<> &Builder,
   // Create replacements for the PHIs at the destination.
   Function *Fn = SI->getFunction();
   Module &M = *Fn->getParent();
-  Type *IndexTy = LIOperand.Index->getType();
+  IntegerType *IndexTy = cast<IntegerType>(LIOperand.Index->getType());
   SmallVector<SwitchReplacement, 4> Replacements;
   for (auto [PhiIdx, PHI] : enumerate(PHIs)) {
     SmallVector<std::pair<ConstantInt *, Constant *>, 64> Values;
     for (auto [I, Results] : enumerate(EltResults))
-      Values.emplace_back(cast<ConstantInt>(ConstantInt::get(IndexTy, I)),
-                          Results[PhiIdx].second);
+      Values.emplace_back(ConstantInt::get(IndexTy, I), Results[PhiIdx].second);
     Constant *Poison = PoisonValue::get(PHI->getType());
-    SwitchReplacement Replacement(
-        M, NumElts, cast<ConstantInt>(ConstantInt::get(IndexTy, 0)), Values,
-        Poison, DL, TTI, Fn->getName());
+    SwitchReplacement Replacement(M, NumElts, ConstantInt::get(IndexTy, 0),
+                                  Values, Poison, DL, TTI, Fn->getName());
     if (!Replacement.isValid())
       return false;
     Replacements.emplace_back(Replacement);
