@@ -30,7 +30,7 @@ end subroutine
 subroutine s_inverted(u1)
   unsigned(1), intent(in) :: u1
   select case (u1)
-  !WARNING: CASE has lower bound greater than upper bound
+  !WARNING: CASE has lower bound greater than upper bound [-Wempty-case]
   case (200u_1:99u_1)
   end select
 end subroutine
