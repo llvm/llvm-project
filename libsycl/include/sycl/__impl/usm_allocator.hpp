@@ -101,8 +101,8 @@ public:
   template <class U, usm::alloc AllocKindU, std::size_t AlignmentU>
   friend bool operator==(const usm_allocator<T, AllocKind, Alignment> &lhs,
                          const usm_allocator<U, AllocKindU, AlignmentU> &rhs) {
-    return AllocKind == AllocKindU && Alignment == AlignmentU &&
-           lhs.MContext == rhs.MContext && lhs.MDevice == rhs.MDevice;
+    return AllocKind == AllocKindU && lhs.MContext == rhs.MContext &&
+           lhs.MDevice == rhs.MDevice;
   }
 
   template <class U, usm::alloc AllocKindU, std::size_t AlignmentU>
