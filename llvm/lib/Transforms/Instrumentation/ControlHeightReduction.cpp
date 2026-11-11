@@ -803,8 +803,13 @@ CHRScope * CHR::findScope(Region *R) {
       // later.
       for (Instruction &I : *BB) {
         if (auto *SI = dyn_cast<SelectInst>(&I)) {
-          Selects.push_back(SI);
-          ++Stats.NumBranches;
+          // The fixupBranchesAndSelects function tries to merge
+          // the condition of select instruction with 'i1 true', which
+          // fails for non-integer condition type.
+          if (SI->getCondition()->getType()->isIntegerTy()) {
+            Selects.push_back(SI);
+            ++Stats.NumBranches;
+          }
         }
       }
     }

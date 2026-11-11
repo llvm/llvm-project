@@ -339,21 +339,13 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
       IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
+      DebuggerTuning(MMI->getModule()->getDebuggerTuning()),
       InfoHolder(A, "info_string", DIEValueAllocator) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
-  // Make sure we know our "debugger tuning".  The target option takes
-  // precedence; fall back to triple-based defaults.
-  if (Asm->TM.Options.DebuggerTuning != DebuggerKind::Default)
-    DebuggerTuning = Asm->TM.Options.DebuggerTuning;
-  else if (IsDarwin)
-    DebuggerTuning = DebuggerKind::LLDB;
-  else if (TT.isPS())
-    DebuggerTuning = DebuggerKind::SCE;
-  else if (TT.isOSAIX())
-    DebuggerTuning = DebuggerKind::DBX;
-  else
-    DebuggerTuning = DebuggerKind::GDB;
+  // Emit call-site-param debug info for GDB and LLDB, if the target supports
+  // the debug entry values feature. It can also be enabled explicitly.
+  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues(DebuggerTuning);
 
   if (DwarfInlinedStrings == Default)
     UseInlineStrings = tuneForDBX();
@@ -423,10 +415,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // offsets table used by the pre-DWARF v5 split-DWARF implementation uses
   // a monolithic string offsets table without any header.
   UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
-
-  // Emit call-site-param debug info for GDB and LLDB, if the target supports
-  // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
 
   // It is unclear if the GCC .debug_macro extension is well-specified
   // for split DWARF. For now, do not allow LLVM to emit it.
@@ -1505,6 +1493,14 @@ void DwarfDebug::endModule() {
   PrevCU = nullptr;
   assert(CurFn == nullptr);
   assert(CurMI == nullptr);
+
+  // All functions have been processed, so it is known now which subprograms
+  // have abstract DIEs. Move DIEs of function-local entities created while
+  // processing functions to their final parents.
+  AllFunctionsProcessed = true;
+  for (DwarfFile *Holder : {&InfoHolder, &SkeletonHolder})
+    for (const auto &CU : Holder->getUnits())
+      CU->resolvePendingLocalScopeDIEs();
 
   const Module *M = MMI->getModule();
 
@@ -3276,6 +3272,17 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
   if (!DwarfExpr.canAddGlobalAddress() &&
       any_of(Value.getLocEntries(), [](const DbgValueLocEntry &Entry) {
         return Entry.isGlobalAddress();
+      }))
+    return;
+
+  // DW_OP_LLVM_implicit_pointer is only lowered for single-location variables
+  // (see DwarfCompileUnit::emitImplicitPointerLocation). In a location list,
+  // bail before anything is written, otherwise the register part of the
+  // location gets emitted without the implicit pointer and describes the
+  // wrong thing. The range is dropped instead, i.e. optimized out there.
+  if (DIExpr &&
+      any_of(DIExpr->expr_ops(), [](const DIExpression::ExprOperand &Op) {
+        return Op.getOp() == dwarf::DW_OP_LLVM_implicit_pointer;
       }))
     return;
 

@@ -1,8 +1,8 @@
 if(LIBC_TESTS_CAN_USE_MPFR OR LIBC_TESTS_CAN_USE_MPC)
   add_library(libc.utils.MPCommon STATIC
-    MPCommon.cpp
-    MPCommon.h
-    mpfr_inc.h
+      MPCommon.cpp
+      MPCommon.h
+      mpfr_inc.h
   )
   _get_common_test_compile_options(compile_options "" "")
   # mpfr/gmp headers do not work with -ffreestanding flag.
@@ -35,8 +35,8 @@ endif()
 
 if(LIBC_TESTS_CAN_USE_MPFR)
   add_library(libc.utils.MPFRWrapper STATIC
-    MPFRUtils.cpp
-    MPFRUtils.h
+      MPFRUtils.cpp
+      MPFRUtils.h
   )
   _get_common_test_compile_options(compile_options "" "")
   # mpfr/gmp headers do not work with -ffreestanding flag.

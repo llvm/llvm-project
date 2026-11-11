@@ -35,7 +35,6 @@ name:            cmn_s32_rhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -66,7 +65,6 @@ name:            cmn_s32_lhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -97,7 +95,6 @@ name:            no_cmn_s32_rhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -129,7 +126,6 @@ name:            no_cmn_s32_lhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -161,7 +157,6 @@ name:            cmn_s64_rhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -192,7 +187,6 @@ name:            cmn_s64_lhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -223,7 +217,6 @@ name:            no_cmn_s64_rhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -255,7 +248,6 @@ name:            no_cmn_s64_lhs
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -287,7 +279,6 @@ name:            tst_s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -317,7 +308,6 @@ name:            tst_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -347,7 +337,6 @@ name:            no_tst_unsigned_compare
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -378,7 +367,6 @@ name:            no_tst_nonzero
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -409,7 +397,6 @@ name:            imm_tst
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -442,7 +429,6 @@ name:            no_imm_tst_not_logical_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -475,7 +461,6 @@ name:            test_physreg_copy
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -503,7 +488,6 @@ name:            tst_fold_shift_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -534,7 +518,6 @@ name:            tst_fold_shift_s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -565,7 +548,6 @@ name:            cmn_s32_neg_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -592,7 +574,6 @@ name:            cmn_arith_extended_shl
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $x0, $x1
