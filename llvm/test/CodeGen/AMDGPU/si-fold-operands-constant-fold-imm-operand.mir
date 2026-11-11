@@ -113,3 +113,152 @@ body:             |
     SI_RETURN_TO_EPILOG %0
 
 ...
+
+# S_AND_B64 x, -1 -> COPY x. tryConstantFoldOp already does this for B32.
+---
+name: s_and_b64_neg1_to_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: s_and_b64_neg1_to_copy
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[COPY]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[COPY1]]
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64 = S_AND_B64 %0, -1, implicit-def dead $scc
+    SI_RETURN_TO_EPILOG %1
+...
+
+# s_and vcc, exec, -1 -> copy exec (SOP2 -> SOP1).
+---
+name: s_and_b64_exec_neg1_to_copy_exec
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: s_and_b64_exec_neg1_to_copy_exec
+    ; CHECK: $vcc = COPY $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc
+    $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    S_ENDPGM 0, implicit $vcc
+...
+
+# S_AND_B64 x, 0 -> S_MOV_B64 0.
+---
+name: s_and_b64_zero_to_mov
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: s_and_b64_zero_to_mov
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[S_MOV_B64_]]
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64 = S_AND_B64 %0, 0, implicit-def dead $scc
+    SI_RETURN_TO_EPILOG %1
+...
+
+# s_and vcc, exec, 0 -> s_mov vcc, 0.
+---
+name: s_and_b64_exec_zero_to_mov
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: s_and_b64_exec_zero_to_mov
+    ; CHECK: $vcc = S_MOV_B64 0
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc
+    $vcc = S_AND_B64 $exec, 0, implicit-def dead $scc
+    S_ENDPGM 0, implicit $vcc
+...
+
+# Commuted: immediate in src0.
+---
+name: s_and_b64_neg1_exec_commuted
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: s_and_b64_neg1_exec_commuted
+    ; CHECK: $vcc = COPY $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc
+    $vcc = S_AND_B64 -1, $exec, implicit-def dead $scc
+    S_ENDPGM 0, implicit $vcc
+...
+
+# Materialized 0, not an inline immediate.
+---
+name: s_and_b64_exec_mov0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: s_and_b64_exec_mov0
+    ; CHECK: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; CHECK-NEXT: $vcc = COPY [[S_MOV_B64_]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc
+    %0:sreg_64 = S_MOV_B64 0
+    %1:sreg_64 = S_AND_B64 $exec, %0, implicit-def dead $scc
+    $vcc = COPY %1
+    S_ENDPGM 0, implicit $vcc
+...
+
+# Negative: SCC of the AND is live.
+---
+name: s_and_b64_exec_neg1_scc_live
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: s_and_b64_exec_neg1_scc_live
+    ; CHECK: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, -1, implicit-def $scc
+    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    ; CHECK-NEXT: $vcc = COPY [[S_AND_B64_]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vcc, implicit [[S_CSELECT_B32_]]
+    %0:sreg_64 = S_AND_B64 $exec, -1, implicit-def $scc
+    %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    $vcc = COPY %0
+    S_ENDPGM 0, implicit $vcc, implicit %1
+...
+
+# Negative: 0x8000000000000000 truncated to i32 is 0, but AND is neither 0 nor identity.
+---
+name: s_and_b64_signbit_not_folded
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: s_and_b64_signbit_not_folded
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 -9223372036854775808
+    ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B64_]], implicit-def dead $scc
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[S_AND_B64_]]
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64 = S_MOV_B64 -9223372036854775808
+    %2:sreg_64 = S_AND_B64 %0, %1, implicit-def dead $scc
+    SI_RETURN_TO_EPILOG %2
+...
+
+# Negative: 0xffffffff truncated to i32 is -1, but high bits are 0 so AND is not identity.
+---
+name: s_and_b64_low32ones_not_folded
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: s_and_b64_low32ones_not_folded
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4294967295
+    ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], [[S_MOV_B64_]], implicit-def dead $scc
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG [[S_AND_B64_]]
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64 = S_MOV_B64 4294967295
+    %2:sreg_64 = S_AND_B64 %0, %1, implicit-def dead $scc
+    SI_RETURN_TO_EPILOG %2
+...
+

@@ -172,14 +172,10 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Match:
-  // sreg = -1 or 0
-  // vcc = S_AND_B64 exec, sreg or S_ANDN2_B64 exec, sreg
+  // vcc = S_AND exec, 0/-1 (or S_ANDN2)  /  S_MOV 0  /  S_MOV|COPY exec
   // S_CBRANCH_VCC[N]Z
   // =>
   // S_CBRANCH_EXEC[N]Z
-  // We end up with this pattern sometimes after basic block placement.
-  // It happens while combining a block which assigns -1 or 0 to a saved mask
-  // and another block which consumes that saved mask and then a branch.
 
   bool Changed = false;
   MachineBasicBlock &MBB = *MI.getParent();
@@ -201,8 +197,9 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     if (A->modifiesRegister(ExecReg, TRI))
       return false;
     if (A->modifiesRegister(CondReg, TRI)) {
+      unsigned Opc = A->getOpcode();
       if (!A->definesRegister(CondReg, TRI) ||
-          (A->getOpcode() != And && A->getOpcode() != AndN2))
+          (Opc != And && Opc != AndN2 && Opc != Mov && Opc != AMDGPU::COPY))
         return false;
       break;
     }
@@ -211,70 +208,82 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   if (A == E)
     return false;
 
-  MachineOperand &Op1 = A->getOperand(1);
-  MachineOperand &Op2 = A->getOperand(2);
-  if ((!Op1.isReg() || Op1.getReg() != ExecReg) && Op2.isReg() &&
-      Op2.getReg() == ExecReg) {
-    TII->commuteInstruction(*A);
-    Changed = true;
-  }
-  if (!Op1.isReg() || Op1.getReg() != ExecReg)
-    return Changed;
-  if (Op2.isImm() && !(Op2.getImm() == -1 || Op2.getImm() == 0))
-    return Changed;
-
   int64_t MaskValue = 0;
   Register SReg;
-  if (Op2.isReg()) {
-    SReg = Op2.getReg();
-    auto M = std::next(A);
-    bool ReadsSreg = false;
-    for (; M != E; ++M) {
-      if (M->definesRegister(SReg, TRI))
-        break;
-      if (M->modifiesRegister(SReg, TRI))
-        return Changed;
-      ReadsSreg |= M->readsRegister(SReg, TRI);
-    }
-    if (M == E)
-      return Changed;
-
-    if (!M->isMoveImmediate() || !M->getOperand(1).isImm() ||
-        (M->getOperand(1).getImm() != -1 && M->getOperand(1).getImm() != 0))
-      return Changed;
-    MaskValue = M->getOperand(1).getImm();
-    // First if sreg is only used in the AND instruction fold the immediate
-    // into the AND.
-    if (!ReadsSreg && Op2.isKill()) {
-      A->getOperand(2).ChangeToImmediate(MaskValue);
-      M->eraseFromParent();
-    }
-  } else if (Op2.isImm()) {
-    MaskValue = Op2.getImm();
+  const unsigned Opc = A->getOpcode();
+  if (Opc == Mov || Opc == AMDGPU::COPY) {
+    // Already-folded AND: s_mov vcc, 0  or  s_mov/copy vcc, exec.
+    const MachineOperand &Src = A->getOperand(1);
+    if (Src.isImm() && (Src.getImm() == 0 || Src.getImm() == -1))
+      MaskValue = Src.getImm();
+    else if (Src.isReg() && Src.getReg() == ExecReg)
+      MaskValue = -1;
+    else
+      return false;
+    if (!ReadsCond && MI.killsRegister(CondReg, TRI))
+      A->eraseFromParent();
   } else {
-    llvm_unreachable("Op2 must be register or immediate");
-  }
-
-  // Invert mask for s_andn2
-  assert(MaskValue == 0 || MaskValue == -1);
-  if (A->getOpcode() == AndN2)
-    MaskValue = ~MaskValue;
-
-  if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC, /*TRI=*/nullptr)) {
-    if (!MI.killsRegister(CondReg, TRI)) {
-      // Replace AND with MOV
-      if (MaskValue == 0) {
-        BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
-            .addImm(0);
-      } else {
-        BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
-            .addReg(ExecReg);
-      }
+    MachineOperand &Op1 = A->getOperand(1);
+    MachineOperand &Op2 = A->getOperand(2);
+    if ((!Op1.isReg() || Op1.getReg() != ExecReg) && Op2.isReg() &&
+        Op2.getReg() == ExecReg) {
+      TII->commuteInstruction(*A);
+      Changed = true;
     }
-    // Remove AND instruction
-    A->eraseFromParent();
-  }
+    if (!Op1.isReg() || Op1.getReg() != ExecReg)
+      return Changed;
+    if (Op2.isImm() && !(Op2.getImm() == -1 || Op2.getImm() == 0))
+      return Changed;
+    if (Op2.isReg()) {
+      SReg = Op2.getReg();
+      auto M = std::next(A);
+      bool ReadsSreg = false;
+      for (; M != E; ++M) {
+        if (M->definesRegister(SReg, TRI))
+          break;
+        if (M->modifiesRegister(SReg, TRI))
+          return Changed;
+        ReadsSreg |= M->readsRegister(SReg, TRI);
+      }
+      if (M == E)
+        return Changed;
 
+      if (!M->isMoveImmediate() || !M->getOperand(1).isImm() ||
+          (M->getOperand(1).getImm() != -1 && M->getOperand(1).getImm() != 0))
+        return Changed;
+      MaskValue = M->getOperand(1).getImm();
+      // First if sreg is only used in the AND instruction fold the immediate
+      // into the AND.
+      if (!ReadsSreg && Op2.isKill()) {
+        A->getOperand(2).ChangeToImmediate(MaskValue);
+        M->eraseFromParent();
+      }
+    } else if (Op2.isImm()) {
+      MaskValue = Op2.getImm();
+    } else {
+      llvm_unreachable("Op2 must be register or immediate");
+    }
+
+    // Invert mask for s_andn2
+    assert(MaskValue == 0 || MaskValue == -1);
+    if (Opc == AndN2)
+      MaskValue = ~MaskValue;
+
+    if (!ReadsCond && A->registerDefIsDead(AMDGPU::SCC, /*TRI=*/nullptr)) {
+      if (!MI.killsRegister(CondReg, TRI)) {
+        // Replace AND with MOV
+        if (MaskValue == 0) {
+          BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
+              .addImm(0);
+        } else {
+          BuildMI(*A->getParent(), *A, A->getDebugLoc(), TII->get(Mov), CondReg)
+              .addReg(ExecReg);
+        }
+      }
+      // Remove AND instruction
+      A->eraseFromParent();
+    }
+  }
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
   if (SReg == ExecReg) {
     // EXEC is updated directly

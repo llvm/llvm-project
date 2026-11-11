@@ -176,7 +176,7 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    s_cmpk_lt_i32 s0, 0x3e8
 ; SI-NEXT:    s_cbranch_scc0 .LBB3_4
 ; SI-NEXT:  ; %bb.2: ; %for.body
-; SI-NEXT:    s_and_b64 vcc, exec, -1
+; SI-NEXT:    s_mov_b64 vcc, exec
 ; SI-NEXT:  .LBB3_3: ; %self.loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    s_mov_b64 vcc, vcc
@@ -196,7 +196,7 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    s_cmpk_lt_i32 s0, 0x3e8
 ; FLAT-NEXT:    s_cbranch_scc0 .LBB3_4
 ; FLAT-NEXT:  ; %bb.2: ; %for.body
-; FLAT-NEXT:    s_and_b64 vcc, exec, -1
+; FLAT-NEXT:    s_mov_b64 vcc, exec
 ; FLAT-NEXT:  .LBB3_3: ; %self.loop
 ; FLAT-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; FLAT-NEXT:    s_mov_b64 vcc, vcc

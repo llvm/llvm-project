@@ -9,11 +9,11 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX90A:       ; %bb.0: ; %entry
 ; GFX90A-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX90A-NEXT:    s_mov_b32 s2, 0
-; GFX90A-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX90A-NEXT:    s_mov_b32 s3, 0
 ; GFX90A-NEXT:    s_mov_b32 s4, 0
 ; GFX90A-NEXT:    s_mov_b32 s5, 0
 ; GFX90A-NEXT:    s_mov_b32 s6, 0
+; GFX90A-NEXT:    s_mov_b64 vcc, exec
 ; GFX90A-NEXT:  .LBB0_1: ; %for.body
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
@@ -57,11 +57,11 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX942-NEXT:    s_mov_b32 s2, 0
-; GFX942-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX942-NEXT:    s_mov_b32 s3, 0
 ; GFX942-NEXT:    s_mov_b32 s4, 0
 ; GFX942-NEXT:    s_mov_b32 s5, 0
 ; GFX942-NEXT:    s_mov_b32 s6, 0
+; GFX942-NEXT:    s_mov_b64 vcc, exec
 ; GFX942-NEXT:  .LBB0_1: ; %for.body
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
