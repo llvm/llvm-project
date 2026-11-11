@@ -17651,9 +17651,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               TTI::getCastContextHint(I), CostKind, I);
           continue;
         }
+        // An interchangeable lane, like add %x, 0 in the shl node, is costed as
+        // its own scalar instruction.
         assert(is_contained(
                    {Instruction::And, Instruction::LShr, Instruction::Shl},
-                   I->getOpcode()) &&
+                   TE->getMatchingMainOpOrAltOp(I)->getOpcode()) &&
                "Expected and/shift in the bit pack.");
         ScalarCost += TTI.getArithmeticInstrCost(
             I->getOpcode(), I->getType(), CostKind,
