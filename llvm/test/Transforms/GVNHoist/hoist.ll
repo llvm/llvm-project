@@ -4,6 +4,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @GlobalVar = internal global float 1.000000e+00
+@LoadedVar = external global i32
+@StoredVar = external global i32
 
 ; Check that all scalar expressions are hoisted.
 define float @scalarsHoisting(float %d, float %min, float %max, float %a) {
@@ -883,6 +885,51 @@ c:
 x:
   %r2 = load i8, ptr %word, align 1
   ret i8 %r2
+}
+
+; The loads in left.a and left.b are hoisted into left first. The store in left
+; does not alias @LoadedVar, so the merged load must keep its optimized
+; MemorySSA clobber and be hoisted with the load in right into entry.
+define i32 @hoistLoadPastNoAliasStore(i1 %c, i1 %d) {
+; CHECK-LABEL: @hoistLoadPastNoAliasStore(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LA:%.*]] = load i32, ptr @LoadedVar, align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    store i32 0, ptr @StoredVar, align 4
+; CHECK-NEXT:    br i1 [[D:%.*]], label [[LEFT_A:%.*]], label [[LEFT_B:%.*]]
+; CHECK:       left.a:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       left.b:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       right:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[LA]], [[LEFT_A]] ], [ [[LA]], [[LEFT_B]] ], [ [[LA]], [[RIGHT]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  store i32 0, ptr @StoredVar
+  br i1 %d, label %left.a, label %left.b
+
+left.a:
+  %la = load i32, ptr @LoadedVar
+  br label %exit
+
+left.b:
+  %lb = load i32, ptr @LoadedVar
+  br label %exit
+
+right:
+  %lr = load i32, ptr @LoadedVar
+  br label %exit
+
+exit:
+  %r = phi i32 [ %la, %left.a ], [ %lb, %left.b ], [ %lr, %right ]
+  ret i32 %r
 }
 
 ; The hoisted mul replaces the extractvalue of smul.with.overflow, whose result

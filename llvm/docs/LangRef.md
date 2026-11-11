@@ -4135,7 +4135,17 @@ may see any write to the same byte, except:
 -  If R{sub}`byte` happens before write{sub}`3`, then
    R{sub}`byte` does not see write{sub}`3`.
 
-Given that definition, R{sub}`byte` is defined as follows:
+Two accesses form a *data race* if all of the following apply:
+
+-  at least one of them is a write,
+-  they access overlapping sets of bytes,
+-  they are not related by *happens-before*, and
+-  at least one of them is not atomic, or they do not access the exact
+   same set of bytes, or at least one of them specifies a `syncscope` and
+   the accesses do not satisfy the target-specific requirements for that
+   `syncscope`.
+
+Given these definitions, R{sub}`byte` is defined as follows:
 
 -  If R is volatile, the result is target-dependent. (Volatile is
    supposed to give guarantees which can support `sig_atomic_t` in
@@ -4144,19 +4154,18 @@ Given that definition, R{sub}`byte` is defined as follows:
    synchronization.)
 -  Otherwise, if there is no write to the same byte that happens before
    R{sub}`byte`, R{sub}`byte` returns `undef` for that byte.
--  Otherwise, if R{sub}`byte` may see exactly one write,
-   R{sub}`byte` returns the value written by that write.
--  Otherwise, if R is atomic, and all the writes R{sub}`byte` may
-   see are atomic, and R and the writes all access the exact same set of
-   bytes, it chooses one of the values written. See the {ref}`Atomic
-   Memory Ordering Constraints <ordering>` section for additional
-   constraints on how the choice is made. Targets may impose additional
-   requirements on R and the writes it may see based on their `syncscope`.
--  Otherwise R{sub}`byte` returns `undef`.
+-  Otherwise, consider the set consisting of R and all the writes that
+   R{sub}`byte` may see. If any two accesses in that set form a
+   *data race*, R{sub}`byte` returns `undef`.
+-  Otherwise, R{sub}`byte` chooses one of the values written by the
+   writes it may see.
+   See the {ref}`Atomic Memory Ordering Constraints <ordering>` section
+   for additional constraints on how the choice is made.
 
-Atomic accesses cannot tear: If a byte subaccess R{sub}`byte1` of an
-atomic read R reads from an atomic write W, then all other byte
-subaccesses R{sub}`byte2` of R that may see W must also read from W.
+Accesses which return a defined value cannot tear: If a byte subaccess
+R{sub}`byte1` of a read R reads from a write W, then all other byte
+subaccesses R{sub}`byte2` of R that may see W must also read from W or
+return `undef` by the above definition.
 
 R returns the value composed of the series of bytes it read. This
 implies that some bytes within the value may be `undef` **without**
@@ -21880,6 +21889,43 @@ VecT compress(VecT vec, VecT mask, VecT passthru) {
 }
 ```
 
+(int_vector_shuffle)=
+
+#### '`llvm.vector.shuffle.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <8 x i32> @llvm.vector.shuffle.v8i32.v8i8(<8 x i32> %vec, <8 x i8> %mask)
+declare <vscale x 4 x float> @llvm.vector.shuffle.nxv4f32.nxv4i16(<vscale x 4 x float> %vec, <vscale x 4 x i16> %mask)
+```
+
+##### Overview:
+
+The '`llvm.vector.shuffle.*`' intrinsics permute the elements of a vector
+according to a mask that does not need to be a constant.
+
+For example:
+
+```text
+llvm.vector.shuffle(<A,B,C,D>, <3,0,0,7>) ==> <D,A,A,poison>
+```
+
+##### Arguments:
+
+The first operand is the vector to permute. The result has the same type. The
+second operand is the mask, a vector of integers with the same number of
+elements as the first operand.
+
+##### Semantics:
+
+Element `i` of the result is element `%mask[i]` of `%vec`, where `%mask[i]` is
+treated as an unsigned index. If `%mask[i]` is poison, or is greater than or
+equal to the number of elements in `%vec`, element `i` of the result is a
+{ref}`poison value <poisonvalues>`.
+
 #### '`llvm.experimental.vector.match.*`' Intrinsic
 
 ##### Syntax:
@@ -22604,8 +22650,8 @@ operation.
 ##### Semantics:
 
 The '`llvm.vp.sdiv`' intrinsic performs signed division ({ref}`sdiv <i_sdiv>`)
-of the first and second vector arguments on each enabled lane.  The result on
-disabled lanes is a {ref}`poison value <poisonvalues>`.
+of the first and second vector arguments on each enabled or poison lane. The
+result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22646,7 +22692,8 @@ operation.
 
 The '`llvm.vp.udiv`' intrinsic performs unsigned division
 ({ref}`udiv <i_udiv>`) of the first and second vector arguments on each enabled
-lane. The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22687,7 +22734,8 @@ operation.
 
 The '`llvm.vp.srem`' intrinsic computes the remainder of the signed division
 ({ref}`srem <i_srem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22728,7 +22776,8 @@ operation.
 
 The '`llvm.vp.urem`' intrinsic computes the remainder of the unsigned division
 ({ref}`urem <i_urem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
