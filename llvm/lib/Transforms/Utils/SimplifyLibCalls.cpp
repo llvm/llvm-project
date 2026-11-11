@@ -1111,9 +1111,6 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
   unsigned WCharSize = M.getWCharSize();
-  // We cannot perform this optimization without wchar_size metadata.
-  if (WCharSize == 0)
-    return nullptr;
 
   if (Value *V = optimizeStringLength(CI, B, WCharSize * 8))
     return V;
