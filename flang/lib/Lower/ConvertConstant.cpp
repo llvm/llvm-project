@@ -870,6 +870,9 @@ template <Fortran::common::TypeCategory TC>
 static fir::ExtendedValue genConstantValue(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::evaluate::Expr<Fortran::evaluate::Type<TC>> &constantExpr) {
+  static_assert(TC != Fortran::common::TypeCategory::Derived,
+                "Derived must use the non-template overload, which handles "
+                "structure constructors and parentheses");
   using T = Fortran::evaluate::Type<TC>;
   // Initializer folding preserves parentheses around a scalar constant (e.g.
   // "integer :: i = (42)"). UnwrapConstantValue looks through them.
