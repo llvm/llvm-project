@@ -358,10 +358,10 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
   return Error::success();
 }
 
-/// link.exe options are case-insensitive, but the COFF options in the option
-/// table only match lower case, so a '/' spelling in another case, e.g.
-/// '/OUT:', is parsed as an input. Returns the value of option \p Name if
-/// \p Input is such a spelling of it and the host is Windows.
+/// Returns the value of the link.exe option \p Name if \p Input is that option
+/// with a '/' prefix in any case, e.g. "dir" for "/LIBPATH:dir" and "libpath:".
+/// link.exe options are case-insensitive, but the option table only matches
+/// lower case, so other spellings are parsed as inputs. Windows hosts only.
 std::optional<StringRef> getCOFFOptionValue(StringRef Input, StringRef Name,
                                             const Triple &HostTriple) {
   if (!HostTriple.isOSWindows() || !Input.consume_front("/") ||
@@ -370,7 +370,7 @@ std::optional<StringRef> getCOFFOptionValue(StringRef Input, StringRef Name,
   return Input;
 }
 
-/// Returns true if \p Arg names the output file.
+/// Returns true if \p Arg names the output file, e.g. -o, /out: or /OUT:.
 bool isOutputArg(const opt::Arg *Arg, const Triple &HostTriple) {
   return Arg->getOption().matches(OPT_o) || Arg->getOption().matches(OPT_out) ||
          (Arg->getOption().matches(OPT_INPUT) &&
@@ -389,18 +389,19 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
   const Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   ArgStringList NewLinkerArgs;
-  bool AddedFiles = false;
+  bool AddedWrappedFiles = false;
   for (const opt::Arg *Arg : Args) {
     // Do not forward arguments only intended for the linker wrapper.
     if (Arg->getOption().hasFlag(WrapperOnlyOption))
       continue;
 
     Arg->render(Args, NewLinkerArgs);
-    // Add the image once, even if the output is named more than once.
-    if (!AddedFiles && isOutputArg(Arg, HostTriple)) {
+    // Add the wrapped device objects after the first output option only, even
+    // if the output is named more than once.
+    if (!AddedWrappedFiles && isOutputArg(Arg, HostTriple)) {
       llvm::transform(Files, std::back_inserter(NewLinkerArgs),
                       [&](StringRef A) { return Args.MakeArgString(A); });
-      AddedFiles = true;
+      AddedWrappedFiles = true;
     }
   }
 
@@ -814,9 +815,9 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
-  // With --sycl-device-link, the wrapped images are already linked. They must
-  // not be found and linked again if the output goes through another wrapped
-  // host link, so they are embedded as finalized images.
+  // With --sycl-device-link the images are already linked. Embed them as
+  // finalized images, so that a later host link through this tool does not
+  // link them again.
   bool IsFinalizedImage = Kind == OFK_SYCL && Args.hasArg(OPT_sycl_device_link);
 
   // We use the discrete tools if we are in verbose mode with '--save-temps'.
@@ -1134,7 +1135,7 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
   // All inputs are SYCL device code, which is wrapped into a single object.
   assert(WrappedFiles.size() <= 1 && "expected one wrapped SYCL object");
 
-  StringRef File;
+  StringRef WrappedFile;
   if (WrappedFiles.empty()) {
     // No device code was linked. Emit an empty host object with no runtime
     // registration, so the output can still be used in the host link.
@@ -1147,15 +1148,15 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
     auto FileOrErr = compileModule(LibraryOptions, M, OFK_SYCL);
     if (!FileOrErr)
       return FileOrErr.takeError();
-    File = *FileOrErr;
+    WrappedFile = *FileOrErr;
   } else {
-    File = WrappedFiles.front();
+    WrappedFile = WrappedFiles.front();
   }
 
   if (DryRun)
     return Error::success();
 
-  if (std::error_code EC = sys::fs::copy_file(File, ExecutableName))
+  if (std::error_code EC = sys::fs::copy_file(WrappedFile, ExecutableName))
     return createFileError(ExecutableName, EC);
   return Error::success();
 }
@@ -1439,13 +1440,9 @@ getDeviceInput(const ArgList &Args) {
   const llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
-  auto GetCOFFOptionValue = [&](StringRef Input, StringRef Name) {
-    return getCOFFOptionValue(Input, Name, HostTriple);
-  };
-
-  // Libraries are searched in -L and -libpath: paths. Only `link.exe` style
-  // linkers also search -libpath: paths for other inputs. Paths are searched
-  // in command line order.
+  // Collect the search paths in command line order. -L paths are used for -l
+  // libraries. link.exe style -libpath: paths are used for both libraries and
+  // other inputs.
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   SmallVector<StringRef> InputPaths;
@@ -1458,7 +1455,7 @@ getDeviceInput(const ArgList &Args) {
     std::optional<StringRef> Path =
         Arg->getOption().matches(OPT_libpath)
             ? std::optional<StringRef>(Arg->getValue())
-            : GetCOFFOptionValue(Arg->getValue(), "libpath:");
+            : getCOFFOptionValue(Arg->getValue(), "libpath:", HostTriple);
     if (!Path)
       continue;
     LibraryPaths.push_back(*Path);
@@ -1480,33 +1477,38 @@ getDeviceInput(const ArgList &Args) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
-  // Try to extract device code from the linker input files.
+  // Try to extract device code from the linker input files. A bare
+  // '/WHOLEARCHIVE' extracts all archives, like --whole-archive.
   bool WholeArchive =
       Args.hasArg(OPT_wholearchive_flag) ||
       llvm::any_of(Args.filtered(OPT_INPUT), [&](const opt::Arg *Arg) {
         std::optional<StringRef> Rest =
-            GetCOFFOptionValue(Arg->getValue(), "wholearchive");
+            getCOFFOptionValue(Arg->getValue(), "wholearchive", HostTriple);
         return Rest && Rest->empty();
       });
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
   DenseMap<StringRef, StringRef> SourceForImage;
 
-  // With --sycl-device-link no host link runs to report missing inputs, so
-  // report them here. An input right after an option that is not known here
-  // may be the value of a host linker option (e.g. '-z now'), so it is skipped
-  // as in a host link. Without the host linker's options, a file after an
-  // unknown flag option is skipped the same way. The '--' separator is not an
-  // option.
+  // With --sycl-device-link no host linker runs, so report missing inputs here.
+  // This tool does not know every host linker option, so a missing input is
+  // not reported if it may not be a file:
+  // - it follows an unknown option and may be its value, e.g. 'now' in
+  //   '-z now'. A file after an unknown option without a value is also skipped.
+  // - it is a link.exe option, e.g. '/nologo'.
   bool ReportMissingInputs = Args.hasArg(OPT_sycl_device_link);
   DenseSet<unsigned> UnknownOptionIndices;
   for (const opt::Arg *Arg : Args.filtered(OPT_UNKNOWN))
-    if (Arg->getSpelling() != "--")
+    if (Arg->getSpelling() != "--") // '--' ends the options and has no value.
       UnknownOptionIndices.insert(Arg->getIndex());
-  // COFF linker options such as '/nologo' or '/LIBPATH:C:\dir' are parsed as
-  // inputs. Unlike a path, the option name before any ':' has no further path
-  // separator. A missing root-level path such as '/a.obj' looks the same, so it
-  // is not reported.
+  auto FollowsUnknownOption = [&](const opt::Arg *Arg) {
+    return Arg->getIndex() > 0 &&
+           UnknownOptionIndices.contains(Arg->getIndex() - 1);
+  };
+  // link.exe options such as '/nologo' or '/LIBPATH:C:\dir' are parsed as
+  // inputs. Unlike a path, the option name before any ':' has no '/' or '\'.
+  // A missing root-level path such as '/a.obj' looks the same, so it is not
+  // reported.
   auto IsCOFFLinkerOption = [&](StringRef Input) {
     if (!HostTriple.isOSWindows() || !Input.consume_front("/"))
       return false;
@@ -1526,13 +1528,15 @@ getDeviceInput(const ArgList &Args) {
     StringRef Input = Arg->getValue();
     bool IsWholeArchiveFile = Arg->getOption().matches(OPT_wholearchive_file);
     if (Arg->getOption().matches(OPT_INPUT)) {
-      // Upper-case spellings of the COFF options in the option table.
-      std::optional<StringRef> Rest = GetCOFFOptionValue(Input, "wholearchive");
+      // '/WHOLEARCHIVE:file', '/WHOLEARCHIVE' and '/LIBPATH:dir' in a case
+      // other than the option table's lower case.
+      std::optional<StringRef> Rest =
+          getCOFFOptionValue(Input, "wholearchive", HostTriple);
       if (Rest && Rest->consume_front(":")) {
         Input = *Rest;
         IsWholeArchiveFile = true;
       } else if ((Rest && Rest->empty()) ||
-                 GetCOFFOptionValue(Input, "libpath:")) {
+                 getCOFFOptionValue(Input, "libpath:", HostTriple)) {
         // '/WHOLEARCHIVE' or '/LIBPATH:', both handled above. Anything else,
         // e.g. '/wholearchive-dir/a.obj', is an input path.
         continue;
@@ -1548,8 +1552,7 @@ getDeviceInput(const ArgList &Args) {
       return createStringError("unable to find library -l%s", Arg->getValue());
 
     if (!Filename || !sys::fs::exists(*Filename)) {
-      if (ReportMissingInputs &&
-          !UnknownOptionIndices.contains(Arg->getIndex() - 1) &&
+      if (ReportMissingInputs && !FollowsUnknownOption(Arg) &&
           !IsCOFFLinkerOption(Input))
         return createFileError(
             Filename ? *Filename : Input,
@@ -1779,7 +1782,7 @@ int main(int Argc, char **Argv) {
       if (EmitFatbinOnly)
         reportError(createStringError(
             "--sycl-device-link cannot be used with --emit-fatbin-only"));
-      auto CheckKind = [](OffloadKind Kind) {
+      auto CheckIsSYCL = [](OffloadKind Kind) {
         if (Kind != OFK_SYCL)
           reportError(createStringError(
               "--sycl-device-link requires SYCL device code, got '" +
@@ -1787,9 +1790,9 @@ int main(int Argc, char **Argv) {
       };
       for (const SmallVector<OffloadFile> &Files : *DeviceInputFiles)
         for (const OffloadFile &File : Files)
-          CheckKind(File.getBinary()->getOffloadKind());
+          CheckIsSYCL(File.getBinary()->getOffloadKind());
       for (StringRef Override : Args.getAllArgValues(OPT_override_image))
-        CheckKind(getOffloadKind(Override.split('=').first));
+        CheckIsSYCL(getOffloadKind(Override.split('=').first));
     }
 
     // Link and process the device images. The function may emit a direct fat
