@@ -1,4 +1,4 @@
-SAME Because -dump-input-filter=error includes a failed directive's search range,
+; Because -dump-input-filter=error includes a failed directive's search range,
 ; input lines 1 and 62 below are revealed, and -dump-input-context=2 reveals the
 ; surrounding lines.  Even with only line 1, it looks like the host list
 ; includes a GPU triple.  Line 62 and its context reveals we have an
