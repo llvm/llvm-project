@@ -388,6 +388,25 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
       collectMacroReferences(AST);
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
+  auto MarkUsed = [&](const include_cleaner::Include &Inc) {
+    const IncludeStructure &Includes = AST.getIncludeStructure();
+    if (auto HeaderID = Includes.getID(&Inc.Resolved->getFileEntry())) {
+      Used.insert(*HeaderID);
+      return;
+    }
+    // convertIncludes() looks up each include by its canonical path. The
+    // preamble's stat cache is keyed by the path the header was included by,
+    // which differs if e.g. the include directory is a symlink. If the header
+    // was replaced on disk since a stale preamble was built, we then see a
+    // file whose UniqueID is unknown to the IncludeStructure. Use the HeaderID
+    // recorded for the #include on the same line instead.
+    for (const Inclusion &MFI : Includes.MainFileIncludes) {
+      if (MFI.HeaderID && unsigned(MFI.HashLine + 1) == Inc.Line) {
+        Used.insert(static_cast<IncludeStructure::HeaderID>(*MFI.HeaderID));
+        return;
+      }
+    }
+  };
   trace::Span Tracer("include_cleaner::walkUsed");
   OptionalDirectoryEntryRef ResourceDir = AST.getPreprocessor()
                                               .getHeaderSearchInfo()
@@ -408,11 +427,7 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
           }
           for (auto *Inc : ConvertedIncludes.match(H)) {
             Satisfied = true;
-            auto HeaderID =
-                AST.getIncludeStructure().getID(&Inc->Resolved->getFileEntry());
-            assert(HeaderID.has_value() &&
-                   "ConvertedIncludes only contains resolved includes.");
-            Used.insert(*HeaderID);
+            MarkUsed(*Inc);
           }
         }
 
@@ -431,11 +446,7 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
         for (auto *Inc :
              ConvertedIncludes.match(include_cleaner::Header{Spelling})) {
           Satisfied = true;
-          auto HeaderID =
-              AST.getIncludeStructure().getID(&Inc->Resolved->getFileEntry());
-          assert(HeaderID.has_value() &&
-                 "ConvertedIncludes only contains resolved includes.");
-          Used.insert(*HeaderID);
+          MarkUsed(*Inc);
         }
         if (Satisfied)
           return;
