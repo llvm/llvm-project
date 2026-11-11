@@ -54,11 +54,6 @@ static cl::opt<unsigned>
     LargeStrideThresh("amdgpu-large-stride-threshold", cl::init(64), cl::Hidden,
                       cl::desc("Large stride memory access threshold"));
 
-static cl::opt<unsigned>
-    LDSContentionThreshold("amdgpu-lds-contention-threshold", cl::init(50),
-                           cl::Hidden,
-                           cl::desc("Function mem bound threshold in %"));
-
 STATISTIC(NumMemBound, "Number of functions marked as memory bound");
 STATISTIC(NumLimitWave, "Number of functions marked as needing limit wave");
 
@@ -75,6 +70,8 @@ public:
   bool runOnFunction(Function &F);
 
 private:
+  static constexpr unsigned LDSContentionThreshold = 50;
+
   struct MemAccessInfo {
     const Value *V = nullptr;
     const Value *Base = nullptr;
