@@ -98,14 +98,14 @@ void atomic_compare_fmax_f32() {
 // DEFAULT-SAME: ) #[[ATTR0]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspacecast (ptr addrspace(1) @iv to ptr), align 4
-// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw max ptr addrspacecast (ptr addrspace(1) @ix to ptr), i32 [[TMP0]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw max ptr addrspacecast (ptr addrspace(1) @ix to ptr), i32 [[TMP0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // DEFAULT-NEXT:    ret void
 //
 // UNSAFE-FP-ATOMICS-LABEL: define hidden void @_Z22atomic_compare_max_i32v(
 // UNSAFE-FP-ATOMICS-SAME: ) #[[ATTR0]] {
 // UNSAFE-FP-ATOMICS-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspacecast (ptr addrspace(1) @iv to ptr), align 4
-// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw max ptr addrspacecast (ptr addrspace(1) @ix to ptr), i32 [[TMP0]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw max ptr addrspacecast (ptr addrspace(1) @ix to ptr), i32 [[TMP0]] syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // UNSAFE-FP-ATOMICS-NEXT:    ret void
 //
 void atomic_compare_max_i32() {
@@ -120,7 +120,7 @@ enum { ompx_fast_fp_atomics = 1 << 19, ompx_safe_fp_atomics = 1 << 20 };
 // DEFAULT-SAME: ) #[[ATTR0]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // DEFAULT-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // DEFAULT-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // DEFAULT-NEXT:    ret void
@@ -129,7 +129,7 @@ enum { ompx_fast_fp_atomics = 1 << 19, ompx_safe_fp_atomics = 1 << 20 };
 // UNSAFE-FP-ATOMICS-SAME: ) #[[ATTR0]] {
 // UNSAFE-FP-ATOMICS-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode [[META4]], !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // UNSAFE-FP-ATOMICS-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // UNSAFE-FP-ATOMICS-NEXT:    ret void
@@ -143,7 +143,7 @@ void atomic_fadd_f32_fast_hint() {
 // DEFAULT-SAME: ) #[[ATTR0]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // DEFAULT-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // DEFAULT-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // DEFAULT-NEXT:    ret void
@@ -152,7 +152,7 @@ void atomic_fadd_f32_fast_hint() {
 // UNSAFE-FP-ATOMICS-SAME: ) #[[ATTR0]] {
 // UNSAFE-FP-ATOMICS-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // UNSAFE-FP-ATOMICS-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // UNSAFE-FP-ATOMICS-NEXT:    ret void
@@ -166,7 +166,7 @@ void atomic_fadd_f32_safe_hint() {
 // DEFAULT-SAME: ) #[[ATTR0]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// DEFAULT-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // DEFAULT-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // DEFAULT-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // DEFAULT-NEXT:    ret void
@@ -175,7 +175,7 @@ void atomic_fadd_f32_safe_hint() {
 // UNSAFE-FP-ATOMICS-SAME: ) #[[ATTR0]] {
 // UNSAFE-FP-ATOMICS-NEXT:  [[ENTRY:.*:]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[TMP0:%.*]] = load float, ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
-// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// UNSAFE-FP-ATOMICS-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr addrspacecast (ptr addrspace(1) @fx to ptr), float [[TMP0]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
 // UNSAFE-FP-ATOMICS-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP0]]
 // UNSAFE-FP-ATOMICS-NEXT:    store float [[ADD]], ptr addrspacecast (ptr addrspace(1) @fv to ptr), align 4
 // UNSAFE-FP-ATOMICS-NEXT:    ret void
