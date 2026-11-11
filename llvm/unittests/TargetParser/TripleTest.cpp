@@ -1706,7 +1706,7 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("powerpcle-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::PPCDoubleDouble,
             Triple("powerpcle-unknown-linux").getDefaultLongDoubleFormat());
-  // ... except on AIX, FreeBSD, OpenBSD, and Musl, which use IEEE double.
+  // ... except on AIX, FreeBSD, OpenBSD, SPE, and Musl, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("powerpc-ibm-aix").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
@@ -1715,6 +1715,9 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("powerpc64-unknown-freebsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("powerpc64-unknown-openbsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEdouble,
+      Triple("powerpcspe-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(
       LongDoubleFormat::IEEEdouble,
       Triple("powerpc64-unknown-linux-musl").getDefaultLongDoubleFormat());
