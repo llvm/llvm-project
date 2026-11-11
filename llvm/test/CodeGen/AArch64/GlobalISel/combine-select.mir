@@ -582,7 +582,7 @@ body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3, $x4
     ; CHECK-LABEL: name: select_failed_icmp_ugt_t_f_t_f_umax_t_f
-    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: liveins: $x0, $x1, $x2, $x3, $x4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1

@@ -7,7 +7,9 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fminimum_half
-    ; CHECK: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
     ; CHECK-NEXT: $h0 = COPY [[C]](f16)
     %0:_(f16) = COPY $h0
     %1:_(f16) = G_FCONSTANT half 0xH7C01
@@ -20,7 +22,9 @@ body:             |
   bb.1:
   liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fminimum_float
-    ; CHECK: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
     ; CHECK-NEXT: $w0 = COPY [[C]](f32)
     %0:_(f32) = COPY $w0
     %1:_(f32) = G_FCONSTANT float 0x7FF8000000000000
@@ -33,7 +37,9 @@ body:             |
   bb.1:
   liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fminimum_double
-    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
     ; CHECK-NEXT: $x0 = COPY [[C]](f64)
     %0:_(f64) = COPY $x0
     %1:_(f64) = G_FCONSTANT double 0x7FF8000000000000
@@ -46,7 +52,9 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fminimum_half
-    ; CHECK: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
     ; CHECK-NEXT: $h0 = COPY [[C]](f16)
     %0:_(f16) = COPY $h0
     %1:_(f16) = G_FCONSTANT half 0xH7C01
@@ -59,7 +67,9 @@ body:             |
   bb.1:
   liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fminimum_float
-    ; CHECK: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
     ; CHECK-NEXT: $w0 = COPY [[C]](f32)
     %0:_(f32) = COPY $w0
     %1:_(f32) = G_FCONSTANT float 0x7FF8000000000000
@@ -72,7 +82,9 @@ body:             |
   bb.1:
   liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fminimum_double
-    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
     ; CHECK-NEXT: $x0 = COPY [[C]](f64)
     %0:_(f64) = COPY $x0
     %1:_(f64) = G_FCONSTANT double 0x7FF8000000000000
@@ -85,7 +97,9 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fmaximum_half
-    ; CHECK: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
     ; CHECK-NEXT: $h0 = COPY [[C]](f16)
     %0:_(f16) = COPY $h0
     %1:_(f16) = G_FCONSTANT half 0xH7C01
@@ -98,7 +112,9 @@ body:             |
   bb.1:
   liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fmaximum_float
-    ; CHECK: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
     ; CHECK-NEXT: $w0 = COPY [[C]](f32)
     %0:_(f32) = COPY $w0
     %1:_(f32) = G_FCONSTANT float 0x7FF8000000000000
@@ -111,7 +127,9 @@ body:             |
   bb.1:
   liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fmaximum_double
-    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
     ; CHECK-NEXT: $x0 = COPY [[C]](f64)
     %0:_(f64) = COPY $x0
     %1:_(f64) = G_FCONSTANT double 0x7FF8000000000000
@@ -124,7 +142,9 @@ body:             |
   bb.1:
   liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fmaximum_half
-    ; CHECK: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
+    ; CHECK: liveins: $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half +snan(0x1)
     ; CHECK-NEXT: $h0 = COPY [[C]](f16)
     %0:_(f16) = COPY $h0
     %1:_(f16) = G_FCONSTANT half 0xH7C01
@@ -137,7 +157,9 @@ body:             |
   bb.1:
   liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fmaximum_float
-    ; CHECK: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float +qnan
     ; CHECK-NEXT: $w0 = COPY [[C]](f32)
     %0:_(f32) = COPY $w0
     %1:_(f32) = G_FCONSTANT float 0x7FF8000000000000
@@ -150,7 +172,9 @@ body:             |
   bb.1:
   liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fmaximum_double
-    ; CHECK: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
     ; CHECK-NEXT: $x0 = COPY [[C]](f64)
     %0:_(f64) = COPY $x0
     %1:_(f64) = G_FCONSTANT double 0x7FF8000000000000

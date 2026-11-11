@@ -56,7 +56,7 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_nuw_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -160,7 +160,7 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: sext_trunc_nsw_nuw_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -188,7 +188,7 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -216,7 +216,7 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_nsw_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -244,7 +244,7 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: zext_trunc_nuw_vector2
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -315,8 +315,8 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-    ; CHECK-NEXT: %2:_(i64) = nneg G_ZEXT [[COPY]](i32)
-    ; CHECK-NEXT: $x1 = COPY %2(i64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = nneg G_ZEXT [[COPY]](i32)
+    ; CHECK-NEXT: $x1 = COPY [[ZEXT]](i64)
     %0:_(i32) = COPY $w0
     %2:_(i16) = nuw G_TRUNC %0
     %3:_(i64) = G_ZEXT  %2

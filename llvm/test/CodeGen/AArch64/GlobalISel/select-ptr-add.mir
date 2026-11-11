@@ -107,7 +107,7 @@ body:             |
   bb.0:
       liveins: $x0, $x1
     ; CHECK-LABEL: name: ptr_add_arith_extended
-    ; CHECK: liveins: $x0
+    ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %reg0:gpr32 = COPY $w0
     ; CHECK-NEXT: %ptr:gpr64 = COPY $x1

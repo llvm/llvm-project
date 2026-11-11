@@ -7,7 +7,9 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap1
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
     ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
@@ -27,7 +29,9 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap2
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
     ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
@@ -47,7 +51,9 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap3
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
     ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
@@ -67,7 +73,9 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap4
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
     ; CHECK-NEXT: $w0 = COPY [[AND]](i32)
@@ -87,7 +95,9 @@ body:             |
   bb.1:
     liveins: $w0
     ; CHECK-LABEL: name: bitmask_no_overlap
-    ; CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; CHECK-NEXT: $w0 = COPY [[C]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(i32) = COPY $w0
@@ -105,7 +115,9 @@ body:             |
   bb.1:
     liveins: $w0, $x1
     ; CHECK-LABEL: name: bitmask_overlap_extrause
-    ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK: liveins: $w0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]

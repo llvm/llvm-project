@@ -210,8 +210,14 @@ body:             |
   bb.0:
     liveins: $b0, $s1
   ; CHECK-LABEL: name: @VectorCTLSDemandedElts
-  ; CHECK: %count:_ KnownBits:000000000000000000000000000????? SignBits:27
-  ; CHECK: %selected:_ KnownBits:00000000000000000000000000011??? SignBits:27 IsKnownNeverZero:1
+  ; CHECK-NEXT: %narrow:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %wide:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %ext:_ KnownBits:???????????????????????????????? SignBits:25 IsKnownNeverZero:0
+  ; CHECK-NEXT: %src:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %count:_ KnownBits:000000000000000000000000000????? SignBits:27 IsKnownNeverZero:0
+  ; CHECK-NEXT: %zero:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %one:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63 IsKnownNeverZero:1
+  ; CHECK-NEXT: %selected:_ KnownBits:00000000000000000000000000011??? SignBits:27 IsKnownNeverZero:1
   ; CHECK-NEXT: %other:_ KnownBits:000000000000000000000000000????? SignBits:27 IsKnownNeverZero:0
   ; CHECK-NEXT: %splat:_ KnownBits:00000000000000000000000000011??? SignBits:27 IsKnownNeverZero:1
     %narrow:_(i8) = COPY $b0

@@ -10,7 +10,7 @@ body: |
 
 
     ; CHECK-LABEL: name: test_inserts_nonpow2
-    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x3
     ; CHECK-NEXT: $x0 = COPY [[COPY]](i64)
@@ -399,7 +399,7 @@ body: |
   bb.0:
     liveins: $q0, $w0, $w1
     ; CHECK-LABEL: name: s1_s128
-    ; CHECK: liveins: $q0, $w0
+    ; CHECK: liveins: $q0, $w0, $w1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %val1:_(i128) = COPY $q0
     ; CHECK-NEXT: %val2:_(i32) = COPY $w1
