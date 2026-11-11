@@ -283,7 +283,7 @@ public:
       EXPECT_FP_EQ_WITH_EXCEPTION(
           boundary, func(0x1.fffffcp-127f, FPBits(bound_bits - 1).get_val()),
           FE_UNDERFLOW | FE_INEXACT);
-#endif
+#endif // ndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       EXPECT_FP_EQ_WITH_EXCEPTION(
           positive, func(0x1.fffffcp-127f, FPBits(bound_bits + 1).get_val()),
           FE_UNDERFLOW | FE_INEXACT);
