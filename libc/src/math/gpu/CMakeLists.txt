@@ -1,3 +1,15 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+endif()
+
+# Implementations shared by the AMDGPU and NVPTX targets. Architecture specific
+# implementations live in the corresponding subdirectory and take precedence
+# over the ones listed here.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND
+   NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  return()
+endif()
+
 add_entrypoint_object(
   ceil
   SRCS
@@ -196,44 +208,4 @@ add_entrypoint_object(
     truncf.cpp
   HDRS
     ../truncf.h
-)
-
-add_entrypoint_object(
-  tgamma
-  SRCS
-    tgamma.cpp
-  HDRS
-    ../tgamma.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-)
-
-add_entrypoint_object(
-  tgammaf
-  SRCS
-    tgammaf.cpp
-  HDRS
-    ../tgammaf.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-)
-
-add_entrypoint_object(
-  lgamma
-  SRCS
-    lgamma.cpp
-  HDRS
-    ../lgamma.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-)
-
-add_entrypoint_object(
-  lgamma_r
-  SRCS
-    lgamma_r.cpp
-  HDRS
-    ../lgamma_r.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
 )

@@ -1,33 +1,36 @@
 add_subdirectory(generic)
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+if(LIBC_TARGET_OS_IS_GPU)
+  # GPU implementations are organized as 'gpu/' for code shared by all GPU
+  # targets and 'gpu/<arch>/' for architecture specific code.
+  add_subdirectory(gpu)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 endif()
 
 function(add_math_entrypoint_object name)
-  # We prefer machine specific implementation if available. Hence we check
-  # that first and return early if we are able to add an alias target for the
-  # machine specific implementation.
-  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
-  if(TARGET ${fq_machine_specific_target_name})
-    add_entrypoint_object(
-      ${name}
-      ALIAS
-      DEPENDS
-        .${LIBC_TARGET_ARCHITECTURE}.${name}
-    )
-    return()
+  # We prefer machine specific implementation if available, followed by an
+  # implementation shared by all GPU targets, and finally the generic one. We
+  # return early once we are able to add an alias target for the first
+  # implementation found.
+  if(LIBC_TARGET_OS_IS_GPU)
+    set(impl_targets "gpu.${LIBC_TARGET_ARCHITECTURE}" "gpu")
+  else()
+    set(impl_targets "${LIBC_TARGET_ARCHITECTURE}")
   endif()
+  list(APPEND impl_targets "generic")
 
-  get_fq_target_name("generic.${name}" fq_generic_target_name)
-  if(TARGET ${fq_generic_target_name})
-    add_entrypoint_object(
-      ${name}
-      ALIAS
-      DEPENDS
-        .generic.${name}
-    )
-    return()
-  endif()
+  foreach(impl_tgt IN LISTS impl_targets)
+    get_fq_target_name("${impl_tgt}.${name}" fq_impl_target_name)
+    if(TARGET ${fq_impl_target_name})
+      add_entrypoint_object(
+        ${name}
+        ALIAS
+        DEPENDS
+          .${impl_tgt}.${name}
+      )
+      return()
+    endif()
+  endforeach()
 
   # Add a dummy entrypoint object for missing implementations. They will be skipped
   # anyway as there will be no entry for them in the target entrypoints list.

@@ -1,0 +1,39 @@
+add_entrypoint_object(
+  tgamma
+  SRCS
+    tgamma.cpp
+  HDRS
+    ../../tgamma.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+)
+
+add_entrypoint_object(
+  tgammaf
+  SRCS
+    tgammaf.cpp
+  HDRS
+    ../../tgammaf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+)
+
+add_entrypoint_object(
+  lgamma
+  SRCS
+    lgamma.cpp
+  HDRS
+    ../../lgamma.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+)
+
+add_entrypoint_object(
+  lgamma_r
+  SRCS
+    lgamma_r.cpp
+  HDRS
+    ../../lgamma_r.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+)
