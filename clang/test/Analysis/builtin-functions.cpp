@@ -125,24 +125,24 @@ void test_constant_p(void *ptr) {
 namespace GH39448 {
 struct A { int someApi(); };
 
-int testAssert(A* a) {
+void testAssert(A* a) {
   __assume(a != nullptr);
-  return a->someApi();
+  clang_analyzer_eval(a != nullptr); // expected-warning {{TRUE}}
 }
 
-int testAssert2(int* a) {
+void testAssert2(int* a) {
   __assume(a != nullptr);
-  return *a;
+  clang_analyzer_eval(a != nullptr); // expected-warning {{TRUE}}
 }
 
-int testAssert3(A* a) {
+void testAssert3(A* a) {
   __assume(a);
-  return a->someApi();
+  clang_analyzer_eval(a != nullptr); // expected-warning {{TRUE}}
 }
 
-int testAssert4(int* a) {
+void testAssert4(int* a) {
   __assume(a);
-  return *a;
+  clang_analyzer_eval(a != nullptr); // expected-warning {{TRUE}}
 }
 
 } // namespace GH39448

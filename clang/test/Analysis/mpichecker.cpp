@@ -381,9 +381,9 @@ void externFunctions2() {
   callNonblockingExtern(&req);
 }
 
-bool contains();
+bool coin();
 void GH64647() {
-  if (contains()) {
+  if (coin()) {
     MPI_Request request_item;
     MPI_Wait(&request_item, MPI_STATUS_IGNORE); // expected-warning {{Request 'request_item' has no matching nonblocking call.}}
 	}

@@ -100,6 +100,13 @@ void nestedLazyCompoundVal(List* n) {
   delete w;
 }
 
+// In some cases SymbolRegions were wrapped by ElementRegions in
+// some they weren't. That is why the analyzer did not recognize
+// if two regions are referring to the same entity whic could
+// lead to unreachable paths discovered and also false reports.
+// D132142 resolved this issue while D132143 made
+// LazyCompoundVals to only appear as default bindings in the
+// RegionStore. This applies to both GH60694 and GH26595.
 struct GH60694_Node { GH60694_Node *parent; };
 
 void GH60694(GH60694_Node *a, GH60694_Node *b) {

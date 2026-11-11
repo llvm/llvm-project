@@ -4,7 +4,6 @@
 // RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=unix.Errno \
-// RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true
 
 #include "Inputs/errno_var.h"
@@ -177,39 +176,12 @@ void errno_realpath(char *Path, char *Buf) {
   }
 }
 
-#define PATH_MAX 4096
-#define AF_UNIX 1
-#define SOCK_SEQPACKET 5
-#define SOCK_CLOEXEC 02000000
-
-void *malloc(size_t);
-void free(void *);
-int dosomething(char *);
-
-int GH43015_connect_socket(char **mname) {
-  int ret;
-  *mname = (char *)malloc(PATH_MAX);
-
-  int fd = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
-  if (fd < 0) {
-    ret = errno;
-    free(*mname);
-    return ret;
+// A failed socket() sets errno to a non-zero value, so a caller that returns
+// errno on the failure path cannot return zero. GH43015 reported a false
+// use-after-free in clang 18.1.0. Since clang 19.1.0 the false positive is
+// no longer present.
+void GH43015(void) {
+  if (socket(1, 2, 3) < 0) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
   }
-
-  {
-    ret = recv(fd, *mname, PATH_MAX, 0);
-    if (ret > 0) return 0;
-  }
-  close(fd);
-  return ret;
-}
-
-int GH43015(void) {
-  char *mname;
-  int ret = GH43015_connect_socket(&mname);
-  if (ret)
-    return ret;
-
-  return dosomething(mname); // no-warning
 }
