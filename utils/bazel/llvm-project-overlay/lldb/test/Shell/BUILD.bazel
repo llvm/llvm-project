@@ -95,6 +95,7 @@ filegroup(
     data = glob(["helper/*.py"]) + [
         "lit.cfg.py",
         "lit.site.cfg.py",
+        "lit-lldb-init.in",
         ":lit_tools/clang",
         ":lit_tools/ld.lld",
         ":lit_tools/ld64.lld",
