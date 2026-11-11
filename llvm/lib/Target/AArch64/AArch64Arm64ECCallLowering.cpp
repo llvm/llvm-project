@@ -111,6 +111,20 @@ private:
   reportFatalUsageError("scalable types are not supported for Arm64EC thunks");
 }
 
+static bool hasScalableParamAttr(AttributeList Attrs, unsigned I) {
+  if (Type *Ty = Attrs.getParamByValType(I))
+    if (Ty->isScalableTy()) return true;
+  if (Type *Ty = Attrs.getParamStructRetType(I))
+    if (Ty->isScalableTy()) return true;
+  if (Type *Ty = Attrs.getParamByRefType(I))
+    if (Ty->isScalableTy()) return true;
+  if (Type *Ty = Attrs.getParamPreallocatedType(I))
+    if (Ty->isScalableTy()) return true;
+  if (Type *Ty = Attrs.getParamInAllocaType(I))
+    if (Ty->isScalableTy()) return true;
+  return false;
+}
+
 // Reject scalable return, parameter, and sret types before querying fixed
 // DataLayout alignments or sizes (heterogeneous scalable structs are unsized).
 static void checkNoScalableTypes(const FunctionType *FT, AttributeList Attrs) {
@@ -119,8 +133,7 @@ static void checkNoScalableTypes(const FunctionType *FT, AttributeList Attrs) {
   for (unsigned I = 0, E = FT->getNumParams(); I != E; ++I) {
     if (FT->getParamType(I)->isScalableTy())
       reportUnsupportedScalableType();
-    if (Type *SRetTy = Attrs.getParamStructRetType(I);
-        SRetTy && SRetTy->isScalableTy())
+    if (hasScalableParamAttr(Attrs, I))
       reportUnsupportedScalableType();
   }
 }
@@ -132,8 +145,7 @@ static void checkNoScalableTypes(const CallBase &CB) {
        I < E; ++I) {
     if (CB.getArgOperand(I)->getType()->isScalableTy())
       reportUnsupportedScalableType();
-    if (Type *SRetTy = Attrs.getParamStructRetType(I);
-        SRetTy && SRetTy->isScalableTy())
+    if (hasScalableParamAttr(Attrs, I))
       reportUnsupportedScalableType();
   }
 }
@@ -330,8 +342,7 @@ void AArch64Arm64ECCallLowering::getThunkRetType(
 ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     Type *T, Align Alignment, bool Ret, uint64_t ArgSizeBytes,
     raw_ostream &Out) {
-  if (T->isScalableTy())
-    reportUnsupportedScalableType();
+  assert(!T->isScalableTy() && "scalable types should be rejected earlier");
 
   auto direct = [](Type *T) {
     return ThunkArgInfo{T, T, ThunkArgTranslation::Direct};

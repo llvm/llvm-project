@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -verify-machineinstrs < %t/positive.ll | FileCheck %s --check-prefix=POS
+; RUN: llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -verify-machineinstrs < %t/positive.ll | FileCheck %s --check-prefix=POS --implicit-check-not="#internal_sve_helper"
 ; RUN: llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -arm64ec-generate-thunks=false -verify-machineinstrs < %t/no_thunks.ll | FileCheck %s --check-prefix=NOTHUNKS
 ; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -filetype=null < %t/entry_ret.ll 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/entry_ret.ll 2>&1 | FileCheck %s --check-prefix=ERR
@@ -18,6 +18,11 @@
 ; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/exit_indirect.ll 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/exit_vararg_direct.ll 2>&1 | FileCheck %s --check-prefix=ERR
 ; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve,+sme -filetype=null < %t/exit_vararg_indirect.ll 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/entry_sret_param1.ll 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/entry_byref.ll 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/entry_inalloca.ll 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/entry_preallocated.ll 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -mtriple=arm64ec-pc-windows-msvc -mattr=+sve -filetype=null < %t/exit_patchable_vararg.ll 2>&1 | FileCheck %s --check-prefix=ERR
 
 ; ERR: LLVM ERROR: scalable types are not supported for Arm64EC thunks
 
@@ -28,7 +33,6 @@ declare <vscale x 4 x i32> @unused_sve_decl(<vscale x 4 x i32>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 
-; POS-NOT: "#internal_sve_helper"
 ; POS-LABEL: internal_sve_helper:
 ; POS:       add z0.s, p0/m, z0.s, z1.s
 ; POS-NEXT:  ret
@@ -149,5 +153,34 @@ declare target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
 define void @caller(ptr %fptr, ptr %p) {
   %c = call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
   call void (ptr, ...) %fptr(ptr %p, target("aarch64.svcount") %c)
+  ret void
+}
+
+;--- entry_sret_param1.ll
+define void @sret_param1_sve(ptr %this, ptr sret(<vscale x 4 x i32>) %out) {
+  ret void
+}
+
+;--- entry_byref.ll
+define void @byref_sve(ptr byref(<vscale x 4 x i32>) %out) {
+  ret void
+}
+
+;--- entry_inalloca.ll
+define void @inalloca_sve(ptr inalloca(<vscale x 4 x i32>) %out) {
+  ret void
+}
+
+;--- entry_preallocated.ll
+define void @preallocated_sve(ptr preallocated(<vscale x 4 x i32>) %out) {
+  ret void
+}
+
+;--- exit_patchable_vararg.ll
+declare dso_local <vscale x 4 x i32> @patchable(ptr, ...) hybrid_patchable
+define void @caller(ptr %p) {
+  %v = load <vscale x 4 x i32>, ptr %p
+  %r = call <vscale x 4 x i32> (ptr, ...) @patchable(ptr %p, <vscale x 4 x i32> %v)
+  store <vscale x 4 x i32> %r, ptr %p
   ret void
 }
