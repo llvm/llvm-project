@@ -7522,6 +7522,20 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     }
   }
 
+  // The fp atomics hints override -f[no-]atomic-ignore-denormal-mode for this
+  // construct. The safe hint takes precedence if both are given.
+  AtomicOptions AtomicOpts = CGM.getAtomicOpts();
+  if (const auto *HintClause = S.getSingleClause<OMPHintClause>()) {
+    uint64_t Hint = HintClause->getHint()
+                        ->EvaluateKnownConstInt(getContext())
+                        .getZExtValue();
+    if (Hint & llvm::to_underlying(OMPSyncHint::OMPXSafeFPAtomics))
+      AtomicOpts.ignore_denormal_mode = false;
+    else if (Hint & llvm::to_underlying(OMPSyncHint::OMPXFastFPAtomics))
+      AtomicOpts.ignore_denormal_mode = true;
+  }
+  CGAtomicOptionsRAII AtomicOptsRAII(CGM, AtomicOpts);
+
   LexicalScope Scope(*this, S.getSourceRange());
   EmitStopPoint(S.getAssociatedStmt());
   emitOMPAtomicExpr(*this, Kind, AO, FailAO, S.isPostfixUpdate(), S.getX(),

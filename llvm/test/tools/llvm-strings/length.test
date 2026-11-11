@@ -46,9 +46,9 @@ RUN: not llvm-strings -n foo %t 2>&1 | FileCheck %s --check-prefix=ERR
 ERR: error: expected a positive integer, but got 'foo'
 
 ## Show that the count is number of characters, not number of bytes.
-RUN: echo -e '\302\241' > %t
-RUN: echo -e '\302\241\302\242' >> %t
-RUN: echo -e '\302\241\302\242\302\243' >> %t
+RUN: echo -e '\0302\0241' > %t
+RUN: echo -e '\0302\0241\0302\0242' >> %t
+RUN: echo -e '\0302\0241\0302\0242\0302\0243' >> %t
 RUN: not llvm-strings --encoding utf8 -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
 RUN: llvm-strings --encoding utf8 -n 1 %t | FileCheck --check-prefix UTF-8-1 %s --implicit-check-not={{.}}
 RUN: llvm-strings --encoding utf8 -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --implicit-check-not={{.}}

@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=prefer-fold-tail \
 ; RUN:   -mtriple aarch64-unknown-linux-gnu -mattr=+sve -S | FileCheck %s
 
-define void @invariant_store_red_exit_is_phi(ptr %dst, ptr readonly %src, i64 %n) {
+define void @invariant_store_red_exit_is_phi(ptr %dst, ptr readonly %src, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @invariant_store_red_exit_is_phi(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr readonly [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

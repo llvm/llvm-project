@@ -31,7 +31,6 @@
 ---
 name:            load_in_pred_region_over_instruction_budget
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: load_in_pred_region_over_instruction_budget
   ; CHECK-DEFAULT: bb.0:
@@ -217,7 +216,6 @@ body:             |
 ---
 name:            pseudo_probe_counts_toward_instruction_budget
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-DEFAULT-LABEL: name: pseudo_probe_counts_toward_instruction_budget
   ; CHECK-DEFAULT: bb.0:

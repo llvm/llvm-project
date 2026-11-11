@@ -295,6 +295,7 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
   auto itOp = mlir::omp::IteratorOp::create(
       builder, loc, iterTy, mlir::ValueRange{lbs}, mlir::ValueRange{ubs},
       mlir::ValueRange{steps});
+  itOp.setLoopInclusive(true);
 
   mlir::OpBuilder::InsertionGuard guard(builder);
 
