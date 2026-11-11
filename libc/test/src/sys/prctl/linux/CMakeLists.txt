@@ -3,8 +3,8 @@ add_libc_testsuite(libc-sys-prctl-tests)
 # Temporarily disable this test while setting up arm and riscv buildbots
 # using qemu, since PR_GET_THP_DISABLE is not supported on qemu.
 if(NOT (LIBC_TARGET_ARCHITECTURE_IS_ARM OR
-  LIBC_TARGET_ARCHITECTURE_IS_RISCV32 OR
-  LIBC_TARGET_ARCHITECTURE_IS_RISCV64))
+    LIBC_TARGET_ARCHITECTURE_IS_RISCV32 OR
+    LIBC_TARGET_ARCHITECTURE_IS_RISCV64))
   add_libc_test(
     prctl_test
     SUITE

@@ -48,9 +48,16 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
-bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
-  const auto *CI = dyn_cast<ConstantInt>(V);
-  return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+Constant *getReassocIdentity(unsigned Opcode, Type *Ty, bool Negated) {
+  // Subtracting -0.0 turns a -0.0 total into +0.0.
+  if (Negated && Opcode == Instruction::FAdd)
+    Opcode = Instruction::FSub;
+  return ConstantExpr::getBinOpIdentity(Opcode, Ty, /*AllowRHSConstant=*/true);
+}
+
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode, bool Negated) {
+  return isa<ConstantInt, ConstantFP>(V) &&
+         V == getReassocIdentity(Opcode, V->getType(), Negated);
 }
 
 bool isUndefTolerantBinOp(const Value *V) {

@@ -169,6 +169,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   getModule()->setAttr(cir::CIRDialect::getTargetABIAttrName(),
                        builder.getStringAttr(getTarget().getABI()));
 
+  // Assign the target-cpu and target-features as attributes to the module. This
+  // will allow subsequent passes to use this to ensure that 'generated'
+  // functions get the correct behavior for the model.
+  llvm::StringMap<std::string> defaultCPUAndFeatures;
+  if (getCPUAndFeaturesAttributes(GlobalDecl(), defaultCPUAndFeatures))
+    for (const auto &[key, val] : defaultCPUAndFeatures)
+      getModule()->setAttr(key, builder.getStringAttr(val));
+
   // If cxxabi was overridden via -fc++-abi, record it.
   if (langOpts.CXXABI)
     getModule()->setAttr(
@@ -202,13 +210,17 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
           /*hlsl=*/langOpts.HLSL,
+          /*sycl_is_device=*/langOpts.SYCLIsDevice,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
           static_cast<int32_t>(langOpts.LongDoubleSize),
-          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs));
+          /*enable_noundef_attrs=*/cgo.EnableNoundefAttrs,
+          /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
+              LangOptions::FPE_Ignore,
+          /*ssp_buffer_size=*/cgo.SSPBufferSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -499,7 +511,12 @@ void CIRGenModule::emitDeferred() {
   // emitted that then need those vtables.
   assert(deferredVTables.empty());
 
-  assert(!cir::MissingFeatures::cudaSupport());
+  // Emit CUDA/HIP static device variables referenced by host code only.
+  // Note we should not clear CUDADeviceVarODRUsedByHost since it is still
+  // needed for further handling.
+  if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+    llvm::append_range(deferredDeclsToEmit,
+                       getASTContext().CUDADeviceVarODRUsedByHost);
 
   // Stop if we're out of both deferred vtables and deferred declarations.
   if (deferredDeclsToEmit.empty())
@@ -1838,7 +1855,18 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (const Module *m = fd->getOwningModule();
       m && m->getTopLevelModule()->isNamedModule() &&
       getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
-    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!fd->isTemplateInstantiation() || !fd->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
   }
 
   if (fd->hasAttr<NoInlineAttr>())
@@ -2293,7 +2321,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
   gv.setLinkageAttr(
       cir::GlobalLinkageKindAttr::get(cgm.getBuilder().getContext(), lt));
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  gv.setUnnamedAddr(true);
   CIRGenModule::setInitializer(gv, c);
   if (gv.isWeakForLinker()) {
     assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
@@ -3177,7 +3205,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
     // dso_local on the function if using a local alias is preferable (can avoid
     // PLT indirection).
-    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+    auto func = dyn_cast<cir::FuncOp>(gv.getOperation());
+    if (!func || func.getAliasee() || !gv.canBenefitFromLocalAlias())
       return false;
     return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }
@@ -3449,6 +3478,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     func->setAttr(cir::CIRDialect::getNoBuiltinAttrName(),
                   mlir::UnitAttr::get(&getMLIRContext()));
   }
+
+  if (isa<CXXConstructorDecl>(funcDecl) || isa<CXXDestructorDecl>(funcDecl))
+    func.setUnnamedAddr(true);
+  else if (const auto *md = dyn_cast<CXXMethodDecl>(funcDecl))
+    if (md->isVirtual())
+      func.setUnnamedAddr(true);
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
@@ -4060,6 +4095,8 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
+  extraAttrs.set(cir::CIRDialect::getRuntimeFuncAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false, extraAttrs);
 
@@ -4296,10 +4333,11 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
-                                      mlir::Operation *op, GlobalDecl aliasGD,
-                                      cir::FuncOp aliasee,
-                                      cir::GlobalLinkageKind linkage) {
+cir::FuncOp CIRGenModule::emitAliasForGlobal(StringRef mangledName,
+                                             mlir::Operation *op,
+                                             GlobalDecl aliasGD,
+                                             cir::FuncOp aliasee,
+                                             cir::GlobalLinkageKind linkage) {
 
   auto *aliasFD = dyn_cast<FunctionDecl>(aliasGD.getDecl());
   assert(aliasFD && "expected FunctionDecl");
@@ -4322,9 +4360,6 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
   mlir::SymbolTable::setSymbolVisibility(
       alias, mlir::SymbolTable::Visibility::Private);
 
-  // Alias constructors and destructors are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
-
   if (op) {
     // Any existing users of the existing function declaration will be
     // referencing the function by flat symbol reference (i.e. the name), so
@@ -4341,6 +4376,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
 
   // Finally, set up the alias with its proper name and attributes.
   setCommonAttributes(aliasGD, alias);
+  return alias;
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {
@@ -4600,6 +4636,7 @@ cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
 
   CharUnits alignment = getASTContext().getTypeAlignInChars(gcd->getType());
   globalOp.setAlignment(alignment.getAsAlign().value());
+  globalOp.setUnnamedAddr(true);
   CIRGenModule::setInitializer(globalOp, init);
 
   emitter.finalize(globalOp);

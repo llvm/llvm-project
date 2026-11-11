@@ -139,7 +139,6 @@
 ---
 name:            _ZN1BC2Ev
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:
@@ -178,7 +177,6 @@ body:             |
 ---
 name:            _ZN1BC1Ev
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:
