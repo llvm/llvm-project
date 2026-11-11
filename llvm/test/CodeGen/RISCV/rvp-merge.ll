@@ -8,21 +8,14 @@ define i32 @merge_const(i32 %a, i32 %b, i32 %c) {
 ; RV32-LABEL: merge_const:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pli.b a0, -86
-; RV32-NEXT:    pli.b a3, 85
-; RV32-NEXT:    and a0, a2, a0
-; RV32-NEXT:    and a1, a1, a3
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    merge a0, a1, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: merge_const:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 699051
-; RV64-NEXT:    lui a3, 349525
 ; RV64-NEXT:    addi a0, a0, -1366
-; RV64-NEXT:    addi a3, a3, 1365
-; RV64-NEXT:    and a0, a2, a0
-; RV64-NEXT:    and a1, a1, a3
-; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    merge a0, a1, a2
 ; RV64-NEXT:    ret
   %x = and i32 %c, -1431655766
   %y = and i32 %b, 1431655765
@@ -34,21 +27,14 @@ define i32 @merge_const_swapped(i32 %a, i32 %b, i32 %c) {
 ; RV32-LABEL: merge_const_swapped:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pli.b a0, 85
-; RV32-NEXT:    pli.b a3, -86
-; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    and a2, a2, a3
-; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    merge a0, a2, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: merge_const_swapped:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 349525
-; RV64-NEXT:    lui a3, 699051
 ; RV64-NEXT:    addi a0, a0, 1365
-; RV64-NEXT:    addi a3, a3, -1366
-; RV64-NEXT:    and a0, a1, a0
-; RV64-NEXT:    and a2, a2, a3
-; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    merge a0, a2, a1
 ; RV64-NEXT:    ret
   %y = and i32 %b, 1431655765
   %x = and i32 %c, -1431655766
@@ -60,22 +46,14 @@ define i64 @merge_const_i64(i64 %a, i64 %b) {
 ; RV32-LABEL: merge_const_i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pli.b a4, 15
-; RV32-NEXT:    and a1, a1, a4
-; RV32-NEXT:    and a0, a0, a4
-; RV32-NEXT:    pli.b a4, -16
-; RV32-NEXT:    and a3, a3, a4
-; RV32-NEXT:    and a2, a2, a4
-; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    or a1, a1, a3
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    mvmn a1, a3, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: merge_const_i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    pli.b a2, 15
-; RV64-NEXT:    pli.b a3, -16
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    and a1, a1, a3
-; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    mvmn a0, a1, a2
 ; RV64-NEXT:    ret
   %x = and i64 %a, 1085102592571150095
   %y = and i64 %b, -1085102592571150096
@@ -101,31 +79,19 @@ define i32 @no_merge(i32 %a, i32 %b) {
 define i64 @merge_const_pool(i64 %a, i64 %b) {
 ; RV32-LABEL: merge_const_pool:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a4, 74565
-; RV32-NEXT:    lui a5, 633806
-; RV32-NEXT:    addi a4, a4, 1656
-; RV32-NEXT:    addi a5, a5, -272
-; RV32-NEXT:    and a1, a1, a4
-; RV32-NEXT:    and a0, a0, a5
-; RV32-NEXT:    lui a4, 974011
-; RV32-NEXT:    lui a5, 414770
-; RV32-NEXT:    addi a4, a4, -1657
-; RV32-NEXT:    addi a5, a5, 271
-; RV32-NEXT:    and a3, a3, a4
-; RV32-NEXT:    and a2, a2, a5
-; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    or a1, a1, a3
+; RV32-NEXT:    lui a4, 633806
+; RV32-NEXT:    lui a5, 74565
+; RV32-NEXT:    addi a4, a4, -272
+; RV32-NEXT:    addi a5, a5, 1656
+; RV32-NEXT:    mvmn a0, a2, a4
+; RV32-NEXT:    mvmn a1, a3, a5
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: merge_const_pool:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a2, %hi(.LCPI4_0)
-; RV64-NEXT:    lui a3, %hi(.LCPI4_1)
 ; RV64-NEXT:    ld a2, %lo(.LCPI4_0)(a2)
-; RV64-NEXT:    ld a3, %lo(.LCPI4_1)(a3)
-; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    and a1, a1, a3
-; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    mvmn a0, a1, a2
 ; RV64-NEXT:    ret
   %x = and i64 %a, 1311768467463790320
   %y = and i64 %b, -1311768467463790321
