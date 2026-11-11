@@ -14,6 +14,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -30,8 +31,6 @@
 #include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-to-gpu"
-
-#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOGPUPASS
@@ -203,10 +202,6 @@ static bool supportsMMaMatrixType(Operation *op) {
     return integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(signedExtend);
   if (auto unsignedExtend = dyn_cast<arith::ExtUIOp>(op))
     return integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(unsignedExtend);
-  if (auto fpExtend = dyn_cast<arith::ExtFOp>(op))
-    return fpExtendSupportsMMAMatrixType(fpExtend);
-  if (auto fpTrunc = dyn_cast<arith::TruncFOp>(op))
-    return fpTruncSupportsMMAMatrixType(fpTrunc);
   return elementwiseSupportsMMAMatrixType(op);
 }
 
@@ -612,9 +607,9 @@ LogicalResult mlir::convertVectorToMMAOps(RewriterBase &rewriter,
     } else if (auto broadcastOp = dyn_cast<vector::BroadcastOp>(op)) {
       res = convertBroadcastOp(rewriter, broadcastOp, valueMapping);
     } else if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-      res = convertForOp(rewriter, forOp, valueMapping);
+      res = convertForOpForMMA(rewriter, forOp, valueMapping);
     } else if (auto yieldOp = dyn_cast<scf::YieldOp>(op)) {
-      res = convertYieldOp(rewriter, yieldOp, valueMapping);
+      res = convertYieldOpForMMA(rewriter, yieldOp, valueMapping);
     } else if (auto elementwiseType = convertElementwiseOpToMMA(op)) {
       res = convertElementwiseOp(rewriter, op, *elementwiseType, valueMapping);
     }

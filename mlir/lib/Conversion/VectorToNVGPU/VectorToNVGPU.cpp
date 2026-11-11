@@ -15,6 +15,7 @@
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
+#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -34,8 +35,6 @@
 #include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "vector-to-nvgpu"
-
-#include "mlir/Conversion/VectorToGPUCommon/VectorToGPUUtils.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTONVGPUPASS
@@ -144,10 +143,6 @@ static bool supportsMMaMatrixType(Operation *op) {
     return integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(signedExtend);
   if (auto unsignedExtend = dyn_cast<arith::ExtUIOp>(op))
     return integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(unsignedExtend);
-  if (auto fpExtend = dyn_cast<arith::ExtFOp>(op))
-    return fpExtendSupportsMMAMatrixType(fpExtend);
-  if (auto fpTrunc = dyn_cast<arith::TruncFOp>(op))
-    return fpTruncSupportsMMAMatrixType(fpTrunc);
   return elementwiseSupportsMMAMatrixType(op);
 }
 
@@ -699,10 +694,10 @@ LogicalResult mlir::convertVectorToNVVMCompatibleMMASync(RewriterBase &rewriter,
                                                 valueMapping);
             })
             .Case([&](scf::ForOp forOp) {
-              return convertForOp(rewriter, forOp, valueMapping);
+              return convertForOpForMMA(rewriter, forOp, valueMapping);
             })
             .Case([&](scf::YieldOp yieldOp) {
-              return convertYieldOp(rewriter, yieldOp, valueMapping);
+              return convertYieldOpForMMA(rewriter, yieldOp, valueMapping);
             })
             .Case([&](arith::ConstantOp constOp) {
               return convertConstantOpMmaSync(rewriter, constOp, valueMapping);

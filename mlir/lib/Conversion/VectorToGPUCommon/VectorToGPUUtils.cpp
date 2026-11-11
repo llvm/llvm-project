@@ -24,20 +24,21 @@
 
 #define DEBUG_TYPE "vector-to-gpu-common"
 
-namespace mlir {
-bool constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
+using namespace mlir;
+
+bool mlir::constantSupportsMMAMatrixType(arith::ConstantOp constantOp) {
   auto vecType = dyn_cast<VectorType>(constantOp.getType());
   if (!vecType || vecType.getRank() != 2)
     return false;
   return isa<SplatElementsAttr>(constantOp.getValue());
 }
 
-bool broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
+bool mlir::broadcastSupportsMMAMatrixType(vector::BroadcastOp broadcastOp) {
   return broadcastOp.getResultVectorType().getRank() == 2;
 }
 
 template <typename ExtOpTy>
-bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
+bool mlir::integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
   auto transferReadOp =
       extOp.getOperand().template getDefiningOp<vector::TransferReadOp>();
   if (!transferReadOp)
@@ -46,16 +47,13 @@ bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
 }
 
 template bool
-    integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(arith::ExtSIOp);
+    mlir::integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(arith::ExtSIOp);
 
 template bool
-    integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(arith::ExtUIOp);
+    mlir::integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(arith::ExtUIOp);
 
-bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
-
-bool fpTruncSupportsMMAMatrixType(arith::TruncFOp extOp) { return true; }
-
-std::optional<gpu::MMAElementwiseOp> convertElementwiseOpToMMA(Operation *op) {
+std::optional<gpu::MMAElementwiseOp>
+mlir::convertElementwiseOpToMMA(Operation *op) {
   using MMAEwO = gpu::MMAElementwiseOp;
   return TypeSwitch<Operation *, std::optional<MMAEwO>>(op)
       .Case([](arith::AddFOp) { return MMAEwO::ADDF; })
@@ -75,7 +73,7 @@ std::optional<gpu::MMAElementwiseOp> convertElementwiseOpToMMA(Operation *op) {
       .Default(std::nullopt);
 }
 
-bool elementwiseSupportsMMAMatrixType(Operation *op) {
+bool mlir::elementwiseSupportsMMAMatrixType(Operation *op) {
   return convertElementwiseOpToMMA(op).has_value();
 }
 
@@ -112,8 +110,9 @@ static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
   return newLoop;
 }
 
-LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
-                           llvm::DenseMap<Value, Value> &valueMapping) {
+LogicalResult
+mlir::convertForOpForMMA(RewriterBase &rewriter, scf::ForOp op,
+                         llvm::DenseMap<Value, Value> &valueMapping) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
 
@@ -144,8 +143,9 @@ LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
   return success();
 }
 
-LogicalResult convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
-                             llvm::DenseMap<Value, Value> &valueMapping) {
+LogicalResult
+mlir::convertYieldOpForMMA(RewriterBase &rewriter, scf::YieldOp op,
+                           llvm::DenseMap<Value, Value> &valueMapping) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
 
@@ -234,7 +234,7 @@ struct CombineTransferReadOpTranspose final
 };
 } // namespace
 
-void populateVectorTransferReadTransposePatterns(RewritePatternSet &patterns) {
+void mlir::populateVectorTransferReadTransposePatterns(
+    RewritePatternSet &patterns) {
   patterns.add<CombineTransferReadOpTranspose>(patterns.getContext());
 }
-} // namespace mlir

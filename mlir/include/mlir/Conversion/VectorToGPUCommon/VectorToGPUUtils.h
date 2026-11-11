@@ -22,10 +22,8 @@ class RewritePatternSet;
 
 namespace arith {
 class ConstantOp;
-class ExtFOp;
 class ExtSIOp;
 class ExtUIOp;
-class TruncFOp;
 } // namespace arith
 
 namespace gpu {
@@ -59,12 +57,6 @@ extern template bool
 extern template bool
     integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(arith::ExtUIOp);
 
-/// Return true if the floating-point extension is supported.
-bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp);
-
-/// Return true if the floating-point truncation is supported.
-bool fpTruncSupportsMMAMatrixType(arith::TruncFOp extOp);
-
 /// Return the MMA elementwise enum associated with the operation if supported.
 /// Return std::nullopt otherwise.
 std::optional<gpu::MMAElementwiseOp> convertElementwiseOpToMMA(Operation *op);
@@ -73,12 +65,12 @@ std::optional<gpu::MMAElementwiseOp> convertElementwiseOpToMMA(Operation *op);
 bool elementwiseSupportsMMAMatrixType(Operation *op);
 
 /// Extend loop-carried values with their converted counterparts.
-LogicalResult convertForOp(RewriterBase &rewriter, scf::ForOp op,
-                           llvm::DenseMap<Value, Value> &valueMapping);
+LogicalResult convertForOpForMMA(RewriterBase &rewriter, scf::ForOp op,
+                                 llvm::DenseMap<Value, Value> &valueMapping);
 
 /// Update a yield operation to yield the converted values.
-LogicalResult convertYieldOp(RewriterBase &rewriter, scf::YieldOp op,
-                             llvm::DenseMap<Value, Value> &valueMapping);
+LogicalResult convertYieldOpForMMA(RewriterBase &rewriter, scf::YieldOp op,
+                                   llvm::DenseMap<Value, Value> &valueMapping);
 
 /// Populate patterns that fold vector.transpose into vector.transfer_read,
 /// including through arithmetic extension operations.
