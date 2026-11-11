@@ -4775,7 +4775,7 @@ static SmallVector<Dialect> getOpDialects(ArrayRef<const Record *> defs) {
   llvm::SetVector<const Record *> dialectDefs;
   for (const Record *def : defs)
     dialectDefs.insert(def->getValueAsDef("opDialect"));
-  return SmallVector<Dialect>(dialectDefs.begin(), dialectDefs.end());
+  return llvm::to_vector_of<Dialect>(dialectDefs);
 }
 
 /// Returns the sorted names of the op partitions within `dialect` where
