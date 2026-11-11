@@ -164,7 +164,8 @@ public:
   static lldb::StopInfoSP
   CreateStopReasonWithPlan(lldb::ThreadPlanSP &plan,
                            lldb::ValueObjectSP return_valobj_sp,
-                           lldb::ExpressionVariableSP expression_variable_sp);
+                           lldb::ExpressionVariableSP expression_variable_sp,
+                           bool return_value_is_thrown_error = false);
 
   static lldb::StopInfoSP
   CreateStopReasonWithException(Thread &thread, const char *description);
@@ -193,8 +194,12 @@ public:
 
   static lldb::StopInfoSP CreateStopReasonVForkDone(Thread &thread);
 
+  /// \param[out] is_thrown_error
+  ///     If not null, set to whether the value is an error the function threw
+  ///     instead of returning.
   static lldb::ValueObjectSP
-  GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);
+  GetReturnValueObject(lldb::StopInfoSP &stop_info_sp,
+                       bool *is_thrown_error = nullptr);
 
   static lldb::ExpressionVariableSP
   GetExpressionVariable(lldb::StopInfoSP &stop_info_sp);

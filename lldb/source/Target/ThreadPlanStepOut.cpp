@@ -14,6 +14,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
@@ -198,6 +199,23 @@ void ThreadPlanStepOut::SetupReturnAddress(
       }
     }
   }
+
+  // Record where the language runtime will find an error thrown by the
+  // function. The runtime has to look at the function before it returns, so
+  // this only works when stepping out of frame 0.
+  if (frame_idx != 0)
+    return;
+
+  StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+  if (!frame_sp)
+    return;
+  lldb::LanguageType language = frame_sp->GuessLanguage().AsLanguageType();
+  if (language == eLanguageTypeUnknown)
+    return;
+  m_thrown_error_runtime = m_process.GetLanguageRuntime(language);
+  if (m_thrown_error_runtime)
+    m_thrown_error_location =
+        m_thrown_error_runtime->GetThrownErrorLocation(*frame_sp);
 }
 
 void ThreadPlanStepOut::SetupAvoidNoDebug(
@@ -545,6 +563,19 @@ void ThreadPlanStepOut::CalculateReturnValue() {
 
   if (!m_calculate_return_value)
     return;
+
+  if (m_thrown_error_runtime) {
+    StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
+    if (!frame_sp)
+      return;
+    if (std::optional<ValueObjectSP> error_sp =
+            m_thrown_error_runtime->GetThrownError(*frame_sp,
+                                                   m_thrown_error_location)) {
+      m_return_valobj_sp = *error_sp;
+      m_return_value_is_thrown_error = true;
+      return;
+    }
+  }
 
   if (m_immediate_step_from_function != nullptr) {
     CompilerType return_compiler_type =

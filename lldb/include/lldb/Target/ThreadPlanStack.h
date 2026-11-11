@@ -71,7 +71,10 @@ public:
   lldb::ThreadPlanSP GetPlanByIndex(uint32_t plan_idx,
                                     bool skip_private = true) const;
 
-  lldb::ValueObjectSP GetReturnValueObject() const;
+  /// \param[out] is_thrown_error
+  ///     If not null, set to whether the value is an error the function threw.
+  lldb::ValueObjectSP
+  GetReturnValueObject(bool *is_thrown_error = nullptr) const;
 
   lldb::ExpressionVariableSP GetExpressionVariable() const;
 

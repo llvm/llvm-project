@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_THREADPLANSTEPOUT_H
 #define LLDB_TARGET_THREADPLANSTEPOUT_H
 
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
@@ -50,6 +51,10 @@ public:
     return m_return_valobj_sp;
   }
 
+  bool IsReturnValueThrownError() override {
+    return m_return_value_is_thrown_error;
+  }
+
 protected:
   void SetFlagsToDefault() override {
     GetFlags().Set(ThreadPlanStepOut::s_default_flag_values);
@@ -81,7 +86,12 @@ private:
   Function *m_immediate_step_from_function;
   std::vector<lldb::StackFrameSP> m_stepped_past_frames;
   lldb::ValueObjectSP m_return_valobj_sp;
+  bool m_return_value_is_thrown_error = false;
   bool m_calculate_return_value;
+  /// The runtime of the function being stepped out of, which finds the error
+  /// it throws, if any.
+  LanguageRuntime *m_thrown_error_runtime = nullptr;
+  LanguageRuntime::ThrownErrorLocation m_thrown_error_location;
   StreamString m_constructor_errors;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(

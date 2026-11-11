@@ -479,6 +479,10 @@ public:
     return lldb::ValueObjectSP();
   }
 
+  /// Whether the value from GetReturnValueObject is an error the function
+  /// threw rather than a value it returned.
+  virtual bool IsReturnValueThrownError() { return false; }
+
   // If the thread plan managing the evaluation of a user expression lives
   // longer than the command that instigated the expression (generally because
   // the expression evaluation hit a breakpoint, and the user regained control
