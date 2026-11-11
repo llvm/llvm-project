@@ -527,12 +527,22 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
       Known.knownNot(fcZero | fcNegSubnormal);
   }
 
-  // TODO: Refine signed zeroes for other rounding modes once fadd/fsub take a
-  // rounding mode parameter.
-  if (RM == RoundingMode::NearestTiesToEven) {
-    // (fadd x, +0.0) is guaranteed to return +0.0, not -0.0.
+  switch (RM) {
+  case RoundingMode::NearestTiesToEven:
+  case RoundingMode::NearestTiesToAway:
+  case RoundingMode::TowardZero:
+  case RoundingMode::TowardPositive:
+    // Only -0.0 + -0.0 produces -0.0 for these rounding modes.
     if (KnownLHS.isKnownNever(fcNegZero) || KnownRHS.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
+    break;
+  case RoundingMode::TowardNegative:
+    // Only +0.0 + +0.0 produces +0.0 when rounding towards negative infinity.
+    if (KnownLHS.isKnownNever(fcPosZero) || KnownRHS.isKnownNever(fcPosZero))
+      Known.knownNot(fcPosZero);
+    break;
+  default:
+    break;
   }
 
   return Known;
