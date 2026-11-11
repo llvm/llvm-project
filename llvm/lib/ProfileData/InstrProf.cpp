@@ -375,10 +375,16 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
   return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
 }
 
-// Returns the PGO object name. This function has some special handling
-// when called in LTO optimization. In LTO mode (when InLTO is true),
-// LTO's internalization privatizes many global linkage symbols, so we assume
-// non-internal linkage without a source prefix.
+// Returns the PGO object name. If InLTO is true, assume external linkage, so
+// there's no file name prefix. This is needed with sample profiles, which key
+// local functions by their plain name, even without LTO.
+//
+// In LTO post-link passes, LTO may have internalized GO since the profile was
+// collected. Objects are also found by their GUID, which is assigned before
+// LTO and so still matches, so InLTO only matters here for objects without
+// one. Those shouldn't occur outside of tests: LTO pre-link pipelines assign
+// GUIDs, and bitcode written before GUIDs were recorded is assigned them when
+// it's read.
 std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(GO);
