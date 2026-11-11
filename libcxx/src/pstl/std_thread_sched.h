@@ -130,6 +130,7 @@ private:
 
   // Wait-wake mechanism.
   // The epoch is incremented each time a new task is opened for participation.
+  // Epoch wraparound would not be a problem since only the change itself matters, not the stored value.
   alignas(std::hardware_destructive_interference_size) std::atomic_unsigned_lock_free epoch_{0};
 };
 
