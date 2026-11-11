@@ -301,7 +301,7 @@ VariableDescription::VariableDescription(
     llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
     const bool has_summary = !display_summary.empty();
 
-    // Respect the type summary options. 
+    // Respect the type summary options.
     lldb::SBTypeSummary type_summary = val.GetTypeSummary();
     const bool print_value =
         !value.empty() && (summary.empty() || type_summary.DoesPrintValue(val));
