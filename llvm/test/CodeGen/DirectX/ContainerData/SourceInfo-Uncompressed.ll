@@ -1,4 +1,4 @@
-; RUN: opt %S/Inputs/SourceInfo.ll -compress-srci=none -dxil-embed -dxil-container-globals -S -o - | FileCheck %s
+; RUN: opt %S/Inputs/SourceInfo.ll -compress-srci=none -dxil-embedder -dxil-container-globals -S -o - | FileCheck %s
 ; RUN: llc %S/Inputs/SourceInfo.ll -compress-srci=none --filetype=obj --dx-pdb-path=%t.pdb -o /dev/null
 ; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC
 
