@@ -54,6 +54,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <cassert>
@@ -217,6 +218,14 @@ public:
 /// parts that can be used from the rest of CodeGen.
 class LLVM_ABI TargetLoweringBase {
 public:
+  /// Return the target's denormal mode for constant folding \p Opcode with
+  /// \p Semantics in the denormal environment described by \p DM.
+  virtual DenormalMode
+  getTargetConstFoldDenormMode(FPOp Opcode, const fltSemantics &Semantics,
+                               DenormalMode DM) const {
+    return DenormalMode::getIEEE();
+  }
+
   /// This enum indicates whether operations are valid for a target, and if not,
   /// what action should be used to make them valid.
   enum LegalizeAction : uint8_t {

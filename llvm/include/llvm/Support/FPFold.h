@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/Compiler.h"
+#include <cstddef>
 #include <optional>
 
 namespace llvm {
@@ -39,7 +40,42 @@ enum class FPOp {
   Floor,
   Trunc,
   Round,
-  RoundEven
+  RoundEven,
+  FCmp // Used by tryFoldFCmp when querying target preferences.
+};
+
+/// A non-owning adapter for target-specific floating-point folding preferences.
+/// Construct from a TTI or TargetLowering pointer, which must outlive the
+/// adapter. A missing target conservatively uses dynamic denormal handling.
+class TargetFPInfo {
+  using GetTargetConstFoldDenormModeFn = DenormalMode (*)(const void *, FPOp,
+                                                          const fltSemantics &,
+                                                          DenormalMode);
+
+  const void *Target = nullptr;
+  GetTargetConstFoldDenormModeFn GetTargetConstFoldDenormMode = nullptr;
+
+public:
+  TargetFPInfo() = default;
+  TargetFPInfo(std::nullptr_t) {}
+
+  template <typename T> TargetFPInfo(const T *Target) : Target(Target) {
+    if (!Target)
+      return;
+    GetTargetConstFoldDenormMode = [](const void *Target, FPOp Opcode,
+                                      const fltSemantics &Semantics,
+                                      DenormalMode DM) {
+      return static_cast<const T *>(Target)->getTargetConstFoldDenormMode(
+          Opcode, Semantics, DM);
+    };
+  }
+
+  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
+                                            const fltSemantics &Semantics,
+                                            DenormalMode DM) const {
+    return Target ? GetTargetConstFoldDenormMode(Target, Opcode, Semantics, DM)
+                  : DenormalMode::getDynamic();
+  }
 };
 
 /// A unique floating-point result and the IEEE exceptions raised computing it.
@@ -59,23 +95,31 @@ LLVM_ABI std::optional<APFloat> getFPValue(std::optional<FPFoldResult> Res);
 /// Returns std::nullopt when the modes do not specify one result. In
 /// particular, this occurs when a dynamic denormal mode could change an input
 /// or output value.
+/// In target-default mode, TFPI selects the folding environment. If no target
+/// is available, use dynamic denormal handling.
+/// OverrideDefaultFlushingMode bypasses -const-folding-denormal-mode and uses
+/// Denorms unchanged, for operations with explicit denormal semantics.
 LLVM_ABI std::optional<FPFoldResult>
-tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode Denorms);
+tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode Denorms,
+          TargetFPInfo TFPI = {}, bool OverrideDefaultFlushingMode = false);
 
 /// Try to evaluate a floating-point operation with an explicit rounding mode.
 /// Dynamic is evaluated using RN, but folding is declined if evaluation is
 /// inexact. Fixed-rounding operations still select their own rounding mode.
-LLVM_ABI std::optional<FPFoldResult> tryFoldFPWithRM(FPOp Opcode,
-                                                     ArrayRef<APFloat> Args,
-                                                     RoundingMode RM,
-                                                     DenormalMode Denorms);
+/// OverrideDefaultFlushingMode has the same meaning as in tryFoldFP.
+LLVM_ABI std::optional<FPFoldResult>
+tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
+                DenormalMode Denorms, TargetFPInfo TFPI = {},
+                bool OverrideDefaultFlushingMode = false);
 
 /// Try to compare two floating-point values.
 ///
 /// A comparison has no rounding or output-denormal mode, but is not foldable
 /// when dynamic input-denormal handling could alter an operand.
+/// OverrideDefaultFlushingMode has the same meaning as in tryFoldFP.
 LLVM_ABI std::optional<APFloat::cmpResult>
-tryFoldFCmp(const APFloat &LHS, const APFloat &RHS, DenormalMode Denorms);
+tryFoldFCmp(const APFloat &LHS, const APFloat &RHS, DenormalMode Denorms,
+            TargetFPInfo TFPI = {}, bool OverrideDefaultFlushingMode = false);
 
 } // namespace llvm
 

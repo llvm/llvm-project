@@ -20,6 +20,7 @@ namespace llvm {
 // This enables lazy-initialization of all the globals in libSupport, instead
 // of eagerly loading everything on program startup.
 void initDebugCounterOptions();
+void initFPFoldOptions();
 void initGraphWriterOptions();
 void initSignalsOptions();
 void initStatisticOptions();

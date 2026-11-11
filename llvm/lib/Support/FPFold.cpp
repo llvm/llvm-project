@@ -7,13 +7,69 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FPFold.h"
+#include "DebugOptions.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <cassert>
 #include <utility>
 
 using namespace llvm;
+
+namespace {
+enum class DenormalFoldingMode {
+  TargetDefault,
+  DisableFlushing,
+  MatchDenormalFPEnv,
+  DisableFolding
+};
+
+struct CreateDenormalFoldingMode {
+  static void *call() {
+    return new cl::opt<DenormalFoldingMode>(
+        "const-folding-denormal-mode", cl::Hidden,
+        cl::desc("Denormal handling during floating-point constant folding"),
+        cl::init(DenormalFoldingMode::TargetDefault),
+        cl::values(
+            clEnumValN(DenormalFoldingMode::TargetDefault, "target-default",
+                       "Use the target's preferred folding mode (default)"),
+            clEnumValN(DenormalFoldingMode::DisableFlushing, "disable-flushing",
+                       "Fold using IEEE denormal handling"),
+            clEnumValN(DenormalFoldingMode::MatchDenormalFPEnv,
+                       "match-denormal-fpenv",
+                       "Fold using the supplied denormal mode"),
+            clEnumValN(DenormalFoldingMode::DisableFolding, "disable-folding",
+                       "Decline folds that depend on denormal handling")));
+  }
+};
+} // namespace
+
+static ManagedStatic<cl::opt<DenormalFoldingMode>, CreateDenormalFoldingMode>
+    ConstFoldingDenormalMode;
+
+void llvm::initFPFoldOptions() { *ConstFoldingDenormalMode; }
+
+static DenormalMode getFoldingDenormalMode(FPOp Opcode,
+                                           const fltSemantics &Semantics,
+                                           DenormalMode Denorms,
+                                           TargetFPInfo TFPI,
+                                           bool OverrideDefaultFlushingMode) {
+  if (OverrideDefaultFlushingMode)
+    return Denorms;
+  switch (*ConstFoldingDenormalMode) {
+  case DenormalFoldingMode::TargetDefault:
+    return TFPI.getTargetConstFoldDenormMode(Opcode, Semantics, Denorms);
+  case DenormalFoldingMode::DisableFlushing:
+    return DenormalMode::getIEEE();
+  case DenormalFoldingMode::MatchDenormalFPEnv:
+    return Denorms;
+  case DenormalFoldingMode::DisableFolding:
+    return DenormalMode::getDynamic();
+  }
+  llvm_unreachable("unknown denormal folding mode");
+}
 
 std::optional<APFloat> llvm::getFPValue(std::optional<FPFoldResult> Res) {
   return llvm::transformOptional(std::move(Res), &FPFoldResult::Value);
@@ -42,6 +98,8 @@ static bool mayHaveBeenRoundedFromSubnormal(const APFloat &Result,
     return false;
 
   switch (RM) {
+  default:
+    llvm_unreachable("unknown rounding mode");
   case RoundingMode::NearestTiesToEven:
   case RoundingMode::NearestTiesToAway:
   case RoundingMode::Dynamic:
@@ -52,10 +110,7 @@ static bool mayHaveBeenRoundedFromSubnormal(const APFloat &Result,
     return Result.isNegative();
   case RoundingMode::TowardZero:
     return false;
-  case RoundingMode::Invalid:
-    llvm_unreachable("invalid rounding mode");
   }
-  llvm_unreachable("unknown rounding mode");
 }
 
 static APFloat::opStatus getSNaNStatus(ArrayRef<APFloat> Args) {
@@ -129,21 +184,19 @@ static APFloat::opStatus executeFold(FPOp Opcode, APFloat &Result,
 
 /// Internal helper to fold or reject if we cannot give correct results.
 /// If RM is necessary for the operation, it must be valid and non-dynamic.
-/// Dynamic/Invalid denormal modes are handled - they reject the fold if
-/// subnormal inputs are present, or if the output is subnormal and needs
-/// flushed.
+/// Dynamic denormal modes reject the fold if subnormal inputs are present or
+/// if the output is subnormal and may need flushing.
 static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
                                                    ArrayRef<APFloat> Args,
                                                    RoundingMode RM,
                                                    DenormalMode Denorms) {
   assert(!Args.empty() && Args.size() <= 3);
+  assert(Denorms.isValid() && "invalid denormal mode");
 
   SmallVector<APFloat, 3> FlushedArgs;
-  bool DenormInputModeUnknown = Denorms.Input == DenormalMode::Dynamic ||
-                                Denorms.Input == DenormalMode::Invalid;
   for (unsigned I = 0; I < Args.size(); ++I) {
     assert(&Args[I].getSemantics() == &Args[0].getSemantics());
-    if (DenormInputModeUnknown && Args[I].isDenormal())
+    if (Denorms.Input == DenormalMode::Dynamic && Args[I].isDenormal())
       return std::nullopt;
     FlushedArgs.push_back(flush(Args[I], Denorms.Input));
   }
@@ -151,9 +204,7 @@ static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
   APFloat Result = FlushedArgs[0];
   APFloat::opStatus Status = executeFold(Opcode, Result, FlushedArgs, RM);
 
-  if ((Denorms.Output == DenormalMode::Dynamic ||
-       Denorms.Output == DenormalMode::Invalid) &&
-      Result.isDenormal())
+  if (Denorms.Output == DenormalMode::Dynamic && Result.isDenormal())
     return std::nullopt;
   if (Denorms.Output != DenormalMode::IEEE &&
       mayHaveBeenRoundedFromSubnormal(Result, Status, RM))
@@ -163,7 +214,12 @@ static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
 
 // Fold FPOps that do not require a rounding mode (or use the default RN)
 std::optional<FPFoldResult> llvm::tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args,
-                                            DenormalMode Denorms) {
+                                            DenormalMode Denorms,
+                                            TargetFPInfo TFPI,
+                                            bool OverrideDefaultFlushingMode) {
+  assert(!Args.empty());
+  Denorms = getFoldingDenormalMode(Opcode, Args[0].getSemantics(), Denorms,
+                                   TFPI, OverrideDefaultFlushingMode);
   return tryFoldFPOpImpl(Opcode, Args, RoundingMode::NearestTiesToEven,
                          Denorms);
 }
@@ -171,11 +227,14 @@ std::optional<FPFoldResult> llvm::tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args,
 // Fold FPOps that do require a rounding mode. Handle the possibility
 // that the RM is dynamic (fold with RN and allow the fold
 // only if no rounding is required).
-std::optional<FPFoldResult> llvm::tryFoldFPWithRM(FPOp Opcode,
-                                                  ArrayRef<APFloat> Args,
-                                                  RoundingMode RM,
-                                                  DenormalMode Denorms) {
+std::optional<FPFoldResult>
+llvm::tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
+                      DenormalMode Denorms, TargetFPInfo TFPI,
+                      bool OverrideDefaultFlushingMode) {
   assert(RM != RoundingMode::Invalid && "invalid rounding mode");
+  assert(!Args.empty());
+  Denorms = getFoldingDenormalMode(Opcode, Args[0].getSemantics(), Denorms,
+                                   TFPI, OverrideDefaultFlushingMode);
   RoundingMode EvalRM =
       RM == RoundingMode::Dynamic ? RoundingMode::NearestTiesToEven : RM;
   auto Res = tryFoldFPOpImpl(Opcode, Args, EvalRM, Denorms);
@@ -184,11 +243,13 @@ std::optional<FPFoldResult> llvm::tryFoldFPWithRM(FPOp Opcode,
   return Res;
 }
 
-std::optional<APFloat::cmpResult> llvm::tryFoldFCmp(const APFloat &LHS,
-                                                    const APFloat &RHS,
-                                                    DenormalMode Denorms) {
-  if ((Denorms.Input == DenormalMode::Dynamic ||
-       Denorms.Input == DenormalMode::Invalid) &&
+std::optional<APFloat::cmpResult>
+llvm::tryFoldFCmp(const APFloat &LHS, const APFloat &RHS, DenormalMode Denorms,
+                  TargetFPInfo TFPI, bool OverrideDefaultFlushingMode) {
+  Denorms = getFoldingDenormalMode(FPOp::FCmp, LHS.getSemantics(), Denorms,
+                                   TFPI, OverrideDefaultFlushingMode);
+  assert(Denorms.isValid() && "invalid denormal mode");
+  if (Denorms.Input == DenormalMode::Dynamic &&
       (LHS.isDenormal() || RHS.isDenormal()))
     return std::nullopt;
 

@@ -34,6 +34,15 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
+                                            const fltSemantics &Semantics,
+                                            DenormalMode DM) const override {
+    // NVPTX prefers the constant-folding results to obey the specified
+    // denormal_fpenv where possible, as the outputs are more likely to match
+    // those generated if the operation was executed on the hardware.
+    return DM;
+  }
+
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                           const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;

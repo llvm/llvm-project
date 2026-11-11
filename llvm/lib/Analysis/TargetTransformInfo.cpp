@@ -808,6 +808,15 @@ InstructionCost TargetTransformInfo::getFPOpCost(Type *Ty) const {
   return Cost;
 }
 
+// Prefer constant folding to use IEEE by default, and ignore the
+// denormal_fpenv function attribute. Targets may override this to return DM
+// unmodified to match denormal_fpenv where possible when folding, or may
+// provide custom rules for specific float semantics / operations.
+DenormalMode TargetTransformInfo::getTargetConstFoldDenormMode(
+    FPOp Opcode, const fltSemantics &Semantics, DenormalMode DM) const {
+  return TTIImpl->getTargetConstFoldDenormMode(Opcode, Semantics, DM);
+}
+
 InstructionCost TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode,
                                                            unsigned Idx,
                                                            const APInt &Imm,

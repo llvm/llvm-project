@@ -682,6 +682,12 @@ public:
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
 
+  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
+                                            const fltSemantics &Semantics,
+                                            DenormalMode DM) const override {
+    return getTLI()->getTargetConstFoldDenormMode(Opcode, Semantics, DM);
+  }
+
   InstructionCost getFPOpCost(Type *Ty) const override {
     // Check whether FADD is available, as a proxy for floating-point in
     // general.

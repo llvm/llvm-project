@@ -602,6 +602,12 @@ public:
     return TargetTransformInfo::TCC_Basic;
   }
 
+  virtual DenormalMode
+  getTargetConstFoldDenormMode(FPOp Opcode, const fltSemantics &Semantics,
+                               DenormalMode DM) const {
+    return DenormalMode::getIEEE();
+  }
+
   virtual InstructionCost getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
                                                 const APInt &Imm,
                                                 Type *Ty) const {
