@@ -7556,8 +7556,8 @@ SDValue AArch64TargetLowering::LowerMGATHER(SDValue Op,
 
   // Lower fixed length gather to a scalable equivalent.
   if (VT.isFixedLengthVector()) {
-    assert(Subtarget->useSVEForFixedLengthVectors() &&
-           "Cannot lower when not using SVE for fixed vectors!");
+    assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+           "Cannot lower when SVE is unavailable!");
 
     // NOTE: Handle floating-point as if integer then bitcast the result.
     EVT DataVT = VT.changeVectorElementTypeToInteger();
@@ -7645,8 +7645,8 @@ SDValue AArch64TargetLowering::LowerMSCATTER(SDValue Op,
 
   // Lower fixed length scatter to a scalable equivalent.
   if (VT.isFixedLengthVector()) {
-    assert(Subtarget->useSVEForFixedLengthVectors() &&
-           "Cannot lower when not using SVE for fixed vectors!");
+    assert(Subtarget->isSVEorStreamingSVEAvailable() &&
+           "Cannot lower when SVE is unavailable!");
 
     // Once bitcast we treat floating-point scatters as if integer.
     if (VT.isFloatingPoint()) {
