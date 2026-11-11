@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; An undef or poison aggregate PHI arm materializes in its incoming block,
+; A poison aggregate PHI arm materializes in its incoming block,
 ; where it dominates the edge, once per edge.
 ; CHECK-DAG: [[TY:%.+]] = OpTypeStruct {{%.+}} {{%.+}}
 ; CHECK-DAG: [[UNDEF:%.+]] = OpUndef [[TY]]
@@ -12,7 +12,7 @@ define { i32, float } @f(i1 %c) {
 entry:
   br label %next
 next:
-  %p = phi { i32, float } [ undef, %entry ]
+  %p = phi { i32, float } [ poison, %entry ]
   ret { i32, float } %p
 }
 
