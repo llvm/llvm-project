@@ -60,7 +60,6 @@ static llvm::cl::list<std::string>
 namespace {
 struct InputTarget {
   std::string Input;
-  std::string Target;
   bool IsHost = false;
 };
 } // namespace
@@ -114,7 +113,7 @@ validateCombineCommandLine(llvm::SmallVectorImpl<InputTarget> &inputTargets) {
 
     bool isHost = clang::OffloadTargetInfo(target, bundlerConfig).hasHostKind();
     numHostTargets += isHost;
-    inputTargets.push_back({input, target, isHost});
+    inputTargets.push_back({input, isHost});
   }
 
   if (numHostTargets != 1)
@@ -125,13 +124,10 @@ validateCombineCommandLine(llvm::SmallVectorImpl<InputTarget> &inputTargets) {
 }
 
 static void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
-                            cir::OffloadKind offloadKind,
-                            llvm::StringRef bundleID) {
+                            cir::OffloadKind offloadKind) {
   module.setSymName(name);
   module->setAttr(cir::CIRDialect::getOffloadKindAttrName(),
                   cir::OffloadKindAttr::get(module.getContext(), offloadKind));
-  module->setAttr(cir::CIRDialect::getOffloadBundleIDAttrName(),
-                  mlir::StringAttr::get(module.getContext(), bundleID));
 }
 
 static mlir::OwningOpRef<mlir::ModuleOp>
@@ -148,16 +144,14 @@ combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
       return {};
 
     if (inputTarget.IsHost) {
-      setOffloadAttrs(*module, "host", cir::OffloadKind::Host,
-                      inputTarget.Target);
+      setOffloadAttrs(*module, "host", cir::OffloadKind::Host);
       hostModule = std::move(module);
       continue;
     }
 
     std::string deviceName =
         ("device_" + llvm::Twine(deviceModules.size())).str();
-    setOffloadAttrs(*module, deviceName, cir::OffloadKind::Device,
-                    inputTarget.Target);
+    setOffloadAttrs(*module, deviceName, cir::OffloadKind::Device);
     deviceModules.push_back(std::move(module));
   }
 

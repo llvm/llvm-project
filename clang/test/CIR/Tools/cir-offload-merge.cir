@@ -9,9 +9,9 @@
 // RUN: cir-opt %t/combined.cir --verify-roundtrip -o /dev/null
 
 // COMBINE:      module attributes {cir.offload.container} {
-// COMBINE-NEXT:   module @host attributes {cir.offload.bundle_id = "host-x86_64-unknown-linux-gnu", cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
+// COMBINE-NEXT:   module @host attributes {cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
 // COMBINE-NEXT:     cir.func{{.*}} @host_fn
-// COMBINE:        module @device_0 attributes {cir.offload.bundle_id = "cuda-nvptx64-nvidia-cuda--sm_80", cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// COMBINE:        module @device_0 attributes {cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
 // COMBINE-NEXT:     cir.func{{.*}} @device_fn
 
 // The host module goes first whatever the input order; device modules keep
@@ -26,10 +26,11 @@
 
 // REORDER:      module attributes {cir.offload.container} {
 // REORDER-NEXT:   module @host
-// REORDER:        module @device_0 attributes {cir.offload.bundle_id = "cuda-nvptx64-nvidia-cuda--sm_90"
-// REORDER:        module @device_1 attributes {cir.offload.bundle_id = "cuda-nvptx64-nvidia-cuda--sm_80"
+// REORDER:        module @device_0 attributes {cir.offload.kind = #cir.offload<device>} {
+// REORDER-NEXT:   }
+// REORDER-NEXT:   module @device_1 attributes {cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
 
-// Device modules sharing a triple are told apart by their target ID.
+// Device targets may share a triple and only differ in their target ID.
 // RUN: cir-offload-merge -combine \
 // RUN:   -input=%t/host.cir \
 // RUN:   -input=%t/device-gfx90a.cir \
@@ -38,8 +39,8 @@
 // RUN:   -output=%t/multi-arch.cir
 // RUN: FileCheck %s --check-prefix=MULTI-ARCH --input-file=%t/multi-arch.cir
 
-// MULTI-ARCH: module @device_0 attributes {cir.offload.bundle_id = "hip-amdgcn-amd-amdhsa--gfx90a:xnack+"
-// MULTI-ARCH: module @device_1 attributes {cir.offload.bundle_id = "hip-amdgcn-amd-amdhsa--gfx90a:xnack-"
+// MULTI-ARCH: module @device_0 attributes {cir.offload.kind = #cir.offload<device>}
+// MULTI-ARCH: module @device_1 attributes {cir.offload.kind = #cir.offload<device>}
 
 // RUN: not cir-offload-merge -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
 // ERR-NO-MODE: error: expected -combine
