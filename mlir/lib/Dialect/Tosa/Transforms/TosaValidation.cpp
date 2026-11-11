@@ -1396,14 +1396,12 @@ LogicalResult checkErrorIfReshape(Operation *op) {
                                  shapeValues))
     return success();
 
-  // ERROR_IF(at most one dimension may be -1)
-  if (llvm::count(shapeValues, kInferableDimSize) > 1)
-    return op->emitOpError() << "expected at most one target dimension to be "
-                             << kInferableDimSize;
-
-  // ERROR_IF(any(shape < -1))
+  // ERROR_IF(any(shape < 0)): shape dimensions must be non-negative. This also
+  // rejects the legacy inferable dimension (-1), which does not conform to the
+  // TOSA specification. Dynamic dimensions must be expressed with `tosa.dim`,
+  // not -1.
   for (int64_t dim : shapeValues)
-    if (dim < kInferableDimSize)
+    if (dim < 0)
       return op->emitOpError()
              << "new shape has invalid tensor dimension size " << dim;
 
@@ -1414,8 +1412,7 @@ LogicalResult checkErrorIfReshape(Operation *op) {
       outputType.getRank() == static_cast<int64_t>(shapeValues.size())) {
     for (auto [newShapeDim, outputShapeDim] :
          llvm::zip_equal(shapeValues, outputType.getShape())) {
-      if (newShapeDim == kInferableDimSize ||
-          ShapedType::isDynamic(outputShapeDim))
+      if (ShapedType::isDynamic(outputShapeDim))
         continue;
       if (newShapeDim != outputShapeDim)
         return op->emitOpError()
@@ -1446,14 +1443,6 @@ LogicalResult checkErrorIfReshape(Operation *op) {
       return op->emitOpError() << "cannot reshape " << inputElementsNum
                                << " elements into " << newShapeElementsNum;
   }
-
-  // ERROR_IF(shape contains an inferable dimension (-1)); TOSA requires
-  // dynamic dimensions to be expressed with `tosa.dim`, not -1.
-  if (llvm::is_contained(shapeValues, kInferableDimSize))
-    return op->emitOpError("shape input contains inferable dimension (")
-           << kInferableDimSize
-           << ") "
-              "which does not conform to the TOSA specification";
 
   return success();
 }
