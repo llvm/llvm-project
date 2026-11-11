@@ -138,6 +138,36 @@ end subroutine sub2
 !PARSE-TREE: | | OmpClauseList ->
 !PARSE-TREE: | | Flags = {}
 
+subroutine sub3(value)
+  integer :: value
+  !$omp assume no_openmp holds(value > 0)
+  block
+    value = 2
+  end block
+  !$omp assume holds(value > 0) no_openmp
+    value = 3
+  !$omp end assume
+end subroutine sub3
+
+!UNPARSE: SUBROUTINE sub3
+!UNPARSE: INTEGER value
+!UNPARSE: !$OMP ASSUME NO_OPENMP HOLDS(value>0)
+!UNPARSE: BLOCK
+!UNPARSE: value = 2
+!UNPARSE: END BLOCK
+!UNPARSE: !$OMP ASSUME HOLDS(value>0) NO_OPENMP
+!UNPARSE: value = 3
+!UNPARSE: !$OMP END ASSUME
+!UNPARSE: END SUBROUTINE sub3
+
+!PARSE-TREE: OmpAssumeDirective
+!PARSE-TREE: OmpClauseList -> OmpClause -> NoOpenmp
+!PARSE-TREE: OmpClause -> Holds -> OmpHoldsClause -> Expr -> GT
+!PARSE-TREE: BlockConstruct
+!PARSE-TREE: OmpAssumeDirective
+!PARSE-TREE: OmpClauseList -> OmpClause -> Holds -> OmpHoldsClause -> Expr -> GT
+!PARSE-TREE: OmpClause -> NoOpenmp
+
 program p
   !$omp assumes no_openmp
 end program p

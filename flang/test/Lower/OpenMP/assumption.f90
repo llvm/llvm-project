@@ -36,6 +36,94 @@ subroutine assume_block(x)
   end block
 end subroutine assume_block
 
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp(value)
+  integer :: value
+  ! CHECK: %[[DECL:.*]]:2 = hlfir.declare
+  ! CHECK: fir.call {{.*}}external_helper
+  ! CHECK-NOT: default_func_attrs
+  call external_helper(value)
+  !$omp assume no_openmp
+  block
+    ! CHECK: %[[TWO:.*]] = arith.constant 2 : i32
+    ! CHECK: hlfir.assign %[[TWO]] to %[[DECL]]#0
+    value = 2
+    ! CHECK: fir.call {{.*}}external_helper
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+  end block
+  ! CHECK: fir.call {{.*}}external_helper
+  ! CHECK-NOT: default_func_attrs
+  ! CHECK: return
+  call external_helper(value)
+end subroutine assume_no_openmp
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp_loose
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp_loose(value)
+  integer :: value
+  !$omp assume no_openmp holds(value > 0)
+    ! CHECK: llvm.intr.assume %{{.*}} : i1
+    ! CHECK: fir.call {{.*}}external_helper
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+  !$omp end assume
+  ! CHECK: %[[THREE:.*]] = arith.constant 3 : i32
+  ! CHECK: hlfir.assign %[[THREE]]
+  ! CHECK: return
+  value = 3
+end subroutine assume_no_openmp_loose
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp_holds_first
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp_holds_first(value)
+  integer :: value
+  !$omp assume holds(value > 0) no_openmp
+  block
+    ! CHECK: llvm.intr.assume %{{.*}} : i1
+    ! CHECK: fir.call {{.*}}external_helper
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call external_helper(value)
+  end block
+  ! CHECK: return
+end subroutine assume_no_openmp_holds_first
+
+! CHECK-LABEL: func.func {{.*}}assume_no_openmp_nested
+! CHECK-NOT: llvm.passthrough
+subroutine assume_no_openmp_nested(callback, value)
+  integer :: value
+  interface
+    subroutine callback(value)
+      integer :: value
+    end subroutine callback
+  end interface
+  ! CHECK: fir.call %{{[^ (]+}}
+  ! CHECK-NOT: default_func_attrs
+  call callback(value)
+  !$omp assume no_openmp
+    ! CHECK: fir.call %{{[^ (]+}}
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call callback(value)
+    !$omp assume no_openmp
+    block
+      ! CHECK: fir.if %{{.*}} {
+      if (value > 0) then
+        ! CHECK: fir.call %{{[^ (]+}}
+        ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+        call callback(value)
+      end if
+    end block
+    ! CHECK: fir.call %{{[^ (]+}}
+    ! CHECK-SAME: default_func_attrs = {llvm.assume = "omp_no_openmp"}
+    call callback(value)
+  !$omp end assume
+  ! CHECK: fir.call %{{[^ (]+}}
+  ! CHECK-NOT: default_func_attrs
+  ! CHECK: return
+  call callback(value)
+end subroutine assume_no_openmp_nested
+
 module assumes_module
   implicit none
   !$omp assumes no_openmp
