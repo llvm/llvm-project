@@ -23,3 +23,19 @@ void test(bool b) {
   // OGCG: store i32 0, ptr %{{.*}}, align 4
   S s = b ? S{int()} : S{int()};
 }
+
+struct Pair {
+  int a;
+  int b;
+};
+using AS = _Atomic(Pair);
+
+// CIR-LABEL: cir.func {{.*}} @_Z11test_atomicv
+// OGCG-LABEL: define {{.*}} @_Z11test_atomicv
+void test_atomic() {
+  // CIR: %[[ZERO:.*]] = cir.const #cir.zero : !rec_Pair
+  // CIR: cir.store %[[ZERO]], %{{.*}} : !rec_Pair, !cir.ptr<!rec_Pair>
+
+  // OGCG: call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 8, i1 false)
+  AS s = AS();
+}
