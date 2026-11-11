@@ -145,7 +145,6 @@
 // XNACK2-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,fuzzer,fuzzer-no-link,leak"}}
 
 // UNSUPPORTEDERROR: error: 'leak' in '-fsanitize=leak' option is not currently supported for target 'spirv64-amd-amdhsa'
-// XNACKERROR: error: '-fsanitize=address' option for offload arch 'gfx900:xnack-' is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // INVALIDCOMBINATIONERROR: error: 'fuzzer' in '-fsanitize=fuzzer,address' option is not currently supported for target 'spirv64-amd-amdhsa'
 
 // WARNSANCOV: warning: ignoring '-fsanitize-coverage=inline-bool-flag' option as it is not currently supported for target 'spirv64-amd-amdhsa'
