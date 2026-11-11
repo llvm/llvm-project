@@ -14,6 +14,9 @@
 // Design overview:
 // - A single Scheduler instance is created on first use and never destroyed.
 //   It starts `hardware_concurrency()-1` worker threads that live forever and sleep on an atomic epoch when idle.
+// - The worker threads are deliberately never shut down, which keeps the internal state simple.
+//   In practice this means that once a parallel algorithm has been called, the process keeps a set of
+//   (idle, blocked) threads around until it exits.
 // - Scheduler contains a shared board of tasks with a fixed number of slots.
 // - apply() acquires a Task, initializes it and opens it for participation by the worker threads.
 //   Workers join the Task and run the user function on indices taken from the Task's shared atomic counter.
