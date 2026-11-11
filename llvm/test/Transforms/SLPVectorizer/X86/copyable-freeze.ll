@@ -4,17 +4,8 @@
 define void @one_copyable(ptr %p, ptr %q) {
 ; CHECK-LABEL: @one_copyable(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[A2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[A3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[F2:%.*]] = freeze i32 [[A2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i32> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[F2]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A3]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], <i32 3, i32 5, i32 7, i32 9>
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -47,22 +38,9 @@ entry:
 define void @half_copyable_loads(ptr %p, ptr %q) {
 ; CHECK-LABEL: @half_copyable_loads(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[A1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[A2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[A3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[F0:%.*]] = freeze i32 [[A0]]
-; CHECK-NEXT:    [[F2:%.*]] = freeze i32 [[A2]]
-; CHECK-NEXT:    [[H1:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[H2:%.*]] = getelementptr i32, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[H3:%.*]] = getelementptr i32, ptr [[Q]], i64 3
-; CHECK-NEXT:    store i32 [[F0]], ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[A1]], ptr [[H1]], align 4
-; CHECK-NEXT:    store i32 [[F2]], ptr [[H2]], align 4
-; CHECK-NEXT:    store i32 [[A3]], ptr [[H3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -119,13 +97,9 @@ entry:
 define void @two_lanes(ptr %p, ptr %q) {
 ; CHECK-LABEL: @two_lanes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[A0:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr [[G1]], align 8
-; CHECK-NEXT:    [[F0:%.*]] = freeze i64 [[A0]]
-; CHECK-NEXT:    [[H1:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 1
-; CHECK-NEXT:    store i64 [[F0]], ptr [[Q]], align 8
-; CHECK-NEXT:    store i64 [[A1]], ptr [[H1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i64> [[TMP0]]
+; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr [[Q:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -228,24 +202,10 @@ entry:
 define void @tie_unrelated_freeze_first(ptr %p, ptr %q) {
 ; CHECK-LABEL: @tie_unrelated_freeze_first(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = freeze i32 [[L0]]
-; CHECK-NEXT:    [[V1:%.*]] = add i32 [[L1]], 3
-; CHECK-NEXT:    [[V2:%.*]] = freeze i32 [[L2]]
-; CHECK-NEXT:    [[V3:%.*]] = add i32 [[L3]], 5
-; CHECK-NEXT:    [[H1:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[H2:%.*]] = getelementptr i32, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[H3:%.*]] = getelementptr i32, ptr [[Q]], i64 3
-; CHECK-NEXT:    store i32 [[V0]], ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[V1]], ptr [[H1]], align 4
-; CHECK-NEXT:    store i32 [[V2]], ptr [[H2]], align 4
-; CHECK-NEXT:    store i32 [[V3]], ptr [[H3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], <i32 0, i32 3, i32 0, i32 5>
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -273,24 +233,10 @@ entry:
 define void @tie_unrelated_add_first(ptr %p, ptr %q) {
 ; CHECK-LABEL: @tie_unrelated_add_first(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = add i32 [[L0]], 3
-; CHECK-NEXT:    [[V1:%.*]] = freeze i32 [[L1]]
-; CHECK-NEXT:    [[V2:%.*]] = add i32 [[L2]], 5
-; CHECK-NEXT:    [[V3:%.*]] = freeze i32 [[L3]]
-; CHECK-NEXT:    [[H1:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[H2:%.*]] = getelementptr i32, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[H3:%.*]] = getelementptr i32, ptr [[Q]], i64 3
-; CHECK-NEXT:    store i32 [[V0]], ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[V1]], ptr [[H1]], align 4
-; CHECK-NEXT:    store i32 [[V2]], ptr [[H2]], align 4
-; CHECK-NEXT:    store i32 [[V3]], ptr [[H3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[TMP1]], <i32 3, i32 0, i32 5, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -318,26 +264,10 @@ entry:
 define void @tie_frozen_add_freeze_first(ptr %p, ptr %q) {
 ; CHECK-LABEL: @tie_frozen_add_freeze_first(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = add i32 [[L0]], 3
-; CHECK-NEXT:    [[A2:%.*]] = add i32 [[L2]], 7
-; CHECK-NEXT:    [[V0:%.*]] = freeze i32 [[A0]]
-; CHECK-NEXT:    [[V1:%.*]] = add i32 [[L1]], 5
-; CHECK-NEXT:    [[V2:%.*]] = freeze i32 [[A2]]
-; CHECK-NEXT:    [[V3:%.*]] = add i32 [[L3]], 9
-; CHECK-NEXT:    [[H1:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[H2:%.*]] = getelementptr i32, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[H3:%.*]] = getelementptr i32, ptr [[Q]], i64 3
-; CHECK-NEXT:    store i32 [[V0]], ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[V1]], ptr [[H1]], align 4
-; CHECK-NEXT:    store i32 [[V2]], ptr [[H2]], align 4
-; CHECK-NEXT:    store i32 [[V3]], ptr [[H3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 3, i32 5, i32 7, i32 9>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i32> [[TMP1]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -367,26 +297,10 @@ entry:
 define void @tie_frozen_add_add_first(ptr %p, ptr %q) {
 ; CHECK-LABEL: @tie_frozen_add_add_first(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i32, ptr [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr i32, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[G1]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[G2]], align 4
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[G3]], align 4
-; CHECK-NEXT:    [[A1:%.*]] = add i32 [[L1]], 5
-; CHECK-NEXT:    [[A3:%.*]] = add i32 [[L3]], 9
-; CHECK-NEXT:    [[V0:%.*]] = add i32 [[L0]], 3
-; CHECK-NEXT:    [[V1:%.*]] = freeze i32 [[A1]]
-; CHECK-NEXT:    [[V2:%.*]] = add i32 [[L2]], 7
-; CHECK-NEXT:    [[V3:%.*]] = freeze i32 [[A3]]
-; CHECK-NEXT:    [[H1:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[H2:%.*]] = getelementptr i32, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[H3:%.*]] = getelementptr i32, ptr [[Q]], i64 3
-; CHECK-NEXT:    store i32 [[V0]], ptr [[Q]], align 4
-; CHECK-NEXT:    store i32 [[V1]], ptr [[H1]], align 4
-; CHECK-NEXT:    store i32 [[V2]], ptr [[H2]], align 4
-; CHECK-NEXT:    store i32 [[V3]], ptr [[H3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 3, i32 5, i32 7, i32 9>
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i32> [[TMP1]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

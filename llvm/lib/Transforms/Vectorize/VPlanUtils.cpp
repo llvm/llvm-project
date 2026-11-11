@@ -1520,7 +1520,14 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
         // Optimizing WideALM can only happen after the Plan is unrolled.
         if (!Plan.isUnrolled())
           return nullptr;
+
         Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+
+        // TODO: We can't fold if any users expect require a wide value.
+        if (Multiplier != 1 &&
+            !all_of(R.users(), match_fn(m_ExtractVectorForPart())))
+          return nullptr;
+
         Ops.pop_back();
       }
 

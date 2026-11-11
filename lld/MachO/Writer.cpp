@@ -735,7 +735,8 @@ void Writer::scanRelocations() {
         ++it;
         // Canonicalize the referent so that later accesses in Writer won't
         // have to worry about it.
-        if (auto *referentIsec = it->referent.dyn_cast<InputSection *>())
+        if (auto *referentIsec =
+                dyn_cast_if_present<InputSection *>(it->referent))
           it->referent = referentIsec->canonical();
         continue;
       }

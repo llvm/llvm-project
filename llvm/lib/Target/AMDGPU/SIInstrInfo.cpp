@@ -8406,15 +8406,15 @@ void SIInstrInfo::handleCopyToPhysHelper(
     return;
   }
   Register SrcReg = Inst.getOperand(1).getReg();
-  MachineBasicBlock::iterator I = Inst.getIterator();
-  MachineBasicBlock::iterator E = Inst.getParent()->end();
   // Only search current block since phyreg's def & use cannot cross
   // blocks when MF.NoPhi = false.
-  while (++I != E) {
+  for (MachineInstr &MI :
+       instructionsWithoutDebug(std::next(MachineBasicBlock::iterator(Inst)),
+                                Inst.getParent()->end())) {
     // For SI_CALL_ISEL users, replace the phys SGPR with the VGPR source
     // and record the operand for later waterfall loop generation.
-    if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
-      MachineInstr *UseMI = &*I;
+    if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
+      MachineInstr *UseMI = &MI;
       for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
         if (UseMI->getOperand(i).isReg() &&
             UseMI->getOperand(i).getReg() == DstReg) {
@@ -8426,16 +8426,16 @@ void SIInstrInfo::handleCopyToPhysHelper(
           V2SPhyCopiesToErase.try_emplace(&Inst, true);
         }
       }
-    } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
-               I->getOperand(0).isReg() &&
-               I->getOperand(0).getReg() == DstReg) {
+    } else if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
+               MI.getOperand(0).isReg() &&
+               MI.getOperand(0).getReg() == DstReg) {
       createReadFirstLaneFromCopyToPhysReg(MRI, DstReg, Inst);
       V2SPhyCopiesToErase.try_emplace(&Inst, true);
-    } else if (I->readsRegister(DstReg, &RI)) {
+    } else if (MI.readsRegister(DstReg, &RI)) {
       // COPY cannot be erased if other type of inst uses it.
       V2SPhyCopiesToErase[&Inst] = false;
     }
-    if (I->findRegisterDefOperand(DstReg, &RI))
+    if (MI.modifiesRegister(DstReg, &RI))
       break;
   }
 }
@@ -12099,4 +12099,16 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
     return true;
 
   return AMDGPU::getMAIIsGFX940XDL(Opcode);
+}
+
+bool SIInstrInfo::isVAVDSTOrderedXDL(const MachineInstr &MI) const {
+  constexpr unsigned MinOrderedXDLVAVDSTVGPRs = 8;
+  if (!AMDGPU::isGFX1250(ST) || !isXDL(MI))
+    return false;
+
+  const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
+  const TargetRegisterClass *DstRC =
+      getRegClass(MI.getDesc(), Dst->getOperandNo());
+  return DstRC && RI.isVGPRClass(DstRC) &&
+         RI.getRegSizeInBits(*DstRC) >= MinOrderedXDLVAVDSTVGPRs * 32;
 }

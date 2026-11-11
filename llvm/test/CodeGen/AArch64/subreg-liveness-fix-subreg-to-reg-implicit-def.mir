@@ -13,7 +13,6 @@
 ---
 name: test_implicit_def_w1_to_x1
 isSSA: false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x1
@@ -31,7 +30,6 @@ body:             |
 ---
 name: test_implicit_def_dead_w1_to_dead_x1
 isSSA: false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x1
@@ -49,7 +47,6 @@ body:             |
 ---
 name: test_implicit_def_d0_to_q0_and_d1_to_q1
 isSSA: false
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1, $x1
@@ -67,7 +64,6 @@ body:             |
 ---
 name: test_implicit_def_d0_d1_d2_to_q0_q1_q2
 isSSA: false
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
@@ -88,7 +84,6 @@ body:             |
 ---
 name: test_implicit_def_d0_d1_d2_to_z0_z1_z2_with_sve
 isSSA: false
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:

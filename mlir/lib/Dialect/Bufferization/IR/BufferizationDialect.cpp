@@ -43,7 +43,9 @@ struct BuiltinTensorExternalModel
       mlir::Type tensor, BufferLikeType bufferType,
       llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
     auto tensorType = cast<ShapedType>(tensor);
-    auto memrefType = cast<ShapedType>(bufferType);
+    auto memrefType = dyn_cast<ShapedType>(bufferType);
+    if (!memrefType)
+      return emitError() << "expected a shaped buffer type";
 
     if (tensorType.getShape() != memrefType.getShape())
       return emitError() << "shapes do not match";

@@ -17,12 +17,12 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <mutex>
 #include <shared_mutex>
 #include <variant>
 #include <vector>
 
 #include "ExclusiveAccess.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Utils.h"
@@ -46,6 +46,27 @@
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm::offload::debug;
+
+/// This struct contains information exchanged between different asynchronous
+/// operations for device-dependent optimization and potential synchronization
+struct __tgt_async_info {
+  // A pointer to a queue-like structure where offloading operations are issued.
+  // We assume to use this structure to do synchronization. In CUDA backend, it
+  // is CUstream.
+  void *Queue = nullptr;
+
+  /// A collection of allocations that are associated with this stream and that
+  /// should be freed after finalization. Also store the type of the allocation.
+  llvm::SmallVector<std::pair<void *, TargetAllocTy>, 2> AssociatedAllocations;
+
+  /// Mutex to guard access to AssociatedAllocations and the Queue.
+  std::mutex Mutex;
+
+  /// Opaque handle for profiler-specific data (e.g., OMPT trace record info).
+  /// Owned by the profiler; the runtime threads this pointer through the plugin
+  /// layer to associate async operations with trace records.
+  void *ProfilerData = nullptr;
+};
 
 namespace llvm {
 namespace omp {
@@ -124,6 +145,11 @@ struct AsyncInfoWrapperTy {
   /// provide a __tgt_async_info.
   bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
 
+  /// Note that a kernel trace entry referencing this wrapper's async info was
+  /// recorded. If the async info is the wrapper's local one, finalize() will
+  /// drop that reference before the local object is destroyed.
+  void setKernelTraced() { KernelTraced = true; }
+
   /// Get the queue.
   template <typename Ty> Ty getQueueAs() {
     static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
@@ -157,6 +183,7 @@ private:
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
   __tgt_async_info *AsyncInfoPtr;
+  bool KernelTraced = false;
 };
 
 enum class DeviceInfo {
@@ -471,6 +498,15 @@ struct KernelTraceInfoRecordTy {
                __tgt_async_info *AsyncInfo) {
     KTIs[Idx] = {Kernel, std::move(StackTrace), AsyncInfo};
     Idx = (Idx + 1) % size();
+  }
+
+  /// Drop the references to \p AsyncInfo from all entries, keeping the rest of
+  /// the information (kernel, launch trace) available for error reporting.
+  void clearAsyncInfo(const __tgt_async_info *AsyncInfo) {
+    for (auto &KTI : KTIs) {
+      if (KTI.AsyncInfo == AsyncInfo)
+        KTI.AsyncInfo = nullptr;
+    }
   }
 
   /// Return the \p I'th last kernel trace info.
