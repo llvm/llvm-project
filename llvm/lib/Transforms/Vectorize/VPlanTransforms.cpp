@@ -4342,9 +4342,9 @@ void VPlanTransforms::widenPredicatedInvariantLoads(VPlan &Plan,
     // Consecutive=true selects the masked-load (not masked-gather) lowering in
     // VPWidenLoadRecipe::execute. The access is stride-0, not stride-1; lane 0
     // holds the loaded value and is broadcast across all VF lanes below.
-    auto *MaskedLoad = new VPWidenLoadRecipe(*LI, Addr, VMask,
-                                             /*Consecutive*/ true, Alignment,
-                                             *RepR, DL);
+    auto *MaskedLoad =
+        new VPWidenLoadRecipe(*LI, Addr, VMask,
+                              /*Consecutive*/ true, Alignment, *RepR, DL);
     Builder.insert(MaskedLoad);
 
     // Broadcast lane 0 of the masked load across all lanes, reusing the
