@@ -528,6 +528,7 @@ FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(errs()))
 FUNCTION_PASS("print<lazy-value-info>", LazyValueInfoPrinterPass(errs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(errs()))
 FUNCTION_PASS("print<loop-cache-cost>", LoopCachePrinterPass(errs()))
+FUNCTION_PASS("print<memoryssa>", MemorySSAPrinterPass(errs()))
 FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(errs()))
 FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(errs()))
 FUNCTION_PASS("print<postdomtree>", PostDominatorTreePrinterPass(errs()))
@@ -689,12 +690,6 @@ FUNCTION_PASS_WITH_PARAMS(
       return DependenceAnalysisPrinterPass(errs(), NormalizeResults);
     },
     parseDependenceAnalysisPrinterOptions, "normalized-results")
-FUNCTION_PASS_WITH_PARAMS(
-    "print<memoryssa>", "MemorySSAPrinterPass",
-    [](bool NoEnsureOptimizedUses) {
-      return MemorySSAPrinterPass(errs(), !NoEnsureOptimizedUses);
-    },
-    parseMemorySSAPrinterPassOptions, "no-ensure-optimized-uses")
 FUNCTION_PASS_WITH_PARAMS(
     "print<stack-lifetime>", "StackLifetimePrinterPass",
     [](StackLifetime::LivenessType Type) {

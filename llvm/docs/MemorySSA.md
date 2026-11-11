@@ -87,8 +87,8 @@ run on, and implies that we've hit the top of the function. It's the only
 defined before the function begins.
 
 An example of all of this overlaid on LLVM IR (obtained by running `opt
--passes='print<memoryssa>' -disable-output` on an `.ll` file) is below. When
-viewing this example, it may be helpful to view it in terms of clobbers.
+-passes='print<memoryssa-walker>' -disable-output` on an `.ll` file) is below.
+When viewing this example, it may be helpful to view it in terms of clobbers.
 The operands of a given `MemoryAccess` are all (potential) clobbers of said
 `MemoryAccess`, and the value produced by a `MemoryAccess` can act as a clobber
 for other `MemoryAccess`es.
@@ -112,40 +112,39 @@ a value (i.e. `MemoryDef/MemoryPhi`),
 the value is the new version of the memory after the operation.
 
 ```llvm
-  define void @foo() {
-  entry:
-    %p1 = alloca i8
-    %p2 = alloca i8
-    %p3 = alloca i8
-    ; 1 = MemoryDef(liveOnEntry)
-    store i8 0, ptr %p3
-    br label %while.cond
+define void @foo() {
+entry:
+  %p1 = alloca i8, align 1
+  %p2 = alloca i8, align 1
+  %p3 = alloca i8, align 1
+; 1 = MemoryDef(liveOnEntry)->liveOnEntry - clobbered by liveOnEntry
+  store i8 0, ptr %p3, align 1
+  br label %while.cond
 
-  while.cond:
-    ; 6 = MemoryPhi({entry,1},{if.end,4})
-    br i1 undef, label %if.then, label %if.else
+while.cond:                                       ; preds = %if.end, %entry
+; 6 = MemoryPhi({entry,1},{if.end,4})
+  br i1 undef, label %if.then, label %if.else
 
-  if.then:
-    ; 2 = MemoryDef(6)
-    store i8 0, ptr %p1
-    br label %if.end
+if.then:                                          ; preds = %while.cond
+; 2 = MemoryDef(6)->6 - clobbered by 6 = MemoryPhi({entry,1},{if.end,4})
+  store i8 0, ptr %p1, align 1
+  br label %if.end
 
-  if.else:
-    ; 3 = MemoryDef(6)
-    store i8 1, ptr %p2
-    br label %if.end
+if.else:                                          ; preds = %while.cond
+; 3 = MemoryDef(6)->6 - clobbered by 6 = MemoryPhi({entry,1},{if.end,4})
+  store i8 1, ptr %p2, align 1
+  br label %if.end
 
-  if.end:
-    ; 5 = MemoryPhi({if.then,2},{if.else,3})
-    ; MemoryUse(5)
-    %1 = load i8, ptr %p1
-    ; 4 = MemoryDef(5)
-    store i8 2, ptr %p2
-    ; MemoryUse(1)
-    %2 = load i8, ptr %p3
-    br label %while.cond
-  }
-
+if.end:                                           ; preds = %if.else, %if.then
+; 5 = MemoryPhi({if.then,2},{if.else,3})
+; MemoryUse(5) - clobbered by 5 = MemoryPhi({if.then,2},{if.else,3})
+  %0 = load i8, ptr %p1, align 1
+; 4 = MemoryDef(5)->5 - clobbered by 5 = MemoryPhi({if.then,2},{if.else,3})
+  store i8 2, ptr %p2, align 1
+; MemoryUse(1) - clobbered by 1 = MemoryDef(liveOnEntry)->liveOnEntry
+  %1 = load i8, ptr %p3, align 1
+  br label %while.cond
+}
 ```
 
 The `MemorySSA` IR is shown in comments that precede the instructions they map
@@ -153,8 +152,12 @@ to (if such an instruction exists). For example, `1 = MemoryDef(liveOnEntry)`
 is a `MemoryAccess` (specifically, a `MemoryDef`), and it describes the LLVM
 instruction `store i8 0, ptr %p3`. Other places in `MemorySSA` refer to this
 particular `MemoryDef` as `1` (much like how one can refer to `load i8, ptr
-%p1` in LLVM with `%1`). Again, `MemoryPhi`s don't correspond to any LLVM
+%p1` in LLVM with `%0`). Again, `MemoryPhi`s don't correspond to any LLVM
 Instruction, so the line directly below a `MemoryPhi` isn't special.
+`print<memoryssa-walker>` also asks the walker for the clobber of each
+`MemoryUse` and `MemoryDef`, and prints it after `- clobbered by`. For a
+`MemoryDef`, the optimized access the walker cached is also printed after `->`
+(see [Use and Def optimization](#use-and-def-optimization)).
 
 Going from the top down:
 
@@ -262,10 +265,11 @@ second `MemoryUse` in `if.end` has an operand of `1`, which is a
 value numbering, etc, faster and easier.
 As of [this revision](https://reviews.llvm.org/D121381), the default was
 changed to not optimize uses at build time, in order to provide the option to
-reduce compile-time if the walking is not necessary in a pass. Most users call
-the new API `ensureOptimizedUses()` to keep the previous behavior and do a
-one-time optimization of `MemoryUse`s, if this was not done before.
-New pass users are recommended to call `ensureOptimizedUses()`.
+reduce compile-time if the walking is not necessary in a pass. Passes that
+need the clobber of a `MemoryUse` query the walker with
+`getClobberingMemoryAccess()`, which optimizes the use on demand and caches
+the result. The defining access of a `MemoryUse` is therefore only guaranteed
+to be its nearest dominating `MemoryDef` or `MemoryPhi`, not its clobber.
 
 Initially it was not possible to optimize `MemoryDef`s in the same way, as we
 restricted `MemorySSA` to one operand per access.

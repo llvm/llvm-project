@@ -15,8 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -141,96 +139,6 @@ public:
 
 } // namespace
 
-namespace {
-
-/// Our current alias analysis API differentiates heavily between calls and
-/// non-calls, and functions called on one usually assert on the other.
-/// This class encapsulates the distinction to simplify other code that wants
-/// "Memory affecting instructions and related data" to use as a key.
-/// For example, this class is used as a densemap key in the use optimizer.
-class MemoryLocOrCall {
-public:
-  bool IsCall = false;
-
-  MemoryLocOrCall(MemoryUseOrDef *MUD)
-      : MemoryLocOrCall(MUD->getMemoryInst()) {}
-  MemoryLocOrCall(const MemoryUseOrDef *MUD)
-      : MemoryLocOrCall(MUD->getMemoryInst()) {}
-
-  MemoryLocOrCall(Instruction *Inst) {
-    if (auto *C = dyn_cast<CallBase>(Inst)) {
-      IsCall = true;
-      Call = C;
-    } else {
-      IsCall = false;
-      // There is no such thing as a memorylocation for a fence inst, and it is
-      // unique in that regard.
-      if (!isa<FenceInst>(Inst))
-        Loc = MemoryLocation::get(Inst);
-    }
-  }
-
-  explicit MemoryLocOrCall(const MemoryLocation &Loc) : Loc(Loc) {}
-
-  const CallBase *getCall() const {
-    assert(IsCall);
-    return Call;
-  }
-
-  MemoryLocation getLoc() const {
-    assert(!IsCall);
-    return Loc;
-  }
-
-  bool operator==(const MemoryLocOrCall &Other) const {
-    if (IsCall != Other.IsCall)
-      return false;
-
-    if (!IsCall)
-      return Loc == Other.Loc;
-
-    if (Call->getCalledOperand() != Other.Call->getCalledOperand())
-      return false;
-
-    return Call->arg_size() == Other.Call->arg_size() &&
-           std::equal(Call->arg_begin(), Call->arg_end(),
-                      Other.Call->arg_begin());
-  }
-
-private:
-  union {
-    const CallBase *Call;
-    MemoryLocation Loc;
-  };
-};
-
-} // end anonymous namespace
-
-namespace llvm {
-
-template <> struct DenseMapInfo<MemoryLocOrCall> {
-  static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
-    if (!MLOC.IsCall)
-      return hash_combine(
-          MLOC.IsCall,
-          DenseMapInfo<MemoryLocation>::getHashValue(MLOC.getLoc()));
-
-    hash_code hash =
-        hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCall()->getCalledOperand()));
-
-    for (const Value *Arg : MLOC.getCall()->args())
-      hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));
-    return hash;
-  }
-
-  static bool isEqual(const MemoryLocOrCall &LHS, const MemoryLocOrCall &RHS) {
-    return LHS == RHS;
-  }
-};
-
-} // end namespace llvm
-
 /// This does one-way checks to see if Use could theoretically be hoisted above
 /// MayClobber. This will not check the other way around.
 ///
@@ -303,23 +211,13 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
   return isModSet(I);
 }
 
-template <typename AliasAnalysisType>
-static bool instructionClobbersQuery(MemoryDef *MD, const MemoryUseOrDef *MU,
-                                     const MemoryLocOrCall &UseMLOC,
-                                     AliasAnalysisType &AA) {
-  // FIXME: This is a temporary hack to allow a single instructionClobbersQuery
-  // to exist while MemoryLocOrCall is pushed through places.
-  if (UseMLOC.IsCall)
-    return instructionClobbersQuery(MD, MemoryLocation(), MU->getMemoryInst(),
-                                    AA);
-  return instructionClobbersQuery(MD, UseMLOC.getLoc(), MU->getMemoryInst(),
-                                  AA);
-}
-
 // Return true when MD may alias MU, return false otherwise.
 bool MemorySSAUtil::defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
                                         AliasAnalysis &AA) {
-  return instructionClobbersQuery(MD, MU, MemoryLocOrCall(MU), AA);
+  Instruction *UseInst = MU->getMemoryInst();
+  MemoryLocation UseLoc =
+      MemoryLocation::getOrNone(UseInst).value_or(MemoryLocation());
+  return instructionClobbersQuery(MD, UseLoc, UseInst, AA);
 }
 
 namespace {
@@ -985,8 +883,7 @@ public:
   // additional query becomes heavily used we may decide to cache the result.
   // Walker instantiations will decide how to set the SkipSelf bool.
   MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, BatchAAResults &,
-                                              unsigned &, bool,
-                                              bool UseInvariantGroup = true);
+                                              unsigned &, bool);
 };
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
@@ -1010,11 +907,6 @@ public:
                                           const MemoryLocation &Loc,
                                           BatchAAResults &BAA, unsigned &UWL) {
     return Walker->getClobberingMemoryAccessBase(MA, Loc, BAA, UWL);
-  }
-  // This method is not accessible outside of this file.
-  MemoryAccess *getClobberingMemoryAccessWithoutInvariantGroup(
-      MemoryAccess *MA, BatchAAResults &BAA, unsigned &UWL) {
-    return Walker->getClobberingMemoryAccessBase(MA, BAA, UWL, false, false);
   }
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
@@ -1273,216 +1165,6 @@ MemorySSA::DefsList *MemorySSA::getOrCreateDefsList(const BasicBlock *BB) {
   if (Res.second)
     Res.first->second = std::make_unique<DefsList>();
   return Res.first->second.get();
-}
-
-namespace llvm {
-
-/// This class is a batch walker of all MemoryUse's in the program, and points
-/// their defining access at the thing that actually clobbers them.  Because it
-/// is a batch walker that touches everything, it does not operate like the
-/// other walkers.  This walker is basically performing a top-down SSA renaming
-/// pass, where the version stack is used as the cache.  This enables it to be
-/// significantly more time and memory efficient than using the regular walker,
-/// which is walking bottom-up.
-class MemorySSA::OptimizeUses {
-public:
-  OptimizeUses(MemorySSA *MSSA, CachingWalker *Walker, BatchAAResults *BAA,
-               DominatorTree *DT)
-      : MSSA(MSSA), Walker(Walker), AA(BAA), DT(DT) {}
-
-  void optimizeUses();
-
-private:
-  /// This represents where a given memorylocation is in the stack.
-  struct MemlocStackInfo {
-    // This essentially is keeping track of versions of the stack. Whenever
-    // the stack changes due to pushes or pops, these versions increase.
-    unsigned long StackEpoch;
-    unsigned long PopEpoch;
-    // This is the lower bound of places on the stack to check. It is equal to
-    // the place the last stack walk ended.
-    // Note: Correctness depends on this being initialized to 0, which densemap
-    // does
-    unsigned long LowerBound;
-    const BasicBlock *LowerBoundBlock;
-    // This is where the last walk for this memory location ended.
-    unsigned long LastKill;
-    bool LastKillValid;
-  };
-
-  void optimizeUsesInBlock(const BasicBlock *, unsigned long &, unsigned long &,
-                           SmallVectorImpl<MemoryAccess *> &,
-                           DenseMap<MemoryLocOrCall, MemlocStackInfo> &);
-
-  MemorySSA *MSSA;
-  CachingWalker *Walker;
-  BatchAAResults *AA;
-  DominatorTree *DT;
-};
-
-} // end namespace llvm
-
-/// Optimize the uses in a given block This is basically the SSA renaming
-/// algorithm, with one caveat: We are able to use a single stack for all
-/// MemoryUses.  This is because the set of *possible* reaching MemoryDefs is
-/// the same for every MemoryUse.  The *actual* clobbering MemoryDef is just
-/// going to be some position in that stack of possible ones.
-///
-/// We track the stack positions that each MemoryLocation needs
-/// to check, and last ended at.  This is because we only want to check the
-/// things that changed since last time.  The same MemoryLocation should
-/// get clobbered by the same store (getModRefInfo does not use invariantness or
-/// things like this, and if they start, we can modify MemoryLocOrCall to
-/// include relevant data)
-void MemorySSA::OptimizeUses::optimizeUsesInBlock(
-    const BasicBlock *BB, unsigned long &StackEpoch, unsigned long &PopEpoch,
-    SmallVectorImpl<MemoryAccess *> &VersionStack,
-    DenseMap<MemoryLocOrCall, MemlocStackInfo> &LocStackInfo) {
-
-  /// If no accesses, nothing to do.
-  MemorySSA::AccessList *Accesses = MSSA->getBlockAccesses(BB);
-  if (Accesses == nullptr)
-    return;
-
-  // Pop everything that doesn't dominate the current block off the stack,
-  // increment the PopEpoch to account for this.
-  while (true) {
-    assert(
-        !VersionStack.empty() &&
-        "Version stack should have liveOnEntry sentinel dominating everything");
-    BasicBlock *BackBlock = VersionStack.back()->getBlock();
-    if (DT->dominates(BackBlock, BB))
-      break;
-    while (VersionStack.back()->getBlock() == BackBlock)
-      VersionStack.pop_back();
-    ++PopEpoch;
-  }
-
-  for (MemoryAccess &MA : *Accesses) {
-    auto *MU = dyn_cast<MemoryUse>(&MA);
-    if (!MU) {
-      VersionStack.push_back(&MA);
-      ++StackEpoch;
-      continue;
-    }
-
-    if (MU->isOptimized())
-      continue;
-
-    MemoryLocOrCall UseMLOC(MU);
-    auto &LocInfo = LocStackInfo[UseMLOC];
-    // If the pop epoch changed, it means we've removed stuff from top of
-    // stack due to changing blocks. We may have to reset the lower bound or
-    // last kill info.
-    if (LocInfo.PopEpoch != PopEpoch) {
-      LocInfo.PopEpoch = PopEpoch;
-      LocInfo.StackEpoch = StackEpoch;
-      // If the lower bound was in something that no longer dominates us, we
-      // have to reset it.
-      // We can't simply track stack size, because the stack may have had
-      // pushes/pops in the meantime.
-      // XXX: This is non-optimal, but only is slower cases with heavily
-      // branching dominator trees.  To get the optimal number of queries would
-      // be to make lowerbound and lastkill a per-loc stack, and pop it until
-      // the top of that stack dominates us.  This does not seem worth it ATM.
-      // A much cheaper optimization would be to always explore the deepest
-      // branch of the dominator tree first. This will guarantee this resets on
-      // the smallest set of blocks.
-      if (LocInfo.LowerBoundBlock && LocInfo.LowerBoundBlock != BB &&
-          !DT->dominates(LocInfo.LowerBoundBlock, BB)) {
-        // Reset the lower bound of things to check.
-        // TODO: Some day we should be able to reset to last kill, rather than
-        // 0.
-        LocInfo.LowerBound = 0;
-        LocInfo.LowerBoundBlock = VersionStack[0]->getBlock();
-        LocInfo.LastKillValid = false;
-      }
-    } else if (LocInfo.StackEpoch != StackEpoch) {
-      // If all that has changed is the StackEpoch, we only have to check the
-      // new things on the stack, because we've checked everything before.  In
-      // this case, the lower bound of things to check remains the same.
-      LocInfo.PopEpoch = PopEpoch;
-      LocInfo.StackEpoch = StackEpoch;
-    }
-    if (!LocInfo.LastKillValid) {
-      LocInfo.LastKill = VersionStack.size() - 1;
-      LocInfo.LastKillValid = true;
-    }
-
-    // At this point, we should have corrected last kill and LowerBound to be
-    // in bounds.
-    assert(LocInfo.LowerBound < VersionStack.size() &&
-           "Lower bound out of range");
-    assert(LocInfo.LastKill < VersionStack.size() &&
-           "Last kill info out of range");
-    // In any case, the new upper bound is the top of the stack.
-    unsigned long UpperBound = VersionStack.size() - 1;
-
-    if (UpperBound - LocInfo.LowerBound > MSSA->Opts.memssa_check_limit) {
-      LLVM_DEBUG(dbgs() << "MemorySSA skipping optimization of " << *MU << " ("
-                        << *(MU->getMemoryInst()) << ")"
-                        << " because there are "
-                        << UpperBound - LocInfo.LowerBound
-                        << " stores to disambiguate\n");
-      // Because we did not walk, LastKill is no longer valid, as this may
-      // have been a kill.
-      LocInfo.LastKillValid = false;
-      continue;
-    }
-    bool FoundClobberResult = false;
-    unsigned UpwardWalkLimit = MSSA->Opts.memssa_check_limit;
-    while (UpperBound > LocInfo.LowerBound) {
-      if (isa<MemoryPhi>(VersionStack[UpperBound])) {
-        // For phis, use the walker, see where we ended up, go there.
-        // The invariant.group handling in MemorySSA is ad-hoc and doesn't
-        // support updates, so don't use it to optimize uses.
-        MemoryAccess *Result =
-            Walker->getClobberingMemoryAccessWithoutInvariantGroup(
-                MU, *AA, UpwardWalkLimit);
-        // We are guaranteed to find it or something is wrong.
-        while (VersionStack[UpperBound] != Result) {
-          assert(UpperBound != 0);
-          --UpperBound;
-        }
-        FoundClobberResult = true;
-        break;
-      }
-
-      MemoryDef *MD = cast<MemoryDef>(VersionStack[UpperBound]);
-      if (instructionClobbersQuery(MD, MU, UseMLOC, *AA)) {
-        FoundClobberResult = true;
-        break;
-      }
-      --UpperBound;
-    }
-
-    // At the end of this loop, UpperBound is either a clobber, or lower bound
-    // PHI walking may cause it to be < LowerBound, and in fact, < LastKill.
-    if (FoundClobberResult || UpperBound < LocInfo.LastKill) {
-      MU->setDefiningAccess(VersionStack[UpperBound], true);
-      LocInfo.LastKill = UpperBound;
-    } else {
-      // Otherwise, we checked all the new ones, and now we know we can get to
-      // LastKill.
-      MU->setDefiningAccess(VersionStack[LocInfo.LastKill], true);
-    }
-    LocInfo.LowerBound = VersionStack.size() - 1;
-    LocInfo.LowerBoundBlock = BB;
-  }
-}
-
-/// Optimize uses to point to their actual clobbering definitions.
-void MemorySSA::OptimizeUses::optimizeUses() {
-  SmallVector<MemoryAccess *, 16> VersionStack;
-  DenseMap<MemoryLocOrCall, MemlocStackInfo> LocStackInfo;
-  VersionStack.push_back(MSSA->getLiveOnEntryDef());
-
-  unsigned long StackEpoch = 1;
-  unsigned long PopEpoch = 1;
-  // We perform a non-recursive top-down dominator tree walk.
-  for (const auto *DomNode : depth_first(DT->getRootNode()))
-    optimizeUsesInBlock(DomNode->getBlock(), StackEpoch, PopEpoch, VersionStack,
-                        LocStackInfo);
 }
 
 void MemorySSA::placePHINodes(
@@ -2193,17 +1875,6 @@ bool MemorySSA::dominates(const MemoryAccess *Dominator,
   return dominates(Dominator, cast<MemoryAccess>(Dominatee.getUser()));
 }
 
-void MemorySSA::ensureOptimizedUses() {
-  if (IsOptimized)
-    return;
-
-  BatchAAResults BatchAA(*AA);
-  ClobberWalkerBase WalkerBase(this, DT);
-  CachingWalker WalkerLocal(this, &WalkerBase);
-  OptimizeUses(this, &WalkerLocal, &BatchAA, DT).optimizeUses();
-  IsOptimized = true;
-}
-
 void MemoryAccess::print(raw_ostream &OS) const {
   switch (getValueID()) {
   case MemoryPhiVal: return static_cast<const MemoryPhi *>(this)->print(OS);
@@ -2378,8 +2049,6 @@ bool MemorySSAAnalysis::Result::invalidate(
 PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  if (EnsureOptimizedUses)
-    MSSA.ensureOptimizedUses();
   StringRef DotCFGMSSA = getAnalysisOptions(F).dot_cfg_mssa;
   if (!DotCFGMSSA.empty()) {
     DOTFuncMSSAInfo CFGInfo(F, MSSA);
@@ -2523,23 +2192,21 @@ getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
 
 MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
     MemoryAccess *MA, BatchAAResults &BAA, unsigned &UpwardWalkLimit,
-    bool SkipSelf, bool UseInvariantGroup) {
+    bool SkipSelf) {
   auto *StartingAccess = dyn_cast<MemoryUseOrDef>(MA);
   // If this is a MemoryPhi, we can't do anything.
   if (!StartingAccess)
     return MA;
 
-  if (UseInvariantGroup) {
-    if (auto *I = getInvariantGroupClobberingInstruction(
-            *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
-      assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  if (auto *I = getInvariantGroupClobberingInstruction(
+          *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
+    assert(isa<LoadInst>(I) || isa<StoreInst>(I));
 
-      auto *ClobberMA = MSSA->getMemoryAccess(I);
-      assert(ClobberMA);
-      if (isa<MemoryUse>(ClobberMA))
-        return ClobberMA->getDefiningAccess();
-      return ClobberMA;
-    }
+    auto *ClobberMA = MSSA->getMemoryAccess(I);
+    assert(ClobberMA);
+    if (isa<MemoryUse>(ClobberMA))
+      return ClobberMA->getDefiningAccess();
+    return ClobberMA;
   }
 
   bool IsOptimized = false;

@@ -211,6 +211,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Removed `LiveVariables` analysis
 
+* Removed `MemorySSA::ensureOptimizedUses()`, which no longer had any users.
+  Query `MemorySSAWalker::getClobberingMemoryAccess()` instead; it optimizes
+  each `MemoryUse` on demand and caches the result. `print<memoryssa>` no
+  longer optimizes uses before printing, and its `<no-ensure-optimized-uses>`
+  option is removed; use `print<memoryssa-walker>` to print clobbers.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
