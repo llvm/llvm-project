@@ -696,7 +696,7 @@ struct DevirtModule {
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
   static bool runForTesting(Module &M, ModuleAnalysisManager &MAM,
-                            bool DevirtuSpeculatively);
+                            bool DevirtSpeculatively);
 };
 
 struct DevirtIndex {
