@@ -1126,7 +1126,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
         entry.end = note.data.GetAddress(&offset);
-        entry.file_ofs = note.data.GetAddress(&offset) * page_size;
+        entry.original_file_offset = note.data.GetAddress(&offset) * page_size;
         m_nt_file_entries.push_back(entry);
       }
       for (uint64_t i = 0; i < count; ++i) {
