@@ -9702,9 +9702,7 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
 
   LLT Ty = MRI.getType(Dst0Reg);
   if (Ty.isFloat()) {
-    Register R0 =
-        MIRBuilder.buildTrunc(Ty.changeToInteger(), SrcReg)
-            .getReg(0);
+    Register R0 = MIRBuilder.buildTrunc(Ty.changeToInteger(), SrcReg).getReg(0);
     MIRBuilder.buildBitcast(Dst0Reg, R0);
   } else {
     MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
@@ -9719,8 +9717,7 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
     LLT Ty = MRI.getType(DstNReg);
     if (Ty.isFloat()) {
       Register R0 =
-          MIRBuilder.buildTrunc(Ty.changeToInteger(), Shift)
-              .getReg(0);
+          MIRBuilder.buildTrunc(Ty.changeToInteger(), Shift).getReg(0);
       MIRBuilder.buildBitcast(DstNReg, R0);
     } else {
       MIRBuilder.buildTrunc(DstNReg, Shift);
