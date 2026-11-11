@@ -4450,37 +4450,23 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
 
   // Dispatch on the else-expr to recover the concrete kind type T.
   return common::visit(
-      common::visitors{
-          [&](Expr<Type<TypeCategory::Derived>> &&elseVal) -> MaybeExpr {
-            Expr<LogicalResult> cond{
-                ConvertToType<LogicalResult>(LogicalResultKind,
-                    std::move(std::get<Expr<Type<TypeCategory::Logical>>>(
-                        condExpr->u)))};
-            Expr<Type<TypeCategory::Derived>> thenVal{std::move(
-                std::get<Expr<Type<TypeCategory::Derived>>>(thenExpr->u))};
-            return AsGenericExpr(Expr<Type<TypeCategory::Derived>>{
-                evaluate::ConditionalExpr<Type<TypeCategory::Derived>>{
-                    std::move(cond), std::move(thenVal), std::move(elseVal)}});
-          },
-          [&](auto &&elseCatExpr) -> MaybeExpr {
-            using CategoryType = std::decay_t<decltype(elseCatExpr)>;
-            if constexpr (std::is_same_v<CategoryType, BOZLiteralConstant> ||
-                std::is_same_v<CategoryType, NullPointer> ||
-                std::is_same_v<CategoryType, ProcedureDesignator> ||
-                std::is_same_v<CategoryType, ProcedureRef>) {
-              DIE("Invalid expression type in conditional expression");
-            } else {
-              using T = ResultType<CategoryType>;
-              Expr<LogicalResult> cond{
-                  ConvertToType<LogicalResult>(LogicalResultKind,
-                      std::move(std::get<Expr<Type<TypeCategory::Logical>>>(
-                          condExpr->u)))};
-              Expr<T> thenVal{std::move(std::get<Expr<T>>(thenExpr->u))};
-              return AsGenericExpr(
-                  Expr<T>{evaluate::ConditionalExpr<T>{std::move(cond),
-                      std::move(thenVal), std::move(elseCatExpr)}});
-            }
-          },
+      [&](auto &&elseCatExpr) -> MaybeExpr {
+        using CategoryType = std::decay_t<decltype(elseCatExpr)>;
+        if constexpr (std::is_same_v<CategoryType, BOZLiteralConstant> ||
+            std::is_same_v<CategoryType, NullPointer> ||
+            std::is_same_v<CategoryType, ProcedureDesignator> ||
+            std::is_same_v<CategoryType, ProcedureRef>) {
+          DIE("Invalid expression type in conditional expression");
+        } else {
+          using T = ResultType<CategoryType>;
+          Expr<LogicalResult> cond{
+              ConvertToType<LogicalResult>(LogicalResultKind,
+                  std::move(std::get<Expr<Type<TypeCategory::Logical>>>(
+                      condExpr->u)))};
+          Expr<T> thenVal{std::move(std::get<Expr<T>>(thenExpr->u))};
+          return AsGenericExpr(Expr<T>{evaluate::ConditionalExpr<T>{
+              std::move(cond), std::move(thenVal), std::move(elseCatExpr)}});
+        }
       },
       std::move(elseExpr->u));
 }
