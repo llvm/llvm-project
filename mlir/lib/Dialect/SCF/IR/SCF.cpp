@@ -1035,25 +1035,17 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
   }
 };
 
-/// Fold a conditional effective prefix into the loop upper bound. The other
-/// branch must have no effects and must forward every loop-carried value.
+/// Fold a strict, loop-invariant bound on the IV into the loop upper bound.
+/// Discarded suffix iterations must be pure and preserve loop-carried state.
 struct ForOpPrefixFolder : public OpRewritePattern<ForOp> {
   using OpRewritePattern<ForOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
-    IfOp ifOp;
-    for (Operation &op : forOp.getBody()->without_terminator()) {
-      if (auto candidate = dyn_cast<IfOp>(op)) {
-        if (ifOp)
-          return failure();
-        ifOp = candidate;
-      } else if (!isPure(&op)) {
-        return failure();
-      }
-    }
-    if (!ifOp)
+    auto ifOps = forOp.getBody()->getOps<IfOp>();
+    if (!llvm::hasSingleElement(ifOps))
       return failure();
+    IfOp ifOp = *ifOps.begin();
 
     auto cmp = ifOp.getCondition().getDefiningOp<arith::CmpIOp>();
     if (!cmp)
@@ -1084,6 +1076,11 @@ struct ForOpPrefixFolder : public OpRewritePattern<ForOp> {
                                    [](Operation &op) { return isPure(&op); })))
       return failure();
 
+    for (Operation &op : forOp.getBody()->without_terminator()) {
+      if (&op != ifOp.getOperation() && !isPure(&op))
+        return failure();
+    }
+
     for (auto [arg, yielded] :
          llvm::zip_equal(forOp.getRegionIterArgs(), forOp.getYieldedValues())) {
       if (yielded == arg)
@@ -1109,10 +1106,10 @@ struct ForOpPrefixFolder : public OpRewritePattern<ForOp> {
     rewriter.modifyOpInPlace(forOp, [&] { forOp.setUpperBound(prefixUb); });
 
     auto yield = cast<YieldOp>(active->getTerminator());
-    SmallVector<Value> values(yield.getOperands());
+    ValueRange values = yield.getOperands();
     rewriter.inlineBlockBefore(active, ifOp);
-    rewriter.eraseOp(yield);
     rewriter.replaceOp(ifOp, values);
+    rewriter.eraseOp(yield);
     return success();
   }
 };

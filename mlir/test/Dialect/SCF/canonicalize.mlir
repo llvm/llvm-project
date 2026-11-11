@@ -2881,6 +2881,31 @@ func.func @prefix_dynamic_range(%dst: memref<?xindex>, %lb: index, %ub: index, %
 
 // -----
 
+// Clipping the upper bound preserves iteration points 3 and 7 without aligning
+// the cutoff to the step.
+// CHECK-LABEL: func.func @prefix_non_unit_step(
+// CHECK-DAG: %[[LB:.*]] = arith.constant 3 : index
+// CHECK-DAG: %[[STEP:.*]] = arith.constant 4 : index
+// CHECK-DAG: %[[END:.*]] = arith.constant 10 : index
+// CHECK: scf.for %[[I:.*]] = %[[LB]] to %[[END]] step %[[STEP]] {
+// CHECK-NEXT: memref.store %[[I]], {{.*}}[%[[I]]]
+// CHECK-NEXT: }
+func.func @prefix_non_unit_step(%dst: memref<?xindex>) {
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %c10 = arith.constant 10 : index
+  %c64 = arith.constant 64 : index
+  scf.for %i = %c3 to %c64 step %c4 {
+    %p = arith.cmpi slt, %i, %c10 : index
+    scf.if %p {
+      memref.store %i, %dst[%i] : memref<?xindex>
+    }
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func.func @prefix_unsigned(
 // CHECK-SAME: %[[DST:.*]]: memref<?xi32>, %[[LIMIT:.*]]: i32)
 // CHECK: %[[C64:.*]] = arith.constant 64 : i32
