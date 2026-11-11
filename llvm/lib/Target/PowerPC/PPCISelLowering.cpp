@@ -271,6 +271,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::bf16, Expand);
     setTruncStoreAction(VT, MVT::bf16, Expand);
   }
+  setOperationAction(ISD::FP_ROUND, MVT::bf16, Expand);
 
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
