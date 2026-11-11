@@ -27036,7 +27036,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             auto *ScalarTy = FTy->getElementType();
             auto Key = std::make_pair(Vec, ScalarTy);
             auto VecIt = VectorCasts.find(Key);
-            if (VecIt == VectorCasts.end()) {
+            if (VecIt == VectorCasts.end() ||
+                !DT->dominates(VecIt->second, VU)) {
               IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<PHINode>(Vec)) {
                 if (IVec->getParent()->isLandingPad())
@@ -27046,7 +27047,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
-                Builder.SetInsertPoint(IVec->getNextNode());
+                // The result of callbr is available in several successors and
+                // has no single dominating insertion point, so emit the cast
+                // in the block of the vectorized scalars.
+                Builder.SetInsertPoint(
+                    IVec->getInsertionPointAfterDef().value_or(
+                        E->getMainOp()->getParent()->getFirstInsertionPt()));
               }
               Vec = Builder.CreateIntCast(
                   Vec,
@@ -27054,7 +27060,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                       ScalarTy,
                       cast<FixedVectorType>(Vec->getType())->getNumElements()),
                   BWIt->second.second);
-              VectorCasts.try_emplace(Key, Vec);
+              VectorCasts.insert_or_assign(Key, Vec);
             } else {
               Vec = VecIt->second;
             }
