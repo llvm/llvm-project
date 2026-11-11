@@ -284,6 +284,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the AArch64 Backend
 
+* Added the `+outline-atomics-preserve-most` subtarget feature (and `--aarch64-outline-atomics-preserve-most` backend option) to lower AArch64 out-of-line atomic helper calls to `__aarch64_*_preservemost` entry points using `aarch64_outline_atomics_preservemost`, preserving all registers except `x0`-`x4`, `x15`-`x17`, and `NZCV`.
+
 * Added support for C2-Pro and C2-Ultra CPUs.
 * Added support for hardening return address signing against PACMAN attacks.
   Functions with the `"sign-return-address-harden"="load-return-address"`
@@ -302,8 +304,6 @@ Makes programs 10x faster by doing Special New Thing.
 * Added support for the `aarch64-unknown-uefi` target. It follows the Windows
   ARM64 ABI (calling convention, callee saved registers, stack probing and SEH
   unwind information) and produces PE/COFF objects.
-
-* Added the `+outline-atomics-preserve-most` subtarget feature (and `--aarch64-outline-atomics-preserve-most` backend option) to lower AArch64 out-of-line atomic helper calls to `__aarch64_*_preservemost` entry points using `aarch64_outline_atomics_preservemost`, preserving all registers except `x0`-`x4`, `x15`-`x17`, and `NZCV`.
 
 ### Changes to the AMDGPU Backend
 
