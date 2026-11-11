@@ -32041,15 +32041,21 @@ static SDValue performVectorDeinterleaveCombine(
   if (isDeinterleave4ForWideningUToFP(N))
     return SDValue();
 
-  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  bool UseFixedSVE =
+      !IsScalable && Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  EVT LoadVT =
+      UseFixedSVE ? getContainerForFixedLengthVector(DAG, SubVecTy) : SubVecTy;
+  SmallVector<EVT, 5> ResVTs(NumParts, LoadVT);
   ResVTs.push_back(MVT::Other);
   SDVTList ResVTList = DAG.getVTList(ResVTs);
 
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
-  if (IsScalable) {
+  if (IsScalable || UseFixedSVE) {
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
+      if (UseFixedSVE)
+        return SDValue();
       // Bail out if the masked load has an unexpected number of uses, since we
       // want to avoid a situation where we have both deinterleaving loads and
       // normal loads in the same block. Also, discard masked loads that are
@@ -32075,8 +32081,7 @@ static SDValue performVectorDeinterleaveCombine(
           !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
         return SDValue();
 
-      EVT PredVT = SubVecTy.changeVectorElementType(*DAG.getContext(), MVT::i1);
-      Pred = DAG.getConstant(1, DL, PredVT);
+      Pred = getPredicateForVector(DAG, DL, SubVecTy);
       Chain = Load->getChain();
       BasePtr = Load->getBasePtr();
     }
@@ -32120,7 +32125,9 @@ static SDValue performVectorDeinterleaveCombine(
   }
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-    ResOps[Idx] = Res.getValue(Idx);
+    ResOps[Idx] = UseFixedSVE ? convertFromScalableVector(DAG, SubVecTy,
+                                                          Res.getValue(Idx))
+                              : Res.getValue(Idx);
   // Replace uses of the original chain result with the new chain result.
   DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1),
                                 SDValue(Res.getNode(), NumParts));
