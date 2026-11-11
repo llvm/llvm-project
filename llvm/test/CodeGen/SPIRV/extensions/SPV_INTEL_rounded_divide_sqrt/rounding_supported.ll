@@ -2,7 +2,9 @@
 ; extended instruction) trigger the RoundedDivideSqrtINTEL capability and the
 ; SPV_INTEL_rounded_divide_sqrt extension.
 ; Some operand pairs are swapped operands to avoid MachineCSE dropping the
-; 2nd instruction (see fdiv_cse.ll), such as the %d0 and %d1 operands below.
+; 2nd instruction (see fdiv_cse.ll and
+; https://github.com/llvm/llvm-project/issues/241441), such as the %d0 and %d1
+; operands below.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - | FileCheck %s
 ; RUN: llc -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_rounded_divide_sqrt %s -o - | FileCheck %s
@@ -26,7 +28,7 @@
 ; CHECK-DAG: OpDecorate %[[#F_RTZ]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#D_RTP]] FPRoundingMode RTP
 ; CHECK-DAG: OpDecorate %[[#D_RTN]] FPRoundingMode RTN
-define spir_kernel void @test_fdiv_scalar(half %h0, half %h1, float %f0, float %f1, double %d0, double %d1) {
+define spir_kernel void @test_fdiv_scalar(half %h0, half %h1, float %f0, float %f1, double %d0, double %d1) strictfp {
 entry:
   %h_rte = call half @llvm.experimental.constrained.fdiv.f16(half %h0, half %h1, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call float @llvm.experimental.constrained.fdiv.f32(float %f0, float %f1, metadata !"round.towardzero", metadata !"fpexcept.strict")
@@ -43,7 +45,7 @@ entry:
 ; CHECK-DAG: OpDecorate %[[#FV_RTZ]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#DV_RTP]] FPRoundingMode RTP
 ; CHECK-DAG: OpDecorate %[[#DV_RTN]] FPRoundingMode RTN
-define spir_kernel void @test_fdiv_vector(<2 x half> %h0, <2 x half> %h1, <4 x float> %f0, <4 x float> %f1, <3 x double> %d0, <3 x double> %d1) {
+define spir_kernel void @test_fdiv_vector(<2 x half> %h0, <2 x half> %h1, <4 x float> %f0, <4 x float> %f1, <3 x double> %d0, <3 x double> %d1) strictfp {
 entry:
   %h_rte = call <2 x half> @llvm.experimental.constrained.fdiv.v2f16(<2 x half> %h0, <2 x half> %h1, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call <4 x float> @llvm.experimental.constrained.fdiv.v4f32(<4 x float> %f0, <4 x float> %f1, metadata !"round.towardzero", metadata !"fpexcept.strict")
@@ -60,7 +62,7 @@ entry:
 ; CHECK-DAG: OpDecorate %[[#S_RTZ]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#S_RTP]] FPRoundingMode RTP
 ; CHECK-DAG: OpDecorate %[[#S_RTN]] FPRoundingMode RTN
-define spir_kernel void @test_sqrt_scalar(half %h, float %f, double %d0, double %d1) {
+define spir_kernel void @test_sqrt_scalar(half %h, float %f, double %d0, double %d1) strictfp {
 entry:
   %h_rte = call half @llvm.experimental.constrained.sqrt.f16(half %h, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call float @llvm.experimental.constrained.sqrt.f32(float %f, metadata !"round.towardzero", metadata !"fpexcept.strict")
@@ -77,7 +79,7 @@ entry:
 ; CHECK-DAG: OpDecorate %[[#SV_RTZ]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#SV_RTP]] FPRoundingMode RTP
 ; CHECK-DAG: OpDecorate %[[#SV_RTN]] FPRoundingMode RTN
-define spir_kernel void @test_sqrt_vector(<2 x half> %h, <4 x float> %f, <3 x double> %d0, <3 x double> %d1) {
+define spir_kernel void @test_sqrt_vector(<2 x half> %h, <4 x float> %f, <3 x double> %d0, <3 x double> %d1) strictfp {
 entry:
   %h_rte = call <2 x half> @llvm.experimental.constrained.sqrt.v2f16(<2 x half> %h, metadata !"round.tonearest", metadata !"fpexcept.strict")
   %f_rtz = call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(<4 x float> %f, metadata !"round.towardzero", metadata !"fpexcept.strict")

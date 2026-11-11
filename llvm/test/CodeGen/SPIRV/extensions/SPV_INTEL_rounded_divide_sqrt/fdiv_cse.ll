@@ -1,9 +1,9 @@
-; This test catches a bug as a result of MachineCSE: with the default pipeline (-O2),
-; MachineCSE dropped the 2nd fdiv that differ only in rounding mode as redundant computation
-; (most likely because the rounding mode becomes a separate OpDecorate instruction instead
-; of an operand).
-; The RTN divide below is dropped and only the RTP one survives. It passes with -O0 or
-; -disable-machine-cse.
+; FIXME: https://github.com/llvm/llvm-project/issues/241441
+; With the default pipeline (-O2), MachineCSE drops the 2nd fdiv, which differs
+; only in rounding mode, as a redundant computation: the rounding mode is a
+; separate OpDecorate, not an operand of OpFDiv. The RTN decoration then lands
+; on the RTP divide and is skipped as a duplicate, so only RTP survives.
+; It passes with -O0 or -disable-machine-cse.
 ; Remove XFAIL once fixed.
 ; XFAIL: *
 

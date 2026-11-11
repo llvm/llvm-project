@@ -1172,8 +1172,6 @@ static void addCoreInSPIRV13Capability(SPIRV::RequirementHandler &Reqs,
 // sqrt extended instruction, i.e. an instruction whose FPRoundingMode
 // decoration requires SPV_INTEL_rounded_divide_sqrt.
 static bool isRoundedDivideSqrtTarget(const MachineInstr &MI) {
-  if (!MI.getOperand(0).isReg())
-    return false;
   const MachineInstr *Def =
       MI.getMF()->getRegInfo().getVRegDef(MI.getOperand(0).getReg());
   if (!Def)
@@ -1184,14 +1182,12 @@ static bool isRoundedDivideSqrtTarget(const MachineInstr &MI) {
   case SPIRV::OpStrictFDivS:
   case SPIRV::OpStrictFDivV:
     return true;
+  case SPIRV::OpExtInst:
+    return Def->getOperand(2).getImm() == SPIRV::InstructionSet::OpenCL_std &&
+           Def->getOperand(3).getImm() == SPIRV::OpenCLExtInst::sqrt;
   default:
-    break;
+    return false;
   }
-  return Def->getOpcode() == SPIRV::OpExtInst &&
-         Def->getOperand(2).getImm() ==
-             static_cast<int64_t>(SPIRV::InstructionSet::OpenCL_std) &&
-         Def->getOperand(3).getImm() ==
-             static_cast<int64_t>(SPIRV::OpenCLExtInst::sqrt);
 }
 
 // Add the required capabilities from a decoration instruction (including
