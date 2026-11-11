@@ -122,11 +122,9 @@ LIBC_INLINE_VAR constexpr DFloat128 EXCEPTS[3][3][2] = {
 } // namespace atan2f128_internal
 
 LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
-
   using namespace atan_internal;
   using namespace atan2f128_internal;
   using FPBits = fputil::FPBits<Float128>;
-  using DFloat128 = fputil::DyadicFloat<128>;
 
   FPBits x_bits(x), y_bits(y);
   bool x_sign = x_bits.sign().is_neg();
