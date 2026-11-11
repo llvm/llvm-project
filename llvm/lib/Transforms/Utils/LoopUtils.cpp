@@ -2202,8 +2202,8 @@ static RuntimeCheckGroupBounds getGroupBounds(const RuntimeCheckingPtrGroup *CG,
   // which can be significant for low trip counts. The disadvantage is that
   // there is a chance we may now never enter the vectorized inner loop,
   // whereas using a restricted range check could have allowed us to enter at
-  // least once. This is why the behaviour is not currently the default and is
-  // controlled by the parameter 'HoistRuntimeChecks'.
+  // least once. This is why the behaviour is controlled by the parameter
+  // 'HoistRuntimeChecks'.
   const Loop *OuterLoop = TheLoop->getParentLoop();
   if (HoistRuntimeChecks && OuterLoop &&
       haveSameStepIn({Low, High}, OuterLoop, SE)) {
@@ -2237,16 +2237,34 @@ RuntimeCheckBounds llvm::getRuntimeCheckBounds(const RuntimePointerCheck &Check,
                                                const Loop *TheLoop,
                                                ScalarEvolution &SE,
                                                bool HoistRuntimeChecks) {
+  // If both groups advance by the same step in the parent loop, their relative
+  // position is the same in every iteration of it, so they overlap in some
+  // iteration iff they overlap in the first one. Checking the first iteration
+  // is exact and invariant in the parent loop, and needs neither widening nor
+  // a stride check.
+  const Loop *ParentLoop = TheLoop->getParentLoop();
+  const auto &[A, B] = Check;
+  bool UseFirstIteration =
+      HoistRuntimeChecks && ParentLoop &&
+      haveSameStepIn({A->Low, A->High, B->Low, B->High}, ParentLoop, SE);
+
   auto GetBounds = [&](const RuntimeCheckingPtrGroup *CG) {
     LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
-    RuntimeCheckGroupBounds Bounds =
-        getGroupBounds(CG, TheLoop, SE, HoistRuntimeChecks);
+    RuntimeCheckGroupBounds Bounds;
+    if (UseFirstIteration) {
+      LLVM_DEBUG(dbgs() << "LAA: Using RT check range of the first outer loop "
+                           "iteration in order to permit hoisting\n");
+      Bounds = {cast<SCEVAddRecExpr>(CG->Low)->getStart(),
+                cast<SCEVAddRecExpr>(CG->High)->getStart(), nullptr};
+    } else {
+      Bounds = getGroupBounds(CG, TheLoop, SE, HoistRuntimeChecks);
+    }
     LLVM_DEBUG(dbgs() << "Start: " << *Bounds.Low << " End: " << *Bounds.High
                       << "\n");
     return Bounds;
   };
   // Braced initialization evaluates the groups in order.
-  return {GetBounds(Check.first), GetBounds(Check.second)};
+  return {GetBounds(A), GetBounds(B)};
 }
 
 /// Expand code for the lower and upper bound \p Bounds of the pointer group
