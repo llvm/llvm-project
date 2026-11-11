@@ -180,11 +180,36 @@ const std::vector<Token> &MacroArgs::getPreExpArgument(unsigned Arg,
   PP.EnterTokenStream(AT, NumToks, false /*disable expand*/,
                       false /*owns tokens*/, false /*is reinject*/);
 
+  // In MSVC compatibility mode, keep the operand of a 'defined' operator in a
+  // '#if'/'#elif' condition unexpanded. MSVC does not pre-expand macro
+  // arguments, so it never expands the operand of a 'defined' that an
+  // argument's expansion generates. For example, given
+  //   #define FOO(x) (defined __foo_##x && __foo_##x)
+  //   #define __foo_hello true
+  //   #define NOT(X) (!(X))
+  //   #if NOT(FOO(hello))
+  // '__foo_hello' must not become 'true' while pre-expanding NOT's argument.
+  bool KeepDefinedOperand =
+      PP.getLangOpts().MSVCCompat && PP.isParsingIfOrElifDirective();
+
   // Lex all of the macro-expanded tokens into Result.
   do {
-    Result.push_back(Token());
-    Token &Tok = Result.back();
+    Token &Tok = Result.emplace_back();
     PP.Lex(Tok);
+    if (!KeepDefinedOperand || Tok.isNot(tok::identifier) ||
+        Tok.getIdentifierInfo()->getPPKeywordID() != tok::pp_defined)
+      continue;
+
+    // Handle 'defined X' and 'defined ( X )': lex the operand, and the '('
+    // before it, without expanding them. Malformed uses are left for
+    // EvaluateDefined to diagnose.
+    PP.LexUnexpandedToken(Result.emplace_back());
+    if (Result.back().is(tok::l_paren))
+      PP.LexUnexpandedToken(Result.emplace_back());
+
+    // Keep the operand from being expanded when the result is rescanned.
+    if (Result.back().isNot(tok::eof))
+      Result.back().setFlag(Token::DisableExpand);
   } while (Result.back().isNot(tok::eof));
 
   // Pop the token stream off the top of the stack.  We know that the internal
