@@ -11846,17 +11846,10 @@ void Sema::UnmarkAsLateParsedTemplate(FunctionDecl *FD) {
 }
 
 bool Sema::IsInsideALocalClassWithinATemplateFunction() {
-  DeclContext *DC = CurContext;
-
-  while (DC) {
-    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(CurContext)) {
-      const FunctionDecl *FD = RD->isLocalClass();
-      return (FD && FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate);
-    } else if (DC->isTranslationUnit() || DC->isNamespace())
-      return false;
-
-    DC = DC->getParent();
-  }
+  for (DeclContext *DC = CurContext; DC && !DC->isFileContext();
+       DC = DC->getParent())
+    if (DC->isFunctionOrMethod() && DC->isDependentContext())
+      return true;
   return false;
 }
 
