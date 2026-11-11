@@ -106,8 +106,7 @@ private:
     }
   }
 
-  // Specialization for optional<Expr<Type<TypeCategory::Integer> and
-  // SubscriptInteger>>
+  // Specialization for std::optional<Expr<T>>.
   template <typename T>
   evaluate::StructureConstructor GetValue(
       const std::optional<evaluate::Expr<T>> &expr,
