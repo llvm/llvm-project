@@ -1236,6 +1236,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when encountering C2y labeled `break`/`continue` statements
   in a statement expression within a `switch` condition. (#GH184060)
 
+- Fixed a crash when attaching documentation comments (for example under
+  `-Wdocumentation` or `-fparse-all-comments`) to a declaration group that spans
+  multiple files, such as when a declaration uses a macro defined in an
+  included header.
+  
 #### Miscellaneous Bug Fixes
 
 - Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and

@@ -31,11 +31,11 @@ using SymbolRef = common::Reference<const Symbol>;
 
 // Wraps a constant value in a class templated by its resolved type.
 // This Constant<> template class should be instantiated only for
-// concrete intrinsic types and SomeDerived.  There is no instance
-// Constant<SomeType> since there is no way to constrain each
-// element of its array to hold the same type.  To represent a generic
-// constant, use a generic expression like Expr<SomeInteger> or
-// Expr<SomeType>) to wrap the appropriate instantiation of Constant<>.
+// concrete intrinsic types and Type<TypeCategory::Derived>.  There is no
+// instance Constant<SomeType> since there is no way to constrain each element
+// of its array to hold the same type.  To represent a generic constant, use a
+// generic expression like Expr<Type<TypeCategory::Integer>> or Expr<SomeType>)
+// to wrap the appropriate instantiation of Constant<>.
 
 template <typename> class Constant;
 
@@ -99,9 +99,10 @@ private:
   ConstantSubscripts lbounds_;
 };
 
-// Constant<> is specialized for Character kinds and SomeDerived.
-// The non-Character intrinsic types, and SomeDerived, share enough
-// common behavior that they use this common base class.
+// Constant<> is specialized for Character kinds and
+// Type<TypeCategory::Derived>. The non-Character intrinsic types, and
+// Type<TypeCategory::Derived>, share enough common behavior that they use this
+// common base class.
 template <typename RESULT, typename ELEMENT = Scalar<RESULT>>
 class ConstantBase : public ConstantBounds {
   static_assert(RESULT::category != TypeCategory::Character);
@@ -128,17 +129,6 @@ public:
     if constexpr (IsLengthlessIntrinsicType<Result>) {
       CHECK(values_.front().kind() == kind);
     }
-  }
-
-  template <TypeCategory CAT>
-  ConstantBase(int kind, const SomeKind<CAT> &x)
-      : kind_{kind}, result_{Result{kind}}, values_{x} {
-    CHECK_KIND(kind, RESULT);
-  }
-  template <TypeCategory CAT>
-  ConstantBase(int kind, SomeKind<CAT> &&x)
-      : kind_{kind}, result_{Result{kind}}, values_{std::move(x)} {
-    CHECK_KIND(kind, RESULT);
   }
 
   template <typename A>
@@ -277,12 +267,14 @@ using StructureConstructorValues = std::map<SymbolRef,
     common::CopyableIndirection<Expr<SomeType>>, ComponentCompare>;
 
 template <>
-class Constant<SomeDerived>
-    : public ConstantBase<SomeDerived, StructureConstructorValues> {
+class Constant<Type<TypeCategory::Derived>>
+    : public ConstantBase<Type<TypeCategory::Derived>,
+          StructureConstructorValues> {
 public:
-  using Result = SomeDerived;
+  using Result = Type<TypeCategory::Derived>;
   using Element = StructureConstructorValues;
-  using Base = ConstantBase<SomeDerived, StructureConstructorValues>;
+  using Base =
+      ConstantBase<Type<TypeCategory::Derived>, StructureConstructorValues>;
 
   Constant(const StructureConstructor &);
   Constant(StructureConstructor &&);
@@ -342,12 +334,14 @@ inline Constant<T> MakeConstant(int kind, int64_t v) {
 }
 
 FOR_EACH_LENGTHLESS_INTRINSIC_KIND(extern template class ConstantBase, )
-extern template class ConstantBase<SomeDerived, StructureConstructorValues>;
+extern template class ConstantBase<Type<TypeCategory::Derived>,
+    StructureConstructorValues>;
 FOR_EACH_INTRINSIC_KIND(extern template class Constant, )
 
 #define INSTANTIATE_CONSTANT_TEMPLATES \
   FOR_EACH_LENGTHLESS_INTRINSIC_KIND(template class ConstantBase, ) \
-  template class ConstantBase<SomeDerived, StructureConstructorValues>; \
+  template class ConstantBase<Type<TypeCategory::Derived>, \
+      StructureConstructorValues>; \
   FOR_EACH_INTRINSIC_KIND(template class Constant, )
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CONSTANT_H_

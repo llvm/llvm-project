@@ -946,13 +946,16 @@ private:
   /// argument or call site argument. See also `getCalleeArgNo` and
   /// `getCallSiteArgNo`.
   int getArgNo(bool CallbackCalleeArgIfApplicable) const {
-    if (CallbackCalleeArgIfApplicable)
-      if (Argument *Arg = getAssociatedArgument())
-        return Arg->getArgNo();
     switch (getPositionKind()) {
     case IRPosition::IRP_ARGUMENT:
       return cast<Argument>(getAsValuePtr())->getArgNo();
     case IRPosition::IRP_CALL_SITE_ARGUMENT: {
+      // Only call site arguments can be associated with a callback callee
+      // argument.
+      if (CallbackCalleeArgIfApplicable) {
+        if (Argument *Arg = getAssociatedArgument())
+          return Arg->getArgNo();
+      }
       Use &U = *getAsUsePtr();
       return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
     }
@@ -2518,7 +2521,18 @@ private:
   /// the inner level.
   ///{
   using AAMapKeyTy = std::pair<const char *, IRPosition>;
-  DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
+  /// The IDs are adjacent bytes and the positions of a value differ only in
+  /// the low bits, both of which the default hash functions mostly ignore.
+  struct AAMapKeyInfo : DenseMapInfo<AAMapKeyTy> {
+    static unsigned getHashValue(const AAMapKeyTy &Key) {
+      const IRPosition &IRP = Key.second;
+      auto ID = reinterpret_cast<uintptr_t>(Key.first);
+      auto Pos = reinterpret_cast<uintptr_t>(static_cast<void *>(IRP));
+      auto Ctx = reinterpret_cast<uintptr_t>(IRP.getCallBaseContext());
+      return detail::combineHashValue(unsigned(ID), unsigned(Pos ^ Ctx));
+    }
+  };
+  DenseMap<AAMapKeyTy, AbstractAttribute *, AAMapKeyInfo> AAMap;
   ///}
 
   /// Map to remember all requested signature changes (= argument replacements).
@@ -3336,10 +3350,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Return false if an AA should not be updated for \p IRP.
   static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFnInterfaceKind())
+      return true;
     Function *AssociatedFn = IRP.getAssociatedFunction();
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    assert((!IsFnInterface || AssociatedFn) &&
-           "Function interface without a function?");
+    assert(AssociatedFn && "Function interface without a function?");
 
     // TODO: Not all attributes require an exact definition. Find a way to
     //       enable deduction for some but not all attributes in case the
@@ -3348,7 +3362,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
     // TODO: We could always determine abstract attributes and if sufficient
     //       information was found we could duplicate the functions that do not
     //       have an exact definition.
-    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+    return A.isFunctionIPOAmendable(*AssociatedFn);
   }
 
   /// Initialize the state with the information in the Attributor \p A.

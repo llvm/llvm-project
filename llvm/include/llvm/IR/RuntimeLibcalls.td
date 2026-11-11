@@ -877,7 +877,7 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []> {
   let FnAttrs = [NoReturn, NoUnwind, NoFree];
 }
-def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]> {
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr]> {
   let FnAttrs = [NoReturn, NoUnwind, NoFree];
 }
 
