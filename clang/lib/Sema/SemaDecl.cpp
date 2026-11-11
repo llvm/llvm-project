@@ -3517,11 +3517,12 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
         found += propagateAttribute<InheritableParamAttr>(To, From, S);
-        // Propagate the lifetimebound attribute from parameters to the
-        // most recent declaration. Note that this doesn't include the implicit
-        // 'this' parameter, as the attribute is applied to the function type in
-        // that case.
+        // Propagate the lifetimebound and lifetime_capture_by attributes from
+        // parameters to the most recent declaration. Note that this doesn't
+        // include the implicit 'this' parameter, as the attribute is applied to
+        // the function type in that case.
         found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        found += propagateAttribute<LifetimeCaptureByAttr>(To, From, S);
         return found;
       });
 }

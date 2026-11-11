@@ -175,3 +175,24 @@ struct X {
 };
 
 } // namespace GH97453
+
+namespace GH36907 {
+
+void some_function() noexcept;
+
+class V1 {
+  void f() noexcept(noexcept(some_function()));
+  decltype(&V1::f) f2;
+};
+
+class V2 {
+  void f() noexcept(true);
+  decltype(&V2::f) f2;
+};
+
+class V3 {
+  void f() noexcept;
+  decltype(&V3::f) f2;
+};
+
+} // namespace GH36907

@@ -19,7 +19,6 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_offload.h"
 #include "sanitizer_common/sanitizer_platform.h"
@@ -113,25 +112,6 @@ template <typename T> static T HsaFunction(const char *Name) {
   CSAN_HSA_ENTER(name);                                                        \
   if (UNLIKELY(!Offload::Get().Ready()))                                       \
     return REAL(name)(__VA_ARGS__);
-
-static bool FromHsa(void *P) {
-  Dl_info Info = {};
-  if (!dladdr(P, &Info) || !Info.dli_fname)
-    return false;
-  return internal_strstr(Info.dli_fname, SANITIZER_HSA_LIBRARY);
-}
-
-// Callers bind to whichever 'hsa_init' comes first, if HSA was loaded before
-// the runtime the interceptors are bypassed.
-static void CheckInterposed() {
-  void *Sym = dlsym(RTLD_DEFAULT, "hsa_init");
-  if (!Sym || !FromHsa(Sym))
-    return;
-  Report("WARNING: %s: the runtime is loaded too late to intercept HSA, GPU "
-         "races will not be reported. Link the runtime first or use "
-         "LD_PRELOAD.\n",
-         SanitizerToolName);
-}
 
 static bool Lookup(hsa_executable_t Executable, const char *Name,
                    hsa_agent_t Agent, u64 *Addr) {
@@ -302,5 +282,5 @@ extern "C" void __csan_offload_init() { Initialize(); }
 
 __attribute__((constructor(0))) static void CsanOffloadDynInit() {
   __csan_offload_init();
-  CheckInterposed();
+  WarnIfHsaNotInterposed();
 }

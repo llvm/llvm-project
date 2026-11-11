@@ -290,13 +290,12 @@ public:
 
   void initDwarf();
 
-  void initSectionsAndLocalSyms(bool ignoreComdats);
+  void initSectionsAndLocalSyms();
   void postParse();
   void importCmseSymbols();
 
 private:
-  void initializeSections(bool ignoreComdats,
-                          const llvm::object::ELFFile<ELFT> &obj);
+  void initializeSections(const llvm::object::ELFFile<ELFT> &obj);
   Symbol *insertGlobal(size_t i);
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
   void initDynDbgSymbols();

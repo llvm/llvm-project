@@ -2733,11 +2733,42 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_addcarryx_u32:
   case X86::BI__builtin_ia32_addcarryx_u64:
   case X86::BI__builtin_ia32_subborrow_u32:
-  case X86::BI__builtin_ia32_subborrow_u64:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case X86::BI__builtin_ia32_subborrow_u64: {
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("Unsupported intrinsic!");
+    case X86::BI__builtin_ia32_addcarryx_u32:
+      intrinsicName = "x86.addcarry.32";
+      break;
+    case X86::BI__builtin_ia32_addcarryx_u64:
+      intrinsicName = "x86.addcarry.64";
+      break;
+    case X86::BI__builtin_ia32_subborrow_u32:
+      intrinsicName = "x86.subborrow.32";
+      break;
+    case X86::BI__builtin_ia32_subborrow_u64:
+      intrinsicName = "x86.subborrow.64";
+      break;
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Type carryTy = ops[0].getType();
+    mlir::Type valueTy = ops[1].getType();
+    llvm::SmallVector<mlir::Type, 2> resultTypes = {carryTy, valueTy};
+    cir::StructType resRecord =
+        builder.getAnonRecordTy(resultTypes, /*packed=*/false,
+                                cir::RecordType::getAllDataKinds(resultTypes));
+
+    mlir::Value call =
+        builder.emitIntrinsicCallOp(loc, intrinsicName, resRecord,
+                                    mlir::ValueRange{ops[0], ops[1], ops[2]});
+    mlir::Value result =
+        cir::ExtractMemberOp::create(builder, loc, valueTy, call, 1);
+    builder.CIRBaseBuilderTy::createStore(loc, result, ops[3]);
+
+    return cir::ExtractMemberOp::create(builder, loc, carryTy, call, 0);
+  }
   case X86::BI__builtin_ia32_fpclassps128_mask:
   case X86::BI__builtin_ia32_fpclassps256_mask:
   case X86::BI__builtin_ia32_fpclassps512_mask:
