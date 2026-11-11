@@ -1,0 +1,22 @@
+# RUN: not --crash llc -mtriple=amdgpu12.00 -run-pass=none -o - %s 2>&1 | FileCheck --check-prefix=GFX1200 %s
+# RUN: not --crash llc -mtriple=amdgpu12.50 -run-pass=none -o - %s 2>&1 | FileCheck --check-prefix=GFX1250 %s
+
+# GFX1200-COUNT-2: *** Bad machine code: Subtarget does not support offset scaling ***
+# GFX1200: LLVM ERROR: Found 2 machine code errors
+
+# GFX1250: *** Bad machine code: Instruction does not support offset scaling ***
+# GFX1250: LLVM ERROR: Found 1 machine code error
+
+---
+name: invalid_scale_offset
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    %0:sreg_64_xexec_xnull = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vreg_64_align2 = IMPLICIT_DEF
+    %3:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR %0, %1, 0, 512, implicit $exec
+    %4:vgpr_32 = GLOBAL_LOAD_DWORD %2, 0, 512, implicit $exec
+    S_ENDPGM 0
+...
+
