@@ -128,7 +128,7 @@
 "`LWG4205 <https://wg21.link/LWG4205>`__","``let_[*].transform_env`` is specified in terms of the ``let_*`` sender itself instead of its child","2025-06 (Sofia)","","","`#148193 <https://github.com/llvm/llvm-project/issues/148193>`__",""
 "`LWG4208 <https://wg21.link/LWG4208>`__","Wording needs to ensure that in ``connect(sndr, rcvr)`` that ``rcvr`` expression is only evaluated once","2025-06 (Sofia)","","","`#148194 <https://github.com/llvm/llvm-project/issues/148194>`__",""
 "`LWG4209 <https://wg21.link/LWG4209>`__","``default_domain::transform_env`` should be returning ``FWD-ENV(env)``","2025-06 (Sofia)","","","`#148196 <https://github.com/llvm/llvm-project/issues/148196>`__",""
-"`LWG4188 <https://wg21.link/LWG4188>`__","``ostream::sentry`` destructor should handle exceptions","2025-06 (Sofia)","","","`#148200 <https://github.com/llvm/llvm-project/issues/148200>`__",""
+"`LWG4188 <https://wg21.link/LWG4188>`__","``ostream::sentry`` destructor should handle exceptions","2025-06 (Sofia)","|Complete|","24","`#148200 <https://github.com/llvm/llvm-project/issues/148200>`__",""
 "`LWG4200 <https://wg21.link/LWG4200>`__","The ``operation_state`` concept can be simplified","2025-06 (Sofia)","","","`#148201 <https://github.com/llvm/llvm-project/issues/148201>`__",""
 "`LWG4201 <https://wg21.link/LWG4201>`__","``with-await-transform::await_transform`` should not use a deduced return type","2025-06 (Sofia)","","","`#148202 <https://github.com/llvm/llvm-project/issues/148202>`__",""
 "`LWG4217 <https://wg21.link/LWG4217>`__","Clarify ``mdspan`` layout mapping requirements for ``rank == 0``","2025-06 (Sofia)","","","`#148203 <https://github.com/llvm/llvm-project/issues/148203>`__",""
