@@ -108,8 +108,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX11-GISEL:  ; %bb.0:
 ; GFX11-GISEL:    v_xor_b16 v3.l, 0x8000, v0.h
 ; GFX11-GISEL:    v_bfe_u32 v3, v3, 0, 16
-; GFX11-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-GISEL:    v_and_or_b32 v0, v0, 0xffff, v3
+; GFX11-GISEL:    v_mov_b16_e32 v0.h, v3.l
 ; GFX11-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
 ;
 ; GFX12-SDAG-LABEL: v_fdot2_f32_bf16_neg_a_hi:
@@ -121,8 +120,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX12-GISEL:  ; %bb.0:
 ; GFX12-GISEL:    v_xor_b16 v3.l, 0x8000, v0.h
 ; GFX12-GISEL:    v_bfe_u32 v3, v3, 0, 16
-; GFX12-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX12-GISEL:    v_and_or_b32 v0, v0, 0xffff, v3
+; GFX12-GISEL:    v_mov_b16_e32 v0.h, v3.l
 ; GFX12-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
   %a_hi = extractelement <2 x bfloat> %a, i32 1
   %neg.a_hi = fneg bfloat %a_hi
@@ -218,8 +216,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX11-GISEL:  ; %bb.0:
 ; GFX11-GISEL:    v_xor_b16 v3.l, 0x8000, v1.h
 ; GFX11-GISEL:    v_bfe_u32 v3, v3, 0, 16
-; GFX11-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-GISEL:    v_and_or_b32 v1, v1, 0xffff, v3
+; GFX11-GISEL:    v_mov_b16_e32 v1.h, v3.l
 ; GFX11-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
 ;
 ; GFX12-SDAG-LABEL: v_fdot2_f32_bf16_neg_b_hi:
@@ -231,8 +228,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi(<2 x bfloat> %a, <2 x bfloat> %b, float 
 ; GFX12-GISEL:  ; %bb.0:
 ; GFX12-GISEL:    v_xor_b16 v3.l, 0x8000, v1.h
 ; GFX12-GISEL:    v_bfe_u32 v3, v3, 0, 16
-; GFX12-GISEL:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX12-GISEL:    v_and_or_b32 v1, v1, 0xffff, v3
+; GFX12-GISEL:    v_mov_b16_e32 v1.h, v3.l
 ; GFX12-GISEL:    v_dot2_f32_bf16 v0, v0, v1, v2
   %b_hi = extractelement <2 x bfloat> %b, i32 1
   %neg.b_hi = fneg bfloat %b_hi
@@ -787,8 +783,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX11-GISEL:    v_xor_b16 v6.l, 0x8000, v0.h
 ; GFX11-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
 ; GFX11-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX11-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX11-GISEL:    v_and_or_b32 v0, v0, 0xffff, v6
+; GFX11-GISEL:    v_mov_b16_e32 v0.h, v6.l
 ; GFX11-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
 ; GFX11-GISEL:    v_add_f32_e32 v0, v2, v5
 ;
@@ -803,8 +798,7 @@ define float @v_fdot2_f32_bf16_neg_a_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX12-GISEL:    v_xor_b16 v6.l, 0x8000, v0.h
 ; GFX12-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
 ; GFX12-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX12-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX12-GISEL:    v_and_or_b32 v0, v0, 0xffff, v6
+; GFX12-GISEL:    v_mov_b16_e32 v0.h, v6.l
 ; GFX12-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
 ; GFX12-GISEL:    v_add_f32_e32 v0, v2, v5
   %a_hi = extractelement <2 x bfloat> %a, i32 1
@@ -927,8 +921,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX11-GISEL:    v_xor_b16 v6.l, 0x8000, v1.h
 ; GFX11-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
 ; GFX11-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX11-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX11-GISEL:    v_and_or_b32 v1, v1, 0xffff, v6
+; GFX11-GISEL:    v_mov_b16_e32 v1.h, v6.l
 ; GFX11-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
 ; GFX11-GISEL:    v_add_f32_e32 v0, v2, v5
 ;
@@ -943,8 +936,7 @@ define float @v_fdot2_f32_bf16_neg_b_hi_dual(<2 x bfloat> %a, <2 x bfloat> %b, f
 ; GFX12-GISEL:    v_xor_b16 v6.l, 0x8000, v1.h
 ; GFX12-GISEL:    v_dot2_f32_bf16 v5, v3, v4, v5
 ; GFX12-GISEL:    v_bfe_u32 v6, v6, 0, 16
-; GFX12-GISEL:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX12-GISEL:    v_and_or_b32 v1, v1, 0xffff, v6
+; GFX12-GISEL:    v_mov_b16_e32 v1.h, v6.l
 ; GFX12-GISEL:    v_dot2_f32_bf16 v2, v0, v1, v2
 ; GFX12-GISEL:    v_add_f32_e32 v0, v2, v5
   %b_hi = extractelement <2 x bfloat> %b, i32 1
