@@ -49,8 +49,9 @@ define float @frem_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal fmodf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal fmodf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc fmodf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -143,8 +144,9 @@ define float @powi_f32(float %x, i32 %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal __powisf2
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal __powisf2
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc __powisf2
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -159,8 +161,9 @@ define float @sin_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal sinf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal sinf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc sinf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -175,8 +178,9 @@ define float @cos_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal cosf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal cosf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-next: balc cosf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -191,11 +195,13 @@ define float @tan_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal tanf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal tanf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc tanf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-R6: balc tanf
   %val = call float @llvm.experimental.constrained.tan.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
@@ -207,8 +213,9 @@ define float @acos_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal acosf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal acosf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc acosf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -223,8 +230,9 @@ define float @asin_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal asinf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal asinf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc asinf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -239,8 +247,9 @@ define float @atan_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal atanf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal atanf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc atanf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -257,6 +266,7 @@ define float @cosh_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_offset 31, -4
 ; CHECK-NEXT:    jal coshf
 ; CHECK-NEXT:    nop
+; CHECK-R6: balc coshf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -271,8 +281,9 @@ define float @sinh_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal sinhf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal sinhf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc sinhf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -287,8 +298,9 @@ define float @tanh_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal tanhf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal tanhf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc tanhf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -320,8 +332,9 @@ define float @ldexp_f32(float %x, i32 %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal ldexpf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal ldexpf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc ldexpf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -336,8 +349,9 @@ define float @roundeven_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal roundevenf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal roundevenf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc roundevenf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -416,8 +430,9 @@ define float @atan2_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal atan2f
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal atan2f
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc atan2f
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -432,8 +447,9 @@ define float @pow_f32(float %x, float %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal powf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal powf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc powf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -448,8 +464,9 @@ define float @log_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal logf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal logf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc logf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -464,8 +481,9 @@ define float @log10_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal log10f
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal log10f
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc log10f
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -480,8 +498,9 @@ define float @log2_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal log2f
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal log2f
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc log2f
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -512,8 +531,9 @@ define float @exp2_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal exp2f
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal exp2f
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc exp2f
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -549,8 +569,9 @@ define float @nearbyint_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal nearbyintf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal nearbyintf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc nearbyintf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -565,8 +586,9 @@ define i32 @lrint_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal lrintf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal lrintf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc lrintf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -581,8 +603,9 @@ define i32 @llrint_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal llrintf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal llrintf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc llrintf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -639,8 +662,9 @@ define float @ceil_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal ceilf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal ceilf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc ceilf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -655,8 +679,9 @@ define float @floor_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal floorf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal floorf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc floorf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -671,8 +696,9 @@ define i32 @lround_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal lroundf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal lroundf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc lroundf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -687,8 +713,9 @@ define i32 @llround_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal llroundf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal llroundf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc llroundf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -703,8 +730,9 @@ define float @round_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal roundf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal roundf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc roundf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -719,8 +747,9 @@ define float @trunc_f32(float %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal truncf
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal truncf
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc truncf
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -773,8 +802,9 @@ define double @frem_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal fmod
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal fmod
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc fmod
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -902,8 +932,9 @@ define double @powi_f64(double %x, i32 %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal __powidf2
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal __powidf2
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc __powidf2
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -918,8 +949,9 @@ define double @sin_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal sin
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal sin
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc sin
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -934,8 +966,9 @@ define double @cos_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal cos
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal cos
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc cos
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -950,8 +983,9 @@ define double @tan_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal tan
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal tan
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc tan
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -966,8 +1000,9 @@ define double @acos_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal acos
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal acos
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc acos
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -982,8 +1017,9 @@ define double @asin_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal asin
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal asin
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc asin
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -998,8 +1034,9 @@ define double @atan_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal atan
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal atan
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc atan
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1014,8 +1051,9 @@ define double @cosh_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal cosh
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal cosh
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc cosh
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1030,8 +1068,9 @@ define double @sinh_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal sinh
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal sinh
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc sinh
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1046,8 +1085,9 @@ define double @tanh_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal tanh
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal tanh
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc tanh
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1079,8 +1119,9 @@ define double @ldexp_f64(double %x, i32 %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal ldexp
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal ldexp
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc ldexp
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1095,8 +1136,9 @@ define double @roundeven_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal roundeven
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal roundeven
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc roundeven
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1171,8 +1213,9 @@ define double @atan2_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal atan2
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal atan2
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc atan2
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1187,8 +1230,9 @@ define double @pow_f64(double %x, double %y) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal pow
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal pow
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc pow
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1203,8 +1247,9 @@ define double @log_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal log
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal log
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc log
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1219,8 +1264,9 @@ define double @log10_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal log10
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal log10
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc log10
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1235,8 +1281,9 @@ define double @log2_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal log2
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal log2
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc log2
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1251,8 +1298,9 @@ define double @exp_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal exp
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal exp
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc exp
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1267,8 +1315,9 @@ define double @exp2_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal exp2
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal exp2
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc exp2
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1304,8 +1353,9 @@ define double @nearbyint_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal nearbyint
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal nearbyint
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc nearbyint
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1320,8 +1370,9 @@ define i32 @lrint_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal lrint
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal lrint
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc lrint
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1336,8 +1387,9 @@ define i32 @llrint_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal llrint
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal llrint
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc llrint
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1394,8 +1446,9 @@ define double @ceil_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal ceil
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal ceil
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc ceil
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1410,8 +1463,9 @@ define double @floor_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal floor
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal floor
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc floor
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1426,8 +1480,9 @@ define i32 @lround_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal lround
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal lround
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc lround
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1442,8 +1497,9 @@ define i32 @llround_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal llround
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal llround
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc llround
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1458,8 +1514,9 @@ define double @round_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal round
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal round
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc round
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
@@ -1474,8 +1531,9 @@ define double @trunc_f64(double %x) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -4
-; CHECK-NEXT:    jal trunc
-; CHECK-NEXT:    nop
+; CHECK-R2-NEXT: jal trunc
+; CHECK-R2-NEXT: nop
+; CHECK-R6-NEXT: balc trunc
 ; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 24
