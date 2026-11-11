@@ -22226,6 +22226,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     VecTy = FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
 
   // The base address of the load.
   Value *BaseAddr = LI->getPointerOperand();
@@ -22374,6 +22375,7 @@ bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   // StN intrinsics don't support pointer vectors as arguments. Convert pointer
   // vectors to integer vectors.

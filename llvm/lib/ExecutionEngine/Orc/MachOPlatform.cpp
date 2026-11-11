@@ -14,9 +14,10 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
@@ -98,6 +99,22 @@ struct CreatePThreadKey {
   using SPSSig = SPSExpected<uint64_t>();
 };
 } // namespace llvm::orc::macho_sps_ci
+
+// Descriptors for the call-controller handlers that the MachO platform
+// runtime calls.
+namespace llvm::orc::macho_sps_handlers {
+struct PushInitializers {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag");
+  using SPSSig = SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
+};
+struct PushSymbols {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag");
+  using SPSSig = SPSError(SPSExecutorAddr,
+                          SPSSequence<SPSTuple<SPSString, bool>>);
+};
+} // namespace llvm::orc::macho_sps_handlers
 
 namespace {
 
@@ -625,19 +642,14 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions() {
-  using PushInitializersSPSSig =
-      SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
-  using PushSymbolsSPSSig =
-      SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
-
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandlerSPS<PushInitializersSPSSig>(
-          SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag"), this,
-          &MachOPlatform::rt_pushInitializers),
-      bindCallControllerHandlerSPS<PushSymbolsSPSSig>(
-          SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag"), this,
-          &MachOPlatform::rt_pushSymbols));
+      bindCallControllerHandler<
+          sps::HandlerSpec<macho_sps_handlers::PushInitializers>>(
+          this, &MachOPlatform::rt_pushInitializers),
+      bindCallControllerHandler<
+          sps::HandlerSpec<macho_sps_handlers::PushSymbols>>(
+          this, &MachOPlatform::rt_pushSymbols));
 }
 
 void MachOPlatform::pushInitializersLoop(

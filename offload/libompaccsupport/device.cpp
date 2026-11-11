@@ -50,11 +50,11 @@ using namespace llvm::omp::target::debug;
 namespace llvm::offload::tmp {
 llvm::Expected<void *> __ol_tgt_MemAlloc(ol_context_handle_t Context,
                                          ol_device_handle_t Device,
-                                         TargetAllocTy Kind, int64_t Size,
+                                         ol_alloc_type_t Kind, int64_t Size,
                                          void *HostPtr);
 llvm::Error __ol_tgt_MemFree(ol_context_handle_t Context,
                              ol_device_handle_t Device, void *Ptr,
-                             TargetAllocTy Kind);
+                             ol_alloc_type_t Kind);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -459,6 +459,21 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
+/// Map a libomptarget allocation kind onto the liboffload one. There is no
+/// liboffload notion of a default allocation; it is a device allocation.
+static ol_alloc_type_t toOlAllocTy(int32_t Kind) {
+  switch (Kind) {
+  case TARGET_ALLOC_HOST:
+    return OL_ALLOC_TYPE_HOST;
+  case TARGET_ALLOC_SHARED:
+    return OL_ALLOC_TYPE_MANAGED;
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_DEFAULT:
+    return OL_ALLOC_TYPE_DEVICE;
+  }
+  llvm_unreachable("unhandled TargetAllocTy");
+}
+
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -481,7 +496,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   }
 
   auto AllocOrErr = llvm::offload::tmp::__ol_tgt_MemAlloc(
-      Context, DeviceHandle, static_cast<TargetAllocTy>(Kind), Size, HstPtr);
+      Context, DeviceHandle, toOlAllocTy(Kind), Size, HstPtr);
   if (!AllocOrErr) {
     REPORT() << "Failure to allocate device memory: "
              << llvm::toString(AllocOrErr.takeError());
@@ -512,8 +527,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   }
 
   if (auto Err = llvm::offload::tmp::__ol_tgt_MemFree(
-          Context, DeviceHandle, TgtAllocBegin,
-          static_cast<TargetAllocTy>(Kind))) {
+          Context, DeviceHandle, TgtAllocBegin, toOlAllocTy(Kind))) {
     REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
              << llvm::toString(std::move(Err));
     return OFFLOAD_FAIL;

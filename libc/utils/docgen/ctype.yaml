@@ -1,4 +1,9 @@
+standard: c23
+posix: posix-2024
 c-reference-root: string/byte
+types:
+  locale_t:
+    in-latest-posix: ''
 functions:
   isalnum:
     c-definition: 7.4.1.1
@@ -71,3 +76,7 @@ functions:
   toupper_l:
     in-latest-posix: ''
 
+  isascii:
+    removed-in-posix-2024: ''
+  toascii:
+    removed-in-posix-2024: ''

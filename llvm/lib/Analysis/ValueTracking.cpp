@@ -2032,6 +2032,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       }
     } else {
       IntrinsicInst *II = nullptr;
+      GEPOperator *GEP = nullptr;
       if (matchTwoInputRecurrence<IntrinsicInst>(P, II, Start, Step)) {
         // %iv      = [<Start>, %entry], [%iv.next, %backedge]
         //
@@ -2055,6 +2056,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
             Known.One.setHighBits(KnownStart.countMinLeadingOnes());
           }
         }
+      } else if (Known.isUnknown() && I->getType()->isPointerTy() &&
+                 matchTwoInputRecurrence<GEPOperator>(P, GEP, Start, Step) &&
+                 GEP->getPointerOperand() == P) {
+        // Handle a pointer induction variable, whose step is a getelementptr:
+        //   %p    = phi ptr [ %start, %preheader ], [ %next, %latch ]
+        //   %next = getelementptr <ty>, ptr %p, <indices>
+        // Every value %p takes is %start plus a whole number of steps, and
+        // tz(a + b) >= min(tz(a), tz(b)), so the trailing zeros of %p - and
+        // hence its alignment - are at least the smaller of those of %start and
+        // of the step.
+
+        // Evaluate the start value on its own incoming edge.
+        unsigned StartIdx = P->getIncomingValue(0) == Start ? 0 : 1;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
+        RecQ.CtxI = P->getIncomingBlock(StartIdx)->getTerminator();
+        computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
+        Known.Zero.setLowBits(
+            std::min(KnownStart.countMinTrailingZeros(),
+                     Log2(GEP->getMaxPreservedAlignment(Q.DL))));
       }
     }
 
