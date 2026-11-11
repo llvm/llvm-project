@@ -790,8 +790,7 @@ public:
 
   /// Special case of EmitValue that avoids the client having to pass in
   /// a MCExpr for MCSymbols.
-  void emitSymbolValue(const MCSymbol *Sym, unsigned Size,
-                       bool IsSectionRelative = false);
+  void emitSymbolValue(const MCSymbol *Sym, unsigned Size);
 
   /// Emit the offset of \p Sym + \p Offset from the start of its DWARF section
   /// as a section-relative relocation.

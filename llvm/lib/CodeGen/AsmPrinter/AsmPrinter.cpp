@@ -3924,7 +3924,7 @@ void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
 void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                                      unsigned Size,
                                      bool IsSectionRelative) const {
-  if (MAI.needsDwarfSectionOffsetDirective() && IsSectionRelative) {
+  if (IsSectionRelative) {
     unsigned Emitted = OutStreamer->emitDwarfSectionOffset(Label, Offset, Size);
     if (Size > Emitted)
       OutStreamer->emitZeros(Size - Emitted);

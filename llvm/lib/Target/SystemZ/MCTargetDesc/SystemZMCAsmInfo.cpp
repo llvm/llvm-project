@@ -55,7 +55,6 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
-  NeedsDwarfSectionOffsetDirective = true;
 
   initializeAtSpecifiers(atSpecifiers);
 }

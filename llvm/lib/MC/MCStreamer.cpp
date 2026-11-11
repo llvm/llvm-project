@@ -177,28 +177,20 @@ void MCStreamer::emitValue(const MCExpr *Value, unsigned Size, SMLoc Loc) {
   emitValueImpl(Value, Size, Loc);
 }
 
-void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size,
-                                 bool IsSectionRelative) {
-  if (!IsSectionRelative) {
-    emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
-    return;
-  }
-
-  unsigned Emitted = emitDwarfSectionOffset(Sym, /*Offset=*/0, Size);
-  assert(Emitted == Size && "SectionRelative value requires 4-bytes");
-  (void)Emitted;
+void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size) {
+  emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
 }
 
 unsigned MCStreamer::emitDwarfSectionOffset(const MCSymbol *Sym,
                                             uint64_t Offset, unsigned Size) {
-  if (const MCExpr *Expr = getContext().getAsmInfo().getDwarfSectionOffsetExpr(
-          Sym, Offset, getContext())) {
-    emitValueImpl(Expr, Size);
-    return Size;
+  const MCAsmInfo &MAI = getContext().getAsmInfo();
+  if (MAI.needsDwarfSectionOffsetDirective()) {
+    emitCOFFSecRel32(Sym, Offset);
+    return 4;
   }
 
-  emitCOFFSecRel32(Sym, Offset);
-  return 4;
+  emitValueImpl(MAI.getDwarfSectionOffsetExpr(Sym, Offset, getContext()), Size);
+  return Size;
 }
 
 /// Emit NumBytes bytes worth of the value specified by FillValue.
