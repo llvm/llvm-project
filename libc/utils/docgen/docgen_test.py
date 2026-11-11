@@ -26,6 +26,16 @@ class DocgenTest(unittest.TestCase):
         self.assertEqual(Header("search.h").stem, "search")
         self.assertEqual(Header("arpa/inet.h").stem, "arpa/inet")
 
+    def test_new_c23_and_posix_headers(self):
+        self.assertTrue(Header("limits.h").implements_macro("CHAR_BIT"))
+        self.assertFalse(Header("limits.h").implements_macro("BITINT_MAXWIDTH"))
+        self.assertTrue(Header("stdint.h").implements_type("int64_t"))
+        self.assertTrue(Header("stdint.h").implements_macro("INT64_MAX"))
+        self.assertTrue(Header("stdckdint.h").implements_macro("ckd_add"))
+        self.assertTrue(Header("regex.h").implements_fn("regcomp"))
+        self.assertTrue(Header("sys/shm.h").implements_fn("shmget"))
+        self.assertFalse(Header("ulimit.h").implements_fn("ulimit"))
+
     def test_is_stub_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             stub = Path(tmpdir) / "stub.cpp"
@@ -77,7 +87,8 @@ class DocgenTest(unittest.TestCase):
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
         self.assertTrue(Header("unistd.h").implements_macro("SEEK_SET"))
-        self.assertTrue(Header("float.h").implements_macro("NAN"))
+        self.assertTrue(Header("float.h").implements_macro("FLT_MAX"))
+        self.assertFalse(Header("float.h").implements_macro("NAN"))
 
     def test_implements_type(self):
         self.assertTrue(Header("stdio.h").implements_type("FILE"))
