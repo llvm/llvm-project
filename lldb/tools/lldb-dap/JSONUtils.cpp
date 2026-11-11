@@ -24,6 +24,7 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBType.h"
+#include "lldb/API/SBTypeSummary.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/PosixApi.h" // IWYU pragma: keep
 #include "lldb/lldb-defines.h"
@@ -300,7 +301,12 @@ VariableDescription::VariableDescription(
     llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
     const bool has_summary = !display_summary.empty();
 
-    if (!value.empty()) {
+    // Respect the type summary options. 
+    lldb::SBTypeSummary type_summary = val.GetTypeSummary();
+    const bool print_value =
+        !value.empty() && (summary.empty() || type_summary.DoesPrintValue(val));
+
+    if (print_value) {
       os_display_value << value;
       if (has_summary)
         os_display_value << " " << display_summary;
