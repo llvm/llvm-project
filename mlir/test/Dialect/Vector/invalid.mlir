@@ -2105,7 +2105,6 @@ func.func @vector_mask_already_masked_transfer_read(%base: memref<?xf32>, %c0: i
   return %0 : vector<4xf32>
 }
 
-
 // -----
 
 func.func @vector_mask_already_masked_transfer_write(%base: memref<?xf32>, %c0: index, %v: vector<4xf32>, %m: vector<4xi1>) {
