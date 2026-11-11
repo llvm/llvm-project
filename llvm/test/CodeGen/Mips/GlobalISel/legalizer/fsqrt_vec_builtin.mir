@@ -12,7 +12,6 @@
 ---
 name:            fsqrt_v4f32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -36,7 +35,6 @@ body:             |
 ---
 name:            fsqrt_v2f64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

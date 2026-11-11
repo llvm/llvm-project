@@ -2086,10 +2086,9 @@ define amdgpu_ps <4 x float> @test_nonvoid_return() nounwind {
 define amdgpu_ps <4 x float> @test_nonvoid_return_unreachable(i32 inreg %c) nounwind {
 ; GFX9-W64-LABEL: test_nonvoid_return_unreachable:
 ; GFX9-W64:       ; %bb.0: ; %entry
-; GFX9-W64-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    image_sample v0, v0, s[0:7], s[0:3] dmask:0x1
-; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
+; GFX9-W64-NEXT:    s_and_b64 exec, exec, exec
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    image_sample v[0:3], v0, s[0:7], s[0:3] dmask:0xf
 ; GFX9-W64-NEXT:    s_cmp_lt_i32 s0, 1
@@ -2105,10 +2104,9 @@ define amdgpu_ps <4 x float> @test_nonvoid_return_unreachable(i32 inreg %c) noun
 ;
 ; GFX10-W32-LABEL: test_nonvoid_return_unreachable:
 ; GFX10-W32:       ; %bb.0: ; %entry
-; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-W32-NEXT:    image_sample v0, v0, s[0:7], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_1D
-; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s1
+; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, exec_lo
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_cmp_lt_i32 s0, 1

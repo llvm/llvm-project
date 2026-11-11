@@ -97,6 +97,9 @@ public:
   struct BankConflictMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
+  struct HLXPseudoMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
 
 private:
   enum HexagonProcFamilyEnum { Others, TinyCore, HLX2048B };
