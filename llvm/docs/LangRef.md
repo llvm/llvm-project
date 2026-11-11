@@ -22656,9 +22656,6 @@ The '`llvm.vp.sdiv`' intrinsic performs signed division ({ref}`sdiv <i_sdiv>`)
 of the first and second vector arguments on each enabled or poison lane. The
 result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
 
-Undefined behavior can still occur on enabled or poison lanes when `%evl` is
-greater than the number of vector elements.
-
 ##### Examples:
 
 ```llvm
@@ -22700,9 +22697,6 @@ The '`llvm.vp.udiv`' intrinsic performs unsigned division
 ({ref}`udiv <i_udiv>`) of the first and second vector arguments on each enabled
 or poison lane. The result on disabled and poison lanes is a
 {ref}`poison value <poisonvalues>`.
-
-Undefined behavior can still occur on enabled or poison lanes when `%evl` is
-greater than the number of vector elements.
 
 ##### Examples:
 
@@ -22746,9 +22740,6 @@ The '`llvm.vp.srem`' intrinsic computes the remainder of the signed division
 or poison lane. The result on disabled and poison lanes is a
 {ref}`poison value <poisonvalues>`.
 
-Undefined behavior can still occur on enabled or poison lanes when `%evl` is
-greater than the number of vector elements.
-
 ##### Examples:
 
 ```llvm
@@ -22790,9 +22781,6 @@ The '`llvm.vp.urem`' intrinsic computes the remainder of the unsigned division
 ({ref}`urem <i_urem>`) of the first and second vector arguments on each enabled
 or poison lane. The result on disabled and poison lanes is a
 {ref}`poison value <poisonvalues>`.
-
-Undefined behavior can still occur on enabled or poison lanes when `%evl` is
-greater than the number of vector elements.
 
 ##### Examples:
 
