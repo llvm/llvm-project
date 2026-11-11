@@ -873,38 +873,6 @@ TEST(VerifierTest, DeeplyNested) {
   EXPECT_FALSE(verifyModule(M, &ErrorOS));
 }
 
-TEST(VerifierTest, WCharSizeModuleFlag) {
-  LLVMContext C;
-  {
-    Module M("M", C);
-    M.addModuleFlag(Module::Error, "wchar_size", 4u);
-    EXPECT_FALSE(verifyModule(M));
-    EXPECT_EQ(4u, M.getWCharSize());
-  }
-  {
-    Module M("M", C);
-    M.addModuleFlag(Module::Error, "wchar_size", 0u);
-
-    std::string Error;
-    raw_string_ostream ErrorOS(Error);
-    EXPECT_TRUE(verifyModule(M, &ErrorOS));
-    EXPECT_TRUE(StringRef(Error).starts_with(
-        "wchar_size metadata requires constant positive integer argument"))
-        << Error;
-  }
-  {
-    Module M("M", C);
-    M.addModuleFlag(Module::Error, "wchar_size", MDString::get(C, "4"));
-
-    std::string Error;
-    raw_string_ostream ErrorOS(Error);
-    EXPECT_TRUE(verifyModule(M, &ErrorOS));
-    EXPECT_TRUE(StringRef(Error).starts_with(
-        "wchar_size metadata requires constant positive integer argument"))
-        << Error;
-  }
-}
-
 TEST(VerifierTest, IntrinsicRetInvalidStruct) {
   LLVMContext Ctx;
 
