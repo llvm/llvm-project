@@ -6,11 +6,8 @@ export class VariablesTrackerFactory
 {
   constructor(private readonly showVariableTypes: () => boolean) {}
 
-  createDebugAdapterTracker(): vscode.DebugAdapterTracker | undefined {
-    if (this.showVariableTypes()) {
-      return undefined;
-    }
-    return new VariablesTracker();
+  createDebugAdapterTracker(): vscode.DebugAdapterTracker {
+    return new VariablesTracker(this.showVariableTypes);
   }
 }
 
@@ -19,13 +16,15 @@ export class VariablesTrackerFactory
  * no value. e.g. a struct without a value.
  */
 class VariablesTracker implements vscode.DebugAdapterTracker {
+  constructor(private readonly showVariableTypes: () => boolean) {}
+
   onDidSendMessage(message: dap.ProtocolMessage) {
     if (message.type !== "response") {
       return;
     }
 
     const response = message as dap.Response;
-    if (!response.success) {
+    if (!response.success || this.showVariableTypes()) {
       return;
     }
 

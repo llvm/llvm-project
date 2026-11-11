@@ -28,15 +28,14 @@ function variable(value: string, type?: string): dap.Variable {
 }
 
 suite("VariablesTracker", function () {
+  // Mimics `debug.showVariableTypes` setting.
+  const settings = { showVariableTypes: false };
+  const factory = new VariablesTrackerFactory(() => settings.showVariableTypes);
   let tracker: vscode.DebugAdapterTracker;
 
   setup(function () {
-    const showVariableTypes = () => false;
-    const trackerFactory = new VariablesTrackerFactory(showVariableTypes);
-    const created = trackerFactory.createDebugAdapterTracker();
-
-    assert.ok(created);
-    tracker = created;
+    settings.showVariableTypes = false;
+    tracker = factory.createDebugAdapterTracker();
   });
 
   test("puts the type in an empty variable value", function () {
@@ -95,6 +94,23 @@ suite("VariablesTracker", function () {
     assert.strictEqual(message.body.result, "");
   });
 
+  test("follows `showVariableTypes` setting during a session", function () {
+    const typesHidden = variablesResponse(variable("", "PointType"));
+    tracker.onDidSendMessage!(typesHidden);
+
+    settings.showVariableTypes = true;
+    const typesShown = variablesResponse(variable("", "PointType"));
+    tracker.onDidSendMessage!(typesShown);
+
+    settings.showVariableTypes = false;
+    const typesHiddenAgain = variablesResponse(variable("", "PointType"));
+    tracker.onDidSendMessage!(typesHiddenAgain);
+
+    assert.strictEqual(typesHidden.body.variables[0].value, "PointType");
+    assert.strictEqual(typesShown.body.variables[0].value, "");
+    assert.strictEqual(typesHiddenAgain.body.variables[0].value, "PointType");
+  });
+
   test("ignores failed responses", function () {
     const message = response<dap.VariablesResponse>(
       "variables",
@@ -118,13 +134,11 @@ suite("VariablesTracker", function () {
 });
 
 suite("VariablesTrackerFactory", function () {
-  test("creates a tracker when variable types are hidden", function () {
-    const factory = new VariablesTrackerFactory(() => false);
-    assert.ok(factory.createDebugAdapterTracker());
-  });
+  test("creates a tracker regardless of lambda return value", function () {
+    const factoryFalse = new VariablesTrackerFactory(() => false);
+    assert.ok(factoryFalse.createDebugAdapterTracker());
 
-  test("creates no tracker when variable types are shown", function () {
-    const factory = new VariablesTrackerFactory(() => true);
-    assert.strictEqual(factory.createDebugAdapterTracker(), undefined);
+    const factoryTrue = new VariablesTrackerFactory(() => true);
+    assert.ok(factoryTrue.createDebugAdapterTracker());
   });
 });
