@@ -2,6 +2,10 @@
 
 set(COPYPROF_SOURCES
   copyprof.cpp
+  copyprof_allocator.cpp
+  copyprof_interceptors.cpp
+  copyprof_interceptors_memintrinsics.cpp
+  copyprof_preinit.cpp
   copyprof_reporting.cpp
   copyprof_shadow.cpp
   copyprof_stack.cpp
@@ -9,6 +13,8 @@ set(COPYPROF_SOURCES
 )
 
 set(COPYPROF_HEADERS
+  copyprof_allocator.h
+  copyprof_interceptors.h
   copyprof_interface_internal.h
   copyprof_internal.h
   copyprof_reporting.h

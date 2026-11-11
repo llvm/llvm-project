@@ -23,6 +23,7 @@ add_mlir_conversion_library(MLIRShardToMPI
   MLIRMemRefDialect
   MLIRPass
   MLIRShardDialect
+  MLIRShardTransforms
   MLIRMPIDialect
   MLIRTransforms
   )

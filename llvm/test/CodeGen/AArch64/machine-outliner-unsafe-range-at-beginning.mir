@@ -4,7 +4,6 @@
 ...
 ---
 name:           unsafe_range_at_beginning
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone:      false
 body:             |

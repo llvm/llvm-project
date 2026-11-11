@@ -443,12 +443,12 @@ define void @self_compare_same_block_value(ptr %r, <4 x i64> %va, i64 %n, ptr %o
 ; CHECK-LABEL: define void @self_compare_same_block_value(
 ; CHECK-SAME: ptr [[R:%.*]], <4 x i64> [[VA:%.*]], i64 [[N:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[FN:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[N]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze <2 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[R]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[VA]], <4 x i64> <i64 0, i64 poison, i64 poison, i64 poison>, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> <i64 0, i64 poison, i64 poison, i64 poison>, i64 [[FN]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <4 x i64> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i1> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i1> [[TMP6]] to <4 x i8>

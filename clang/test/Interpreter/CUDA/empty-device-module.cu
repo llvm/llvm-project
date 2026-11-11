@@ -1,9 +1,10 @@
+// REQUIRES: lld
 // Tests host-only inputs. They produce an empty device module, and emitting
 // PTX for it must not be reported as a failure just because no pass changed
 // the module.
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/lib
-// RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared \
+// RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared -fuse-ld=lld \
 // RUN:   %S/Inputs/cudart.c -o %t/lib/libcudart.so
 // RUN: cat %s | clang-repl --cuda --cuda-path=%t -Xcc -nocudainc \
 // RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h \

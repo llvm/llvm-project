@@ -1754,8 +1754,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP37:%.*]] = load ptr, ptr [[_TMP3]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK4-NEXT:    store ptr [[TMP37]], ptr [[_TMP21]], align 8
 // CHECK4-NEXT:    [[TMP38:%.*]] = load i32, ptr [[C10]], align 4
-// CHECK4-NEXT:    [[C22:%.*]] = getelementptr inbounds nuw [[STRUCT_SS:%.*]], ptr [[TMP0]], i32 0, i32 2
-// CHECK4-NEXT:    [[TMP39:%.*]] = load ptr, ptr [[C22]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK4-NEXT:    [[TMP39:%.*]] = load ptr, ptr [[_TMP21]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK4-NEXT:    store i32 [[TMP38]], ptr [[TMP39]], align 4
 // CHECK4-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK4:       .omp.linear.pu.done:

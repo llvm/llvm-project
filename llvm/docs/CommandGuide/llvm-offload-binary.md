@@ -69,11 +69,12 @@ Compress the packaged offload binary.
 :::
 
 :::{option} --compression-format=<zstd|zlib>
-Select the compression format. The default is `zstd`.
+Select the compression format. The default is `zstd`, or `zlib` if LLVM was
+built without zstd support.
 :::
 
 :::{option} --compression-level=<level>
-Specify a compression level for the selected format.
+Specify a compression level. This requires {option}`--compression-format`,
 :::
 
 :::{option} --image=<<key>=<value>,...>

@@ -1,0 +1,108 @@
+# RUN: yaml2obj --docnum=1 %s | llvm-objdump -d --no-print-imm-hex --no-show-raw-insn - | FileCheck %s
+# RUN: yaml2obj --docnum=2 %s | llvm-objdump -d --no-print-imm-hex --no-show-raw-insn - | FileCheck %s --check-prefix=NEG
+
+# CHECK:      00000000000105a0 <foo@plt>:
+# CHECK-NEXT:    105a0:       pcalau12i $t3, 33
+# CHECK-NEXT:    105a4:       ld.d $t3, $t3, -1312
+# CHECK-NEXT:    105a8:       jirl $t1, $t3, 0
+# CHECK-NEXT:    105ac:       break 0
+# CHECK-EMPTY:
+# CHECK-NEXT: 00000000000105b0 <bar@plt>:
+# CHECK-NEXT:    105b0:       pcalau12i $t3, 33
+# CHECK-NEXT:    105b4:       ld.d $t3, $t3, -1304
+# CHECK-NEXT:    105b8:       jirl $t1, $t3, 0
+# CHECK-NEXT:    105bc:       break 0
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_OBJABI_V1 ]
+Sections:
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x2B8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x30AE0
+        Symbol:          foo
+        Type:            R_LARCH_JUMP_SLOT
+      - Offset:          0x30AE8
+        Symbol:          bar
+        Type:            R_LARCH_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10580
+    AddressAlign:    0x10
+    Content:         2E04001AADBD1100CF21EB28AD51FF02CC21EB02AD0545008C21C028E001004C2F04001AEF81EB28ED01004C00002A002F04001AEFA1EB28ED01004C00002A00
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x30AC8
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000000000000000000080050100000000008005010000000000'
+DynamicSymbols:
+  - Name:            foo
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+
+## .got.plt is placed below .plt, so the pcalau12i offset is negative.
+# NEG:      0000000040000020 <foo@plt>:
+# NEG-NEXT: 40000020:       pcalau12i $t3, -262128
+# NEG-NEXT: 40000024:       ld.d $t3, $t3, 200
+# NEG-NEXT: 40000028:       jirl $t1, $t3, 0
+# NEG-NEXT: 4000002c:       break 0
+# NEG:      0000000040000030 <bar@plt>:
+# NEG-NEXT: 40000030:       pcalau12i $t3, -262128
+# NEG-NEXT: 40000034:       ld.d $t3, $t3, 208
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_OBJABI_V1 ]
+Sections:
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x100B0
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000000000000000000000000040000000000000004000000000'
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x10188
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x100C8
+        Symbol:          foo
+        Type:            R_LARCH_JUMP_SLOT
+      - Offset:          0x100D0
+        Symbol:          bar
+        Type:            R_LARCH_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x40000000
+    AddressAlign:    0x10
+    Content:         0E02801BADBD1100CFC1C228AD51FF02CCC1C202AD0545008C21C028E001004C0F02801BEF21C328ED01004C00002A000F02801BEF41C328ED01004C00002A00
+DynamicSymbols:
+  - Name:            foo
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL

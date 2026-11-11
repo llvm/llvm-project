@@ -4,7 +4,7 @@
 ; RUN: llc -O0 -mtriple=x86_64-unknown-unknown < %s | FileCheck %s -check-prefix LINKAGE1
 ; RUN: llc -O0 -mtriple=x86_64-unknown-unknown < %s | FileCheck %s -check-prefix LINKAGE2
 ; RUN: llc -O0 -mtriple=x86_64-scei-ps4 < %s | FileCheck %s -check-prefix NOLINKAGE
-; RUN: llc -O0 -mtriple=x86_64-unknown-unknown -debugger-tune=sce < %s | FileCheck %s -check-prefix NOLINKAGE
+; RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s | llc -O0 -mtriple=x86_64-unknown-unknown | FileCheck %s -check-prefix NOLINKAGE
 
 ; $ clang++ -emit-llvm -S -g dwarf-linkage-names.cpp
 ; namespace test {
@@ -52,7 +52,7 @@ entry:
 attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!5}
-!llvm.module.flags = !{!8, !9}
+!llvm.module.flags = !{!8, !9, !100}
 !llvm.ident = !{!10}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -65,6 +65,7 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !7 = !{!0}
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
 !10 = !{!"clang version 3.8.0 (trunk 244662)"}
 !11 = distinct !DISubprogram(name: "bar", linkageName: "_ZN4test3barEv", scope: !2, file: !3, line: 3, type: !12, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !5, retainedNodes: !6)
 !12 = !DISubroutineType(types: !13)

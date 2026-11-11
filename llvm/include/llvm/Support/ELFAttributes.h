@@ -31,9 +31,9 @@ struct BuildAttributeItem {
     TextAttribute,
   } Type;
   unsigned Tag;
-  unsigned IntValue;
+  uint64_t IntValue;
   std::string StringValue;
-  BuildAttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
+  BuildAttributeItem(Types Ty, unsigned Tg, uint64_t IV, std::string SV)
       : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
 };
 struct BuildAttributeSubSection {

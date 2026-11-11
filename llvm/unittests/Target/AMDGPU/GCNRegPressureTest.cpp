@@ -247,6 +247,144 @@ body:             |
   EXPECT_EQ(P.getSGPRNum(), 1U);
 }
 
+// Tests the banked pressure accounting for the av_* classes, whose values the
+// allocator may place in either bank.
+class GCNRegPressureBankingTest : public AMDGPUCodeGenTestBase {
+public:
+  void SetUp() override { setUpImpl("amdgpu9.42-amd-amdhsa", "", ""); }
+
+protected:
+  using Banked = std::pair<unsigned, unsigned>;
+
+  /// \returns the maximum pressure over the single basic block of the function
+  /// named \p FnName in \p MIR.
+  GCNRegPressure maxPressureOf(StringRef MIR, StringRef FnName) {
+    EXPECT_TRUE(parseMIR(MIR));
+    MachineFunction &MF = getMF(FnName);
+    LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+    MachineBasicBlock &MBB = *MF.getBlockNumbered(0);
+    GCNDownwardRPTracker RPTracker(LIS);
+    EXPECT_TRUE(RPTracker.advance(MBB.begin(), MBB.end(), nullptr));
+    return RPTracker.moveMaxPressure();
+  }
+};
+
+TEST_F(GCNRegPressureBankingTest, BankedVGPRNumDistributesAVGPRs) {
+  StringRef MIR = R"(
+name:            banked_distribute
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:areg_64 = IMPLICIT_DEF
+    %2:av_256 = IMPLICIT_DEF
+    S_NOP 0, implicit %0, implicit %1, implicit %2
+    S_ENDPGM 0
+...
+)";
+  GCNRegPressure RP = maxPressureOf(MIR, "banked_distribute");
+
+  // 4 rigid ArchVGPRs, 2 rigid AGPRs, and 8 that may go to either bank.
+  ASSERT_EQ(RP.getNumRegs(GCNRegPressure::VGPR), 4U);
+  ASSERT_EQ(RP.getNumRegs(GCNRegPressure::AGPR), 2U);
+  ASSERT_EQ(RP.getNumRegs(GCNRegPressure::AVGPR), 8U);
+
+  // No headroom in the ArchVGPR bank, so every flexible value goes to AGPR.
+  EXPECT_EQ(RP.getBankedVGPRNum(0, 256), Banked(4, 10));
+  EXPECT_EQ(RP.getBankedVGPRNum(4, 256), Banked(4, 10));
+
+  // A limit below the rigid ArchVGPR pressure must clamp the headroom to zero
+  // rather than wrap around.
+  EXPECT_EQ(RP.getBankedVGPRNum(2, 256), Banked(4, 10));
+
+  // Partial headroom: 2 of the 8 flexible values fit, the rest go to AGPR.
+  EXPECT_EQ(RP.getBankedVGPRNum(6, 256), Banked(6, 8));
+
+  // Headroom exactly absorbs the flexible values.
+  EXPECT_EQ(RP.getBankedVGPRNum(12, 256), Banked(12, 2));
+
+  // With room to spare the result matches the unbanked accounting, which
+  // charges every AVGPR to the ArchVGPR bank.
+  EXPECT_EQ(RP.getBankedVGPRNum(256, 256), Banked(12, 2));
+  EXPECT_EQ(RP.getBankedVGPRNum(256, 256),
+            Banked(RP.getArchVGPRNum(), RP.getAGPRNum()));
+
+  // Partial AGPR headroom: 2 of the 8 flexible values fit in the ArchVGPR
+  // bank, 3 in the AGPR bank, and the remaining 3 are charged back to the
+  // ArchVGPR bank as excess.
+  EXPECT_EQ(RP.getBankedVGPRNum(6, 5), Banked(9, 5));
+
+  // No AGPRs allocatable: every flexible value stays in the ArchVGPR bank.
+  EXPECT_EQ(RP.getBankedVGPRNum(4, 0), Banked(12, 2));
+  EXPECT_EQ(RP.getBankedVGPRNum(6, 0), Banked(12, 2));
+
+  // An AGPR limit below the rigid AGPR pressure must clamp the headroom to
+  // zero rather than wrap around.
+  EXPECT_EQ(RP.getBankedVGPRNum(4, 1), Banked(12, 2));
+}
+
+TEST_F(GCNRegPressureBankingTest, BankedVGPRNumWithoutAVGPRs) {
+  StringRef MIR = R"(
+name:            banked_no_avgprs
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:areg_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %0, implicit %1
+    S_ENDPGM 0
+...
+)";
+  GCNRegPressure RP = maxPressureOf(MIR, "banked_no_avgprs");
+
+  ASSERT_EQ(RP.getNumRegs(GCNRegPressure::AVGPR), 0U);
+
+  // With nothing flexible to place, banking must be an exact no-op at every
+  // limit.
+  for (unsigned ArchLimit : {0U, 1U, 4U, 5U, 256U})
+    EXPECT_EQ(RP.getBankedVGPRNum(ArchLimit, 256),
+              Banked(RP.getArchVGPRNum(), RP.getAGPRNum()))
+        << "ArchLimit = " << ArchLimit;
+}
+
+TEST_F(GCNRegPressureBankingTest, BankedVGPRNumMatchesReferenceSweep) {
+  StringRef MIR = R"(
+name:            banked_sweep
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:areg_64 = IMPLICIT_DEF
+    %2:av_256 = IMPLICIT_DEF
+    S_NOP 0, implicit %0, implicit %1, implicit %2
+    S_ENDPGM 0
+...
+)";
+  GCNRegPressure RP = maxPressureOf(MIR, "banked_sweep");
+
+  unsigned Arch = RP.getNumRegs(GCNRegPressure::VGPR);
+  unsigned Acc = RP.getNumRegs(GCNRegPressure::AGPR);
+  unsigned Flex = RP.getNumRegs(GCNRegPressure::AVGPR);
+
+  // Check the closed form against placing the flexible values one at a time.
+  for (unsigned ArchLimit = 0; ArchLimit <= 32; ++ArchLimit) {
+    for (unsigned AccLimit = 0; AccLimit <= 32; ++AccLimit) {
+      unsigned ExpectedArch = Arch, ExpectedAcc = Acc;
+      for (unsigned I = 0; I != Flex; ++I) {
+        if (ExpectedArch < ArchLimit)
+          ++ExpectedArch;
+        else if (ExpectedAcc < AccLimit)
+          ++ExpectedAcc;
+        else
+          ++ExpectedArch;
+      }
+      EXPECT_EQ(RP.getBankedVGPRNum(ArchLimit, AccLimit),
+                Banked(ExpectedArch, ExpectedAcc))
+          << "ArchLimit = " << ArchLimit << ", AccLimit = " << AccLimit;
+    }
+  }
+}
+
 // Returns the maximum pressure over the only block of \p MF, from the downward
 // and from the upward tracker.
 static std::pair<GCNRegPressure, GCNRegPressure>
