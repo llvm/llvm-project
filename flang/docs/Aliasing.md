@@ -283,6 +283,11 @@ above example, `ptr = loc(target)` causes accesses through `handle` and
 TARGET attribute in FIR so that this information is available to all FIR
 optimizations.
 
+The association is visible when the variable is the argument of a `LOC` or
+`%LOC` reference anywhere in the procedure, in its host, or in their internal
+procedures, whatever the reference is used for. Variables that share storage
+with it through EQUIVALENCE or COMMON are given the TARGET attribute as well.
+
 If the association is not visible, Flang keeps the default assumption that the
 Cray pointee does not alias the target:
 
