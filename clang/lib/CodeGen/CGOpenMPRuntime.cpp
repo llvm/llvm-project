@@ -10926,7 +10926,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   bool PropagatePresentToPointee = CGM.getLangOpts().OpenMP >= 60;
   llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
       PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB,
-      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointee));
+      PropagatePresentToPointee));
   UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);

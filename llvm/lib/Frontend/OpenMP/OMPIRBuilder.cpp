@@ -10702,7 +10702,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
     Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
-    bool PreserveMemberOfFlags, bool PropagatePresentToPointee) {
+    bool PropagatePresentToPointee) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -10856,17 +10856,11 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     //     shifted -- see (***).
     //   * (**) ATTACH entries: they are not a member of anything — they just
     //     link a ptr to its ptee.
-    //   * All entries when PreserveMemberOfFlags is set (the Flang/MLIR path):
-    //     its pre-shaped entries already carry their final MEMBER_OF bits.
-    //     TODO: set HasAttachPtr from Flang for entries whose storage is the
-    //     pointee's (e.g. s%p(0:10)) and drop PreserveMemberOfFlags in favor of
-    //     it.
     //
     // (***) If such an entry already has its own MEMBER_OF bits (e.g. the
     // s1p->x/y entries above), those bits are still shifted by N.
     Value *MemberMapType;
-    if (PreserveMemberOfFlags || (RawType & AttachBit) ||
-        Info->HasAttachPtr[I]) {
+    if ((RawType & AttachBit) || Info->HasAttachPtr[I]) {
       if (RawType & MemberOfMask)
         MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
       else
