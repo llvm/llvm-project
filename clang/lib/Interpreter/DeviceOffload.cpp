@@ -13,10 +13,12 @@
 
 #include "DeviceOffload.h"
 
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/CommonArgs.h"
+#include "clang/Driver/OffloadBundler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Options/Options.h"
@@ -33,6 +35,8 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace clang {
@@ -166,6 +170,81 @@ IncrementalHIPDeviceParser::GenerateHSACO(llvm::StringRef Object) {
   return llvm::StringRef(HSACOContent.data(), HSACOContent.size());
 }
 
+llvm::Expected<llvm::StringRef>
+IncrementalHIPDeviceParser::GenerateFatbinary(llvm::StringRef HSACO) {
+  int HSACOFD = -1;
+  llvm::SmallString<128> HSACOFile;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", HSACOFD, HSACOFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary code object file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover HSACORemover(HSACOFile);
+  {
+    llvm::raw_fd_ostream OS(HSACOFD, /*shouldClose=*/true);
+    OS << HSACO;
+  }
+
+  llvm::StringRef OffloadKind =
+      (TargetOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_2 ||
+       TargetOpts.CodeObjectVersion == llvm::CodeObjectVersionKind::COV_3)
+          ? "hip"
+          : "hipv4";
+  llvm::SmallString<128> FatbinFile;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hipfb", FatbinFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary fat binary file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover FatbinRemover(FatbinFile);
+
+  llvm::SmallString<128> HostFile;
+  if (llvm::sys::fs::createTemporaryFile("host", "o", HostFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary host file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover HostRemover(HostFile);
+
+  llvm::Triple DeviceTriple(TargetOpts.Triple);
+  // The GPU can be encoded in the triple's sub-architecture instead of in
+  // -target-cpu, so fall back to it when the CPU is empty.
+  std::string Processor = TargetOpts.CPU;
+  if (Processor.empty())
+    if (std::optional<llvm::AMDGPU::TargetID> ID =
+            llvm::AMDGPU::TargetID::parse(DeviceTriple, ""))
+      Processor = ID->getCanonicalFeatureString();
+  std::string TargetID =
+      llvm::AMDGPU::TargetID::createFromSubtargetFeatures(
+          DeviceTriple, Processor, llvm::join(TargetOpts.Features, ","))
+          .getCanonicalFeatureString();
+  if (TargetID.empty())
+    return llvm::make_error<llvm::StringError>(
+        "Could not determine the HIP device architecture.",
+        llvm::inconvertibleErrorCode());
+
+  OffloadBundlerConfig BundlerConfig;
+  BundlerConfig.BundleAlignment = 4096;
+  BundlerConfig.HostInputIndex = 0;
+  BundlerConfig.FilesType = "o";
+  BundlerConfig.TargetNames = {"host-" + llvm::sys::getProcessTriple(),
+                               OffloadKind.str() + "-" +
+                                   normalizeForBundler(DeviceTriple, TargetID) +
+                                   "-" + TargetID};
+  BundlerConfig.InputFileNames = {std::string(HostFile),
+                                  std::string(HSACOFile)};
+  BundlerConfig.OutputFileNames = {std::string(FatbinFile)};
+
+  if (llvm::Error Err = OffloadBundler(BundlerConfig).BundleFiles())
+    return std::move(Err);
+
+  auto FatbinBuf = llvm::MemoryBuffer::getFile(FatbinFile, /*IsText=*/false);
+  if (!FatbinBuf)
+    return llvm::make_error<llvm::StringError>("Failed to read the fat binary.",
+                                               llvm::inconvertibleErrorCode());
+
+  llvm::StringRef Buffer = (*FatbinBuf)->getBuffer();
+  FatbinContent.assign(Buffer.begin(), Buffer.end());
+  return llvm::StringRef(FatbinContent.data(), FatbinContent.size());
+}
+
 llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   llvm::Expected<llvm::StringRef> Object = GenerateDeviceObject();
   if (!Object)
@@ -175,7 +254,11 @@ llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   if (!HSACO)
     return HSACO.takeError();
 
-  // FIXME: Bundle the HSACO and embed it into the host compilation.
+  llvm::Expected<llvm::StringRef> Fatbin = GenerateFatbinary(*HSACO);
+  if (!Fatbin)
+    return Fatbin.takeError();
+
+  // FIXME: Embed the fat binary into the host compilation.
   return llvm::make_error<llvm::StringError>(
       "HIP offload binary generation is not supported yet.",
       llvm::inconvertibleErrorCode());

@@ -146,7 +146,7 @@ TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
                               "supported. Pass a single --offload-arch"));
 }
 
-TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
+TEST_F(DeviceOffloadHIPTest, DeviceCodeIsBundled) {
   IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
   auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
@@ -157,8 +157,9 @@ TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
       std::move(*HostCI), std::move(*DeviceCI), OffloadType::HIP);
   ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
 
-  // FIXME: Replace this with a check of the embedded bundle once the offload
-  // binary is generated.
+  // With lld, the unsupported embedding step is only reached after the device
+  // object was linked into an HSACO and bundled.
+  // FIXME: Check the fat binary once it is embedded into the host compilation.
   std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
   bool HasLLD = llvm::sys::findProgramByName(
                     "lld", {llvm::sys::path::parent_path(Exe)}) ||

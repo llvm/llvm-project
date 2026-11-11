@@ -48,6 +48,7 @@ class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
   CompilerInstance &DeviceCI;
   llvm::SmallVector<char, 0> ObjectContent;
   llvm::SmallVector<char, 0> HSACOContent;
+  llvm::SmallVector<char, 0> FatbinContent;
   // The -B prefixes and --ld-path value from the driver arguments.
   llvm::SmallVector<std::string, 4> PrefixDirs;
   std::string LdPath;
@@ -57,6 +58,9 @@ class IncrementalHIPDeviceParser : public IncrementalDeviceParser {
 
   // Link the object file into a loadable AMDGPU code object (HSACO).
   llvm::Expected<llvm::StringRef> GenerateHSACO(llvm::StringRef Object);
+
+  // Bundle the code object into a HIP fat binary.
+  llvm::Expected<llvm::StringRef> GenerateFatbinary(llvm::StringRef HSACO);
 
 public:
   IncrementalHIPDeviceParser(
