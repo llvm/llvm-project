@@ -25560,9 +25560,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         PO = LI->getPointerOperand();
         const uint64_t Shift = getVectorLoadShift(E->Scalars);
         if (Shift)
-          PO = Builder.CreatePtrAdd(
-              PO, ConstantInt::getSigned(DL->getIndexType(PO->getType()),
-                                         -static_cast<int64_t>(Shift)));
+          PO = Builder.CreatePtrAddWithSignedOffset(
+              PO, -static_cast<int64_t>(Shift));
         NewLI = Builder.CreateAlignedLoad(
             VecTy, PO, commonAlignment(LI->getAlign(), Shift));
       } else if (E->State == TreeEntry::CompressVectorize) {

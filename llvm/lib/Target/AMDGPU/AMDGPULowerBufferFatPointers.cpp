@@ -475,9 +475,9 @@ public:
 Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::applyOffset(Value *Ptr,
                                                              uint64_t Off) {
   // The InstSimplifyFolder gives back `Ptr` itself when `Off` is 0.
-  return IRB.CreatePtrAdd(
-      Ptr, ConstantInt::get(DL.getIndexType(Ptr->getType()), Off),
-      Ptr->getName() + ".off." + Twine(Off), GEPNoWrapFlags::noUnsignedWrap());
+  return IRB.CreatePtrAddWithUnsignedOffset(
+      Ptr, Off, Ptr->getName() + ".off." + Twine(Off),
+      GEPNoWrapFlags::noUnsignedWrap());
 }
 
 void StoreFatPtrsAsIntsAndExpandMemcpyVisitor::forEachAggLeaf(

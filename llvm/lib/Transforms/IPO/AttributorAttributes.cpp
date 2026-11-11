@@ -303,8 +303,8 @@ static Value *constructPointer(Value *Ptr, int64_t Offset,
                     << "-bytes\n");
 
   if (Offset)
-    Ptr = IRB.CreatePtrAdd(Ptr, IRB.getInt64(Offset),
-                           Ptr->getName() + ".b" + Twine(Offset));
+    Ptr = IRB.CreatePtrAddWithSignedOffset(
+        Ptr, Offset, Ptr->getName() + ".b" + Twine(Offset));
   return Ptr;
 }
 

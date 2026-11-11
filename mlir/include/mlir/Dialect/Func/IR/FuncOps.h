@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_FUNC_IR_OPS_H
 #define MLIR_DIALECT_FUNC_IR_OPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/IR/Builders.h"

@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_WasmSSA_IR_WasmSSA_H_
 #define MLIR_DIALECT_WasmSSA_IR_WasmSSA_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
 
 //===----------------------------------------------------------------------===//

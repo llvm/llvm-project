@@ -170,9 +170,9 @@ static void maybeFreeRetconStorage(IRBuilder<> &Builder,
 /// frame.
 static Value *createSwitchDestroyPtr(const coro::Shape &Shape,
                                      IRBuilder<> &Builder, Value *FramePtr) {
-  auto *Offset = ConstantInt::get(Type::getInt64Ty(FramePtr->getContext()),
-                                  Shape.SwitchLowering.DestroyOffset);
-  return Builder.CreateInBoundsPtrAdd(FramePtr, Offset, "destroy.addr");
+  return Builder.CreatePtrAddWithUnsignedOffset(
+      FramePtr, Shape.SwitchLowering.DestroyOffset, "destroy.addr",
+      GEPNoWrapFlags::inBounds());
 }
 
 /// Make resume-clone coro.free conditional on whether the frame is elided.

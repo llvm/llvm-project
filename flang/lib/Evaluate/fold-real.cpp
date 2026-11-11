@@ -494,6 +494,6 @@ Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_REAL_KIND(template class ExpressionBase, )
+template class ExpressionBase<Type<TypeCategory::Real>>;
 template class ExpressionBase<SomeReal>;
 } // namespace Fortran::evaluate
