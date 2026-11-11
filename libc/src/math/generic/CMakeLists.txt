@@ -2918,7 +2918,6 @@ add_entrypoint_object(
     libc.src.__support.math.rsqrtbf16
 )
 
-
 add_entrypoint_object(
   remquof
   SRCS
