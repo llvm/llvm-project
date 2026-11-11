@@ -17163,7 +17163,8 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
                                    SourceLocation Loc,
                                    SmallVectorImpl<Expr *> &ConvertedArgs,
                                    bool AllowExplicit,
-                                   bool IsListInitialization) {
+                                   bool IsListInitialization,
+                                   bool IsUserConversion) {
   // FIXME: This duplicates a lot of code from Sema::ConvertArgumentsForCall.
   unsigned NumArgs = ArgsPtr.size();
   Expr **Args = ArgsPtr.data();
@@ -17183,7 +17184,7 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
   SmallVector<Expr *, 8> AllArgs;
   bool Invalid = GatherArgumentsForCall(
       Loc, Constructor, Proto, 0, llvm::ArrayRef(Args, NumArgs), AllArgs,
-      CallType, AllowExplicit, IsListInitialization);
+      CallType, AllowExplicit, IsListInitialization, IsUserConversion);
   ConvertedArgs.append(AllArgs.begin(), AllArgs.end());
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);

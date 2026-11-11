@@ -6443,7 +6443,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   unsigned FirstParam, ArrayRef<Expr *> Args,
                                   SmallVectorImpl<Expr *> &AllArgs,
                                   VariadicCallType CallType, bool AllowExplicit,
-                                  bool IsListInitialization) {
+                                  bool IsListInitialization,
+                                  bool IsUserConversion) {
   unsigned NumParams = Proto->getNumParams();
   bool Invalid = false;
   size_t ArgIx = 0;
@@ -6492,6 +6493,9 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       // Remember that parameter belongs to a CF audited API.
       if (CFAudited)
         Entity.setParameterCFAudited();
+
+      if (IsUserConversion)
+        Entity.setParameterOfUserConversion();
 
       // Warn if argument has OBT but parameter doesn't, discarding OBTs at
       // function boundaries is a common oversight.

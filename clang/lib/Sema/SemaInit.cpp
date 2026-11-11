@@ -4503,7 +4503,7 @@ static OverloadingResult ResolveConstructorOverload(
     DeclContext::lookup_result Ctors, OverloadCandidateSet::iterator &Best,
     bool CopyInitializing, bool AllowExplicit, bool OnlyListConstructors,
     bool IsListInit, bool RequireActualConstructor,
-    bool SecondStepOfCopyInit = false) {
+    bool PartOfUserConversion = false) {
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByConstructor);
   CandidateSet.setDestAS(DestType.getQualifiers().getAddressSpace());
 
@@ -4527,7 +4527,7 @@ static OverloadingResult ResolveConstructorOverload(
     //     is to X or reference to (possibly cv-qualified X),
     //   user-defined conversion sequences are not considered.
     bool SuppressUserConversions =
-        SecondStepOfCopyInit ||
+        PartOfUserConversion ||
         (IsListInit && Args.size() == 1 && isa<InitListExpr>(Args[0]) &&
          hasCopyOrMoveCtorParam(S.Context, Info));
 
@@ -4563,10 +4563,10 @@ static OverloadingResult ResolveConstructorOverload(
   // Explicit conversion functions are only candidates during
   // direct-initialization.
   //
-  // Note: SecondStepOfCopyInit is only ever true in this case when
-  // evaluating whether to produce a C++98 compatibility warning.
+  // Conversion functions are user-defined conversions, so they are not
+  // candidates when user-defined conversions are not being considered.
   if (S.getLangOpts().CPlusPlus17 && Args.size() == 1 &&
-      !RequireActualConstructor && !SecondStepOfCopyInit) {
+      !RequireActualConstructor && !PartOfUserConversion) {
     Expr *Initializer = Args[0];
     auto *SourceRD = Initializer->getType()->getAsCXXRecordDecl();
     if (SourceRD && S.isCompleteType(DeclLoc, Initializer->getType())) {
@@ -4755,10 +4755,29 @@ static void TryConstructorInitialization(Sema &S,
   //     elements of the initializer list.
   if (Result == OR_No_Viable_Function) {
     AsInitializerList = false;
-    Result = ResolveConstructorOverload(
-        S, Kind.getLocation(), UnwrappedArgs, CandidateSet, DestType, Ctors,
-        Best, CopyInitialization, AllowExplicit,
-        /*OnlyListConstructors=*/false, IsListInit, RequireActualConstructor);
+    auto Resolve = [&](bool PartOfUserConversion) {
+      return ResolveConstructorOverload(
+          S, Kind.getLocation(), UnwrappedArgs, CandidateSet, DestType, Ctors,
+          Best, CopyInitialization, AllowExplicit,
+          /*OnlyListConstructors=*/false, IsListInit, RequireActualConstructor,
+          PartOfUserConversion);
+    };
+    // The argument of a user-defined conversion converts to its parameter by a
+    // standard conversion sequence (C++ [over.best.ics]p4), so a constructor
+    // that can take it that way is better than any that needs another
+    // user-defined conversion. Don't look for one unless nothing else works:
+    // doing so can require checking constraints that depend on this very
+    // initialization. CUDA can prefer a worse conversion sequence, though.
+    bool TryWithoutUserConversions = Entity.isParameterOfUserConversion() &&
+                                     !ILE && Args.size() == 1 &&
+                                     !S.getLangOpts().CUDA;
+    if (TryWithoutUserConversions)
+      Result = Resolve(/*PartOfUserConversion=*/true);
+    if (!TryWithoutUserConversions ||
+        llvm::none_of(CandidateSet, [](const OverloadCandidate &Candidate) {
+          return Candidate.Viable && Candidate.Conversions[0].isStandard();
+        }))
+      Result = Resolve(/*PartOfUserConversion=*/false);
   }
   if (Result) {
     Sequence.SetOverloadFailure(
@@ -7391,7 +7410,7 @@ static ExprResult CopyObject(Sema &S,
       /*CopyInitializing=*/false, /*AllowExplicit=*/true,
       /*OnlyListConstructors=*/false, /*IsListInit=*/false,
       /*RequireActualConstructor=*/false,
-      /*SecondStepOfCopyInit=*/true)) {
+      /*PartOfUserConversion=*/true)) {
   case OR_Success:
     break;
 
@@ -7533,7 +7552,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
       /*CopyInitializing=*/false, /*AllowExplicit=*/true,
       /*OnlyListConstructors=*/false, /*IsListInit=*/false,
       /*RequireActualConstructor=*/false,
-      /*SecondStepOfCopyInit=*/true);
+      /*PartOfUserConversion=*/true);
 
   PartialDiagnostic Diag = S.PDiag(diag::warn_cxx98_compat_temp_copy)
     << OR << (int)Entity.getKind() << CurInitExpr->getType()
@@ -8303,7 +8322,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         Expr *Arg = CurInit.get();
         if (S.CompleteConstructorCall(Constructor, Step->Type,
                                       MultiExprArg(&Arg, 1), Loc,
-                                      ConstructorArgs))
+                                      ConstructorArgs, /*AllowExplicit=*/false,
+                                      /*IsListInitialization=*/false,
+                                      /*IsUserConversion=*/true))
           return ExprError();
 
         // Build an expression that constructs a temporary.
