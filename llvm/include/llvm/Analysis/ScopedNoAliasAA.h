@@ -22,14 +22,20 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class FenceInst;
 class Function;
+class LLVMContext;
 class MDNode;
 class MemoryLocation;
 
 /// A simple AA result which uses scoped-noalias metadata to answer queries.
 class ScopedNoAliasAAResult : public AAResultBase {
+  const AnalysisOptions &Opts;
+
 public:
+  LLVM_ABI explicit ScopedNoAliasAAResult(const LLVMContext &C);
+
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
@@ -38,8 +44,8 @@ public:
     return false;
   }
 
-  LLVM_ABI static AliasResult alias(const MemoryLocation &LocA,
-                                    const MemoryLocation &LocB);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB);
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &,
                              const Instruction *);

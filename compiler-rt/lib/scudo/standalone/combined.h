@@ -139,7 +139,9 @@ public:
     SizeClassAllocatorT &SizeClassAllocator;
   };
 
-  typedef GlobalQuarantine<QuarantineCallback, void> QuarantineT;
+  typedef GlobalQuarantine<QuarantineCallback, void,
+                           AllocatorConfig::getQuarantineDisabled()>
+      QuarantineT;
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
   void init() {
@@ -310,11 +312,24 @@ public:
     if (!allocatorSupportsMemoryTagging<AllocatorConfig>())
       return Ptr;
     auto UntaggedPtr = untagPointer(Ptr);
+    // If the untagged pointer differs from the tagged pointer, it means the
+    // original pointer was tagged and we have a primary allocation. So we want
+    // to return a pointer with tag 0 which is the header tag for primary
+    // allocations. It's the same as the untagged pointer. We use 0 for the
+    // primary allocation headers because it doesn't conflict with the tags used
+    // by the allocations themselves (1-15). This means that MTE will
+    // deterministically detect linear buffer overflows.
     if (UntaggedPtr != Ptr)
       return UntaggedPtr;
     // Secondary, or pointer allocated while memory tagging is unsupported or
     // disabled. The tag mismatch is okay in the latter case because tags will
     // not be checked.
+    // If the untagged pointer is the same as the tagged pointer, it means the
+    // original pointer was untagged. This means one of the followings:
+    // 1. We have a secondary allocation so we apply a fixed tag of 2, the
+    // header tag for secondary allocation.
+    // 2. MTE is disabled at runtime. In this case it doesn't matter which tag
+    // we apply, so we arbitrarily apply a fixed tag of 2 in this case as well.
     return addHeaderTag(Ptr);
   }
 
@@ -381,11 +396,6 @@ public:
     }
 #endif // GWP_ASAN_HOOKS
 
-    const FillContentsMode FillContents = ZeroContents ? ZeroFill
-                                          : TSDRegistry.getDisableMemInit()
-                                              ? NoFill
-                                              : Options.getFillContentsMode();
-
     // If the requested size happens to be 0 (more common than you might think),
     // allocate MinAlignment bytes on top of the header. Then add the extra
     // bytes required to fulfill the alignment requirements: we allocate enough
@@ -422,6 +432,20 @@ public:
           ClassId = 0;
       }
     }
+
+    FillContentsMode FillContents;
+    if (ZeroContents)
+      FillContents = ZeroFill;
+    else if (TSDRegistry.getDisableMemInit())
+      FillContents = NoFill;
+    else {
+      FillContents = Options.getFillContentsMode();
+      if (FillContents == ZeroFill && AllocatorConfig::getDeallocZeroFill()) {
+        // The zeroing will happen in the deallocate.
+        FillContents = NoFill;
+      }
+    }
+
     if (UNLIKELY(ClassId == 0)) {
       Block = Secondary.allocate(Options, Size, Alignment, &SecondaryBlockEnd,
                                  FillContents);
@@ -443,7 +467,6 @@ public:
       return initChunk(ClassId, Origin, Block, UserPtr, SizeOrUnusedBytes,
                        FillContents);
     }
-
     return initChunkWithMemoryTagging(ClassId, Origin, Block, UserPtr, Size,
                                       SizeOrUnusedBytes, FillContents);
   }
@@ -564,7 +587,7 @@ public:
                  !isAligned(reinterpret_cast<uptr>(Ptr), DeleteAlignment)))
       reportDeleteAlignmentMismatch(Ptr, DeleteAlignment);
 
-    quarantineOrDeallocateChunk(Options, TaggedPtr, &Header, Size);
+    quarantineOrDeallocateChunk(Options, TaggedPtr, Ptr, &Header, Size);
   }
 
   void *reallocate(void *OldPtr, uptr NewSize, uptr Alignment = MinAlignment) {
@@ -665,7 +688,8 @@ public:
                        useMemoryTagging<AllocatorConfig>(Options);
       memcpy(NewPtr, OldTaggedPtr,
              Min(NewSize, ExactSize ? OldSize : UsableSize));
-      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr, OldPtr, &Header,
+                                  OldSize);
     }
     return NewPtr;
   }
@@ -751,20 +775,15 @@ public:
     const uptr From = Base;
     const uptr To = Base + Size;
     const Options Options = Primary.Options.load();
-    bool MayHaveTaggedPrimary = useMemoryTagging<AllocatorConfig>(Options);
-    auto Lambda = [this, From, To, MayHaveTaggedPrimary, Callback,
+    bool MemoryTaggingEnabled = useMemoryTagging<AllocatorConfig>(Options);
+    auto Lambda = [this, From, To, MemoryTaggingEnabled, Callback,
                    Arg](uptr Block) {
       if (Block < From || Block >= To)
         return;
       uptr Chunk;
       Chunk::UnpackedHeader Header;
-      if (UNLIKELY(MayHaveTaggedPrimary)) {
-        // A chunk header can either have a zero tag (tagged primary) or the
-        // header tag (secondary, or untagged primary). We don't know which so
-        // try both.
-        ScopedDisableMemoryTagChecks x;
-        if (!getChunkFromBlock(Block, &Chunk, &Header) &&
-            !getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
+      if (UNLIKELY(MemoryTaggingEnabled)) {
+        if (!getChunkFromBlock(loadTag(Block), &Chunk, &Header))
           return;
       } else if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header)) {
         return;
@@ -777,7 +796,7 @@ public:
       if (allocatorSupportsMemoryTagging<AllocatorConfig>())
         TaggedChunk = untagPointer(TaggedChunk);
       uptr Size;
-      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Primary.Options.load()))) {
+      if (UNLIKELY(MemoryTaggingEnabled)) {
         TaggedChunk = loadTag(Chunk);
         Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
       } else if (AllocatorConfig::getExactUsableSize()) {
@@ -899,10 +918,10 @@ public:
   // Returns true if the pointer provided was allocated by the current
   // allocator instance, which is compliant with tcmalloc's ownership concept.
   // A corrupted chunk will not be reported as owned, which is WAI.
-  bool isOwned(const void *Ptr) {
+  bool isOwnedTestOnly(const void *Ptr) {
     initThreadMaybe();
     // If the allocation is not owned, the tags could be wrong.
-    ScopedDisableMemoryTagChecks x(
+    ScopedTestOnlyDisableMemoryTagChecks x(
         useMemoryTagging<AllocatorConfig>(Primary.Options.load()));
 #ifdef GWP_ASAN_HOOKS
     if (GuardedAlloc.pointerIsMine(Ptr))
@@ -1226,7 +1245,7 @@ private:
   GlobalStats Stats;
   PrimaryT Primary;
   SecondaryT Secondary;
-  QuarantineT Quarantine;
+  [[no_unique_address]] QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
   pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
 
@@ -1332,11 +1351,9 @@ private:
         reinterpret_cast<uptr>(Block) + Chunk::getHeaderSize();
 
     Block = addHeaderTag(Block);
-    // Only do content fill when it's from primary allocator because secondary
-    // allocator has filled the content.
+    // Only do content fill when it's from the primary allocator because the
+    // secondary allocator handles filling memory on its own.
     if (ClassId != 0 && UNLIKELY(FillContents != NoFill)) {
-      // This condition is not necessarily unlikely, but since memset is
-      // costly, we might as well mark it as such.
       memset(Block, FillContents == ZeroFill ? 0 : PatternFillByte,
              PrimaryT::getSizeByClassId(ClassId));
     }
@@ -1497,47 +1514,58 @@ private:
     return TaggedPtr;
   }
 
-  void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
-                                   Chunk::UnpackedHeader *Header,
-                                   uptr Size) NO_THREAD_SAFETY_ANALYSIS {
-    void *Ptr = getHeaderTaggedPointer(TaggedPtr);
-    // If the quarantine is disabled, the actual size of a chunk is 0 or larger
-    // than the maximum allowed, we return a chunk directly to the backend.
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) bool
+  canQuarantine(uptr Size) const {
+    // Only quarantine if quarantine is enabled, cache size is non-zero, and
+    // the actual size of the chunk is between 1 and QuarantineMaxChunkSize.
     // This purposefully underflows for Size == 0.
-    const bool BypassQuarantine = AllocatorConfig::getQuarantineDisabled() ||
-                                  !Quarantine.getCacheSize() ||
-                                  ((Size - 1) >= QuarantineMaxChunkSize) ||
-                                  !Header->ClassId;
-    if (BypassQuarantine)
-      Header->State = Chunk::State::Available;
-    else
-      Header->State = Chunk::State::Quarantined;
+    return !AllocatorConfig::getQuarantineDisabled() &&
+           Quarantine.getCacheSize() && ((Size - 1) < QuarantineMaxChunkSize);
+  }
 
-    if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options)))
-      Header->OriginOrWasZeroed = 0U;
-    else {
-      Header->OriginOrWasZeroed =
-          Header->ClassId && !TSDRegistry.getDisableMemInit();
+  void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
+                                   void *Ptr, Chunk::UnpackedHeader *Header,
+                                   uptr Size) NO_THREAD_SAFETY_ANALYSIS {
+    const bool BypassQuarantine = !canQuarantine(Size) || !Header->ClassId;
+    bool MemoryTaggingEnabled = useMemoryTagging<AllocatorConfig>(Options);
+    bool ZeroOnDeallocate = AllocatorConfig::getDeallocZeroFill() &&
+                            Options.getFillContentsMode() == ZeroFill;
+    if (!ZeroOnDeallocate) {
+      Header->State = BypassQuarantine ? Chunk::State::Available
+                                       : Chunk::State::Quarantined;
+      if (LIKELY(!MemoryTaggingEnabled)) {
+        Header->OriginOrWasZeroed = 0U;
+      } else {
+        Header->OriginOrWasZeroed =
+            Header->ClassId && !TSDRegistry.getDisableMemInit();
+      }
+      Chunk::storeHeader(Cookie, Ptr, Header);
     }
 
-    Chunk::storeHeader(Cookie, Ptr, Header);
-
     if (BypassQuarantine) {
+      const uptr ClassId = Header->ClassId;
       void *BlockBegin;
-      if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+      if (LIKELY(!MemoryTaggingEnabled)) {
         // Must do this after storeHeader because loadHeader uses a tagged ptr.
         if (allocatorSupportsMemoryTagging<AllocatorConfig>())
           Ptr = untagPointer(Ptr);
         BlockBegin = getBlockBegin(Ptr, Header);
+        if (ZeroOnDeallocate && ClassId != 0) {
+          memset(BlockBegin, 0,
+                 SizeClassMap::getSizeByClassId(Header->ClassId));
+        }
       } else {
-        BlockBegin = retagBlock(Options, TaggedPtr, Ptr, Header, Size, true);
+        // retagBlock always zeroes the allocation.
+        BlockBegin =
+            retagBlock(Options, TaggedPtr, Ptr, Header, Size,
+                       /*ClearHeader*/ ZeroOnDeallocate || ClassId == 0);
       }
 
 #if SCUDO_FUCHSIA
       if (AllocatorConfig::getEnableZeroOnDealloc()) {
         // Clearing the header is incompatible with quarantine and tagging.
         // Hence, it is fine to implement it only when quarantine is bypassed.
-        DCHECK(!useMemoryTagging<AllocatorConfig>(Options));
+        DCHECK(!MemoryTaggingEnabled);
         uptr length = reinterpret_cast<uptr>(Ptr) + Size -
                       reinterpret_cast<uptr>(BlockBegin);
         if (length <= ZeroOnDeallocMaxSize)
@@ -1545,7 +1573,6 @@ private:
       }
 #endif // SCUDO_FUCHSIA
 
-      const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
         bool CacheDrained;
         {
@@ -1560,11 +1587,14 @@ private:
         if (CacheDrained)
           Primary.tryReleaseToOS(ClassId, ReleaseToOS::Normal);
       } else {
-        Secondary.deallocate(Options, BlockBegin);
+        Secondary.deallocate(Options, BlockBegin, ZeroOnDeallocate);
       }
     } else {
-      if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options)))
-        retagBlock(Options, TaggedPtr, Ptr, Header, Size, false);
+      // TODO: ZeroOnDeallocate is not supported when quarantining is enabled.
+      CHECK(!ZeroOnDeallocate);
+      if (UNLIKELY(MemoryTaggingEnabled))
+        retagBlock(Options, TaggedPtr, Ptr, Header, Size,
+                   /*ClearHeader*/ false);
       typename TSDRegistryT::ScopedTSD TSD(TSDRegistry);
       Quarantine.put(&TSD->getQuarantineCache(),
                      QuarantineCallback(*this, TSD->getSizeClassAllocator()),
@@ -1574,25 +1604,25 @@ private:
 
   NOINLINE void *retagBlock(const Options &Options, void *TaggedPtr, void *&Ptr,
                             Chunk::UnpackedHeader *Header, const uptr Size,
-                            bool BypassQuarantine) {
+                            bool ClearHeader) {
     DCHECK(useMemoryTagging<AllocatorConfig>(Options));
 
     const u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
     storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
     if (Header->ClassId && !TSDRegistry.getDisableMemInit()) {
-      uptr TaggedBegin, TaggedEnd;
       const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
           Options, reinterpret_cast<uptr>(getBlockBegin(Ptr, Header)),
           Header->ClassId);
       // Exclude the previous tag so that immediate use after free is
       // detected 100% of the time.
+      uptr TaggedBegin, TaggedEnd;
       setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
                    &TaggedEnd);
     }
 
     Ptr = untagPointer(Ptr);
     void *BlockBegin = getBlockBegin(Ptr, Header);
-    if (BypassQuarantine && !Header->ClassId) {
+    if (ClearHeader) {
       storeTags(reinterpret_cast<uptr>(BlockBegin),
                 reinterpret_cast<uptr>(Ptr));
     }

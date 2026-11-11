@@ -11,7 +11,7 @@ define i64 @test(i64 %x, ptr %p) {
 ; CHECK-NEXT:    store i64 [[OR]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[SHL]], i64 6
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i64> [[TMP1]], i64 [[OR]], i64 7
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP2]], <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 undef, i64 undef>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP2]], <8 x i64> <i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 poison, i64 poison>, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP3]])
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;

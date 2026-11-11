@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 
 ; CHECK: [[R0:%[0-9]+]]:intregs = A2_tfrsi 0
-; CHECK-NEXT: predregs = C2_tfrrp killed [[R0]]:intregs
+; CHECK-NEXT: predregs = C2_tfrrp [[R0]]:intregs
 
 define fastcc i16 @test(ptr %0, { <4 x i32>, <4 x i1> } %1, <4 x i1> %2) {
 Entry:

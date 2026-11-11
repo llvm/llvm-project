@@ -3,6 +3,7 @@
 
 ---
 name: opt_redundant_flags_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_0
@@ -21,6 +22,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_1
@@ -39,6 +41,7 @@ body: |
 ...
 ---
 name: opt_redundant_flags_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_redundant_flags_2
@@ -59,6 +62,7 @@ body: |
 ...
 ---
 name: opt_zerocmp_user_0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: opt_zerocmp_user_0

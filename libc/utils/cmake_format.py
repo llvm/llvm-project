@@ -48,7 +48,7 @@ Formatting Rules Enforced:
   6. Multi-line Argument Layout: Keywords and positional args indented +2 spaces relative to call base; multi-value list items indented +4 spaces; closing `)` at +0 spaces.
   7. Control Block Indentation: 2-space indentation inside `if`/`foreach`/`function`/`macro`.
   8. Comment Formatting: Line comments buffer and align with the indentation level of the code element immediately following them, unless separated by a blank line (standalone comments) or immediately preceding a closing parenthesis `)`.
-  9. Cleanliness: Trailing whitespace stripped, single trailing newline for non-empty files; empty files preserved 0-byte.
+  9. Cleanliness: Trailing whitespace and leading blank lines stripped, consecutive blank lines collapsed to a single blank line, single trailing newline for non-empty files; empty files preserved 0-byte.
 
 Usage:
   cmake_format.py [options] <file|directory>...
@@ -721,6 +721,14 @@ def scan_dynamic_schemas(
         for m in regex.finditer(content):
             if not RE_CACHE.search(m.group(2)):
                 words = set(RE_IDENTIFIER_TOKENS.findall(m.group(2)))
+                if m.group(1).upper() in {
+                    "LLVM_LIBC_OPTIONAL_ARGS",
+                    "LLVM_LIBC_SINGLE_VALUE_ARGS",
+                    "LLVM_LIBC_MULTI_VALUE_ARGS",
+                }:
+                    words |= {f"OVERLAY_{w}" for w in words} | {
+                        f"FULL_BUILD_{w}" for w in words
+                    }
                 target_set.update(words)
                 if target_set is context.learned_multi_value:
                     context.list_keywords.update(words)
@@ -1249,7 +1257,7 @@ def format_cmake_content(content: str, ctx: FormatterContext | None = None) -> s
     and lookahead comment buffering alignment.
 
     The function dispatches each source line to one of five handlers:
-      1. Empty line  — flush buffered comments and emit a blank line.
+      1. Empty line  — flush buffered comments and emit at most one blank line.
       2. Comment line — buffer the comment for lookahead alignment.
       3. Call continuation line — delegate to _process_call_continuation_line().
       4. Command invocation line — delegate to _process_command_invocation_line().
@@ -1283,13 +1291,14 @@ def format_cmake_content(content: str, ctx: FormatterContext | None = None) -> s
             state.current_call_state is not None and state.current_call_state.in_call
         )
 
-        # 1. Empty line — flush buffered comments and emit a blank line.
+        # 1. Empty line — flush buffered comments and emit at most one blank line.
         if not non_ws_toks:
             if state.pending_comments:
                 state.flush_comments(
                     INDENT_STR * (state.block_indent_level + (1 if in_call else 0))
                 )
-            state.formatted_lines.append("")
+            if state.formatted_lines and state.formatted_lines[-1] != "":
+                state.formatted_lines.append("")
             if (
                 state.current_call_state
                 and state.current_call_state.in_call
@@ -1392,7 +1401,7 @@ def process_file(
                         pass
                 print(f"Error writing file {filepath}: {e}", file=sys.stderr)
                 return None
-        elif dry_run:
+        elif dry_run and not show_diff:
             print(f"Formatting needed: {filepath}")
 
     return has_changes
@@ -1496,6 +1505,7 @@ def main() -> None:
     pre_scan_workspace_modules(args.paths)
 
     files_needing_format = 0
+    had_errors = False
     if args.jobs > 1 and len(cmake_files) > 1:
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -1520,8 +1530,11 @@ def main() -> None:
                     result = future.result()
                     if result is True:
                         files_needing_format += 1
+                    elif result is None:
+                        had_errors = True
                 except Exception as e:
                     print(f"Error processing {fpath}: {e}", file=sys.stderr)
+                    had_errors = True
     else:
         for fpath in cmake_files:
             changed = process_file(
@@ -1529,9 +1542,16 @@ def main() -> None:
             )
             if changed is True:
                 files_needing_format += 1
+            elif changed is None:
+                had_errors = True
+
+    if had_errors:
+        sys.exit(1)
 
     if args.dry_run and files_needing_format > 0:
-        print(f"\n{files_needing_format} file(s) need formatting.")
+        if not args.diff:
+            print(f"\n{files_needing_format} file(s) need formatting.")
+            print("Run with -i / --inplace to format files in-place.")
         sys.exit(1)
 
     sys.exit(0)

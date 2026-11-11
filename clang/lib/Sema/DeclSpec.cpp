@@ -774,15 +774,6 @@ bool DeclSpec::SetTypeSpecType(TST T, SourceLocation TagKwLoc,
   TSTLoc = TagKwLoc;
   TSTNameLoc = TagNameLoc;
   TypeSpecOwned = false;
-
-  if (T == TST_typename_pack_indexing) {
-    // we got there from a an annotation. Reconstruct the type
-    // Ugly...
-    QualType QT = Rep.get();
-    const PackIndexingType *LIT = cast<PackIndexingType>(QT);
-    TypeRep = ParsedType::make(LIT->getPattern());
-    PackIndexingExpr = LIT->getIndexExpr();
-  }
   return false;
 }
 
@@ -914,6 +905,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
 
   if (isPipe) {
     TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
+    TQ_pipeLoc = Loc;
   }
   return false;
 }

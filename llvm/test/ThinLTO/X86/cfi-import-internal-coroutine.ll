@@ -21,8 +21,7 @@
 ; RUN: llvm-dis %t.dir/out.2.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 
 ; IMPORT: define available_externally hidden ptr @coro.llvm.{{[0-9]+}}()
-; IMPORT-NEXT: %id = call token @llvm.coro.id(i32 8, ptr null, ptr nonnull @coro.b66cc3a748330e63b2451fa89522eb06, ptr null)
-; IMPORT: declare ptr @coro.b66cc3a748330e63b2451fa89522eb06()
+; IMPORT-NEXT: %id = call token @llvm.coro.id(i32 8, ptr null, ptr nonnull @coro.llvm.{{[0-9]+}}, ptr null)
 
 ;--- a.ll
 source_filename = "a.ll"

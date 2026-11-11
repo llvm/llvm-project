@@ -29,6 +29,7 @@ FunctionEffectAnalysis
 AddressSanitizer
 HardwareAssistedAddressSanitizer
 ThreadSanitizer
+ConcurrencySanitizer
 MemorySanitizer
 UndefinedBehaviorSanitizer
 DataFlowSanitizer
@@ -40,11 +41,10 @@ SanitizerStats
 SanitizerSpecialCaseList
 AllocToken
 OverflowBehaviorTypes
-BoundsSafety
-BoundsSafetyAdoptionGuide
-BoundsSafetyImplPlans
+BoundsSafety/index
 ControlFlowIntegrity
 LTOVisibility
+ReturnAddressAuthenticationHardening
 SafeStack
 ShadowCallStack
 StructureProtection
@@ -136,12 +136,11 @@ LLVMExceptionHandlingCodeGen
 * {doc}`SanitizerSpecialCaseList`
 * {doc}`AllocToken`
 * {doc}`OverflowBehaviorTypes`
-* {doc}`BoundsSafety`
-* {doc}`BoundsSafetyAdoptionGuide`
-* {doc}`BoundsSafetyImplPlans`
+* {doc}`BoundsSafety/index`
 * {doc}`ControlFlowIntegrity`
 * {doc}`LTOVisibility`
 * {doc}`PointerAuthentication`
+* {doc}`ReturnAddressAuthenticationHardening`
 * {doc}`SafeStack`
 * {doc}`ShadowCallStack`
 * {doc}`StructureProtection`
@@ -213,4 +212,3 @@ LLVMExceptionHandlingCodeGen
 
 - {ref}`genindex`
 - {ref}`search`
-

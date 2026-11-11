@@ -227,24 +227,16 @@ exit:
 define void @loop_invariant_intrinsic_with_deopt_bundle_not_hoisted(ptr %dst, float %a, float %b) {
 ; CHECK-LABEL: define void @loop_invariant_intrinsic_with_deopt_bundle_not_hoisted(
 ; CHECK-SAME: ptr [[DST:%.*]], float [[A:%.*]], float [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x float> poison, float [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT2]], <4 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[BROADCAST_SPLAT2]], <4 x float> [[BROADCAST_SPLAT3]]) [ "deopt"(float 1.000000e+01) ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.pow.f32(float [[A]], float [[B]]) [ "deopt"(float 1.000000e+01) ]
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr float, ptr [[DST]], i32 [[IV]]
+; CHECK-NEXT:    store float [[R]], ptr [[DST_GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

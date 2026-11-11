@@ -41,7 +41,7 @@ end subroutine omp_tile02
 ! CHECK:         %[[VAL_19:.*]] = arith.select %[[VAL_17]], %[[VAL_18]], %[[VAL_14]] : i32
 ! CHECK:         %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_13]], %[[VAL_12]] : i32
 ! CHECK:         %[[VAL_21:.*]] = arith.select %[[VAL_17]], %[[VAL_12]], %[[VAL_13]] : i32
-! CHECK:         %[[VAL_22:.*]] = arith.subi %[[VAL_21]], %[[VAL_20]] overflow<nuw> : i32
+! CHECK:         %[[VAL_22:.*]] = arith.subi %[[VAL_21]], %[[VAL_20]] : i32
 ! CHECK:         %[[VAL_23:.*]] = arith.divui %[[VAL_22]], %[[VAL_19]] : i32
 ! CHECK:         %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_16]] overflow<nuw> : i32
 ! CHECK:         %[[VAL_25:.*]] = arith.cmpi slt, %[[VAL_21]], %[[VAL_20]] : i32
@@ -57,7 +57,7 @@ end subroutine omp_tile02
 ! CHECK:         %[[VAL_35:.*]] = arith.select %[[VAL_33]], %[[VAL_34]], %[[VAL_30]] : i32
 ! CHECK:         %[[VAL_36:.*]] = arith.select %[[VAL_33]], %[[VAL_29]], %[[VAL_28]] : i32
 ! CHECK:         %[[VAL_37:.*]] = arith.select %[[VAL_33]], %[[VAL_28]], %[[VAL_29]] : i32
-! CHECK:         %[[VAL_38:.*]] = arith.subi %[[VAL_37]], %[[VAL_36]] overflow<nuw> : i32
+! CHECK:         %[[VAL_38:.*]] = arith.subi %[[VAL_37]], %[[VAL_36]] : i32
 ! CHECK:         %[[VAL_39:.*]] = arith.divui %[[VAL_38]], %[[VAL_35]] : i32
 ! CHECK:         %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_32]] overflow<nuw> : i32
 ! CHECK:         %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_37]], %[[VAL_36]] : i32

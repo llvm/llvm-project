@@ -637,16 +637,6 @@ func.func @test_mul_int_type_mismatch(%arg0: tensor<1xf32>, %arg1: tensor<1xf32>
 
 // -----
 
-// CHECK-LABEL: test_mul_invalid_shift
-func.func @test_mul_invalid_shift(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x1x3xf32>) -> tensor<13x21x3xf32> {
-  %shift = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
-  // expected-error@+1 {{'tosa.mul' op require shift to be 0 for float type}}
-  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xf32>, tensor<13x1x3xf32>, tensor<1xi8>) -> tensor<13x21x3xf32>
-  return %0 : tensor<13x21x3xf32>
-}
-
-// -----
-
 // CHECK-LABEL: test_mul_missing_shift
 func.func @test_mul_missing_shift(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x1x3xi32>) -> tensor<13x21x3xi32> {
   // expected-error@+1 {{'tosa.mul' op expected 3 operands, but found 2}}
@@ -1468,79 +1458,6 @@ func.func @test_rescale_invalid_shift_type(%arg0: tensor<13x21x3xi32>) -> tensor
 
 // -----
 
-func.func @test_rescale_invalid_input_zp_i32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
-  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
-  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi32>}> : () -> tensor<1xi32>
-  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.rescale' op expect input_zp of 0, got 1}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi32>) -> tensor<13x21x3xi32>
-  return %0 : tensor<13x21x3xi32>
-}
-
-// -----
-
-func.func @test_rescale_invalid_input_zp_s16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
-  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
-  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi16>}> : () -> tensor<1xi16>
-  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
-  // expected-error@+1 {{'tosa.rescale' op expect input_zp of 0, got 1}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
-  return %0 : tensor<13x21x3xi16>
-}
-
-// -----
-
-func.func @test_rescale_invalid_input_zp_u16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
-  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
-  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi16>}> : () -> tensor<1xi16>
-  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
-  // expected-error@+1 {{'tosa.rescale' op expect input_zp of 0 or 32768 for unsigned int16 input, got 1}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
-  return %0 : tensor<13x21x3xi16>
-}
-
-
-// -----
-
-func.func @test_rescale_invalid_output_zp_i32(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi32> {
-  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
-  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
-  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi32>}> : () -> tensor<1xi32>
-  // expected-error@+1 {{'tosa.rescale' op expect output_zp of 0, got -1}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(false) : (tensor<13x21x3xi32>, tensor<1xi32>, tensor<1xi8>, tensor<1xi32>, tensor<1xi32>) -> tensor<13x21x3xi32>
-  return %0 : tensor<13x21x3xi32>
-}
-
-// -----
-
-func.func @test_rescale_invalid_output_zp_s16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
-  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
-  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
-  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi16>}> : () -> tensor<1xi16>
-  // expected-error@+1 {{'tosa.rescale' op expect output_zp of 0, got -1}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(true) output_unsigned(false) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
-  return %0 : tensor<13x21x3xi16>
-}
-
-// -----
-
-func.func @test_rescale_invalid_output_zp_u16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
-  %multiplier = "tosa.const"() <{values = dense<1073741824> : tensor<1xi32> }> : () -> tensor<1xi32>
-  %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
-  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi16>}> : () -> tensor<1xi16>
-  %output_zp = "tosa.const"() <{values = dense<-1> : tensor<1xi16>}> : () -> tensor<1xi16>
-  // expected-error@+1 {{'tosa.rescale' op expect output_zp of 0 or 32768 for unsigned int16 output, got 65535}}
-  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp scale32(true) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(true) : (tensor<13x21x3xi16>, tensor<1xi32>, tensor<1xi8>, tensor<1xi16>, tensor<1xi16>) -> tensor<13x21x3xi16>
-  return %0 : tensor<13x21x3xi16>
-}
-
-// -----
-
 func.func @test_rescale_invalid_multiplier_i16(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi16> {
   %multiplier = "tosa.const"() <{values = dense<19689> : tensor<1xi16> }> : () -> tensor<1xi16>
   %shift = "tosa.const"() <{values = dense<30> : tensor<1xi8> }> : () -> tensor<1xi8>
@@ -2239,4 +2156,24 @@ func.func @test_cast_fp6e3m2_block_scaled(%arg0: tensor<4x32xf6E3M2FN>) -> tenso
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (fp6e3m2,bs32_fp8e8m0_mxint8), did you mean (fp8e4m3,bs32_fp8e8m0_mxint8)? Otherwise, please refer to the 'supported data types' for 'tosa.cast' in the specification.}}
   %0 = tosa.cast %arg0 : (tensor<4x32xf6E3M2FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_invalid_accumulator(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op illegal: operation operand/result data types did not align with any profile or extension}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f16) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp_fp32_to_fp16(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32xf32>, %bias: tensor<8xf16>) -> tensor<1x4x4x4x8xf16> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op illegal: operation operand/result data types did not align with any profile or extension}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32xf32>, tensor<8xf16>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x4x8xf16>
+  return %0 : tensor<1x4x4x4x8xf16>
 }

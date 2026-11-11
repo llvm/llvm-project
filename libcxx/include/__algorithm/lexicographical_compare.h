@@ -40,7 +40,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Proj1, class _Proj2, class _Comp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __lexicographical_compare(
+_LIBCPP_CONSTEXPR_SINCE_CXX20 bool __lexicographical_compare(
     _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Comp& __comp, _Proj1& __proj1, _Proj2& __proj2) {
   while (__first2 != __last2) {
     if (__first1 == __last1 ||
@@ -69,7 +69,7 @@ template <class _Tp,
                             __is_trivially_equality_comparable_v<_Tp, _Tp> && __is_identity<_Proj1>::value &&
                             __is_identity<_Proj2>::value,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+_LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __lexicographical_compare(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Tp* __last2, _Comp&, _Proj1&, _Proj2&) {
   if constexpr (__is_trivially_lexicographically_comparable_v<_Tp, _Tp>) {
     auto __res =
@@ -99,7 +99,7 @@ __lexicographical_compare(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Tp* __las
 #endif // _LIBCPP_STD_VER >= 14
 
 template <class _InputIterator1, class _InputIterator2, class _Compare>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool lexicographical_compare(
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool lexicographical_compare(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -117,7 +117,7 @@ template <class _InputIterator1, class _InputIterator2, class _Compare>
 }
 
 template <class _InputIterator1, class _InputIterator2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool lexicographical_compare(
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool lexicographical_compare(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::lexicographical_compare(__first1, __last1, __first2, __last2, __less<>());
 }

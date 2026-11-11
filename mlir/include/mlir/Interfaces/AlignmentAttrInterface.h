@@ -9,7 +9,6 @@
 #ifndef MLIR_INTERFACES_ALIGNMENTATTRINTERFACE_H
 #define MLIR_INTERFACES_ALIGNMENTATTRINTERFACE_H
 
-#include "mlir/IR/OpDefinition.h"
 #include "llvm/Support/Alignment.h"
 
 namespace mlir {

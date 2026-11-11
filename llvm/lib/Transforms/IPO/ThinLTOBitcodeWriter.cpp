@@ -52,7 +52,6 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       }
     }
 
-    std::string OldName = Name.str();
     std::string NewName = (Name + ModuleId).str();
 
     if (const auto *C = ExportGV.getComdat())
@@ -76,10 +75,10 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
         ExportGV.getValueType(), ExportGV.getAddressSpace(),
         GlobalValue::ExternalLinkage, NewName, Aliasee, &ExportM);
     ExternalAlias->setVisibility(GlobalValue::HiddenVisibility);
-    ExportGV.replaceUsesWithIf(
-        ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
 
     if (MustPromote) {
+      ExportGV.replaceUsesWithIf(
+          ExternalAlias, [](Use &U) { return !isa<GlobalAlias>(U.getUser()); });
       PromoteExtra->remove(&ExportGV);
       PromoteExtra->insert(ExternalAlias);
     }

@@ -64,16 +64,16 @@ Error unloadLibrary(void *Handle) {
   return Error::success();
 }
 
-std::vector<std::optional<void *>>
-lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names) {
-  std::vector<std::optional<void *>> Result;
-  Result.reserve(Names.size());
+SymbolLookupResult lookupLibrarySymbols(void *Handle,
+                                        const SymbolLookupSet &Symbols) {
+  SymbolLookupResult Result;
+  Result.reserve(Symbols.size());
   // Reset dlerror so we can distinguish "dlsym returned null because the
   // symbol is present at address 0" from "dlsym returned null because the
   // symbol isn't in the library" via per-iteration dlerror() checks.
   dlerror();
-  for (const auto &Name : Names) {
-    auto LookupName = toDLSymName(Name);
+  for (const auto &Sym : Symbols) {
+    auto LookupName = toDLSymName(Sym.first);
     if (!LookupName) {
       Result.push_back(std::nullopt);
       continue;

@@ -22,6 +22,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/FormatVariadicDetails.h"
+#include <type_traits>
 
 using namespace lldb;
 namespace lldb_private {
@@ -96,9 +97,62 @@ std::string toString(const FormatterBytecode::DataStack &data) {
 
 namespace FormatterBytecode {
 
+/// Check a format string, and remove the layout and options of each
+/// replacement. The format string may contain literal text, escaped braces
+/// ("{{"), and automatically indexed replacements:
+///
+///   "{" [ "," layout ] [ ":" options ] "}"
+///
+/// Explicit indexes are not supported. Layouts and options are accepted, so
+/// that support for them can be added without changing the ABI, but they are
+/// currently ignored. The result contains only literal text, escaped braces,
+/// and "{}", so malformed format strings never reach formatv.
+static llvm::Expected<std::string> SanitizeFormatString(llvm::StringRef fmt) {
+  const llvm::StringRef original = fmt;
+  std::string result;
+  while (!fmt.empty()) {
+    // Copy the literal text up to the next brace.
+    llvm::StringRef literal = fmt.take_front(fmt.find('{'));
+    result += literal;
+    fmt = fmt.drop_front(literal.size());
+    if (fmt.empty())
+      break;
+    if (fmt.consume_front("{{")) {
+      result += "{{";
+      continue;
+    }
+    llvm::StringRef replacement = fmt;
+    fmt = fmt.drop_front();
+    // Skip the layout, which ends at the options or the closing brace.
+    if (fmt.consume_front(","))
+      fmt = fmt.substr(fmt.find_first_of("{}:"));
+    // Skip the options, which end at the closing brace.
+    if (fmt.consume_front(":"))
+      fmt = fmt.substr(fmt.find_first_of("{}"));
+    if (!fmt.consume_front("}"))
+      return llvm::createStringErrorV(
+          "invalid replacement in format string at offset {0}",
+          original.size() - replacement.size());
+    replacement = replacement.drop_back(fmt.size());
+    if (replacement != "{}")
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "ignoring unsupported layout or options in format replacement "
+               "'{0}'",
+               replacement);
+    result += "{}";
+  }
+  return result;
+}
+
 /// Implement the @format function.
-static llvm::Error FormatImpl(DataStack &data) {
+static llvm::Error FormatImpl(DataStack &data, uint32_t version) {
   auto fmt = data.Pop<std::string>();
+  if (version >= 2) {
+    auto sanitized = SanitizeFormatString(fmt);
+    if (!sanitized)
+      return sanitized.takeError();
+    fmt = std::move(*sanitized);
+  }
   auto replacements =
       llvm::formatv_object_base::parseFormatString(fmt, 0, false);
   std::string s;
@@ -143,6 +197,8 @@ static llvm::Error FormatImpl(DataStack &data) {
     else if (std::holds_alternative<DictionarySP>(arg))
       format(FormatFunctor("dict"));
   }
+  // Consume the arguments, leaving only the result.
+  data.erase(data.end() - num_args, data.end());
   data.Push(s);
   return llvm::Error::success();
 }
@@ -249,7 +305,32 @@ static bool Reaches(const Dictionary *from, const Dictionary *target) {
   return false;
 }
 
-llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
+template <typename T>
+using EnableIfSigned =
+    std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int>;
+template <typename T>
+using EnableIfUnsigned =
+    std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> &&
+                         !std::is_same_v<T, bool>,
+                     int>;
+
+template <typename T, EnableIfSigned<T> = 0>
+static DataStackElement MakeInt(T value, uint32_t version) {
+  if (version < 2)
+    return int64_t(value);
+  return llvm::APSInt::get(value);
+}
+
+template <typename T, EnableIfUnsigned<T> = 0>
+static DataStackElement MakeInt(T value, uint32_t version) {
+  if (version < 2)
+    return uint64_t(value);
+  unsigned width = uint64_t(value) > uint64_t(INT64_MAX) ? 65 : 64;
+  return llvm::APSInt(llvm::APInt(width, value), /*isUnsigned=*/false);
+}
+
+llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
+                      uint32_t version) {
   if (control.empty())
     return llvm::Error::success();
   // Since the only data types are single endian and ULEBs, the
@@ -644,12 +725,18 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto result = valobj->GetNumChildren();
         if (!result)
           return result.takeError();
-        data.Push((uint64_t)*result);
+        data.Push(MakeInt(*result, version));
         break;
       }
       case sel_get_child_at_index: {
-        TYPE_CHECK(Object, UInt);
-        auto index = data.Pop<uint64_t>();
+        uint64_t index;
+        if (version >= 2) {
+          TYPE_CHECK(Object, Integer);
+          index = data.Pop<llvm::APSInt>().getLimitedValue(UINT32_MAX);
+        } else {
+          TYPE_CHECK(Object, UInt);
+          index = data.Pop<uint64_t>();
+        }
         POP_VALOBJ(valobj);
         data.Push(valobj->GetChildAtIndex(index));
         break;
@@ -666,7 +753,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
         if (auto index_or_err = valobj->GetIndexOfChildWithName(name))
-          data.Push((uint64_t)*index_or_err);
+          data.Push(MakeInt(*index_or_err, version));
         else
           return index_or_err.takeError();
         break;
@@ -686,8 +773,14 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         break;
       }
       case sel_get_template_argument_type: {
-        TYPE_CHECK(Type, UInt);
-        auto index = data.Pop<uint64_t>();
+        uint64_t index;
+        if (version >= 2) {
+          TYPE_CHECK(Type, Integer);
+          index = data.Pop<llvm::APSInt>().getLimitedValue();
+        } else {
+          TYPE_CHECK(Type, UInt);
+          index = data.Pop<uint64_t>();
+        }
         auto type = data.Pop<CompilerType>();
         // FIXME: There is more code in SBType::GetTemplateArgumentType().
         data.Push(type.GetTypeTemplateArgument(index, true));
@@ -716,7 +809,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         POP_VALOBJ(valobj);
         bool success;
         uint64_t val = valobj->GetValueAsUnsigned(0, &success);
-        data.Push(val);
+        data.Push(MakeInt(val, version));
         if (!success)
           return sel_error("failed to get value");
         break;
@@ -726,7 +819,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
         POP_VALOBJ(valobj);
         bool success;
         int64_t val = valobj->GetValueAsSigned(0, &success);
-        data.Push(val);
+        data.Push(MakeInt(val, version));
         if (!success)
           return sel_error("failed to get value");
         break;
@@ -740,7 +833,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
           return sel_error("failed to get value");
         if (auto process_sp = valobj->GetProcessSP())
           addr = process_sp->FixDataAddress(addr);
-        data.Push(addr);
+        data.Push(MakeInt(addr, version));
         break;
       }
       case sel_cast: {
@@ -782,12 +875,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       }
       case sel_strlen: {
         TYPE_CHECK(String);
-        data.Push((uint64_t)data.Pop<std::string>().size());
+        auto size = data.Pop<std::string>().size();
+        data.Push(MakeInt(size, version));
         break;
       }
       case sel_fmt: {
         TYPE_CHECK(String);
-        if (auto error = FormatImpl(data))
+        if (auto error = FormatImpl(data, version))
           return error;
         break;
       }

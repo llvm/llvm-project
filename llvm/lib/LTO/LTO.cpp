@@ -174,12 +174,11 @@ std::string llvm::computeLTOCacheKey(
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
-  // X86RelaxRelocations. The clang driver can also pass FunctionSections,
-  // DataSections and DebuggerTuning via command line flags.
+  // X86RelaxRelocations. The clang driver can also pass FunctionSections and
+  // DataSections via command line flags.
   AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
   AddUnsigned(Conf.Options.FunctionSections);
   AddUnsigned(Conf.Options.DataSections);
-  AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
   for (auto &A : Conf.MAttrs)
     AddString(A);
   if (Conf.RelocModel)
@@ -735,6 +734,27 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
+
+    // In rare occasion, the symbol used to initialize GlobalRes has a different
+    // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
+    // symbol is referenced through its mangled name, say @"\01_symbol" while
+    // the IRName is @symbol (the prefix underscore comes from MachO mangling).
+    // In that case, we have the same actual Symbol that can get two different
+    // GUID, leading to some invalid internalization. Workaround this by marking
+    // the GlobalRes external.
+    // Do this check before the IRName is rewritten below, otherwise it'll miss
+    // the case where a prevailing symbol comes first.
+
+    // FIXME: instead of this check, it would be desirable to compute GUIDs
+    // based on mangled name, but this requires an access to the Target Triple
+    // and would be relatively invasive on the codebase.
+    // FIXME: use the GUID member of GlobalRes.
+    if ((GlobalRes.Prevailing || !GlobalRes.IRName.empty()) &&
+        GlobalRes.IRName != Sym.getIRName()) {
+      GlobalRes.Partition = GlobalResolution::External;
+      GlobalRes.VisibleOutsideSummary = true;
+    }
+
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
              "Multiple prevailing defs are not allowed");
@@ -748,23 +768,6 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       // Otherwise, if we haven't seen a prevailing symbol, set the name so that
       // we can later use it to check if there is any prevailing copy in IR.
       GlobalRes.IRName = std::string(Sym.getIRName());
-    }
-
-    // In rare occasion, the symbol used to initialize GlobalRes has a different
-    // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
-    // symbol is referenced through its mangled name, say @"\01_symbol" while
-    // the IRName is @symbol (the prefix underscore comes from MachO mangling).
-    // In that case, we have the same actual Symbol that can get two different
-    // GUID, leading to some invalid internalization. Workaround this by marking
-    // the GlobalRes external.
-
-    // FIXME: instead of this check, it would be desirable to compute GUIDs
-    // based on mangled name, but this requires an access to the Target Triple
-    // and would be relatively invasive on the codebase.
-    // FIXME: use the GUID member of GlobalRes.
-    if (GlobalRes.IRName != Sym.getIRName()) {
-      GlobalRes.Partition = GlobalResolution::External;
-      GlobalRes.VisibleOutsideSummary = true;
     }
 
     bool IsLibcall = Sym.isLibcall(TLI, Libcalls);
@@ -1199,11 +1202,6 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
             auto IT = IRSpecifiedGUIDs.insert({VI.name(), VI.getGUID()});
             (void)IT;
             assert(IT.second);
-            if (auto GRIt = GlobalResolutions->find(VI.name());
-                GRIt != GlobalResolutions->end() &&
-                Prevailing.count(VI.name())) {
-              GRIt->second.setGUID(VI.getGUID());
-            }
           }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
@@ -1224,6 +1222,7 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     if (!Sym.getIRName().empty() &&
         (R.Prevailing || R.FinalDefinitionInLinkageUnit)) {
       if (R.Prevailing) {
+        (*GlobalResolutions)[Sym.getName()].setGUID(GUID);
         ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
@@ -2245,7 +2244,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   thinLTOPropagateFunctionAttrs(ThinLTO.CombinedIndex, isPrevailing);
 
-  generateParamAccessSummary(ThinLTO.CombinedIndex);
+  generateParamAccessSummary(Conf.LibraryOptions, ThinLTO.CombinedIndex);
 
   if (llvm::timeTraceProfilerEnabled())
     llvm::timeTraceProfilerEnd();
@@ -2296,7 +2295,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return BackendProcess->wait();
   };
 
-  if (!cgdata::thinLTOTwoRounds()) {
+  if (!cgdata::thinLTOTwoRounds(RegularLTO.Ctx.getLibraryOptions())) {
     std::unique_ptr<ThinBackendProc> BackendProc =
         ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
                         AddStream, Cache, BitcodeLibFuncs);
@@ -2327,7 +2326,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return E;
 
   LLVM_DEBUG(dbgs() << "[TwoRounds] Merging codegen data\n");
-  auto CombinedHashOrErr = cgdata::mergeCodeGenData(*CG.getResult());
+  auto CombinedHashOrErr = cgdata::mergeCodeGenData(
+      RegularLTO.Ctx.getLibraryOptions(), *CG.getResult());
   if (Error E = CombinedHashOrErr.takeError())
     return E;
   auto CombinedHash = *CombinedHashOrErr;

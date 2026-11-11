@@ -224,6 +224,18 @@ Value acc::castToI64(Location loc, Value value, OpBuilder &builder) {
   return arith::ExtSIOp::create(builder, loc, i64Ty, value);
 }
 
+Value acc::constantI64(Location loc, int64_t value, OpBuilder &builder) {
+  return LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), value);
+}
+
+Value acc::remapOrSelf(Value value, ConversionPatternRewriter &rewriter) {
+  if (!value)
+    return {};
+  if (Value converted = rewriter.getRemappedValue(value))
+    return converted;
+  return value;
+}
+
 Value acc::getAsyncQueue(Location loc, Value asyncOperand, bool asyncOnly,
                          OpBuilder &builder,
                          const ACCRuntimeCallConfig &config) {
@@ -308,16 +320,6 @@ FailureOr<Value> acc::emitGetDevicePtrCall(Operation *clauseOp, Value hostPtr,
   if (failed(call))
     return failure();
   return call->getResult();
-}
-
-SmallVector<DeviceType, 3>
-acc::getDeviceTypesByPrecedence(DeviceType deviceType) {
-  SmallVector<DeviceType, 3> deviceTypes;
-  if (deviceType != DeviceType::None && deviceType != DeviceType::Star)
-    deviceTypes.push_back(deviceType);
-  deviceTypes.push_back(DeviceType::Star);
-  deviceTypes.push_back(DeviceType::None);
-  return deviceTypes;
 }
 
 LogicalResult acc::emitGuardedByIfCond(Location loc, Value ifCond,

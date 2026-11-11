@@ -8,17 +8,16 @@ define <2 x i8> @test_bitcast_assertion(<4 x i32> %vqaddq_v2.i.i, ptr %BS_VAR_0)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov w9, #4 // =0x4
 ; CHECK-NEXT:  .LBB0_1: // %for.cond
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    umov w10, v1.h[0]
+; CHECK-NEXT:    umov w9, v1.h[0]
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    and x10, x10, #0x3
-; CHECK-NEXT:    umull x10, w10, w9
-; CHECK-NEXT:    ldrh w10, [x8, x10]
+; CHECK-NEXT:    and x9, x9, #0x3
+; CHECK-NEXT:    lsl x9, x9, #2
+; CHECK-NEXT:    ldrh w9, [x8, x9]
 ; CHECK-NEXT:    stp q1, q1, [x0, #32]
 ; CHECK-NEXT:    stp q1, q1, [x0, #64]
-; CHECK-NEXT:    fmov d2, x10
+; CHECK-NEXT:    fmov d2, x9
 ; CHECK-NEXT:    stp q1, q1, [x0, #96]
 ; CHECK-NEXT:    mov v2.d[1], xzr
 ; CHECK-NEXT:    stp q2, q1, [x0]

@@ -8,11 +8,11 @@ define amdgpu_ps void @_amdgpu_ps_main() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
-  ; CHECK-NEXT:   [[S_BUFFER_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM killed [[REG_SEQUENCE]], 0, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(8) null`, align 1, addrspace 8)
+  ; CHECK-NEXT:   [[S_BUFFER_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM [[REG_SEQUENCE]], 0, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(8) null`, align 1, addrspace 8)
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   nofpexcept S_CMP_NLT_F32 [[S_BUFFER_LOAD_DWORD_IMM]], [[S_MOV_B32_1]], implicit-def $scc, implicit $mode
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $scc
-  ; CHECK-NEXT:   SI_KILL_I1_PSEUDO killed [[COPY]], 0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   SI_KILL_I1_PSEUDO [[COPY]], 0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   nofpexcept S_CMP_LT_F32 [[S_BUFFER_LOAD_DWORD_IMM]], [[S_MOV_B32_1]], implicit-def $scc, implicit $mode
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.1

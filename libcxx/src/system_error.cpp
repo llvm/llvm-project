@@ -258,7 +258,8 @@ const error_category& generic_category() noexcept {
     constexpr explicit AvoidDestroyingGenericCategory() : generic_error_category() {}
     ~AvoidDestroyingGenericCategory() {}
   };
-  constinit static AvoidDestroyingGenericCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingGenericCategory helper;
   return helper.generic_error_category;
 }
 
@@ -326,7 +327,8 @@ const error_category& system_category() noexcept {
     constexpr explicit AvoidDestroyingSystemCategory() : system_error_category() {}
     ~AvoidDestroyingSystemCategory() {}
   };
-  constinit static AvoidDestroyingSystemCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingSystemCategory helper;
   return helper.system_error_category;
 }
 

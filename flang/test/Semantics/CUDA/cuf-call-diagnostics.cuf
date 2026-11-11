@@ -1,0 +1,69 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! The attribute belongs to the selected specific procedure, including kernels.
+module mixed_callees
+  use cudadevice, only: on_device
+  interface mixed
+    module procedure mixed_host, mixed_dev
+  end interface
+contains
+  attributes(grid_global) subroutine k()
+  end subroutine
+
+  integer function mixed_host(n)
+    integer, value :: n
+    mixed_host = n
+  end function
+
+  attributes(device) real function mixed_dev(x)
+    real, value :: x
+    mixed_dev = x
+  end function
+
+  attributes(device) subroutine dev_caller()
+    !ERROR: 'k', a procedure with the GRID_GLOBAL attribute, may not be called from device code
+    call k<<<1,1>>>()
+  end subroutine
+
+  attributes(host,device) subroutine hd_caller(n, x)
+    integer :: n
+    real :: x
+    !ERROR: 'k', a procedure with the GRID_GLOBAL attribute, may not be called from HOST,DEVICE code
+    call k<<<1,1>>>()
+    !ERROR: 'mixed' (specific procedure 'mixed_host'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+    n = mixed(n)
+    !ERROR: 'mixed' (specific procedure 'mixed_dev'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+    x = mixed(x)
+  end subroutine
+
+  attributes(host,device) subroutine guarded_caller()
+    if (on_device()) then
+      call k<<<1,1>>>()
+    else
+      call k<<<1,1>>>()
+    end if
+  end subroutine
+end module
+
+! Calls in result lengths and dummy bounds cannot be enclosed in an IF guard.
+module specification_callees
+contains
+  pure integer function host_len(n)
+    integer, intent(in) :: n
+    host_len = n
+  end function
+
+  attributes(host,device) function f(n) result(r)
+    integer, value :: n
+    !ERROR: 'host_len', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+    character(host_len(n)) :: r
+    r = ''
+  end function
+
+  attributes(host,device) subroutine s(n, a)
+    integer, value :: n
+    !ERROR: 'host_len', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+    real :: a(host_len(n))
+    a = 0
+  end subroutine
+end module

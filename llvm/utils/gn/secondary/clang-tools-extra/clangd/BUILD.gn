@@ -82,6 +82,7 @@ static_library("clangd") {
     "ASTSignals.cpp",
     "ClangdLSPServer.cpp",
     "ClangdServer.cpp",
+    "ClangTidyFeatureModule.cpp",
     "CodeComplete.cpp",
     "CodeCompletionStrings.cpp",
     "CollectMacros.cpp",

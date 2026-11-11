@@ -434,29 +434,24 @@ conventions used in the skeleton file.
 The `RecordKeeper` class provides two functions for getting the
 `Record` instances for classes defined in the TableGen files.
 
-- `getClasses()` returns a `RecordMap` reference for all the classes.
+- `getClasses()` returns all the class records, sorted by name.
 - `getClass(`*name*`)` returns a `Record` reference for the named
   class.
 
 If you need to iterate over all the class records:
 
 ```text
-for (auto ClassPair : Records.getClasses()) {
-  Record *ClassRec = ClassPair.second.get();
+for (const Record *ClassRec : Records.getClasses()) {
   ...
 }
 ```
-
-`ClassPair.second` gets the class's `unique_ptr`, and then `.get()` gets the
-class `Record` itself.
 
 ## Getting Records
 
 The `RecordKeeper` class provides four functions for getting the
 `Record` instances for concrete records defined in the TableGen files.
 
-- `getDefs()` returns a `RecordMap` reference for all the concrete
-  records.
+- `getDefs()` returns all the concrete records, sorted by name.
 - `getDef(`*name*`)` returns a `Record` reference for the named
   concrete record.
 - `getAllDerivedDefinitions(`*classname*`)` returns a vector of

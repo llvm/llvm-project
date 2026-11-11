@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64 -run-pass=none -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass=none %s -o - | FileCheck %s
 
 ---
 name: test

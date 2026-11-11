@@ -10,6 +10,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
@@ -180,6 +181,25 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIPrologEnd() {
       WinEH::Instruction(Win64EH::UOP_End, /*Label=*/nullptr, -1, 0);
   auto it = CurFrame->Instructions.begin();
   CurFrame->Instructions.insert(it, Inst);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEndC() {
+  auto &S = getStreamer();
+  WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
+  if (!CurFrame)
+    return;
+  bool InEpilogue = S.isInEpilogCFI();
+  auto &Instructions = InEpilogue ? S.getCurrentWinEpilog()->Instructions
+                                  : CurFrame->Instructions;
+  if ((!InEpilogue && CurFrame->PrologEnd) ||
+      llvm::any_of(Instructions, [](const WinEH::Instruction &I) {
+        return I.Operation == Win64EH::UOP_EndC;
+      })) {
+    S.getContext().reportError(
+        SMLoc(), ".seh_end_c must appear once in a prologue or epilogue");
+    return;
+  }
+  emitARM64WinUnwindCode(Win64EH::UOP_EndC, -1, 0);
 }
 
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogStart() {

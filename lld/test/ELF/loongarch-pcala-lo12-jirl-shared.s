@@ -7,8 +7,8 @@
 # RUN: ld.lld %t/a.la32.o -shared -T %t/a.t -o %t/a.la32.so
 # RUN: ld.lld %t/a.la64.o -shared -T %t/a.t -o %t/a.la64.so
 
-# RUN: llvm-objdump -d --no-show-raw-insn %t/a.la32.so | FileCheck --check-prefixes=DIS,DIS32 %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/a.la64.so | FileCheck --check-prefixes=DIS,DIS64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/a.la32.so | FileCheck --check-prefixes=DIS,DIS32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/a.la64.so | FileCheck --check-prefixes=DIS,DIS64 %s
 
 ## PLT should be present in this case.
 # DIS:        Disassembly of section .plt:

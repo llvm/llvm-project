@@ -23,7 +23,7 @@ namespace Fortran::runtime {
 template <typename CHAR>
 inline RT_API_ATTRS int CompareToBlankPadding(
     const CHAR *x, std::size_t chars) {
-  using UNSIGNED_CHAR = std::make_unsigned_t<CHAR>;
+  using UNSIGNED_CHAR = common::make_unsigned_t<CHAR>;
   const auto blank{static_cast<UNSIGNED_CHAR>(' ')};
   for (; chars-- > 0; ++x) {
     const UNSIGNED_CHAR ux{*reinterpret_cast<const UNSIGNED_CHAR *>(x)};

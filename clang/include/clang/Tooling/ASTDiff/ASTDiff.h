@@ -63,7 +63,6 @@ public:
   ~SyntaxTree();
 
   const ASTContext &getASTContext() const;
-  StringRef getFilename() const;
 
   int getSize() const;
   NodeId getRootId() const;

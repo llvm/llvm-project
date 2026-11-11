@@ -80,10 +80,6 @@ char SIOptimizeExecMaskingPreRALegacy::ID = 0;
 
 char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
 
-FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
-  return new SIOptimizeExecMaskingPreRALegacy();
-}
-
 // See if there is a def between \p AndIdx and \p SelIdx that needs to live
 // beyond \p AndIdx.
 static bool isDefBetween(const LiveRange &LR, SlotIndex AndIdx,
@@ -108,6 +104,24 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   }
 
   return false;
+}
+
+// Return true if Use is not after Def in the same block or EXEC is modified
+// between them.
+static bool execModifiedBeforeUse(const SIRegisterInfo &TRI, MCRegister ExecReg,
+                                  const MachineInstr &Def,
+                                  const MachineInstr &Use) {
+  if (Use.getParent() != Def.getParent())
+    return true;
+
+  auto I = std::next(Def.getIterator());
+  auto E = Def.getParent()->end();
+  for (; I != E && &*I != &Use; ++I) {
+    if (I->modifiesRegister(ExecReg, &TRI))
+      return true;
+  }
+
+  return I == E;
 }
 
 // Optimize sequence
@@ -454,9 +468,13 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     //    %1:sreg_64 = S_AND_B64 %0:sreg_64, %2:sreg_64
     // =>
     //    %1 = S_AND_B64 $exec, %2:sreg_64
-    unsigned ScanThreshold = 10;
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E
-         && ScanThreshold--; ++I) {
+    constexpr unsigned ScanThreshold = 10;
+    unsigned ScanCount = 0;
+    for (auto I = MBB.rbegin(), E = MBB.rend();
+         I != E && ScanCount < ScanThreshold; ++I) {
+      if (I->isMetaInstruction())
+        continue;
+      ++ScanCount;
       // Continue scanning if this is not a full exec copy
       if (!(I->isFullCopy() && I->getOperand(1).getReg() == Register(ExecReg)))
         continue;
@@ -467,7 +485,7 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
         int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec,
                                                             /*TRI=*/nullptr);
         assert(Idx != -1);
-        if (SingleExecUser->getParent() == I->getParent() &&
+        if (!execModifiedBeforeUse(*TRI, ExecReg, *I, *SingleExecUser) &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&
             static_cast<unsigned>(Idx) <
                 SingleExecUser->getDesc().getNumOperands() &&

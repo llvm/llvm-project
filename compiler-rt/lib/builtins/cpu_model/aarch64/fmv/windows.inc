@@ -39,6 +39,12 @@
 #ifndef PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE 59
 #endif
+#ifndef PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE 64
+#endif
+#ifndef PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE 65
+#endif
 #ifndef PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE
 #define PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE 66
 #endif
@@ -73,13 +79,19 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   uint64_t features = 0;
 
   setCPUFeature(FEAT_INIT);
+  // Presupposed by the Windows ARM64 ABI
   setCPUFeature(FEAT_FP);
+  setCPUFeature(FEAT_SIMD);
 
   // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-isprocessorfeaturepresent
   if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE)) {
     setCPUFeature(FEAT_SHA2);
     setCPUFeature(FEAT_PMULL);
   }
+
+  if (IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE) &&
+      IsProcessorFeaturePresent(PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE))
+    setCPUFeature(FEAT_SHA3); // covers both SHA3 and SHA512 in FMV
 
   static const struct ProcessFeatureToFeatMap_t {
     int WinApiFeature;
@@ -118,6 +130,10 @@ void CONSTRUCTOR_ATTRIBUTE __init_cpu_features(void) {
   for (size_t I = 0, E = sizeof(FeatMap) / sizeof(FeatMap[0]); I != E; ++I)
     if (IsProcessorFeaturePresent(FeatMap[I].WinApiFeature))
       setCPUFeature(FeatMap[I].CPUFeature);
+
+  // Infer prerequisites that are not checked directly above.
+  if (features & (1ULL << FEAT_SVE_SM4))
+    setCPUFeature(FEAT_SM4);
 
   __atomic_store(&__aarch64_cpu_features.features, &features, __ATOMIC_RELAXED);
 }

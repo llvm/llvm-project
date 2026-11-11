@@ -178,8 +178,3 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
   }
   return error;
 }
-
-OptionValueSP OptionValueFileSpecList::Clone() const {
-  std::lock_guard<std::recursive_mutex> lock(m_rmutex);
-  return Cloneable::Clone();
-}

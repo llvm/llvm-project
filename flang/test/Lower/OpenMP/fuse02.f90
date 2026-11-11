@@ -53,7 +53,7 @@ end subroutine omp_fuse02
 ! CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[SUBI_0]], %[[LOAD_2]] : i32
 ! CHECK:           %[[SELECT_1:.*]] = arith.select %[[CMPI_0]], %[[LOAD_1]], %[[LOAD_0]] : i32
 ! CHECK:           %[[SELECT_2:.*]] = arith.select %[[CMPI_0]], %[[LOAD_0]], %[[LOAD_1]] : i32
-! CHECK:           %[[SUBI_1:.*]] = arith.subi %[[SELECT_2]], %[[SELECT_1]] overflow<nuw> : i32
+! CHECK:           %[[SUBI_1:.*]] = arith.subi %[[SELECT_2]], %[[SELECT_1]] : i32
 ! CHECK:           %[[DIVUI_0:.*]] = arith.divui %[[SUBI_1]], %[[SELECT_0]] : i32
 ! CHECK:           %[[ADDI_0:.*]] = arith.addi %[[DIVUI_0]], %[[CONSTANT_1]] overflow<nuw> : i32
 ! CHECK:           %[[CMPI_1:.*]] = arith.cmpi slt, %[[SELECT_2]], %[[SELECT_1]] : i32
@@ -77,7 +77,7 @@ end subroutine omp_fuse02
 ! CHECK:           %[[SELECT_4:.*]] = arith.select %[[CMPI_2]], %[[SUBI_2]], %[[LOAD_6]] : i32
 ! CHECK:           %[[SELECT_5:.*]] = arith.select %[[CMPI_2]], %[[LOAD_5]], %[[LOAD_4]] : i32
 ! CHECK:           %[[SELECT_6:.*]] = arith.select %[[CMPI_2]], %[[LOAD_4]], %[[LOAD_5]] : i32
-! CHECK:           %[[SUBI_3:.*]] = arith.subi %[[SELECT_6]], %[[SELECT_5]] overflow<nuw> : i32
+! CHECK:           %[[SUBI_3:.*]] = arith.subi %[[SELECT_6]], %[[SELECT_5]] : i32
 ! CHECK:           %[[DIVUI_1:.*]] = arith.divui %[[SUBI_3]], %[[SELECT_4]] : i32
 ! CHECK:           %[[ADDI_2:.*]] = arith.addi %[[DIVUI_1]], %[[CONSTANT_3]] overflow<nuw> : i32
 ! CHECK:           %[[CMPI_3:.*]] = arith.cmpi slt, %[[SELECT_6]], %[[SELECT_5]] : i32
@@ -101,7 +101,7 @@ end subroutine omp_fuse02
 ! CHECK:           %[[SELECT_8:.*]] = arith.select %[[CMPI_4]], %[[SUBI_4]], %[[LOAD_10]] : i32
 ! CHECK:           %[[SELECT_9:.*]] = arith.select %[[CMPI_4]], %[[LOAD_9]], %[[LOAD_8]] : i32
 ! CHECK:           %[[SELECT_10:.*]] = arith.select %[[CMPI_4]], %[[LOAD_8]], %[[LOAD_9]] : i32
-! CHECK:           %[[SUBI_5:.*]] = arith.subi %[[SELECT_10]], %[[SELECT_9]] overflow<nuw> : i32
+! CHECK:           %[[SUBI_5:.*]] = arith.subi %[[SELECT_10]], %[[SELECT_9]] : i32
 ! CHECK:           %[[DIVUI_2:.*]] = arith.divui %[[SUBI_5]], %[[SELECT_8]] : i32
 ! CHECK:           %[[ADDI_4:.*]] = arith.addi %[[DIVUI_2]], %[[CONSTANT_5]] overflow<nuw> : i32
 ! CHECK:           %[[CMPI_5:.*]] = arith.cmpi slt, %[[SELECT_10]], %[[SELECT_9]] : i32

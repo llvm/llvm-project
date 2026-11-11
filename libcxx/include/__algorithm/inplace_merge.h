@@ -45,17 +45,17 @@ private:
   _Predicate __p_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __invert() {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __invert() {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __invert(_Predicate __p) : __p_(__p) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __invert(_Predicate __p) : __p_(__p) {}
 
   template <class _T1>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _T1& __x) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _T1& __x) {
     return !__p_(__x);
   }
 
   template <class _T1, class _T2>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _T1& __x, const _T2& __y) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _T1& __x, const _T2& __y) {
     return __p_(__y, __x);
   }
 };
@@ -67,7 +67,7 @@ template <class _AlgPolicy,
           class _InputIterator2,
           class _Sent2,
           class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __half_inplace_merge(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __half_inplace_merge(
     _InputIterator1 __first1,
     _Sent1 __last1,
     _InputIterator2 __first2,
@@ -92,7 +92,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __half_inplace_merge(
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __buffered_inplace_merge(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __buffered_inplace_merge(
     _BidirectionalIterator __first,
     _BidirectionalIterator __middle,
     _BidirectionalIterator __last,
@@ -204,7 +204,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __inplace_merge(
 }
 
 template <class _AlgPolicy, class _BidirectionalIterator, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __inplace_merge(
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __inplace_merge(
     _BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last, _Compare&& __comp) {
   typedef typename iterator_traits<_BidirectionalIterator>::value_type value_type;
   typedef typename iterator_traits<_BidirectionalIterator>::difference_type difference_type;
@@ -224,14 +224,14 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __inplace_merge(
 }
 
 template <class _BidirectionalIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void inplace_merge(
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 void inplace_merge(
     _BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last, _Compare __comp) {
   std::__inplace_merge<_ClassicAlgPolicy>(
       std::move(__first), std::move(__middle), std::move(__last), static_cast<__comp_ref_type<_Compare> >(__comp));
 }
 
 template <class _BidirectionalIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 inplace_merge(_BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last) {
   std::inplace_merge(std::move(__first), std::move(__middle), std::move(__last), __less<>());
 }

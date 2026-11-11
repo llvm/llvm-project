@@ -113,11 +113,6 @@ public:
   size_t tryStoreFilePath(FileEntryRef FE);
 
 private:
-  /// Stores \p Path if it is non-empty.
-  /// Warning: this method doesn't check for uniqueness.
-  /// \returns offset of \p Path value begin in buffer with stored paths.
-  StringPool::StringOffsetSize storePath(llvm::StringRef Path);
-
   /// Stores \p dirStr path if it hasn't been stored yet.
   PathPool::DirPath tryStoreDirPath(llvm::StringRef dirStr);
 };

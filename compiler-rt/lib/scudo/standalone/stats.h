@@ -35,12 +35,14 @@ public:
       DCHECK_EQ(get(static_cast<StatType>(I)), 0U);
   }
 
-  void add(StatType I, uptr V) {
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) void add(StatType I,
+                                                                     uptr V) {
     V += atomic_load_relaxed(&StatsArray[I]);
     atomic_store_relaxed(&StatsArray[I], V);
   }
 
-  void sub(StatType I, uptr V) {
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) void sub(StatType I,
+                                                                     uptr V) {
     V = atomic_load_relaxed(&StatsArray[I]) - V;
     atomic_store_relaxed(&StatsArray[I], V);
   }
@@ -73,7 +75,8 @@ public:
       add(static_cast<StatType>(I), S->get(static_cast<StatType>(I)));
   }
 
-  void get(uptr *S) const EXCLUDES(Mutex) {
+  __attribute__((no_sanitize("unsigned-integer-overflow"))) void
+  get(uptr *S) const EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
     for (uptr I = 0; I < StatCount; I++)
       S[I] = LocalStats::get(static_cast<StatType>(I));

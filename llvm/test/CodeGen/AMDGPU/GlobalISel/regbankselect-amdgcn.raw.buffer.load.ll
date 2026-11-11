@@ -81,7 +81,7 @@ define amdgpu_ps float @raw_buffer_load__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr
   ; CHECK-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](i64), [[UV5]]
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT4]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -127,7 +127,7 @@ define amdgpu_ps float @raw_buffer_load__sgpr_rsrc__vgpr_val__vgpr_voffset__vgpr
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](i32)
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[INTRINSIC_CONVERGENT]](i32), [[COPY5]]
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[ICMP]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT1]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT1]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
@@ -185,7 +185,7 @@ define amdgpu_ps float @raw_buffer_load__vgpr_rsrc__vgpr_val__vgpr_voffset__vgpr
   ; CHECK-NEXT:   [[ICMP2:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[INTRINSIC_CONVERGENT4]](i32), [[COPY5]]
   ; CHECK-NEXT:   [[AND1:%[0-9]+]]:vcc(s1) = G_AND [[AND]], [[ICMP2]]
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT5:%[0-9]+]]:sreg_64_xexec(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND1]](s1)
-  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT5]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[INTRINSIC_CONVERGENT5]](i64), implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)

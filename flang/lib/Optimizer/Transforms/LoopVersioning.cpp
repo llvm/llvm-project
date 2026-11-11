@@ -9,7 +9,11 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This pass looks for loops iterating over assumed-shape arrays, that can
-/// be optimized by "guessing" that the stride is element-sized.
+/// be optimized by "guessing" that the stride is element-sized. A local
+/// POINTER that is associated with such an array is treated like the array.
+/// A loop that is versioned anyway also checks the strides of local POINTER
+/// arrays whose pointer assignment is not visible, as this does not add
+/// another copy of the loop.
 ///
 /// This is done by creating two versions of the same loop: one which assumes
 /// that the elements are contiguous (stride == size of element), and one that
@@ -18,7 +22,8 @@
 /// As a side-effect of the assumed element size stride, the array is also
 /// flattened to make it a 1D array - this is because the internal array
 /// structure must be either 1D or have known sizes in all dimensions - and at
-/// least one of the dimensions here is already unknown.
+/// least one of the dimensions here is already unknown. Supported slices are
+/// folded into the flattened indices.
 ///
 /// There are two distinct benefits here:
 /// 1. The loop that iterates over the elements is somewhat simplified by the
@@ -41,6 +46,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
@@ -62,6 +68,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <optional>
+
 namespace fir {
 #define GEN_PASS_DEF_LOOPVERSIONING
 #include "flang/Optimizer/Transforms/Passes.h.inc"
@@ -74,6 +82,10 @@ namespace {
 class LoopVersioningPass
     : public fir::impl::LoopVersioningBase<LoopVersioningPass> {
 public:
+  /// Construct the pass with its TableGen defaults.
+  LoopVersioningPass() = default;
+  /// Construct the pass with programmatic option values.
+  LoopVersioningPass(fir::LoopVersioningOptions options) : Base(options) {}
   void runOnOperation() override;
 };
 
@@ -93,7 +105,7 @@ struct ArgInfo {
 struct ArgsUsageInLoop {
   /// Mapping between the memref operand of an array indexing
   /// operation (e.g. fir.coordinate_of) and the argument information.
-  llvm::DenseMap<mlir::Value, ArgInfo> usageInfo;
+  llvm::MapVector<mlir::Value, ArgInfo> usageInfo;
   /// Some array indexing operations inside a loop cannot be transformed.
   /// This vector holds the memref operands of such operations.
   /// The vector is used to make sure that we do not try to transform
@@ -134,7 +146,7 @@ struct ArgsUsageInLoop {
 
   // Erase usageInfo and cannotTransform entries for a set
   // of given arguments provided in the form of usageInfo map.
-  void eraseUsage(const llvm::DenseMap<mlir::Value, ArgInfo> &args) {
+  void eraseUsage(const llvm::MapVector<mlir::Value, ArgInfo> &args) {
     for (auto &arg : args) {
       usageInfo.erase(arg.first);
       cannotTransform.remove(arg.first);
@@ -168,6 +180,9 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
          seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent())) {
       size_t typeSize = 0;
       mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(v.getType());
+      // A pointer dummy is a box address, but accesses use its loaded box.
+      if (isArgument && fir::isBoxAddress(v.getType()))
+        elementType = seqTy.getEleTy();
       if (fir::isa_trivial(elementType)) {
         auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignmentOrCrash(
             v.getLoc(), elementType, dl, kindMap);
@@ -182,51 +197,72 @@ getRankAndElementSize(const fir::KindMapping &kindMap,
   return {0, 0};
 }
 
-/// If a value comes from a fir.declare of fir.pack_array,
-/// follow it to the original source, otherwise return the value.
-static mlir::Value unwrapPassThroughOps(mlir::Value val) {
-  // Instead of unwrapping fir.declare, we may try to start
-  // the analysis in this pass from fir.declare's instead
-  // of the function entry block arguments. This way the loop
-  // versioning would work even after FIR inlining.
+/// Return true iff \p var is the address of a local POINTER variable.
+static bool isLocalPointer(mlir::Value var) {
+  auto declare = var.getDefiningOp<fir::DeclareOp>();
+  return declare && fir::isPointerType(var.getType()) &&
+         declare.getMemref().getDefiningOp<fir::AllocaOp>();
+}
+
+/// If \p load reads a local POINTER variable, return the descriptor stored by
+/// the pointer assignment that reaches it: the closest preceding store in the
+/// same or an enclosing block, provided that nothing in between may modify the
+/// POINTER, including the rest of any loop that contains the load. Return
+/// nullptr otherwise.
+static mlir::Value getAssignedDescriptor(fir::LoadOp load,
+                                         mlir::AliasAnalysis &aliasAnalysis) {
+  mlir::Value var = load.getMemref();
+  if (!isLocalPointer(var))
+    return nullptr;
+  mlir::Operation *cur = load;
+  while (true) {
+    for (mlir::Operation *op = cur->getPrevNode(); op; op = op->getPrevNode()) {
+      if (auto store = mlir::dyn_cast<fir::StoreOp>(op))
+        if (store.getMemref() == var)
+          return store.getValue();
+      if (aliasAnalysis.getModRef(op, var).isMod())
+        return nullptr;
+    }
+    cur = cur->getParentOp();
+    if (!cur || mlir::isa<mlir::func::FuncOp>(cur) ||
+        aliasAnalysis.getModRef(cur, var).isMod())
+      return nullptr;
+  }
+}
+
+/// Follow descriptor producers to identify a function argument. Traverse a
+/// load only when its source is a box address; other loads stop the walk.
+/// The original access value is retained for the guard and rewritten loop.
+static mlir::Value normaliseVal(mlir::Value val) {
   while (true) {
     if (fir::DeclareOp declare = val.getDefiningOp<fir::DeclareOp>()) {
       val = declare.getMemref();
       continue;
     }
-    // fir.pack_array might be met before fir.declare - this is how
-    // it is orifinally generated.
-    // It might also be met after fir.declare - after the optimization
-    // passes that sink fir.pack_array closer to the uses.
     if (auto packArray = val.getDefiningOp<fir::PackArrayOp>()) {
       val = packArray.getArray();
+      continue;
+    }
+    if (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
+      if (!fir::reboxPreservesContinuity(rebox,
+                                         /*mayHaveNonDefaultLowerBounds=*/true,
+                                         /*checkWhole=*/false)) {
+        LLVM_DEBUG(llvm::dbgs() << "REBOX may produce non-contiguous array: "
+                                << rebox << '\n');
+        break;
+      }
+      val = rebox.getBox();
+      continue;
+    }
+    if (fir::LoadOp load = val.getDefiningOp<fir::LoadOp>()) {
+      if (!fir::isBoxAddress(load.getMemref().getType()))
+        break;
+      val = load.getMemref();
       continue;
     }
     break;
   }
   return val;
-}
-
-/// if a value comes from a fir.rebox, follow the rebox to the original source,
-/// of the value, otherwise return the value
-static mlir::Value unwrapReboxOp(mlir::Value val) {
-  while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
-    if (!fir::reboxPreservesContinuity(rebox,
-                                       /*mayHaveNonDefaultLowerBounds=*/true,
-                                       /*checkWhole=*/false)) {
-      LLVM_DEBUG(llvm::dbgs() << "REBOX may produce non-contiguous array: "
-                              << rebox << '\n');
-      break;
-    }
-    val = rebox.getBox();
-  }
-  return val;
-}
-
-/// normalize a value (removing fir.declare and fir.rebox) so that we can
-/// more conveniently spot values which came from function arguments
-static mlir::Value normaliseVal(mlir::Value val) {
-  return unwrapPassThroughOps(unwrapReboxOp(val));
 }
 
 /// some FIR operations accept a fir.shape, a fir.shift or a fir.shapeshift.
@@ -260,6 +296,47 @@ static mlir::Value getLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
   return {};
 }
 
+/// A fir.slice triple whose upper bound is fir.undefined selects a single
+/// element instead of a section. XArrayCoor lowering then ignores the triple's
+/// lower bound and step, and only uses the fir.array_coor index of that
+/// dimension.
+static bool isScalarSliceDim(mlir::ValueRange triples, unsigned dim) {
+  return mlir::isa_and_nonnull<fir::UndefOp>(
+      triples[3 * dim + 1].getDefiningOp());
+}
+
+/// Return the section lower bound that dimension \p dim of \p coop's slice
+/// adds to the coordinate, or a null value if it adds nothing.
+static mlir::Value getSliceLowerBound(fir::ArrayCoorOp coop, unsigned dim) {
+  if (!coop.getSlice())
+    return {};
+  auto slice = mlir::cast<fir::SliceOp>(coop.getSlice().getDefiningOp());
+  if (isScalarSliceDim(slice.getTriples(), dim))
+    return {};
+  return slice.getTriples()[3 * dim];
+}
+
+/// Match XArrayCoor's signed integerCast before computing sliced coordinates.
+/// FIR conversion zero-extends builtin i1 and unsigned integers, whereas the
+/// generic array-coordinate lowering sign-extends their bit patterns.
+static mlir::Value toSliceIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Value value) {
+  if (auto type = mlir::dyn_cast<mlir::IntegerType>(value.getType())) {
+    if (type.getWidth() == 1) {
+      value = builder.createConvert(loc, builder.getI1Type(), value);
+      value = mlir::arith::ExtSIOp::create(builder, loc,
+                                           builder.getIntegerType(2), value);
+    } else if (type.isUnsigned()) {
+      value = builder.createConvert(
+          loc, builder.getIntegerType(type.getWidth()), value);
+    }
+  }
+  if (value.getType().isSignlessInteger())
+    return mlir::arith::IndexCastOp::create(builder, loc,
+                                            builder.getIndexType(), value);
+  return builder.createConvert(loc, builder.getIndexType(), value);
+}
+
 /// gets the i'th index from array coordinate operation op
 /// dim should range between 0 and rank - 1
 static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
@@ -275,6 +352,23 @@ static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
   // subtracting the lower bound
   mlir::Value index = coop.getIndices()[dim];
   mlir::Value lb = getLowerBound(coop, dim);
+  if (coop.getSlice()) {
+    // Convert a unit-step slice coordinate to a zero-based source-array index:
+    // (index - lb) + (slice lower bound - lb); scalar dimensions omit the
+    // adjustment.
+    mlir::Location loc = coop.getLoc();
+    index = toSliceIndex(builder, loc, index);
+    lb = lb ? toSliceIndex(builder, loc, lb)
+            : builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+    mlir::Value coor = mlir::arith::SubIOp::create(builder, loc, index, lb);
+    if (mlir::Value sliceLb = getSliceLowerBound(coop, dim)) {
+      sliceLb = toSliceIndex(builder, loc, sliceLb);
+      mlir::Value adjust =
+          builder.createOrFold<mlir::arith::SubIOp>(loc, sliceLb, lb);
+      coor = builder.createOrFold<mlir::arith::AddIOp>(loc, coor, adjust);
+    }
+    return coor;
+  }
   if (!lb)
     // assume a default lower bound of one
     lb = builder.createIntegerConstant(coop.getLoc(), index.getType(), 1);
@@ -283,6 +377,74 @@ static mlir::Value getIndex(fir::FirOpBuilder &builder, mlir::Operation *op,
   if (lb.getType() != index.getType())
     lb = builder.createConvert(coop.getLoc(), index.getType(), lb);
   return mlir::arith::SubIOp::create(builder, coop.getLoc(), index, lb);
+}
+
+/// Return whether converting an integer through \p type may turn the value one
+/// into something else. A one-bit builtin or kind-mapped FIR integer denotes
+/// -1 once XArrayCoor lowering sign extends it again.
+static bool mayNotPreserveOne(mlir::Type type,
+                              const fir::KindMapping &kindMap) {
+  if (mlir::isa<mlir::IndexType>(type))
+    return false;
+  if (auto intTy = mlir::dyn_cast<fir::IntegerType>(type))
+    return kindMap.getIntegerBitsize(intTy.getFKind()) <= 1;
+  auto intTy = mlir::dyn_cast<mlir::IntegerType>(type);
+  return !intTy || intTy.getWidth() <= 1;
+}
+
+/// Return whether \p value is the constant one, looking through fir.convert.
+static bool isConstantOne(mlir::Value value, const fir::KindMapping &kindMap) {
+  while (auto convert = value.getDefiningOp<fir::ConvertOp>()) {
+    if (mayNotPreserveOne(convert.getType(), kindMap))
+      return false;
+    value = convert.getValue();
+  }
+  if (mayNotPreserveOne(value.getType(), kindMap))
+    return false;
+  std::optional<llvm::APInt> constant = fir::getIntIfConstant(value);
+  return constant && constant->isOne();
+}
+
+/// Return whether the slice of \p coop can be folded into the flat index
+/// computed for the fast loop version.
+///
+/// XArrayCoor lowering computes the zero based coordinate of dimension i of a
+/// boxed array as `(index - lb) * step + (sliceLb - lb)`, where step and
+/// sliceLb only contribute for a section. With a unit step this is the
+/// slice-free coordinate `index - lb` plus the loop invariant
+/// `sliceLb - lb`, so flattening only needs that extra term. Anything that
+/// does not fit is left on the generic path.
+static bool isFoldableSlice(fir::ArrayCoorOp coop, unsigned rank,
+                            const fir::KindMapping &kindMap) {
+  auto slice = coop.getSlice().getDefiningOp<fir::SliceOp>();
+  // ArrayCoorOp's verifier rejects slices with substring operands, so they do
+  // not need to be checked here.
+  if (!slice || !slice.getFields().empty())
+    return false;
+
+  mlir::ValueRange triples = slice.getTriples();
+  // Reduced-rank slices need a separate mapping from result coordinates to
+  // source dimensions. The current flattening handles only one coordinate per
+  // descriptor dimension.
+  if (coop.getIndices().size() != rank)
+    return false;
+
+  // TODO: Support the remaining valid fir.slice forms. This initial slice
+  // implementation leaves non-unit section steps on the generic path.
+  for (unsigned dim = 0; dim < rank; ++dim) {
+    if (isScalarSliceDim(triples, dim))
+      continue;
+    mlir::Value lower = triples[3 * dim];
+    mlir::Value step = triples[3 * dim + 2];
+    if (mlir::isa_and_nonnull<fir::UndefOp>(lower.getDefiningOp()) ||
+        mlir::isa_and_nonnull<fir::UndefOp>(step.getDefiningOp()))
+      return false;
+    // TODO: Fold constant zero and one through fir.convert when motivating
+    // source cases justify changing the dialect-wide folder.
+    if (!isConstantOne(step, kindMap))
+      return false;
+  }
+  return true;
 }
 
 void LoopVersioningPass::runOnOperation() {
@@ -323,6 +485,48 @@ void LoopVersioningPass::runOnOperation() {
     return;
   }
 
+  // This pass runs on a function, so FIR alias analysis must not look up
+  // callees or globals. Its recursive effects cache must be cleared when the
+  // IR changes between queries.
+  fir::AliasAnalysisRecursiveEffectsCache recursiveEffectsCache;
+  auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
+  fir::AliasAnalysis firAliasAnalysis{recursiveEffectsCache};
+  firAliasAnalysis.disableSymbolLookups();
+  aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
+
+  // A local POINTER associated with one of the dummies above, or with a
+  // section of one that keeps the first dimension contiguous, is as likely
+  // contiguous as the dummy. When nothing can change such a POINTER between
+  // its pointer assignment and a load of it inside a loop, use the assigned
+  // descriptor instead of the load, so that the loop is versioned like a loop
+  // over the dummy. All decisions are made before any IR is changed.
+  // TODO: This is not specific to loop versioning. Move it into a separate
+  // optimization pass.
+  {
+    llvm::SmallVector<std::pair<fir::LoadOp, mlir::Value>> forwards;
+    func.walk([&](fir::LoadOp load) {
+      if (!load->getParentOfType<fir::DoLoopOp>() ||
+          !fir::isBoxAddress(load.getMemref().getType()))
+        return;
+      mlir::Value assigned = getAssignedDescriptor(load, aliasAnalysis);
+      if (!assigned)
+        return;
+      mlir::Value source = normaliseVal(assigned);
+      if (llvm::any_of(argsOfInterest,
+                       [&](const ArgInfo &a) { return a.arg == source; }))
+        forwards.emplace_back(load, assigned);
+    });
+    for (auto [load, assigned] : forwards) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Forwarding POINTER assignment to: " << load << '\n');
+      load.getResult().replaceAllUsesWith(assigned);
+      load.erase();
+    }
+    // The cached effects may refer to the erased loads.
+    if (!forwards.empty())
+      recursiveEffectsCache.clear();
+  }
+
   // A list of all loops in the function in post-order.
   mlir::SmallVector<fir::DoLoopOp> originalLoops;
   // Information about the arguments usage by the instructions
@@ -345,34 +549,39 @@ void LoopVersioningPass::runOnOperation() {
       if (op->getParentOfType<fir::DoLoopOp>() != loop)
         return;
       mlir::Value operand = op->getOperand(0);
+      mlir::Value source = normaliseVal(operand);
       for (auto a : argsOfInterest) {
-        if (a.arg == normaliseVal(operand)) {
-          // Use the reboxed value, not the block arg when re-creating the loop.
+        if (a.arg == source) {
+          // Use the access descriptor, not its originating block argument.
           a.arg = operand;
 
-          // Check that the operand dominates the loop?
-          // If this is the case, record such operands in argsInLoop.cannot-
-          // Transform, so that they disable the transformation for the parent
-          /// loops as well.
-          if (!domInfo.dominates(a.arg, loop))
+          // A rejected descriptor cannot recover in a later access. Skip
+          // repeated dominance, type, and slice analysis for such accesses.
+          bool rejected = argsInLoop.cannotTransform.contains(a.arg);
+          if (!rejected) {
+            rejected = !domInfo.dominates(a.arg, loop);
+
+            // Compute rank and element size from the access descriptor rather
+            // than the original argument, since intervening descriptor
+            // operations may change them.
+            if (!rejected) {
+              std::tie(a.rank, a.size) =
+                  getRankAndElementSize(kindMap, *dl, a.arg);
+              rejected = a.rank == 0 || a.size == 0;
+
+              // A slice must fold into the flat index; otherwise this
+              // descriptor and its later accesses stay on the generic path.
+              if (!rejected) {
+                if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op);
+                    arrayCoor && arrayCoor.getSlice())
+                  rejected = !enableSlices ||
+                             !isFoldableSlice(arrayCoor, a.rank, kindMap);
+              }
+            }
+          }
+
+          if (rejected) {
             argsInLoop.cannotTransform.insert(a.arg);
-
-          // No support currently for sliced arrays.
-          // This means that we cannot transform properly
-          // instructions referencing a.arg in the whole loop
-          // nest this loop is located in.
-          if (auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op))
-            if (arrayCoor.getSlice())
-              argsInLoop.cannotTransform.insert(a.arg);
-
-          // We need to compute the rank and element size
-          // based on the operand, not the original argument,
-          // because array slicing may affect it.
-          std::tie(a.rank, a.size) = getRankAndElementSize(kindMap, *dl, a.arg);
-          if (a.rank == 0 || a.size == 0)
-            argsInLoop.cannotTransform.insert(a.arg);
-
-          if (argsInLoop.cannotTransform.contains(a.arg)) {
             // Remove any previously recorded usage, if any.
             argsInLoop.usageInfo.erase(a.arg);
             break;
@@ -449,6 +658,83 @@ void LoopVersioningPass::runOnOperation() {
     for (auto &arg : argsInLoop.usageInfo)
       info.argsAndDims.push_back(arg.second);
     loopsOfInterest.emplace_back(std::move(info));
+  }
+
+  // A loop that is versioned anyway can also check the stride of a local
+  // POINTER array that it accesses, without another copy of the loop. Do this
+  // when the pointer assignment is not visible, e.g. because a call associated
+  // the POINTER, and the loop does not modify the POINTER. If the pointer
+  // assignment is visible, the POINTER was either forwarded above, or it is
+  // associated with something else, such as a row of a dummy or a local array,
+  // and is left alone. A descriptor loaded inside the loop is loaded before
+  // the loop instead, so that the check can use it. Visit outer loops first,
+  // so that a descriptor checked for a loop is not checked again for its inner
+  // loops.
+  {
+    llvm::DenseMap<mlir::Operation *, llvm::SmallPtrSet<mlir::Value, 4>> added;
+    llvm::SmallVector<std::pair<fir::LoadOp, mlir::Operation *>> hoists;
+    for (OpsWithArgs &info : llvm::reverse(loopsOfInterest)) {
+      auto loop = mlir::cast<fir::DoLoopOp>(info.op);
+      // Accesses in the loop and its inner loops, by descriptor.
+      llvm::MapVector<mlir::Value, llvm::SmallVector<mlir::Operation *>>
+          accesses;
+      loop.getBody()->walk([&](mlir::Operation *op) {
+        if (mlir::isa<fir::ArrayCoorOp, fir::CoordinateOp>(op))
+          accesses[op->getOperand(0)].push_back(op);
+      });
+      for (auto &entry : accesses) {
+        mlir::Value desc = entry.first;
+        auto load = desc.getDefiningOp<fir::LoadOp>();
+        if (!load || !isLocalPointer(load.getMemref()))
+          continue;
+        // Only consider descriptors that the loop itself accesses, and that
+        // are not checked for this loop or an outer loop yet.
+        if (llvm::none_of(entry.second,
+                          [&](mlir::Operation *op) {
+                            return op->getParentOfType<fir::DoLoopOp>() == loop;
+                          }) ||
+            llvm::any_of(info.argsAndDims,
+                         [&](const ArgInfo &a) { return a.arg == desc; }))
+          continue;
+        bool checkedOutside = false;
+        for (auto parent = loop->getParentOfType<fir::DoLoopOp>(); parent;
+             parent = parent->getParentOfType<fir::DoLoopOp>()) {
+          auto it = added.find(parent);
+          if (it != added.end() && it->second.contains(desc))
+            checkedOutside = true;
+        }
+        if (checkedOutside || getAssignedDescriptor(load, aliasAnalysis))
+          continue;
+        bool inLoop = loop->isProperAncestor(load);
+        if (inLoop && (!domInfo.dominates(load.getMemref(), loop) ||
+                       aliasAnalysis.getModRef(loop, load.getMemref()).isMod()))
+          continue;
+        unsigned rank;
+        size_t size;
+        std::tie(rank, size) = getRankAndElementSize(kindMap, *dl, desc);
+        if (rank == 0 || size == 0)
+          continue;
+        if (llvm::any_of(entry.second, [&](mlir::Operation *op) {
+              auto arrayCoor = mlir::dyn_cast<fir::ArrayCoorOp>(op);
+              return arrayCoor && arrayCoor.getSlice() &&
+                     (!enableSlices ||
+                      !isFoldableSlice(arrayCoor, rank, kindMap));
+            }))
+          continue;
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Adding local POINTER to the check: " << load << '\n');
+        info.argsAndDims.push_back({desc, size, rank, {}});
+        added[loop].insert(desc);
+        if (inLoop)
+          hoists.emplace_back(load, loop);
+      }
+    }
+    for (auto [load, loop] : hoists) {
+      load->moveBefore(loop);
+      // The load no longer belongs to the statement it was written in, so do
+      // not report that statement's line before the loop.
+      load->setLoc(mlir::UnknownLoc::get(load->getContext()));
+    }
   }
 
   if (loopsOfInterest.empty()) {

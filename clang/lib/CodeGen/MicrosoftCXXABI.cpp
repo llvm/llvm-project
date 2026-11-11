@@ -1168,12 +1168,13 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   if (RD->needsImplicitCopyAssignment() && !RD->hasSimpleCopyAssignment())
     return false;
   for (const Decl *D : RD->decls()) {
-    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
-      if (Ctor->isUserProvided())
-        return false;
-    } else if (auto *Template = dyn_cast<FunctionTemplateDecl>(D)) {
-      if (isa<CXXConstructorDecl>(Template->getTemplatedDecl()))
-        return false;
+    auto *Ctor = dyn_cast<CXXConstructorDecl>(D);
+    if (!Ctor) {
+      if (auto *Template = dyn_cast<FunctionTemplateDecl>(D))
+        Ctor = dyn_cast<CXXConstructorDecl>(Template->getTemplatedDecl());
+    }
+    if (Ctor && Ctor->isUserProvided()) {
+      return false;
     } else if (auto *MethodDecl = dyn_cast<CXXMethodDecl>(D)) {
       if (MethodDecl->isCopyAssignmentOperator() && MethodDecl->isDeleted())
         return false;
@@ -2436,6 +2437,19 @@ void MicrosoftCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
   // HLSL doesn't support atexit.
   if (CGM.getLangOpts().HLSL)
     return CGM.AddCXXDtorEntry(Dtor, Addr);
+
+  // Handle atexit overwrite by #pragma init_seg
+  if (auto *ISA = D.getAttr<InitSegAttr>()) {
+    if (const FunctionDecl *FD = ISA->getFunc()) {
+      llvm::Constant *dtorStub = CGF.createAtExitStub(D, Dtor, Addr);
+      llvm::FunctionType *ExitFnTy =
+          llvm::FunctionType::get(CGM.IntTy, dtorStub->getType(), false);
+      llvm::Constant *ExitFn = CGM.GetAddrOfFunction(FD, ExitFnTy);
+      CGF.EmitNounwindRuntimeCall(llvm::FunctionCallee(ExitFnTy, ExitFn),
+                                  dtorStub);
+      return;
+    }
+  }
 
   // The default behavior is to use atexit.
   CGF.registerGlobalDtorWithAtExit(D, Dtor, Addr);

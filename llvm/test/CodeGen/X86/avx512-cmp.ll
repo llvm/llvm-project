@@ -155,7 +155,7 @@ B:
 define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-LABEL: test10:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    xorb $1, %dl
+; ALL-NEXT:    notb %dl
 ; ALL-NEXT:    cmpq %rsi, %rdi
 ; ALL-NEXT:    sete %al
 ; ALL-NEXT:    testb %dl, %al

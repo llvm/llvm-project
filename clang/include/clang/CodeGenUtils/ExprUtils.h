@@ -43,6 +43,32 @@ bool isTrivialFiller(const Expr *E);
 /// one everywhere.  That's GCC behavior too.
 bool onlyHasInlineBuiltinDeclaration(const FunctionDecl *FD);
 
+/// Given an object of the canonical type \p Type, can we safely copy a value
+/// out of it based on its initializer?
+///
+/// FIXME: Overly conservative: rejects all arrays, and requires C++ records
+/// to be trivial rather than just trivially copyable.
+bool isConstantEmittableObjectType(QualType Type);
+
+/// How a reference to a variable can be emitted as a constant.
+enum ConstantEmissionKind {
+  CEK_None,
+  CEK_AsReferenceOnly,
+  CEK_AsValueOrReference,
+  CEK_AsValueOnly
+};
+
+/// Can we constant-emit a load of a reference to a variable of the given
+/// type?  This is different from predicates like
+/// Decl::mightBeUsableInConstantExpressions because we do want it to apply
+/// in situations that don't necessarily satisfy the language's rules
+/// for this (e.g. C++'s ODR-use rules).  For example, we want to be able
+/// to do this with const float variables even if those variables
+/// aren't marked 'constexpr'.
+///
+/// FIXME: For references, checks the pointee type, not the bound object's.
+ConstantEmissionKind checkVarTypeForConstantEmission(QualType Type);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_EXPRUTILS_H

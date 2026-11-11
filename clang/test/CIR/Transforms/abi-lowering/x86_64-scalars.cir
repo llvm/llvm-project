@@ -21,7 +21,7 @@ module attributes {
 } {
 
   // Register-sized integers are Direct: signature and call sites unchanged.
-  cir.func @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i {
+  cir.func @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i requires_call_conv_lowering {
     cir.return %arg0 : !s32i
   }
 
@@ -29,65 +29,65 @@ module attributes {
   // CHECK-NEXT: cir.return %arg0 : !s32i
 
   // Floating-point scalars are Direct.
-  cir.func @floats(%arg0: !cir.float, %arg1: !cir.double) -> !cir.double {
+  cir.func @floats(%arg0: !cir.float, %arg1: !cir.double) -> !cir.double requires_call_conv_lowering {
     cir.return %arg1 : !cir.double
   }
 
   // CHECK: cir.func{{.*}} @floats(%arg0: !cir.float, %arg1: !cir.double) -> !cir.double
 
   // Pointers are Direct.
-  cir.func @take_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+  cir.func @take_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> requires_call_conv_lowering {
     cir.return %arg0 : !cir.ptr<!s32i>
   }
 
   // CHECK: cir.func{{.*}} @take_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i>
 
   // Signed sub-register integer is sign-extended.
-  cir.func @take_s8(%arg0: !s8i) {
+  cir.func @take_s8(%arg0: !s8i) requires_call_conv_lowering {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.signext})
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.noundef, llvm.signext})
 
   // Unsigned sub-register integer is zero-extended.
-  cir.func @take_u16(%arg0: !u16i) {
+  cir.func @take_u16(%arg0: !u16i) requires_call_conv_lowering {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_u16(%arg0: !u16i {llvm.zeroext})
+  // CHECK: cir.func{{.*}} @take_u16(%arg0: !u16i {llvm.noundef, llvm.zeroext})
 
   // bool is zero-extended.
-  cir.func @take_bool(%arg0: !cir.bool) {
+  cir.func @take_bool(%arg0: !cir.bool) requires_call_conv_lowering {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_bool(%arg0: !cir.bool {llvm.zeroext})
+  // CHECK: cir.func{{.*}} @take_bool(%arg0: !cir.bool {llvm.noundef, llvm.zeroext})
 
   // Call site picks up the same extension attribute on the operand.
-  cir.func @call_s8(%arg0: !s8i) {
+  cir.func @call_s8(%arg0: !s8i) requires_call_conv_lowering {
     cir.call @take_s8(%arg0) : (!s8i) -> ()
     cir.return
   }
 
-  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.signext}) -> ()
+  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.noundef, llvm.signext}) -> ()
 
-  // A sub-register integer return is also extended, not just arguments.
-  cir.func @ret_s8() -> !s8i {
+  // A sub-register integer return is not extended.
+  cir.func @ret_s8() -> !s8i requires_call_conv_lowering {
     %0 = cir.const #cir.int<0> : !s8i
     cir.return %0 : !s8i
   }
 
-  // CHECK: cir.func{{.*}} @ret_s8() -> (!s8i {llvm.signext})
+  // CHECK: cir.func{{.*}} @ret_s8() -> !s8i
 
-  cir.func @ret_u16() -> !u16i {
+  cir.func @ret_u16() -> !u16i requires_call_conv_lowering {
     %0 = cir.const #cir.int<0> : !u16i
     cir.return %0 : !u16i
   }
 
-  // CHECK: cir.func{{.*}} @ret_u16() -> (!u16i {llvm.zeroext})
+  // CHECK: cir.func{{.*}} @ret_u16() -> !u16i
 
   // A signed __int128 is Direct, so the signature is unchanged.
-  cir.func @ret_i128(%arg0: !s128i) -> !s128i {
+  cir.func @ret_i128(%arg0: !s128i) -> !s128i requires_call_conv_lowering {
     cir.return %arg0 : !s128i
   }
 
@@ -95,14 +95,14 @@ module attributes {
   // CHECK-NEXT: cir.return %arg0 : !s128i
 
   // An unsigned __int128 is Direct as well.
-  cir.func @ret_u128(%arg0: !u128i) -> !u128i {
+  cir.func @ret_u128(%arg0: !u128i) -> !u128i requires_call_conv_lowering {
     cir.return %arg0 : !u128i
   }
 
   // CHECK: cir.func{{.*}} @ret_u128(%arg0: !u128i) -> !u128i
 
   // The call site passes the value through unchanged.
-  cir.func @call_i128(%arg0: !s128i) -> !s128i {
+  cir.func @call_i128(%arg0: !s128i) -> !s128i requires_call_conv_lowering {
     %0 = cir.call @ret_i128(%arg0) : (!s128i) -> !s128i
     cir.return %0 : !s128i
   }
@@ -110,10 +110,10 @@ module attributes {
   // CHECK: cir.call @ret_i128(%arg0) : (!s128i) -> !s128i
 }
 
-// LLVM: define void @take_s8(i8 signext %{{.+}})
-// LLVM: define void @take_u16(i16 zeroext %{{.+}})
-// LLVM: define void @take_bool(i1 zeroext %{{.+}})
-// LLVM: define signext i8 @ret_s8()
-// LLVM: define zeroext i16 @ret_u16()
+// LLVM: define void @take_s8(i8 noundef signext %{{.+}})
+// LLVM: define void @take_u16(i16 noundef zeroext %{{.+}})
+// LLVM: define void @take_bool(i1 noundef zeroext %{{.+}})
+// LLVM: define i8 @ret_s8()
+// LLVM: define i16 @ret_u16()
 // LLVM: define i128 @ret_i128(i128 %{{.+}})
 // LLVM: define i128 @ret_u128(i128 %{{.+}})

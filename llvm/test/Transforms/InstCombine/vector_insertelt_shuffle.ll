@@ -84,7 +84,7 @@ define <4 x float> @bazzzzz() {
 
 define <4 x float> @bazzzzzz(<4 x float> %x, i32 %a) {
 ; CHECK-LABEL: @bazzzzzz(
-; CHECK-NEXT:    ret <4 x float> <float undef, float 5.000000e+00, float undef, float 4.000000e+00>
+; CHECK-NEXT:    ret <4 x float> <float undef, float 5.000000e+00, float poison, float 4.000000e+00>
 ;
   %ins1 = insertelement <4 x float> insertelement (<4 x float> shufflevector (<4 x float> undef, <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0> , <4 x i32> <i32 0, i32 5, i32 undef, i32 6> ), float 4.0, i32 3), float 5.0, i32 1
   ret <4 x float> %ins1

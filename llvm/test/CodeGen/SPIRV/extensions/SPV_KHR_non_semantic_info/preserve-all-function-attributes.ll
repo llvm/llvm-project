@@ -1,9 +1,12 @@
-; Adapted from the SPIRV-LLVM-Translator --spirv-preserve-auxdata forward-path
-; tests. The backend only emits, so the reverse-translation checks are dropped.
+; Function attributes are emitted as NonSemantic.AuxData records: an OpString
+; for the name, plus one for the value if present.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
 
@@ -17,8 +20,8 @@
 
 ; CHECK-DAG: %[[#VoidT:]] = OpTypeVoid
 
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn0]] %[[#Attr0]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn1]] %[[#Attr1LHS]] %[[#Attr1RHS]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn0]] %[[#Attr0]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#VoidT]] %[[#Import]] {{.+}} %[[#Fcn1]] %[[#Attr1LHS]] %[[#Attr1RHS]]
 
 target triple = "spir64-unknown-unknown"
 
