@@ -238,17 +238,17 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandDashDash) {
   };
   const char *AfterSC[] = {"foo", "--", "bar"};
   InputArgList AL1 = T.ParseArgs(AfterSC, MAI, MAC);
-  EXPECT_EQ(AL1.getSubCommand(T.getSubCommands(), HandleMultiple,
-                              HandlePositionals),
-            "foo");
+  EXPECT_EQ(
+      AL1.getSubCommand(T.getSubCommands(), HandleMultiple, HandlePositionals),
+      "foo");
   EXPECT_TRUE(SubCommands.empty());
   EXPECT_EQ(Positionals, SmallVector<StringRef>({"bar"}));
   Positionals.clear();
   const char *LeadingDashDash[] = {"--", "foo"};
   InputArgList AL2 = T.ParseArgs(LeadingDashDash, MAI, MAC);
-  EXPECT_TRUE(AL2.getSubCommand(T.getSubCommands(), HandleMultiple,
-                                HandlePositionals)
-                  .empty());
+  EXPECT_TRUE(
+      AL2.getSubCommand(T.getSubCommands(), HandleMultiple, HandlePositionals)
+          .empty());
   EXPECT_EQ(Positionals, SmallVector<StringRef>({"foo"}));
 }
 
