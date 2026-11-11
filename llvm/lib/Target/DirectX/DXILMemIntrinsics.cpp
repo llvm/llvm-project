@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILMemIntrinsics.h"
 #include "DirectX.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/IRBuilder.h"
@@ -167,10 +166,11 @@ void expandMemCpy(MemCpyInst *MemCpy) {
     if (Offset >= ByteLength)
       break;
     // TODO: Should we skip padding types here?
-    Value *ByteOffset = Builder.getInt32(Offset);
-    Value *SrcPtr = Builder.CreateInBoundsPtrAdd(Src, ByteOffset);
+    Value *SrcPtr = Builder.CreatePtrAddWithUnsignedOffset(
+        Src, Offset, "", GEPNoWrapFlags::inBounds());
     Value *SrcVal = Builder.CreateLoad(Ty, SrcPtr);
-    Value *DstPtr = Builder.CreateInBoundsPtrAdd(Dst, ByteOffset);
+    Value *DstPtr = Builder.CreatePtrAddWithUnsignedOffset(
+        Dst, Offset, "", GEPNoWrapFlags::inBounds());
     Builder.CreateStore(SrcVal, DstPtr);
   }
 
@@ -212,7 +212,8 @@ static bool eliminateMemIntrinsics(Module &M) {
   return HadMemIntrinsicUses;
 }
 
-PreservedAnalyses DXILMemIntrinsics::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses DXILMemIntrinsicsPass::run(Module &M,
+                                             ModuleAnalysisManager &) {
   if (eliminateMemIntrinsics(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

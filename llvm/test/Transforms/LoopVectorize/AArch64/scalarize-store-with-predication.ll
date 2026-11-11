@@ -16,7 +16,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; architecture with masked loads/stores, but we use SVE for testing purposes
 ; here.
 
-define void @foo(ptr %data1, ptr %data2) {
+define void @foo(ptr %data1, ptr %data2) vscale_range(1,16) {
 ; CHECK-LABEL: @foo(
 ; CHECK:       vector.body:
 ; CHECK:         br i1 {{%.*}}, label %pred.store.if, label %pred.store.continue
@@ -37,7 +37,7 @@ while.body:
   %i = phi i64 [ 1023, %entry ], [ %i.next, %if.end ]
   %arrayidx = getelementptr inbounds i32, ptr %data1, i64 %i
   %ld = load i32, ptr %arrayidx, align 4
-  %cmp = icmp sgt i32 %ld, %ld
+  %cmp = icmp sgt i32 %ld, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:

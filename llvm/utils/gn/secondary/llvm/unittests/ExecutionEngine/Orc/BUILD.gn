@@ -46,6 +46,7 @@ unittest("OrcJITTests") {
     "RTDyldObjectLinkingLayerTest.cpp",
     "ReOptimizeLayerTest.cpp",
     "ResourceTrackerTest.cpp",
+    "SPSHandlerSpecTest.cpp",
     "SPSProxySpecTest.cpp",
     "SharedMemoryMapperTest.cpp",
     "SimpleExecutorMemoryManagerTest.cpp",

@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
@@ -41,6 +42,7 @@ class Value;
 /// to preserve information from query to query. However it does retain handles
 /// to various other analyses and must be recomputed when those analyses are.
 class BasicAAResult : public AAResultBase {
+  const AnalysisOptions &Opts;
   const DataLayout &DL;
   const Function &F;
   const TargetLibraryInfo &TLI;
@@ -54,17 +56,16 @@ class BasicAAResult : public AAResultBase {
   }
 
 public:
-  BasicAAResult(const DataLayout &DL, const Function &F,
-                const TargetLibraryInfo &TLI, AssumptionCache &AC,
-                DominatorTree *DT = nullptr)
-      : DL(DL), F(F), TLI(TLI), AC(AC), DT_(DT) {}
+  LLVM_ABI BasicAAResult(const DataLayout &DL, const Function &F,
+                         const TargetLibraryInfo &TLI, AssumptionCache &AC,
+                         DominatorTree *DT = nullptr);
 
   BasicAAResult(const BasicAAResult &Arg)
-      : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
-        DT_(Arg.DT_) {}
-  BasicAAResult(BasicAAResult &&Arg)
-      : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
+      : AAResultBase(Arg), Opts(Arg.Opts), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
         AC(Arg.AC), DT_(Arg.DT_) {}
+  BasicAAResult(BasicAAResult &&Arg)
+      : AAResultBase(std::move(Arg)), Opts(Arg.Opts), DL(Arg.DL), F(Arg.F),
+        TLI(Arg.TLI), AC(Arg.AC), DT_(Arg.DT_) {}
 
   /// Handle invalidation events in the new pass manager.
   LLVM_ABI bool invalidate(Function &Fn, const PreservedAnalyses &PA,

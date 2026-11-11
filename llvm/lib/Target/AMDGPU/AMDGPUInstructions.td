@@ -908,6 +908,20 @@ def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
    (fmaximumnum_oneuse node:$src0, node:$src1)]
 >;
 
+// Unlike FMA, div.fmas always preserves input denormals.
+def unscaled_div_fmas : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2, node:$scale),
+  (AMDGPUdiv_fmas node:$src0, node:$src1, node:$src2, node:$scale), [{
+    return isNullConstant(N->getOperand(N->getNumOperands() - 1)) &&
+           CurDAG->getMachineFunction()
+               .getDenormalMode(N->getValueType(0).getFltSemantics()).Input ==
+           DenormalMode::IEEE;
+  }]> {
+  let GISelPredicateCode = [{
+    return AMDGPU::isUnscaledIEEEDivFmas(MI, MRI);
+  }];
+}
+
 def any_fmad : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(fmad node:$src0, node:$src1, node:$src2),
    (AMDGPUfmad_ftz node:$src0, node:$src1, node:$src2)]

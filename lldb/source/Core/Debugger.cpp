@@ -979,7 +979,7 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   lldb_private::telemetry::ScopedDispatcher<
       lldb_private::telemetry::DebuggerInfo>
       helper([](lldb_private::telemetry::DebuggerInfo *entry) {
-        entry->lldb_version = lldb_private::GetVersion();
+        entry->lldb_version = Language::GetVersionWithLanguageInfo();
       });
   DebuggerSP debugger_sp(new Debugger(log_callback, baton));
   helper.SetDebugger(debugger_sp.get());
@@ -1717,6 +1717,8 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
 void Debugger::AssertCallback(llvm::StringRef message,
                               llvm::StringRef backtrace,
                               llvm::StringRef prompt) {
+  // Don't use Language::GetVersionWithLanguageInfo() here: an assertion can
+  // fail while Language::FindPlugin() holds its lock to create a plugin.
   Debugger::ReportError(llvm::formatv("{0}\n{1}{2}\n{3}", message, backtrace,
                                       GetVersion(), prompt)
                             .str());

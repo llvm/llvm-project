@@ -5,6 +5,7 @@
 # CASE1: error: Section size must be greater than or equal to the content size
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -64,6 +65,7 @@ LoadCommands:
 # CASE2-NEXT:  )
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -124,6 +126,7 @@ LoadCommands:
 # CASE3-NEXT:  )
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -166,6 +169,7 @@ LoadCommands:
 # CASE4: error: failed to parse YAML
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

@@ -83,7 +83,6 @@ add_libc_test(
     libc.hdr.types.struct_in_addr
     libc.hdr.types.struct_in6_addr
     libc.src.arpa.inet.inet_pton
-    libc.src.__support.libc_errno
     libc.hdr.sys_socket_macros
     libc.src.string.memory_utils.inline_memcmp
     libc.test.UnitTest.ErrnoCheckingTest

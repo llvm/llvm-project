@@ -1,9 +1,12 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck \
 // RUN: -check-prefix=CHECK-1 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-1 %s %}
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck \
 // RUN: -check-prefix=CHECK-2 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-2 %s %}
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck \
 // RUN: -check-prefix=CHECK-3 %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple=x86_64-unknown-linux -emit-llvm %s -o - | FileCheck -check-prefix=CHECK-3 %s %}
 
 // CHECK-1: [[FOO:%.+]] = type { float }
 struct foo {

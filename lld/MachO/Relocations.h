@@ -41,7 +41,8 @@ enum class RelocAttrBits {
   LOAD = 1 << 13,      // Relaxable indirect load
   POINTER = 1 << 14,   // Non-relaxable indirect load (pointer is taken)
   UNSIGNED = 1 << 15,  // *_UNSIGNED relocs
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 16) - 1),
+  AUTH = 1 << 16,      // *_AUTHENTICATED_POINTER relocs
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 17) - 1),
 };
 // Note: SUBTRACTOR always pairs with UNSIGNED (a delta between two symbols).
 
@@ -51,11 +52,40 @@ struct RelocAttrs {
   bool hasAttr(RelocAttrBits b) const { return (bits & b) == b; }
 };
 
+// Matches ptrauth_key in <ptrauth.h>.
+enum PtrAuthKey : uint8_t {
+  PtrAuthKeyIA,
+  PtrAuthKeyIB,
+  PtrAuthKeyDA,
+  PtrAuthKeyDB
+};
+
+// The signing schema of an authenticated pointer.
+struct AuthInfo {
+  uint16_t diversity;
+  PtrAuthKey key;
+  bool addrDiv;
+
+  bool operator==(const AuthInfo &other) const {
+    return diversity == other.diversity && key == other.key &&
+           addrDiv == other.addrDiv;
+  }
+  bool operator!=(const AuthInfo &other) const { return !(*this == other); }
+};
+
+struct AuthReloc {
+  int32_t addend;
+  AuthInfo info;
+};
+static_assert(sizeof(AuthReloc) == sizeof(int64_t),
+              "AuthReloc must match int64_t size");
+
 class Relocation {
 public:
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;
   bool pcrel = false;
   uint8_t length = 0;
+  bool hasAuth = false;
   // The offset from the start of the subsection that this relocation belongs
   // to.
   uint32_t offset = 0;
@@ -69,8 +99,23 @@ public:
       : type(type), pcrel(pcrel), length(length), offset(offset),
         referent(referent), addend(addend) {}
 
-  int64_t getAddend() const { return addend; }
-  void setAddend(int64_t value) { addend = value; }
+  const AuthInfo *getAuthInfo() const {
+    return hasAuth ? &authData.info : nullptr;
+  }
+  void setAuthInfo(AuthInfo info) {
+    assert(!hasAuth);
+    authData = {static_cast<int32_t>(addend), info};
+    hasAuth = true;
+  }
+  int64_t getAddend() const {
+    return hasAuth ? static_cast<int64_t>(authData.addend) : addend;
+  }
+  void setAddend(int64_t a) {
+    if (hasAuth)
+      authData.addend = static_cast<int32_t>(a);
+    else
+      addend = a;
+  }
 
   InputSection *getReferentInputSection() const;
 
@@ -81,7 +126,10 @@ public:
 private:
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
-  int64_t addend = 0;
+  union {
+    int64_t addend = 0;
+    AuthReloc authData; // Valid when hasAuth.
+  };
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,

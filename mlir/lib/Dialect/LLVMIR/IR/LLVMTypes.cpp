@@ -181,8 +181,7 @@ LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
 llvm::TypeSize
 LLVMArrayType::getTypeSizeInBits(const DataLayout &dataLayout,
                                  DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(kBitsInByte *
-                                  getTypeSize(dataLayout, params));
+  return getTypeSize(dataLayout, params) * kBitsInByte;
 }
 
 llvm::TypeSize LLVMArrayType::getTypeSize(const DataLayout &dataLayout,

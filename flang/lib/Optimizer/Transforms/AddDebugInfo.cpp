@@ -1262,10 +1262,10 @@ void AddDebugInfoPass::runOnOperation() {
   // points at, is never written. Asking for a name table would have that table
   // reference a label that does not exist. Clang leaves the name table off for
   // the same reason.
-  mlir::LLVM::DINameTableKind nameTableKind =
+  mlir::LLVM::DINameTableKind cuNameTableKind =
       debugLevel == mlir::LLVM::DIEmissionKind::DebugDirectivesOnly
           ? mlir::LLVM::DINameTableKind::None
-          : mlir::LLVM::DINameTableKind::Default;
+          : nameTableKind;
   // Each submodule compiled here imports the one above it, and those entries
   // hang off the compile unit. They are scoped at modules that name the unit
   // they are part of, so build them against a placeholder of it first, and give
@@ -1280,7 +1280,7 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel, debugInfoForProfiling, nameTableKind,
+      isOptimized, debugLevel, debugInfoForProfiling, cuNameTableKind,
       splitDwarfFile.empty() ? mlir::StringAttr()
                              : mlir::StringAttr::get(context, splitDwarfFile),
       cuImports);

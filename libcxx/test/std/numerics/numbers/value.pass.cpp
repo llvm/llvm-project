@@ -14,6 +14,9 @@
 #include "test_macros.h"
 
 constexpr bool tests() {
+  // Note: Use arbitrary precision with hundreds of digits when generating these
+  // ground-truth values, and round only once to avoid double-rounding issues.
+
   assert(std::numbers::e == 0x1.5bf0a8b145769p+1);
   assert(std::numbers::e_v<double> == 0x1.5bf0a8b145769p+1);
   assert(std::numbers::e_v<float> == 0x1.5bf0a8p+1f);
@@ -24,11 +27,11 @@ constexpr bool tests() {
 
   assert(std::numbers::log10e == 0x1.bcb7b1526e50ep-2);
   assert(std::numbers::log10e_v<double> == 0x1.bcb7b1526e50ep-2);
-  assert(std::numbers::log10e_v<float> == 0x1.bcb7b15p-2f);
+  assert(std::numbers::log10e_v<float> == 0x1.bcb7b2p-2f);
 
   assert(std::numbers::pi == 0x1.921fb54442d18p+1);
   assert(std::numbers::pi_v<double> == 0x1.921fb54442d18p+1);
-  assert(std::numbers::pi_v<float> == 0x1.921fb54p+1f);
+  assert(std::numbers::pi_v<float> == 0x1.921fb6p+1f);
 
   assert(std::numbers::inv_pi == 0x1.45f306dc9c883p-2);
   assert(std::numbers::inv_pi_v<double> == 0x1.45f306dc9c883p-2);
@@ -40,11 +43,11 @@ constexpr bool tests() {
 
   assert(std::numbers::ln2 == 0x1.62e42fefa39efp-1);
   assert(std::numbers::ln2_v<double> == 0x1.62e42fefa39efp-1);
-  assert(std::numbers::ln2_v<float> == 0x1.62e42fp-1f);
+  assert(std::numbers::ln2_v<float> == 0x1.62e430p-1f);
 
   assert(std::numbers::ln10 == 0x1.26bb1bbb55516p+1);
   assert(std::numbers::ln10_v<double> == 0x1.26bb1bbb55516p+1);
-  assert(std::numbers::ln10_v<float> == 0x1.26bb1bp+1f);
+  assert(std::numbers::ln10_v<float> == 0x1.26bb1cp+1f);
 
   assert(std::numbers::sqrt2 == 0x1.6a09e667f3bcdp+0);
   assert(std::numbers::sqrt2_v<double> == 0x1.6a09e667f3bcdp+0);
@@ -60,11 +63,11 @@ constexpr bool tests() {
 
   assert(std::numbers::egamma == 0x1.2788cfc6fb619p-1);
   assert(std::numbers::egamma_v<double> == 0x1.2788cfc6fb619p-1);
-  assert(std::numbers::egamma_v<float> == 0x1.2788cfp-1f);
+  assert(std::numbers::egamma_v<float> == 0x1.2788d0p-1f);
 
   assert(std::numbers::phi == 0x1.9e3779b97f4a8p+0);
   assert(std::numbers::phi_v<double> == 0x1.9e3779b97f4a8p+0);
-  assert(std::numbers::phi_v<float> == 0x1.9e3779ap+0f);
+  assert(std::numbers::phi_v<float> == 0x1.9e377ap+0f);
 
 #if defined(TEST_LONG_DOUBLE_IS_DOUBLE)
   assert(std::numbers::e_v<long double> == 0x1.5bf0a8b145769p+1L);

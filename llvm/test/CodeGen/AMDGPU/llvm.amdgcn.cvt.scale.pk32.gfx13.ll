@@ -909,14 +909,14 @@ define amdgpu_ps void @test_cvt_scale_pk32_f32_bf6_sl_inreg_src(ptr addrspace(1)
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v10
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v11
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s6, v12
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s7, v13
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s8, v10
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s9, v11
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s10, v12
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s11, v13
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s12, v14
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s13, v15
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s14, v16
@@ -939,10 +939,10 @@ define amdgpu_ps void @test_cvt_scale_pk32_f32_bf6_sl_inreg_src(ptr addrspace(1)
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s29, v31
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s30, v32
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s31, v33
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v9, s11
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s11 :: v_dual_mov_b32 v12, s10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s9 :: v_dual_mov_b32 v10, s8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s7 :: v_dual_mov_b32 v8, s6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s5 :: v_dual_mov_b32 v6, s4
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s15 :: v_dual_mov_b32 v16, s14
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s13 :: v_dual_mov_b32 v14, s12
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s19 :: v_dual_mov_b32 v20, s18
@@ -1174,14 +1174,14 @@ define amdgpu_ps void @test_cvt_scale_pk32_f32_fp6_sl_inreg_src(ptr addrspace(1)
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s3, v5
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v10
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v11
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s6, v12
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s7, v13
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s8, v6
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s9, v7
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
-; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s8, v10
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s9, v11
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s10, v12
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s11, v13
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s6, v8
+; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s7, v9
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s12, v14
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s13, v15
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s14, v16
@@ -1204,10 +1204,10 @@ define amdgpu_ps void @test_cvt_scale_pk32_f32_fp6_sl_inreg_src(ptr addrspace(1)
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s29, v31
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s30, v32
 ; GFX13-GISEL-NEXT:    v_readfirstlane_b32 s31, v33
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s7 :: v_dual_mov_b32 v12, s6
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s5 :: v_dual_mov_b32 v10, s4
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, s8 :: v_dual_mov_b32 v7, s9
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v8, s10 :: v_dual_mov_b32 v9, s11
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, s11 :: v_dual_mov_b32 v12, s10
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, s9 :: v_dual_mov_b32 v10, s8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v9, s7 :: v_dual_mov_b32 v8, s6
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v7, s5 :: v_dual_mov_b32 v6, s4
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v17, s15 :: v_dual_mov_b32 v16, s14
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v15, s13 :: v_dual_mov_b32 v14, s12
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v21, s19 :: v_dual_mov_b32 v20, s18
