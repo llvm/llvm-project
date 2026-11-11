@@ -2744,17 +2744,18 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
 }
 
 llvm::LogicalResult tosa::ReshapeOp::verify() {
+  TensorType outputType = getOutput().getType();
   if (verifySameElementTypes(*this, /* inType = */ getInput1().getType(),
-                             /* outType = */ getOutput().getType())
+                             outputType)
           .failed()) {
     return failure();
   }
 
   // The rank of the shape operand is encoded in its type (`!tosa.shape<N>`),
   // so it can be compared without inspecting the constant values.
-  if (auto outputType = dyn_cast<RankedTensorType>(getType())) {
+  if (auto rankedOutputType = dyn_cast<RankedTensorType>(outputType)) {
     if (cast<tosa::shapeType>(getShape().getType()).getRank() !=
-        outputType.getRank())
+        rankedOutputType.getRank())
       return emitOpError() << "new shape does not match result rank";
   }
 
