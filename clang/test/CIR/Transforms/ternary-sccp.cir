@@ -1,0 +1,34 @@
+// RUN: cir-opt %s --sccp | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // A constant condition enters only one region, so the other arm's value does
+  // not reach the result.
+  cir.func @const_cond(%arg0: !s32i) -> !s32i {
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    %1 = cir.ternary (%0, true {
+      %2 = cir.const #cir.int<1> : !s32i
+      cir.yield %2 : !s32i
+    }, false {
+      cir.yield %arg0 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @const_cond
+  // CHECK:        %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:        cir.return %[[ONE]] : !s32i
+
+  cir.func @unknown_cond(%arg0: !cir.bool, %arg1: !s32i) -> !s32i {
+    %0 = cir.ternary (%arg0, true {
+      %1 = cir.const #cir.int<1> : !s32i
+      cir.yield %1 : !s32i
+    }, false {
+      cir.yield %arg1 : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return %0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @unknown_cond
+  // CHECK:        %[[RESULT:.*]] = cir.ternary
+  // CHECK:        cir.return %[[RESULT]] : !s32i
+}

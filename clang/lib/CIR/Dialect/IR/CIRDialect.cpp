@@ -1340,7 +1340,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
     return result;
 
   // Handle simple constant casts.
-  if (auto srcConst = getSrc().getDefiningOp<cir::ConstantOp>()) {
+  if (mlir::Attribute src = adaptor.getSrc()) {
     switch (getKind()) {
     case cir::CastKind::integral: {
       mlir::Type srcTy = getSrc().getType();
@@ -1352,7 +1352,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
       auto srcIntTy = mlir::cast<cir::IntType>(srcTy);
       auto dstIntTy = mlir::cast<cir::IntType>(getType());
-      auto constIntAttr = srcConst.getValueAttr<cir::IntAttr>();
+      auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(src);
       if (!constIntAttr)
         return {};
 
@@ -1362,6 +1362,14 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
                          : srcValue.zextOrTrunc(dstIntTy.getWidth());
       return cir::IntAttr::get(dstIntTy, newVal);
     }
+    case cir::CastKind::int_to_bool:
+      if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(src))
+        return cir::BoolAttr::get(getContext(), !intAttr.getValue().isZero());
+      break;
+    case cir::CastKind::bool_to_int:
+      if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(src))
+        return cir::IntAttr::get(getType(), boolAttr.getValue() ? 1 : 0);
+      break;
     default:
       break;
     }
@@ -3539,6 +3547,17 @@ void cir::TernaryOp::build(
          "expected zero or one result type");
   if (yield && yield.getNumOperands() == 1)
     result.addTypes(TypeRange{yield.getOperandTypes().front()});
+}
+
+void cir::TernaryOp::getEntrySuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  // A constant condition selects one region.
+  FoldAdaptor adaptor(operands, *this);
+  auto cond = mlir::dyn_cast_if_present<cir::BoolAttr>(adaptor.getCond());
+  if (!cond || cond.getValue())
+    regions.emplace_back(&getTrueRegion());
+  if (!cond || !cond.getValue())
+    regions.emplace_back(&getFalseRegion());
 }
 
 //===----------------------------------------------------------------------===//
