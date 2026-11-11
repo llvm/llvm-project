@@ -57,3 +57,45 @@ func.func @main_graph(%arg0: index) {
 ^bb3:  // pred: ^bb1
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// cf.assert
+//===----------------------------------------------------------------------===//
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel, AbortKHR], [SPV_KHR_abort]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @assert
+// CHECK-SAME:    (%[[COND:.+]]: i1)
+// CHECK:         spirv.BranchConditional %[[COND]], ^[[CONT:.+]], ^[[ABORT:[^ ]+]]
+// CHECK:       ^[[ABORT]]:
+// CHECK-NEXT:    %[[MSG:.+]] = spirv.Constant -1 : i32
+// CHECK-NEXT:    spirv.KHR.Abort %[[MSG]] : i32
+// CHECK:       ^[[CONT]]:
+// CHECK-NEXT:    return
+func.func @assert(%cond: i1) {
+  cf.assert %cond, "message"
+  return
+}
+
+}
+
+// -----
+
+// Without SPV_KHR_abort, cf.assert is left unconverted.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @assert_no_abort
+// CHECK:         cf.assert
+func.func @assert_no_abort(%cond: i1) {
+  cf.assert %cond, "message"
+  return
+}
+
+}
