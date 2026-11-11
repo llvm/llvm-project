@@ -1,0 +1,30 @@
+# RUN: not --crash llc -global-isel -mtriple=amdgpu9.00 -stop-after=ir-translator -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: amdgpu-registered-target
+
+# CHECK: LLVM ERROR: Found 4 machine code errors.
+
+---
+name: invalid_fp_ext_trunc
+body: |
+  bb.0:
+    %f16:_(f16) = G_IMPLICIT_DEF
+    %f32:_(f32) = G_IMPLICIT_DEF
+    %i16:_(i16) = G_IMPLICIT_DEF
+    %i32:_(i32) = G_IMPLICIT_DEF
+    # CHECK: Bad machine code: g_trunc and g_anyext doesn't not accept scalar float type
+    # CHECK: - instruction: %ext_from_float:_(i32) = G_ANYEXT %f16:_(f16)
+    %ext_from_float:_(i32) = G_ANYEXT %f16
+
+    # CHECK: Bad machine code: g_trunc and g_anyext doesn't not accept scalar float type
+    # CHECK: - instruction: %ext_to_float:_(f32) = G_ANYEXT %i16:_(i16)
+    %ext_to_float:_(f32) = G_ANYEXT %i16
+
+    # CHECK: Bad machine code: g_trunc and g_anyext doesn't not accept scalar float type
+    # CHECK: - instruction: %trunc_from_float:_(i16) = G_TRUNC %f32:_(f32)
+    %trunc_from_float:_(i16) = G_TRUNC %f32
+
+    # CHECK: Bad machine code: g_trunc and g_anyext doesn't not accept scalar float type
+    # CHECK: - instruction: %trunc_to_float:_(f16) = G_TRUNC %i32:_(i32)
+    %trunc_to_float:_(f16) = G_TRUNC %i32
+    S_ENDPGM 0
+...
