@@ -484,17 +484,19 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     const std::vector<CallGraphNode *> &SCC = *I;
     assert(!SCC.empty() && "SCC with no functions?");
 
-    Function *FirstF = SCC[0]->getFunction();
-
-    if (!FirstF || !FirstF->isDefinitionExact()) {
-      // Calls externally or not exact - can't say anything useful. Remove any
-      // existing function records (may have been created when scanning
-      // globals).
+    if (any_of(SCC, [](CallGraphNode *Node) {
+          Function *F = Node->getFunction();
+          return !F || !F->isDefinitionExact();
+        })) {
+      // Some function in the SCC calls externally or is not exact - can't say
+      // anything useful. Remove any existing function records (may have been
+      // created when scanning globals).
       for (auto *Node : SCC)
         FunctionInfos.erase(Node->getFunction());
       continue;
     }
 
+    Function *FirstF = SCC[0]->getFunction();
     FunctionInfo &FI = FunctionInfos[FirstF];
     Handles.emplace_front(*this, FirstF);
     Handles.front().I = Handles.begin();
