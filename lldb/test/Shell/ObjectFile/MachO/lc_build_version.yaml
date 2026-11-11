@@ -4,6 +4,7 @@
 # CHECK: x86_64-apple-macosx10.14.0
 # CHECK: x86_64-apple-ios12.0.0-macabi
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007

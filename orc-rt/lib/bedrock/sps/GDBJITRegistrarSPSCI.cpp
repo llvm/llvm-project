@@ -16,7 +16,7 @@
 
 using namespace orc_rt;
 
-namespace orc_rt::sps_ci {
+namespace orc_rt::sps::ci {
 
 ORC_RT_SPS_ALLOC_ACTION_IMPL(orc_rt_ci_aa_sps_GDBJITRegistrar_register,
                              (SPSExecutorAddrRange), &gdb_jit::registerObject)
@@ -33,4 +33,4 @@ Error addGDBJITRegistrar(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_GDBJITRegistrar_sps_interface);
 }
 
-} // namespace orc_rt::sps_ci
+} // namespace orc_rt::sps::ci

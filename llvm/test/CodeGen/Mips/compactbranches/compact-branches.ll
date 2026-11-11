@@ -187,7 +187,8 @@ define i32 @l9(ptr %i) #0 {
 entry:
   %i.addr = alloca ptr, align 4
   store ptr %i, ptr %i.addr, align 4
-; STATIC32: balc
+; STATIC32: jal
+; STATIC32: nop
 ; PIC: jalrc $25
   %call = call i32 @k()
 ; PIC: jalrc $25

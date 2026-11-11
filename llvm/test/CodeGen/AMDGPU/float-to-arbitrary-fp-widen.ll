@@ -62,7 +62,6 @@ define <5 x i8> @to_fp8_v5f32(<5 x float> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f32 v1, v1, v1
@@ -130,7 +129,6 @@ define <6 x i8> @to_fp8_v6f32(<6 x float> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f32 v1, v1, v1
@@ -203,7 +201,6 @@ define <7 x i8> @to_fp8_v7f32(<7 x float> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f32 v0, v0, v0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f32 v1, v1, v1
@@ -269,7 +266,6 @@ define <5 x i8> @to_bf8_v5f32(<5 x float> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_bf8_f32 v0, v0, v0
 ; GFX1310-NEXT:    v_cvt_pk_bf8_f32 v1, v1, v1
@@ -1036,7 +1032,6 @@ define <5 x i8> @to_fp8_v5f16(<5 x half> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f16_e32 v5, v2
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f16_e32 v0, v0
@@ -1818,7 +1813,6 @@ define <6 x i8> @to_fp8_v6f16(<6 x half> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f16_e32 v0, v0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f16_e32 v6, v2
@@ -2837,7 +2831,6 @@ define <7 x i8> @to_fp8_v7f16(<7 x half> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f16_e32 v7, v2
 ; GFX1310-NEXT:    v_cvt_pk_fp8_f16_e32 v0, v0
@@ -3740,7 +3733,6 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1310-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1310-NEXT:    s_wait_expcnt 0x0
 ; GFX1310-NEXT:    s_wait_samplecnt 0x0
-; GFX1310-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1310-NEXT:    s_wait_kmcnt 0x0
 ; GFX1310-NEXT:    v_cvt_pk_bf8_f16_e32 v5, v2
 ; GFX1310-NEXT:    v_cvt_pk_bf8_f16_e32 v0, v0

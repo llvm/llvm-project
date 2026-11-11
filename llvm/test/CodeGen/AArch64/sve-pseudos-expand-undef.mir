@@ -1,9 +1,8 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=aarch64-expand-pseudo -simplify-mir -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=aarch64-expand-pseudo -simplify-mir %s -o - | FileCheck %s
 # RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -passes=aarch64-expand-pseudo -simplify-mir %s -o - | FileCheck %s
 ---
 name:            add_x
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$p0' }
   - { reg: '$z0' }

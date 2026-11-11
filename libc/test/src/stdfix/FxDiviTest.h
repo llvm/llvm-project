@@ -1,16 +1,25 @@
-//===-- Utility class to test fxdivi functions ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility class to test fxdivi functions.
+///
+//===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/type_traits/conditional.h"
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_FXDIVITEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_FXDIVITEST_H
+
 #include "test/UnitTest/Test.h"
 
 #include "hdr/signal_macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits/conditional.h"
 #include "src/__support/fixed_point/fx_rep.h"
 
 namespace cpp = LIBC_NAMESPACE::cpp;
@@ -250,3 +259,5 @@ public:
   }                                                                            \
   static_assert(true, "Require semicolon.")
 #endif // LIBC_ADD_NULL_CHECKS
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_FXDIVITEST_H

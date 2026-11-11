@@ -42,7 +42,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_MOV_B32_e32 0, implicit $exec
@@ -69,7 +68,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_PK_ADD_U16 8, $vgpr10, 8, $vgpr11, 0, 0, 0, 0, 0, implicit $exec
@@ -96,7 +94,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_ADD_F16_fake16_e64 0, $vgpr10, 0, $vgpr11, 0, 0, implicit $mode, implicit $exec
@@ -123,7 +120,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_FMAC_F32_e64 0, $vgpr10, 0, $vgpr11, 0, $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -150,7 +146,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr10, implicit $exec
@@ -177,7 +172,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_RCP_F32_e32 $vgpr10, implicit $mode, implicit $exec
@@ -205,7 +199,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4 = V_MUL_LO_U32_e64 $vgpr10, $vgpr11, implicit $exec
@@ -234,7 +227,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: early-clobber $vgpr4_vgpr5 = V_MQSAD_PK_U16_U8_e64 $vgpr10_vgpr11, $vgpr12, $vgpr14_vgpr15, 0, implicit $exec
@@ -262,7 +254,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $vgpr4_vgpr5 = V_RCP_F64_e32 $vgpr10_vgpr11, implicit $mode, implicit $exec
@@ -291,7 +282,6 @@ body: |
     ; GFX1310: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX1310-NEXT: S_WAIT_EXPCNT 0
     ; GFX1310-NEXT: S_WAIT_SAMPLECNT 0
-    ; GFX1310-NEXT: S_WAIT_BVHCNT 0
     ; GFX1310-NEXT: S_WAIT_KMCNT 0
     ; GFX1310-NEXT: $vgpr0_vgpr1 = V_PERM_PK16_B4_U4_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, implicit $exec
     ; GFX1310-NEXT: $sgpr4 = V_S_EXP_F32_e64 0, $sgpr10, 0, 0, implicit $mode, implicit $exec

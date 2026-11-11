@@ -58,15 +58,6 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
                      cl::desc("Fill a percentage of the latency between "
                               "neighboring MFMA with s_nops."));
 
-// This is intended for debugging purposes only.
-static cl::opt<unsigned>
-    NopPadding("amdgpu-snop-padding", cl::init(0), cl::Hidden,
-               cl::desc("Insert a s_nop x before every instruction"));
-
-static cl::opt<bool> EnableWMMAVnopHoisting(
-    "amdgpu-wmma-vnop-hoisting", cl::init(true), cl::Hidden,
-    cl::desc("Hoist WMMA hazard V_NOPs from loops to preheaders"));
-
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
 //===----------------------------------------------------------------------===//
@@ -221,7 +212,7 @@ bool GCNHazardRecognizer::hasCoExecWindowModel() const {
     return true;
 
   if (ST.hasGFX950Insts() &&
-      AMDGPU::getSchedStrategy(MF.getFunction()) == "coexec")
+      AMDGPU::getSchedStrategy(ST.getCLOpts(), MF.getFunction()) == "coexec")
     return true;
 
   return false;
@@ -706,7 +697,7 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
   CurrCycleInstr = nullptr;
-  return std::max(W, NopPadding.getValue());
+  return std::max(W, ST.getCLOpts().snop_padding);
 }
 
 unsigned GCNHazardRecognizer::getHazardWaitStates(MachineInstr *MI) const {
@@ -1967,7 +1958,6 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixWMMAHazards(MI); // fall-through if co-execution is enabled.
   fixWMMACoexecutionHazards(MI);
   fixShift64HighRegBug(MI);
-  fixPkF32InvalidOpSel(MI);
   fixVALUMaskWriteHazard(MI);
   fixRequiredExportPriority(MI);
   if (ST.hasVPermPk16Hazard())
@@ -2957,7 +2947,8 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   if (WaitStatesNeeded <= 0)
     return false;
 
-  if (EnableWMMAVnopHoisting && tryHoistWMMAVnopsFromLoop(MI, WaitStatesNeeded))
+  if (ST.getCLOpts().wmma_vnop_hoisting &&
+      tryHoistWMMAVnopsFromLoop(MI, WaitStatesNeeded))
     return true;
 
   emitVNops(*MI->getParent(), MI->getIterator(), WaitStatesNeeded);
@@ -3079,54 +3070,6 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   }
 
   return true;
-}
-
-// Handle GFX950 v_pk_{add,mul,fma}_f32 invalid op_sels
-// 1. Fix: opsel[1:0]==2’b10 : Packed ADD_F32/MUL_F32
-// 2. Fail: opsel[2:1]==2'b01/2'b10/2'b11 : Packed FMA_F32
-bool GCNHazardRecognizer::fixPkF32InvalidOpSel(MachineInstr *MI) {
-  if (!ST.hasPkF32InvalidOpSel())
-    return false;
-
-  switch (MI->getOpcode()) {
-  default:
-    return false;
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_FMA_F32:
-    break;
-  }
-
-  const MachineOperand *Src0Mods =
-      TII.getNamedOperand(*MI, AMDGPU::OpName::src0_modifiers);
-  const MachineOperand *Src1Mods =
-      TII.getNamedOperand(*MI, AMDGPU::OpName::src1_modifiers);
-  if (!Src0Mods || !Src1Mods)
-    return false;
-
-  if (MI->getOpcode() != AMDGPU::V_PK_FMA_F32) {
-    if (!(Src0Mods->getImm() & SISrcMods::OP_SEL_0) &&
-        (Src1Mods->getImm() & SISrcMods::OP_SEL_0)) {
-      if (!TII.commuteInstruction(*MI)) {
-        reportFatalInternalError(
-            "cannot swap the GFX950 v_pk_add/mul_f32 src0 and src1: " +
-            Twine(TII.getName(MI->getOpcode())));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  // Safety net: v_pk_fma_f32 invalid opsels are expected to already
-  // be prevented earlier, so just fail loudly if it is ever seen here
-  // instead of silently miscompiling, as a safeguard against future changes.
-  if (!TII.isLegalPkFMAF32OpSel(*MI)) {
-    reportFatalInternalError("GFX950 v_pk_fma_f32 has an invalid op_sel that "
-                             "should have been legalized earlier in the "
-                             "pipeline");
-  }
-
-  return false;
 }
 
 int GCNHazardRecognizer::checkNSAtoVMEMHazard(MachineInstr *MI) const {

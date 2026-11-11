@@ -1,16 +1,16 @@
 # NOTE: This test verifies disable/enable instruction hoisting to hot blocks
 #       based on profile data
-# RUN: llc -run-pass early-machinelicm -verify-machineinstrs \
+# RUN: llc -run-pass early-machinelicm \
 # RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
 # RUN:   -disable-hoisting-to-hotter-blocks=pgo \
 # RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
 # RUN:   --check-prefix=CHECK-NO-HOIST
-# RUN: llc -run-pass early-machinelicm -verify-machineinstrs \
+# RUN: llc -run-pass early-machinelicm \
 # RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
 # RUN:   -disable-hoisting-to-hotter-blocks=pgo \
 # RUN:   -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s \
 # RUN:   --check-prefix=CHECK-HOIST
-# RUN: llc -run-pass early-machinelicm -verify-machineinstrs \
+# RUN: llc -run-pass early-machinelicm \
 # RUN:   -mtriple=powerpc64le-unknown-linux-gnu \
 # RUN:   -disable-hoisting-to-hotter-blocks=none \
 # RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \

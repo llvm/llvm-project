@@ -72,21 +72,13 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
       std::make_unique<std::byte[]>(Block::allocSize(D, Block::Local));
   auto *B = new (Memory.get()) Block(EvalID, D, Block::Local);
   B->invokeCtorNoMemset();
-  InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());
-  ID->Desc = D;
-  ID->IsActive = true;
-  ID->Offset = sizeof(InlineDescriptor);
-  ID->IsBase = false;
-  ID->IsFieldMutable = false;
-  ID->IsConst = false;
-  ID->IsInitialized = false;
-  ID->IsVolatile = false;
+  auto &ID = B->getBlockDesc<LocalInlineDescriptor>();
 
   if (D->isCompositeArray())
-    ID->LifeState = Lifetime::Started;
+    ID.setLifetime(Lifetime::Started);
   else
-    ID->LifeState =
-        AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
+    ID.setLifetime(AllocForm == Form::Operator ? Lifetime::Ended
+                                               : Lifetime::Started);
 
   if (auto It = AllocationSites.find(D->asExpr());
       It != AllocationSites.end()) {
@@ -133,7 +125,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   // over to a DeadBlock and simply keep the block in a separate DeadAllocations
   // list.
   if (B->hasPointers()) {
-    B->AccessFlags |= Block::DeadFlag;
+    B->markDead();
     DeadAllocations.push_back(std::move(*AllocIt));
     Site.Allocations.erase(AllocIt);
 

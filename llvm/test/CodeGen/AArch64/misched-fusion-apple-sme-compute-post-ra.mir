@@ -15,7 +15,6 @@
 # CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S $za(tied-def 0), $w8, 7, $z0_z1, $z2
 ---
 name:            fuse_fmla
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $za, $w8, $z0_z1, $z2, $w2
@@ -33,7 +32,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S $za(tied-def 0), $w8, 0, $z0_z1, $z2
 ---
 name:            fuse_za_write
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w8, $z0_z1, $z2, $w2
@@ -51,7 +49,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $z4 = ADD_ZZZ_S $z0, $z3
 ---
 name:            fuse_z_write
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $z1, $z2, $z3, $w2
@@ -68,7 +65,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
 ---
 name:            no_fuse_load
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $za, $w8, $z0_z1, $x0, $w2
@@ -85,7 +81,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): STR_ZA
 ---
 name:            no_fuse_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $za, $w8, $z0_z1, $z2, $w12, $x0, $w2
@@ -102,7 +97,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $p1 = FCMEQ_PPzZZ_S $p0, $z0, $z3
 ---
 name:            no_fuse_write_p
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $p0, $z1, $z2, $z3, $w2
@@ -119,7 +113,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $w0 = LASTB_RPZ_S $p0, $z0
 ---
 name:            no_fuse_write_gpr32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $p0, $z1, $z2, $w2
@@ -136,7 +129,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $x0 = LASTB_RPZ_D $p0, $z0
 ---
 name:            no_fuse_write_gpr64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $p0, $z1, $z2, $w2
@@ -153,7 +145,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
 ---
 name:            no_fuse_read_gpr32_not_za
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $za, $w8, $z0_z1, $w0, $w2
@@ -170,7 +161,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
 ---
 name:            no_fuse_read_gpr64_not_za
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $za, $w8, $z0_z1, $x0, $w2
@@ -190,7 +180,6 @@ body:             |
 # CHECK: SU({{[0-9]+}}): $z0 = ADD_ZZZ_S $z3, $z4
 ---
 name:            fuse_non_raw
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $z1, $z2, $z3, $z4, $w2

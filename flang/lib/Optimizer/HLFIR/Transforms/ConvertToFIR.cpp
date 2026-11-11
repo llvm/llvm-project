@@ -300,8 +300,11 @@ public:
         hlfir::getIndexExtents(loc, builder, shape);
     llvm::SmallVector<mlir::Value> typeParams;
     hlfir::genLengthParameters(loc, builder, inputEntity, typeParams);
-    const bool useStack =
-        fir::shouldUseStackForCopyin(loc, sequenceType, policy, sizeContext);
+    // The buffer stands in for the variable: honor the alignment the copy-in
+    // was given, if any.
+    std::optional<std::int64_t> alignment = copyInOp.getAlignment();
+    const bool useStack = fir::shouldUseStackForCopyin(
+        loc, sequenceType, policy, sizeContext, alignment);
 
     mlir::Value addr =
         builder
@@ -313,10 +316,12 @@ public:
               llvm::StringRef tmpName{".tmp.copy_in"};
               mlir::Value allocation =
                   useStack
-                      ? builder.createTemporary(loc, sequenceType, tmpName,
-                                                extents, typeParams)
+                      ? builder.createTemporary(
+                            loc, sequenceType, tmpName, extents, typeParams,
+                            /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment)
                       : builder.createHeapTemporary(loc, sequenceType, tmpName,
-                                                    extents, typeParams);
+                                                    extents, typeParams,
+                                                    /*attrs=*/{}, alignment);
               mlir::Value declared = fir::FirOpBuilder::genTempDeclareOp(
                   builder, loc, allocation, tmpName, shape, typeParams,
                   fir::FortranVariableFlagsAttr{});

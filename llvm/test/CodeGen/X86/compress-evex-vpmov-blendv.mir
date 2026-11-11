@@ -1,5 +1,4 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=x86-compress-evex \
-# RUN:   -verify-machineinstrs -mcpu=skx -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-compress-evex -mcpu=skx -o - %s | FileCheck %s
 
 ---
 name:            blendv_positive

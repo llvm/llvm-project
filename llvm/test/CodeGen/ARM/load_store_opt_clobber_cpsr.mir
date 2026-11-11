@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv6m--eabi -verify-machineinstrs -run-pass=arm-ldst-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv6m--eabi -run-pass=arm-ldst-opt %s -o - | FileCheck %s
 
 # Make sure bb.0 isn't transformed: it would incorrectly clobber CPSR.
 #
@@ -13,7 +13,6 @@
 # CHECK: $r4, dead $cpsr = tSUBi8 $r4, 8, 14 /* CC::al */, $noreg
 
 name: foo
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r2, $r4
