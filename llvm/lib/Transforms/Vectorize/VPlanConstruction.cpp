@@ -2201,21 +2201,13 @@ static bool handleFirstArgMinOrMax(
       "backedge value must be a select");
   // Ensure intermediate trunc is supported when `narrowInductionTruncates`
   // deems merging trunc with induction not profitable.
-  VPValue *Trunc = nullptr;
-  std::optional<unsigned> WideIVIdx;
-  for (auto [Idx, Op] : drop_begin(enumerate(FindIVSelectR->operands())))
-    if (match(Op, m_TruncOrSelf(m_Specific(WideIV)))) {
-      if (match(Op, m_Trunc(m_VPValue())))
-        Trunc = Op;
-      WideIVIdx = Idx;
-      break;
-    }
-  if (!WideIVIdx)
+  auto *It = find_if(drop_begin(FindIVSelectR->operands()),
+                     match_fn(m_TruncOrSelf(m_Specific(WideIV))));
+  if (It == FindIVSelectR->op_end())
     return false;
-
+  Type *WideIVScalarTy = (*It)->getScalarType();
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
-  Type *WideIVScalarTy =
-      Trunc ? Trunc->getScalarType() : WideIV->getScalarType();
+  bool WideIVAtFalse = std::distance(FindIVSelectR->op_begin(), It) == 2;
 
   // TODO: Support cases where the WideIV type is larger than the CanonicalIV
   // type. This is rare in practice as `IndVarSimplify` almost always makes the
@@ -2253,17 +2245,11 @@ static bool handleFirstArgMinOrMax(
           Plan.getPoison(Ty), Plan.getPoison(Ty));
       CanonicalFindIVPhiR->insertAfter(FindLastIVPhiR);
 
-      VPValue *Cond = FindIVSelectR->getOperand(0);
-      VPValue *TrueVal, *FalseVal;
-      if (WideIVIdx.value() == 1) {
-        TrueVal = WidenCanIV;
-        FalseVal = CanonicalFindIVPhiR;
-      } else {
-        TrueVal = CanonicalFindIVPhiR;
-        FalseVal = WidenCanIV;
-      }
+      VPValue *TrueVal = WidenCanIV, *FalseVal = CanonicalFindIVPhiR;
+      if (WideIVAtFalse)
+        std::swap(TrueVal, FalseVal);
       VPSingleDefRecipe *CanonicalSelectR =
-          Builder.createSelect(Cond, TrueVal, FalseVal);
+          Builder.createSelect(FindIVSelectR->getOperand(0), TrueVal, FalseVal);
       CanonicalFindIVPhiR->setOperand(1, CanonicalSelectR);
 
       // Erase the previous select reduction.
@@ -2274,7 +2260,7 @@ static bool handleFirstArgMinOrMax(
       FindIVSelectR = CanonicalSelectR;
       FindLastIVPhiR = CanonicalFindIVPhiR;
     } else {
-      FindIVSelectR->setOperand(WideIVIdx.value(), WidenCanIV);
+      FindIVSelectR->setOperand(WideIVAtFalse ? 2 : 1, WidenCanIV);
     }
   }
   FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
@@ -2356,11 +2342,8 @@ static bool handleFirstArgMinOrMax(
     // might not match the actual final type of the induction (i.e. it might be
     // truncated afterwards). In that case add a manual cast to ensure result
     // types match.
-    FinalCanIV = DerivedIVRecipe->getScalarType() != WideIVScalarTy
-                     ? cast<VPValue>(Builder.createScalarCast(
-                           Instruction::Trunc, DerivedIVRecipe, WideIVScalarTy,
-                           FindIVRdxResult->getDebugLoc()))
-                     : DerivedIVRecipe;
+    FinalCanIV = Builder.createScalarZExtOrTrunc(
+        DerivedIVRecipe, WideIVScalarTy, FindIVRdxResult->getDebugLoc());
   }
 
   // If the final min/max value matches its start value, the condition in the
