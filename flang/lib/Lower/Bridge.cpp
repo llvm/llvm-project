@@ -604,6 +604,13 @@ struct LocArgumentVisitor {
 };
 } // namespace
 
+/// Return whether \p scope or one of the scopes it contains declares a Cray
+/// pointer.
+static bool declaresCrayPointer(const Fortran::semantics::Scope &scope) {
+  return !scope.crayPointers().empty() ||
+         llvm::any_of(scope.children(), declaresCrayPointer);
+}
+
 //===----------------------------------------------------------------------===//
 // FirConverter
 //===----------------------------------------------------------------------===//
@@ -7101,59 +7108,86 @@ private:
     }
   }
 
-  /// Collect the entities that a Cray pointer in \p funit may visibly be
-  /// associated with: the arguments of LOC and %LOC references anywhere in
-  /// \p funit, in its host, or in their internal procedures, and the entities
-  /// that share storage with them through EQUIVALENCE or COMMON.
+  /// If \p host or one of its internal procedures uses a Cray pointer, collect
+  /// the entities that the Cray pointer may visibly be associated with: the
+  /// arguments of LOC and %LOC references anywhere in \p host and its internal
+  /// procedures, and the entities that share storage with them through
+  /// EQUIVALENCE or COMMON.
   void collectVisibleCrayPointerTargets(
-      Fortran::lower::pft::FunctionLikeUnit &funit) {
-    Fortran::lower::pft::FunctionLikeUnit *host =
-        funit.parent.getIf<Fortran::lower::pft::FunctionLikeUnit>();
+      const Fortran::lower::pft::FunctionLikeUnit &host) {
+    // Do not walk the symbols of every procedure nest in programs without
+    // Cray pointers.
+    if (!programDeclaresCrayPointer)
+      programDeclaresCrayPointer =
+          declaresCrayPointer(bridge.getSemanticsContext().globalScope());
+    if (!*programDeclaresCrayPointer)
+      return;
+    bool usesCrayPointer = false;
+    Fortran::lower::pft::visitAllSymbols(
+        host, [&](const Fortran::semantics::Symbol &symbol) {
+          const Fortran::semantics::Symbol &ultimate = symbol.GetUltimate();
+          usesCrayPointer =
+              usesCrayPointer ||
+              ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointer) ||
+              ultimate.test(Fortran::semantics::Symbol::Flag::CrayPointee);
+        });
+    if (!usesCrayPointer)
+      return;
     LocArgumentVisitor visitor;
-    (host ? *host : funit).visit([&](const auto &functionParserNode) {
+    host.visit([&](const auto &functionParserNode) {
       Fortran::parser::Walk(functionParserNode, visitor);
     });
     llvm::SmallVector<const Fortran::semantics::Symbol *> worklist =
         std::move(visitor.symbols);
+    llvm::SmallPtrSet<const Fortran::semantics::EquivalenceSet *, 4>
+        visitedEquivalenceSets;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+        visitedCommonBlocks;
     while (!worklist.empty()) {
       const Fortran::semantics::Symbol &symbol =
           worklist.pop_back_val()->GetUltimate();
       if (!visibleCrayPointerTargets.insert(&symbol).second)
         continue;
       worklist.push_back(&Fortran::semantics::GetAssociationRoot(symbol));
-      if (const Fortran::semantics::EquivalenceSet *equivalenceSet =
-              Fortran::semantics::FindEquivalenceSet(symbol))
+      // A symbol can be in several equivalence sets, for instance an array in
+      // `equivalence (a(1), b), (a(2), c)`.
+      for (const Fortran::semantics::EquivalenceSet &equivalenceSet :
+           symbol.owner().equivalenceSets()) {
+        if (visitedEquivalenceSets.contains(&equivalenceSet) ||
+            llvm::none_of(
+                equivalenceSet,
+                [&](const Fortran::semantics::EquivalenceObject &object) {
+                  return object.symbol == symbol;
+                }))
+          continue;
+        visitedEquivalenceSets.insert(&equivalenceSet);
         for (const Fortran::semantics::EquivalenceObject &object :
-             *equivalenceSet)
+             equivalenceSet)
           worklist.push_back(&object.symbol);
-      if (const Fortran::semantics::Symbol *commonBlock =
-              Fortran::semantics::FindCommonBlockContaining(symbol))
+      }
+      const Fortran::semantics::Symbol *commonBlock =
+          Fortran::semantics::FindCommonBlockContaining(symbol);
+      if (commonBlock && visitedCommonBlocks.insert(commonBlock).second) {
         for (const Fortran::semantics::MutableSymbolRef &object :
              commonBlock->get<Fortran::semantics::CommonBlockDetails>()
                  .objects())
           worklist.push_back(&*object);
+      }
     }
-  }
-
-  /// Return whether \p scope declares or imports a Cray pointer.
-  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
-    if (!scope.crayPointers().empty())
-      return true;
-    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
-      if (symbol->GetUltimate().test(
-              Fortran::semantics::Symbol::Flag::CrayPointer))
-        return true;
-    return false;
   }
 
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
-    assert(visibleCrayPointerTargets.empty() &&
-           "Cray pointer targets must not outlive a procedure");
-    if (hasCrayPointer(funit.getScope()))
+    // Internal procedures share the Cray pointer targets of their host.
+    const bool isInternalProcedure =
+        funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>();
+    if (!isInternalProcedure) {
+      assert(visibleCrayPointerTargets.empty() &&
+             "Cray pointer targets must not outlive a procedure nest");
       collectVisibleCrayPointerTargets(funit);
+    }
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -7177,10 +7211,11 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
-    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
+    if (!isInternalProcedure)
+      visibleCrayPointerTargets.clear();
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
@@ -7365,9 +7400,13 @@ private:
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
 
-  /// Symbols associated with Cray pointers in the current procedure.
+  /// Symbols associated with Cray pointers in the current procedure nest.
   llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
       visibleCrayPointerTargets;
+
+  /// Whether a scope of the program declares a Cray pointer. Computed when the
+  /// first procedure nest is lowered.
+  std::optional<bool> programDeclaresCrayPointer;
 
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
