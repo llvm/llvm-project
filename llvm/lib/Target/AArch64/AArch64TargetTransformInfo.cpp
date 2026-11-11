@@ -7069,7 +7069,7 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   }
 
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
-      VecVT.getSizeInBits() >= 64) {
+      !VecVT.isScalableVT() && VecVT.getFixedSizeInBits() >= 64) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases are:
