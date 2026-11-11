@@ -4734,12 +4734,19 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
   taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
-  return genOpWithBody<mlir::omp::TaskgroupOp>(
+  auto taskgroupOp = genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
           .setClauses(&item->clauses)
           .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.taskReductionVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    taskgroupOp.setTaskReductionAssumeBoundedRecipeEffects(true);
+
+  return taskgroupOp;
 }
 
 static mlir::omp::TaskwaitOp
@@ -6071,7 +6078,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     return;
 
   for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
-    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u))
+    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::Absent>(clause.u))
       TODO(converter.genLocation(clause.source),
            "assumption clauses on the assumes directive");
   }
@@ -6753,8 +6761,7 @@ static std::string getDefinedOperatorOpName(
     const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
   return common::visit(
       common::visitors{
-          [&](const clause::DefinedOperator::IntrinsicOperator &intrOp)
-              -> std::string {
+          [&](const clause::IntrinsicOperator &intrOp) -> std::string {
             // Directive side of the intrinsic-operator USER reduction naming
             // contract (clause side:
             // ReductionProcessor::processReductionArguments site 2). A user

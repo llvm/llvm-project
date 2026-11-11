@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; Lowest non-zero bit.
 ; CHECK: llvm.raw.sections entry operand 2 must be zero (flags are reserved for future use)

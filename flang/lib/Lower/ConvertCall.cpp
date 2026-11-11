@@ -33,6 +33,7 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
@@ -465,6 +466,46 @@ static bool mustDestroyOrFinalizeFunctionResult(
   return Fortran::semantics::MayRequireFinalization(
              retTy->GetDerivedTypeSpec()) ||
          hlfir::mayHaveAllocatableComponent(callSiteType.getResult(0));
+}
+
+/// Return the result symbol of the procedure being called, if it is known.
+static const Fortran::semantics::Symbol *
+getResultSymbol(Fortran::lower::CallerInterface &caller) {
+  return caller.getInterfaceDetails() ? &caller.getResultSymbol() : nullptr;
+}
+
+/// Return true if the storage of an allocatable function result may have been
+/// obtained from an allocator other than the default one, so that the caller
+/// cannot release it with an inlined free. A result with a CUDA data attribute
+/// is allocated with the matching CUDA allocator. Under -gpu=unified, a plain
+/// allocatable result is given the unified allocator (see
+/// Fortran::lower::getAllocatorIdxForUnified).
+static bool
+resultMayUseNonDefaultAllocator(Fortran::lower::AbstractConverter &converter,
+                                const Fortran::semantics::Symbol *resultSym) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  if (resultSym && Fortran::lower::translateSymbolCUFDataAttribute(
+                       builder.getContext(), *resultSym))
+    return true;
+  return converter.getFoldingContext().languageFeatures().IsEnabled(
+             Fortran::common::LanguageFeature::CudaUnified) &&
+         !cuf::isCUDADeviceContext(builder.getRegion());
+}
+
+/// Deallocate the allocatable function result \p box, if allocated, through
+/// the runtime, which releases its storage with the allocator recorded in its
+/// descriptor. The result is not finalized: this is the caller's job.
+static void genResultDeallocationNoFinal(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         const fir::MutableBoxValue &box) {
+  mlir::Value isAllocated =
+      fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, box);
+  builder.genIfThen(loc, isAllocated)
+      .genThen([&]() {
+        mlir::Value desc = fir::factory::getMutableIRBox(builder, loc, box);
+        fir::runtime::genAllocatableDeallocateNoFinal(builder, loc, desc);
+      })
+      .end();
 }
 
 /// Return the CUDA data attribute of each descriptor in \p args as call
@@ -1049,17 +1090,26 @@ Fortran::lower::genCallOpAndResult(
     // do not deallocate the top-level entity. The two clean-ups
     // must be pushed in reverse order, so that the final order is:
     //   Destroy(desc)
-    //   free(desc->base_addr)
+    //   deallocate desc (an inlined free, or a runtime call if the storage
+    //   may come from another allocator)
     allocatedResult->match(
         [&](const fir::MutableBoxValue &box) {
           if (box.isAllocatable()) {
             // 9.7.3.2 point 4. Deallocate allocatable results. Note that
             // finalization was done independently by calling
-            // genDerivedTypeDestroy above and is not triggered by this inline
-            // deallocation.
+            // genDerivedTypeDestroy above and is not triggered by this
+            // deallocation. When the storage may come from a non-default
+            // allocator, it is released through the runtime, which uses the
+            // allocator recorded in the descriptor. cuf.deallocate is not
+            // used here: it would finalize the result a second time.
             fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
-            stmtCtx.attachCleanup([bldr, loc, box]() {
-              fir::factory::genFreememIfAllocated(*bldr, loc, box);
+            const bool useRuntime = resultMayUseNonDefaultAllocator(
+                converter, getResultSymbol(caller));
+            stmtCtx.attachCleanup([bldr, loc, box, useRuntime]() {
+              if (useRuntime)
+                genResultDeallocationNoFinal(*bldr, loc, box);
+              else
+                fir::factory::genFreememIfAllocated(*bldr, loc, box);
             });
           }
         },
@@ -2184,24 +2234,27 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     // Allocatable result must be freed, other results are stack allocated.
     const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
     const bool mustFree = allocatable != nullptr;
-    // A CUDA allocatable result lives in device/managed/unified memory: it was
-    // allocated with the CUDA allocator and cannot be moved into an hlfir.expr
-    // whose buffer would be released with the host deallocator. Keep it as a
-    // variable and release it with the CUDA-aware deallocation.
-    const Fortran::semantics::Symbol *resultSym = nullptr;
-    cuf::DataAttributeAttr resultCudaAttr;
-    if (mustFree && caller.getInterfaceDetails()) {
-      resultSym = &caller.getResultSymbol();
-      resultCudaAttr = Fortran::lower::translateSymbolCUFDataAttribute(
-          builder.getContext(), *resultSym);
-    }
-    if (resultCudaAttr) {
+    // An allocatable result whose storage may come from a CUDA allocator
+    // (device/managed/unified memory) cannot be moved into an hlfir.expr whose
+    // buffer would be released with the host deallocator. Keep it as a
+    // variable and release it with the allocator-aware deallocation.
+    const Fortran::semantics::Symbol *resultSym =
+        mustFree ? getResultSymbol(caller) : nullptr;
+    if (mustFree &&
+        resultMayUseNonDefaultAllocator(callContext.converter, resultSym)) {
       callContext.stmtCtx.attachCleanup([&converter = callContext.converter,
                                          loc, box = *allocatable, resultSym]() {
         Fortran::lower::genDeallocateIfAllocated(converter, box, loc,
                                                  resultSym);
       });
-      return hlfir::EntityWithAttributes{resultEntity};
+      // As for a finalized result below, drop the lower bounds: this is not a
+      // variable from the Fortran point of view, so the lower bounds are ones
+      // when inquired on the caller side.
+      fir::ExtendedValue loadedResult = fir::factory::genMutableBoxRead(
+          builder, loc, *allocatable, /*mayBePolymorphic=*/true,
+          /*preserveLowerBounds=*/false);
+      return extendedValueToHlfirEntity(loc, builder, loadedResult,
+                                        tempResultName);
     }
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {

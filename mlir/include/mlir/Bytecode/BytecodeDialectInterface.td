@@ -6,6 +6,7 @@ include "mlir/IR/Interfaces.td"
 def BytecodeDialectInterface : DialectInterface<"BytecodeDialectInterface"> {
   let description = [{}];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Bytecode/BytecodeImplementation.h"];
 
   let methods = [
     InterfaceMethod<[{

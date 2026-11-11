@@ -40,11 +40,11 @@ define void @StoreIntrinsic(ptr %p, <4 x float> %x) nounwind uwtable sanitize_me
 ; ORIGINS-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB15:.*]], !prof [[PROF1:![0-9]+]]
 ; ORIGINS:       [[BB11]]:
 ; ORIGINS-NEXT:    store i32 [[TMP2]], ptr [[TMP8]], align 4
-; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP8]], i32 1
+; ORIGINS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 4
 ; ORIGINS-NEXT:    store i32 [[TMP2]], ptr [[TMP11]], align 4
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP8]], i32 2
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP8]], i64 8
 ; ORIGINS-NEXT:    store i32 [[TMP2]], ptr [[TMP12]], align 4
-; ORIGINS-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP8]], i32 3
+; ORIGINS-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP8]], i64 12
 ; ORIGINS-NEXT:    store i32 [[TMP2]], ptr [[TMP13]], align 4
 ; ORIGINS-NEXT:    br label %[[BB15]]
 ; ORIGINS:       [[BB15]]:

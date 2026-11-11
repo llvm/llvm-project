@@ -35,6 +35,7 @@ def ConvertToLLVMAttrInterface :
     patterns specific to a particular target.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"];
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
@@ -59,6 +60,7 @@ def ConvertToLLVMOpInterface : OpInterface<"ConvertToLLVMOpInterface"> {
     attributes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"];
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
@@ -87,6 +89,7 @@ def ConvertToLLVMPatternInterface : DialectInterface<"ConvertToLLVMPatternInterf
     available in DialectRegistry.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"];
 
   let methods = [
     InterfaceMethod<[{

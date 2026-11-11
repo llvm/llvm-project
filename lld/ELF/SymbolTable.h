@@ -65,7 +65,7 @@ public:
     sym->resolve(ctx, newSym);
     return sym;
   }
-  Symbol *addAndCheckDuplicate(Ctx &, const Defined &newSym);
+  Symbol *addAndCheckDuplicate(const Defined &newSym);
 
   void scanVersionScript();
 

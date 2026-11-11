@@ -7,7 +7,6 @@
 ---
 name:            sextload_from_inreg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -33,7 +32,6 @@ body:             |
 ---
 name:            sextload_from_inreg_across_store
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -62,7 +60,6 @@ body:             |
 ---
 name:            non_pow_2_inreg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -87,7 +84,6 @@ body:             |
 ---
 name:            atomic
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -114,7 +110,6 @@ body:             |
 ---
 name:            volatile
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |

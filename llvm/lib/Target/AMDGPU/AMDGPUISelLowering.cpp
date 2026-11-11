@@ -25,7 +25,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -33,11 +32,6 @@ using namespace llvm;
 
 #define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
-
-static cl::opt<bool> AMDGPUBypassSlowDiv(
-  "amdgpu-bypass-slow-div",
-  cl::desc("Skip 64-bit divide for dynamic 32-bit values"),
-  cl::init(true));
 
 // Find a larger type to do a load / store of a vector with.
 EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
@@ -609,7 +603,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset  = 0xffffffff;
 
   // The expansion for 64-bit division is enormous.
-  if (AMDGPUBypassSlowDiv)
+  if (static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts().bypass_slow_div)
     addBypassSlowDiv(64, 32);
 
   setTargetDAGCombine({ISD::BITCAST,    ISD::SHL,
@@ -6076,11 +6070,17 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
-    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
 
     // TODO: SelfMultiply can be poison, but not undef.
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
+
+    // For a self-multiply both operands are the same value, so RHSKnown also
+    // describes the LHS; avoid the duplicated query.
+    KnownBits LHSKnown =
+        SelfMultiply ? RHSKnown
+                     : DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+
     if (SelfMultiply)
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,

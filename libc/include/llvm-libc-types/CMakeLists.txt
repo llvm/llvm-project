@@ -208,6 +208,16 @@ add_header(
     .struct_ipc_perm
     .time_t
 )
+add_header(
+  struct_shmid_ds
+  HDR struct_shmid_ds.h
+  DEPENDS
+    .pid_t
+    .shmatt_t
+    .size_t
+    .struct_ipc_perm
+    .time_t
+)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_itimerval HDR struct_itimerval.h DEPENDS .struct_timeval)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)

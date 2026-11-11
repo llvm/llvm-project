@@ -29,6 +29,7 @@
 #include <memory>
 #include <ranges>
 
+#include "../heap_helpers.h"
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 
@@ -65,6 +66,7 @@ constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::ar
   assert(std::to_address(base(last)) == heapified.data() + heapified.size());
   assert(std::is_heap(heapified.begin(), heapified.end() - 1));
   assert(*std::max_element(heapified.begin(), heapified.end()) == heapified.back());
+  assert(satisfies_heap_property(heapified.begin(), heapified.end() - 1));
 }
 
 template <class Iter, class Sent, std::size_t N>

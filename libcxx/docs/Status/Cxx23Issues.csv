@@ -275,7 +275,7 @@
 "`LWG3857 <https://wg21.link/LWG3857>`__","``basic_string_view`` should allow explicit conversion when only traits vary","2023-02 (Issaquah)","|Complete|","17","`#105092 <https://github.com/llvm/llvm-project/issues/105092>`__",""
 "`LWG3860 <https://wg21.link/LWG3860>`__","``range_common_reference_t`` is missing","2023-02 (Issaquah)","|Complete|","17","`#105094 <https://github.com/llvm/llvm-project/issues/105094>`__",""
 "`LWG3866 <https://wg21.link/LWG3866>`__","Bad Mandates for ``expected::transform_error`` overloads","2023-02 (Issaquah)","|Complete|","17","`#105095 <https://github.com/llvm/llvm-project/issues/105095>`__",""
-"`LWG3867 <https://wg21.link/LWG3867>`__","Should ``std::basic_osyncstream``'s move assignment operator be ``noexcept``?","2023-02 (Issaquah)","|Complete|","18","`#105097 <https://github.com/llvm/llvm-project/issues/105097>`__",""
+"`LWG3867 <https://wg21.link/LWG3867>`__","Should ``std::basic_osyncstream``'s move assignment operator be ``noexcept``?","2023-02 (Issaquah)","|Experimental|","18","`#105097 <https://github.com/llvm/llvm-project/issues/105097>`__",""
 "`LWG3441 <https://wg21.link/LWG3441>`__","Misleading note about calls to customization points","2023-02 (Issaquah)","","","`#105098 <https://github.com/llvm/llvm-project/issues/105098>`__",""
 "`LWG3622 <https://wg21.link/LWG3622>`__","Misspecified transitivity of equivalence in §[unord.req.general]","2023-02 (Issaquah)","","","`#105100 <https://github.com/llvm/llvm-project/issues/105100>`__",""
 "`LWG3631 <https://wg21.link/LWG3631>`__","``basic_format_arg(T&&)`` should use ``remove_cvref_t<T>`` throughout","2023-02 (Issaquah)","|Complete|","17","`#105101 <https://github.com/llvm/llvm-project/issues/105101>`__",""

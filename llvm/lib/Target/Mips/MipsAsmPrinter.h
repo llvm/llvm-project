@@ -159,6 +159,24 @@ public:
                               const MipsSubtarget &Subtarget);
 };
 
+class MipsAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<MipsAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
+class MipsAsmPrinterPass : public RequiredPassInfoMixin<MipsAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class MipsAsmPrinterEndPass
+    : public RequiredPassInfoMixin<MipsAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_MIPS_MIPSASMPRINTER_H
