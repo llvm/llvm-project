@@ -6365,26 +6365,23 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
 
       VPValue *Op = VPI.getOperand(0);
 
-      // Also handle the IV plus a constant C, e.g. %iv.c below:
+      // Also handle the IV plus a loop-invariant %c, e.g. %iv.c below:
       //
       //   %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
-      //   %iv.c = add i64 %iv, C
+      //   %iv.c = add i64 %iv, %c
       //   %iv.next = add i64 %iv, %step
       //
       // %iv.c is an induction with the same step as %iv, but starting at
-      // %start + C, which folds to a single constant if %start is constant.
-      // With a constant %step, this also covers the increment %iv.next, with
-      // C == %step. A non-constant C or %start would need an extra add or sub
-      // instruction, so it is not worth handling.
-      VPValue *IVOp = Op, *X;
-      std::optional<APInt> Offset;
-      const APInt *C;
-      if (match(Op, m_c_Add(m_VPValue(X), m_APInt(C)))) {
+      // %start + %c, which is computed once in the vector preheader. This also
+      // covers the increment %iv.next, with %c == %step.
+      VPValue *IVOp = Op, *X, *Offset = nullptr;
+      bool IsSub = false;
+      auto MatchIV = m_VPValue(X, m_Isa<VPWidenIntOrFpInductionRecipe>());
+      if (match(Op, m_c_Add(MatchIV, m_VPValue(Offset)))) {
         IVOp = X;
-        Offset = *C;
-      } else if (match(Op, m_Sub(m_VPValue(X), m_APInt(C)))) {
+      } else if (match(Op, m_Sub(MatchIV, m_VPValue(Offset)))) {
         IVOp = X;
-        Offset = -*C;
+        IsSub = true;
       }
 
       // An IV that is already truncated is not narrowed further.
@@ -6392,9 +6389,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (!WideIV || WideIV->isTruncated())
         continue;
 
-      // The offset can only be folded into a constant start value.
-      const APInt *StartC = nullptr;
-      if (Offset && !match(WideIV->getStartValue(), m_APInt(StartC)))
+      // The IV plus a value that changes in the loop is not an induction.
+      if (Offset && !Offset->isDefinedOutsideLoopRegions())
         continue;
 
       // A truncate that is not widened is left to the scalarization decisions
@@ -6415,8 +6411,12 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
               IsNarrowingProfitable, Range))
         continue;
 
-      VPValue *Start = Offset ? Plan.getConstantInt(*StartC + *Offset)
-                              : WideIV->getStartValue();
+      VPValue *Start = WideIV->getStartValue();
+      if (Offset) {
+        VPBuilder PHBuilder(Plan.getVectorPreheader());
+        Start = IsSub ? PHBuilder.createSub(Start, Offset)
+                      : PHBuilder.createAdd(Start, Offset);
+      }
       // Wrap flags of the original induction do not hold in the truncated
       // type, so do not propagate them.
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
