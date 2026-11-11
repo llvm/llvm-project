@@ -1,0 +1,51 @@
+# RUN: split-file %s %t
+# RUN: not --crash llc -mtriple=amdgpu12.00 -run-pass=none %t/movrel.mir -filetype=null 2>&1 | FileCheck %s -check-prefix=MOVREL -implicit-check-not="Bad machine code"
+# RUN: not --crash llc -mtriple=amdgpu9.42 -run-pass=none %t/gpr-idx.mir -filetype=null 2>&1 | FileCheck %s -check-prefix=GPRIDX -implicit-check-not="Bad machine code"
+
+#--- movrel.mir
+# MOVREL: *** Bad machine code: invalid VGPR address space offset ***
+# MOVREL-NEXT: - function:    invalid_offset
+# MOVREL: V_LOAD_IDX_B32 1024,
+# MOVREL: *** Bad machine code: invalid VGPR address space offset ***
+# MOVREL: V_LOAD_IDX_B32 -1,
+# MOVREL: *** Bad machine code: invalid VGPR address space offset ***
+# MOVREL: V_LOAD_IDX_B32 %stack.0,
+# MOVREL: *** Bad machine code: invalid VGPR address space offset ***
+# MOVREL: V_STORE_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, 1021,
+---
+name: invalid_offset
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    liveins: $sgpr0, $vgpr4_vgpr5_vgpr6_vgpr7
+    $m0 = S_MOV_B32 $sgpr0
+    $vgpr0 = V_LOAD_IDX_B32 1023, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    $vgpr1 = V_LOAD_IDX_B32 1024, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    $vgpr2 = V_LOAD_IDX_B32 -1, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    $vgpr3 = V_LOAD_IDX_B32 %stack.0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    V_STORE_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, 1020, implicit $m0, implicit $exec :: (store (s128), addrspace 13)
+    V_STORE_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, 1021, implicit $m0, implicit $exec :: (store (s128), addrspace 13)
+    S_ENDPGM 0
+...
+
+#--- gpr-idx.mir
+# GPRIDX: *** Bad machine code: invalid VGPR address space offset ***
+# GPRIDX-NEXT: - function:    invalid_offset
+# GPRIDX: V_LOAD_IDX_GPR_IDX_B32 $sgpr0, 1024,
+# GPRIDX: *** Bad machine code: invalid VGPR address space offset ***
+# GPRIDX: V_LOAD_IDX_GPR_IDX_B32 $sgpr0, -1,
+# GPRIDX: *** Bad machine code: invalid VGPR address space offset ***
+# GPRIDX: V_STORE_IDX_GPR_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr0, 1021,
+---
+name: invalid_offset
+body: |
+  bb.0:
+    liveins: $sgpr0, $vgpr4_vgpr5_vgpr6_vgpr7
+    $vgpr0 = V_LOAD_IDX_GPR_IDX_B32 $sgpr0, 1023, implicit-def $m0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    $vgpr1 = V_LOAD_IDX_GPR_IDX_B32 $sgpr0, 1024, implicit-def $m0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    $vgpr2 = V_LOAD_IDX_GPR_IDX_B32 $sgpr0, -1, implicit-def $m0, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    V_STORE_IDX_GPR_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr0, 1020, implicit-def $m0, implicit $m0, implicit $exec :: (store (s128), addrspace 13)
+    V_STORE_IDX_GPR_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr0, 1021, implicit-def $m0, implicit $m0, implicit $exec :: (store (s128), addrspace 13)
+    S_ENDPGM 0
+...

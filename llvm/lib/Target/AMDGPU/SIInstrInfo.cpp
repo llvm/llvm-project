@@ -2125,11 +2125,6 @@ static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
   unsigned Offset = LdSt.getOffsetOp().getImm();
   unsigned NumDwords = LdSt.getBitWidth() / 32;
 
-  // A statically out-of-range offset is undefined behavior; mask it into the
-  // addressable range below rather than emit an invalid register.
-  unsigned NumIndexableVGPRs =
-      AMDGPUMI::VLoadStoreIdxInst::getNumIndexableVGPRs(MF);
-
   const bool UseGPRIdxMode = LdSt.isGPRIdx();
   assert(UseGPRIdxMode == TII.getSubtarget().useVGPRIndexMode());
 
@@ -2138,9 +2133,7 @@ static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
     SetOn = BuildMI(MBB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
                 .add(LdSt.getIdxOp())
                 .addImm(IsStore ? AMDGPU::VGPRIndexMode::DST_ENABLE
-                                : AMDGPU::VGPRIndexMode::SRC0_ENABLE)
-                .getInstr();
-    SetOn->getOperand(3).setIsUndef();
+                                : AMDGPU::VGPRIndexMode::SRC0_ENABLE);
   }
 
   unsigned Opcode;
@@ -2158,8 +2151,7 @@ static void expandLoadStoreIdx(const SIInstrInfo &TII, MachineInstr &MI) {
                                  ? getUndefRegState(LdSt.getDataOp().isUndef())
                                  : RegState::NoFlags;
   for (unsigned i = 0; i < NumDwords; ++i) {
-    Register Base = AMDGPU::VGPR_32RegClass.getRegister(
-        (Offset + i) & (NumIndexableVGPRs - 1));
+    Register Base = AMDGPU::VGPR_32RegClass.getRegister(Offset + i);
     Register Sub = Data;
     if (NumDwords != 1)
       Sub = RI.getSubReg(Data, RI.getSubRegFromChannel(i));
@@ -6107,6 +6099,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     int64_t Mask = MI.getOperand(MI.getNumExplicitOperands() - 1).getImm();
     if (!AMDGPU::isValidAsyncStageMask(Mask)) {
       ErrInfo = "invalid asyncmark stage mask";
+      return false;
+    }
+  }
+
+  // An offset past the addressable VGPRs is an out-of-bounds access, which is
+  // allowed, but each dword must still be a VGPR.
+  if (const auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
+    const MachineOperand &Offset = LdSt->getOffsetOp();
+    if (!Offset.isImm() || Offset.getImm() < 0 ||
+        Offset.getImm() + LdSt->getBitWidth() / 32 >
+            AMDGPU::VGPR_32RegClass.getNumRegs()) {
+      ErrInfo = "invalid VGPR address space offset";
       return false;
     }
   }

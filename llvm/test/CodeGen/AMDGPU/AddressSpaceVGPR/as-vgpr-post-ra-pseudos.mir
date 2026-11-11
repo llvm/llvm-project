@@ -2,12 +2,10 @@
 # RUN: llc -mtriple=amdgpu12.00 -passes=post-ra-pseudos -o - %s | FileCheck %s
 
 # Selection never folds an offset past the addressable VGPRs, but MIR can still
-# hold one. It is masked into range rather than naming a register that does not
-# exist. The range is 256 here.
+# hold one. The access is out of bounds, and the move names the register as is.
 
 ---
 name: load_past_end
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -15,7 +13,7 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $m0 = S_MOV_B32 $sgpr0
-    ; CHECK-NEXT: $vgpr0 = V_MOVRELS_B32_as_mem undef $vgpr44, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
+    ; CHECK-NEXT: $vgpr0 = V_MOVRELS_B32_as_mem undef $vgpr300, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
     ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
     $m0 = S_MOV_B32 $sgpr0
     $vgpr0 = V_LOAD_IDX_B32 300, implicit $m0, implicit $exec :: (load (s32), addrspace 13)
@@ -24,7 +22,6 @@ body: |
 
 ---
 name: store_straddling_end
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr4_vgpr5_vgpr6_vgpr7
@@ -34,8 +31,8 @@ body: |
     ; CHECK-NEXT: $m0 = S_MOV_B32 $sgpr0
     ; CHECK-NEXT: V_MOVRELD_B32_as_mem undef $vgpr254, $vgpr4, implicit $m0, implicit $exec, implicit $vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s32), align 16, addrspace 13)
     ; CHECK-NEXT: V_MOVRELD_B32_as_mem undef $vgpr255, $vgpr5, implicit $m0, implicit $exec, implicit $vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s32) into unknown-address + 4, addrspace 13)
-    ; CHECK-NEXT: V_MOVRELD_B32_as_mem undef $vgpr0, $vgpr6, implicit $m0, implicit $exec, implicit $vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s32) into unknown-address + 8, align 8, addrspace 13)
-    ; CHECK-NEXT: V_MOVRELD_B32_as_mem undef $vgpr1, $vgpr7, implicit $m0, implicit $exec, implicit $vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s32) into unknown-address + 12, addrspace 13)
+    ; CHECK-NEXT: V_MOVRELD_B32_as_mem undef $vgpr256, $vgpr6, implicit $m0, implicit $exec, implicit $vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s32) into unknown-address + 8, align 8, addrspace 13)
+    ; CHECK-NEXT: V_MOVRELD_B32_as_mem undef $vgpr257, $vgpr7, implicit $m0, implicit $exec, implicit $vgpr4_vgpr5_vgpr6_vgpr7 :: (store (s32) into unknown-address + 12, addrspace 13)
     ; CHECK-NEXT: S_ENDPGM 0
     $m0 = S_MOV_B32 $sgpr0
     V_STORE_IDX_B128 $vgpr4_vgpr5_vgpr6_vgpr7, 254, implicit $m0, implicit $exec :: (store (s128), addrspace 13)
@@ -46,7 +43,6 @@ body: |
 # tuple, so the undefined part is a valid operand.
 ---
 name: store_partly_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr4

@@ -7,7 +7,6 @@
 
 ---
 name:            divergent_load
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -49,7 +48,6 @@ body:             |
 
 ---
 name:            divergent_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -91,7 +89,6 @@ body:             |
 
 ---
 name:            other_reader_before
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -139,7 +136,6 @@ body:             |
 # the first lane again.
 ---
 name:            other_reader_after
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -185,7 +181,6 @@ body:             |
 
 ---
 name:            two_divergent_loads
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -258,7 +253,6 @@ body:             |
 # index into M0 in the access's own block.
 ---
 name:            copy_first_in_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: copy_first_in_block
   ; CHECK: bb.0:
@@ -311,7 +305,6 @@ body:             |
 # Nothing follows the access in its block.
 ---
 name:            last_in_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: last_in_block
   ; CHECK: bb.0:
