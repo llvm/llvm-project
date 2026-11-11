@@ -2317,9 +2317,13 @@ Expected<bool> FunctionImporter::importFunctions(
                             DI.GUID))}));
       };
       if (GlobalValue *Existing = DestModule.getNamedValue(DI.Name)) {
-        // A declaration created by the IRMover as a side effect of linking an
-        // imported definition that references it (e.g. a vtable initializer)
-        // does not carry the original GUID, so attach it here.
+        // A declaration created by the IRMover as a side effect of importing a
+        // definition that references it (e.g. a vtable initializer) does not
+        // carry the original GUID, so attach it here.
+        // TODO: Consider having IRMover propagate !guid metadata onto
+        // declarations it creates for referenced values (including functions
+        // and global variables not in DeclInfos), especially if we move toward
+        // attaching !guid uniformly to all declarations.
         if (auto *ExistingF = dyn_cast<Function>(Existing);
             ExistingF && ExistingF->isDeclaration() &&
             !ExistingF->getMetadata(LLVMContext::MD_guid))
