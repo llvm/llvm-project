@@ -27,12 +27,12 @@ This section describes how to use MemPGO to profile and optimize your applicatio
 To enable MemProf instrumentation, compile your application with the `-fmemory-profile` flag. Make sure to include debug information (`-gmlt` and `-fdebug-info-for-profiling`) and frame pointers to ensure accurate stack traces and line number reporting.
 
 ```bash
-clang++ -fmemory-profile -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fdebug-info-for-profiling -gmlt -O2 -fno-pie -no-pie -Wl,-z,noseparate-code -Wl,--build-id source.cpp -o app
+clang++ -fmemory-profile -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fdebug-info-for-profiling -gmlt -O2 -Wl,-z,noseparate-code -Wl,--build-id source.cpp -o app
 ```
 
 :::{note}
 Link with `-fmemory-profile` as well to link the necessary runtime libraries. If you use a separate link step, ensure the flag is passed to the linker.
-On Linux, the flags `-fno-pie -no-pie -Wl,-z,noseparate-code -Wl,--build-id` are currently required to ensure the binary layout (executable segment at offset 0) and Build ID presence are compatible with the `llvm-profdata` profile reader.
+On Linux, the flags `-Wl,-z,noseparate-code -Wl,--build-id` are currently required to ensure the binary layout (executable segment at offset 0) and Build ID presence are compatible with the `llvm-profdata` profile reader.
 :::
 
 ### Running and Generating Profiles
@@ -72,7 +72,7 @@ Merge MemProf profiles with standard PGO instrumentation profiles if you have bo
 Feed the indexed profile back into the compiler using the `-fmemory-profile-use=` option (or low-level passes options).
 
 ```bash
-clang++ -fmemory-profile-use=memprof.memprofdata -O2 -Wl,-mllvm,-enable-memprof-context-disambiguation -Wl,-mllvm,-optimize-hot-cold-new -Wl,-mllvm,-supports-hot-cold-new source.cpp -o optimized_app -ltcmalloc
+clang++ -fmemory-profile-use=memprof.memprofdata -O2 -flto=thin -fuse-ld=lld -gmlt -fdebug-info-for-profiling -Wl,-mllvm,-enable-memprof-context-disambiguation -Wl,-mllvm,-optimize-hot-cold-new -Wl,-mllvm,-supports-hot-cold-new source.cpp -o optimized_app -ltcmalloc
 ```
 
 If invoking the optimizer directly via `opt`:
