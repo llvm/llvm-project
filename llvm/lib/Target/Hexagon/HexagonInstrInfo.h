@@ -441,6 +441,9 @@ public:
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr &MI) const;
   bool mayBeNewStore(const MachineInstr &MI) const;
+  // Identify HLX pseudos that expand to a tmp load or new store and a copy.
+  bool isTmpLoadPseudo(const MachineInstr &MI) const;
+  bool isNewStorePseudo(const MachineInstr &MI) const;
   bool producesStall(const MachineInstr &ProdMI,
                      const MachineInstr &ConsMI) const;
   bool producesStall(const MachineInstr &MI,
