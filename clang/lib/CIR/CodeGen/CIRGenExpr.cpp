@@ -2842,15 +2842,10 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   const auto *me = cast<MemberExpr>(callee);
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
 
-  // Although Sema normally represents static method calls as ordinary
-  // CallExpr nodes, retain defensive handling here for parity with classic
-  // Clang (CGExprCXX.cpp:200) in case a CXXMemberCallExpr node is encountered.
-  if (md->isStatic()) {
-    emitIgnoredExpr(me->getBase());
-    CIRGenCallee callee = emitDirectCallee(md);
-    return emitCall(getContext().getPointerType(md->getType()), callee, ce,
-                    returnValue);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!md->isStatic() &&
+         "static member call is unexpected in emitCXXMemberCallExpr");
 
   bool hasQualifier = me->hasQualifier();
   NestedNameSpecifier qualifier = me->getQualifier();
