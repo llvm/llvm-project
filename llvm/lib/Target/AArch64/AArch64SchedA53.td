@@ -58,6 +58,11 @@ def A53UnitFPALU  : ProcResource<2> { let BufferSize = 0; } // FP ALU/Mult
 // Divide and square root run in their own unit, without holding back the
 // arithmetic and multiply operations that follow them.
 def A53UnitFPDS   : ProcResource<2> { let BufferSize = 0; } // FP Div/Sqrt
+// Some scalar and 64-bit operations only issue as one particular instruction
+// of a dual-issue pair: FP compares only as the older one (BeginGroup), and the
+// by-element multiplies and the other operations marked EndGroup only as the
+// younger one. So two of the same kind never issue together, but a compare and
+// a by-element multiply can.
 
 
 //===----------------------------------------------------------------------===//
@@ -136,10 +141,12 @@ def : WriteRes<WriteHint, [A53UnitB]>;
 
 // FP ALU
 def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 6; }
-// A compare does not dual-issue with another compare. Taking both lanes keeps
-// that limit, but also stops it from pairing with an unrestricted operation,
-// which the hardware allows.
-def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
+// A compare pairs with an independent FP/ASIMD or integer operation, but only
+// as the older instruction of the pair, so not with another compare.
+def : WriteRes<WriteFCmp, [A53UnitFPALU]> {
+  let Latency = 6;
+  let BeginGroup = 1;
+}
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
@@ -151,8 +158,13 @@ def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
 // FP Mul, Div, Sqrt. Divide and square root are not pipelined and block their
 // whole unit, so they hold it for their full occupancy.
 def : WriteRes<WriteFMul, [A53UnitFPALU]> { let Latency = 6; }
-// The Q-form by-element multiplies take both lanes like any other Q-form
-// operation.
+// The scalar and 64-bit by-element multiplies only issue as the younger
+// instruction of a pair, so at most one per cycle, and their Q-forms take both
+// lanes like any other Q-form operation.
+def A53WriteFMulIdx : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 6;
+  let EndGroup = 1;
+}
 def A53WriteFMulIdxQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 6;
 }
@@ -161,6 +173,10 @@ def : WriteRes<WriteFDiv, [A53UnitFPDS, A53UnitFPDS]> {
   let ReleaseAtCycles = [29, 29];
 }
 def A53WriteFMAC : SchedWriteRes<[A53UnitFPALU]> { let Latency = 10; }
+def A53WriteFMACIdx : SchedWriteRes<[A53UnitFPALU]> {
+  let Latency = 10;
+  let EndGroup = 1;
+}
 // Q-form multiply-accumulate fills the datapath and takes both lanes.
 def A53WriteFMACQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 10;
@@ -327,9 +343,13 @@ def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
 def : InstRW<[A53WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
 def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S)L.*")>;
 def : InstRW<[A53WriteFMAC],
-      (instregex "^FML(A|S)(v2f32|v4f16)$",
-                 "^FML(A|S)v1i(16|32|64)_indexed$",
+      (instregex "^FML(A|S)(v2f32|v4f16)$")>;
+def : InstRW<[A53WriteFMACIdx],
+      (instregex "^FML(A|S)v1i(16|32|64)_indexed$",
                  "^FML(A|S)(v2i32|v4i16)_indexed$")>;
+def : InstRW<[A53WriteFMulIdx],
+      (instregex "^FMULX?v1i(16|32|64)_indexed$",
+                 "^FMULX?(v2i32|v4i16)_indexed$")>;
 def : InstRW<[A53WriteFMulIdxQ],
       (instregex "^FMULX?(v4i32|v2i64|v8i16)_indexed$")>;
 def : InstRW<[A53WriteFMACQ],
