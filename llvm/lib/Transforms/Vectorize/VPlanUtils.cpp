@@ -1523,7 +1523,7 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
 
         Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
 
-        // TODO: We can't fold if any users expect require a wide value.
+        // TODO: We can't fold if any users require a wide value.
         if (Multiplier != 1 &&
             !all_of(R.users(), match_fn(m_ExtractVectorForPart())))
           return nullptr;

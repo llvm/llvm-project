@@ -4345,11 +4345,8 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
       assert(MemOp->isConsecutive() && "Expected consecutive load/store");
 
       // If there's a mask, ensure it's a wide active-lane-mask.
-      if (Mask &&
-          !match(Mask,
-                 m_ActiveLaneMaskPhi(
-                     m_VPInstruction<VPInstruction::ExtractVectorForPart>(),
-                     m_VPInstruction<VPInstruction::ExtractVectorForPart>())))
+      if (Mask && !match(Mask, m_ActiveLaneMaskPhi(m_ExtractVectorForPart(),
+                                                   m_ExtractVectorForPart())))
         continue;
 
       auto MaskSource = MemOp->isMasked()
