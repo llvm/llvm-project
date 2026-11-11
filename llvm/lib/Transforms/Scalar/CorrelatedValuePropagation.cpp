@@ -88,6 +88,8 @@ STATISTIC(NumSaturating,
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
+STATISTIC(NumFrozen, "Number of values frozen to make use of a select "
+                     "condition that may be undef");
 STATISTIC(NumSMinMax,
           "Number of llvm.s{min,max} intrinsics simplified to unsigned");
 STATISTIC(NumUDivURemsNarrowedExpanded,
@@ -652,6 +654,35 @@ bool CVPImpl::processCmpIntrinsic(CmpIntrinsic *CI) {
   return false;
 }
 
+static bool freezeOperands(MinMaxIntrinsic *MM, bool FreezeL, bool FreezeR,
+                           DominatorTree &DT) {
+  Value *LHS = MM->getLHS();
+  Value *RHS = MM->getRHS();
+  FreezeInst *LFI = nullptr;
+  if (FreezeL) {
+    LFI = new FreezeInst(LHS, LHS->getName() + ".fr", MM->getIterator());
+    if (!freezeUsesAfterDef(*LFI, DT)) {
+      LFI->eraseFromParent();
+      return false;
+    }
+    ++NumFrozen;
+  }
+  if (FreezeR) {
+    auto *RFI = new FreezeInst(RHS, RHS->getName() + ".fr", MM->getIterator());
+    if (!freezeUsesAfterDef(*RFI, DT)) {
+      RFI->eraseFromParent();
+      if (LFI) { // Undo the freeze of LHS.
+        LFI->replaceAllUsesWith(LHS);
+        LFI->eraseFromParent();
+        --NumFrozen;
+      }
+      return false;
+    }
+    ++NumFrozen;
+  }
+  return true;
+}
+
 // See if this min/max intrinsic always picks it's one specific operand.
 // If not, check whether we can canonicalize signed minmax into unsigned version
 bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
@@ -667,6 +698,37 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
     return true;
   }
   if (RRange.icmp(Pred, LRange)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getRHS());
+    MM->eraseFromParent();
+    return true;
+  }
+
+  // A select condition that may be undef still constrains an operand if the
+  // operand is frozen, so that the condition and the min/max observe the same
+  // value:
+  //   select (m < 0), (shl x, (sub 0, smin(m, 0))), 0
+  //     --> m.fr = freeze m
+  //         select (m.fr < 0), (shl x, (sub 0, m.fr)), 0
+  ConstantRange FrozenLRange =
+      LVI->getConstantRangeAtUse(MM->getOperandUse(0), /*UndefAllowed*/ false,
+                                 /*AssumeFrozen*/ true);
+  ConstantRange FrozenRRange =
+      LVI->getConstantRangeAtUse(MM->getOperandUse(1), /*UndefAllowed*/ false,
+                                 /*AssumeFrozen*/ true);
+  // Freeze the operands whose range is narrowed by it (there is at least one,
+  // as the fold without freezing failed above).
+  bool FreezeL = FrozenLRange != LRange;
+  bool FreezeR = FrozenRRange != RRange;
+  if (FrozenLRange.icmp(Pred, FrozenRRange) &&
+      freezeOperands(MM, FreezeL, FreezeR, *DT)) {
+    ++NumMinMax;
+    MM->replaceAllUsesWith(MM->getLHS());
+    MM->eraseFromParent();
+    return true;
+  }
+  if (FrozenRRange.icmp(Pred, FrozenLRange) &&
+      freezeOperands(MM, FreezeL, FreezeR, *DT)) {
     ++NumMinMax;
     MM->replaceAllUsesWith(MM->getRHS());
     MM->eraseFromParent();
