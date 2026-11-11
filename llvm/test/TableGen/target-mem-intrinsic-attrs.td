@@ -23,41 +23,41 @@ def int_aarch64_target_mem1_read_argmem_write   : DefaultAttrsIntrinsic<[], [llv
 def int_aarch64_target_mem0_read_argmem_write   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrRead<[TargetMem0]>, IntrWrite<[ArgMem]>]>;
 
 // CHECK-LABEL: case 0: // llvm.aarch64.argmem.read.target.mem1.write
-// CHECK: // ArgMem: Ref, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: NoModRef, TargetMem1: Mod
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(2049)),
+// CHECK: // ArgMem: Ref, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: NoModRef, TargetMem1: Mod
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(8193)),
 
 // CHECK-LABEL: case 1: // llvm.aarch64.argmem.target.mem1.read.target.mem1.write
-// CHECK: // ArgMem: Ref, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: NoModRef, TargetMem1: ModRef
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(3073)),
+// CHECK: // ArgMem: Ref, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: NoModRef, TargetMem1: ModRef
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(12289)),
 
 // CHECK-LABEL: case 2: // llvm.aarch64.get.target.mem0.mem1
-// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: Ref, TargetMem1: Ref
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(1280)),
+// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: Ref, TargetMem1: Ref
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(5120)),
 
 // CHECK-LABEL: case 3: // llvm.aarch64.get.target.mem0.set.target.mem1
-// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: Ref, TargetMem1: Mod
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(2304)),
+// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: Ref, TargetMem1: Mod
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(9216)),
 
 // CHECK-LABEL: case 4: // llvm.aarch64.get.target.mem1
-// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: NoModRef, TargetMem1: Ref
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(1024)),
+// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: NoModRef, TargetMem1: Ref
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(4096)),
 
 // CHECK-LABEL: case 5: // llvm.aarch64.get.target.mem1.set.target.mem1
-// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: NoModRef, TargetMem1: ModRef
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(3072)),
+// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: NoModRef, TargetMem1: ModRef
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(12288)),
 
 // CHECK-LABEL: case 6: // llvm.aarch64.set.inaccessible.mem
-// CHECK: // ArgMem: NoModRef, InaccessibleMem: Mod, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: NoModRef, TargetMem1: NoModRef
+// CHECK: // ArgMem: NoModRef, InaccessibleMem: Mod, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: NoModRef, TargetMem1: NoModRef
 // CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(8)),
 
 // CHECK-LABEL: case 7: // llvm.aarch64.set.target.mem0
-// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: Mod, TargetMem1: NoModRef
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(512)),
+// CHECK: // ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: Mod, TargetMem1: NoModRef
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(2048)),
 
 // CHECK-LABEL: case 8: // llvm.aarch64.target.mem0.read.argmem.write
-// CHECK: // ArgMem: Mod, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: Ref, TargetMem1: NoModRef
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(258)),
+// CHECK: // ArgMem: Mod, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: Ref, TargetMem1: NoModRef
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(1026)),
 
 // CHECK-LABEL: case 9: // llvm.aarch64.target.mem1.read.argmem.write
-// CHECK: // ArgMem: Mod, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, TargetMem0: NoModRef, TargetMem1: Ref
-// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(1026)),
+// CHECK: // ArgMem: Mod, InaccessibleMem: NoModRef, ErrnoMem: NoModRef, Other: NoModRef, ThreadIdMem: NoModRef, TargetMem0: NoModRef, TargetMem1: Ref
+// CHECK-NEXT: Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(4098)),

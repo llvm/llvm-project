@@ -608,6 +608,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
               convertModRefInfoToLLVM(memAttr.getInaccessibleMem())) |
           llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                               convertModRefInfoToLLVM(memAttr.getOther())) |
+          llvm::MemoryEffects(llvm::MemoryEffects::Location::ThreadIdMem,
+                              convertModRefInfoToLLVM(memAttr.getOther())) |
           llvm::MemoryEffects(llvm::MemoryEffects::Location::ErrnoMem,
                               convertModRefInfoToLLVM(memAttr.getErrnoMem())) |
           llvm::MemoryEffects(

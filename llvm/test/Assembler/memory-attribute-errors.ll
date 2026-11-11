@@ -5,6 +5,7 @@
 ; RUN: not llvm-as < %t/invalid-kind.ll 2>&1 | FileCheck %s --check-prefix=INVALID-KIND
 ; RUN: not llvm-as < %t/other.ll 2>&1 | FileCheck %s --check-prefix=OTHER
 ; RUN: not llvm-as < %t/missing-colon.ll 2>&1 | FileCheck %s --check-prefix=MISSING-COLON
+; RUN: not llvm-as < %t/threadid-missing-colon.ll 2>&1 | FileCheck %s --check-prefix=THREADID-MISSING-COLON
 ; RUN: not llvm-as < %t/invalid-access-kind.ll 2>&1 | FileCheck %s --check-prefix=INVALID-ACCESS-KIND
 ; RUN: not llvm-as < %t/default-after-loc.ll 2>&1 | FileCheck %s --check-prefix=DEFAULT-AFTER-LOC
 ; RUN: not llvm-as < %t/default-after-target-loc.ll 2>&1 | FileCheck %s --check-prefix=DEFAULT-AFTER-TARGET-LOC
@@ -27,6 +28,9 @@ declare void @fn() memory(other: read)
 ;--- missing-colon.ll
 ; MISSING-COLON: error: expected ':' after location
 declare void @fn() memory(argmem)
+;--- threadid-missing-colon.ll
+; THREADID-MISSING-COLON: error: expected ':' after location
+declare void @fn() memory(threadid)
 ;--- invalid-access-kind.ll
 ; INVALID-ACCESS-KIND: error: expected access kind (none, read, write, readwrite)
 declare void @fn() memory(argmem: foo)

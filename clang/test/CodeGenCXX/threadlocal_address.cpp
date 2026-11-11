@@ -135,7 +135,7 @@ int h() {
 // NON-ZERO-GLOBAL-AS: attributes #[[ATTR3:[0-9]+]] = { convergent noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // NON-ZERO-GLOBAL-AS: attributes #[[ATTR4]] = { convergent }
 //.
-// CHECK-O1: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none, target_mem: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK-O1: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none, inaccessiblemem: none, threadid: none, target_mem: none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK-O1: attributes #[[ATTR1:[0-9]+]] = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 // CHECK-O1: attributes #[[ATTR2]] = { mustprogress nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK-O1: attributes #[[ATTR3:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
