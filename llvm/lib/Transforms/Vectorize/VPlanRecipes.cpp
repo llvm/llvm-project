@@ -4219,6 +4219,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     return computeCallCost(CalledFn, ResultTy, drop_end(operands()),
                            isSingleScalar(), VF, Ctx);
   }
+  case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::FAdd:
@@ -4235,6 +4236,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Xor:
   case Instruction::ICmp:
   case Instruction::FCmp:
+  case Instruction::Freeze:
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
@@ -4346,6 +4348,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     }
     return Cost;
   }
+  case Instruction::BitCast:
   case Instruction::SExt:
   case Instruction::ZExt:
   case Instruction::FPToUI:
