@@ -422,6 +422,7 @@ public:
   bool isToBeScheduledASAP(const MachineInstr &MI1,
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
+  bool isHLXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
   bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;

@@ -1,4 +1,4 @@
-import { DebugProtocol } from "@vscode/debugprotocol";
+import type { dap } from "@protocol/dap";
 import * as vscode from "vscode";
 import { DebugSessionTracker } from "../debug-session-tracker";
 
@@ -9,20 +9,20 @@ export interface ModuleProperty {
 
 /** Type to represent both Module and ModuleProperty since TreeDataProvider
  * expects one concrete type */
-type TreeData = DebugProtocol.Module | ModuleProperty;
+type TreeData = dap.Module | ModuleProperty;
 
-function isModule(type: TreeData): type is DebugProtocol.Module {
-  return (type as DebugProtocol.Module).id !== undefined;
+function isModule(type: TreeData): type is dap.Module {
+  return (type as dap.Module).id !== undefined;
 }
 
 class ModuleItem extends vscode.TreeItem {
-  constructor(module: DebugProtocol.Module) {
+  constructor(module: dap.Module) {
     super(module.name, vscode.TreeItemCollapsibleState.Collapsed);
     this.description = module.symbolStatus;
     this.contextValue = "module";
   }
 
-  static getProperties(module: DebugProtocol.Module): ModuleProperty[] {
+  static getProperties(module: dap.Module): ModuleProperty[] {
     // does not include the name and symbol status as it is show in the parent.
     let children: ModuleProperty[] = [];
     children.push({ key: "id:", value: module.id.toString() });

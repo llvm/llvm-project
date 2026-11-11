@@ -25,6 +25,7 @@ def InParallelOpInterface : OpInterface<"InParallelOpInterface"> {
     iterating op, the combining op and the individual subtensor producing ops.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ParallelCombiningOpInterface.h"];
 
   let methods = [
     InterfaceMethod<
@@ -89,6 +90,7 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
     to verify the correctness of the op.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ParallelCombiningOpInterface.h"];
 
   let methods = [
     InterfaceMethod<[{ 

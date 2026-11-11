@@ -43,7 +43,7 @@
     "lnt-machine": "linux-x86_64-2026-10-16",
     "pr-benchmarks": true,
     "setup": {
-      "runner": "llvm-premerge-linux-32-runners",
+      "runner": "llvm-premerge-linux-4-runners",
       "container": "ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830",
       "cxx": "clang++-22",
       "benchmark-suite-version": "215725ffad83bd499ffca9381b3cace185522160",

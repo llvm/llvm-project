@@ -645,6 +645,11 @@ bool HexagonMCInstrInfo::isHVX(MCInstrInfo const &MCII, MCInst const &MCI) {
   return HexagonII::TypeCVI_FIRST <= V && V <= HexagonII::TypeCVI_LAST;
 }
 
+bool HexagonMCInstrInfo::isHLX(MCInstrInfo const &MCII, MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::isHLXPos) & HexagonII::isHLXMask;
+}
+
 bool HexagonMCInstrInfo::isImmext(MCInst const &MCI) {
   return MCI.getOpcode() == Hexagon::A4_ext;
 }
@@ -967,6 +972,15 @@ bool HexagonMCInstrInfo::hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI) {
 bool HexagonMCInstrInfo::hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
   const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
   return (F >> HexagonII::HasHvxTmpPos) & HexagonII::HasHvxTmpMask;
+}
+
+bool HexagonMCInstrInfo::hasHlxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::HasHlxTmpPos) & HexagonII::HasHlxTmpMask;
+}
+
+bool HexagonMCInstrInfo::hasHxxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
+  return hasHvxTmp(MCII, MCI) || hasHlxTmp(MCII, MCI);
 }
 
 bool HexagonMCInstrInfo::requiresSlot(MCSubtargetInfo const &STI,
