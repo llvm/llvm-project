@@ -12628,7 +12628,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         SmallVector<Value *> Calls;
         if (checkEVsForVecCalls(VL, S, *TLI, Indices, Calls)) {
           TE->StructEVIndices = std::move(Indices);
-          buildTreeRec(Operands.front(), Depth + 1, {TE, 0});
+          // The calls are vectorized already for another field - reuse them.
+          if (TreeEntry *CallTE =
+                  getSameValuesTreeEntry(Calls.front(), Calls, /*SameVF=*/true))
+            OperandsToTreeEntry.try_emplace({TE, 0}, CallTE);
+          else
+            buildTreeRec(Operands.front(), Depth + 1, {TE, 0});
         }
       }
       return;
@@ -19999,6 +20004,18 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     GatherCost += getUnfusedFMulsPenalty(*TE);
     // Erase subtree if it is non-profitable.
     ArrayRef<unsigned> Nodes = std::get<2>(Worklist.top().second);
+    // Skip, if the struct call in the subtree is still reused by the
+    // extractvalue node outside of the subtree.
+    if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &EV) {
+          return !EV->StructEVIndices.empty() && EV.get() != TE &&
+                 !DeletedNodes.contains(EV.get()) &&
+                 !TransformedToGatherNodes.contains(EV.get()) &&
+                 !is_contained(Nodes, EV->Idx) &&
+                 is_contained(Nodes, getOperandEntry(EV.get(), 0)->Idx);
+        })) {
+      Worklist.pop();
+      continue;
+    }
     // Prefer trimming equal-cost alternate-shuffle subtrees rooted at binary
     // ops: alt-shuffles introduce runtime shuffle overhead that the cost model
     // may underestimate. Skip if the subtree contains ExtractElement nodes,

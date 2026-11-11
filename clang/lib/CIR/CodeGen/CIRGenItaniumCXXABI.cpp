@@ -519,8 +519,12 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   cgvt.createVTableInitializer(vtable, vtLayout, rtti,
                                cir::isLocalLinkage(linkage));
 
-  // Set the correct linkage.
+  // Set the correct linkage. The global was created as a declaration, which
+  // MLIR requires to be private, so the visibility has to follow the linkage of
+  // the definition.
   vtable.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      vtable, CIRGenModule::getMLIRVisibility(vtable));
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
@@ -643,7 +647,7 @@ public:
   /// Build the RTTI type info struct for the given type.
   mlir::Attribute buildTypeInfo(mlir::Location loc, QualType ty,
                                 cir::GlobalLinkageKind linkage,
-                                mlir::SymbolTable::Visibility visibility);
+                                cir::VisibilityKind globalVisibility);
 };
 
 /// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
@@ -1143,27 +1147,26 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
 
   // Give the type_info object and name the formal visibility of the
   // type itself.
-  assert(!cir::MissingFeatures::hiddenVisibility());
-  assert(!cir::MissingFeatures::protectedVisibility());
-
-  mlir::SymbolTable::Visibility symVisibility;
-  if (cir::isLocalLinkage(linkage))
+  cir::VisibilityKind globalVisibility;
+  if (cir::isLocalLinkage(linkage)) {
     // If the linkage is local, only default visibility makes sense.
-    symVisibility = mlir::SymbolTable::Visibility::Public;
-  else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
-           CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
+    globalVisibility = cir::VisibilityKind::Default;
+  } else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
+             CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
     cgm.errorNYI(
         "buildTypeInfo: classifyRTTIUniqueness == RUK_NonUniqueHidden");
-    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
-  } else
-    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
+    globalVisibility = cir::VisibilityKind::Hidden;
+  } else {
+    globalVisibility = CIRGenModule::getCIRVisibilityKind(ty->getVisibility());
+  }
 
-  return buildTypeInfo(loc, ty, linkage, symVisibility);
+  return buildTypeInfo(loc, ty, linkage, globalVisibility);
 }
 
-mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
-    mlir::Location loc, QualType ty, cir::GlobalLinkageKind linkage,
-    mlir::SymbolTable::Visibility visibility) {
+mlir::Attribute
+CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc, QualType ty,
+                                        cir::GlobalLinkageKind linkage,
+                                        cir::VisibilityKind globalVisibility) {
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   assert(!cir::MissingFeatures::setDLLStorageClass());
@@ -1346,15 +1349,19 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   // All of this is to say that it's important that both the type_info
   // object and the type_info name be uniqued when weakly emitted.
 
-  mlir::SymbolTable::setSymbolVisibility(typeName, visibility);
+  mlir::SymbolTable::setSymbolVisibility(
+      typeName, CIRGenModule::getMLIRVisibilityFromCIRLinkage(linkage));
+  typeName.setGlobalVisibility(globalVisibility);
   assert(!cir::MissingFeatures::setDLLStorageClass());
   assert(!cir::MissingFeatures::opGlobalPartition());
-  assert(!cir::MissingFeatures::setDSOLocal());
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(typeName));
 
-  mlir::SymbolTable::setSymbolVisibility(gv, visibility);
+  mlir::SymbolTable::setSymbolVisibility(
+      gv, CIRGenModule::getMLIRVisibilityFromCIRLinkage(linkage));
+  gv.setGlobalVisibility(globalVisibility);
   assert(!cir::MissingFeatures::setDLLStorageClass());
   assert(!cir::MissingFeatures::opGlobalPartition());
-  assert(!cir::MissingFeatures::setDSOLocal());
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
 
   CIRGenModule::setInitializer(gv, init);
   return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
