@@ -1981,6 +1981,10 @@ AArch64InstrInfo::canRemovePTestInstr(MachineInstr *PTest, MachineInstr *Mask,
   }
   case AArch64::PTRUE_B:
     // PTEST(OP=PTRUE_B(A), OP) -> PTRUES_B(A)
+    // PTRUES sets the flags using its own result as the governing predicate,
+    // so this is only valid when the PTEST does the same.
+    if (Mask != Pred)
+      return {};
     break;
   default:
     // Bail out if we don't recognize the input

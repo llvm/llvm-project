@@ -12,5 +12,59 @@ define i1 @ptrue() {
   ret i1 %2
 }
 
+; The PTEST must stay when its governing predicate is not the PTRUE itself,
+; because PTRUES sets the flags as PTEST(%ptrue, %ptrue) would.
+
+define i1 @ptrue_any_other_mask(<vscale x 16 x i1> %pg) {
+; CHECK-LABEL: ptrue_any_other_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %2 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %1)
+  ret i1 %2
+}
+
+define i1 @ptrue_first_other_mask(<vscale x 16 x i1> %pg) {
+; CHECK-LABEL: ptrue_first_other_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b, vl5
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, mi
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 5)
+  %2 = tail call i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %1)
+  ret i1 %2
+}
+
+define i1 @ptrue_last_other_mask(<vscale x 16 x i1> %pg) {
+; CHECK-LABEL: ptrue_last_other_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %2 = tail call i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %1)
+  ret i1 %2
+}
+
+define i1 @ptrue_any_pfalse_mask() {
+; CHECK-LABEL: ptrue_any_pfalse_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl5
+; CHECK-NEXT:    pfalse p1.b
+; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 5)
+  %2 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> %1)
+  ret i1 %2
+}
+
 declare i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
+declare i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
+declare i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 %pattern)
