@@ -92,6 +92,24 @@ entry:
   ret float %val
 }
 
+; Cloning the no-op inttoptr/ptrtoint pair whose source address space was
+; itself inferred must insert an addrspacecast instead of asserting. The %x
+; load makes the addrspacecast's address space be inferred before the inttoptr.
+@g4 = addrspace(1) global i32 0
+
+define i32 @noop_ptrint_pair_ce_flat_src() {
+; CHECK-LABEL: @noop_ptrint_pair_ce_flat_src(
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr addrspace(1) @g4, align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(1) @g4, align 4
+; CHECK-NEXT:    [[S:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %x = load i32, ptr addrspacecast (ptr addrspace(1) @g4 to ptr)
+  %y = load i32, ptr inttoptr (i64 ptrtoint (ptr addrspacecast (ptr addrspace(1) @g4 to ptr) to i64) to ptr)
+  %s = add i32 %x, %y
+  ret i32 %s
+}
+
 attributes #0 = { convergent nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }

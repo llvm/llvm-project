@@ -81,10 +81,19 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
       uint64_t CallSites = 0;
 
       // Find caller from veneer's branch-back target so we can limit the scan.
+      // The block at that target is where an inlined load/store falls through
+      // to: the branch being replaced is a tail call, so its block has no
+      // successors in the CFG, and without an explicit edge layout passes are
+      // free to separate the two.
       BinaryFunction *CallerBF = nullptr;
+      BinaryBasicBlock *ReturnBB = nullptr;
       if (ReturnTargetSym) {
-        if (ErrorOr<uint64_t> Addr = BC.getSymbolValue(*ReturnTargetSym))
+        if (ErrorOr<uint64_t> Addr = BC.getSymbolValue(*ReturnTargetSym)) {
           CallerBF = BC.getBinaryFunctionContainingAddress(*Addr);
+          if (CallerBF)
+            ReturnBB =
+                CallerBF->getBasicBlockAtOffset(*Addr - CallerBF->getAddress());
+        }
       }
 
       auto ScanForBranchesToVeneer = [&](BinaryFunction &F) {
@@ -96,30 +105,50 @@ Error VeneerElimination::runOnFunctions(BinaryContext &BC) {
               continue;
             }
             const MCSymbol *Target = BC.MIB->getTargetSymbol(Instr);
-            if (!BranchTargetsVeneer(Target)) {
+            // The branch lld wrote in place of the load/store is the block's
+            // unconditional terminator. Anything else branching here is not a
+            // patch site: inlining the veneer body over it would execute the
+            // load unconditionally and drop the branch.
+            if (!BranchTargetsVeneer(Target) ||
+                BC.MIB->isConditionalBranch(Instr) ||
+                std::next(II) != BB.end()) {
               ++II;
               continue;
             }
             InstructionListType Repl;
             Repl.emplace_back(VeneerFirstInstr);
             II = BB.replaceInstruction(II, Repl);
+            // The block now ends in the veneer's load/store and continues at
+            // the veneer's branch-back target. That edge has to be recorded:
+            // the branch just removed was a tail call, so the block has no
+            // successors, and layout passes would be free to put something
+            // else after it -- with no branch added, since a block with no
+            // successors has no fall-through to fix up.
+            BB.addSuccessor(ReturnBB, BB.getKnownExecutionCount());
             ++CallSites;
             ++NumE843419Inlined;
           }
         }
       };
 
-      if (CallerBF && !CallerBF->isIgnored())
+      if (CallerBF && !CallerBF->isIgnored() && ReturnBB)
         ScanForBranchesToVeneer(*CallerBF);
       else
         LLVM_DEBUG(dbgs() << "BOLT: skipping e843419 veneer inline for "
                           << BF.getOneName()
-                          << " (caller not resolved or ignored)\n");
+                          << " (caller or return block not resolved, or "
+                             "caller ignored)\n");
 
       // Only mark pseudo when we actually inlined at least one branch site.
       if (CallSites > 0) {
         ++NumEliminatedVeneers;
         BF.setPseudo(true);
+        // The veneer's branch back is what made its target a secondary entry
+        // point of the caller. With the veneer gone, the entry point stays
+        // only if something else requested it as well.
+        if (CallerBF->getSecondaryEntryPointSymbol(*ReturnBB) ==
+            ReturnTargetSym)
+          CallerBF->releaseEntryPoint(*ReturnBB);
         LLVM_DEBUG(dbgs() << "BOLT-INFO: inlined e843419 veneer "
                           << BF.getOneName() << " at " << CallSites
                           << " branch sites\n");

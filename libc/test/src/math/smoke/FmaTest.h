@@ -90,24 +90,30 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(func(InType(-0.25), in_z, in_z),
                               func(InType(1.75), in_z, -in_z));
 
-    // Exact cancellation.
+    // Exact cancellation. The rounding mode decides the sign of the zero, so
+    // the inputs must not be known to the compiler.
+    auto exact = [&](InType x, InType y, InType z) {
+      return func(LIBC_NAMESPACE::testing::opaque(x),
+                  LIBC_NAMESPACE::testing::opaque(y),
+                  LIBC_NAMESPACE::testing::opaque(z));
+    };
     EXPECT_FP_EQ_ROUNDING_NEAREST(
-        out.zero, func(InType(3.0), InType(5.0), InType(-15.0)));
-    EXPECT_FP_EQ_ROUNDING_UPWARD(out.zero,
-                                 func(InType(3.0), InType(5.0), InType(-15.0)));
+        out.zero, exact(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(
+        out.zero, exact(InType(3.0), InType(5.0), InType(-15.0)));
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
-        out.zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+        out.zero, exact(InType(3.0), InType(5.0), InType(-15.0)));
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(
-        out.neg_zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+        out.neg_zero, exact(InType(3.0), InType(5.0), InType(-15.0)));
 
     EXPECT_FP_EQ_ROUNDING_NEAREST(
-        out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
-    EXPECT_FP_EQ_ROUNDING_UPWARD(out.zero,
-                                 func(InType(-3.0), InType(5.0), InType(15.0)));
+        out.zero, exact(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(
+        out.zero, exact(InType(-3.0), InType(5.0), InType(15.0)));
     EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
-        out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+        out.zero, exact(InType(-3.0), InType(5.0), InType(15.0)));
     EXPECT_FP_EQ_ROUNDING_DOWNWARD(
-        out.neg_zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+        out.neg_zero, exact(InType(-3.0), InType(5.0), InType(15.0)));
   }
 };
 

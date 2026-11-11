@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class AssumeInst;
 struct OperandBundleUse;
 class Function;
@@ -57,6 +58,8 @@ public:
   };
 
 private:
+  const AnalysisOptions &Opts;
+
   /// The function for which this cache is handling assumptions.
   ///
   /// We track this to lazily populate our assumptions.
@@ -111,8 +114,7 @@ private:
 public:
   /// Construct an AssumptionCache from a function by scanning all of
   /// its instructions.
-  AssumptionCache(Function &F, TargetTransformInfo *TTI = nullptr)
-      : F(F), TTI(TTI) {}
+  LLVM_ABI AssumptionCache(Function &F, TargetTransformInfo *TTI = nullptr);
 
   /// This cache is designed to be self-updating and so it should never be
   /// invalidated.

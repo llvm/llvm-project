@@ -69,7 +69,7 @@ public:
   }
 
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag T,
+                      orc_rt_ControllerHandlerTag *T,
                       WrapperFunctionBuffer ArgBytes) override {
     Captured = std::move(OnComplete);
   }

@@ -136,6 +136,10 @@ union E2 {
   bool operator>(const E2&) const = default;
   bool operator>=(const E2&) const = default;
 };
+void f(E1 e) {
+  void(e == e);
+  void(e != e);
+}
 
 struct F;
 bool operator==(const F&, const F&);

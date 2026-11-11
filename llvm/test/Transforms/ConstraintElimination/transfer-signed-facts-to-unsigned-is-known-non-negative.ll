@@ -160,7 +160,7 @@ define void @iv_may_signed_wrap_variable_trip_count(i8 %N) {
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ugt i8 [[IV]], 2
 ; CHECK-NEXT:    call void @use(i1 [[C_0]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    ret void

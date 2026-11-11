@@ -49,9 +49,9 @@ define dso_local i32 @_Z3fooi1S(i32 %count, ptr nocapture readonly byval(%struct
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], i64 20, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP_I]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], i64 20, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP_I1]], ptr align 8 [[AGG_TMP_I]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P1]], ptr align 8 [[AGG_TMP_I1]], i64 20, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP14]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP_I]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P1]], ptr align 8 [[AGG_TMP_I1]], i64 20, i1 false)
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 [[CALL]]

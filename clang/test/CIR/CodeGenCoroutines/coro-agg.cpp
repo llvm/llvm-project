@@ -1,11 +1,13 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -Wno-coroutine-missing-unhandled-exception -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefixes=CIR,CIR-COMMON,CIR-NOEH
+// RUN: FileCheck --input-file=%t.cir %s -check-prefixes=CIR,CIR-COMMON,CIR-NOEH,RESUME,RESUME-NOEH
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -Wno-coroutine-missing-unhandled-exception -emit-cir %s -o %t.eh.cir
-// RUN: FileCheck --input-file=%t.eh.cir %s -check-prefixes=CIR-EH,CIR-COMMON
+// RUN: FileCheck --input-file=%t.eh.cir %s -check-prefixes=CIR-EH,CIR-COMMON,RESUME,RESUME-EH
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=OGCG,RESUME-IR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.eh.ll
-// RUN: FileCheck --input-file=%t.eh.ll %s -check-prefix=OGCG-EH
+// RUN: FileCheck --input-file=%t.eh.ll %s -check-prefixes=OGCG-EH,RESUME-IR
 
 #include "Inputs/coroutine.h"
 
@@ -29,6 +31,7 @@ struct coro_t {
 };
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z22aggregate_coawait_exprv
+// LLVM-LABEL: define dso_local void @_Z22aggregate_coawait_exprv
 // OGCG-LABEL: define dso_local void @_Z22aggregate_coawait_exprv
 coro_t aggregate_coawait_expr() {
   // CIR: %[[VAL:.*]] = cir.alloca "val" align(4) init : !cir.ptr<!rec_B>
@@ -42,6 +45,13 @@ coro_t aggregate_coawait_expr() {
   // CIR:   cir.yield
   // CIR: },)
 
+  // The i64 result goes through a coerce slot and is copied into val.
+  // LLVM: %[[COERCE:.*]] = alloca i64, align 8
+  // LLVM: %[[VAL:.*]] = alloca %struct.B, align 4
+  // LLVM:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
+  // LLVM-NEXT:   store i64 %[[RES]], ptr %[[COERCE]], align 8
+  // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAL]], ptr align 8 %[[COERCE]], i64 8, i1 false)
+
   // OGCG: %[[VAL:.*]] = alloca %struct.B, align 4
   // OGCG: await.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
@@ -50,6 +60,7 @@ coro_t aggregate_coawait_expr() {
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z29aggregate_coawait_expr_unusedv
+// LLVM-LABEL: define dso_local void @_Z29aggregate_coawait_expr_unusedv
 // OGCG-LABEL: define dso_local void @_Z29aggregate_coawait_expr_unusedv
 coro_t aggregate_coawait_expr_unused() {
   // CIR: cir.await(user, ready : {
@@ -59,6 +70,11 @@ coro_t aggregate_coawait_expr_unused() {
   // CIR:   cir.yield
   // CIR: },)
 
+  // LLVM: %[[COERCE:.*]] = alloca i64, align 8
+  // LLVM:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
+  // LLVM-NEXT:   store i64 %[[RES]], ptr %[[COERCE]], align 8
+  // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 8 %[[COERCE]], i64 8, i1 false)
+
   // OGCG: await.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
   // OGCG:   store i64 %[[RES]], ptr %{{.*}}, align 4
@@ -66,6 +82,7 @@ coro_t aggregate_coawait_expr_unused() {
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z22aggregate_coyield_exprv
+// LLVM-LABEL: define dso_local void @_Z22aggregate_coyield_exprv
 // OGCG-LABEL: define dso_local void @_Z22aggregate_coyield_exprv
 coro_t aggregate_coyield_expr() {
   // CIR: %[[VAL:.*]] = cir.alloca "val" align(4) init : !cir.ptr<!rec_B>
@@ -79,6 +96,14 @@ coro_t aggregate_coyield_expr() {
   // CIR:   cir.yield
   // CIR: },)
 
+  // The first i64 slot holds the yield_value() result.
+  // LLVM: alloca i64, align 8
+  // LLVM-NEXT: %[[COERCE:.*]] = alloca i64, align 8
+  // LLVM: %[[VAL:.*]] = alloca %struct.B, align 4
+  // LLVM:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
+  // LLVM-NEXT:   store i64 %[[RES]], ptr %[[COERCE]], align 8
+  // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAL]], ptr align 8 %[[COERCE]], i64 8, i1 false)
+
   // OGCG: %[[VAL:.*]] = alloca %struct.B, align 4
   // OGCG: yield.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
@@ -87,6 +112,7 @@ coro_t aggregate_coyield_expr() {
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z29aggregate_coyield_expr_unusedv
+// LLVM-LABEL: define dso_local void @_Z29aggregate_coyield_expr_unusedv
 // OGCG-LABEL: define dso_local void @_Z29aggregate_coyield_expr_unusedv
 coro_t aggregate_coyield_expr_unused() {
   // CIR: cir.await(yield, ready : {
@@ -95,6 +121,12 @@ coro_t aggregate_coyield_expr_unused() {
   // CIR:   %[[RES:.*]] = cir.call @_ZN1B12await_resumeEv(%{{.*}})
   // CIR:   cir.yield
   // CIR: },)
+
+  // LLVM: alloca i64, align 8
+  // LLVM-NEXT: %[[COERCE:.*]] = alloca i64, align 8
+  // LLVM:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
+  // LLVM-NEXT:   store i64 %[[RES]], ptr %[[COERCE]], align 8
+  // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 8 %[[COERCE]], i64 8, i1 false)
 
   // OGCG: yield.ready:
   // OGCG:   %[[RES:.*]] = call i64 @_ZN1B12await_resumeEv(ptr {{.*}})
@@ -158,6 +190,21 @@ struct coro_nt_t {
 // CIR-EH-NEXT: } cleanup all {
 // CIR-EH-NEXT:   cir.call @_ZN2NTD1Ev(%[[TMP]])
 
+// The destroy case skips the destructor: the result does not exist yet.
+// LLVM-LABEL: define dso_local void @_Z18discard_nontrivialv
+// LLVM: call noundef zeroext i1 @_ZN7AwaitNT11await_readyEv(
+// LLVM: switch i8 %{{.*}}, label %{{.*}} [
+// LLVM-NEXT:   i8 0, label %{{.*}}
+// LLVM-NEXT:   i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT: br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} sret(%struct.NT) {{.*}} %[[TMP:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[TMP]])
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT: call ptr @llvm.coro.free(
+
 // OGCG-LABEL: define dso_local void @_Z18discard_nontrivialv
 // OGCG: await.cleanup:
 // OGCG-NEXT: br label %[[CLEANUP:.*]]
@@ -181,6 +228,15 @@ coro_t discard_nontrivial() { co_await AwaitNT{}; }
 // CIR-NEXT: } cleanup normal {
 // CIR-NEXT:   cir.call @_ZN2NTD1Ev(%[[TMP]])
 
+// LLVM-LABEL: define dso_local void @_Z16comma_nontrivialv
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[TMP:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_Z3usei(i32 noundef 1)
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[TMP]])
+
 // OGCG-LABEL: define dso_local void @_Z16comma_nontrivialv
 // OGCG: await.ready:
 // OGCG-NEXT: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[TMP:.*]], ptr
@@ -199,6 +255,15 @@ coro_t comma_nontrivial() { (co_await AwaitNT{}, use(1)); }
 // CIR-NEXT:   cir.yield
 // CIR-NEXT: } cleanup normal {
 // CIR-NEXT:   cir.call @_ZN2NTD1Ev(%[[ARG]])
+
+// LLVM-LABEL: define dso_local void @_Z16byval_nontrivialv
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_Z7consume2NT(ptr {{.*}} %[[ARG]])
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
 
 // OGCG-LABEL: define dso_local void @_Z16byval_nontrivialv
 // OGCG: await.ready:
@@ -253,6 +318,41 @@ coro_t byval_nontrivial() { consume(co_await AwaitNT{}); }
 // CIR-EH-NEXT: } cleanup all {
 // CIR-EH-NEXT:   cir.call @_ZN2NTD1Ev(%[[A0]])
 
+// Destroying the coroutine at the second await runs ~NT on the first
+// argument (slot 1) before the coroutine cleanup.
+// LLVM-LABEL: define dso_local void @_Z19two_args_nontrivialv
+// LLVM: call noundef zeroext i1 @_ZN7AwaitNT11await_readyEv(
+// LLVM: i8 1, label %[[AWAIT1_CLEANUP:[0-9]+]]
+// LLVM: [[AWAIT1_CLEANUP]]:
+// LLVM-NEXT: br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[A0:[0-9]+]], ptr
+// LLVM: call noundef zeroext i1 @_ZN7AwaitNT11await_readyEv(
+// LLVM: i8 1, label %[[AWAIT2_CLEANUP:[0-9]+]]
+// LLVM: [[AWAIT2_CLEANUP]]:
+// LLVM-NEXT: store i32 1, ptr %[[SLOT:[0-9]+]], align 4
+// LLVM-NEXT: br label %[[A0_DTOR:[0-9]+]]
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[A1:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_Z8consume22NTS_(ptr {{.*}} %[[A0]], ptr {{.*}} %[[A1]])
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[A1]])
+// LLVM-NEXT: br label %[[BB3:[0-9]+]]
+// LLVM: [[BB3]]:
+// LLVM-NEXT: store i32 0, ptr %[[SLOT]], align 4
+// LLVM-NEXT: br label %[[A0_DTOR]]
+// LLVM: [[A0_DTOR]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[A0]])
+// LLVM: switch i32 %{{.*}}, label %{{.*}} [
+// LLVM-NEXT:   i32 0, label %{{.*}}
+// LLVM-NEXT:   i32 1, label %[[DESTROY:[0-9]+]]
+// LLVM-NEXT: ]
+// LLVM: [[DESTROY]]:
+// LLVM-NEXT: br label %[[CORO_CLEANUP]]
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT: call ptr @llvm.coro.free(
+
 // OGCG-LABEL: define dso_local void @_Z19two_args_nontrivialv
 // OGCG: await.cleanup:
 // OGCG-NEXT: br label %[[OUTER:.*]]
@@ -281,6 +381,18 @@ coro_t two_args_nontrivial() { consume2(co_await AwaitNT{}, co_await AwaitNT{});
 // CIR-NEXT: } cleanup normal {
 // CIR-NEXT:   cir.call @_ZN2NTD1Ev(%[[ARG]])
 
+// LLVM-LABEL: define dso_local void @_Z27coreturn_coyield_nontrivialv
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_ZN9coro_nt_t12promise_type12return_valueE2NT(ptr {{.*}}, ptr {{.*}} %[[ARG]])
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
+// LLVM-NEXT: br label %[[BB3:[0-9]+]]
+// LLVM: [[BB3]]:
+// LLVM-NEXT: call void @_ZN9coro_nt_t12promise_type13final_suspendEv(
+
 // OGCG-LABEL: define dso_local void @_Z27coreturn_coyield_nontrivialv
 // OGCG: yield.ready:
 // OGCG-NEXT: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:.*]], ptr
@@ -307,6 +419,27 @@ coro_nt_t coreturn_coyield_nontrivial() { co_return co_yield 42; }
 // CIR-NEXT:  %[[ACTIVE:.*]] = cir.load {{.*}} %[[FLAG]] :
 // CIR-NEXT:  cir.if %[[ACTIVE]] {
 // CIR-NEXT:    cir.call @_ZN2NTD1Ev(%[[TMP]])
+
+// The destroy case reaches the guarded cleanup with the flag still unset.
+// LLVM-LABEL: define dso_local void @_Z23cond_discard_nontrivialb
+// LLVM: call void @_ZNSt13suspend_never12await_resumeEv(
+// LLVM: store i8 0, ptr %[[FLAG:[0-9]+]], align 1
+// LLVM: call noundef zeroext i1 @_ZN7AwaitNT11await_readyEv(
+// LLVM: switch i8 %{{.*}}, label %{{.*}} [
+// LLVM-NEXT:   i8 0, label %{{.*}}
+// LLVM-NEXT:   i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT: store i32 1, ptr %{{.*}}, align 4
+// LLVM-NEXT: br label %[[CLEANUP:[0-9]+]]
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[TMP:[0-9]+]], ptr
+// LLVM-NEXT: br label %{{.*}}
+// LLVM: store i8 1, ptr %[[FLAG]], align 1
+// LLVM: [[CLEANUP]]:
+// LLVM-NEXT: %[[F:.*]] = load i8, ptr %[[FLAG]], align 1
+// LLVM-NEXT: %[[FB:.*]] = trunc i8 %[[F]] to i1
+// LLVM-NEXT: br i1 %[[FB]], label %[[ACTION:[0-9]+]], label %{{.*}}
+// LLVM: [[ACTION]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[TMP]])
 
 // OGCG-LABEL: define dso_local void @_Z23cond_discard_nontrivialb
 // OGCG: store i1 false, ptr %[[FLAG:cleanup.cond]]
@@ -336,6 +469,23 @@ coro_t cond_discard_nontrivial(bool c) { c ? (void)co_await AwaitNT{} : (void)0;
 // CIR-NEXT:   cir.call @_ZN2NTD1Ev(%[[V]])
 // CIR-NOT:  @_ZN2NTD1Ev
 // CIR:      }, finalSuspend : {
+
+// LLVM-LABEL: define dso_local void @_Z19var_init_nontrivialv
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[V:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: %[[X_ADDR:.*]] = getelementptr inbounds nuw %struct.NT, ptr %[[V]], i32 0, i32 0
+// LLVM-NEXT: %[[X:.*]] = load i32, ptr %[[X_ADDR]], align 4
+// LLVM-NEXT: call void @_Z3usei(i32 noundef %[[X]])
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[V]])
+// LLVM-NEXT: br label %[[BB3:[0-9]+]]
+// LLVM: [[BB3]]:
+// LLVM-NEXT: call void @_ZN6coro_t12promise_type11return_voidEv(
+// LLVM-NEXT: br label %[[BB4:[0-9]+]]
+// LLVM: [[BB4]]:
+// LLVM-NEXT: call void @_ZN6coro_t12promise_type13final_suspendEv(
 
 // OGCG-LABEL: define dso_local void @_Z19var_init_nontrivialv
 // OGCG-NOT: agg.tmp.ensured
@@ -369,6 +519,20 @@ bool check(NT);
 // CIR-NEXT: }
 // CIR-NEXT: %[[COND:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.condition(%[[COND]])
+
+// LLVM-LABEL: define dso_local void @_Z20loop_cond_nontrivialv
+// LLVM: call void @_ZN7AwaitNT12await_resumeEv(ptr {{.*}} %[[ARG:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: %[[CHECK:.*]] = call {{.*}} i1 @_Z5check2NT(ptr {{.*}} %[[ARG]])
+// LLVM-NEXT: %[[EXT:.*]] = zext i1 %[[CHECK]] to i8
+// LLVM-NEXT: store i8 %[[EXT]], ptr %[[SPILL:[0-9]+]], align 1
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[ARG]])
+// LLVM-NEXT: br label %[[BB3:[0-9]+]]
+// LLVM: [[BB3]]:
+// LLVM-NEXT: load i8, ptr %[[SPILL]], align 1
 
 // OGCG-LABEL: define dso_local void @_Z20loop_cond_nontrivialv
 // OGCG: await.ready:
@@ -457,6 +621,16 @@ struct coro_init_final_nt_t {
 // CIR-EH-NEXT:   cir.yield
 // CIR-EH-NEXT: } cleanup all {
 // CIR-EH-NEXT:   cir.call @_ZN2NTD1Ev(%[[FINAL]])
+
+// LLVM-LABEL: define dso_local void @_Z21init_final_nontrivialv
+// LLVM: call void @_ZN11InitAwaitNT12await_resumeEv(ptr {{.*}} %[[INIT:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[INIT]])
+// LLVM: call void @_ZN12FinalAwaitNT12await_resumeEv(ptr {{.*}} %[[FINAL:[0-9]+]], ptr
+// LLVM-NEXT: br label %[[BB2:[0-9]+]]
+// LLVM: [[BB2]]:
+// LLVM-NEXT: call void @_ZN2NTD1Ev(ptr {{.*}} %[[FINAL]])
 
 // OGCG-LABEL: define dso_local void @_Z21init_final_nontrivialv
 // OGCG: init.ready:
@@ -589,3 +763,429 @@ ThrowingDtorInitTask throwing_dtor_initial_resume() {
 // OGCG-EH-NEXT:      to label %[[CONT:.*]] unwind label
 // OGCG-EH:       [[CONT]]:
 // OGCG-EH-NEXT:    store i1 false, ptr %[[RESUME_EH]], align 1
+
+// Resume-expression temporaries survive through the enclosing full-expression.
+// Construction guards exclude paths that destroy the coroutine while suspended;
+// array elements and ready/suspend calls retain their own cleanup boundaries.
+
+struct S {
+  S(int);
+  ~S();
+};
+
+struct Agg {
+  S s;
+  int i;
+};
+
+extern "C" bool resume_flag();
+extern "C" int resume_arg(const S &);
+extern "C" int resume_next();
+extern "C" void resume_use(int);
+extern "C" void resume_use_pair(int, int);
+extern "C" void resume_use_result(NT);
+extern "C" void resume_use_aggregate(const Agg &, int);
+extern "C" void mark();
+
+struct DA {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  int await_resume(const S & = S(1));
+};
+
+struct DV {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  int await_resume(S = S(2));
+};
+
+struct DCC {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  int await_resume(int = resume_flag() ? resume_arg(S(1)) : 0);
+};
+
+struct RA {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  NT await_resume(const S & = S(1));
+};
+
+struct PL {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  int await_resume();
+};
+
+struct Task {
+  struct promise_type {
+    Task get_return_object();
+    std::suspend_never initial_suspend();
+    std::suspend_never final_suspend() noexcept;
+    void return_void();
+    void unhandled_exception();
+    DA yield_value(int);
+  };
+};
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @defarg_condtemp(
+// RESUME: %[[TMP:[^,]+]] = cir.alloca "ref.tmp{{[0-9]+}}" {{.*}} : !cir.ptr<!rec_S>
+// RESUME: %[[FLAG:.*]] = cir.alloca "cleanup.cond"
+// RESUME: %[[FALSE:.*]] = cir.const #false
+// RESUME-NEXT: cir.store %[[FALSE]], %[[FLAG]]
+// RESUME: cir.await(user, ready : {
+// RESUME: }, resume : {
+// RESUME: cir.ternary(
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP]],
+// RESUME-NEXT: %[[TRUE:.*]] = cir.const #true
+// RESUME-NEXT: cir.store %[[TRUE]], %[[FLAG]]
+// RESUME: cir.call @_ZN3DCC12await_resumeEi(
+// RESUME: },)
+// RESUME: cir.call @resume_use(
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME: %[[LIVE:.*]] = cir.load {{.*}} %[[FLAG]]
+// RESUME-NEXT: cir.if %[[LIVE]] {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP]])
+
+extern "C" Task defarg_condtemp() {
+  resume_use(co_await DCC{});
+}
+
+// Cover reference and value arguments across two suspension points. Destroy
+// them in reverse order at full-expression end, before the next statement.
+// Construction flags exclude paths that destroy the coroutine while suspended.
+// RESUME-LABEL: cir.func coroutine {{.*}} @two_awaits(
+// RESUME-DAG: %[[TMP1:[^,]+]] = cir.alloca "ref.tmp{{[0-9]+}}" {{.*}} : !cir.ptr<!rec_S>
+// RESUME-DAG: %[[FLAG1:.*]] = cir.alloca "cleanup.cond"
+// RESUME-DAG: %[[TMP2:[^,]+]] = cir.alloca "agg.tmp{{[0-9]+}}" {{.*}} : !cir.ptr<!rec_S>
+// RESUME-DAG: %[[FLAG2:.*]] = cir.alloca "cleanup.cond"
+// RESUME: %[[FALSE1:.*]] = cir.const #false
+// RESUME-NEXT: cir.store %[[FALSE1]], %[[FLAG1]]
+// RESUME: cir.await(user, ready : {
+// RESUME: }, resume : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP1]],
+// RESUME-NEXT: %[[TRUE1:.*]] = cir.const #true
+// RESUME-NEXT: cir.store %[[TRUE1]], %[[FLAG1]]
+// RESUME: cir.call @_ZN2DA12await_resumeERK1S(
+// RESUME: },)
+// RESUME: %[[FALSE2:.*]] = cir.const #false
+// RESUME-NEXT: cir.store %[[FALSE2]], %[[FLAG2]]
+// RESUME: cir.await(user, ready : {
+// RESUME: }, resume : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP2]],
+// RESUME-NEXT: %[[TRUE2:.*]] = cir.const #true
+// RESUME-NEXT: cir.store %[[TRUE2]], %[[FLAG2]]
+// RESUME: cir.call @_ZN2DV12await_resumeE1S(
+// RESUME: },)
+// RESUME: cir.call @resume_use_pair(
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME: %[[LIVE2:.*]] = cir.load {{.*}} %[[FLAG2]]
+// RESUME-NEXT: cir.if %[[LIVE2]] {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP2]])
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME: %[[LIVE1:.*]] = cir.load {{.*}} %[[FLAG1]]
+// RESUME-NEXT: cir.if %[[LIVE1]] {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP1]])
+// RESUME: cir.call @mark()
+
+// RESUME-IR-LABEL: define {{.*}} void @two_awaits(
+// RESUME-IR: await.ready:
+// RESUME-IR: {{(call|invoke)}} void @_ZN1SC1Ei(ptr {{.*}} %[[TMP1:[^,]+]], i32 {{.*}} 1)
+// RESUME-IR: {{(call|invoke)}} {{.*}} i32 @_ZN2DA12await_resumeERK1S(
+// RESUME-IR: {{(call|invoke)}} void @_ZN1SC1Ei(ptr {{.*}} %[[TMP2:[^,]+]], i32 {{.*}} 2)
+// RESUME-IR: {{(call|invoke)}} void @resume_use_pair(
+// RESUME-IR: call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP2]])
+// RESUME-IR: call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP1]])
+// RESUME-IR: {{(call|invoke)}} void @mark()
+
+extern "C" Task two_awaits() {
+  resume_use_pair(co_await DA{}, co_await DV{});
+  mark();
+}
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @class_result(
+// RESUME: cir.await(user, ready : {
+// RESUME: cir.call @_ZN2RA12await_resumeERK1S(
+// RESUME: },)
+// RESUME: cir.call @resume_use_result(
+// RESUME: cir.call @_ZN2NTD1Ev(
+// RESUME: cir.call @_ZN1SD1Ev(
+
+// RESUME-IR-LABEL: define {{.*}} void @class_result(
+// RESUME-IR: {{(call|invoke)}} void @_ZN2RA12await_resumeERK1S(
+// RESUME-IR: {{(call|invoke)}} void @resume_use_result(
+// RESUME-IR: call void @_ZN2NTD1Ev(
+// RESUME-IR: call void @_ZN1SD1Ev(
+
+extern "C" Task class_result() {
+  resume_use_result(co_await RA{});
+}
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @in_conditional(
+// RESUME: %[[FLAG:.*]] = cir.alloca "cleanup.cond"
+// RESUME: %[[FALSE:.*]] = cir.const #false
+// RESUME-NEXT: cir.store %[[FALSE]], %[[FLAG]]
+// RESUME: cir.ternary(
+// RESUME: cir.await(user, ready : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP:[^,]+]],
+// RESUME: },)
+// RESUME: cir.call @resume_use(
+// RESUME: %[[LIVE:.*]] = cir.load {{.*}} %[[FLAG]]
+// RESUME-NEXT: cir.if %[[LIVE]] {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP]])
+
+extern "C" Task in_conditional() {
+  resume_use(resume_flag() ? co_await DA{} : 0);
+}
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @agg_init(
+// RESUME: cir.call @_ZN1SC1Ei(
+// RESUME-NEXT: %[[TRUE:.*]] = cir.const #true
+// RESUME-NEXT: cir.store %[[TRUE]], %[[ACTIVE:.*]]
+// RESUME: cir.await(user, ready : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP:[^,]+]],
+// RESUME: cir.call @_ZN2DA12await_resumeERK1S(
+// RESUME: },)
+// RESUME: %[[FALSE:.*]] = cir.const #false
+// RESUME-NEXT: cir.store %[[FALSE]], %[[ACTIVE]]
+// RESUME-NOT: cir.call @_ZN1SD1Ev(%[[TMP]])
+// RESUME: cir.call @resume_next()
+// RESUME: cir.call @resume_use_aggregate(
+// RESUME: cir.call @_ZN3AggD1Ev(
+// RESUME: cir.call @_ZN1SD1Ev(%[[TMP]])
+
+// RESUME-IR-LABEL: define {{.*}} void @agg_init(
+// RESUME-IR: {{(call|invoke)}} {{.*}} i32 @_ZN2DA12await_resumeERK1S(
+// RESUME-IR: {{(call|invoke)}} i32 @resume_next()
+// RESUME-IR: {{(call|invoke)}} void @resume_use_aggregate(
+// RESUME-IR: call void @_ZN3AggD1Ev(
+// RESUME-IR: call void @_ZN1SD1Ev(
+
+extern "C" Task agg_init() {
+  resume_use_aggregate(Agg{S(0), co_await DA{}}, resume_next());
+}
+
+// An unrelated conditional must not create a resume cleanup guard.
+// RESUME-LABEL: cir.func coroutine {{.*}} @agg_plain_resume(
+// RESUME-NOT: cir.alloca "cleanup.cond"
+// RESUME: cir.await(user, ready : {
+// RESUME: cir.call @_ZN2PL12await_resumeEv(
+// RESUME: },)
+// RESUME: cir.call @resume_use_aggregate(
+// RESUME: cir.call @_ZN3AggD1Ev(
+// RESUME: cir.call @mark()
+
+extern "C" Task agg_plain_resume() {
+  resume_use_aggregate(Agg{S(0), co_await PL{}}, resume_flag() ? 1 : 2);
+  mark();
+}
+
+struct E {
+  E(const S & = S(3));
+  ~E();
+};
+
+struct Holder {
+  E e[2];
+  int k;
+};
+
+extern "C" int take(E *);
+extern "C" int take2(Holder *);
+
+struct AN {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  int await_resume(int = take(new E[2]) + take2(new Holder{}));
+};
+
+// Array-element boundaries still apply inside a deferred resume expression.
+// RESUME-LABEL: cir.func coroutine {{.*}} @array_elements(
+// RESUME: cir.await(user, ready : {
+// RESUME: }, resume : {
+// RESUME: cir.do {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP1:[^,]+]],
+// RESUME: cir.call @_ZN1EC1ERK1S(
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP1]])
+// RESUME: } while {
+// RESUME: cir.call @take(
+// RESUME: cir.do {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP2:[^,]+]],
+// RESUME: cir.call @_ZN1EC1ERK1S(
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP2]])
+// RESUME: } while {
+// RESUME: cir.call @take2(
+// RESUME: cir.call @_ZN2AN12await_resumeEi(
+// RESUME: },)
+// RESUME: cir.call @resume_use(
+
+extern "C" Task array_elements() {
+  resume_use(co_await AN{});
+  mark();
+}
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @asm_operand(
+// RESUME: cir.await(user, ready : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP:[^,]+]],
+// RESUME: },)
+// RESUME: cir.asm(
+// RESUME: cir.call @_ZN1SD1Ev(%[[TMP]])
+// RESUME: cir.call @mark()
+
+extern "C" Task asm_operand() {
+  asm volatile("" : : "r"(co_await DA{}));
+  mark();
+}
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @coyield_arg(
+// RESUME: cir.await(yield, ready : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP:[^,]+]],
+// RESUME: },)
+// RESUME: cir.call @resume_use(
+// RESUME: cir.call @_ZN1SD1Ev(%[[TMP]])
+
+extern "C" Task coyield_arg() {
+  resume_use(co_yield 1);
+}
+
+struct TransformTask {
+  struct promise_type {
+    TransformTask get_return_object();
+    std::suspend_never initial_suspend();
+    std::suspend_never final_suspend() noexcept;
+    void return_void();
+    void unhandled_exception();
+    PL await_transform(int, int = resume_flag() ? resume_arg(S(5)) : 0);
+  };
+};
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @transform_condtemp(
+// RESUME: %[[FLAG:.*]] = cir.alloca "cleanup.cond"
+// RESUME: cir.ternary(
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP:[^,]+]],
+// RESUME: cir.call @_ZN13TransformTask12promise_type15await_transformEii(
+// RESUME: cir.await(user, ready : {
+// RESUME: },)
+// RESUME: cir.call @resume_use(
+// RESUME: %[[LIVE:.*]] = cir.load {{.*}} %[[FLAG]]
+// RESUME-NEXT: cir.if %[[LIVE]] {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[TMP]])
+
+extern "C" TransformTask transform_condtemp() {
+  resume_use(co_await 1);
+}
+
+struct NoexceptInitAwaiter {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  void await_resume(const S & = S(1)) noexcept;
+};
+
+struct NoexceptFinalAwaiter {
+  bool await_ready() noexcept;
+  void await_suspend(std::coroutine_handle<>) noexcept;
+  void await_resume(const S & = S(2)) noexcept;
+};
+
+struct DefaultInitTask {
+  struct promise_type {
+    DefaultInitTask get_return_object();
+    NoexceptInitAwaiter initial_suspend();
+    NoexceptFinalAwaiter final_suspend() noexcept;
+    void return_void();
+    void unhandled_exception();
+  };
+};
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @init_final_noexcept(
+// RESUME-NOT: resume.eh
+// RESUME: cir.await(init, ready : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[INIT_TMP:[^,]+]],
+// RESUME: cir.call @_ZN19NoexceptInitAwaiter12await_resumeERK1S(
+// RESUME: },)
+// RESUME: cir.call @_ZN1SD1Ev(%[[INIT_TMP]])
+// RESUME: }, body : {
+// RESUME: cir.call @mark()
+// RESUME: }, finalSuspend : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[FINAL_TMP:[^,]+]],
+// RESUME: cir.call @_ZN20NoexceptFinalAwaiter12await_resumeERK1S(
+// RESUME: },)
+// RESUME: cir.call @_ZN1SD1Ev(%[[FINAL_TMP]])
+
+extern "C" DefaultInitTask init_final_noexcept() {
+  mark();
+  co_return;
+}
+
+struct InitAwaiter {
+  bool await_ready();
+  void await_suspend(std::coroutine_handle<>);
+  void await_resume(const S & = S(1), int = resume_flag() ? resume_arg(S(2)) : 0);
+};
+
+struct InitTask {
+  struct promise_type {
+    InitTask get_return_object();
+    InitAwaiter initial_suspend();
+    std::suspend_never final_suspend() noexcept;
+    void return_void();
+    void unhandled_exception();
+  };
+};
+
+// RESUME-LABEL: cir.func coroutine {{.*}} @init_try(
+// RESUME-EH: %[[RESUMED:.*]] = cir.alloca "resume.eh"
+// RESUME: cir.await(init, ready : {
+// RESUME-EH: cir.try {
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP1:[^,]+]],
+// RESUME: cir.ternary(
+// RESUME: cir.call @_ZN1SC1Ei(%[[TMP2:[^,]+]],
+// RESUME: cir.call @_ZN11InitAwaiter12await_resumeERK1Si(
+// RESUME: cir.call @_ZN1SD1Ev(%[[TMP2]])
+// RESUME: cir.call @_ZN1SD1Ev(%[[TMP1]])
+// RESUME-EH-NEXT: cir.yield
+// RESUME-EH-NEXT: }
+// RESUME-EH-NEXT: %[[TRUE:.*]] = cir.const #true
+// RESUME-EH-NEXT: cir.store %[[TRUE]], %[[RESUMED]]
+// RESUME-EH: } catch all
+// RESUME: }, body : {
+// RESUME: cir.call @mark()
+
+extern "C" InitTask init_try() {
+  mark();
+  co_return;
+}
+
+struct ReadySuspendArgs {
+  bool await_ready(const S & = S(8));
+  void await_suspend(std::coroutine_handle<>, const S & = S(9));
+  int await_resume();
+};
+
+// Ready and suspend arguments end before the next coroutine phase.
+// RESUME-LABEL: cir.func coroutine {{.*}} @ready_suspend_in_conditional(
+// RESUME: cir.ternary(
+// RESUME: cir.await(user, ready : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[READY:[^,]+]],
+// RESUME: cir.call @_ZN16ReadySuspendArgs11await_readyERK1S(
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[READY]])
+// RESUME: }, suspend : {
+// RESUME: cir.call @_ZN1SC1Ei(%[[SUSPEND:[^,]+]],
+// RESUME: cir.call @_ZN16ReadySuspendArgs13await_suspendESt16coroutine_handleIvERK1S(
+// RESUME-NOEH: } cleanup normal {
+// RESUME-EH: } cleanup all {
+// RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[SUSPEND]])
+// RESUME: cir.coro.suspend_point
+// RESUME: }, resume : {
+// RESUME: cir.call @_ZN16ReadySuspendArgs12await_resumeEv(
+
+extern "C" Task ready_suspend_in_conditional(bool b) { resume_use(b ? co_await ReadySuspendArgs{} : 0); }

@@ -22,7 +22,8 @@ TEST(LlvmLibcPutcTest, WriteToFile) {
 
   constexpr char simple[] = "simple letters";
   for (size_t i = 0; i < sizeof(simple); ++i) {
-    ASSERT_EQ(LIBC_NAMESPACE::putc(simple[i], file), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::putc(simple[i], file),
+              static_cast<int>(static_cast<unsigned char>(simple[i])));
   }
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));

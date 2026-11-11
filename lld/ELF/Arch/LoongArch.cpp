@@ -41,9 +41,9 @@ public:
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.is64)
-      elf::scanSection1<LoongArch, ELF64LE>(*this, sec, shard);
+      elf::scanSection1<ELF64LE>(*this, sec, shard);
     else
-      elf::scanSection1<LoongArch, ELF32LE>(*this, sec, shard);
+      elf::scanSection1<ELF32LE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -457,6 +457,21 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_DTPREL32:
   case R_LARCH_TLS_DTPREL64:
     return R_DTPREL;
+  // TLS IE relocations, reverted by the extreme code model fallback in
+  // relocateAlloc() .
+  case R_LARCH_TLS_IE_PC_HI20:
+    return RE_LOONGARCH_GOT_PAGE_PC;
+  case R_LARCH_TLS_IE_PC_LO12:
+    return RE_LOONGARCH_GOT;
+  // TLS DESC relocations, similarly reverted by the extreme code model
+  // fallback in relocateAlloc().
+  case R_LARCH_TLS_DESC_PC_HI20:
+    return RE_LOONGARCH_TLSDESC_PAGE_PC;
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_LD:
+    return R_TLSDESC;
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    return R_TLSDESC_PC;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;

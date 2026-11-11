@@ -83,7 +83,7 @@ bool SandboxVectorizerPass::allowFile(const std::string &SrcFilePath) {
 }
 
 bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
-  Opts = &LLVMF.getContext().getLibraryOptions().get<VectorizeOptions>();
+  Opts = &getVectorizeOptions(LLVMF);
   if (Ctx == nullptr) {
     Ctx = std::make_unique<sandboxir::Context>(LLVMF.getContext());
     buildPipeline();

@@ -527,9 +527,6 @@ def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
 
-def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
-
 def HasFlatScratchEnabled : Predicate<"Subtarget->hasFlatScratchEnabled()">;
 
 def NotHasFlatScratchEnabled : Predicate<"!Subtarget->hasFlatScratchEnabled()">;
@@ -543,6 +540,9 @@ def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDo
   AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
+
+def HasAnyBVHInsts : Predicate<"Subtarget->hasAnyBVHInsts()">,
+  AssemblerPredicate<(any_of FeatureBVHRayTracingInsts, FeatureBVHDualAndBVH8Insts)>;
 
 def HasAnyPackedFP32Ops : Predicate<"Subtarget->hasAnyPackedFP32Ops()">,
   AssemblerPredicate<(any_of FeaturePackedFP32Ops, FeaturePackedFP32SingleSGPROps)>;

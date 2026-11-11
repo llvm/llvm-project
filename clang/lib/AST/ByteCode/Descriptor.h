@@ -22,7 +22,6 @@
 
 namespace clang {
 namespace interp {
-class Block;
 class Record;
 class SourceInfo;
 struct Descriptor;
@@ -31,14 +30,13 @@ enum PrimType : uint8_t;
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
-using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
-                             bool IsMutable, bool IsVolatile, bool IsActive,
-                             bool InUnion, const Descriptor *FieldDesc);
+using BlockCtorFn = void (*)(std::byte *FieldPtr, bool IsConst, bool IsMutable,
+                             bool IsVolatile, bool IsActive, bool InUnion,
+                             const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
-using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
-                             const Descriptor *FieldDesc);
+using BlockDtorFn = void (*)(std::byte *FieldPtr, const Descriptor *FieldDesc);
 
 enum class GlobalInitState {
   Initialized,
@@ -58,6 +56,18 @@ enum class Lifetime : uint8_t {
   Destroyed,
   Ended,
 };
+
+struct alignas(void *) LocalInlineDescriptor {
+  bool IsEnabled;
+  bool IsInitialized;
+  Lifetime LifeState;
+
+  LocalInlineDescriptor()
+      : IsEnabled(false), IsInitialized(false), LifeState(Lifetime::Started) {}
+  Lifetime getLifetime() const { return LifeState; }
+  void setLifetime(Lifetime L) { LifeState = L; }
+};
+static_assert(sizeof(LocalInlineDescriptor) == sizeof(void *));
 
 /// Inline descriptor embedded in structures and arrays.
 ///
@@ -108,16 +118,9 @@ struct InlineDescriptor {
 
   const Descriptor *Desc;
 
-  InlineDescriptor(const Descriptor *D)
-      : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
-        IsBase(false), IsActive(false), IsFieldMutable(false),
-        IsArrayElement(false), IsVolatile(false), LifeState(Lifetime::Started),
-        Desc(D) {}
-
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 };
-static_assert(sizeof(GlobalInlineDescriptor) != sizeof(InlineDescriptor), "");
 
 /// Describes a memory block created by an allocation site.
 struct Descriptor final {
@@ -160,7 +163,6 @@ public:
   const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
-  bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;

@@ -332,7 +332,7 @@ int main(int argc, char **argv) {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    PassBuilder PB(nullptr, PipelineTuningOptions(&Context.getLibraryOptions()));
+    PassBuilder PB(Context);
 
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -379,7 +379,7 @@ int main(int argc, char **argv) {
     CGSCCAnalysisManager CGAM;
     ModuleAnalysisManager MAM;
 
-    PassBuilder PB(nullptr, PipelineTuningOptions(&Context.getLibraryOptions()));
+    PassBuilder PB(Context);
 
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
@@ -400,7 +400,7 @@ int main(int argc, char **argv) {
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB(nullptr, PipelineTuningOptions(&Context.getLibraryOptions()));
+  PassBuilder PB(Context);
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);

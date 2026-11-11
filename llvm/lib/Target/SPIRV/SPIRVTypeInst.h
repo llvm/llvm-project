@@ -43,9 +43,6 @@ public:
   bool operator==(const SPIRVTypeInst &Other) const { return MI == Other.MI; }
   bool operator!=(const SPIRVTypeInst &Other) const { return MI != Other.MI; }
 
-  bool operator==(const MachineInstr *Other) const { return MI == Other; }
-  bool operator!=(const MachineInstr *Other) const { return MI != Other; }
-
   operator bool() const { return MI; }
 
   // Returns true if this is an OpTypeInt instruction.

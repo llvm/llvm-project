@@ -15,7 +15,9 @@
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -34,6 +36,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <optional>
 
@@ -1043,9 +1046,18 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
 
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
-  uint32_t ElemTypeId;
-  const DIType *ElemType = CTy->getBaseType();
+  uint32_t ElemTypeId = 0;
+  const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
   visitTypeEntry(ElemType, ElemTypeId, false, false);
+  if (!ElemTypeId) {
+    SmallString<128> Message;
+    raw_svector_ostream Err(Message);
+    Err << "unsupported BTF array element type";
+    if (ElemType && !ElemType->getName().empty())
+      Err << " '" << ElemType->getName() << '\'';
+    OS.getContext().reportError({}, Message);
+    // Still register the array so enclosing types can resolve their references.
+  }
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
@@ -1683,23 +1695,13 @@ void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
   FieldReloc.Label = ORSym;
   FieldReloc.TypeID = RootId;
 
-  StringRef AccessPattern = GVar->getName();
-  size_t FirstDollar = AccessPattern.find_first_of('$');
   if (IsAma) {
-    size_t FirstColon = AccessPattern.find_first_of(':');
-    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
-    StringRef IndexPattern = AccessPattern.substr(FirstDollar + 1);
-    StringRef RelocKindStr = AccessPattern.substr(FirstColon + 1,
-        SecondColon - FirstColon);
-    StringRef PatchImmStr = AccessPattern.substr(SecondColon + 1,
-        FirstDollar - SecondColon);
-
-    FieldReloc.OffsetNameOff = addString(IndexPattern);
-    FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));
-    PatchImms[GVar] = std::make_pair(std::stoll(std::string(PatchImmStr)),
-                                     FieldReloc.RelocKind);
+    auto Reloc = BPFCoreSharedInfo::AmaRelocation::decode(GVar->getName());
+    FieldReloc.OffsetNameOff = addString(Reloc.AccessString);
+    FieldReloc.RelocKind = Reloc.Kind;
+    PatchImms[GVar] = {Reloc.PatchImm, Reloc.Kind};
   } else {
-    StringRef RelocStr = AccessPattern.substr(FirstDollar + 1);
+    StringRef RelocStr = GVar->getName().split('$').second;
     FieldReloc.OffsetNameOff = addString("0");
     FieldReloc.RelocKind = std::stoull(std::string(RelocStr));
     PatchImms[GVar] = std::make_pair(RootId, FieldReloc.RelocKind);

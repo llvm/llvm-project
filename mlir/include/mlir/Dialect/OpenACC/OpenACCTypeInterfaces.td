@@ -262,11 +262,14 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Returns true if the pointer points to device data.
+        Returns true if the pointer points to device data. `symbolTables`, when
+        non-null, caches symbol lookups (e.g. of referenced globals) across
+        repeated queries.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isDeviceAccessible",
-      /*args=*/(ins "::mlir::Value":$var),
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
@@ -283,11 +286,12 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isInDeviceMemory",
-      /*args=*/(ins "::mlir::Value":$var),
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::cast<::mlir::acc::PointerLikeType>($_type)
-            .isDeviceAccessible(var);
+            .isDeviceAccessible(var, symbolTables);
       }]
     >,
   ];
@@ -562,11 +566,14 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
-        Returns true if the variable represents device data.
+        Returns true if the variable represents device data. `symbolTables`,
+        when non-null, caches symbol lookups (e.g. of referenced globals)
+        across repeated queries.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isDeviceAccessible",
-      /*args=*/(ins "::mlir::Value":$var),
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return false;
@@ -583,11 +590,12 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       }],
       /*retTy=*/"bool",
       /*methodName=*/"isInDeviceMemory",
-      /*args=*/(ins "::mlir::Value":$var),
+      /*args=*/(ins "::mlir::Value":$var,
+                    "::mlir::SymbolTableCollection *":$symbolTables),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::cast<::mlir::acc::MappableType>($_type)
-            .isDeviceAccessible(var);
+            .isDeviceAccessible(var, symbolTables);
       }]
     >,
   ];

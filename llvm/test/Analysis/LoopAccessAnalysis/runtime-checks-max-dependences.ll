@@ -7,6 +7,10 @@ define void @dependences_with_strides(ptr %dst, i64 %stride) {
 ; DEFAULT-NEXT:    loop:
 ; DEFAULT-NEXT:      Memory dependences are safe with run-time checks
 ; DEFAULT-NEXT:      Dependences:
+; DEFAULT-NEXT:        Forward:
+; DEFAULT-NEXT:            store i16 0, ptr %ptr.iv, align 2 ->
+; DEFAULT-NEXT:            store i16 0, ptr %ptr.iv, align 2
+; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:      Run-time memory checks:
 ; DEFAULT-NEXT:      Check 0:
 ; DEFAULT-NEXT:        Comparing group GRP0:

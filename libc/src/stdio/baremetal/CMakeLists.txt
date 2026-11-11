@@ -101,7 +101,6 @@ add_header_library(
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.string_view
-    libc.src.__support.libc_errno
     libc.src.__support.OSUtil.osutil
     libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.scanf_main

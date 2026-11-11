@@ -40,8 +40,6 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
   CommentString = "!";
   SupportsDebugInformation = true;
 
-  ExceptionsType = ExceptionHandling::DwarfCFI;
-
   UsesELFSectionDirectiveForBSS = true;
 
   DwarfFDERelSymbolSpec = ELF::R_SPARC_DISP32;

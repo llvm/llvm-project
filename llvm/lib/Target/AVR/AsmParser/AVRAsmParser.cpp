@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AVRRegisterInfo.h"
 #include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCELFStreamer.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"

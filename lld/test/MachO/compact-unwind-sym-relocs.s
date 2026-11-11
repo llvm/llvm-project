@@ -39,6 +39,7 @@
 # CHECK-NEXT: [0]: function offset=0x[[#%.8x,FOO]], LSDA offset=0x[[#%.8x,EXCEPT0]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

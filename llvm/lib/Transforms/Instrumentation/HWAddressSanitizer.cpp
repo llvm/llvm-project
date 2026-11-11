@@ -351,8 +351,7 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   const Triple &TargetTriple = M.getTargetTriple();
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (shouldUseStackSafetyAnalysis(Opts, TargetTriple,
                                    Options.DisableOptimization))
     SSI = &MAM.getResult<StackSafetyGlobalAnalysis>(M);
@@ -1339,6 +1338,7 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
     IRBuilder<> IRB(AI->getNextNode());
+    IRB.disableGEPCanonicalization();
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1530,6 +1530,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
   BasicBlock::iterator InsertPt = F.getEntryBlock().begin();
   IRBuilder<> EntryIRB(InsertPt);
+  EntryIRB.disableGEPCanonicalization();
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ Opts.hwasan_record_stack_history !=
                        RecordStackHistoryMode::none &&
@@ -1542,19 +1543,21 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag = getStackBaseTag(EntryIRB);
     Value *UARTag = getUARTag(EntryIRB);
+    // instrumentStack may replace allocas, invalidating EntryIRB's insert
+    // point. Save the insert block before calling it.
+    BasicBlock *EntryBB = EntryIRB.GetInsertBlock();
     instrumentStack(ORE, SInfo, StackTag, UARTag, DT, PDT, LI);
-  }
 
-  // If we split the entry block, move any allocas that were originally in the
-  // entry block back into the entry block so that they aren't treated as
-  // dynamic allocas.
-  if (EntryIRB.GetInsertBlock() != &F.getEntryBlock()) {
-    InsertPt = F.getEntryBlock().begin();
-    for (Instruction &I :
-         llvm::make_early_inc_range(*EntryIRB.GetInsertBlock())) {
-      if (auto *AI = dyn_cast<AllocaInst>(&I))
-        if (isa<ConstantInt>(AI->getArraySize()))
-          I.moveBefore(F.getEntryBlock(), InsertPt);
+    // If we split the entry block, move any allocas that were originally in the
+    // entry block back into the entry block so that they aren't treated as
+    // dynamic allocas.
+    if (EntryBB != &F.getEntryBlock()) {
+      InsertPt = F.getEntryBlock().begin();
+      for (Instruction &I : llvm::make_early_inc_range(*EntryBB)) {
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          if (isa<ConstantInt>(AI->getArraySize()))
+            I.moveBefore(F.getEntryBlock(), InsertPt);
+      }
     }
   }
 

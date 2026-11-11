@@ -1530,8 +1530,7 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   OptimizationRemarkEmitter ORE(&F);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   DFAJumpThreading ThreadImpl(Opts, &AC, &DTU, &LI, &TTI, &ORE);
   if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();

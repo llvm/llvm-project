@@ -1129,7 +1129,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ldexpf16:
   case Builtin::BI__builtin_ldexpf128:
   case Builtin::BI__builtin_elementwise_ldexp:
-    return errorBuiltinNYI(cgf, e, builtinID);
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::LdexpOp>(cgf, *e));
   default:
     break;
   }
@@ -1174,7 +1175,7 @@ decodeFixedType(CIRGenFunction &cgf,
   case IITDescriptor::Vector: {
     mlir::Type elementType = decodeFixedType(cgf, infos, overloadTys, context);
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
-    return cir::VectorType::get(elementType, numElements);
+    return cir::VectorType::getFixed(elementType, numElements);
   }
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
@@ -2096,11 +2097,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
-    // cir.add/cir.sub do not model i1 arithmetic, so a bool-element
-    // saturating add/sub is not representable through the saturated op.
-    // Bail before emitScalarExpr: an ext-vector-of-bool operand would
-    // otherwise hit the NYI bool-vector load, which returns a null value
-    // and would crash op0.getType().
+    // The saturating ops have no !cir.bool form, and emitScalarExpr on a bool
+    // vector hits the NYI bool-vector load and returns null, so bail first.
     QualType argTy = e->getArg(0)->getType();
     if (argTy->isBooleanType() || argTy->isExtVectorBoolType()) {
       cgm.errorNYI(e->getSourceRange(),
@@ -2114,9 +2112,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
            "elementwise saturating add/sub requires integer operands");
     mlir::Value val =
         builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_add_sat
-            ? builder.createAdd(loc, op0, op1, cir::OverflowBehavior::Saturated)
-            : builder.createSub(loc, op0, op1,
-                                cir::OverflowBehavior::Saturated);
+            ? builder.createAddSat(loc, op0, op1)
+            : builder.createSubSat(loc, op0, op1);
     return RValue::get(val);
   }
   case Builtin::BI__builtin_elementwise_max: {
@@ -2538,8 +2535,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value addr = cir::FrameAddrOp::create(
         builder, loc, allocaInt8PtrTy,
         builder.getConstAPInt(loc, builder.getUInt32Ty(), level));
-    return RValue::get(
-        builder.createCast(loc, cir::CastKind::bitcast, addr, voidPtrTy));
+    addr = builder.createBitcast(
+        addr, builder.getVoidPtrTy(getCIRAllocaAddressSpace()));
+    return RValue::get(performAddrSpaceCast(addr, convertType(e->getType())));
   }
   case Builtin::BI__builtin_extract_return_addr:
   case Builtin::BI__builtin_frob_return_addr:
@@ -3226,14 +3224,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN() ||
         (getTarget().getTriple().isSPIRV() &&
-         getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
-      if (getTarget().getTriple().isNVPTX())
-        return RValue::get(emitDevicePrintfCallExpr(e));
-      if ((getTarget().getTriple().isAMDGCN() ||
-           getTarget().getTriple().isSPIRV()) &&
-          getLangOpts().HIP)
-        return errorBuiltinNYI(*this, e, builtinID);
-    }
+         getTarget().getTriple().getVendor() == llvm::Triple::AMD))
+      return RValue::get(emitDevicePrintfCallExpr(e));
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:

@@ -36,7 +36,7 @@ exit:
 ; the high i32 subvector.
 define i64 @dot_i64_ss(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'dot_i64_ss'
-; CHECK:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+; CHECK:  Cost of 5 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
 ;
 entry:
   br label %loop
@@ -62,7 +62,7 @@ exit:
 ; Same as above but both operands zero-extended.
 define i64 @dot_i64_uu(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'dot_i64_uu'
-; CHECK:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
+; CHECK:  Cost of 5 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
 ;
 entry:
   br label %loop

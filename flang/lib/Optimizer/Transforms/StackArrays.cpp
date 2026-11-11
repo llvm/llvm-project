@@ -275,9 +275,9 @@ mlir::LogicalResult AllocationAnalysis::visitOperation(
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!mlir::isa<fir::SequenceType>(retTy)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "--Allocation is not for an array: skipping\n");
+    if (!fir::isStackArraysCandidateType(retTy)) {
+      LLVM_DEBUG(llvm::dbgs() << "--Allocation is not for an array or a "
+                                 "constant-length character: skipping\n");
       return mlir::success();
     }
 
@@ -711,6 +711,9 @@ fir::AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
   auto alloca =
       fir::AllocaOp::create(rewriter, loc, varTy, uniqName, bindcName,
                             oldAlloc.getTypeparams(), oldAlloc.getShape());
+  // Keep a requested alignment across the heap-to-stack conversion.
+  if (std::optional<std::int64_t> alignment = oldAlloc.getAlignment())
+    alloca.setAlignment(*alignment);
   if (emitLifetimeMarkers)
     insertLifetimeMarkers(oldAlloc, alloca, rewriter);
 

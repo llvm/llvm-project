@@ -20,7 +20,7 @@ def WinLibc : LibcallLibrary<"libc",
        LibcallImpls<(add impl_default), isWin>)
 >;
 
-def WinLibrary : SystemRuntimeLibrary<isWin, (add WinLibc)>;
+def WinLibrary : SystemRuntimeLibrary<isWin, ["libc"]>;
 
 // The ARM_AAPCS group sorts after the default-CC group (empty calling
 // convention name orders before "ARM_AAPCS").
