@@ -1,5 +1,5 @@
 """
-Make sure Rust vector data formatter works..
+Make sure Rust vector data formatter works.
 """
 
 import lldb
@@ -8,8 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
-class TestFrameVarDILLocalVars(TestBase):
-
+class TestRustVectorFormatter(TestBase):
     def test_vec_formatter(self):
         core_yaml_path = self.getSourcePath("main.core.yaml")
         main_yaml_path = self.getSourcePath("main.yaml")
