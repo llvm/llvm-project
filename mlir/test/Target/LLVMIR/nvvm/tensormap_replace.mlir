@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: define void @tensormap_replace_global_address(ptr addrspace(1) %0, i64 %1) {
 llvm.func @tensormap_replace_global_address(%addr : !llvm.ptr<1>, %new_val : i64) {
-  // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %0, i64 %1)
+  // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %0, i64 %1, /* alloc_class=small */ i32 0)
   nvvm.tensormap.replace field = global_address, new_value = %new_val in %addr : !llvm.ptr<1>, i64
 
   // CHECK-NEXT: ret void

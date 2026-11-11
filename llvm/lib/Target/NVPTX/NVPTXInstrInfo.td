@@ -198,6 +198,9 @@ def hasCLMAD : SubtargetPredicate;
 def hasTcgen05InstSupport : SubtargetPredicate;
 def hasTensormapReplaceSupport : SubtargetPredicate;
 
+def hasTensormapAllocClassSupport
+  : PredAnd<[PTX95, PredOr<[SM90a, SM100f, SM110f, SM120f]>]>;
+
 // Checks Rubin family extensions support.
 //  - TMA S2G im2col_w mode support
 //  - tcgen05.commit shared mem A variants.
