@@ -687,10 +687,8 @@ void VPlanTransforms::foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx) {
       // Only convert the in-loop operations with tail-folding predication to
       // expression recipe.
       if (!all_of(VPMerge->users(), [](VPUser *U) {
-            if (auto *R = dyn_cast<VPSingleDefRecipe>(U))
-              return isa<VPReductionPHIRecipe>(R) ||
-                     match(R, m_ComputeReductionResult(m_VPValue()));
-            return false;
+            return isa<VPReductionPHIRecipe>(U) ||
+                   match(U, m_ComputeReductionResult(m_VPValue()));
           }))
         continue;
 

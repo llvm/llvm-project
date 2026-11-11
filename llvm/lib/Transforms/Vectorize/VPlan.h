@@ -3667,7 +3667,7 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// Represent a chain of recipes whose last recipe will be optimized away.
     /// Currently only supports folding vp.merge with an in-loop operation, so
     /// LV does not account for the cost or register pressure of vp.merge.
-    FoldedOp,
+    FoldedVPMerge,
   };
 
   /// Type of the expression.
@@ -3726,7 +3726,8 @@ public:
       assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
   VPExpressionRecipe(VPSingleDefRecipe *InLoopOp, VPSingleDefRecipe *VPMerge)
-      : VPExpressionRecipe(ExpressionTypes::FoldedOp, {InLoopOp, VPMerge}) {
+      : VPExpressionRecipe(ExpressionTypes::FoldedVPMerge,
+                           {InLoopOp, VPMerge}) {
     assert(isa<VPWidenIntrinsicRecipe>(VPMerge) &&
            cast<VPWidenIntrinsicRecipe>(VPMerge)->getVectorIntrinsicID() ==
                Intrinsic::vp_merge &&

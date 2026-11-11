@@ -3813,7 +3813,7 @@ VPExpressionRecipe::VPExpressionRecipe(
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
     : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
                         [&]() {
-                          if (ExpressionType == ExpressionTypes::FoldedOp)
+                          if (ExpressionType == ExpressionTypes::FoldedVPMerge)
                             return ExpressionRecipes.back()->getScalarType();
                           return cast<VPReductionRecipe>(
                                      ExpressionRecipes.back())
@@ -3893,7 +3893,8 @@ SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
 bool VPExpressionRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   // The last operand of a folded operation is the vp.merge EVL.
-  if (ExpressionType == ExpressionTypes::FoldedOp && Op == getLastOperand()) {
+  if (ExpressionType == ExpressionTypes::FoldedVPMerge &&
+      Op == getLastOperand()) {
     assert(match(Op, m_EVL(m_VPValue())) &&
            "Expected an explicit vector length recipe");
     return true;
@@ -3905,7 +3906,7 @@ bool VPExpressionRecipe::usesFirstLaneOnly(const VPValue *Op) const {
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
                                                 VPCostContext &Ctx) const {
   // The last recipes in the chain will be optimized away, so igonre the cost.
-  if (ExpressionType == ExpressionTypes::FoldedOp) {
+  if (ExpressionType == ExpressionTypes::FoldedVPMerge) {
     InstructionCost Cost = 0;
     for (auto *R : drop_end(ExpressionRecipes))
       Cost += R->cost(VF, Ctx);
@@ -3983,8 +3984,8 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         Opcode, RedTy, SrcVecTy, Ctx.CostKind);
   }
-  case ExpressionTypes::FoldedOp:
-    llvm_unreachable("Folded expression should be handled eariler");
+  case ExpressionTypes::FoldedVPMerge:
+    llvm_unreachable("Folded vp.merge expression should be handled eariler");
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
@@ -4015,7 +4016,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EXPRESSION ";
   printAsOperand(O, SlotTracker);
   O << " = ";
-  if (ExpressionType == ExpressionTypes::FoldedOp) {
+  if (ExpressionType == ExpressionTypes::FoldedVPMerge) {
     VPSingleDefRecipe *InLoopOp = ExpressionRecipes[0];
     unsigned NumInLoopOps = InLoopOp->getNumOperands();
     O << "vp.merge ";
