@@ -24,7 +24,6 @@
 #include "mlir/Support/FileUtilities.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/InitAllDialects.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
