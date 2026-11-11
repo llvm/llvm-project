@@ -1,8 +1,6 @@
 # RUN: not --crash llc -global-isel -mtriple=amdgpu9.00 -stop-after=ir-translator -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
 # REQUIRES: amdgpu-registered-target
 
-# CHECK: LLVM ERROR: Found 4 machine code errors.
-
 ---
 name: invalid_fp_ext_trunc
 body: |
@@ -27,4 +25,6 @@ body: |
     # CHECK: - instruction: %trunc_to_float:_(f16) = G_TRUNC %i32:_(i32)
     %trunc_to_float:_(f16) = G_TRUNC %i32
     S_ENDPGM 0
+
+    # CHECK: LLVM ERROR: Found 4 machine code errors.
 ...
