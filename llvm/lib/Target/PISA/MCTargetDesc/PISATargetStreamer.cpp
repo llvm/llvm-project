@@ -517,7 +517,7 @@ std::string DataTypes::getPrefixFromLLT(LLT Ty) {
   return PISA::RegEncoder::getPrefixFromBank(Bank);
 }
 
-DataType DataTypes::getTypeFromPrefix(std::string Prefix) {
+DataType DataTypes::getTypeFromPrefix(StringRef Prefix) {
   std::tuple<unsigned, unsigned, unsigned> Result =
       llvm::StringSwitch<std::tuple<unsigned, unsigned, unsigned>>(Prefix)
           .Case("%p", {1, 1, PISA::RegEncoder::PRED})

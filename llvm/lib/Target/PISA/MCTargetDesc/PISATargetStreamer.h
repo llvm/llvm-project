@@ -17,7 +17,7 @@
 #include "PISADefines.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCStreamer.h"
@@ -146,7 +146,7 @@ public:
   static DataType getTypeFromLLT(LLT Ty);
   static LLT getLLTFromType(const DataType &Ty);
   static std::string getPrefixFromLLT(LLT Ty);
-  static DataType getTypeFromPrefix(std::string Prefix);
+  static DataType getTypeFromPrefix(StringRef Prefix);
 
   TypeInfoMap::const_iterator begin() const { return TypeInfos.begin(); }
   TypeInfoMap::const_iterator end() const { return TypeInfos.end(); }
