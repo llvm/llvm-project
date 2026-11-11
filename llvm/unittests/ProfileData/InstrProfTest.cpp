@@ -822,6 +822,33 @@ TEST_F(InstrProfTest, test_symtab_get_canonical_name) {
             "coro.llvm.1234.resume");
 }
 
+TEST_F(InstrProfTest, test_symtab_def_precedence) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+
+  // Place declaration before the definition in module order.
+  Function::Create(FTy, Function::ExternalLinkage,
+                   "InternalLambda.__uniq.42.llvm.111", M.get());
+
+  auto *Def = Function::Create(FTy, Function::ExternalLinkage,
+                               "InternalLambda.__uniq.42.llvm.222", M.get());
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", Def)).CreateRetVoid();
+
+  auto *ExtOnly =
+      Function::Create(FTy, Function::ExternalLinkage, "ExtOnly", M.get());
+
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M, /*InLTO=*/true), Succeeded());
+
+  const uint64_t CanonicalGUID =
+      Function::getGUIDAssumingExternalLinkage("InternalLambda.__uniq.42");
+  EXPECT_EQ(Symtab.getFunction(CanonicalGUID), Def);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("ExtOnly")),
+      ExtOnly);
+}
+
 // callee1 to callee6 are from vtable1 to vtable6 respectively.
 static const char callee1[] = "callee1";
 static const char callee2[] = "callee2";

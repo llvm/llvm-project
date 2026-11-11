@@ -507,6 +507,13 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
       return E;
   }
 
+  // Place definitions before declarations so finalizeSymtab()'s stable_sort
+  // keeps definitions (e.g. @foo.cfi) ahead of jump-table declarations (@foo)
+  // when they share a canonical name or GUID.
+  std::stable_partition(
+      MD5FuncMap.begin(), MD5FuncMap.end(),
+      [](const auto &Entry) { return !Entry.second->isDeclaration(); });
+
   Sorted = false;
   finalizeSymtab();
   return Error::success();
