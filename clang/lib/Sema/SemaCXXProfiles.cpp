@@ -787,19 +787,29 @@ void SemaCXXProfiles::checkExplicitCast(
   unsigned Spelling = isa<CStyleCastExpr>(E)          ? 1
                       : isa<CXXFunctionalCastExpr>(E) ? 2
                                                       : 0;
-  CStyleCastInterpretation Interpretation;
+  // The named cast (or sequence of named casts) the cast performs.
+  CStyleCastInterpretationKind Interpretation;
   if (isa<CXXReinterpretCastExpr>(E))
-    Interpretation = CStyleCastInterpretation::Reinterpret;
+    Interpretation = CStyleCastInterpretationKind::ReinterpretCast;
   else if (isa<CXXConstCastExpr>(E))
-    Interpretation = CStyleCastInterpretation::Const;
+    Interpretation = CStyleCastInterpretationKind::ConstCast;
   else if (isa<CXXStaticCastExpr>(E))
-    Interpretation = CStyleCastInterpretation::Static;
+    Interpretation = CStyleCastInterpretationKind::StaticCast;
   else if (Spelling != 0)
-    Interpretation = E->getCStyleCastInterpretation();
+    Interpretation = E->getCStyleCastInterpretationKind();
   else
     return;
-  if (Interpretation == CStyleCastInterpretation::Unknown)
+  if (Interpretation == CStyleCastInterpretationKind::Unknown)
     return;
+  bool IsReinterpretCast =
+      Interpretation == CStyleCastInterpretationKind::ReinterpretCast ||
+      Interpretation == CStyleCastInterpretationKind::ReinterpretThenConstCast;
+  bool IsStaticCast =
+      Interpretation == CStyleCastInterpretationKind::StaticCast ||
+      Interpretation == CStyleCastInterpretationKind::StaticThenConstCast;
+  bool HasTrailingConstCast =
+      Interpretation == CStyleCastInterpretationKind::StaticThenConstCast ||
+      Interpretation == CStyleCastInterpretationKind::ReinterpretThenConstCast;
 
   ASTContext &Ctx = getASTContext();
   StringRef ProfileName = getCXXProfileName(CXXProfileID::StdCasting);
@@ -808,22 +818,18 @@ void SemaCXXProfiles::checkExplicitCast(
   SourceRange Range = E->getSourceRange();
 
   // For a C-style or functional cast, offer to spell the cast as the named
-  // cast it performs, which is meaningful unless it also casts away
-  // constness. The hint is attached to the first violation only.
+  // cast it performs, unless that takes two named casts. The hint is attached
+  // to the first violation only.
   bool OfferedNamedCast = Spelling == 0;
   auto MakeNotes = [&] {
     SmallVector<PartialDiagnosticAt, 1> Notes;
     if (OfferedNamedCast)
       return Notes;
     OfferedNamedCast = true;
-    if (E->getCStyleCastCastsAwayConst() &&
-        Interpretation != CStyleCastInterpretation::Const)
+    if (HasTrailingConstCast)
       return Notes;
-    StringRef CastName = Interpretation == CStyleCastInterpretation::Const
-                             ? "const_cast"
-                         : Interpretation == CStyleCastInterpretation::Static
-                             ? "static_cast"
-                             : "reinterpret_cast";
+    StringRef CastName =
+        ExplicitCastExpr::getCStyleCastInterpretationKindName(Interpretation);
     SmallVector<FixItHint, 2> Hints;
     if (!buildNamedCastFixIts(SemaRef, E, CastName, Hints))
       return Notes;
@@ -835,8 +841,7 @@ void SemaCXXProfiles::checkExplicitCast(
     return Notes;
   };
 
-  if (Interpretation == CStyleCastInterpretation::Reinterpret &&
-      !isPermittedReinterpretCast(Ctx, E)) {
+  if (IsReinterpretCast && !isPermittedReinterpretCast(Ctx, E)) {
     bool ToCharacter = isCharacterType(getReferencedType(DestType));
     SmallVector<PartialDiagnosticAt, 1> Notes = MakeNotes();
     QualType SourceReferenced = getReferencedType(SourceType);
@@ -874,7 +879,7 @@ void SemaCXXProfiles::checkExplicitCast(
                            << Range},
                  MakeNotes());
 
-  if (Interpretation != CStyleCastInterpretation::Static)
+  if (!IsStaticCast)
     return;
 
   if (E->getCastKind() == CK_BaseToDerived) {

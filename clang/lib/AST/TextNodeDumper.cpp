@@ -1651,30 +1651,16 @@ void TextNodeDumper::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node) {
   VisitCallExpr(Node);
 }
 
-/// Print how a C++ C-style or functional cast was resolved, unless it is a
+/// Print how a C++ C-style or functional cast was interpreted, unless it is a
 /// plain static_cast (the common case).
 static void dumpCStyleCastInterpretation(raw_ostream &OS,
                                          const ExplicitCastExpr *Node) {
-  CStyleCastInterpretation Interpretation = Node->getCStyleCastInterpretation();
-  bool CastsAwayConst = Node->getCStyleCastCastsAwayConst();
-  if (Interpretation == CStyleCastInterpretation::Unknown ||
-      (Interpretation == CStyleCastInterpretation::Static && !CastsAwayConst))
+  CStyleCastInterpretationKind Kind = Node->getCStyleCastInterpretationKind();
+  if (Kind == CStyleCastInterpretationKind::Unknown ||
+      Kind == CStyleCastInterpretationKind::StaticCast)
     return;
-  switch (Interpretation) {
-  case CStyleCastInterpretation::Unknown:
-    llvm_unreachable("handled above");
-  case CStyleCastInterpretation::Const:
-    OS << " resolved_as_const_cast";
-    break;
-  case CStyleCastInterpretation::Static:
-    OS << " resolved_as_static_cast";
-    break;
-  case CStyleCastInterpretation::Reinterpret:
-    OS << " resolved_as_reinterpret_cast";
-    break;
-  }
-  if (CastsAwayConst)
-    OS << " casts_away_const";
+  OS << " interpreted_as_"
+     << ExplicitCastExpr::getCStyleCastInterpretationKindName(Kind);
 }
 
 void TextNodeDumper::VisitCastExpr(const CastExpr *Node) {

@@ -160,10 +160,11 @@ features cannot lower the translation-unit ABI level;
 ### AST Dumping Potentially Breaking Changes
 
 - The AST dump of a C-style or functional-style cast in C++ now shows how the
-  cast was resolved (`resolved_as_const_cast`, `resolved_as_reinterpret_cast`,
-  or `resolved_as_static_cast` when it also casts away constness) and whether it
-  casts away constness (`casts_away_const`). The JSON dump has the corresponding
-  `resolvedAs` and `castsAwayConst` attributes.
+  cast was interpreted under [expr.cast]p4, unless it is a plain `static_cast`:
+  `interpreted_as_const_cast`, `interpreted_as_static_cast_then_const_cast`,
+  `interpreted_as_reinterpret_cast` or
+  `interpreted_as_reinterpret_cast_then_const_cast`. The JSON dump has a
+  corresponding `interpretedAs` attribute.
 
 ### Clang Frontend Potentially Breaking Changes
 

@@ -1512,29 +1512,14 @@ void JSONNodeDumper::VisitCastExpr(const CastExpr *CE) {
   if (const NamedDecl *ND = CE->getConversionFunction())
     JOS.attribute("conversionFunc", createBareDeclRef(ND));
   if (isa<CStyleCastExpr, CXXFunctionalCastExpr>(CE)) {
-    const auto *ECE = cast<ExplicitCastExpr>(CE);
-    CStyleCastInterpretation Interpretation =
-        ECE->getCStyleCastInterpretation();
-    bool CastsAwayConst = ECE->getCStyleCastCastsAwayConst();
     // Only print the interpretation when the cast is not a plain static_cast.
-    if (Interpretation != CStyleCastInterpretation::Unknown &&
-        (Interpretation != CStyleCastInterpretation::Static ||
-         CastsAwayConst)) {
-      switch (Interpretation) {
-      case CStyleCastInterpretation::Unknown:
-        llvm_unreachable("handled above");
-      case CStyleCastInterpretation::Const:
-        JOS.attribute("resolvedAs", "const_cast");
-        break;
-      case CStyleCastInterpretation::Static:
-        JOS.attribute("resolvedAs", "static_cast");
-        break;
-      case CStyleCastInterpretation::Reinterpret:
-        JOS.attribute("resolvedAs", "reinterpret_cast");
-        break;
-      }
-      attributeOnlyIfTrue("castsAwayConst", CastsAwayConst);
-    }
+    CStyleCastInterpretationKind Kind =
+        cast<ExplicitCastExpr>(CE)->getCStyleCastInterpretationKind();
+    if (Kind != CStyleCastInterpretationKind::Unknown &&
+        Kind != CStyleCastInterpretationKind::StaticCast)
+      JOS.attribute(
+          "interpretedAs",
+          ExplicitCastExpr::getCStyleCastInterpretationKindName(Kind));
   }
 }
 

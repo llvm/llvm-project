@@ -70,6 +70,7 @@ class Token;
 class VarDecl;
 enum class CharacterLiteralKind;
 enum class ConstantResultStorageKind;
+enum class CStyleCastInterpretationKind;
 enum class CXXConstructionKind;
 enum class CXXNewInitializationStyle;
 enum class PredefinedIdentKind;
@@ -640,15 +641,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
 
-    /// For a C++ C-style or functional cast, how the cast was resolved.
-    /// Only set for CStyleCastExpr and CXXFunctionalCastExpr.
-    LLVM_PREFERRED_TYPE(CStyleCastInterpretation)
-    unsigned CStyleInterpretation : 2;
-
-    /// For a C++ C-style or functional cast, true if the cast casts away
-    /// constness. Only set for CStyleCastExpr and CXXFunctionalCastExpr.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned CStyleCastsAwayConst : 1;
+    /// For a C++ C-style or functional cast, how the cast was interpreted
+    /// ([expr.cast]p4). Only set for CStyleCastExpr and CXXFunctionalCastExpr.
+    LLVM_PREFERRED_TYPE(CStyleCastInterpretationKind)
+    unsigned CStyleInterpretationKind : 3;
 
     /// The number of CXXBaseSpecifiers in the cast. 14 bits would be enough
     /// here. ([implimits] Direct and indirect base classes [16384]).

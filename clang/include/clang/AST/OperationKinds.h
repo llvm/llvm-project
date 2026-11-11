@@ -45,18 +45,6 @@ enum ObjCBridgeCastKind {
   OBC_BridgeRetained
 };
 
-/// How a C-style or functional cast was resolved in C++ ([expr.cast]p4).
-enum class CStyleCastInterpretation {
-  /// Not a C++ C-style or functional cast, or not yet resolved.
-  Unknown,
-  /// Resolved as a const_cast.
-  Const,
-  /// Resolved as a static_cast (possibly followed by a const_cast).
-  Static,
-  /// Resolved as a reinterpret_cast (possibly followed by a const_cast).
-  Reinterpret
-};
-
 }  // end namespace clang
 
 #endif
