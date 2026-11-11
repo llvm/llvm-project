@@ -409,9 +409,9 @@ void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void PPC::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC, ELF32LE>(*this, sec, shard);
+    elf::scanSection1<ELF32LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC, ELF32BE>(*this, sec, shard);
+    elf::scanSection1<ELF32BE>(*this, sec, shard);
 }
 
 static std::pair<RelType, uint64_t> fromDTPREL(RelType type, uint64_t val) {

@@ -2826,7 +2826,12 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
 
+  // Don't use the index cache for symbol tables of binaries read out of a
+  // corefile.
+  const bool disable_memory_symtab_caching = (bool)GetCoreFile();
+
   if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     disable_memory_symtab_caching,
                                      size_to_read))
     return module_sp;
 
