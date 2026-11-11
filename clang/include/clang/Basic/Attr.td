@@ -523,6 +523,10 @@ def TargetMustTailAvailable:  TargetSpec {
   let CustomCode = [{ Target.hasMustTail() }];
 }
 
+def TargetHasMemTag : TargetSpec {
+  let CustomCode = [{ Target.hasFeature("memtag") }];
+}
+
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
@@ -4152,6 +4156,14 @@ def DisableSanitizerInstrumentation : InheritableAttr {
   let Documentation = [DisableSanitizerInstrumentationDocs];
   let SimpleHandler = 1;
 }
+
+def MemTag : InheritableAttr, TargetSpecificAttr<TargetHasMemTag> {
+  let Spellings = [Clang<"memtag">];
+  let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
+  let Documentation = [MemTagDocs];
+  let IsTypeDependent = 1;
+}
+def : MutualExclusions<[MemTag, Section, DisableSanitizerInstrumentation]>;
 
 def CFICanonicalJumpTable : InheritableAttr {
   let Spellings = [Clang<"cfi_canonical_jump_table">];
