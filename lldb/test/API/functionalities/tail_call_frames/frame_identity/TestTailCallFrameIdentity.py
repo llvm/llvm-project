@@ -40,14 +40,18 @@ class TestTailCallFrameIdentity(TestBase):
         )
         self.assertTrue(thread.GetFrameAtIndex(1).IsArtificial())
 
-        # The second call stops in mid itself, at the CFA its tail call frame
-        # had at the first stop. LLDB reuses the frames of the previous stop
-        # only when both stacks are fully fetched.
+        # LLDB reuses the frames of the previous stop only when both stacks are
+        # fully fetched.
         thread.GetNumFrames()
+
+        # The second call stops in mid itself, at the CFA its tail call frame
+        # had at the first stop.
         target.BreakpointCreateByName("mid")
         process.Continue()
         thread = process.GetSelectedThread()
         thread.GetNumFrames()
         frame = thread.GetFrameAtIndex(0)
         self.assertIn("mid", frame.GetDisplayFunctionName())
+        # Had this frame's StackID matched that tail call frame's, LLDB would
+        # have reused the artificial frame here.
         self.assertFalse(frame.IsArtificial())
