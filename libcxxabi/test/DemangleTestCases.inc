@@ -30237,4 +30237,6 @@
 {"_Z1fILDu114EEvv", "void f<(char8_t)114>()"},
 {"_Z16ManglingTestNTTPILDB99_38EEvv", "void ManglingTestNTTP<(_BitInt(99))38>()"},
 {"_Z1fILDn0EEvv", "void f<nullptr>()"},
+{"_Z1fIRPFiiiEEDTrcT_Li0EEv", "decltype(reinterpret_cast<int (*&)(int, int)>(0)) f<int (*&)(int, int)>()"},
+{"_Z1fIRA3_iEDTscT_Li0EEv", "decltype(static_cast<int (&) [3]>(0)) f<int (&) [3]>()"},
     // clang-format on
