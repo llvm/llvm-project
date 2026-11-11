@@ -40,6 +40,7 @@ add_llvm_target(MipsCodeGen
   MipsAnalyzeImmediate.cpp
   MipsAsmPrinter.cpp
   MipsCallLowering.cpp
+  MipsCodeGenPassBuilder.cpp
   MipsCCState.cpp
   MipsConstantIslandPass.cpp
   MipsDelaySlotFiller.cpp
@@ -84,6 +85,7 @@ add_llvm_target(MipsCodeGen
   MipsDesc
   MipsInfo
   Option
+  Passes
   SelectionDAG
   Support
   Target

@@ -13,7 +13,6 @@
 # RUN:     -o - %s | FileCheck %s --check-prefix=APPLE-FAST
 ---
 name:            madd_w_asr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -36,7 +35,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY]], [[COPY2]], $wzr
-    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = nsw ADDWrs killed [[MADDWrrr]], [[COPY1]], 130
+    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = nsw ADDWrs [[MADDWrrr]], [[COPY1]], 130
     ; APPLE-SLOW-NEXT: $w0 = COPY [[ADDWrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -54,13 +53,12 @@ body:             |
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
     %3:gpr32 = nsw MADDWrrr %2, %0, $wzr
-    %4:gpr32 = nsw ADDWrs killed %3, %1, 130
+    %4:gpr32 = nsw ADDWrs %3, %1, 130
     $w0 = COPY %4
     RET_ReallyLR implicit $w0
 ...
 ---
 name:            madd_w_lsr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -83,7 +81,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], $wzr
-    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs killed [[MADDWrrr]], [[COPY1]], 68
+    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[MADDWrrr]], [[COPY1]], 68
     ; APPLE-SLOW-NEXT: $w0 = COPY [[ADDWrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -101,13 +99,12 @@ body:             |
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
     %3:gpr32 = MADDWrrr %2, %0, $wzr
-    %4:gpr32 = ADDWrs killed %3, %1, 68
+    %4:gpr32 = ADDWrs %3, %1, 68
     $w0 = COPY %4
     RET_ReallyLR implicit $w0
 ...
 ---
 name:            madd_x_asr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -130,7 +127,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
     ; APPLE-SLOW-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = nsw MADDXrrr [[COPY]], [[COPY2]], $xzr
-    ; APPLE-SLOW-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = nsw ADDXrs killed [[MADDXrrr]], [[COPY1]], 130
+    ; APPLE-SLOW-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = nsw ADDXrs [[MADDXrrr]], [[COPY1]], 130
     ; APPLE-SLOW-NEXT: $x0 = COPY [[ADDXrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $x0
     ;
@@ -148,13 +145,12 @@ body:             |
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
     %3:gpr64 = nsw MADDXrrr %2, %0, $xzr
-    %4:gpr64 = nsw ADDXrs killed %3, %1, 130
+    %4:gpr64 = nsw ADDXrs %3, %1, 130
     $x0 = COPY %4
     RET_ReallyLR implicit $x0
 ...
 ---
 name:            no_madd_mul_multi_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3
@@ -209,7 +205,6 @@ body:             |
 ...
 ---
 name:            madd_w_lsl_small
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -232,7 +227,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], $wzr
-    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs killed [[MADDWrrr]], [[COPY1]], 3
+    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[MADDWrrr]], [[COPY1]], 3
     ; APPLE-SLOW-NEXT: $w0 = COPY [[ADDWrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -250,13 +245,12 @@ body:             |
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
     %3:gpr32 = MADDWrrr %2, %0, $wzr
-    %4:gpr32 = ADDWrs killed %3, %1, 3
+    %4:gpr32 = ADDWrs %3, %1, 3
     $w0 = COPY %4
     RET_ReallyLR implicit $w0
 ...
 ---
 name:            madd_w_lsl_large
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -279,7 +273,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w0
     ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[COPY2]], $wzr
-    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs killed [[MADDWrrr]], [[COPY1]], 12
+    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[MADDWrrr]], [[COPY1]], 12
     ; APPLE-SLOW-NEXT: $w0 = COPY [[ADDWrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -297,13 +291,12 @@ body:             |
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
     %3:gpr32 = MADDWrrr %2, %0, $wzr
-    %4:gpr32 = ADDWrs killed %3, %1, 12
+    %4:gpr32 = ADDWrs %3, %1, 12
     $w0 = COPY %4
     RET_ReallyLR implicit $w0
 ...
 ---
 name:            madd_x_lsl_large
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -326,7 +319,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x0
     ; APPLE-SLOW-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = MADDXrrr [[COPY]], [[COPY2]], $xzr
-    ; APPLE-SLOW-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs killed [[MADDXrrr]], [[COPY1]], 12
+    ; APPLE-SLOW-NEXT: [[ADDXrs:%[0-9]+]]:gpr64 = ADDXrs [[MADDXrrr]], [[COPY1]], 12
     ; APPLE-SLOW-NEXT: $x0 = COPY [[ADDXrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $x0
     ;
@@ -344,13 +337,12 @@ body:             |
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
     %3:gpr64 = MADDXrrr %2, %0, $xzr
-    %4:gpr64 = ADDXrs killed %3, %1, 12
+    %4:gpr64 = ADDXrs %3, %1, 12
     $x0 = COPY %4
     RET_ReallyLR implicit $x0
 ...
 ---
 name:            madd_w_div_mul
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -376,8 +368,8 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w1
     ; APPLE-SLOW-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w0
     ; APPLE-SLOW-NEXT: [[UDIVWr:%[0-9]+]]:gpr32 = UDIVWr [[COPY3]], [[COPY]]
-    ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], killed [[UDIVWr]], $wzr
-    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs killed [[MADDWrrr]], [[COPY2]], 3
+    ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[UDIVWr]], $wzr
+    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[MADDWrrr]], [[COPY2]], 3
     ; APPLE-SLOW-NEXT: $w0 = COPY [[ADDWrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -398,14 +390,13 @@ body:             |
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
     %4:gpr32 = UDIVWr %0, %3
-    %5:gpr32 = MADDWrrr %2, killed %4, $wzr
-    %6:gpr32 = ADDWrs killed %5, %1, 3
+    %5:gpr32 = MADDWrrr %2, %4, $wzr
+    %6:gpr32 = ADDWrs %5, %1, 3
     $w0 = COPY %6
     RET_ReallyLR implicit $w0
 ...
 ---
 name:            no_madd_w_lsl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $w3
@@ -419,7 +410,7 @@ body:             |
     ; LINUX-FAST-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w0
     ; LINUX-FAST-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY2]], [[COPY]], $wzr
     ; LINUX-FAST-NEXT: [[MADDWrrr1:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[COPY3]], $wzr
-    ; LINUX-FAST-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs killed [[MADDWrrr1]], killed [[MADDWrrr]], 3
+    ; LINUX-FAST-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[MADDWrrr1]], [[MADDWrrr]], 3
     ; LINUX-FAST-NEXT: $w0 = COPY [[ADDWrs]]
     ; LINUX-FAST-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -432,7 +423,7 @@ body:             |
     ; APPLE-SLOW-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY $w0
     ; APPLE-SLOW-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY2]], [[COPY]], $wzr
     ; APPLE-SLOW-NEXT: [[MADDWrrr1:%[0-9]+]]:gpr32 = MADDWrrr [[COPY1]], [[COPY3]], $wzr
-    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs killed [[MADDWrrr1]], killed [[MADDWrrr]], 3
+    ; APPLE-SLOW-NEXT: [[ADDWrs:%[0-9]+]]:gpr32 = ADDWrs [[MADDWrrr1]], [[MADDWrrr]], 3
     ; APPLE-SLOW-NEXT: $w0 = COPY [[ADDWrs]]
     ; APPLE-SLOW-NEXT: RET_ReallyLR implicit $w0
     ;
@@ -454,7 +445,7 @@ body:             |
     %0:gpr32 = COPY $w0
     %4:gpr32 = MADDWrrr %1, %3, $wzr
     %5:gpr32 = MADDWrrr %2, %0, $wzr
-    %6:gpr32 = ADDWrs killed %5, killed %4, 3
+    %6:gpr32 = ADDWrs %5, %4, 3
     $w0 = COPY %6
     RET_ReallyLR implicit $w0
 ...

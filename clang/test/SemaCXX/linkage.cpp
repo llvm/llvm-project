@@ -4,6 +4,7 @@
 // testing linkage directly in Sema, that would be better.
 
 // RUN: %clang_cc1 -Werror -Wno-non-c-typedef-for-linkage -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -Werror -Wno-non-c-typedef-for-linkage -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s %}
 
 // CHECK: @_ZZN5test61A3fooEvE3bar = linkonce_odr global i32 0, align 4
 

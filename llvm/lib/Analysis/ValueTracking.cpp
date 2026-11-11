@@ -2032,6 +2032,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       }
     } else {
       IntrinsicInst *II = nullptr;
+      GEPOperator *GEP = nullptr;
       if (matchTwoInputRecurrence<IntrinsicInst>(P, II, Start, Step)) {
         // %iv      = [<Start>, %entry], [%iv.next, %backedge]
         //
@@ -2055,6 +2056,25 @@ static void computeKnownBitsFromOperator(const Operator *I,
             Known.One.setHighBits(KnownStart.countMinLeadingOnes());
           }
         }
+      } else if (Known.isUnknown() && I->getType()->isPointerTy() &&
+                 matchTwoInputRecurrence<GEPOperator>(P, GEP, Start, Step) &&
+                 GEP->getPointerOperand() == P) {
+        // Handle a pointer induction variable, whose step is a getelementptr:
+        //   %p    = phi ptr [ %start, %preheader ], [ %next, %latch ]
+        //   %next = getelementptr <ty>, ptr %p, <indices>
+        // Every value %p takes is %start plus a whole number of steps, and
+        // tz(a + b) >= min(tz(a), tz(b)), so the trailing zeros of %p - and
+        // hence its alignment - are at least the smaller of those of %start and
+        // of the step.
+
+        // Evaluate the start value on its own incoming edge.
+        unsigned StartIdx = P->getIncomingValue(0) == Start ? 0 : 1;
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
+        RecQ.CtxI = P->getIncomingBlock(StartIdx)->getTerminator();
+        computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
+        Known.Zero.setLowBits(
+            std::min(KnownStart.countMinTrailingZeros(),
+                     Log2(GEP->getMaxPreservedAlignment(Q.DL))));
       }
     }
 
@@ -2098,12 +2118,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // to help us determine the range of the value.
         if (!Known2.isConstant()) {
           CmpPredicate Pred;
-          const APInt *RHSC;
+          Value *RHSValue = nullptr;
           BasicBlock *TrueSucc, *FalseSucc;
-          // TODO: Use RHS Value and compute range from its known bits.
-          if (match(RecQ.CtxI,
-                    m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
-                         m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
+          if (match(
+                  RecQ.CtxI,
+                  m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_Value(RHSValue)),
+                       m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
             // Check for cases of duplicate successors.
             if ((TrueSucc == CtxPhi->getParent()) !=
                 (FalseSucc == CtxPhi->getParent())) {
@@ -2111,18 +2131,24 @@ static void computeKnownBitsFromOperator(const Operator *I,
               if (FalseSucc == CtxPhi->getParent())
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
-              auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
-              KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
-              // We can have conflicts here if we are analyzing deadcode (its
-              // impossible for us reach this BB based the icmp).
-              if (KnownUnion.hasConflict()) {
-                // No reason to continue analyzing in a known dead region, so
-                // just resetAll and break. This will cause us to also exit the
-                // outer loop.
-                Known.resetAll();
-                break;
+              KnownBits RHSKnown = computeKnownBits(
+                  RHSValue, DemandedElts, RecQ, MaxAnalysisRecursionDepth - 1);
+              if (!RHSKnown.isUnknown()) {
+                ConstantRange RHSRange = ConstantRange::fromKnownBits(
+                    RHSKnown, /*IsSigned=*/ICmpInst::isSigned(Pred));
+                auto CR = ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+                KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
+                // We can have conflicts here if we are analyzing deadcode (its
+                // impossible for us reach this BB based the icmp).
+                if (KnownUnion.hasConflict()) {
+                  // No reason to continue analyzing in a known dead region, so
+                  // just resetAll and break. This will cause us to also exit
+                  // the outer loop.
+                  Known.resetAll();
+                  break;
+                }
+                Known2 = KnownUnion;
               }
-              Known2 = KnownUnion;
             }
           }
         }
@@ -5285,6 +5311,68 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
 }
 
+static void computeKnownFPClassForFRem(const Operator *Op,
+                                       const APInt &DemandedElts,
+                                       FPClassTest InterestedClasses,
+                                       KnownFPClass &Known,
+                                       const SimplifyQuery &Q, unsigned Depth) {
+  const Value *LHS = Op->getOperand(0);
+  const Value *RHS = Op->getOperand(1);
+
+  FPClassTest InterestedLHS = fcNone;
+  FPClassTest InterestedRHS = fcNone;
+
+  // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
+  if (InterestedClasses & fcNan) {
+    InterestedLHS |= fcNan | fcInf;
+    InterestedRHS |= fcNan | fcZero | fcSubnormal;
+  }
+
+  // The sign for frem is the same as the first operand.
+  if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
+    InterestedLHS |= fcPosNormal | fcPosSubnormal;
+  if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
+    InterestedLHS |= fcNegNormal | fcNegSubnormal;
+
+  // A negative zero result requires a negative finite first operand.
+  if (InterestedClasses & fcNegZero)
+    InterestedLHS |= fcNegFinite;
+
+  // A positive zero result can additionally come from a negative finite
+  // result being flushed to positive zero.
+  if (InterestedClasses & fcPosZero)
+    InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
+
+  const Function *F = cast<Instruction>(Op)->getFunction();
+  DenormalMode Mode =
+      F ? F->getDenormalMode(Op->getType()->getScalarType()->getFltSemantics())
+        : DenormalMode::getDynamic();
+
+  if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT)) {
+    // X % X is always exactly [+-]0.0 or a NaN.
+    FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
+    KnownFPClass KnownSrc;
+    if (InterestedSrcs != fcNone)
+      computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownSrc, Q,
+                          Depth + 1);
+    Known = KnownFPClass::frem_self(KnownSrc, Mode);
+    return;
+  }
+
+  KnownFPClass KnownLHS;
+  if (InterestedLHS != fcNone)
+    computeKnownFPClass(LHS, DemandedElts, InterestedLHS, KnownLHS, Q,
+                        Depth + 1);
+
+  KnownFPClass KnownRHS;
+  // RHS is only useful for refining NaN classes.
+  if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
+    computeKnownFPClass(RHS, DemandedElts, InterestedRHS, KnownRHS, Q,
+                        Depth + 1);
+
+  Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
+}
+
 static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   switch (IID) {
   case Intrinsic::minimum:
@@ -5567,6 +5655,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           IsFMA ? KnownFPClass::fma(KnownSrc[0], KnownSrc[1], KnownSrc[2], Mode)
                 : KnownFPClass::fmuladd(KnownSrc[0], KnownSrc[1], KnownSrc[2],
                                         Mode);
+      break;
+    }
+    case Intrinsic::experimental_constrained_frem: {
+      computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
+                                 Depth);
       break;
     }
     case Intrinsic::sqrt:
@@ -6256,61 +6349,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FRem: {
-    FPClassTest InterestedLHS = fcNone;
-    FPClassTest InterestedRHS = fcNone;
-
-    // NaN is also generated for frem(Inf, x) and frem(x, 0.0).
-    if (InterestedClasses & fcNan) {
-      InterestedLHS |= fcNan | fcInf;
-      InterestedRHS |= fcNan | fcZero | fcSubnormal;
-    }
-
-    // The sign for frem is the same as the first operand.
-    if (InterestedClasses & (fcPosNormal | fcPosSubnormal))
-      InterestedLHS |= fcPosNormal | fcPosSubnormal;
-    if (InterestedClasses & (fcNegNormal | fcNegSubnormal))
-      InterestedLHS |= fcNegNormal | fcNegSubnormal;
-
-    // A negative zero result requires a negative finite first operand.
-    if (InterestedClasses & fcNegZero)
-      InterestedLHS |= fcNegFinite;
-
-    // A positive zero result can additionally come from a negative finite
-    // result being flushed to positive zero.
-    if (InterestedClasses & fcPosZero)
-      InterestedLHS |= fcPosFinite | fcNegNormal | fcNegSubnormal;
-
-    const Function *F = cast<Instruction>(Op)->getFunction();
-    DenormalMode Mode =
-        F ? F->getDenormalMode(
-                Op->getType()->getScalarType()->getFltSemantics())
-          : DenormalMode::getDynamic();
-
-    if (Op->getOperand(0) == Op->getOperand(1) &&
-        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CtxI, Q.DT)) {
-      // X % X is always exactly [+-]0.0 or a NaN.
-      FPClassTest InterestedSrcs = InterestedLHS | InterestedRHS;
-      KnownFPClass KnownSrc;
-      if (InterestedSrcs != fcNone)
-        computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                            KnownSrc, Q, Depth + 1);
-      Known = KnownFPClass::frem_self(KnownSrc, Mode);
-      break;
-    }
-
-    KnownFPClass KnownLHS;
-    if (InterestedLHS != fcNone)
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedLHS,
-                          KnownLHS, Q, Depth + 1);
-
-    KnownFPClass KnownRHS;
-    // RHS is only useful for refining NaN classes.
-    if (InterestedRHS != fcNone && KnownLHS.isKnownNever(fcSNan))
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedRHS,
-                          KnownRHS, Q, Depth + 1);
-
-    Known = KnownFPClass::frem(KnownLHS, KnownRHS, Mode);
-
+    computeKnownFPClassForFRem(Op, DemandedElts, InterestedClasses, Known, Q,
+                               Depth);
     break;
   }
   case Instruction::FPExt: {
@@ -8151,9 +8191,10 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
 
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
-
+  const auto *CB = dyn_cast<CallBase>(Op);
+  bool CBHasNoUndef = CB && CB->hasRetAttr(Attribute::NoUndef);
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingAnnotations())
+      Op->hasPoisonGeneratingAnnotations() && !CBHasNoUndef)
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -8189,9 +8230,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
     [[fallthrough]];
   case Instruction::CallBr:
   case Instruction::Invoke: {
-    const auto *CB = cast<CallBase>(Op);
-    return !CB->hasRetAttr(Attribute::NoUndef) &&
-           !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
+    return !CBHasNoUndef && !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
@@ -8652,42 +8691,73 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
   case Intrinsic::pow:
+  case Intrinsic::experimental_constrained_pow:
   case Intrinsic::powi:
+  case Intrinsic::experimental_constrained_powi:
   case Intrinsic::sin:
+  case Intrinsic::experimental_constrained_sin:
   case Intrinsic::sinh:
+  case Intrinsic::experimental_constrained_sinh:
   case Intrinsic::cos:
+  case Intrinsic::experimental_constrained_cos:
   case Intrinsic::cosh:
+  case Intrinsic::experimental_constrained_cosh:
   case Intrinsic::sincos:
   case Intrinsic::sincospi:
   case Intrinsic::tan:
+  case Intrinsic::experimental_constrained_tan:
   case Intrinsic::tanh:
+  case Intrinsic::experimental_constrained_tanh:
   case Intrinsic::asin:
+  case Intrinsic::experimental_constrained_asin:
   case Intrinsic::acos:
+  case Intrinsic::experimental_constrained_acos:
   case Intrinsic::atan:
+  case Intrinsic::experimental_constrained_atan:
   case Intrinsic::atan2:
+  case Intrinsic::experimental_constrained_atan2:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
+  case Intrinsic::experimental_constrained_sqrt:
   case Intrinsic::fma:
+  case Intrinsic::experimental_constrained_fma:
   case Intrinsic::fmuladd:
+  case Intrinsic::experimental_constrained_fmuladd:
   case Intrinsic::exp:
+  case Intrinsic::experimental_constrained_exp:
   case Intrinsic::exp2:
+  case Intrinsic::experimental_constrained_exp2:
   case Intrinsic::exp10:
   case Intrinsic::log:
+  case Intrinsic::experimental_constrained_log:
   case Intrinsic::log2:
+  case Intrinsic::experimental_constrained_log2:
   case Intrinsic::log10:
+  case Intrinsic::experimental_constrained_log10:
   case Intrinsic::modf:
   case Intrinsic::floor:
+  case Intrinsic::experimental_constrained_floor:
   case Intrinsic::ceil:
+  case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::trunc:
+  case Intrinsic::experimental_constrained_trunc:
   case Intrinsic::rint:
+  case Intrinsic::experimental_constrained_rint:
   case Intrinsic::nearbyint:
+  case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::round:
+  case Intrinsic::experimental_constrained_round:
   case Intrinsic::roundeven:
+  case Intrinsic::experimental_constrained_roundeven:
   case Intrinsic::lrint:
+  case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::llrint:
+  case Intrinsic::experimental_constrained_llrint:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
   case Intrinsic::frexp:
+  case Intrinsic::ldexp:
+  case Intrinsic::experimental_constrained_ldexp:
   case Intrinsic::get_active_lane_mask:
   case Intrinsic::mask_beforefirst:
     return true;

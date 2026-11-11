@@ -373,7 +373,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
 
   StringRef ViewFuncName =
       getViewBlockFreqFuncName(MF.getFunction().getContext());
-  if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&
+  if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDAGType::None &&
       (ViewFuncName.empty() || MF.getFunction().getName() == ViewFuncName)) {
     MBFI->view("MIR_Prof_loader_b." + MF.getName(), false);
   }
@@ -385,7 +385,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
     MBFI->calculate(MF, *MBFI->getMBPI(), MCI);
   }
 
-  if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDT_None &&
+  if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDAGType::None &&
       (ViewFuncName.empty() || MF.getFunction().getName() == ViewFuncName)) {
     MBFI->view("MIR_prof_loader_a." + MF.getName(), false);
   }

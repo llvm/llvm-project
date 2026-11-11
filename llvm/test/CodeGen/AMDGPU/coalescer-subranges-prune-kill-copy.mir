@@ -28,16 +28,16 @@ body:             |
     undef %0.sub0:vreg_128 = IMPLICIT_DEF
     %0.sub1:vreg_128 = IMPLICIT_DEF
     %1:vreg_128 = COPY %0
-    %2:vreg_128 = COPY killed %0
+    %2:vreg_128 = COPY %0
     S_BRANCH %bb.2
 
   bb.1:
-    %1:vreg_128 = COPY killed undef %1
+    %1:vreg_128 = COPY undef %1
 
   bb.2:
     %1.sub2:vreg_128 = COPY undef %3:sreg_32
-    %2:vreg_128 = COPY killed %1
-    %4:vreg_128 = COPY killed %2
-    S_ENDPGM 0, implicit killed %4
+    %2:vreg_128 = COPY %1
+    %4:vreg_128 = COPY %2
+    S_ENDPGM 0, implicit %4
 
 ...

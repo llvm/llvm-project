@@ -10,7 +10,7 @@
 ...
 # GCN-LABEL: name: shrink_add_vop3{{$}}
 # GCN: %29:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %19, %17, 0, implicit $exec
-# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %9, implicit $exec
 name:            shrink_add_vop3
 alignment:       1
 exposesReturnsTwice: false
@@ -78,22 +78,22 @@ body:             |
     %27 = REG_SEQUENCE %3, %subreg.sub0, %26, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
-    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
-    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %12 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1
+    %13 = REG_SEQUENCE %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %28 = V_LSHL_B64_e64 %27, 2, implicit $exec
+    %16 = REG_SEQUENCE %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
     %29, %9 = V_ADD_CO_U32_e64 %19, %17, 0, implicit $exec
-    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, %9, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 ---
 # GCN-LABEL: name: shrink_sub_vop3{{$}}
 # GCN: %29:vgpr_32, %9:sreg_64_xexec = V_SUB_CO_U32_e64 %19, %17, 0, implicit $exec
-# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %9, implicit $exec
 
 name:            shrink_sub_vop3
 alignment:       1
@@ -162,22 +162,22 @@ body:             |
     %27 = REG_SEQUENCE %3, %subreg.sub0, %26, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
-    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
-    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %12 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1
+    %13 = REG_SEQUENCE %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %28 = V_LSHL_B64_e64 %27, 2, implicit $exec
+    %16 = REG_SEQUENCE %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
     %29, %9 = V_SUB_CO_U32_e64 %19, %17, 0, implicit $exec
-    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, %9, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 ---
 # GCN-LABEL: name: shrink_subrev_vop3{{$}}
 # GCN: %29:vgpr_32, %9:sreg_64_xexec = V_SUBREV_CO_U32_e64 %19, %17, 0, implicit $exec
-# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
+# GCN: %24:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %9, implicit $exec
 
 name:            shrink_subrev_vop3
 alignment:       1
@@ -246,15 +246,15 @@ body:             |
     %27 = REG_SEQUENCE %3, %subreg.sub0, %26, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
-    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
-    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %12 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1
+    %13 = REG_SEQUENCE %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %28 = V_LSHL_B64_e64 %27, 2, implicit $exec
+    %16 = REG_SEQUENCE %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
     %29, %9 = V_SUBREV_CO_U32_e64 %19, %17, 0, implicit $exec
-    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed %9, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %29, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, %9, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %29, %28, %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -329,16 +329,16 @@ body:             |
     %27 = REG_SEQUENCE %3, %subreg.sub0, %26, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
-    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
-    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %12 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1
+    %13 = REG_SEQUENCE %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %28 = V_LSHL_B64_e64 %27, 2, implicit $exec
+    %16 = REG_SEQUENCE %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
     %9 = S_MOV_B64 0
     %29, $vcc = V_ADDC_U32_e64 %19, %17, %9, 0, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -414,16 +414,16 @@ body:             |
     %27 = REG_SEQUENCE %3, %subreg.sub0, %26, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
-    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
-    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %12 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1
+    %13 = REG_SEQUENCE %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %28 = V_LSHL_B64_e64 %27, 2, implicit $exec
+    %16 = REG_SEQUENCE %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
     $vcc = S_MOV_B64 0
     %29, $vcc = V_ADDC_U32_e64 %19, %17, $vcc, 0, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -499,15 +499,15 @@ body:             |
     %27 = REG_SEQUENCE %3, %subreg.sub0, %26, %subreg.sub1
     %10 = S_MOV_B32 61440
     %11 = S_MOV_B32 0
-    %12 = REG_SEQUENCE killed %11, %subreg.sub0, killed %10, %subreg.sub1
-    %13 = REG_SEQUENCE killed %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
-    %28 = V_LSHL_B64_e64 killed %27, 2, implicit $exec
-    %16 = REG_SEQUENCE killed %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %12 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1
+    %13 = REG_SEQUENCE %5, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
+    %28 = V_LSHL_B64_e64 %27, 2, implicit $exec
+    %16 = REG_SEQUENCE %4, %subreg.sub0_sub1, %12, %subreg.sub2_sub3
     %17 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 0, 0, 0, implicit $exec
     %19 = BUFFER_LOAD_DWORD_ADDR64 %28, %13, 0, 4, 0, 0, implicit $exec
     %29, $vcc = V_ADDC_U32_e64 %19, %17, undef $vcc, 0, implicit $exec
     %24 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $vcc, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 %24, %28, killed %16, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %24, %28, %16, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

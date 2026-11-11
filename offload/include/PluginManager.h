@@ -14,13 +14,13 @@
 #define OMPTARGET_PLUGIN_MANAGER_H
 
 #include "OffloadAPI.h"
-#include "PluginInterface.h"
 
 #include "DeviceImage.h"
 #include "ExclusiveAccess.h"
 #include "OmpAccError.h"
 #include "Shared/APITypes.h"
 #include "Shared/Requirements.h"
+#include "Shared/Utils.h"
 
 #include "Platform.h"
 #include "device.h"
@@ -38,8 +38,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-
-using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
@@ -131,12 +129,6 @@ struct PluginManager {
   /// Eagerly initialize all plugins and their devices.
   void initializeAllDevices();
 
-  /// Iterator range for all plugins (in use or not, but always valid).
-  auto plugins() { return llvm::make_pointee_range(Plugins); }
-
-  /// Iterator range for all plugins (in use or not, but always valid).
-  auto plugins() const { return llvm::make_pointee_range(Plugins); }
-
   /// Return the user provided requirements.
   int64_t getRequirements() const { return Requirements.getRequirements(); }
 
@@ -158,17 +150,11 @@ private:
   bool LibOffloadInitialized = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
-  // List of all plugins, in use or not.
-  llvm::SmallVector<GenericPluginTy *> Plugins;
-
   // Platforms reported by liboffload, indexed by their handle.
   llvm::DenseMap<ol_platform_handle_t, PlatformTy> Platforms;
 
   // Mapping of device handles to the OpenMP device identifier.
   llvm::DenseMap<ol_device_handle_t, int32_t> DeviceIds;
-
-  // Set of all device images currently in use.
-  llvm::DenseSet<const __tgt_device_image *> UsedImages;
 
   /// Executable images and information extracted from the input images passed
   /// to the runtime.

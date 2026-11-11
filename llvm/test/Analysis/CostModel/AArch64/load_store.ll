@@ -3003,10 +3003,16 @@ define void @loads_aligned_tail(ptr %p) {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v3i32 = load <3 x i32>, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v7i16 = load <7 x i16>, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v7i8 = load <7 x i8>, ptr %p, align 4
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v3i32.a16 = load <3 x i32>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v7i16.a16 = load <7 x i16>, ptr %p, align 16
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v7i8.a8 = load <7 x i8>, ptr %p, align 8
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v3i32 = load <3 x i32>, ptr %p, align 8
   %v7i16 = load <7 x i16>, ptr %p, align 8
   %v7i8 = load <7 x i8>, ptr %p, align 4
+  %v3i32.a16 = load <3 x i32>, ptr %p, align 16
+  %v7i16.a16 = load <7 x i16>, ptr %p, align 16
+  %v7i8.a8 = load <7 x i8>, ptr %p, align 8
   ret void
 }

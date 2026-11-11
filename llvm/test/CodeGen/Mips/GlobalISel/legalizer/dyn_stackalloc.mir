@@ -20,7 +20,6 @@
 ---
 name:            Print_c_N_times
 alignment:       4
-tracksRegLiveness: true
 stack:
   - { id: 0, name: vla, type: variable-sized, alignment: 1 }
 body:             |

@@ -21,8 +21,8 @@ entry:
   ; call void @llvm.bar(metadata !{metadata !{}, i32 %v})
   ; call void @llvm.bar(metadata !{i32 %v, metadata !{}})
 
-; CHECK-NEXT: call void @llvm.bar(metadata !0)
-; CHECK-NEXT: call void @llvm.bar(metadata !0)
+; CHECK-NEXT: call void @llvm.bar(metadata !1)
+; CHECK-NEXT: call void @llvm.bar(metadata !1)
   call void @llvm.bar(metadata !{i32 %v, i32 %v})
   call void @llvm.bar(metadata !{metadata !{i32 %v}})
 
@@ -32,4 +32,4 @@ entry:
 
 declare void @llvm.bar(metadata)
 
-; CHECK: !0 = !{}
+; CHECK: !1 = !{}

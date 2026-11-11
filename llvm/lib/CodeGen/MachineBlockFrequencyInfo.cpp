@@ -34,15 +34,16 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
     "view-machine-block-freq-propagation-dags", cl::Hidden,
     cl::desc("Pop up a window to show a dag displaying how machine block "
              "frequencies propagate through the CFG."),
-    cl::values(clEnumValN(GVDT_None, "none", "do not display graphs."),
-               clEnumValN(GVDT_Fraction, "fraction",
+    cl::values(clEnumValN(GVDAGType::None, "none", "do not display graphs."),
+               clEnumValN(GVDAGType::Fraction, "fraction",
                           "display a graph using the "
                           "fractional block frequency representation."),
-               clEnumValN(GVDT_Integer, "integer",
+               clEnumValN(GVDAGType::Integer, "integer",
                           "display a graph using the raw "
                           "integer fractional block frequency representation."),
-               clEnumValN(GVDT_Count, "count", "display a graph using the real "
-                                               "profile count if available.")));
+               clEnumValN(GVDAGType::Count, "count",
+                          "display a graph using the real "
+                          "profile count if available.")));
 
 namespace llvm {
 // Similar option above, but used to control BFI display only after MBP pass
@@ -51,14 +52,14 @@ cl::opt<GVDAGType> ViewBlockLayoutWithBFI(
     cl::desc(
         "Pop up a window to show a dag displaying MBP layout and associated "
         "block frequencies of the CFG."),
-    cl::values(clEnumValN(GVDT_None, "none", "do not display graphs."),
-               clEnumValN(GVDT_Fraction, "fraction",
+    cl::values(clEnumValN(GVDAGType::None, "none", "do not display graphs."),
+               clEnumValN(GVDAGType::Fraction, "fraction",
                           "display a graph using the "
                           "fractional block frequency representation."),
-               clEnumValN(GVDT_Integer, "integer",
+               clEnumValN(GVDAGType::Integer, "integer",
                           "display a graph using the raw "
                           "integer fractional block frequency representation."),
-               clEnumValN(GVDT_Count, "count",
+               clEnumValN(GVDAGType::Count, "count",
                           "display a graph using the real "
                           "profile count if available.")));
 
@@ -69,7 +70,7 @@ static cl::opt<bool>
                           cl::desc("Print the machine block frequency info."));
 
 static GVDAGType getGVDT() {
-  if (ViewBlockLayoutWithBFI != GVDT_None)
+  if (ViewBlockLayoutWithBFI != GVDAGType::None)
     return ViewBlockLayoutWithBFI;
 
   return ViewMachineBlockFreqPropagationDAG;
@@ -221,7 +222,7 @@ void MachineBlockFrequencyInfo::calculate(
   MBFI->calculate(F, MBPI, MCI);
   const LLVMContext &Ctx = F.getFunction().getContext();
   StringRef ViewFuncName = getViewBlockFreqFuncName(Ctx);
-  if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
+  if (ViewMachineBlockFreqPropagationDAG != GVDAGType::None &&
       (ViewFuncName.empty() || F.getName() == ViewFuncName)) {
     view("MachineBlockFrequencyDAGS." + F.getName());
   }

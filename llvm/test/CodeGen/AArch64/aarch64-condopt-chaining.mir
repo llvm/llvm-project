@@ -9,7 +9,6 @@
 # Input:  CMP #9 GT;  CMP #10 GT;  CMP #11 GT
 # Output: CMP #10 GE; CMP #11 GE;  CMP #11 GT
 name:            three_pair_chain
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4, $x5
@@ -29,9 +28,9 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 11, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -49,9 +48,9 @@ body:             |
     %10:gpr32 = SUBSWri %0, 11, 0, implicit-def $nzcv
     %11:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %7, %3, 0
-    STRWui killed %9, %4, 0
-    STRWui killed %11, %5, 0
+    STRWui %7, %3, 0
+    STRWui %9, %4, 0
+    STRWui %11, %5, 0
     RET_ReallyLR
 
 ...
@@ -60,7 +59,6 @@ body:             |
 # the pair is discarded. The subsequent independent pair has no prior match,
 # so it is also left unchanged.
 name:            second_consumer_invalidates
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4, $x5
@@ -79,9 +77,9 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -99,9 +97,9 @@ body:             |
     %9:gpr32 = SUBSWri %0, 10, 0, implicit-def $nzcv
     %10:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %7, %3, 0
-    STRWui killed %8, %4, 0
-    STRWui killed %10, %5, 0
+    STRWui %7, %3, 0
+    STRWui %8, %4, 0
+    STRWui %10, %5, 0
     RET_ReallyLR
 
 ...
@@ -110,7 +108,6 @@ body:             |
 # before the clobber is optimised; the pair after is not, even though it would
 # otherwise match.
 name:            nzcv_clobber_resets_state
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4, $x5, $x6
@@ -132,10 +129,10 @@ body:             |
     ; CHECK-NEXT: [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 5, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[SUBSWri3:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 10, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[SUBSWri2]], [[COPY5]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY6]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[SUBSWri2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY6]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -161,10 +158,10 @@ body:             |
     %12:gpr32 = SUBSWri %0, 10, 0, implicit-def $nzcv
     %13:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %8, %3, 0
-    STRWui killed %10, %4, 0
-    STRWui killed %11, %5, 0
-    STRWui killed %13, %6, 0
+    STRWui %8, %3, 0
+    STRWui %10, %4, 0
+    STRWui %11, %5, 0
+    STRWui %13, %6, 0
     RET_ReallyLR
 
 ...
@@ -177,7 +174,6 @@ body:             |
 # Input:  CMP #10 GT; CMP #9 GT;  CMP #11 GT
 # Output: CMP #10 GT; CMP #10 GE; CMP #11 GT
 name:            stale_cc_chain
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4, $x5
@@ -197,9 +193,9 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 10, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri2:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 11, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr2:%[0-9]+]]:gpr32 = CSINCWr [[COPY1]], [[COPY2]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY3]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr2]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY3]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr2]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32 = COPY $w1
@@ -220,9 +216,9 @@ body:             |
     %10:gpr32 = SUBSWri %0, 11, 0, implicit-def $nzcv
     %11:gpr32 = CSINCWr %1, %2, 12, implicit $nzcv
 
-    STRWui killed %7, %3, 0
-    STRWui killed %9, %4, 0
-    STRWui killed %11, %5, 0
+    STRWui %7, %3, 0
+    STRWui %9, %4, 0
+    STRWui %11, %5, 0
     RET_ReallyLR
 
 ...
@@ -234,7 +230,6 @@ body:             |
 # Input:  CMP %0 #9 GT; CMP %1 #10 GT  (%1 = COPY %0)
 # Output: CMP %0 #10 GE; CMP %1 #10 GT
 name:            copy_traced_registers
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2, $x3, $x4
@@ -252,8 +247,8 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], [[COPY3]], 10, implicit $nzcv
     ; CHECK-NEXT: [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[COPY1]], 10, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr [[COPY2]], [[COPY3]], 12, implicit $nzcv
-    ; CHECK-NEXT: STRWui killed [[CSINCWr]], [[COPY4]], 0
-    ; CHECK-NEXT: STRWui killed [[CSINCWr1]], [[COPY5]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr]], [[COPY4]], 0
+    ; CHECK-NEXT: STRWui [[CSINCWr1]], [[COPY5]], 0
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr32common = COPY $w0
     %1:gpr32common = COPY %0
@@ -270,8 +265,8 @@ body:             |
     %8:gpr32 = SUBSWri %1, 10, 0, implicit-def $nzcv
     %9:gpr32 = CSINCWr %2, %3, 12, implicit $nzcv
 
-    STRWui killed %7, %4, 0
-    STRWui killed %9, %5, 0
+    STRWui %7, %4, 0
+    STRWui %9, %5, 0
     RET_ReallyLR
 
 ...

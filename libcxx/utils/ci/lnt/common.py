@@ -44,9 +44,11 @@ def is_sha(string: str) -> bool:
     return len(string) == 40 and all(c in '0123456789abcdef' for c in string.lower())
 
 
-def lnt_suite_url(lnt_url: str, test_suite: str) -> str:
-    """Return the URL of a test suite in the REST API of a LNT instance."""
-    return f'{lnt_url.rstrip("/")}/api/suites/{urllib.parse.quote(test_suite, safe="")}'
+def lnt_suite_url(lnt_url: str, project: str, test_suite: str) -> str:
+    """Return the URL of a project's test suite in the REST API of a LNT instance."""
+    project = urllib.parse.quote(project, safe='')
+    test_suite = urllib.parse.quote(test_suite, safe='')
+    return f'{lnt_url.rstrip("/")}/api/projects/{project}/suites/{test_suite}'
 
 
 def lnt_request(url: str, body: Optional[bytes] = None, token: Optional[str] = None) -> dict:
@@ -79,17 +81,17 @@ def lnt_get(url: str) -> Optional[dict]:
         raise LNTError(f'GET {url} returned a malformed response: {error}')
 
 
-def benchmarked_commits(lnt_url: str, test_suite: str, machine: str,
+def benchmarked_commits(lnt_url: str, project: str, test_suite: str, machine: str,
                         submitted_before: Optional[str] = None) -> Optional[Dict[str, int]]:
     """
     Return {commit: number of runs} for a machine, or None if the instance has no
     such machine. With `submitted_before` (an ISO 8601 timestamp), only the runs
     submitted before that time are counted.
     """
-    base = lnt_suite_url(lnt_url, test_suite)
+    base = lnt_suite_url(lnt_url, project, test_suite)
     # Listing runs answers 404 both for an unknown suite and for an unknown machine: tell them apart.
     if lnt_get(base) is None:
-        raise LNTError(f'{lnt_url} has no test suite named {test_suite}')
+        raise LNTError(f'{lnt_url} has no test suite named {project}/{test_suite}')
 
     counts: Dict[str, int] = {}
     params = {'machine': machine, 'limit': LNT_PAGE_SIZE}

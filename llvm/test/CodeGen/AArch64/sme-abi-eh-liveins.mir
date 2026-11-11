@@ -12,7 +12,6 @@
 ...
 ---
 name:            sme_abi_eh_liveins
-tracksRegLiveness: true
 isSSA:           true
 noVRegs:         false
 

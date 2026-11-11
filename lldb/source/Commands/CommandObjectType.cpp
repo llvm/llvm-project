@@ -31,7 +31,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
@@ -50,15 +49,15 @@ public:
   TypeSummaryImpl::Flags m_flags;
   StringList m_target_types;
   FormatterMatchType m_match_type;
-  ConstString m_name;
+  std::string m_name;
   std::string m_category;
   uint32_t m_ptr_match_depth;
 
   ScriptAddOptions(const TypeSummaryImpl::Flags &flags,
-                   FormatterMatchType match_type, ConstString name,
+                   FormatterMatchType match_type, std::string name,
                    std::string catg, uint32_t m_ptr_match_depth)
-      : m_flags(flags), m_match_type(match_type), m_name(name),
-        m_category(catg), m_ptr_match_depth(m_ptr_match_depth) {}
+      : m_flags(flags), m_match_type(match_type), m_name(std::move(name)),
+        m_category(std::move(catg)), m_ptr_match_depth(m_ptr_match_depth) {}
 
   typedef std::shared_ptr<ScriptAddOptions> SharedPointer;
 };
@@ -232,14 +231,12 @@ public:
                   }
                 }
 
-                if (options->m_name) {
+                if (!options->m_name.empty()) {
                   CommandObjectTypeSummaryAdd::AddNamedSummary(
-                      options->m_name.GetStringRef().str(), script_format,
-                      &error);
+                      options->m_name, script_format, &error);
                   if (error.Fail()) {
                     CommandObjectTypeSummaryAdd::AddNamedSummary(
-                        options->m_name.GetStringRef().str(), script_format,
-                        &error);
+                        options->m_name, script_format, &error);
                     if (error.Fail()) {
                       LockedStreamFile locked_stream = error_sp->Lock();
                       locked_stream.Printf("error: %s", error.AsCString());
@@ -476,8 +473,8 @@ protected:
                     class_name_str.c_str());
 
                 lldb::TypeCategoryImplSP category;
-                DataVisualization::Categories::GetCategory(
-                    ConstString(options->m_category), category);
+                DataVisualization::Categories::GetCategory(options->m_category,
+                                                           category);
 
                 Status error;
 
@@ -705,8 +702,8 @@ protected:
     // now I have a valid format, let's add it to every type
 
     TypeCategoryImplSP category_sp;
-    DataVisualization::Categories::GetCategory(
-        ConstString(m_command_options.m_category), category_sp);
+    DataVisualization::Categories::GetCategory(m_command_options.m_category,
+                                               category_sp);
     if (!category_sp)
       return;
 
@@ -837,7 +834,9 @@ public:
   }
 
 protected:
-  virtual bool FormatterSpecificDeletion(ConstString typeCS) { return false; }
+  virtual bool FormatterSpecificDeletion(llvm::StringRef typeCS) {
+    return false;
+  }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -847,10 +846,9 @@ protected:
       return;
     }
 
-    const char *typeA = command.GetArgumentAtIndex(0);
-    ConstString typeCS(typeA);
+    llvm::StringRef typeCS = command.GetArgumentAtIndex(0);
 
-    if (!typeCS) {
+    if (typeCS.empty()) {
       result.AppendError("empty typenames not allowed");
       return;
     }
@@ -877,8 +875,8 @@ protected:
       extra_deletion = FormatterSpecificDeletion(typeCS);
     } else {
       lldb::TypeCategoryImplSP category;
-      DataVisualization::Categories::GetCategory(
-          ConstString(m_options.m_category), category);
+      DataVisualization::Categories::GetCategory(m_options.m_category,
+                                                 category);
       if (category)
         delete_category = category->Delete(typeCS, m_formatter_kind);
       extra_deletion = FormatterSpecificDeletion(typeCS);
@@ -887,7 +885,7 @@ protected:
     if (delete_category || extra_deletion) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendErrorWithFormat("no custom formatter for %s", typeA);
+      result.AppendErrorWithFormatv("no custom formatter for {0}", typeCS);
     }
   }
 };
@@ -960,12 +958,10 @@ protected:
     } else {
       lldb::TypeCategoryImplSP category;
       if (command.GetArgumentCount() > 0) {
-        const char *cat_name = command.GetArgumentAtIndex(0);
-        ConstString cat_nameCS(cat_name);
-        DataVisualization::Categories::GetCategory(cat_nameCS, category);
+        llvm::StringRef cat_name = command.GetArgumentAtIndex(0);
+        DataVisualization::Categories::GetCategory(cat_name, category);
       } else {
-        DataVisualization::Categories::GetCategory(ConstString(nullptr),
-                                                   category);
+        DataVisualization::Categories::GetCategory(llvm::StringRef(), category);
       }
       category->Clear(m_formatter_kind);
     }
@@ -1333,9 +1329,8 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
   } else {
     // Use an IOHandler to grab Python code from the user
     auto options = std::make_unique<ScriptAddOptions>(
-        m_options.m_flags, m_options.m_match_type,
-        ConstString(m_options.m_name), m_options.m_category,
-        m_options.m_ptr_match_depth);
+        m_options.m_flags, m_options.m_match_type, m_options.m_name,
+        m_options.m_category, m_options.m_ptr_match_depth);
 
     for (auto &entry : command.entries()) {
       if (entry.ref().empty()) {
@@ -1647,7 +1642,7 @@ bool CommandObjectTypeSummaryAdd::AddNamedSummary(std::string summary_name,
                                                   TypeSummaryImplSP entry,
                                                   Status *error) {
   // system named summaries do not exist (yet?)
-  DataVisualization::NamedSummaryFormats::Add(ConstString(summary_name), entry);
+  DataVisualization::NamedSummaryFormats::Add(summary_name, entry);
   return true;
 }
 
@@ -1657,8 +1652,7 @@ bool CommandObjectTypeSummaryAdd::AddSummary(std::string type_name,
                                              std::string category_name,
                                              Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name),
-                                             category);
+  DataVisualization::Categories::GetCategory(category_name, category);
 
   if (match_type == eFormatterMatchExact) {
     if (FixArrayTypeNameWithRegex(type_name))
@@ -1701,7 +1695,7 @@ public:
   ~CommandObjectTypeSummaryDelete() override = default;
 
 protected:
-  bool FormatterSpecificDeletion(ConstString typeCS) override {
+  bool FormatterSpecificDeletion(llvm::StringRef typeCS) override {
     if (m_options.m_language != lldb::eLanguageTypeUnknown)
       return false;
     return DataVisualization::NamedSummaryFormats::Delete(typeCS);
@@ -1821,7 +1815,7 @@ protected:
 
     for (auto &entry : command.entries()) {
       TypeCategoryImplSP category_sp;
-      if (DataVisualization::Categories::GetCategory(ConstString(entry.ref()),
+      if (DataVisualization::Categories::GetCategory(entry.ref(),
                                                      category_sp) &&
           category_sp) {
         category_sp->AddLanguage(m_options.m_cate_language.GetCurrentValue());
@@ -1908,10 +1902,9 @@ protected:
       DataVisualization::Categories::EnableStar();
     } else if (argc > 0) {
       for (int i = argc - 1; i >= 0; i--) {
-        const char *typeA = command.GetArgumentAtIndex(i);
-        ConstString typeCS(typeA);
+        llvm::StringRef typeCS = command.GetArgumentAtIndex(i);
 
-        if (!typeCS) {
+        if (typeCS.empty()) {
           result.AppendError("empty category name not allowed");
           return;
         }
@@ -1959,10 +1952,9 @@ protected:
 
     // the order is not relevant here
     for (int i = argc - 1; i >= 0; i--) {
-      const char *typeA = command.GetArgumentAtIndex(i);
-      ConstString typeCS(typeA);
+      llvm::StringRef typeCS = command.GetArgumentAtIndex(i);
 
-      if (!typeCS) {
+      if (typeCS.empty()) {
         result.AppendError("empty category name not allowed");
         return;
       }
@@ -2051,10 +2043,9 @@ protected:
     } else if (argc > 0) {
       // the order is not relevant here
       for (int i = argc - 1; i >= 0; i--) {
-        const char *typeA = command.GetArgumentAtIndex(i);
-        ConstString typeCS(typeA);
+        llvm::StringRef typeCS = command.GetArgumentAtIndex(i);
 
-        if (!typeCS) {
+        if (typeCS.empty()) {
           result.AppendError("empty category name not allowed");
           return;
         }
@@ -2264,8 +2255,7 @@ bool CommandObjectTypeSynthAdd::Execute_PythonClass(
   // now I have a valid provider, let's add it to every type
 
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(m_options.m_category),
-                                             category);
+  DataVisualization::Categories::GetCategory(m_options.m_category, category);
 
   Status error;
 
@@ -2300,8 +2290,7 @@ bool CommandObjectTypeSynthAdd::AddSynth(std::string type_name,
                                          std::string category_name,
                                          Status *error) {
   lldb::TypeCategoryImplSP category;
-  DataVisualization::Categories::GetCategory(ConstString(category_name),
-                                             category);
+  DataVisualization::Categories::GetCategory(category_name, category);
 
   if (match_type == eFormatterMatchExact) {
     if (FixArrayTypeNameWithRegex(type_name))
@@ -2439,8 +2428,7 @@ private:
                  FilterFormatType type, std::string category_name,
                  Status *error) {
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(ConstString(category_name),
-                                               category);
+    DataVisualization::Categories::GetCategory(category_name, category);
 
     if (type == eRegularFilter) {
       if (FixArrayTypeNameWithRegex(type_name))
@@ -2560,8 +2548,7 @@ protected:
     // now I have a valid provider, let's add it to every type
 
     lldb::TypeCategoryImplSP category;
-    DataVisualization::Categories::GetCategory(
-        ConstString(m_options.m_category), category);
+    DataVisualization::Categories::GetCategory(m_options.m_category, category);
 
     Status error;
 

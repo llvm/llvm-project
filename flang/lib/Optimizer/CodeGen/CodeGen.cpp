@@ -3481,8 +3481,14 @@ struct CoordinateOpConversion
     // Complex type - basically, extract the real or imaginary part
     // FIXME: double check why this is done before the fir.box case below.
     if (fir::isa_complex(objectTy)) {
+      // A complex is two elements of the same type laid out contiguously, so a
+      // part index that is not constant can index the element type directly.
+      // Only an index into the struct itself has to be constant.
       mlir::Value gep =
-          genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1]);
+          fir::getIntIfConstant(operands[1])
+              ? genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1])
+              : genGEP(loc, convertType(getComplexEleTy(objectTy)), rewriter,
+                       base, operands[1]);
       rewriter.replaceOp(coor, gep);
       return mlir::success();
     }
@@ -4445,6 +4451,30 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
       // feed to the fir declare operation. Thus, during codegen, we can
       // simply erase is as it is no longer used.
       rewriter.eraseOp(undef);
+      return mlir::success();
+    }
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(undef.getType())) {
+      // A fir.box value is lowered as the address of its descriptor storage,
+      // and fir.load/fir.store of a box copy the descriptor through that
+      // address. An undefined box must therefore be valid storage holding an
+      // undefined descriptor, not an undefined address.
+      mlir::Location loc = undef.getLoc();
+      mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
+      mlir::Value storage =
+          genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign, rewriter);
+      if (boxTy.isAssumedRank()) {
+        // Copies of an assumed-rank descriptor are sized from its rank, which
+        // must therefore stay within the storage.
+        mlir::Type rankTy = getBoxEleTy(llvmBoxTy, {kRankPosInBox});
+        mlir::LLVM::GEPOp rankAddr =
+            genGEP(loc, llvmBoxTy, rewriter, storage, 0, kRankPosInBox);
+        mlir::Value zero = mlir::LLVM::ConstantOp::create(
+            rewriter, loc, rankTy, rewriter.getIntegerAttr(rankTy, 0));
+        auto storeOp =
+            mlir::LLVM::StoreOp::create(rewriter, loc, zero, rankAddr);
+        attachTBAATag(storeOp, boxTy, nullptr, rankAddr);
+      }
+      rewriter.replaceOp(undef, storage);
       return mlir::success();
     }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
