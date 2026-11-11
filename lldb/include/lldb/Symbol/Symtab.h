@@ -231,8 +231,9 @@ public:
   void SetWasSavedToCache() { SetStateFlags(lldb::eSymtabStateSavedToCache); }
   /// \}
 
-  /// Flags describing state of this symbol table.
-  lldb::SymtabState GetState() const {
+  /// Returns a bitmask of lldb::SymtabState flags describing the state of this
+  /// symbol table.
+  uint32_t GetState() const {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     return m_state;
   }
@@ -286,7 +287,8 @@ protected:
       m_name_to_symbol_indices;
   bool m_file_addr_to_index_computed = false;
   bool m_name_indexes_computed = false;
-  lldb::SymtabState m_state = lldb::eSymtabStateNone;
+  /// A bitmask of lldb::SymtabState flags.
+  uint32_t m_state = lldb::eSymtabStateNone;
 
 private:
   void SetStateFlags(lldb::SymtabState state) {

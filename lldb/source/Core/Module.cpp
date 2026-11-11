@@ -1021,7 +1021,7 @@ Symtab *Module::GetSymtab(bool can_create) {
   return nullptr;
 }
 
-SymtabState Module::GetSymtabState() {
+uint32_t Module::GetSymtabState() {
   if (ObjectFile *objfile = GetObjectFile())
     if (Symtab *symtab = objfile->GetSymtab(/*can_create=*/false))
       return symtab->GetState();

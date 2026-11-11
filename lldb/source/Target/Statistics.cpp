@@ -357,7 +357,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       module_stat.symtab_symbol_count = symtab->GetNumSymbols();
       symtab_symbol_count += module_stat.symtab_symbol_count;
       ++symtabs_loaded;
-      const SymtabState state = symtab->GetState();
+      const uint32_t state = symtab->GetState();
       module_stat.symtab_loaded_from_cache =
           state & eSymtabStateLoadedFromCache;
       if (module_stat.symtab_loaded_from_cache)

@@ -306,7 +306,7 @@ size_t SBModule::GetNumSymbols() {
   return 0;
 }
 
-lldb::SymtabState SBModule::GetSymtabState() const {
+uint32_t SBModule::GetSymtabState() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (ModuleSP module_sp = GetSP())

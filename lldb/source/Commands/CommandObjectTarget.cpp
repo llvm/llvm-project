@@ -3513,7 +3513,7 @@ protected:
 
       case 'F': {
         std::string flags;
-        const lldb::SymtabState state = module->GetSymtabState();
+        const uint32_t state = module->GetSymtabState();
         if (state & eSymtabStateLoadedFromCache)
           flags += 'C';
         if (state & eSymtabStateParsedFromObjectFile)
