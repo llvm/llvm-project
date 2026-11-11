@@ -905,36 +905,40 @@ define void @memcpy_indexed(ptr noalias %dst, ptr noalias %src, i32 %n, i32 %len
 ; RV32IXQCISLS-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IXQCISLS-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IXQCISLS-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
+; RV32IXQCISLS-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32IXQCISLS-NEXT:    .cfi_offset ra, -4
 ; RV32IXQCISLS-NEXT:    .cfi_offset s0, -8
 ; RV32IXQCISLS-NEXT:    .cfi_offset s1, -12
 ; RV32IXQCISLS-NEXT:    .cfi_offset s2, -16
 ; RV32IXQCISLS-NEXT:    .cfi_offset s3, -20
+; RV32IXQCISLS-NEXT:    .cfi_offset s4, -24
 ; RV32IXQCISLS-NEXT:    addi s0, a3, 0
 ; RV32IXQCISLS-NEXT:    addi s1, a2, 0
 ; RV32IXQCISLS-NEXT:    addi s2, a1, 0
 ; RV32IXQCISLS-NEXT:    addi s3, a0, 0
+; RV32IXQCISLS-NEXT:    addi s4, zero, 0
 ; RV32IXQCISLS-NEXT:  .LBB7_1: # %loop
 ; RV32IXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCISLS-NEXT:    addi a0, s3, 0
-; RV32IXQCISLS-NEXT:    addi a1, s2, 0
+; RV32IXQCISLS-NEXT:    slli a1, s4, 2
+; RV32IXQCISLS-NEXT:    add a0, s3, a1
+; RV32IXQCISLS-NEXT:    add a1, s2, a1
 ; RV32IXQCISLS-NEXT:    addi a2, s0, 0
 ; RV32IXQCISLS-NEXT:    call memcpy
-; RV32IXQCISLS-NEXT:    addi s1, s1, -1
-; RV32IXQCISLS-NEXT:    addi s2, s2, 4
-; RV32IXQCISLS-NEXT:    addi s3, s3, 4
-; RV32IXQCISLS-NEXT:    bne s1, zero, .LBB7_1
+; RV32IXQCISLS-NEXT:    addi s4, s4, 1
+; RV32IXQCISLS-NEXT:    bne s1, s4, .LBB7_1
 ; RV32IXQCISLS-NEXT:  # %bb.2: # %exit
 ; RV32IXQCISLS-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IXQCISLS-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IXQCISLS-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; RV32IXQCISLS-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
 ; RV32IXQCISLS-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
+; RV32IXQCISLS-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
 ; RV32IXQCISLS-NEXT:    .cfi_restore ra
 ; RV32IXQCISLS-NEXT:    .cfi_restore s0
 ; RV32IXQCISLS-NEXT:    .cfi_restore s1
 ; RV32IXQCISLS-NEXT:    .cfi_restore s2
 ; RV32IXQCISLS-NEXT:    .cfi_restore s3
+; RV32IXQCISLS-NEXT:    .cfi_restore s4
 ; RV32IXQCISLS-NEXT:    addi sp, sp, 32
 ; RV32IXQCISLS-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IXQCISLS-NEXT:    jalr zero, 0(ra)
@@ -991,36 +995,40 @@ define void @memcpy_indexed(ptr noalias %dst, ptr noalias %src, i32 %n, i32 %len
 ; RV32IZCBXQCISLS-NEXT:    c.swsp s1, 20(sp) # 4-byte Folded Spill
 ; RV32IZCBXQCISLS-NEXT:    c.swsp s2, 16(sp) # 4-byte Folded Spill
 ; RV32IZCBXQCISLS-NEXT:    c.swsp s3, 12(sp) # 4-byte Folded Spill
+; RV32IZCBXQCISLS-NEXT:    c.swsp s4, 8(sp) # 4-byte Folded Spill
 ; RV32IZCBXQCISLS-NEXT:    .cfi_offset ra, -4
 ; RV32IZCBXQCISLS-NEXT:    .cfi_offset s0, -8
 ; RV32IZCBXQCISLS-NEXT:    .cfi_offset s1, -12
 ; RV32IZCBXQCISLS-NEXT:    .cfi_offset s2, -16
 ; RV32IZCBXQCISLS-NEXT:    .cfi_offset s3, -20
+; RV32IZCBXQCISLS-NEXT:    .cfi_offset s4, -24
 ; RV32IZCBXQCISLS-NEXT:    c.mv s0, a3
 ; RV32IZCBXQCISLS-NEXT:    c.mv s1, a2
 ; RV32IZCBXQCISLS-NEXT:    c.mv s2, a1
 ; RV32IZCBXQCISLS-NEXT:    c.mv s3, a0
+; RV32IZCBXQCISLS-NEXT:    c.li s4, 0
 ; RV32IZCBXQCISLS-NEXT:  .LBB7_1: # %loop
 ; RV32IZCBXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBXQCISLS-NEXT:    c.mv a0, s3
-; RV32IZCBXQCISLS-NEXT:    c.mv a1, s2
+; RV32IZCBXQCISLS-NEXT:    slli a1, s4, 2
+; RV32IZCBXQCISLS-NEXT:    add a0, s3, a1
+; RV32IZCBXQCISLS-NEXT:    c.add a1, s2
 ; RV32IZCBXQCISLS-NEXT:    c.mv a2, s0
 ; RV32IZCBXQCISLS-NEXT:    call memcpy
-; RV32IZCBXQCISLS-NEXT:    c.addi s1, -1
-; RV32IZCBXQCISLS-NEXT:    c.addi s2, 4
-; RV32IZCBXQCISLS-NEXT:    c.addi s3, 4
-; RV32IZCBXQCISLS-NEXT:    c.bnez s1, .LBB7_1
+; RV32IZCBXQCISLS-NEXT:    c.addi s4, 1
+; RV32IZCBXQCISLS-NEXT:    bne s1, s4, .LBB7_1
 ; RV32IZCBXQCISLS-NEXT:  # %bb.2: # %exit
 ; RV32IZCBXQCISLS-NEXT:    c.lwsp ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZCBXQCISLS-NEXT:    c.lwsp s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZCBXQCISLS-NEXT:    c.lwsp s1, 20(sp) # 4-byte Folded Reload
 ; RV32IZCBXQCISLS-NEXT:    c.lwsp s2, 16(sp) # 4-byte Folded Reload
 ; RV32IZCBXQCISLS-NEXT:    c.lwsp s3, 12(sp) # 4-byte Folded Reload
+; RV32IZCBXQCISLS-NEXT:    c.lwsp s4, 8(sp) # 4-byte Folded Reload
 ; RV32IZCBXQCISLS-NEXT:    .cfi_restore ra
 ; RV32IZCBXQCISLS-NEXT:    .cfi_restore s0
 ; RV32IZCBXQCISLS-NEXT:    .cfi_restore s1
 ; RV32IZCBXQCISLS-NEXT:    .cfi_restore s2
 ; RV32IZCBXQCISLS-NEXT:    .cfi_restore s3
+; RV32IZCBXQCISLS-NEXT:    .cfi_restore s4
 ; RV32IZCBXQCISLS-NEXT:    c.addi16sp sp, 32
 ; RV32IZCBXQCISLS-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCBXQCISLS-NEXT:    c.jr ra
@@ -1077,36 +1085,39 @@ define void @memcpy_indexed(ptr noalias %dst, ptr noalias %src, i32 %n, i32 %len
 ; RV32IZCBZBAXQCISLS-NEXT:    c.swsp s1, 20(sp) # 4-byte Folded Spill
 ; RV32IZCBZBAXQCISLS-NEXT:    c.swsp s2, 16(sp) # 4-byte Folded Spill
 ; RV32IZCBZBAXQCISLS-NEXT:    c.swsp s3, 12(sp) # 4-byte Folded Spill
+; RV32IZCBZBAXQCISLS-NEXT:    c.swsp s4, 8(sp) # 4-byte Folded Spill
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_offset ra, -4
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_offset s0, -8
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_offset s1, -12
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_offset s2, -16
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_offset s3, -20
+; RV32IZCBZBAXQCISLS-NEXT:    .cfi_offset s4, -24
 ; RV32IZCBZBAXQCISLS-NEXT:    c.mv s0, a3
 ; RV32IZCBZBAXQCISLS-NEXT:    c.mv s1, a2
 ; RV32IZCBZBAXQCISLS-NEXT:    c.mv s2, a1
 ; RV32IZCBZBAXQCISLS-NEXT:    c.mv s3, a0
+; RV32IZCBZBAXQCISLS-NEXT:    c.li s4, 0
 ; RV32IZCBZBAXQCISLS-NEXT:  .LBB7_1: # %loop
 ; RV32IZCBZBAXQCISLS-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IZCBZBAXQCISLS-NEXT:    c.mv a0, s3
-; RV32IZCBZBAXQCISLS-NEXT:    c.mv a1, s2
+; RV32IZCBZBAXQCISLS-NEXT:    sh2add a0, s4, s3
+; RV32IZCBZBAXQCISLS-NEXT:    sh2add a1, s4, s2
 ; RV32IZCBZBAXQCISLS-NEXT:    c.mv a2, s0
 ; RV32IZCBZBAXQCISLS-NEXT:    call memcpy
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi s1, -1
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi s2, 4
-; RV32IZCBZBAXQCISLS-NEXT:    c.addi s3, 4
-; RV32IZCBZBAXQCISLS-NEXT:    c.bnez s1, .LBB7_1
+; RV32IZCBZBAXQCISLS-NEXT:    c.addi s4, 1
+; RV32IZCBZBAXQCISLS-NEXT:    bne s1, s4, .LBB7_1
 ; RV32IZCBZBAXQCISLS-NEXT:  # %bb.2: # %exit
 ; RV32IZCBZBAXQCISLS-NEXT:    c.lwsp ra, 28(sp) # 4-byte Folded Reload
 ; RV32IZCBZBAXQCISLS-NEXT:    c.lwsp s0, 24(sp) # 4-byte Folded Reload
 ; RV32IZCBZBAXQCISLS-NEXT:    c.lwsp s1, 20(sp) # 4-byte Folded Reload
 ; RV32IZCBZBAXQCISLS-NEXT:    c.lwsp s2, 16(sp) # 4-byte Folded Reload
 ; RV32IZCBZBAXQCISLS-NEXT:    c.lwsp s3, 12(sp) # 4-byte Folded Reload
+; RV32IZCBZBAXQCISLS-NEXT:    c.lwsp s4, 8(sp) # 4-byte Folded Reload
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_restore ra
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_restore s0
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_restore s1
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_restore s2
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_restore s3
+; RV32IZCBZBAXQCISLS-NEXT:    .cfi_restore s4
 ; RV32IZCBZBAXQCISLS-NEXT:    c.addi16sp sp, 32
 ; RV32IZCBZBAXQCISLS-NEXT:    .cfi_def_cfa_offset 0
 ; RV32IZCBZBAXQCISLS-NEXT:    c.jr ra

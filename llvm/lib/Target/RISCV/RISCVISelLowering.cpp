@@ -2527,8 +2527,8 @@ bool RISCVTargetLowering::isLegalXqcislsScaledAddressingMode(
 
   // The address operands of calls (e.g. memcpy/memset) and prefetches are
   // passed in a register, so a scaled index can't be folded into them.
-  if (isa_and_present<CallBase>(I))
-    return false;
+  // if (isa_and_present<CallBase>(I))
+  //   return false;
 
   // FIXME: this incorrectly rejects in soft-float cases but I'm punting on
   // that for the moment.
