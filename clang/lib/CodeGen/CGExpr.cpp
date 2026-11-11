@@ -1407,11 +1407,17 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  if (!AllocTokenPlacementTypes)
-    AllocTokenPlacementTypes = std::make_unique<infer_alloc::PlacementNewTypes>(
-        CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
-  return buildAllocToken(infer_alloc::inferPossibleType(
-      E, getContext(), CurCast, AllocTokenPlacementTypes.get()));
+  QualType T = infer_alloc::inferPossibleType(E, getContext(), CurCast);
+  // A placement new into the result is stronger evidence than a cast to a raw
+  // storage pointer (void *, char *, ...) or a sizeof(char)-based size.
+  if (T.isNull() || infer_alloc::isRawStorageType(T)) {
+    if (!AllocTokenPlacementTypes)
+      AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
+          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+    if (QualType PT = AllocTokenPlacementTypes->lookup(E); !PT.isNull())
+      T = PT;
+  }
+  return buildAllocToken(T);
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {

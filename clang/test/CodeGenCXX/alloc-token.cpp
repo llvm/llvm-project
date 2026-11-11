@@ -222,22 +222,22 @@ void test_placement_new_ambiguous(int which) {
     sink = new (mem) PlacedWithPtr();
 }
 
-// Custom placement operators do not take the storage as placement argument, so
-// the malloc stays untyped (the custom operator new call itself is typed).
+// A user-provided placement operator new may use its argument as allocator
+// state rather than as the storage, so the allocation feeding it stays untyped
+// (the custom operator new call itself is typed).
 struct Arena {};
-void *operator new(size_t, Arena &);
-// CHECK-LABEL: define dso_local void @_Z24test_placement_new_arenaR5Arena(
-// CHECK: call noalias ptr @malloc(i64 noundef 64)
-// CHECK-NOT: @malloc{{.*}}!alloc_token
-// CHECK: call noundef ptr @_ZnwmR5Arena(i64 noundef 16, {{.*}} !alloc_token [[META_PLACEDNOPTR]]
-void test_placement_new_arena(Arena &arena) {
-  sink = malloc(64);
+void *operator new(size_t, Arena *);
+Arena *alloc_arena(size_t) __attribute__((malloc));
+// CHECK-LABEL: define dso_local void @_Z24test_placement_new_arenav(
+// CHECK: call noalias noundef ptr @_Z11alloc_arenam(i64 noundef 64)
+// CHECK-NOT: @_Z11alloc_arenam{{.*}}!alloc_token
+// CHECK: call noundef ptr @_ZnwmP5Arena(i64 noundef 16, {{.*}} !alloc_token [[META_PLACEDNOPTR]]
+void test_placement_new_arena() {
+  Arena *arena = alloc_arena(64);
   sink = new (arena) PlacedNoPtr();
 }
 
-// A class-specific operator new(size_t, void *) may use its argument as
-// allocator state rather than as the storage, so the allocation feeding it
-// stays untyped.
+// Same for a class-specific operator new(size_t, void *).
 struct ClassPlacement {
   void *next;
   static void *operator new(size_t, void *ctx);
@@ -251,31 +251,73 @@ void test_placement_new_class_specific() {
   sink = new (ctx) ClassPlacement;
 }
 
-// Indirect member access and an unmatched address-of name storage other than
-// the allocation itself.
+// Indirect member accesses, address-of, and static members name storage other
+// than the allocation itself.
 struct Holder {
   void *p;
 };
 Holder *alloc_holder(size_t) __attribute__((malloc));
+struct SpanWithStatic {
+  void *p;
+  size_t n;
+  static void *storage;
+};
+SpanWithStatic alloc_span_with_static(size_t) __attribute__((malloc_span));
 // CHECK-LABEL: define dso_local void @_Z27test_placement_new_indirectv(
 // CHECK: call noalias noundef ptr @_Z12alloc_holderm(i64 noundef 64)
 // CHECK-NOT: !alloc_token
+// CHECK: call noalias noundef ptr @_Z12alloc_holderm(i64 noundef 64)
+// CHECK-NOT: !alloc_token
 // CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call { ptr, i64 } @_Z22alloc_span_with_staticm(i64 noundef 64)
 // CHECK-NOT: !alloc_token
 // CHECK: ret void
 void test_placement_new_indirect() {
   Holder *h = alloc_holder(64);
   sink = new (h->p) PlacedNoPtr();
+  Holder *h2 = alloc_holder(64);
+  sink = new (&h2->p) PlacedNoPtr();
   void *mem = malloc(64);
   sink = new (&mem) unsigned char(0);
+  SpanWithStatic span = alloc_span_with_static(64);
+  sink = new (span.storage) PlacedNoPtr();
 }
 
-// Cancelling address-of/dereference pairs are still looked through.
-// CHECK-LABEL: define dso_local noundef ptr @_Z29test_placement_new_deref_addrv(
+// A cast to a raw storage pointer (void *, char *, ...) is weaker evidence
+// than the placement new, which prevails; a cast to an object type does not.
+// CHECK-LABEL: define dso_local void @_Z30test_placement_new_raw_storagev(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+void test_placement_new_raw_storage() {
+  char *p1 = static_cast<char *>(malloc(64));
+  sink = new (p1) PlacedWithPtr();
+  auto *p2 = (unsigned char *)malloc(64);
+  sink = new (p2) PlacedWithPtr();
+  // The member access is an implicit lvalue-to-rvalue cast to void *.
+  sink = new (__size_returning_new(64).p) PlacedWithPtr();
+  void *p3 = malloc(sizeof(char) * 64);
+  sink = new (p3) PlacedWithPtr();
+  auto *p4 = (PlacedWithPtr *)malloc(16);
+  sink = new (p4) PlacedNoPtr();
+}
+
+// Non-generic lambdas use the captured variable; a generic lambda's dependent
+// new-expression has no resolved operator new and is skipped.
+// CHECK-LABEL: define dso_local void @_Z25test_placement_new_lambdav(
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
-PlacedNoPtr *test_placement_new_deref_addr() {
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: @malloc{{.*}}!alloc_token
+void test_placement_new_lambda() {
   void *mem = malloc(64);
-  return new (*&mem) PlacedNoPtr();
+  auto construct = [mem] { sink = new (mem) PlacedNoPtr(); };
+  construct();
+  void *mem2 = malloc(64);
+  auto construct2 = [mem2](auto x) { sink = new (mem2) decltype(x)(); };
+  construct2(PlacedNoPtr{});
 }
 
 template <typename T>

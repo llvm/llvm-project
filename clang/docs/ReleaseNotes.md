@@ -1554,13 +1554,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
   the allocated type and the name of the function containing the allocation.
-- `-fsanitize=alloc-token` type inference now also recognizes memory that is
-  used as placement-new storage: for `new (p) T`, where `p` is the result of an
-  allocation call (directly, through a cast or member access such as the
-  pointer of a size-returning allocation, or via a local variable initialized
-  with it), the allocation is attributed to `T`. This covers the common
-  "allocate raw storage, then construct in place" idiom, which previously
-  received no type and therefore the fallback token.
+- `-fsanitize=alloc-token` now also infers the allocated type from a placement
+  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
+  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

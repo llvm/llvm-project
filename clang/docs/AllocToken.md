@@ -58,35 +58,12 @@ The following command-line options affect generated token IDs:
 
 ## Allocated Type Inference
 
-For `new` expressions the allocated type is known. For allocation functions
-such as `malloc` that return untyped memory, the type is inferred from the
-allocation call and its surroundings, in this order:
-
-- A `sizeof` in a size argument, possibly in arithmetic:
-  `malloc(sizeof(T))`, `malloc(n * sizeof(T))`, `malloc(sizeof(T) + extra)`,
-  or a variable initialized from such an expression.
-- A cast of the result: `(T *)malloc(n)`.
-- Placement new into the result: `new (malloc(n)) T`, or, through a local
-  variable and optionally a cast or member access of the result,
-
-  ```c++
-  void *mem = alloc(n);
-  T *obj = new (mem) T;              // infers 'T' for alloc(n)
-
-  sized_ptr res = size_returning_alloc(n);
-  T *obj = new (res.p) T;            // infers 'T' for size_returning_alloc(n)
-  ```
-
-  If different types are constructed into the same storage, no type is
-  inferred. Only the reserved non-allocating placement form
-  `::operator new(size_t, void *)` is considered; user-provided placement
-  operators may construct elsewhere. Likewise, indirect member accesses
-  (`h->p`) and unmatched `&`/`*` name storage other than the allocation and
-  are not looked through.
-
-These are heuristics: they ignore control flow and reassignments of the
-variables involved. If no type can be inferred, the allocation receives the
-fallback token.
+For `new` expressions the allocated type is known syntactically. For untyped
+allocation functions such as `malloc`, the type is inferred heuristically from
+the allocation call and its context, for example from a `sizeof` in the size
+argument, a cast of the result, or a placement `new` into the result. The
+heuristics are syntactic and ignore control flow and reassignments. If no type
+can be inferred, the allocation receives the fallback token.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`
 
