@@ -305,6 +305,48 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.KHR.Abort
+//===----------------------------------------------------------------------===//
+
+/// Returns true if `type` is a numerical scalar, physical pointer, vector,
+/// matrix, or an aggregate recursively containing only such types. Without an
+/// enclosing `module` any pointer is accepted.
+static bool isConcreteType(Type type, spirv::ModuleOp module) {
+  if (auto pointerType = dyn_cast<spirv::PointerType>(type)) {
+    if (!module)
+      return true;
+    spirv::AddressingModel addressingModel = module.getAddressingModel();
+    if (addressingModel == spirv::AddressingModel::Logical)
+      return false;
+    return addressingModel != spirv::AddressingModel::PhysicalStorageBuffer64 ||
+           pointerType.getStorageClass() ==
+               spirv::StorageClass::PhysicalStorageBuffer;
+  }
+  if (isa<spirv::ScalarType>(type))
+    return !type.isInteger(1);
+  if (auto vectorType = dyn_cast<VectorType>(type))
+    return isConcreteType(vectorType.getElementType(), module);
+  if (auto matrixType = dyn_cast<spirv::MatrixType>(type))
+    return isConcreteType(matrixType.getColumnType(), module);
+  if (auto arrayType = dyn_cast<spirv::ArrayType>(type))
+    return isConcreteType(arrayType.getElementType(), module);
+  if (auto structType = dyn_cast<spirv::StructType>(type))
+    return llvm::all_of(structType.getElementTypes(), [&](Type elementType) {
+      return isConcreteType(elementType, module);
+    });
+  return false;
+}
+
+LogicalResult KHRAbortOp::verify() {
+  if (!isConcreteType(getMessage().getType(),
+                      (*this)->getParentOfType<spirv::ModuleOp>()))
+    return emitOpError("message must be of a concrete type (numerical scalar, "
+                       "physical pointer, vector, matrix, or aggregate of such "
+                       "types)");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.LifetimeStart / spirv.LifetimeStop
 //===----------------------------------------------------------------------===//
 
