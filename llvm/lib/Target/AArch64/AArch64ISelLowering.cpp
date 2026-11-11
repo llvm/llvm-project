@@ -34205,14 +34205,12 @@ void AArch64TargetLowering::insertSSPDeclarations(
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
