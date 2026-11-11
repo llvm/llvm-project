@@ -839,14 +839,12 @@ public:
 // (a map associating symbols with expressions) with a derived type
 // specification.  There are two other similar classes:
 //  - ArrayConstructor<Type<TypeCategory::Derived>> comprises a derived type
-//  spec &
-//    zero or more instances of Expr<Type<TypeCategory::Derived>>; it has rank 1
-//    but not (in the most general case) a known shape.
+//    spec & zero or more instances of Expr<Type<TypeCategory::Derived>>; it has
+//    rank 1 but not (in the most general case) a known shape.
 //  - Constant<Type<TypeCategory::Derived>> comprises a derived type spec, zero
-//  or more
-//    homogeneous instances of StructureConstructorValues whose type
-//    parameters and component expressions are all constant, and a
-//    known shape (possibly scalar).
+//    or more homogeneous instances of StructureConstructorValues whose type
+//    parameters and component expressions are all constant, and a known shape
+//    (possibly scalar).
 // StructureConstructor represents a scalar value of derived type that
 // is not necessarily a constant.  It is used only as an
 // Expr<Type<TypeCategory::Derived>> alternative and as the type
