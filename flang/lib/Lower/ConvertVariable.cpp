@@ -2496,7 +2496,8 @@ static llvm::SmallVector<mlir::Value> lowerSharedRankOneBounds(
     }
     if (!baseArray) {
       Fortran::lower::SomeExpr baseExpr{Fortran::evaluate::AsGenericExpr(
-          Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+          Fortran::evaluate::Expr<
+              Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>{
               Fortran::common::Clone(shared->base())})};
       baseArray = hlfir::Entity{Fortran::lower::convertExprToHLFIR(
           loc, converter, baseExpr, symMap, stmtCtx)};
