@@ -184,6 +184,7 @@ struct MissingFeatures {
   static bool asmGoto() { return false; }
   static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
+  static bool asmNoConvergent() { return false; }
   static bool asmUnwindClobber() { return false; }
   static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
