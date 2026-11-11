@@ -21,6 +21,8 @@
 #include <sycl/__impl/usm_alloc_type.hpp>
 #include <sycl/__impl/usm_functions.hpp>
 
+#include <sycl/__impl/detail/property_interface.hpp>
+
 #include <cstddef>
 #include <type_traits>
 
@@ -29,7 +31,8 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 /// USM Allocator
 /// \sa 4.8.3.1. C++ allocator interface
 template <typename T, usm::alloc AllocKind, std::size_t Alignment = 0>
-class usm_allocator {
+class usm_allocator : private detail::PropertyInterface<
+                          usm_allocator<T, AllocKind, Alignment>> {
   static_assert(
       AllocKind != usm::alloc::device,
       "usm_allocator does not support AllocKind == usm::alloc::device");
@@ -91,21 +94,9 @@ public:
       free(Ptr, MContext);
   }
 
-  /// \return true if the allocator was constructed with property \p Property.
-  // TODO: implement
-  template <typename Property> bool has_property() const noexcept {
-    return false;
-  }
-
-  /// \return a copy of the property \p Property the allocator was constructed
-  /// with.
-  /// \throw sycl::exception with errc::invalid if the allocator was not
-  /// constructed with \p Property.
-  // TODO: implement
-  template <typename Property> Property get_property() const {
-    throw exception(MContext, make_error_code(errc::invalid),
-                    "usm_allocator does not have the requested property");
-  }
+  // SYCL 2020 4.5.4.1. The property interface.
+  using detail::PropertyInterface<usm_allocator>::has_property;
+  using detail::PropertyInterface<usm_allocator>::get_property;
 
   template <class U, usm::alloc AllocKindU, std::size_t AlignmentU>
   friend bool operator==(const usm_allocator<T, AllocKind, Alignment> &lhs,
@@ -121,7 +112,10 @@ public:
   }
 
 private:
+  const property_list &getPropertyList() const noexcept { return MPropList; }
+
   template <typename, usm::alloc, std::size_t> friend class usm_allocator;
+  friend class detail::PropertyInterface<usm_allocator>;
 
   context MContext;
   device MDevice;

@@ -265,20 +265,21 @@ TEST_F(USMAllocatorTest, Propagation) {
   EXPECT_EQ(Dst.data(), SrcData);
 }
 
-struct UnsupportedProperty {};
-
 TEST_F(USMAllocatorTest, Properties) {
-  usm_allocator<int, usm::alloc::host> Alloc(Q);
-  EXPECT_FALSE(Alloc.has_property<UnsupportedProperty>());
+  using property::queue::in_order;
 
+  usm_allocator<int, usm::alloc::host> Alloc(Q);
+  EXPECT_FALSE(Alloc.has_property<in_order>());
   try {
-    Alloc.get_property<UnsupportedProperty>();
+    Alloc.get_property<in_order>();
     FAIL() << "Expected sycl::exception";
   } catch (const sycl::exception &E) {
     EXPECT_EQ(E.code(), make_error_code(errc::invalid));
-    ASSERT_TRUE(E.has_context());
-    EXPECT_EQ(E.get_context(), Q.get_context());
   }
+
+  usm_allocator<int, usm::alloc::host> InOrderAlloc(Q, {in_order{}});
+  EXPECT_TRUE(InOrderAlloc.has_property<in_order>());
+  EXPECT_NO_THROW(InOrderAlloc.get_property<in_order>());
 }
 
 TEST_F(USMAllocatorTest, ZeroCount) {
