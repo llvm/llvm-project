@@ -325,7 +325,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
 
 // The nth item in POWERS_OF_TWO represents the greatest power of two less than
 // 10^n. This tells us how much we can safely shift without overshooting.
-constexpr uint8_t POWERS_OF_TWO[19] = {
+LIBC_INLINE_VAR constexpr uint8_t POWERS_OF_TWO[19] = {
     0, 3, 6, 9, 13, 16, 19, 23, 26, 29, 33, 36, 39, 43, 46, 49, 53, 56, 59,
 };
 constexpr int32_t NUM_POWERS_OF_TWO =
