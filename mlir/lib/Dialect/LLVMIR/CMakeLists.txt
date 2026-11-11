@@ -32,6 +32,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   [["mlir/Dialect/LLVMIR/pch.h"]]
 
   DEPENDS
+  MLIRSCFToControlFlowDialectInterfaceIncGen
   MLIRLLVMDialectBytecodeIncGen
   MLIRLLVMInterfacesIncGen
   MLIRLLVMIntrinsicOpsIncGen
@@ -57,7 +58,6 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
-  MLIRLoopLikeInterface
   MLIRMemorySlotInterfaces
   MLIRPtrMemorySpaceInterfaces
   MLIRSideEffectInterfaces

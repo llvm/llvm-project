@@ -13,8 +13,6 @@
 
 using namespace mlir;
 
-MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::LoopAnnotationDialectInterface)
-
 /// Include the definitions of the loop-like interfaces.
 #include "mlir/Interfaces/LoopLikeInterface.cpp.inc"
 

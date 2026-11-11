@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlowDialectInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -20,7 +21,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -321,7 +321,7 @@ static void propagateLoopAttrs(Operation *from, Operation *to) {
         auto *interface =
             attr.getValue()
                 .getDialect()
-                .getRegisteredInterface<LoopAnnotationDialectInterface>();
+                .getRegisteredInterface<SCFToControlFlowDialectInterface>();
         return interface && interface->shouldPropagateLoopAttribute(attr);
       });
   to->setDiscardableAttrs(loopAttrs);

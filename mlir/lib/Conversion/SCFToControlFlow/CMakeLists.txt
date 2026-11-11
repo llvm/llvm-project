@@ -5,12 +5,12 @@ add_mlir_conversion_library(MLIRSCFToControlFlow
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/SCFToControlFlow
 
   DEPENDS
+  MLIRSCFToControlFlowDialectInterfaceIncGen
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRControlFlowDialect
-  MLIRLoopLikeInterface
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRTransforms
