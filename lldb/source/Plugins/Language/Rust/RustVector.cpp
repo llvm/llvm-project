@@ -95,6 +95,15 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
           .GetChildAtNamePath({"buf", "inner", "ptr", "pointer", "pointer"})
           .get();
 
+  // If rust program was compiled with -Zrandomize-layout, the second
+  // "pointer" child may be omitted.
+  if (!m_start)
+    m_start =
+        m_backend
+            .GetChildAtNamePath({"buf", "inner", "ptr", "pointer"})
+        .get();
+
+
   m_len = m_backend.GetChildMemberWithName("len").get();
 
   m_element_type =
