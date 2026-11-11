@@ -84,6 +84,26 @@ define spir_func void @byte_array() {
   ret void
 }
 
+; Lifetime markers on non-static allocas are dropped.
+; CL-LABEL: Begin function non_static_alloca
+; CL-NOT: OpLifetimeStart
+; CL-NOT: OpLifetimeStop
+; CL: OpFunctionEnd
+define spir_func void @non_static_alloca(i1 %cond) {
+entry:
+  br i1 %cond, label %then, label %exit
+
+then:
+  %var = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(ptr nonnull %var)
+  store i32 0, ptr %var, align 4
+  call void @llvm.lifetime.end.p0(ptr nonnull %var)
+  br label %exit
+
+exit:
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 declare void @llvm.lifetime.end.p0(ptr nocapture)

@@ -290,7 +290,7 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
 }
 
 // Per the SPIR-V spec, the Size operand of OpLifetimeStart/OpLifetimeStop must
-// be 0 if Pointer points to a non-void type (with i8* treated as void*).
+// be 0 if Pointer points to a non-void type.
 static void validateLifetimeStart(MachineRegisterInfo *MRI,
                                   SPIRVGlobalRegistry &GR, MachineInstr &I) {
   Register PtrReg = I.getOperand(0).getReg();
