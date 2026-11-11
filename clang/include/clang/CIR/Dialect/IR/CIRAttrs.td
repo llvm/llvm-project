@@ -2726,13 +2726,13 @@ def CIR_LoweringOptionsAttr
 
     The following fields come from `LangOptions`.  Each bool field mirrors the
     like-named `LangOptions` member: `exceptions`,
-    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`, `gpu_rdc`,
-    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
-    `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
-    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
-    `ClangABI` gains an enumerator every Clang release (see
-    `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
-    single toolchain. `no_trapping_math` is true when
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `hlsl`,
+    `sycl_is_device`, `gpu_rdc`, `openmp` (`LangOpts.OpenMP != 0`; only its
+    on/off state matters), and `openmp_is_target_device`. `clang_abi_compat`
+    is an `i32` mirroring `LangOptions::ClangABI`; it is an `i32` rather than
+    a CIR enum because `ClangABI` gains an enumerator every Clang release
+    (see `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine
+    within a single toolchain. `no_trapping_math` is true when
     `LangOptions::getDefaultExceptionMode()` is `FPE_Ignore`.
 
     The following fields come from `CodeGenOptions`.
@@ -2752,9 +2752,9 @@ def CIR_LoweringOptionsAttr
     ```
     module attributes {cir.lowering_options = #cir.lowering_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
-      cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
-      openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
-      long_double_size = 0, enable_noundef_attrs = false,
+      cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+      gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+      clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false,
       no_trapping_math = true, ssp_buffer_size = 8>} { }
     ```
   }];
@@ -2766,6 +2766,7 @@ def CIR_LoweringOptionsAttr
     "bool":$cuda_is_device,
     "bool":$hip,
     "bool":$hlsl,
+    "bool":$sycl_is_device,
     "bool":$gpu_rdc,
     "bool":$openmp,
     "bool":$openmp_is_target_device,
@@ -2778,9 +2779,10 @@ def CIR_LoweringOptionsAttr
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
-               $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat, $long_double_size, $enable_noundef_attrs,
-               $no_trapping_math, $ssp_buffer_size) `>`
+               $hlsl, $sycl_is_device, $gpu_rdc, $openmp,
+               $openmp_is_target_device, $clang_abi_compat, $long_double_size,
+               $enable_noundef_attrs, $no_trapping_math,
+               $ssp_buffer_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;
