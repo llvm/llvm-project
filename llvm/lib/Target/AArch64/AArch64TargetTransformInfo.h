@@ -569,6 +569,8 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
+  bool shouldDropLSRSolutionIfLessProfitable() const override { return true; }
+
   bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops,
                                   const LoopInfo *LI) const override;
 
