@@ -103,7 +103,7 @@ class SBModuleAPICase(TestBase):
         process = target.AttachToProcessWithID(
             self.dbg.GetListener(), self.background_pid, error
         )
-        self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
         main_module = target.FindModule(lldb.SBFileSpec("a.out"))
         self.assertIsNotNone(main_module)
         self.assertFalse(

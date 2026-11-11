@@ -26,7 +26,7 @@ ArrayDtor arrDtor[16];
 // CIR-BEFORE-LPP:        }
 
 // CIR: cir.global external @arrDtor = #cir.zero : !cir.array<!rec_ArrayDtor x 16>
-// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}) {
+// CIR: cir.func internal private @__cxx_global_array_dtor(%[[ARR_ARG:.*]]: !cir.ptr<!void> {{.*}}){{.*}} {
 // CIR:   %[[ARR:.*]] = cir.cast bitcast %[[ARR_ARG]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[CONST16:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]] : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>> -> !cir.ptr<!rec_ArrayDtor>
@@ -48,7 +48,7 @@ ArrayDtor arrDtor[16];
 // CIR:   cir.return
 // CIR: }
 //
-// CIR: cir.func internal private @__cxx_global_var_init() {
+// CIR: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR:   %[[ARR:.*]] = cir.get_global @arrDtor : !cir.ptr<!cir.array<!rec_ArrayDtor x 16>>
 // CIR:   %[[DTOR:.*]] = cir.get_global @__cxx_global_array_dtor : !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[DTOR_CAST:.*]] = cir.cast bitcast %[[DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!void>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
@@ -103,7 +103,7 @@ ArrayDtor arrDtor[16];
 
 // Common init function for all globals with default priority
 
-// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
+// CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]](){{.*}} {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 
 // LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME:.*]]() #{{[0-9]+}}

@@ -503,7 +503,7 @@ public:
 
   // Returns the canonical name of the given PGOName. This shares the same
   // logic of FunctionSamples::getCanonicalFnName() but only strips ".llvm."
-  // and ".part", and leaves out ".__uniq.".
+  // and ".part.", and leaves out ".__uniq.".
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
 
 private:

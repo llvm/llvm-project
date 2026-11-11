@@ -21,6 +21,7 @@ include "mlir/IR/OpBase.td"
 
 def VerifiableTensorEncoding : AttrInterface<"VerifiableTensorEncoding"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/TensorEncoding.h"];
   let description = [{
     Verifies an encoding attribute for a tensor.
 

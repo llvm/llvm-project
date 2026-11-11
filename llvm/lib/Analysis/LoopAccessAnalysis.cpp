@@ -235,11 +235,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
-  // For the computations below, make sure they don't unsigned wrap.
-  if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
-    return false;
-  const SCEV *StartOffset = SE.getNoopOrZeroExtend(
-      SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
+  // If Start u< StartPtr, StartOffset wraps to a value above DerefBytes, so
+  // the final MaxOffset u<= DerefBytes check rejects it.
+  const SCEV *Start = AR->getStart();
+  const SCEV *StartOffset =
+      SE.getNoopOrZeroExtend(SE.getMinusSCEV(Start, StartPtr), WiderTy);
 
   MaxBTC = SE.applyLoopGuards(MaxBTC, LoopGuards);
 
