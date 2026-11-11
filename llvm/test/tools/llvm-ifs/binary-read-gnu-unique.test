@@ -1,22 +1,27 @@
 ## Test reading ELF shared objects containing STB_GNU_UNIQUE symbols and
 ## emitting both IFS and ELF stubs. STB_GNU_UNIQUE symbols with default or
-## protected visibility should be retained and treated as weak in stubs, while
-## hidden or internal STB_GNU_UNIQUE symbols should still be ignored.
+## protected visibility should be retained as non-weak global symbols, hidden
+## or internal symbols and STB_LOCAL symbols should be ignored, and exported
+## symbols with unsupported bindings should be diagnosed.
 
-# RUN: yaml2obj %s -o %t.so
+# RUN: yaml2obj --docnum=1 %s -o %t.so
 # RUN: llvm-ifs --input-format=ELF --output-ifs=- %t.so | FileCheck %s --check-prefix=IFS
 # RUN: llvm-ifs --input-format=ELF --output-elf=%t.stub.so %t.so
 # RUN: llvm-readobj --dyn-symbols %t.stub.so | FileCheck %s --check-prefix=ELF
 # RUN: llvm-ifs --input-format=ELF --output-ifs=- %t.stub.so | FileCheck %s --check-prefix=IFS
+
+# RUN: yaml2obj --docnum=2 %s -o %t.bad.so
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=- %t.bad.so 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not llvm-ifs --input-format=ELF --output-elf=%t.bad.stub.so %t.bad.so 2>&1 | FileCheck %s --check-prefix=ERR
 
 # IFS:      --- !ifs-v1
 # IFS-NEXT: IfsVersion:      3.0
 # IFS-NEXT: Target:          { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
 # IFS-NEXT: Symbols:
 # IFS-NEXT:   - { Name: global_obj, Type: Object, Size: 4 }
-# IFS-NEXT:   - { Name: unique_default, Type: Object, Size: 8, Weak: true }
-# IFS-NEXT:   - { Name: unique_protected, Type: Object, Size: 16, Weak: true }
-# IFS-NEXT:   - { Name: unique_tls, Type: TLS, Size: 4, Weak: true }
+# IFS-NEXT:   - { Name: unique_default, Type: Object, Size: 8 }
+# IFS-NEXT:   - { Name: unique_protected, Type: Object, Size: 16 }
+# IFS-NEXT:   - { Name: unique_tls, Type: TLS, Size: 4 }
 # IFS-NEXT:   - { Name: weak_obj, Type: Object, Size: 4, Weak: true }
 # IFS-NEXT: ...
 
@@ -43,7 +48,7 @@
 # ELF-NEXT:     Name: unique_default
 # ELF-NEXT:     Value: 0x0
 # ELF-NEXT:     Size: 8
-# ELF-NEXT:     Binding: Weak
+# ELF-NEXT:     Binding: Global
 # ELF-NEXT:     Type: Object
 # ELF-NEXT:     Other: 0
 # ELF-NEXT:     Section: .dynsym
@@ -52,7 +57,7 @@
 # ELF-NEXT:     Name: unique_protected
 # ELF-NEXT:     Value: 0x0
 # ELF-NEXT:     Size: 16
-# ELF-NEXT:     Binding: Weak
+# ELF-NEXT:     Binding: Global
 # ELF-NEXT:     Type: Object
 # ELF-NEXT:     Other: 0
 # ELF-NEXT:     Section: .dynsym
@@ -61,7 +66,7 @@
 # ELF-NEXT:     Name: unique_tls
 # ELF-NEXT:     Value: 0x0
 # ELF-NEXT:     Size: 4
-# ELF-NEXT:     Binding: Weak
+# ELF-NEXT:     Binding: Global
 # ELF-NEXT:     Type: TLS
 # ELF-NEXT:     Other: 0
 # ELF-NEXT:     Section: .dynsym
@@ -76,6 +81,8 @@
 # ELF-NEXT:     Section: .dynsym
 # ELF-NEXT:   }
 # ELF-NEXT: ]
+
+# ERR: error: symbol 'unknown_bind_obj' has unsupported binding (13) when reading dynamic symbols
 
 --- !ELF
 FileHeader:
@@ -119,7 +126,7 @@ Sections:
       - Tag:   DT_STRTAB
         Value: 0x200
       - Tag:   DT_STRSZ
-        Value: 0x68
+        Value: 0x77
       - Tag:   DT_NULL
         Value: 0x0
 DynamicSymbols:
@@ -165,6 +172,69 @@ DynamicSymbols:
     Type:       STT_TLS
     Section:    .tdata
     Binding:    STB_GNU_UNIQUE
+    Size:       4
+  - Name:       hidden_unknown
+    Type:       STT_OBJECT
+    Section:    .data
+    Binding:    0xd # STB_LOPROC
+    Other:      [ STV_HIDDEN ]
+    Size:       4
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x100
+    FirstSec: .dynsym
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_R ]
+    VAddr:    0x400
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_GNU
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .dynsym
+    Type:         SHT_DYNSYM
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x100
+    AddressAlign: 0x8
+  - Name:         .dynstr
+    Type:         SHT_STRTAB
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x200
+    AddressAlign: 0x1
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x300
+    AddressAlign: 0x8
+    Size:         0x10
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x400
+    Link:         .dynstr
+    AddressAlign: 0x8
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x100
+      - Tag:   DT_STRTAB
+        Value: 0x200
+      - Tag:   DT_STRSZ
+        Value: 0x12
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name:       unknown_bind_obj
+    Type:       STT_OBJECT
+    Section:    .data
+    Binding:    0xd # STB_LOPROC
     Size:       4
 ProgramHeaders:
   - Type:     PT_LOAD

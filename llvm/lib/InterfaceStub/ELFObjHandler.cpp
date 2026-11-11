@@ -517,12 +517,31 @@ static Error populateDynamic(DynamicEntries &Dyn,
 /// @param SymName The desired name of the IFSSymbol.
 /// @param RawSym ELFT::Sym to extract symbol information from.
 template <class ELFT>
-static IFSSymbol createELFSym(StringRef SymName,
-                              const typename ELFT::Sym &RawSym) {
+static Expected<IFSSymbol> createELFSym(StringRef SymName,
+                                        const typename ELFT::Sym &RawSym) {
   IFSSymbol TargetSym{std::string(SymName)};
   uint8_t Binding = RawSym.getBinding();
-  // Treat STB_GNU_UNIQUE like STB_WEAK for interface stubs.
-  TargetSym.Weak = Binding == STB_WEAK || Binding == STB_GNU_UNIQUE;
+  switch (Binding) {
+  case STB_GLOBAL:
+    TargetSym.Weak = false;
+    break;
+  case STB_GNU_UNIQUE:
+    // IFSSymbol::Weak controls whether the IFS "Weak" attribute (and STB_WEAK
+    // in generated ELF stubs) is emitted instead of non-weak global binding
+    // (STB_GLOBAL). STB_GNU_UNIQUE is a GNU extension of STB_GLOBAL whose
+    // uniqueness semantics apply only to the runtime dynamic loader; static
+    // linkers reading an ET_DYN shared object treat it the same as STB_GLOBAL.
+    TargetSym.Weak = false;
+    break;
+  case STB_WEAK:
+    TargetSym.Weak = true;
+    break;
+  default:
+    return createStringError(errc::not_supported,
+                             "symbol '" + SymName +
+                                 "' has unsupported binding (" +
+                                 Twine(static_cast<unsigned>(Binding)) + ")");
+  }
 
   TargetSym.Undefined = RawSym.isUndefined();
   TargetSym.Type = convertELFSymbolTypeToIFS(RawSym.st_info);
@@ -547,10 +566,8 @@ static Error populateSymbols(IFSStub &TargetStub,
                              StringRef DynStr) {
   // Skips the first symbol since it's the NULL symbol.
   for (auto RawSym : DynSym.drop_front(1)) {
-    // If a symbol does not have global, weak, or gnu-unique binding, ignore it.
-    uint8_t Binding = RawSym.getBinding();
-    if (!(Binding == STB_GLOBAL || Binding == STB_WEAK ||
-          Binding == STB_GNU_UNIQUE))
+    // If a symbol has local binding, ignore it.
+    if (RawSym.getBinding() == STB_LOCAL)
       continue;
     // If a symbol doesn't have default or protected visibility, ignore it.
     uint8_t Visibility = RawSym.getVisibility();
@@ -561,8 +578,10 @@ static Error populateSymbols(IFSStub &TargetStub,
     Expected<StringRef> SymName = terminatedSubstr(DynStr, RawSym.st_name);
     if (!SymName)
       return SymName.takeError();
-    IFSSymbol Sym = createELFSym<ELFT>(*SymName, RawSym);
-    TargetStub.Symbols.push_back(std::move(Sym));
+    Expected<IFSSymbol> Sym = createELFSym<ELFT>(*SymName, RawSym);
+    if (!Sym)
+      return Sym.takeError();
+    TargetStub.Symbols.push_back(std::move(*Sym));
     // TODO: Populate symbol warning.
   }
   return Error::success();
