@@ -142,10 +142,151 @@ define void @modf_parts(ptr noalias %x, ptr noalias %ip, ptr noalias %r) {
   ret void
 }
 
+; The linear argument of the first lane is also vectorized and stays available
+; for the vector call.
+define void @linear_arg_in_tree(ptr noalias %r, i64 %b) {
+; CHECK-LABEL: define void @linear_arg_in_tree(
+; CHECK-SAME: ptr noalias [[R:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[I0:%.*]] = add i64 [[B]], 1
+; CHECK-NEXT:    [[I1:%.*]] = add i64 [[B]], 2
+; CHECK-NEXT:    [[I2:%.*]] = add i64 [[B]], 3
+; CHECK-NEXT:    [[I3:%.*]] = add i64 [[B]], 4
+; CHECK-NEXT:    [[X0:%.*]] = sitofp i64 [[I0]] to float
+; CHECK-NEXT:    [[X1:%.*]] = sitofp i64 [[I1]] to float
+; CHECK-NEXT:    [[X2:%.*]] = sitofp i64 [[I2]] to float
+; CHECK-NEXT:    [[X3:%.*]] = sitofp i64 [[I3]] to float
+; CHECK-NEXT:    [[V0:%.*]] = call float @lin(float [[X0]], i64 [[I0]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[V1:%.*]] = call float @lin(float [[X1]], i64 [[I1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[V2:%.*]] = call float @lin(float [[X2]], i64 [[I2]]) #[[ATTR3]]
+; CHECK-NEXT:    [[V3:%.*]] = call float @lin(float [[X3]], i64 [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds float, ptr [[R]], i64 1
+; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds float, ptr [[R]], i64 2
+; CHECK-NEXT:    [[R3:%.*]] = getelementptr inbounds float, ptr [[R]], i64 3
+; CHECK-NEXT:    store float [[V0]], ptr [[R]], align 4
+; CHECK-NEXT:    store float [[V1]], ptr [[R1]], align 4
+; CHECK-NEXT:    store float [[V2]], ptr [[R2]], align 4
+; CHECK-NEXT:    store float [[V3]], ptr [[R3]], align 4
+; CHECK-NEXT:    ret void
+;
+  %i0 = add i64 %b, 1
+  %i1 = add i64 %b, 2
+  %i2 = add i64 %b, 3
+  %i3 = add i64 %b, 4
+  %x0 = sitofp i64 %i0 to float
+  %x1 = sitofp i64 %i1 to float
+  %x2 = sitofp i64 %i2 to float
+  %x3 = sitofp i64 %i3 to float
+  %v0 = call float @lin(float %x0, i64 %i0) #2
+  %v1 = call float @lin(float %x1, i64 %i1) #2
+  %v2 = call float @lin(float %x2, i64 %i2) #2
+  %v3 = call float @lin(float %x3, i64 %i3) #2
+  %r1 = getelementptr inbounds float, ptr %r, i64 1
+  %r2 = getelementptr inbounds float, ptr %r, i64 2
+  %r3 = getelementptr inbounds float, ptr %r, i64 3
+  store float %v0, ptr %r, align 4
+  store float %v1, ptr %r1, align 4
+  store float %v2, ptr %r2, align 4
+  store float %v3, ptr %r3, align 4
+  ret void
+}
+
+; The jumbled operands are reordered with the graph, the call with linear
+; arguments keeps the lane order.
+define void @modf_reorder_operands(ptr noalias %x, ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %ip, ptr noalias %r) {
+; CHECK-LABEL: define void @modf_reorder_operands(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
+; CHECK-NEXT:    [[IP1:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 1
+; CHECK-NEXT:    [[IP2:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 2
+; CHECK-NEXT:    [[IP3:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 3
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = call float @modff(float [[X0]], ptr [[IP]]) #[[ATTR2]]
+; CHECK-NEXT:    [[M1:%.*]] = call float @modff(float [[X1]], ptr [[IP1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[M2:%.*]] = call float @modff(float [[X2]], ptr [[IP2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[M3:%.*]] = call float @modff(float [[X3]], ptr [[IP3]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[C]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> poison, float [[M1]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> [[TMP11]], float [[M0]], i64 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP12]], float [[M3]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP13]], float [[M2]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <4 x float> [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds float, ptr %x, i64 1
+  %x2p = getelementptr inbounds float, ptr %x, i64 2
+  %x3p = getelementptr inbounds float, ptr %x, i64 3
+  %a1p = getelementptr inbounds float, ptr %a, i64 1
+  %a2p = getelementptr inbounds float, ptr %a, i64 2
+  %a3p = getelementptr inbounds float, ptr %a, i64 3
+  %b1p = getelementptr inbounds float, ptr %b, i64 1
+  %b2p = getelementptr inbounds float, ptr %b, i64 2
+  %b3p = getelementptr inbounds float, ptr %b, i64 3
+  %c1p = getelementptr inbounds float, ptr %c, i64 1
+  %c2p = getelementptr inbounds float, ptr %c, i64 2
+  %c3p = getelementptr inbounds float, ptr %c, i64 3
+  %ip1 = getelementptr inbounds float, ptr %ip, i64 1
+  %ip2 = getelementptr inbounds float, ptr %ip, i64 2
+  %ip3 = getelementptr inbounds float, ptr %ip, i64 3
+  %r1 = getelementptr inbounds float, ptr %r, i64 1
+  %r2 = getelementptr inbounds float, ptr %r, i64 2
+  %r3 = getelementptr inbounds float, ptr %r, i64 3
+  %x0 = load float, ptr %x, align 4
+  %x1 = load float, ptr %x1p, align 4
+  %x2 = load float, ptr %x2p, align 4
+  %x3 = load float, ptr %x3p, align 4
+  %a0 = load float, ptr %a, align 4
+  %a1 = load float, ptr %a1p, align 4
+  %a2 = load float, ptr %a2p, align 4
+  %a3 = load float, ptr %a3p, align 4
+  %b0 = load float, ptr %b, align 4
+  %b1 = load float, ptr %b1p, align 4
+  %b2 = load float, ptr %b2p, align 4
+  %b3 = load float, ptr %b3p, align 4
+  %c0 = load float, ptr %c, align 4
+  %c1 = load float, ptr %c1p, align 4
+  %c2 = load float, ptr %c2p, align 4
+  %c3 = load float, ptr %c3p, align 4
+  %m0 = call float @modff(float %x0, ptr %ip) #1
+  %m1 = call float @modff(float %x1, ptr %ip1) #1
+  %m2 = call float @modff(float %x2, ptr %ip2) #1
+  %m3 = call float @modff(float %x3, ptr %ip3) #1
+  %u0 = fadd float %a1, %b1
+  %s0 = fadd float %u0, %c1
+  %u1 = fadd float %a0, %b0
+  %s1 = fadd float %u1, %c0
+  %u2 = fadd float %a3, %b3
+  %s2 = fadd float %u2, %c3
+  %u3 = fadd float %a2, %b2
+  %s3 = fadd float %u3, %c2
+  %t0 = fmul float %s0, %m0
+  %t1 = fmul float %s1, %m1
+  %t2 = fmul float %s2, %m2
+  %t3 = fmul float %s3, %m3
+  store float %t0, ptr %r, align 4
+  store float %t1, ptr %r1, align 4
+  store float %t2, ptr %r2, align 4
+  store float %t3, ptr %r3, align 4
+  ret void
+}
+
 declare void @sincosf(float, ptr, ptr)
 declare float @modff(float, ptr)
+declare float @lin(float, i64)
 declare void @vsincosf2(<2 x float>, ptr, ptr)
 declare <4 x float> @vmodff4(<4 x float>, ptr)
+declare <4 x float> @vlin4(<4 x float>, i64)
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "vector-function-abi-variant"="_ZGV_LLVM_N2vl4l4_sincosf(vsincosf2)" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "vector-function-abi-variant"="_ZGV_LLVM_N4vl4_modff(vmodff4)" }
+attributes #2 = { nounwind willreturn memory(none) "vector-function-abi-variant"="_ZGV_LLVM_N4vl_lin(vlin4)" }

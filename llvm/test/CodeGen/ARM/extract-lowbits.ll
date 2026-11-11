@@ -279,16 +279,16 @@ define i64 @bzhi64_a0(i64 %val, i64 %numlowbits) nounwind {
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    .save {r4, r5, r6, lr}
 ; V6M-NEXT:    push {r4, r5, r6, lr}
-; V6M-NEXT:    mov r5, r1
-; V6M-NEXT:    mov r4, r0
+; V6M-NEXT:    mov r4, r1
+; V6M-NEXT:    mov r5, r0
 ; V6M-NEXT:    movs r0, #1
 ; V6M-NEXT:    movs r6, #0
 ; V6M-NEXT:    mov r1, r6
 ; V6M-NEXT:    bl __aeabi_llsl
 ; V6M-NEXT:    subs r0, r0, #1
 ; V6M-NEXT:    sbcs r1, r6
-; V6M-NEXT:    ands r1, r5
-; V6M-NEXT:    ands r0, r4
+; V6M-NEXT:    ands r1, r4
+; V6M-NEXT:    ands r0, r5
 ; V6M-NEXT:    pop {r4, r5, r6, pc}
   %onebit = shl i64 1, %numlowbits
   %mask = add nsw i64 %onebit, -1
@@ -320,21 +320,21 @@ define i64 @bzhi64_a0_masked(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; V7A-LABEL: bzhi64_a0_masked:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    .save {r11, lr}
-; V7A-NEXT:    push {r11, lr}
-; V7A-NEXT:    and r2, r2, #63
+; V7A-NEXT:    .save {r4, lr}
+; V7A-NEXT:    push {r4, lr}
+; V7A-NEXT:    and r4, r2, #63
 ; V7A-NEXT:    mov lr, #1
-; V7A-NEXT:    rsb r12, r2, #32
-; V7A-NEXT:    subs r3, r2, #32
-; V7A-NEXT:    lsl r2, lr, r2
-; V7A-NEXT:    lsr r12, lr, r12
+; V7A-NEXT:    rsb r12, r4, #32
+; V7A-NEXT:    subs r2, r4, #32
+; V7A-NEXT:    lsr r3, lr, r12
+; V7A-NEXT:    lslpl r3, lr, r2
+; V7A-NEXT:    lsl r2, lr, r4
 ; V7A-NEXT:    movwpl r2, #0
-; V7A-NEXT:    lslpl r12, lr, r3
 ; V7A-NEXT:    subs r2, r2, #1
-; V7A-NEXT:    sbc r3, r12, #0
+; V7A-NEXT:    sbc r3, r3, #0
 ; V7A-NEXT:    and r0, r2, r0
 ; V7A-NEXT:    and r1, r3, r1
-; V7A-NEXT:    pop {r11, pc}
+; V7A-NEXT:    pop {r4, pc}
 ;
 ; V7A-T-LABEL: bzhi64_a0_masked:
 ; V7A-T:       @ %bb.0:
@@ -360,8 +360,8 @@ define i64 @bzhi64_a0_masked(i64 %val, i64 %numlowbits) nounwind {
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    .save {r4, r5, r6, lr}
 ; V6M-NEXT:    push {r4, r5, r6, lr}
-; V6M-NEXT:    mov r5, r1
-; V6M-NEXT:    mov r4, r0
+; V6M-NEXT:    mov r4, r1
+; V6M-NEXT:    mov r5, r0
 ; V6M-NEXT:    movs r0, #63
 ; V6M-NEXT:    ands r2, r0
 ; V6M-NEXT:    movs r0, #1
@@ -370,8 +370,8 @@ define i64 @bzhi64_a0_masked(i64 %val, i64 %numlowbits) nounwind {
 ; V6M-NEXT:    bl __aeabi_llsl
 ; V6M-NEXT:    subs r0, r0, #1
 ; V6M-NEXT:    sbcs r1, r6
-; V6M-NEXT:    ands r1, r5
-; V6M-NEXT:    ands r0, r4
+; V6M-NEXT:    ands r1, r4
+; V6M-NEXT:    ands r0, r5
 ; V6M-NEXT:    pop {r4, r5, r6, pc}
   %numlowbits.masked = and i64 %numlowbits, 63
   %onebit = shl i64 1, %numlowbits.masked
@@ -440,16 +440,16 @@ define i64 @bzhi64_a1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    .save {r4, r5, r6, lr}
 ; V6M-NEXT:    push {r4, r5, r6, lr}
-; V6M-NEXT:    mov r5, r1
-; V6M-NEXT:    mov r4, r0
+; V6M-NEXT:    mov r4, r1
+; V6M-NEXT:    mov r5, r0
 ; V6M-NEXT:    movs r0, #1
 ; V6M-NEXT:    movs r6, #0
 ; V6M-NEXT:    mov r1, r6
 ; V6M-NEXT:    bl __aeabi_llsl
 ; V6M-NEXT:    subs r0, r0, #1
 ; V6M-NEXT:    sbcs r1, r6
-; V6M-NEXT:    ands r1, r5
-; V6M-NEXT:    ands r0, r4
+; V6M-NEXT:    ands r1, r4
+; V6M-NEXT:    ands r0, r5
 ; V6M-NEXT:    pop {r4, r5, r6, pc}
   %conv = zext i8 %numlowbits to i64
   %onebit = shl i64 1, %conv
@@ -680,16 +680,16 @@ define i64 @bzhi64_a4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ; V6M:       @ %bb.0:
 ; V6M-NEXT:    .save {r4, r5, r6, lr}
 ; V6M-NEXT:    push {r4, r5, r6, lr}
-; V6M-NEXT:    mov r5, r1
-; V6M-NEXT:    mov r4, r0
+; V6M-NEXT:    mov r4, r1
+; V6M-NEXT:    mov r5, r0
 ; V6M-NEXT:    movs r0, #1
 ; V6M-NEXT:    movs r6, #0
 ; V6M-NEXT:    mov r1, r6
 ; V6M-NEXT:    bl __aeabi_llsl
 ; V6M-NEXT:    subs r0, r0, #1
 ; V6M-NEXT:    sbcs r1, r6
-; V6M-NEXT:    ands r1, r5
-; V6M-NEXT:    ands r0, r4
+; V6M-NEXT:    ands r1, r4
+; V6M-NEXT:    ands r0, r5
 ; V6M-NEXT:    pop {r4, r5, r6, pc}
   %onebit = shl i64 1, %numlowbits
   %mask = add nsw i64 %onebit, -1

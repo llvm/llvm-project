@@ -78,7 +78,7 @@ public:
   ///
   /// Clients that want to be resilient to unexpected crashes during validation
   /// may call this from a separate process (e.g. via
-  /// \c llvm-cas -validate-if-needed) and call \c recover if it fails.
+  /// \c llvm-cas validate-if-needed) and call \c recover if it fails.
   ///
   /// \param Path directory for the on-disk database.
   /// \param HashName Identifier name for the hashing algorithm that is going to

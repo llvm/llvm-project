@@ -227,16 +227,19 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
       if (hasInZp && hasOutZp) {
         // Compute the maximum value that can occur in the intermediate buffer.
+        // Zero points can only be non-zero for int8, so their sum fits in
+        // int64_t. The bound is computed with 128 bits so that it cannot
+        // overflow for 64-bit inputs.
         const int64_t zpAdd = inZp + outZp;
-        const int64_t maxValue =
-            APInt::getSignedMaxValue(inputBitWidth).getSExtValue() +
+        const APInt maxValue =
+            APInt::getSignedMaxValue(inputBitWidth).sext(128) +
             std::abs(zpAdd) + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
         // represent it.
-        if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
+        if (maxValue.sle(APInt::getSignedMaxValue(16).getSExtValue())) {
           intermediateBitWidth = 16;
-        } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
+        } else if (maxValue.sle(APInt::getSignedMaxValue(32).getSExtValue())) {
           intermediateBitWidth = 32;
         }
 
@@ -1862,6 +1865,17 @@ public:
       return rewriter.notifyMatchFailure(
           op, "only support integer output types up to 32 bits");
 
+    // Zero points are already validated by tosa-validate under
+    // strict-op-spec-alignment, but reject invalid values here as well so
+    // that conversion without validation fails instead of silently
+    // generating incorrect arithmetic.
+    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+    if (succeeded(maybeIZp) && op.verifyInputZeroPoint(*maybeIZp).failed())
+      return rewriter.notifyMatchFailure(op, "unsupported input zero point");
+    FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+    if (succeeded(maybeOZp) && op.verifyOutputZeroPoint(*maybeOZp).failed())
+      return rewriter.notifyMatchFailure(op, "unsupported output zero point");
+
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
       if (outputTy.isDynamicDim(i)) {
@@ -1935,8 +1949,6 @@ public:
     // broadcastMap = affine_map<(d0, d1) -> ()>
     // It would affect as broadcast for scalar values in linalg::GenericOp.
     AffineMap broadcastMap = AffineMap::get(rank, 0, {}, rewriter.getContext());
-    FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
-    FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
     // The inputZp and outputZp may be either constant or non-constant,
     // depending on whether dynamic extension is enabled.
     // - If the zp's are non-constant, add them as an inputs to

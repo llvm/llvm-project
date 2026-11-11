@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Attribute 'byval(i32)' applied to incompatible type!
 ; CHECK-NEXT: ptr @h

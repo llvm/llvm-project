@@ -11,6 +11,13 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 
+// Register translation options before Flang tools parse command-line arguments.
+// FIRSupport already links the OpenMP translator for registerLLVMTranslation.
+[[maybe_unused]] static const bool translationOptionsRegistered = [] {
+  mlir::registerOpenMPTranslationCLOptions();
+  return true;
+}();
+
 void fir::support::registerLLVMTranslation(mlir::MLIRContext &context) {
   mlir::DialectRegistry registry;
   // Register OpenMP dialect interface here as well.

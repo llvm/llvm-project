@@ -65,8 +65,7 @@ class ModuleInlinerWrapperPass
     : public OptionalPassInfoMixin<ModuleInlinerWrapperPass> {
 public:
   LLVM_ABI ModuleInlinerWrapperPass(
-      InlineParams Params = getInlineParams(), bool MandatoryFirst = true,
-      InlineContext IC = {},
+      InlineParams Params, bool MandatoryFirst = true, InlineContext IC = {},
       InliningAdvisorMode Mode = InliningAdvisorMode::Default,
       unsigned MaxDevirtIterations = 0);
   ModuleInlinerWrapperPass(ModuleInlinerWrapperPass &&Arg) = default;

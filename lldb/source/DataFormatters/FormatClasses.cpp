@@ -36,7 +36,9 @@ FormattersMatchVector FormattersMatchData::GetMatchesVector() {
   return m_formatters_match_vector.first;
 }
 
-ConstString FormattersMatchData::GetTypeForCache() { return m_type_for_cache; }
+llvm::StringRef FormattersMatchData::GetTypeForCache() {
+  return m_type_for_cache;
+}
 
 CandidateLanguagesVector FormattersMatchData::GetCandidateLanguages() {
   return m_candidate_languages;

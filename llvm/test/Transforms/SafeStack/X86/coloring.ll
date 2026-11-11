@@ -6,28 +6,28 @@
 define void @f() safestack {
 entry:
 ; CHECK:  %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK:  %[[USST:.*]] = getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK:  %[[USST:.*]] = getelementptr i8, ptr %[[USP]], {{i32|i64}} -16
 
   %x = alloca i32, align 4
   %x1 = alloca i32, align 4
   %x2 = alloca i32, align 4
   call void @llvm.lifetime.start.p0(ptr %x)
 
-; CHECK:  %[[A1:.*]] = getelementptr i8, ptr %[[USP]], i32 -4
+; CHECK:  %[[A1:.*]] = getelementptr i8, ptr %[[USP]], {{i32|i64}} -4
 ; CHECK:  call void @capture(ptr nonnull %[[A1]])
 
   call void @capture(ptr nonnull %x)
   call void @llvm.lifetime.end.p0(ptr %x)
   call void @llvm.lifetime.start.p0(ptr %x1)
 
-; CHECK:  %[[B1:.*]] = getelementptr i8, ptr %[[USP]], i32 -4
+; CHECK:  %[[B1:.*]] = getelementptr i8, ptr %[[USP]], {{i32|i64}} -4
 ; CHECK:  call void @capture(ptr nonnull %[[B1]])
 
   call void @capture(ptr nonnull %x1)
   call void @llvm.lifetime.end.p0(ptr %x1)
   call void @llvm.lifetime.start.p0(ptr %x2)
 
-; CHECK:  %[[C1:.*]] = getelementptr i8, ptr %[[USP]], i32 -4
+; CHECK:  %[[C1:.*]] = getelementptr i8, ptr %[[USP]], {{i32|i64}} -4
 ; CHECK:  call void @capture(ptr nonnull %[[C1]])
 
   call void @capture(ptr nonnull %x2)

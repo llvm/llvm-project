@@ -14,6 +14,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace llvm {
   class StructType;
@@ -67,7 +68,7 @@ struct CGBitFieldInfo {
   /// a single "field" within the LLVM struct type. This offset is in bits.
   unsigned Offset : 16;
 
-  /// The total size of the bit-field, in bits.
+  /// The total size of the bit-field, in bits, not including padding.
   unsigned Size : 15;
 
   /// Whether the bit-field is signed.
@@ -97,10 +98,18 @@ struct CGBitFieldInfo {
       : Offset(), Size(), IsSigned(), StorageSize(), VolatileOffset(),
         VolatileStorageSize() {}
 
-  CGBitFieldInfo(unsigned Offset, unsigned Size, bool IsSigned,
-                 unsigned StorageSize, CharUnits StorageOffset)
+  CGBitFieldInfo(uint64_t Offset, uint64_t Size, bool IsSigned,
+                 uint64_t StorageSize, CharUnits StorageOffset)
       : Offset(Offset), Size(Size), IsSigned(IsSigned),
-        StorageSize(StorageSize), StorageOffset(StorageOffset) {}
+        StorageSize(StorageSize), StorageOffset(StorageOffset),
+        VolatileOffset(), VolatileStorageSize() {
+    assert(llvm::isUInt<16>(Offset) &&
+           "bit-field offset does not fit in CGBitFieldInfo::Offset");
+    assert(llvm::isUInt<15>(Size) &&
+           "bit-field size does not fit in CGBitFieldInfo::Size");
+    assert(llvm::isUInt<32>(StorageSize) &&
+           "bit-field storage does not fit in CGBitFieldInfo::StorageSize");
+  }
 
   void print(raw_ostream &OS) const;
   void dump() const;

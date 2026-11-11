@@ -33,6 +33,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     edges. By default, type equality is used.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -181,6 +182,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     is a successor operand.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -427,6 +429,7 @@ def RegionBranchTerminatorOpInterface :
     may have region successors.)
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -500,6 +503,7 @@ def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
     the operation works element-wise.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -536,6 +540,7 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [InterfaceMethod<
                      /*desc=*/"Returns the branch weights",
@@ -600,6 +605,7 @@ def WeightedRegionBranchOpInterface
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ControlFlowInterfaces.h"];
 
   let methods = [InterfaceMethod<
                      /*desc=*/"Returns the region weights",
