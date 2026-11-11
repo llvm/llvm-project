@@ -231,10 +231,10 @@ DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFileUncached(SourceManager &SrcMgr,
                                                  FileID ID) const {
   // Get or insert the File for this ID.
-  auto Range = Files.equal_range(ID);
-  if (Range.first != Range.second)
-    return &Range.first->second;
-  auto &F = Files.insert(Range.first, std::make_pair(ID, File()))->second;
+  auto [It, Inserted] = Files.try_emplace(ID);
+  if (!Inserted)
+    return It->second.get();
+  auto &F = *(It->second = std::make_unique<File>());
 
   // We created a new File; look up the diagnostic state at the start of it and
   // initialize it.
@@ -262,9 +262,16 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
   CurDiagStateLoc.print(llvm::errs(), SrcMgr);
   llvm::errs() << ": " << CurDiagState << "\n";
 
-  for (auto &F : Files) {
+  SmallVector<std::pair<FileID, File *>, 16> SortedFiles;
+  for (auto &F : Files)
+    SortedFiles.emplace_back(F.first, F.second.get());
+  llvm::sort(SortedFiles, [](const auto &LHS, const auto &RHS) {
+    return LHS.first.getOpaqueValue() < RHS.first.getOpaqueValue();
+  });
+
+  for (auto &F : SortedFiles) {
     FileID ID = F.first;
-    File &File = F.second;
+    File &File = *F.second;
 
     bool PrintedOuterHeading = false;
     auto PrintOuterHeading = [&] {
@@ -275,7 +282,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
       llvm::errs() << "File " << &File << " <FileID " << ID.getHashValue()
                    << ">: " << SrcMgr.getBufferOrFake(ID).getBufferIdentifier();
 
-      if (F.second.Parent) {
+      if (File.Parent) {
         FileIDAndOffset Decomp = SrcMgr.getDecomposedIncludedLoc(ID);
         assert(File.ParentOffset == Decomp.second);
         llvm::errs() << " parent " << File.Parent << " <FileID "
