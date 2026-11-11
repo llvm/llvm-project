@@ -576,7 +576,7 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
 
       // The first scan of the copy's block starts at the copy. A later one,
       // around a cycle, starts at the top of the block.
-      bool ScanFromCopy = &UseMBB == &MBB && !VisitedBlocks.count(&UseMBB);
+      bool ScanFromCopy = &UseMBB == &MBB && !VisitedBlocks.contains(&UseMBB);
 
       // Track when if/when we find a kill of the flags in this block.
       bool FlagsKilled = false;
