@@ -1317,7 +1317,6 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     // represented by replacing their base with a pointer constant.
     if (SPIRVTypeInst BaseType = GR.getSPIRVTypeForVReg(GV);
         IsAddrSpaceCast && (!BaseType || !BaseType.isPointer())) {
-      // MachineInstr *BaseDef = getImm((*II).getOperand(1), MRI);
       if (!getImm((*II).getOperand(1), MRI) ||
           foldImm((*II).getOperand(1), MRI) != 0)
         return diagnoseUnsupported(
