@@ -1872,6 +1872,97 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
   return !Ops.empty();
 }
 
+// Count only ordinary flat accesses that inlining can expose to address-space
+// inference. Bound the use walk, and leave PHIs, selects and forwarding calls
+// for subsequent simplification rather than guessing their address spaces.
+static unsigned getLDSArgInliningBonus(const CallBase *CB,
+                                       unsigned ArgLDSCost) {
+  const Function *Callee = CB->getCalledFunction();
+  if (!ArgLDSCost || !Callee || Callee->isDeclaration() ||
+      CB->getFunctionType() != Callee->getFunctionType() ||
+      CB->hasFnAttr(Attribute::Cold) || CB->hasFnAttr(Attribute::NoInline) ||
+      CB->hasFnAttr(Attribute::OptimizeNone) ||
+      CB->hasFnAttr(Attribute::MinSize) ||
+      CB->hasFnAttr(Attribute::OptimizeForSize) ||
+      CB->getFunction()->hasOptSize() || Callee->hasOptSize()) {
+    return 0;
+  }
+
+  SmallVector<const Value *, 8> Worklist;
+  for (const Argument &Arg : Callee->args()) {
+    auto *Ty = dyn_cast<PointerType>(Arg.getType());
+    unsigned ArgNo = Arg.getArgNo();
+    if (!Ty || Ty->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS ||
+        Arg.hasPointeeInMemoryValueAttr() ||
+        CB->isPassPointeeByValueArgument(ArgNo) ||
+        CB->paramHasAttr(ArgNo, Attribute::StructRet) ||
+        CB->paramHasAttr(ArgNo, Attribute::ByRef)) {
+      continue;
+    }
+    const Value *Object = getUnderlyingObject(CB->getArgOperand(ArgNo));
+    if (Object->getType()->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+      Worklist.push_back(&Arg);
+  }
+
+  SmallPtrSet<const Value *, 32> Visited;
+  unsigned Budget = 512;
+  unsigned Bonus = 0;
+  while (!Worklist.empty()) {
+    const Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    for (const Use &U : V->uses()) {
+      if (Budget == 0)
+        return Bonus;
+      --Budget;
+      const User *User = U.getUser();
+      bool IsMemoryAccess = false;
+      if (auto *Load = dyn_cast<LoadInst>(User)) {
+        IsMemoryAccess =
+            U.getOperandNo() == LoadInst::getPointerOperandIndex() &&
+            Load->isSimple();
+      } else if (auto *Store = dyn_cast<StoreInst>(User)) {
+        IsMemoryAccess =
+            U.getOperandNo() == StoreInst::getPointerOperandIndex() &&
+            Store->isSimple();
+      } else if (isa<GetElementPtrInst, BitCastInst>(User)) {
+        Worklist.push_back(User);
+      }
+      if (IsMemoryAccess) {
+        Bonus +=
+            std::min(ArgLDSCost - Bonus,
+                     unsigned(InlineConstants::getInstrCost(CB->getContext())));
+        if (Bonus == ArgLDSCost)
+          return Bonus;
+      }
+    }
+  }
+  return Bonus;
+}
+
+// The compatibility hook sees a caller/callee pair, not a particular call.
+// Require every direct call in this caller to benefit before relaxing the
+// pair's block limit. Each call still has to pass the normal cost model.
+static bool hasOnlyLDSArgCalls(const Function *Caller, const Function *Callee,
+                               unsigned ArgLDSCost) {
+  unsigned Budget = 64;
+  bool FoundCall = false;
+  for (const User *U : Callee->users()) {
+    if (Budget == 0)
+      return false;
+    --Budget;
+    auto *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledFunction() != Callee ||
+        CB->getFunction() != Caller) {
+      continue;
+    }
+    if (!getLDSArgInliningBonus(CB, ArgLDSCost))
+      return false;
+    FoundCall = true;
+  }
+  return FoundCall;
+}
+
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
                                      const Function *Callee) const {
   const TargetMachine &TM = getTLI()->getTargetMachine();
@@ -1900,7 +1991,13 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
     if (Callee->size() == 1)
       return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
-    if (BBSize > CLOpts.inline_max_bb) {
+    size_t MaxBB = CLOpts.inline_max_bb;
+    if (CLOpts.inline_arg_lds_cost && BBSize > MaxBB &&
+        BBSize - MaxBB <= MaxBB &&
+        hasOnlyLDSArgCalls(Caller, Callee, CLOpts.inline_arg_lds_cost)) {
+      MaxBB += MaxBB;
+    }
+    if (BBSize > MaxBB) {
       LLVM_DEBUG(dbgs() << "AMDGPU inline max-BB rejected inlining "
                         << Callee->getName() << " into " << Caller->getName()
                         << ": caller BBs=" << Caller->size() << ", callee BBs="
@@ -2003,6 +2100,7 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   TypeSize AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
   if (AllocaSize.getFixedValue() > 0)
     Threshold += CLOpts.inline_arg_alloca_cost;
+  Threshold += getLDSArgInliningBonus(CB, CLOpts.inline_arg_lds_cost);
   return Threshold;
 }
 
