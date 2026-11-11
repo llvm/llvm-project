@@ -508,14 +508,24 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
     Known.knownNot(fcNan);
 
   // Rule out infinity.
-  if (KnownLHS.isKnownNever(fcPosInf) && KnownRHS.isKnownNever(fcPosInf) &&
-      (KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
-       KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
-    Known.knownNot(fcPosInf);
-  if (KnownLHS.isKnownNever(fcNegInf) && KnownRHS.isKnownNever(fcNegInf) &&
-      (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) ||
-       KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)))
-    Known.knownNot(fcNegInf);
+  if (KnownLHS.isKnownNever(fcPosInf) && KnownRHS.isKnownNever(fcPosInf)) {
+    // Adding a non-zero finite positive value to a large finite positive value
+    // may overflow.
+    if ((KnownLHS.isKnownNever(fcPosNormal) ||
+         KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
+        (KnownRHS.isKnownNever(fcPosNormal) ||
+         KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal)))
+      Known.knownNot(fcPosInf);
+  }
+  if (KnownLHS.isKnownNever(fcNegInf) && KnownRHS.isKnownNever(fcNegInf)) {
+    // Adding a non-zero finite negative value to a large finite negative value
+    // may overflow.
+    if ((KnownLHS.isKnownNever(fcNegNormal) ||
+         KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
+        (KnownRHS.isKnownNever(fcNegNormal) ||
+         KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal)))
+      Known.knownNot(fcNegInf);
+  }
 
   // Rule out finite.
   if (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal) &&
