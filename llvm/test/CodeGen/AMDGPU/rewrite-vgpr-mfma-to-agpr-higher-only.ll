@@ -2,20 +2,21 @@
 ; RUN: llc -O3 -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-num-vgprs-for-wwm-alloc=1 < %s | FileCheck %s --implicit-check-not=v_accvgpr_read --implicit-check-not=v_accvgpr_write
 ;
 ; Reduced from a HIP kernel with many live uniform values and MFMA accumulators.
-; With one VGPR for WWM allocation, SGPR spill copies occupy low AGPRs, while
-; final virtual intervals are assigned to higher AGPRs. AGPR0 has no assigned
-; interval, so checking only AGPR0 incorrectly skips the MFMA copy rewrite.
+; Live uniform values force SGPR spills. With one VGPR for WWM allocation,
+; spill copies occupy low AGPRs and virtual intervals occupy higher AGPRs.
+; AGPR0 has no assigned interval, so checking only AGPR0 incorrectly skips
+; the MFMA copy rewrite.
 ; Check the accumulator transfers through the normal register-allocation pipeline.
 ;
 define amdgpu_kernel void @rewrite_with_higher_agprs(ptr addrspace(1) %out, ptr addrspace(1) %uniforms, ptr addrspace(1) %in, i32 %iterations) #0 {
 ; CHECK-LABEL: rewrite_with_higher_agprs:
 ; CHECK:    v_accvgpr_write_b32 a1, v154
 ; CHECK:    v_accvgpr_write_b32 a0, v154
-; CHECK:    v_accvgpr_write_b32 a3, 0
 ; CHECK:    v_accvgpr_write_b32 a9, s7
 ; CHECK:    v_accvgpr_write_b32 a8, s6
 ; CHECK:    v_accvgpr_write_b32 a7, s5
 ; CHECK:    v_accvgpr_write_b32 a6, s4
+; CHECK:    v_accvgpr_write_b32 a3, 0
 ; CHECK:    v_accvgpr_write_b32 a13, s11
 ; CHECK:    v_accvgpr_write_b32 a12, s10
 ; CHECK:    v_accvgpr_write_b32 a11, s9
@@ -86,7 +87,7 @@ define amdgpu_kernel void @rewrite_with_higher_agprs(ptr addrspace(1) %out, ptr 
 ; CHECK:    v_accvgpr_mov_b32 a71, a3
 ; CHECK:    v_accvgpr_mov_b32 a72, a3
 ; CHECK:    v_accvgpr_mov_b32 a73, a3
-; CHECK:    v_accvgpr_write_b32 a2, s2
+; CHECK:    v_accvgpr_write_b32 a2, s4
 ; CHECK:    v_accvgpr_mov_b32 a4, a3
 ; CHECK:    v_accvgpr_mov_b32 a5, a3
 ; CHECK:    v_mfma_f32_16x16x32_f16 a[14:17], a[6:9], a[6:9], a[14:17]
@@ -150,6 +151,9 @@ define amdgpu_kernel void @rewrite_with_higher_agprs(ptr addrspace(1) %out, ptr 
 ; CHECK:    v_mfma_f32_16x16x32_f16 a[70:73], a[6:9], a[6:9], a[70:73]
 ; CHECK:    v_mfma_f32_16x16x32_f16 v[138:141], a[6:9], a[6:9], v[138:141]
 ; CHECK:    v_mfma_f32_16x16x32_f16 v[142:145], a[6:9], a[6:9], v[142:145]
+; CHECK:    v_accvgpr_read_b32 v154, a1
+; CHECK:    v_accvgpr_write_b32 a1, v154
+; CHECK:    v_accvgpr_read_b32 v154, a0
 ; CHECK:    v_accvgpr_read_b32 v154, a1
 ; CHECK:    v_accvgpr_read_b32 v154, a0
 ; CHECK:    s_endpgm
@@ -340,6 +344,22 @@ entry:
   %v269 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %v268)
   %v271 = load volatile i32, ptr %uniform_ptr, align 4
   %v272 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %v271)
+  %pressure_load0 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform0 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load0)
+  %pressure_load1 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform1 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load1)
+  %pressure_load2 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform2 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load2)
+  %pressure_load3 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform3 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load3)
+  %pressure_load4 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform4 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load4)
+  %pressure_load5 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform5 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load5)
+  %pressure_load6 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform6 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load6)
+  %pressure_load7 = load volatile i32, ptr %uniform_ptr, align 4
+  %pressure_uniform7 = tail call i32 @llvm.amdgcn.readfirstlane.i32(i32 %pressure_load7)
   %skip = icmp eq i32 %iterations, 0
   br i1 %skip, label %exit, label %loop
 
@@ -573,6 +593,26 @@ exit:
   %v409 = uitofp <2 x i32> %v408 to <2 x float>
   %arrayidx3825 = getelementptr i8, ptr addrspace(1) %lane_out, i64 1384
   store <2 x float> %v409, ptr addrspace(1) %arrayidx3825, align 4
+  %pressure_pair0 = insertelement <2 x i32> zeroinitializer, i32 %pressure_uniform0, i64 0
+  %pressure_pair_full0 = insertelement <2 x i32> %pressure_pair0, i32 %pressure_uniform1, i64 1
+  %pressure_floats0 = uitofp <2 x i32> %pressure_pair_full0 to <2 x float>
+  %pressure_out0 = getelementptr i8, ptr addrspace(1) %lane_out, i64 1392
+  store <2 x float> %pressure_floats0, ptr addrspace(1) %pressure_out0, align 4
+  %pressure_pair1 = insertelement <2 x i32> zeroinitializer, i32 %pressure_uniform2, i64 0
+  %pressure_pair_full1 = insertelement <2 x i32> %pressure_pair1, i32 %pressure_uniform3, i64 1
+  %pressure_floats1 = uitofp <2 x i32> %pressure_pair_full1 to <2 x float>
+  %pressure_out1 = getelementptr i8, ptr addrspace(1) %lane_out, i64 1400
+  store <2 x float> %pressure_floats1, ptr addrspace(1) %pressure_out1, align 4
+  %pressure_pair2 = insertelement <2 x i32> zeroinitializer, i32 %pressure_uniform4, i64 0
+  %pressure_pair_full2 = insertelement <2 x i32> %pressure_pair2, i32 %pressure_uniform5, i64 1
+  %pressure_floats2 = uitofp <2 x i32> %pressure_pair_full2 to <2 x float>
+  %pressure_out2 = getelementptr i8, ptr addrspace(1) %lane_out, i64 1408
+  store <2 x float> %pressure_floats2, ptr addrspace(1) %pressure_out2, align 4
+  %pressure_pair3 = insertelement <2 x i32> zeroinitializer, i32 %pressure_uniform6, i64 0
+  %pressure_pair_full3 = insertelement <2 x i32> %pressure_pair3, i32 %pressure_uniform7, i64 1
+  %pressure_floats3 = uitofp <2 x i32> %pressure_pair_full3 to <2 x float>
+  %pressure_out3 = getelementptr i8, ptr addrspace(1) %lane_out, i64 1416
+  store <2 x float> %pressure_floats3, ptr addrspace(1) %pressure_out3, align 4
   ret void
 
 loop:
