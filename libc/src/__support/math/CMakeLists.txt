@@ -4179,6 +4179,18 @@ add_header_library(
 )
 
 add_header_library(
+  frexpf80
+  HDRS
+    frexpf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   frexpf
   HDRS
     frexpf.h
@@ -4260,6 +4272,16 @@ add_header_library(
 )
 
 add_header_library(
+  ilogbf80
+  HDRS
+    ilogbf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ilogbf128
   HDRS
     ilogbf128.h
@@ -4324,6 +4346,16 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.FPUtil.manipulation_functions
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  llogbf80
+  HDRS
+    llogbf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -5717,6 +5749,16 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  logbf80
+  HDRS
+    logbf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
 )
 
 add_header_library(

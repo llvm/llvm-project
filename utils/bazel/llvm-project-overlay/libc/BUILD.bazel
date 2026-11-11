@@ -10813,6 +10813,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_frexpf80",
+    hdrs = ["src/__support/math/frexpf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_float128",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_frexpf16",
     hdrs = ["src/__support/math/frexpf16.h"],
     deps = [
@@ -10841,6 +10855,18 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ilogbf80",
+    hdrs = ["src/__support/math/ilogbf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
     ],
 )
 
@@ -11214,6 +11240,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_llogbf80",
+    hdrs = ["src/__support/math/llogbf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_llogbf16",
     hdrs = ["src/__support/math/llogbf16.h"],
     deps = [
@@ -11542,6 +11580,18 @@ libc_support_library(
         ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_logbf80",
+    hdrs = ["src/__support/math/logbf80.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_float80",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
     ],
 )
 
@@ -15436,6 +15486,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "frexpf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_frexpf80",
+    ],
+)
+
+libc_math_function(
     name = "frexpf16",
     additional_deps = [
         ":__support_math_frexpf16",
@@ -15647,6 +15706,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "ilogbf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_ilogbf80",
+    ],
+)
+
+libc_math_function(
     name = "ilogbf16",
     additional_deps = [
         ":__support_math_ilogbf16",
@@ -15739,6 +15807,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_llogbf128",
+    ],
+)
+
+libc_math_function(
+    name = "llogbf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_llogbf80",
     ],
 )
 
@@ -15955,6 +16032,15 @@ libc_math_function(
         ":__support_cpp_bit",
         ":__support_fputil_float128",
         ":__support_math_logbf128",
+    ],
+)
+
+libc_math_function(
+    name = "logbf80",
+    additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float80",
+        ":__support_math_logbf80",
     ],
 )
 
