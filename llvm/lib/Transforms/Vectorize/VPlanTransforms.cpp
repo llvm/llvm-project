@@ -991,12 +991,11 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
   if (!Offset)
     return WideIV;
 
-  // An increment by a constant, which can only be folded into a constant start
-  // of the same width. A narrowed IV computes in a narrower type than its start
-  // value.
-  const APInt *StartC;
-  if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
-      StartC->getBitWidth() != Offset->getBitWidth())
+  // An increment by a constant, which can only be folded into a constant start.
+  // A truncated IV computes in a narrower type than its start value, so the
+  // offset cannot be folded into the start.
+  if (cast<VPWidenIntOrFpInductionRecipe>(WideIV)->isTruncated() ||
+      !isa<VPConstantInt>(WideIV->getStartValue()))
     return nullptr;
   *StartOffset = Offset;
   return WideIV;
@@ -6435,10 +6434,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       // type, so do not propagate them.
       VPValue *Start = WideIV->getStartValue();
       if (StartOffset) {
-        const APInt *StartC;
-        [[maybe_unused]] bool IsConstantStart = match(Start, m_APInt(StartC));
-        assert(IsConstantStart && "expected a constant start for an offset IV");
-        Start = Plan.getConstantInt(*StartC + *StartOffset);
+        const APInt &StartC = cast<VPConstantInt>(Start)->getAPInt();
+        Start = Plan.getConstantInt(StartC + *StartOffset);
       }
       auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
           WideIV->getPHINode(), Start, WideIV->getStepValue(),
