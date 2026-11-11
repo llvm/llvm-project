@@ -10130,8 +10130,25 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   }
 
   // Can we infer anything when the two compares have matching operands?
-  if (L0 == R0 && L1 == R1)
-    return ICmpInst::isImpliedByMatchingCmp(LPred, RPred);
+  if (L0 == R0 && L1 == R1) {
+    if (std::optional<bool> Res =
+            ICmpInst::isImpliedByMatchingCmp(LPred, RPred))
+      return Res;
+    if (!ICmpInst::isRelational(LPred) || !ICmpInst::isRelational(RPred) ||
+        ICmpInst::isSigned(LPred) == ICmpInst::isSigned(RPred))
+      return std::nullopt;
+    // If L0 is non-negative, L0 s< L1 implies L0 u< L1 and L0 u> L1 implies
+    // L0 s> L1 (also for the non-strict forms). If L1 is non-negative, the
+    // same holds with the operands swapped.
+    CmpInst::Predicate P = LPred;
+    bool IsLess = ICmpInst::isLT(P) || ICmpInst::isLE(P);
+    const Value *NonNeg = ICmpInst::isSigned(P) == IsLess ? L0 : L1;
+    if (!isKnownNonNegative(NonNeg, SimplifyQuery(DL),
+                            MaxAnalysisRecursionDepth - 1))
+      return std::nullopt;
+    return ICmpInst::isImpliedByMatchingCmp(
+        ICmpInst::getFlippedSignednessPredicate(P), RPred);
+  }
 
   // It only really makes sense in the context of signed comparison for "X - Y
   // must be positive if X >= Y and no overflow".
