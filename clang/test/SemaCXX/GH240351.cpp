@@ -52,6 +52,12 @@ void f() {
 }
 } // namespace special_members
 
+#ifdef FP_PRAGMA
+// This stays in effect until the end of the file, where pending instantiations
+// are performed.
+#pragma clang fp contract(fast)
+#endif
+
 namespace postfix {
 // The pattern of a postfix operator defaulted outside its class holds the
 // result of the prefix operator lookup, which the instantiation reuses.
@@ -60,10 +66,23 @@ template <typename T> struct P {
   P operator++(int);
 };
 template <typename T> P<T> P<T>::operator++(int) = default;
-void g(P<int> p) { p++; }
-} // namespace postfix
 
-#ifdef FP_PRAGMA
-// Pending instantiations are performed with the pragma in effect.
-#pragma clang fp contract(fast)
-#endif
+// The floating-point features of a postfix operator defaulted outside its
+// class are recorded along with the result of the prefix operator lookup.
+struct M {
+  M &operator++();
+  M operator++(int);
+};
+M M::operator++(int) = default;
+
+struct N {
+  N &operator--();
+};
+N operator--(N &, int) = default;
+
+void g(P<int> p, M m, N n) {
+  p++;
+  m++;
+  n--;
+}
+} // namespace postfix
