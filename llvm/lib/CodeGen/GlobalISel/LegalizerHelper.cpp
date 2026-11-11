@@ -2203,7 +2203,7 @@ Register LegalizerHelper::coerceToInteger(Register Val) {
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLT NewTy = Ty.changeToInteger();
+  LLT NewTy = LLT::integer(Ty.getSizeInBits());
 
   if (Ty.isFloat())
     return MIRBuilder.buildBitcast(NewTy, Val).getReg(0);
