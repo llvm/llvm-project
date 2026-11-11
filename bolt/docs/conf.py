@@ -10,7 +10,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
 from datetime import date
 
 from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
@@ -21,28 +20,6 @@ globals().update(common_conf(tags))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
-
-try:
-    import myst_parser
-
-    extensions.append("myst_parser")
-except ImportError:
-    raise
-
-myst_heading_anchors = 6
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-# The suffix of source filenames.
-source_suffix = [".rst", ".md"]
-
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
 extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
 
 # General information about the project.
@@ -95,9 +72,6 @@ html_theme = "haiku"
 # documentation.
 # html_theme_options = {}
 
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["."]
-
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
 # html_title = None
@@ -108,6 +82,10 @@ html_theme_path = ["."]
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 # html_logo = None
+
+# Apply Clang-inspired styling to the generated documentation to
+# maintain the same style across the webpages.
+html_css_files = ["bolt.css"]
 
 # If given, this must be the name of an image file (path relative to the
 # configuration directory) that is the favicon of the docs. Modern browsers use
@@ -129,9 +107,6 @@ html_last_updated_fmt = "%Y-%m-%d"
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
 # html_use_smartypants = True
-
-# Custom sidebar templates, maps document names to template names.
-html_sidebars = {"index": ["indexsidebar.html"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

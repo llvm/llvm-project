@@ -967,3 +967,19 @@ func.func @main() -> i1 {
   %status, %non_live = test.call_and_produce @callee_with_dead_return() : () -> (i1, i32)
   return %status : i1
 }
+
+// -----
+
+// Memory-effect-free symbol ops with known users must not be removed, while
+// those without known users are removed.
+// CHECK-LABEL: module @symbol_ops
+// CHECK:         "test.symbol"() <{sym_name = "used"}> : () -> ()
+// CHECK-NOT:     "test.symbol"() <{sym_name = "unused"}>
+// CHECK:         func.func @main()
+module @symbol_ops {
+  "test.symbol"() {sym_name = "used"} : () -> ()
+  "test.symbol"() {sym_name = "unused"} : () -> ()
+  func.func @main() attributes {test.use = @used} {
+    return
+  }
+}

@@ -14,6 +14,7 @@ add_lldb_library(lldbPluginProcessAIX
     lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
+    lldbPluginRegisterNative
   )
 
 target_compile_definitions(lldbPluginProcessAIX PRIVATE "-D_ALL_SOURCE")

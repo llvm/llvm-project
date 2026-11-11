@@ -969,6 +969,7 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
     GetElementPtrInst *Variadic, const APInt &AccumulativeByteOffset) {
   IRBuilder<> Builder(Variadic);
+  Builder.disableGEPCanonicalization();
   Type *PtrIndexTy = DL->getIndexType(Variadic->getType());
 
   Value *ResultPtr = Variadic->getOperand(0);
@@ -1060,6 +1061,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   }
 
   IRBuilder<> Builder(GEP);
+  Builder.disableGEPCanonicalization();
   // For trivial GEP chains, we can swap the indices.
   Value *NewSrc = Builder.CreateGEP(
       GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
@@ -1082,12 +1084,12 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // offset from each is accumulated.
   Value *NewBase;
   const APInt *BaseOffset;
-  bool ExtractBase = match(GEP->getPointerOperand(),
-                           m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  bool ExtractBase =
+      match(GEP->getPointerOperand(),
+            m_PtrAdd(*DL, m_Value(NewBase), m_APInt(BaseOffset)));
 
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
-  APInt BaseByteOffset =
-      ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
+  APInt BaseByteOffset = ExtractBase ? *BaseOffset : APInt(IdxWidth, 0);
 
   // The backend can already nicely handle the case where all indices are
   // constant.

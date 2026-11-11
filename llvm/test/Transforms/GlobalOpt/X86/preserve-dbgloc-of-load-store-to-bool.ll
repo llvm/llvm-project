@@ -41,7 +41,8 @@ define void @bar() !dbg !13 {
 ; CHECK-LABEL: define void @bar(
 ; CHECK-SAME: ) local_unnamed_addr !dbg [[DBG8:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store i1 true, ptr @global.1.init, align 1, !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias nonnull dereferenceable(48) ptr @_Znwm(i64 48)
+; CHECK-NEXT:    store ptr [[CALL]], ptr @global.1, align 8, !dbg [[DBG9:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -54,8 +55,8 @@ define void @pluto() !dbg !10 {
 ; CHECK-LABEL: define void @pluto(
 ; CHECK-SAME: ) local_unnamed_addr !dbg [[DBG10:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[GLOBAL_1_INIT_VAL:%.*]] = load i1, ptr @global.1.init, align 1, !dbg [[DBG11:![0-9]+]]
-; CHECK-NEXT:    [[NOTINIT:%.*]] = xor i1 [[GLOBAL_1_INIT_VAL]], true, !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @global.1, align 8, !dbg [[DBG11:![0-9]+]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[TMP0]], null, !dbg [[DBG12:![0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -85,7 +86,7 @@ declare ptr @_Znwm(i64)
 !14 = !DILocation(line: 11, column: 4, scope: !13)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], retainedTypes: [[META2]], globals: [[META2]], splitDebugInlining: false, nameTableKind: None)
-; CHECK: [[META1]] = !DIFile(filename: "preserve-load-dbgloc.c", directory: {{.*}})
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}preserve-load-dbgloc.c", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
 ; CHECK: [[DBG4]] = distinct !DISubprogram(name: "ham", scope: [[META1]], file: [[META1]], line: 10, type: [[META5:![0-9]+]], flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META2]])

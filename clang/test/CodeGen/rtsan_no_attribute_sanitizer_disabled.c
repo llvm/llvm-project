@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s %}
 
 float process(float *a) [[clang::nonblocking]] { return *a; }
 int spinlock(int *a) [[clang::blocking]] { return *a; }

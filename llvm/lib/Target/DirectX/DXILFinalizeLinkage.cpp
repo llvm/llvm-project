@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILFinalizeLinkage.h"
 #include "DirectX.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 
 #define DEBUG_TYPE "dxil-finalize-linkage"
 
@@ -57,16 +57,22 @@ static bool finalizeLinkage(Module &M) {
   return MadeChange;
 }
 
-PreservedAnalyses DXILFinalizeLinkage::run(Module &M,
-                                           ModuleAnalysisManager &AM) {
+PreservedAnalyses DXILFinalizeLinkagePass::run(Module &M,
+                                               ModuleAnalysisManager &AM) {
   if (finalizeLinkage(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
 
-bool DXILFinalizeLinkageLegacy::runOnModule(Module &M) {
-  return finalizeLinkage(M);
-}
+namespace {
+class DXILFinalizeLinkageLegacy : public ModulePass {
+public:
+  DXILFinalizeLinkageLegacy() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override { return finalizeLinkage(M); }
+
+  static char ID; // Pass identification.
+};
+} // namespace
 
 char DXILFinalizeLinkageLegacy::ID = 0;
 

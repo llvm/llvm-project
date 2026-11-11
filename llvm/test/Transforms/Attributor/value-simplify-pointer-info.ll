@@ -3668,7 +3668,7 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR21]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR22]] = { nocallback }
 ; CGSCC: attributes #[[ATTR23]] = { norecurse }
-; CGSCC: attributes #[[ATTR24]] = { nounwind }
+; CGSCC: attributes #[[ATTR24]] = { nounwind willreturn }
 ; CGSCC: attributes #[[ATTR25]] = { nofree nounwind }
 ; CGSCC: attributes #[[ATTR26]] = { nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR27]] = { nofree }

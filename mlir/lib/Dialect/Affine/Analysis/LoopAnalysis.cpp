@@ -31,7 +31,6 @@ using namespace mlir;
 using namespace mlir::affine;
 
 namespace {
-
 /// A directed graph to model relationships between MLIR Operations.
 class DirectedOpGraph {
 public:
@@ -155,7 +154,6 @@ private:
   // Edges as an adjacency list.
   DenseMap<Operation *, SmallVector<DGNode *>> edges;
 };
-
 } // namespace
 
 /// Returns the trip count of the loop as an affine expression if the latter is
@@ -191,15 +189,11 @@ void mlir::affine::getTripCountMapAndOperands(
   // expression (divided by the step) provides the expressions for the trip
   // count map.
   AffineValueMap ubValueMap(ubMap, forOp.getUpperBoundOperands());
-
-  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
-                                         lbMap.getResult(0));
-  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
-                                   lbSplatExpr, context);
-  AffineValueMap lbSplatValueMap(lbMapSplat, forOp.getLowerBoundOperands());
+  AffineValueMap lbValueMap(lbMap, forOp.getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbValueMap,
+                                             &tripCountValueMap);
   for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i)
     tripCountValueMap.setResult(i,
                                 tripCountValueMap.getResult(i).ceilDiv(step));

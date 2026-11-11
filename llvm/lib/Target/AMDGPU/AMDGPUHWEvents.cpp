@@ -59,7 +59,6 @@ static HWEvents getExpertSchedulingEventType(const MachineInstr &Inst,
 HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
                                     const SIInstrInfo &TII) {
   switch (Inst.getOpcode()) {
-  // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
   case AMDGPU::GLOBAL_INV:
   case AMDGPU::BUFFER_INV:
     return HWEvents::VMEM_INV_ACCESS; // tracked using loadcnt/vmcnt, but
@@ -117,10 +116,8 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (TII.isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
-      return getSimplifiedVMEMEventsFor(Inst, TII);
-
-    assert(Inst.mayLoadOrStore());
+    assert(Inst.mayLoadOrStore() ||
+           SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()));
     HWEvents E = HWEvents::NONE;
     if (TII.mayAccessVMEMThroughFlat(Inst)) {
       if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
@@ -167,7 +164,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (SIInstrInfo::isEXP(Inst)) {
-    unsigned Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
+    int64_t Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
       return HWEvents::EXP_PARAM_ACCESS;
     if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)

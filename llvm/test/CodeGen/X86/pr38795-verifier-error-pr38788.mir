@@ -61,7 +61,7 @@ body:             |
     %1:gr32 = COPY %0
 
   bb.5:
-    %0:gr32 = COPY killed %1
+    %0:gr32 = COPY %1
     JMP_1 %bb.1
 
 ...
@@ -137,7 +137,7 @@ body:             |
     JCC_1 %bb.3, 4, implicit killed undef $eflags
 
   bb.2:
-    %2:gr32 = COPY killed %0
+    %2:gr32 = COPY %0
     JMP_1 %bb.9
 
   bb.3:
@@ -155,15 +155,15 @@ body:             |
     JCC_1 %bb.8, 4, implicit killed undef $eflags
 
   bb.7:
-    %1:gr32 = COPY killed %3
+    %1:gr32 = COPY %3
 
   bb.8:
-    %4:gr32 = COPY killed %1
-    %0:gr32 = COPY killed %4
+    %4:gr32 = COPY %1
+    %0:gr32 = COPY %4
     JMP_1 %bb.1
 
   bb.9:
-    %3:gr32 = COPY killed %2
+    %3:gr32 = COPY %2
     JMP_1 %bb.6
 
 ...
@@ -220,7 +220,7 @@ body:             |
 
   bb.1:
     %2:gr32 = IMPLICIT_DEF
-    %1:gr32 = COPY killed %0
+    %1:gr32 = COPY %0
     %0:gr32 = MOV32r0 implicit-def dead $eflags
     JCC_1 %bb.4, 5, implicit killed undef $eflags
     JMP_1 %bb.5
@@ -231,10 +231,10 @@ body:             |
     JCC_1 %bb.4, 4, implicit killed undef $eflags
 
   bb.3:
-    %2:gr32 = COPY killed %0
+    %2:gr32 = COPY %0
 
   bb.4:
-    %0:gr32 = COPY killed %2
+    %0:gr32 = COPY %2
     JMP_1 %bb.1
 
   bb.5:

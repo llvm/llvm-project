@@ -2,37 +2,37 @@ add_llvm_component_group(RISCV)
 
 set(LLVM_TARGET_DEFINITIONS RISCV.td)
 
-tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM RISCVGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM RISCVGenCompressInstEmitter.inc -gen-compress-inst-emitter)
-tablegen(LLVM RISCVGenMacroFusion.inc -gen-macro-fusion-pred)
-tablegen(LLVM RISCVGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM RISCVGenDisassemblerTables.inc -gen-disassembler
+llvm_tablegen(RISCVGenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(RISCVGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(RISCVGenCompressInstEmitter.inc -gen-compress-inst-emitter)
+llvm_tablegen(RISCVGenMacroFusion.inc -gen-macro-fusion-pred)
+llvm_tablegen(RISCVGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(RISCVGenDisassemblerTables.inc -gen-disassembler
               --specialize-decoders-per-bitwidth)
-tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
-tablegen(LLVM RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
-tablegen(LLVM RISCVGenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM RISCVGenSearchableTables.inc -gen-searchable-tables)
-tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM RISCVGenExegesis.inc -gen-exegesis)
-tablegen(LLVM RISCVGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(RISCVGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(RISCVGenMCCodeEmitter.inc -gen-emitter)
+llvm_tablegen(RISCVGenMCPseudoLowering.inc -gen-pseudo-lowering)
+llvm_tablegen(RISCVGenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(RISCVGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(RISCVGenSearchableTables.inc -gen-searchable-tables)
+llvm_tablegen(RISCVGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(RISCVGenExegesis.inc -gen-exegesis)
+llvm_tablegen(RISCVGenSDNodeInfo.inc -gen-sd-node-info)
 
 set(LLVM_TARGET_DEFINITIONS RISCVGISel.td)
-tablegen(LLVM RISCVGenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM RISCVGenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(RISCVGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(RISCVGenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVO0PreLegalizerCombiner")
-tablegen(LLVM RISCVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(RISCVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVPreLegalizerCombiner")
-tablegen(LLVM RISCVGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(RISCVGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVPostLegalizerCombiner")
 
 set(LLVM_TARGET_DEFINITIONS RISCVOptions.td)
-tablegen(LLVM RISCVOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(RISCVOptions.inc -gen-opt-parser-defs)
 
 set(LLVM_TARGET_DEFINITIONS MCTargetDesc/RISCVMCOptions.td)
-tablegen(LLVM RISCVMCOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(RISCVMCOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(RISCVCommonTableGen)
 

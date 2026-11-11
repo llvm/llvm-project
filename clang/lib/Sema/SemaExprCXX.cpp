@@ -6927,8 +6927,12 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
              ExpressionEvaluationContextRecord::EK_Decltype &&
          "not in a decltype expression");
 
-  // Give up here so we don't try to evaluate it later.
-  if (isa<RecoveryExpr>(E))
+  // RecoveryExpr is always instantiation-dependent regardless of its
+  // type. If the type is essentially non-dependent, we continue to build
+  // a dependent decltype expression to avoid confusing diagnostics with wrong
+  // type. If the type is dependent, we will recover with int.
+  // FIXME: Maybe RecoveryExpr shouldn't be always instantiation-dependent.
+  if (isa<RecoveryExpr>(E) && E->isTypeDependent())
     return ExprError();
 
   ExprResult Result = CheckPlaceholderExpr(E);
@@ -8121,12 +8125,12 @@ Sema::BuildExprRequirement(
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
 
     SFINAETrap Trap(*this);
-    ExprResult Constraint = SubstExpr(IDC, MLTAL);
+    ExprResult Constraint = SubstConstraintExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
       SubstitutedConstraintExpr =
           cast<ConceptSpecializationExpr>(Constraint.get());
-      if (SubstitutedConstraintExpr->getSatisfaction().ContainsErrors)
+      if (SubstitutedConstraintExpr->getSatisfaction().containsErrors())
         HasError = true;
     }
     if (HasError) {
@@ -8194,14 +8198,6 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
 
   return new (Context) concepts::NestedRequirement(Context, Constraint,
                                                    Satisfaction);
-}
-
-concepts::NestedRequirement *
-Sema::BuildNestedRequirement(StringRef InvalidConstraintEntity,
-                       const ASTConstraintSatisfaction &Satisfaction) {
-  return new (Context) concepts::NestedRequirement(
-      InvalidConstraintEntity,
-      ASTConstraintSatisfaction::Rebuild(Context, Satisfaction));
 }
 
 RequiresExprBodyDecl *

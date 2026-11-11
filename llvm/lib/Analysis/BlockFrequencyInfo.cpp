@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
@@ -21,7 +22,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -32,67 +32,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "block-freq"
 
-static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
-    "view-block-freq-propagation-dags", cl::Hidden,
-    cl::desc("Pop up a window to show a dag displaying how block "
-             "frequencies propagation through the CFG."),
-    cl::values(clEnumValN(GVDT_None, "none", "do not display graphs."),
-               clEnumValN(GVDT_Fraction, "fraction",
-                          "display a graph using the "
-                          "fractional block frequency representation."),
-               clEnumValN(GVDT_Integer, "integer",
-                          "display a graph using the raw "
-                          "integer fractional block frequency representation."),
-               clEnumValN(GVDT_Count, "count", "display a graph using the real "
-                                               "profile count if available.")));
-
-namespace llvm {
-cl::opt<std::string>
-    ViewBlockFreqFuncName("view-bfi-func-name", cl::Hidden,
-                          cl::desc("The option to specify "
-                                   "the name of the function "
-                                   "whose CFG will be displayed."));
-
-cl::opt<unsigned>
-    ViewHotFreqPercent("view-hot-freq-percent", cl::init(10), cl::Hidden,
-                       cl::desc("An integer in percent used to specify "
-                                "the hot blocks/edges to be displayed "
-                                "in red: a block or edge whose frequency "
-                                "is no less than the max frequency of the "
-                                "function multiplied by this percent."));
-
-// Command line option to turn on CFG dot or text dump after profile annotation.
-cl::opt<PGOViewCountsType> PGOViewCounts(
-    "pgo-view-counts", cl::Hidden,
-    cl::desc("A boolean option to show CFG dag or text with "
-             "block profile counts and branch probabilities "
-             "right after PGO profile annotation step. The "
-             "profile counts are computed using branch "
-             "probabilities from the runtime profile data and "
-             "block frequency propagation algorithm. To view "
-             "the raw counts from the profile, use option "
-             "-pgo-view-raw-counts instead. To limit graph "
-             "display to only one function, use filtering option "
-             "-view-bfi-func-name."),
-    cl::values(clEnumValN(PGOVCT_None, "none", "do not show."),
-               clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
-               clEnumValN(PGOVCT_Text, "text", "show in text.")));
-
-static cl::opt<bool> PrintBFI("print-bfi", cl::init(false), cl::Hidden,
-                              cl::desc("Print the block frequency info."));
-
-cl::opt<std::string>
-    PrintBFIFuncName("print-bfi-func-name", cl::Hidden,
-                     cl::desc("The option to specify the name of the function "
-                              "whose block frequency info is printed."));
-} // namespace llvm
+StringRef llvm::getViewBlockFreqFuncName(const LLVMContext &C) {
+  return getAnalysisOptions(C).view_bfi_func_name;
+}
+unsigned llvm::getViewHotFreqPercent(const LLVMContext &C) {
+  return getAnalysisOptions(C).view_hot_freq_percent;
+}
+PGOViewCountsType llvm::getPGOViewCounts(const LLVMContext &C) {
+  return getAnalysisOptions(C).pgo_view_counts;
+}
+StringRef llvm::getPrintBFIFuncName(const LLVMContext &C) {
+  return getAnalysisOptions(C).print_bfi_func_name;
+}
 
 namespace llvm {
 
-static GVDAGType getGVDT() {
-  if (PGOViewCounts == PGOVCT_Graph)
-    return GVDT_Count;
-  return ViewBlockFreqPropagationDAG;
+static GVDAGType getGVDT(const LLVMContext &C) {
+  if (getPGOViewCounts(C) == PGOViewCountsType::Graph)
+    return GVDAGType::Count;
+  return getAnalysisOptions(C).view_block_freq_propagation_dags;
 }
 
 template <>
@@ -131,19 +89,21 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
   std::string getNodeLabel(const BasicBlock *Node,
                            const BlockFrequencyInfo *Graph) {
 
-    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph, getGVDT());
+    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph,
+                                           getGVDT(Node->getContext()));
   }
 
   std::string getNodeAttributes(const BasicBlock *Node,
                                 const BlockFrequencyInfo *Graph) {
-    return BFIDOTGTraitsBase::getNodeAttributes(Node, Graph,
-                                                ViewHotFreqPercent);
+    return BFIDOTGTraitsBase::getNodeAttributes(
+        Node, Graph, getViewHotFreqPercent(Node->getContext()));
   }
 
   std::string getEdgeAttributes(const BasicBlock *Node, EdgeIter EI,
                                 const BlockFrequencyInfo *BFI) {
-    return BFIDOTGTraitsBase::getEdgeAttributes(Node, EI, BFI, BFI->getBPI(),
-                                                ViewHotFreqPercent);
+    return BFIDOTGTraitsBase::getEdgeAttributes(
+        Node, EI, BFI, BFI->getBPI(),
+        getViewHotFreqPercent(Node->getContext()));
   }
 };
 
@@ -187,12 +147,14 @@ void BlockFrequencyInfo::calculate(const Function &F,
   if (!BFI)
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, CI);
-  if (ViewBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
+  const AnalysisOptions &Opts = getAnalysisOptions(F);
+  if (Opts.view_block_freq_propagation_dags != GVDAGType::None &&
+      (Opts.view_bfi_func_name.empty() ||
+       F.getName() == Opts.view_bfi_func_name)) {
     view();
   }
-  if (PrintBFI &&
-      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
+  if (Opts.print_bfi && (Opts.print_bfi_func_name.empty() ||
+                         F.getName() == Opts.print_bfi_func_name)) {
     print(dbgs());
   }
 }
@@ -227,24 +189,31 @@ void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB,
   BFI->setBlockFreq(BB, Freq);
 }
 
+/// Return min(BBFreq * NewFreq / OldFreq, UINT64_MAX). Multiplies before
+/// dividing, to minimize loss of precision.
+static uint64_t scaleFrequency(uint64_t BBFreq, uint64_t NewFreq,
+                               uint64_t OldFreq) {
+  assert(OldFreq != 0 && "Divide by zero?");
+  // clang-cl defines __SIZEOF_INT128__, but MSVC's runtime does not provide
+  // the 128-bit division helper (__udivti3).
+#if defined(__SIZEOF_INT128__) && !defined(_MSC_VER)
+  __uint128_t Scaled = __uint128_t(BBFreq) * NewFreq / OldFreq;
+  return std::min<__uint128_t>(Scaled, UINT64_MAX);
+#else
+  return (APInt(128, BBFreq) * NewFreq).udiv(OldFreq).getLimitedValue();
+#endif
+}
+
 void BlockFrequencyInfo::setBlockFreqAndScale(
     const BasicBlock *ReferenceBB, BlockFrequency Freq,
     SmallPtrSetImpl<BasicBlock *> &BlocksToScale) {
   assert(BFI && "Expected analysis to be available");
-  // Use 128 bits APInt to avoid overflow.
-  APInt NewFreq(128, Freq.getFrequency());
-  APInt OldFreq(128, BFI->getBlockFreq(ReferenceBB).getFrequency());
-  APInt BBFreq(128, 0);
+  uint64_t NewFreq = Freq.getFrequency();
+  uint64_t OldFreq = BFI->getBlockFreq(ReferenceBB).getFrequency();
   for (auto *BB : BlocksToScale) {
-    BBFreq = BFI->getBlockFreq(BB).getFrequency();
-    // Multiply first by NewFreq and then divide by OldFreq
-    // to minimize loss of precision.
-    BBFreq *= NewFreq;
-    // udiv is an expensive operation in the general case. If this ends up being
-    // a hot spot, one of the options proposed in
-    // https://reviews.llvm.org/D28535#650071 could be used to avoid this.
-    BBFreq = BBFreq.udiv(OldFreq);
-    BFI->setBlockFreq(BB, BlockFrequency(BBFreq.getLimitedValue()));
+    uint64_t BBFreq = BFI->getBlockFreq(BB).getFrequency();
+    BFI->setBlockFreq(BB,
+                      BlockFrequency(scaleFrequency(BBFreq, NewFreq, OldFreq)));
   }
   BFI->setBlockFreq(ReferenceBB, Freq);
 }

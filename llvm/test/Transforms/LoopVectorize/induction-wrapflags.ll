@@ -293,7 +293,7 @@ define void @sub_induction_nsw_interleave(ptr noalias %dst, i32 %start, i32 %ste
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[STEP_ADD]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8

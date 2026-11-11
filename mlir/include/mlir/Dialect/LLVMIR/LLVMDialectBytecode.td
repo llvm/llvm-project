@@ -67,7 +67,7 @@ class EnumClassFlag<string flag, string getter> :
 
 def DIBasicTypeAttr : DialectAttribute<(attr
   VarInt:$tag,
-  String:$name,
+  OptionalAttribute<"StringAttr">:$name,
   VarInt:$sizeInBits,
   VarInt:$encoding
 )>;

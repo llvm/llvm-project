@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRX86TransformOps
   MLIRIR
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMathDialect
   MLIRMemRefDialect
   MLIRVectorDialect
   MLIRSideEffectInterfaces

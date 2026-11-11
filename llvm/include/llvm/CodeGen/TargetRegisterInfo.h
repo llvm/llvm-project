@@ -639,6 +639,13 @@ public:
     return nullptr;
   }
 
+  /// Return a register class where domain (integer/floating point) crossings
+  /// should be minimized.
+  virtual const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const {
+    return nullptr;
+  }
+
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
   virtual unsigned composeSubRegIndicesImpl(unsigned, unsigned) const {
@@ -1084,6 +1091,12 @@ public:
   /// more important than whether the range is local to a basic block or global.
   virtual bool
   regClassPriorityTrumpsGlobalness(const MachineFunction &MF) const {
+    return false;
+  }
+
+  /// Whether the greedy allocator should drop the SlotIndexes entries of
+  /// erased instructions before allocating. Lets targets opt in one at a time.
+  virtual bool shouldCompactSlotIndexes(const MachineFunction &MF) const {
     return false;
   }
 

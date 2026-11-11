@@ -134,7 +134,6 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
     I.SymbolFlags[ES.intern(std::move(*Name))] = std::move(*SymFlags);
   }
 
-  SymbolStringPtr InitSymbol;
   for (auto &Sec : Obj.sections()) {
     if (auto SecName = Sec.getName()) {
       if (isELFInitializerSection(*SecName)) {
@@ -215,7 +214,6 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
     I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }
 
-  SymbolStringPtr InitSymbol;
   for (auto &Sec : Obj.sections()) {
     if (auto SecName = Sec.getName()) {
       if (isCOFFInitializerSection(*SecName)) {

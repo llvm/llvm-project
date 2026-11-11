@@ -113,6 +113,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   for (auto VT : {MVT::i32, MVT::i64}) {
     setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
+    // No atomic sub insn. Expand it into atomic add of the negated value.
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
   }
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
@@ -177,6 +179,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setMaxAtomicSizeInBitsSupported(64);
+  // AtomicExpand turns operations on 8 and 16 bits into cmpxchg of the word
+  // that they are in. Its loops start with a relaxed atomic load.
+  if (STI.hasLoadAcqStoreRel())
+    setMinCmpXchgSizeInBits(32);
   setMinimumJumpTableEntries(BPFMinimumJumpTableEntries);
 
   // Function alignments
@@ -215,6 +221,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
   HasMovsx = STI.hasMovsx();
+  HasLoadAcqStoreRel = STI.hasLoadAcqStoreRel();
 
   AllowsMisalignedMemAccess = STI.getAllowsMisalignedMemAccess();
 }
@@ -348,9 +355,9 @@ void BPFTargetLowering::ReplaceNodeResults(
   }
 
   SDLoc DL(N);
-  // We'll still produce a fatal error downstream, but this diagnostic is more
-  // user-friendly.
   fail(DL, DAG, Msg);
+  for (EVT VT : N->values())
+    Results.push_back(VT == MVT::Other ? N->getOperand(0) : DAG.getUNDEF(VT));
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -578,10 +585,7 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         break;
       }
 
-      // STORE_STACK_ARG requires i64 operands. With ALU32 mode, the CC
-      // promotion may only extend to i32, so extend to i64 if needed.
-      if (Arg.getValueType() != MVT::i64)
-        Arg = DAG.getNode(ISD::ANY_EXTEND, CLI.DL, MVT::i64, Arg);
+      assert(Arg.getValueType() == MVT::i64 && "stack args are i64");
 
       SDValue OffVal = DAG.getConstant(Off, CLI.DL, MVT::i64);
       Chain = DAG.getNode(BPFISD::STORE_STACK_ARG, CLI.DL, MVT::Other, Chain,
@@ -770,7 +774,7 @@ SDValue BPFTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
 SDValue BPFTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -788,7 +792,7 @@ SDValue BPFTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(1);
   SDValue TrueV = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc DL(Op);
 
   if (!getHasJmpExt())
@@ -805,13 +809,46 @@ SDValue BPFTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
   SDNode *N = Op.getNode();
   SDLoc DL(N);
 
+  // A seq_cst store is xchg by now, see shouldExpandAtomicStoreInIR(), which
+  // makes load acquire enough for a seq_cst load.
   if (cast<AtomicSDNode>(N)->getMergedOrdering() ==
-      AtomicOrdering::SequentiallyConsistent)
+          AtomicOrdering::SequentiallyConsistent &&
+      (N->getOpcode() == ISD::ATOMIC_STORE || !HasLoadAcqStoreRel))
     fail(DL, DAG,
          "sequentially consistent (seq_cst) "
          "atomic load/store is not supported");
 
   return Op;
+}
+
+TargetLowering::AtomicExpansionKind
+BPFTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
+  if (!HasLoadAcqStoreRel)
+    return TargetLowering::shouldExpandAtomicRMWInIR(AI);
+
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Xchg:
+    // There are insns for 32 and 64 bits.
+    if (AI->getDataLayout().getTypeSizeInBits(AI->getType()) >= 32)
+      return AtomicExpansionKind::None;
+    [[fallthrough]];
+  default:
+    return AtomicExpansionKind::CmpXChg;
+  }
+}
+
+TargetLowering::AtomicExpansionKind
+BPFTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  // Store release is not ordered with a later load. xchg is fully ordered.
+  if (HasLoadAcqStoreRel &&
+      SI->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+    return AtomicExpansionKind::Expand;
+  return AtomicExpansionKind::None;
 }
 
 SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
@@ -824,7 +861,25 @@ SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
     // MEMBARRIER is a compiler barrier; it codegens to a no-op.
     return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 
-  report_fatal_error("Runtime fence is not supported at the moment");
+  // There is no insn for that. An atomic insn that returns the old value is
+  // fully ordered: add zero to a slot in the stack. Without alu32 that is
+  // 'lock *(u64 *)(r10 - 8) += r1', which is not ordered.
+  if (!HasAlu32)
+    report_fatal_error("Runtime fence is not supported at the moment");
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Slot = DAG.CreateStackTemporary(MVT::i64);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
+      MF, cast<FrameIndexSDNode>(Slot)->getIndex());
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue Chain = DAG.getStore(Op.getOperand(0), DL, Zero, Slot, PtrInfo);
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad | MachineMemOperand::MOStore,
+      LLT::scalar(64), Align(8), MMOMetadata(), SyncScope::System,
+      AtomicOrdering::SequentiallyConsistent);
+  return DAG
+      .getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MVT::i64, Chain, Slot, Zero, MMO)
+      .getValue(1);
 }
 
 static Function *createBPFUnreachable(Module *M) {
@@ -1165,6 +1220,12 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   F->insert(I, Copy0MBB);
   F->insert(I, Copy1MBB);
+
+  // Set the call frame size on entry to the new basic blocks.
+  unsigned CallFrameSize = TII.getCallFrameSizeAt(MI);
+  Copy0MBB->setCallFrameSize(CallFrameSize);
+  Copy1MBB->setCallFrameSize(CallFrameSize);
+
   // Update machine-CFG edges by transferring all successors of the current
   // block to the new block which will contain the Phi node for the select.
   Copy1MBB->splice(Copy1MBB->begin(), BB,
