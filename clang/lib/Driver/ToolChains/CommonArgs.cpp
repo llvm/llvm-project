@@ -1230,23 +1230,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
   }
 
-  // If an explicit debugger tuning argument appeared, pass it along.
-  if (Arg *A =
-          Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group)) {
-    if (A->getOption().matches(options::OPT_glldb))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=lldb"));
-    else if (A->getOption().matches(options::OPT_gsce))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=sce"));
-    else if (A->getOption().matches(options::OPT_gdbx))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=dbx"));
-    else
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=gdb"));
-  }
-
   if (IsOSAIX) {
     if (!ToolChain.useIntegratedAs())
       CmdArgs.push_back(
@@ -1829,8 +1812,11 @@ collectSanitizerRuntimes(Compilation &C, const ToolChain &TC,
     StaticRuntimes.push_back("dfsan");
   if (SanArgs.needsLsanRt())
     StaticRuntimes.push_back("lsan");
-  if (SanArgs.needsCopyProfRt())
+  if (SanArgs.needsCopyProfRt()) {
     StaticRuntimes.push_back("copyprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("copyprof_cxx");
+  }
   if (SanArgs.needsMsanRt()) {
     StaticRuntimes.push_back("msan");
     if (SanArgs.linkCXXRuntimes())

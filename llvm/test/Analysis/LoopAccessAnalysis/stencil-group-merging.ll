@@ -4069,6 +4069,7 @@ define void @equal_predicate_does_not_imply_positive_stride(ptr %src, ptr %dst, 
 ; MERGE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; MERGE-NEXT:      SCEV assumptions:
 ; MERGE-NEXT:      Equal predicate: (zext i2 (trunc i64 %k to i2) to i64) == 0
+; MERGE-NEXT:      Compare predicate: (zext i2 (trunc i64 %k to i2) to i64) sgt) 0
 ; MERGE-EMPTY:
 ; MERGE-NEXT:      Expressions re-written:
 ;
