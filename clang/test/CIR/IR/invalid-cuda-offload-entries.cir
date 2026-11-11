@@ -1,0 +1,14 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error@+1 {{expects 'cir.cu.offload_entries' to be an array of #cir.cu.offload_entry}}
+module attributes {cir.cu.offload_entries = [1 : i32]} {
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{expects 'cir.cu.offload_entries' attribute to be attached to 'builtin.module'}}
+  cir.func @f() attributes {cir.cu.offload_entries = []} {
+    cir.return
+  }
+}
