@@ -3,7 +3,6 @@
 
 name:            uitofp_to_zero
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: uitofp_to_zero
@@ -19,7 +18,6 @@ body:             |
 ---
 name:            sitofp_to_zero
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: sitofp_to_zero
@@ -35,7 +33,6 @@ body:             |
 ---
 name:            and_to_zero
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: and_to_zero
@@ -52,7 +49,6 @@ body:             |
 ---
 name:            mul_to_zero
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: mul_to_zero
@@ -69,7 +65,6 @@ body:             |
 ---
 name:            or_to_negative_one
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: or_to_negative_one
@@ -86,7 +81,6 @@ body:             |
 ---
 name:            xor_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: xor_to_undef
@@ -103,7 +97,6 @@ body:             |
 ---
 name:            add_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: add_to_undef
@@ -120,7 +113,6 @@ body:             |
 ---
 name:            sub_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: sub_to_undef
@@ -137,7 +129,6 @@ body:             |
 ---
 name:            fptoui_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fptoui_to_undef
@@ -153,7 +144,6 @@ body:             |
 ---
 name:            fptosi_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fptosi_to_undef
@@ -169,7 +159,6 @@ body:             |
 ---
 name:            shufflevector_undef_ops_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: shufflevector_undef_ops_to_undef
@@ -186,7 +175,6 @@ body:             |
 ---
 name:            shufflevector_undef_mask_to_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -206,7 +194,6 @@ body:             |
 ---
 name:            shufflevector_not_all_ops_undef
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -229,7 +216,6 @@ body:             |
 ---
 name:            shl_undef_rhs
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: shl_undef_rhs
@@ -246,7 +232,6 @@ body:             |
 ---
 name:            lshr_undef_rhs
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: lshr_undef_rhs
@@ -263,7 +248,6 @@ body:             |
 ---
 name:            ashr_undef_rhs
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: ashr_undef_rhs
@@ -280,7 +264,6 @@ body:             |
 ---
 name:            lshr_undef_lhs
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; Optimize these to zero?
@@ -300,7 +283,6 @@ body:             |
 ---
 name:            ashr_undef_lhs
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; Optimize these to zero?
@@ -319,7 +301,6 @@ body:             |
 ...
 ---
 name:            store_undef
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -336,7 +317,6 @@ body:             |
 ...
 ---
 name:            store_undef_volatile
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -356,7 +336,6 @@ body:             |
 ...
 ---
 name:            store_undef_unordered
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -373,7 +352,6 @@ body:             |
 ...
 ---
 name:            store_undef_monotonic
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -393,7 +371,6 @@ body:             |
 ...
 ---
 name:            store_undef_release
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -413,7 +390,6 @@ body:             |
 ...
 ---
 name:            store_undef_seq_cst
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

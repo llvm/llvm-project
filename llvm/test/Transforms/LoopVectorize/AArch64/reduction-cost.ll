@@ -132,17 +132,17 @@ define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP14]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[NEXT_GEP]], i64 6
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
-; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP15]], align 8, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x i64>, ptr [[TMP23]], align 8, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <2 x i64>, ptr [[TMP26]], align 8, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP23]], align 8, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x i64>, ptr [[TMP26]], align 8, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <2 x i64>, ptr [[TMP33]], align 8, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[NEXT_GEP]], align 8, !alias.scope [[META9]], !noalias [[META6]]
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP15]], align 8, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP23]], align 8, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP26]], align 8, !alias.scope [[META9]], !noalias [[META6]]
+; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP33]], align 8, !alias.scope [[META9]], !noalias [[META6]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <2 x i64> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <2 x i64> [[WIDE_LOAD9]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = or <2 x i64> [[WIDE_LOAD12]], [[BROADCAST_SPLAT]]
