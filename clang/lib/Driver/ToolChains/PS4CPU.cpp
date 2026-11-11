@@ -572,7 +572,6 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
-  Res |= SanitizerKind::Type;
   Res |= SanitizerKind::Vptr;
   return Res;
 }
@@ -581,6 +580,7 @@ SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
     BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   SanitizerMask Res = PS4PS5Base::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Thread;
+  Res |= SanitizerKind::Type;
   return Res;
 }
 
