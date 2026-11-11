@@ -66,7 +66,7 @@ MapperJITLinkMemoryManager::MapperJITLinkMemoryManager(
 // registers for a destruction notification the first time a JITDylib is
 // seen, so its pool can be freed in notifyDestroying().
 MapperJITLinkMemoryManager::AvailableMemoryMap &
-MapperJITLinkMemoryManager::getAvailableMemory(const JITLinkDylib *Key) {
+MapperJITLinkMemoryManager::getAvailableMemoryLocked(const JITLinkDylib *Key) {
   auto [It, Inserted] = Pools.try_emplace(Key);
   if (Inserted && Key)
     const_cast<JITLinkDylib *>(Key)->notifyOnDestruction(*this);
@@ -172,7 +172,8 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     if (NextSegAddr < Result->End) {
       // Save the remaining memory for reuse by later allocations from the same
       // pool.
-      getAvailableMemory(PoolKey).insert(NextSegAddr, Result->End - 1, true);
+      getAvailableMemoryLocked(PoolKey).insert(NextSegAddr, Result->End - 1,
+                                               true);
     }
     Mutex.unlock();
 
@@ -190,7 +191,7 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
   // find an already reserved range in this pool that is large enough
   ExecutorAddrRange SelectedRange{};
 
-  AvailableMemoryMap &Avail = getAvailableMemory(PoolKey);
+  AvailableMemoryMap &Avail = getAvailableMemoryLocked(PoolKey);
   for (AvailableMemoryMap::iterator It = Avail.begin(); It != Avail.end();
        It++) {
     if (It.stop() - It.start() + 1 >= TotalSize) {
@@ -264,7 +265,7 @@ void MapperJITLinkMemoryManager::deallocate(
         // Return the range to the pool it was allocated from.
         const JITLinkDylib *PoolKey = AllocPoolKey.lookup(Addr);
         AllocPoolKey.erase(Addr);
-        getAvailableMemory(PoolKey).insert(Addr, Addr + Size - 1, true);
+        getAvailableMemoryLocked(PoolKey).insert(Addr, Addr + Size - 1, true);
 
         FA.release();
       }

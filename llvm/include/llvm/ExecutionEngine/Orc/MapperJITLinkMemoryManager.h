@@ -107,7 +107,8 @@ private:
   // key, creating it on first use. The key is the JITDylib when colocating
   // per-JITDylib, otherwise nullptr (a single shared pool). Must be called with
   // Mutex held.
-  AvailableMemoryMap &getAvailableMemory(const jitlink::JITLinkDylib *Key);
+  AvailableMemoryMap &
+  getAvailableMemoryLocked(const jitlink::JITLinkDylib *Key);
 
   std::mutex Mutex;
 
@@ -137,7 +138,7 @@ private:
   // with each other.
   struct PoolInfo {
     // The unique_ptr keeps each IntervalMap at a stable address as the map
-    // grows, so references returned by getAvailableMemory() stay valid.
+    // grows, so references returned by getAvailableMemoryLocked() stay valid.
     std::unique_ptr<AvailableMemoryMap> AvailPool;
     bool Reserved = false;
   };
