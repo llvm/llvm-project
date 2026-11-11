@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_RUST_RUSTLANGUAGE_H
 
 #include "lldb/Target/Language.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/StringRef.h"
 

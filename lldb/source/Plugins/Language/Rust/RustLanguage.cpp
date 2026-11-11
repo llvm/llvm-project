@@ -109,8 +109,7 @@ lldb::TypeCategoryImplSP RustLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
-                                               g_category);
+    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
     if (g_category)
       LoadRustFormatters(g_category);
   });
