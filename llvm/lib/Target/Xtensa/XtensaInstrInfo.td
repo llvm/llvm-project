@@ -62,6 +62,11 @@ def ADDI : RRI8_Inst<0x02, (outs AR:$t), (ins AR:$s, imm8:$imm8),
   let r = 0x0C;
 }
 
+// LowerImmediate keeps an imm8_sh8 constant as an immediate when its only user
+// is an ADD, expecting ADDMI to absorb it. Prefer ADDMI over ADDX2/4/8 so that
+// (add (shl x, N), imm8_sh8) does not select ADDXN with the constant as a
+// register operand.
+let AddedComplexity = 10 in
 def ADDMI : RRI8_Inst<0x02, (outs AR:$t), (ins AR:$s, imm8_sh8:$imm_sh8),
                      "addmi\t$t, $s, $imm_sh8",
                      [(set AR:$t, (add AR:$s, imm8_sh8:$imm_sh8))]> {
@@ -89,6 +94,9 @@ def MOVI : RRI8_Inst<0x02, (outs AR:$t), (ins imm12m:$imm),
   let s{3-0} = imm{11-8};
   let r = 0xa;
 }
+
+// Materialize an imm8_sh8 constant that was not folded into an ADDMI.
+def : Pat<(i32 imm8_sh8:$imm), (ADDMI (MOVI (i32 0)), imm8_sh8:$imm)>;
 
 def MOVEQZ : RRR_Inst<0x00, 0x03, 0x08, (outs AR:$r), (ins AR:$s, AR:$t),
                      "moveqz\t$r, $s, $t", []>;
