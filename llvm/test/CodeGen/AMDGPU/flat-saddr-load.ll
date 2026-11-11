@@ -4432,10 +4432,9 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_sexti8_reg_hi(ptr inreg %
 ; GFX1250-GISEL-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-TRUE16-NEXT:    flat_load_i8 v0, v[2:3]
 ; GFX1250-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
-; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-GISEL-TRUE16-NEXT:    v_and_or_b32 v0, v1, 0xffff, v0
+; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -4505,10 +4504,9 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16hi_sexti8_reg_hi_immneg128(p
 ; GFX1250-GISEL-TRUE16-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX1250-GISEL-TRUE16-NEXT:    flat_load_i8 v0, v[2:3] offset:-128
 ; GFX1250-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
-; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-GISEL-TRUE16-NEXT:    v_and_or_b32 v0, v1, 0xffff, v0
+; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
