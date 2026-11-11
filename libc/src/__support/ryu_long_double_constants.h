@@ -16,6 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// clang-format off
 constexpr size_t TABLE_SHIFT_CONST = 120;
 constexpr size_t IDX_SIZE = 128;
 
@@ -120478,6 +120479,8 @@ LIBC_INLINE_VAR constexpr uint64_t POW10_SPLIT_2[][5] = {
     {0u, 0u, 0u, 13611003973820481536u, 2663254u},
     {0u, 0u, 0u, 16717361816799281152u, 3479003u},
 };
+
+// clang-format on
 
 } // namespace LIBC_NAMESPACE_DECL
 
