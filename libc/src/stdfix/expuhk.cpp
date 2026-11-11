@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "expuhk.h"
+#include "src/stdfix/expuhk.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_rep.h"

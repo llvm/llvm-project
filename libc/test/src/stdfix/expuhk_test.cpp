@@ -11,7 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ExpTest.h"
+#include "test/src/stdfix/ExpTest.h"
 
 #include "src/stdfix/expuhk.h"
 
