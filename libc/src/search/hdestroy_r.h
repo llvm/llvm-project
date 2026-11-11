@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SEARCH_HDESTROY_R_H
 #define LLVM_LIBC_SRC_SEARCH_HDESTROY_R_H
 
-#include "hdr/types/hsearch_data.h"
+#include "hdr/types/struct_hsearch_data.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

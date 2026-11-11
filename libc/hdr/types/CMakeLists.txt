@@ -1321,7 +1321,7 @@ add_proxy_header_library(
 add_proxy_header_library(
   hsearch_data
   HDRS
-    hsearch_data.h
+    struct_hsearch_data.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_hsearch_data
 )
