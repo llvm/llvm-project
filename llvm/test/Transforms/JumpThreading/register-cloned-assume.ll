@@ -1,12 +1,13 @@
-; RUN: opt -S -passes='require<assumptions>,jump-threading,drop-unnecessary-assumes' < %s | FileCheck %s
+; RUN: opt -disable-output -passes='print<assumptions>,jump-threading,print<assumptions>' < %s 2>&1 | FileCheck %s
 
-; Jump threading copies the assume in %merge into the threaded blocks. The
-; copies must be registered with the assumption cache, or the cache-driven
-; drop below would not see them.
+; Jump threading copies the assume in %merge into a threaded block. The copy
+; must be registered with the assumption cache, which is already populated.
 define void @thread_assume(i1 %c, ptr %p) {
-; CHECK-LABEL: define void @thread_assume(
-; CHECK-NOT: call void @llvm.assume
-; CHECK: ret void
+; CHECK:      Cached assumptions for function: thread_assume
+; CHECK-NEXT:   [ "nonnull"(ptr %p) ]
+; CHECK-NEXT: Cached assumptions for function: thread_assume
+; CHECK-NEXT:   [ "nonnull"(ptr %p) ]
+; CHECK-NEXT:   [ "nonnull"(ptr %p) ]
 entry:
   br i1 %c, label %a, label %b
 
