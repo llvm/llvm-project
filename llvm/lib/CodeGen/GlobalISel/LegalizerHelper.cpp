@@ -9691,14 +9691,28 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   // Expand scalarizing unmerge as bitcast to integer and shift.
   LLT IntTy = MRI.getType(SrcReg);
 
-  MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
+  LLT Ty = MRI.getType(Dst0Reg);
+  if (Ty.isFloat()) {
+    Register R0 = MIRBuilder.buildTrunc(LLT::integer(Ty.getSizeInBits()), SrcReg).getReg(0);
+    MIRBuilder.buildBitcast(Dst0Reg, R0);
+  } else {
+    MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
+  }
 
   const unsigned DstSize = DstTy.getSizeInBits();
   unsigned Offset = DstSize;
   for (unsigned I = 1; I != NumDst; ++I, Offset += DstSize) {
     auto ShiftAmt = MIRBuilder.buildConstant(IntTy, Offset);
     auto Shift = MIRBuilder.buildLShr(IntTy, SrcReg, ShiftAmt);
-    MIRBuilder.buildTrunc(MI.getOperand(I), Shift);
+    MachineOperand DstNReg = MI.getOperand(I);
+    LLT Ty = MRI.getType(DstNReg.getReg());
+    if (Ty.isFloat()) {
+      Register R0 = MIRBuilder.buildTrunc(LLT::integer(Ty.getSizeInBits()), Shift).getReg(0);
+      MIRBuilder.buildBitcast(DstNReg, R0);
+    } else {
+      MIRBuilder.buildTrunc(DstNReg, Shift);
+    }
+
   }
 
   MI.eraseFromParent();
