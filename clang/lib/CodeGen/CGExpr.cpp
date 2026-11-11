@@ -1407,8 +1407,11 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  return buildAllocToken(
-      infer_alloc::inferPossibleType(E, getContext(), CurCast));
+  if (!AllocTokenPlacementTypes)
+    AllocTokenPlacementTypes = std::make_unique<infer_alloc::PlacementNewTypes>(
+        CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+  return buildAllocToken(infer_alloc::inferPossibleType(
+      E, getContext(), CurCast, AllocTokenPlacementTypes.get()));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {

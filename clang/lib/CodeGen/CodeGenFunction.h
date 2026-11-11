@@ -26,6 +26,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
@@ -374,6 +375,11 @@ public:
   /// If a cast expression is being visited, this holds the current cast's
   /// expression.
   const CastExpr *CurCast = nullptr;
+
+  /// Placement-new types of the current function body, collected lazily for
+  /// -fsanitize=alloc-token type inference (see
+  /// infer_alloc::PlacementNewTypes).
+  std::unique_ptr<infer_alloc::PlacementNewTypes> AllocTokenPlacementTypes;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;

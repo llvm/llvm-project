@@ -150,6 +150,112 @@ TestClass *test_new_class_array() {
   return arr;
 }
 
+struct PlacedNoPtr {
+  long len;
+  unsigned char tag;
+  char data[1];
+};
+
+struct PlacedWithPtr {
+  void *next;
+  long len;
+};
+
+// Allocation calls whose result is only named by a later placement new.
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z25test_placement_new_directv(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR:![0-9]+]]
+PlacedNoPtr *test_placement_new_direct() {
+  return new (malloc(64)) PlacedNoPtr();
+}
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z24test_placement_new_localv(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR:![0-9]+]]
+PlacedWithPtr *test_placement_new_local() {
+  void *mem = malloc(64);
+  if (!mem)
+    return nullptr;
+  return new (mem) PlacedWithPtr();
+}
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z30test_placement_new_sized_localv(
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+PlacedNoPtr *test_placement_new_sized_local() {
+  __sized_ptr_t res = __size_returning_new(64);
+  PlacedNoPtr *rep = new (res.p) PlacedNoPtr();
+  rep->len = res.n;
+  return rep;
+}
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z29test_placement_new_sized_castv(
+// CHECK: call { ptr, i64 } @__size_returning_new_hot_cold(i64 noundef 64, i8 noundef zeroext 1){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+PlacedNoPtr *test_placement_new_sized_cast() {
+  auto res = __size_returning_new_hot_cold(64, __hot_cold_t{1});
+  return new (static_cast<char *>(res.p)) PlacedNoPtr();
+}
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z24test_placement_new_arrayv(
+// CHECK: call noalias ptr @malloc(i64 noundef 640){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+PlacedNoPtr *test_placement_new_array() {
+  void *mem = malloc(640);
+  return new (mem) PlacedNoPtr[10];
+}
+
+// A sizeof in the size argument or a cast of the result still takes precedence.
+// CHECK-LABEL: define dso_local noundef ptr @_Z34test_placement_new_sizeof_prevailsv(
+// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+PlacedNoPtr *test_placement_new_sizeof_prevails() {
+  void *mem = malloc(sizeof(PlacedWithPtr));
+  return new (mem) PlacedNoPtr();
+}
+
+// Storage constructed into with different types: no type is inferred.
+// CHECK-LABEL: define dso_local void @_Z28test_placement_new_ambiguousi(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_ambiguous(int which) {
+  void *mem = malloc(64);
+  if (which)
+    sink = new (mem) PlacedNoPtr();
+  else
+    sink = new (mem) PlacedWithPtr();
+}
+
+// Custom placement operators do not take the storage as placement argument, so
+// the malloc stays untyped (the custom operator new call itself is typed).
+struct Arena {};
+void *operator new(size_t, Arena &);
+// CHECK-LABEL: define dso_local void @_Z24test_placement_new_arenaR5Arena(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: @malloc{{.*}}!alloc_token
+// CHECK: call noundef ptr @_ZnwmR5Arena(i64 noundef 16, {{.*}} !alloc_token [[META_PLACEDNOPTR]]
+void test_placement_new_arena(Arena &arena) {
+  sink = malloc(64);
+  sink = new (arena) PlacedNoPtr();
+}
+
+template <typename T>
+T *placement_construct(size_t size) {
+  __sized_ptr_t res = __size_returning_new(size);
+  return new (res.p) T();
+}
+
+// CHECK-LABEL: define dso_local void @_Z27test_placement_new_templatev(
+// CHECK: call noundef ptr @_Z19placement_constructI11PlacedNoPtrEPT_m(
+// CHECK: call noundef ptr @_Z19placement_constructI13PlacedWithPtrEPT_m(
+void test_placement_new_template() {
+  sink = placement_construct<PlacedNoPtr>(64);
+  sink = placement_construct<PlacedWithPtr>(64);
+}
+
+// CHECK-LABEL: define linkonce_odr noundef ptr @_Z19placement_constructI11PlacedNoPtrEPT_m(
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef {{.*}}){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+// CHECK-LABEL: define linkonce_odr noundef ptr @_Z19placement_constructI13PlacedWithPtrEPT_m(
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef {{.*}}){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+
 // CHECK: [[META_INT]] = !{!"int", i1 false}
 // CHECK: [[META_LONG]] = !{!"long", i1 false}
 // CHECK: [[META_TESTCLASS]] = !{!"TestClass", i1 true}
+// CHECK: [[META_PLACEDNOPTR]] = !{!"PlacedNoPtr", i1 false}
+// CHECK: [[META_PLACEDWITHPTR]] = !{!"PlacedWithPtr", i1 true}

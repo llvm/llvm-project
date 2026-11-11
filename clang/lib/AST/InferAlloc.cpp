@@ -15,6 +15,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -169,7 +171,8 @@ static QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
 
 QualType infer_alloc::inferPossibleType(const CallExpr *E,
                                         const ASTContext &Ctx,
-                                        const CastExpr *CastE) {
+                                        const CastExpr *CastE,
+                                        PlacementNewTypes *PlacementTypes) {
   QualType AllocType;
   // First check arguments.
   for (const Expr *Arg : E->arguments()) {
@@ -182,7 +185,125 @@ QualType infer_alloc::inferPossibleType(const CallExpr *E,
   // Then check later casts.
   if (AllocType.isNull())
     AllocType = inferPossibleTypeFromCastExpr(E, CastE);
+  // Finally check if the result is used as placement-new storage.
+  if (AllocType.isNull() && PlacementTypes)
+    AllocType = PlacementTypes->lookup(E);
   return AllocType;
+}
+
+namespace {
+/// Strips the wrappers a placement argument may have around the expression
+/// that produced the storage: parentheses, casts, member accesses (e.g. the
+/// pointer member of a size-returning allocation result), and
+/// address-of/dereference pairs.
+const Expr *stripToStorageSource(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParenCasts();
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      E = ME->getBase();
+      continue;
+    }
+    if (const auto *UO = dyn_cast<UnaryOperator>(E);
+        UO && (UO->getOpcode() == UO_AddrOf || UO->getOpcode() == UO_Deref)) {
+      E = UO->getSubExpr();
+      continue;
+    }
+    return E;
+  }
+}
+
+/// Finds the allocation call that initializes a variable, looking through the
+/// temporaries and elidable copies a class-typed initializer may carry.
+const CallExpr *initializingCall(const Expr *Init) {
+  while (Init) {
+    Init = Init->IgnoreParenImpCasts();
+    if (const auto *EWC = dyn_cast<ExprWithCleanups>(Init)) {
+      Init = EWC->getSubExpr();
+    } else if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Init)) {
+      Init = MTE->getSubExpr();
+    } else if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Init)) {
+      Init = BTE->getSubExpr();
+    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(Init);
+               CE && CE->getNumArgs() == 1 &&
+               (CE->isElidable() ||
+                CE->getConstructor()->isCopyOrMoveConstructor())) {
+      Init = CE->getArg(0);
+    } else if (const auto *FCE = dyn_cast<CXXFunctionalCastExpr>(Init)) {
+      Init = FCE->getSubExpr();
+    } else {
+      break;
+    }
+  }
+  return dyn_cast_or_null<CallExpr>(Init);
+}
+
+/// Records placement-new types per allocation call and per variable.
+class PlacementNewCollector
+    : public RecursiveASTVisitor<PlacementNewCollector> {
+public:
+  PlacementNewCollector(
+      llvm::DenseMap<const CallExpr *, QualType> &CallTypes,
+      llvm::DenseMap<const VarDecl *, QualType> &VarTypes,
+      llvm::DenseMap<const CallExpr *, const VarDecl *> &CallVars)
+      : CallTypes(CallTypes), VarTypes(VarTypes), CallVars(CallVars) {}
+
+  bool shouldVisitTemplateInstantiations() const { return true; }
+  bool shouldVisitImplicitCode() const { return true; }
+
+  bool VisitVarDecl(const VarDecl *VD) {
+    if (const CallExpr *CE = initializingCall(VD->getInit()))
+      CallVars.try_emplace(CE, VD);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(const CXXNewExpr *NE) {
+    // Only the standard non-allocating placement form, new (storage) T, takes
+    // the storage as its single placement argument.
+    if (NE->getNumPlacementArgs() != 1)
+      return true;
+    const Expr *Source = stripToStorageSource(NE->getPlacementArg(0));
+    QualType T = NE->getAllocatedType();
+    if (const auto *CE = dyn_cast<CallExpr>(Source))
+      record(CallTypes, CE, T);
+    else if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        record(VarTypes, VD, T);
+    return true;
+  }
+
+private:
+  template <typename Key>
+  static void record(llvm::DenseMap<Key, QualType> &Map, Key K, QualType T) {
+    auto [It, Inserted] = Map.try_emplace(K, T);
+    // Different types constructed into the same storage: ambiguous.
+    if (!Inserted && !It->second.isNull() &&
+        It->second.getCanonicalType() != T.getCanonicalType())
+      It->second = QualType();
+  }
+
+  llvm::DenseMap<const CallExpr *, QualType> &CallTypes;
+  llvm::DenseMap<const VarDecl *, QualType> &VarTypes;
+  llvm::DenseMap<const CallExpr *, const VarDecl *> &CallVars;
+};
+} // namespace
+
+void PlacementNewTypes::collect() {
+  Collected = true;
+  if (!Body)
+    return;
+  PlacementNewCollector Collector(CallTypes, VarTypes, CallVars);
+  Collector.TraverseStmt(const_cast<Stmt *>(Body));
+}
+
+QualType PlacementNewTypes::lookup(const CallExpr *E) {
+  if (!Collected)
+    collect();
+  if (auto It = CallTypes.find(E); It != CallTypes.end())
+    return It->second;
+  if (auto VarIt = CallVars.find(E); VarIt != CallVars.end())
+    if (auto It = VarTypes.find(VarIt->second); It != VarTypes.end())
+      return It->second;
+  return QualType();
 }
 
 std::optional<llvm::AllocTokenMetadata>
