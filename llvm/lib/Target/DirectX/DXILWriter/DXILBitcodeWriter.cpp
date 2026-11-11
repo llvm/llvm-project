@@ -127,17 +127,21 @@ class DXILBitcodeWriter {
   /// Tracks debug info metadata.
   const DXILDebugInfoMap &DebugInfo;
 
+  bool UsesLegacyDataLayout;
+
 public:
   /// Constructs a ModuleBitcodeWriter object for the given Module,
   /// writing to the provided \p Buffer.
   DXILBitcodeWriter(const Module &M, SmallVectorImpl<char> &Buffer,
                     StringTableBuilder &StrtabBuilder, BitstreamWriter &Stream,
-                    const DXILDebugInfoMap &DebugInfo)
+                    const DXILDebugInfoMap &DebugInfo,
+                    bool UsesLegacyDataLayout)
       : I8Ty(Type::getInt8Ty(M.getContext())),
         I8PtrTy(TypedPointerType::get(I8Ty, 0)), Stream(Stream),
         StrtabBuilder(StrtabBuilder), M(M), VE(M, I8PtrTy, DebugInfo),
         Buffer(Buffer), BitcodeStartBit(Stream.GetCurrentBitNo()),
-        PointerMap(PointerTypeAnalysis::run(M)), DebugInfo(DebugInfo) {
+        PointerMap(PointerTypeAnalysis::run(M)), DebugInfo(DebugInfo),
+        UsesLegacyDataLayout(UsesLegacyDataLayout) {
     GlobalValueId = VE.getValues().size();
     // Enumerate the typed pointers
     for (auto El : PointerMap)
@@ -379,10 +383,11 @@ dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
   Stream->Emit(0xD, 4);
 }
 
-dxil::BitcodeWriter::~BitcodeWriter() { }
+dxil::BitcodeWriter::~BitcodeWriter() {}
 
 /// Write the specified module to the specified output stream.
-void dxil::WriteDXILToFile(Module &M, raw_ostream &Out) {
+void dxil::WriteDXILToFile(Module &M, raw_ostream &Out,
+                           bool UsesLegacyDataLayout) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
@@ -394,7 +399,7 @@ void dxil::WriteDXILToFile(Module &M, raw_ostream &Out) {
 
   DXILDebugInfoMap DebugInfo = collectDXILDebugInfo(M);
   BitcodeWriter Writer(Buffer);
-  Writer.writeModule(M, DebugInfo);
+  Writer.writeModule(M, DebugInfo, UsesLegacyDataLayout);
 
   // Write the generated bitstream to "Out".
   if (!Buffer.empty())
@@ -415,7 +420,8 @@ void BitcodeWriter::writeBlob(unsigned Block, unsigned Record, StringRef Blob) {
 }
 
 void BitcodeWriter::writeModule(const Module &M,
-                                const DXILDebugInfoMap &DebugInfo) {
+                                const DXILDebugInfoMap &DebugInfo,
+                                bool UsesLegacyDataLayout) {
 
   // The Mods vector is used by irsymtab::build, which requires non-const
   // Modules in case it needs to materialize metadata. But the bitcode writer
@@ -424,7 +430,8 @@ void BitcodeWriter::writeModule(const Module &M,
   assert(M.isMaterialized());
   Mods.push_back(const_cast<Module *>(&M));
 
-  DXILBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream, DebugInfo);
+  DXILBitcodeWriter ModuleWriter(M, Buffer, StrtabBuilder, *Stream, DebugInfo,
+                                 UsesLegacyDataLayout);
   ModuleWriter.write();
 }
 
@@ -1165,8 +1172,11 @@ void DXILBitcodeWriter::writeModuleInfo() {
   // We need to hardcode a triple and datalayout that's compatible with the
   // historical DXIL triple and datalayout from DXC.
   StringRef Triple = "dxil-ms-dx";
-  StringRef DL = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-"
-                 "f16:16-f32:32-f64:64-n8:16:32:64";
+  StringRef DL = UsesLegacyDataLayout
+                     ? "e-m:e-p:32:32-i1:32-i8:32-i16:32-i32:32-i64:64-"
+                       "f16:32-f32:32-f64:64-n8:16:32:64"
+                     : "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-"
+                       "f16:16-f32:32-f64:64-n8:16:32:64";
   writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, Triple, 0 /*TODO*/);
   writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
 

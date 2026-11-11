@@ -8079,6 +8079,18 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
       Res.insert(Pos + p3232.size(), "-Fi8");
   }
 
+  // DXIL's legacy datalayout defines everything as 32-bit alignment even for
+  // types smaller than 32-bits. This gets rejected by the bitcode reader, but
+  // isn't semantically important because DXIL's legacy format doesn't have
+  // types smaller than 32-bits. We can patch the datalayout here in the
+  // upgrader to prevent this from erroring on load.
+  if (TT == "dxil-ms-dx") {
+    StringRef Ref = Res;
+    auto I = Ref.find("-i8:32-");
+    if (I != StringRef::npos)
+      Res = (Ref.take_front(I) + "-i8:8-" + Ref.drop_front(I + 7)).str();
+  }
+
   if (!T.isX86())
     return Res;
 
