@@ -164,22 +164,71 @@ define void @replicate_udiv_with_only_first_lane_used2(i32 %x, ptr %dst, i64 %d)
 ;
 ; DEFAULT-LABEL: define void @replicate_udiv_with_only_first_lane_used2(
 ; DEFAULT-SAME: i32 [[X:%.*]], ptr [[DST:%.*]], i64 [[D:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    [[C:%.*]] = icmp eq i32 [[X]], 10
 ; DEFAULT-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; DEFAULT:       [[LOOP_HEADER]]:
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; DEFAULT-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
+; DEFAULT-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UDIV_CONTINUE14:.*]] ]
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[ELSE:.*]], label %[[LOOP_LATCH:.*]]
 ; DEFAULT:       [[ELSE]]:
 ; DEFAULT-NEXT:    [[DIV_I:%.*]] = udiv i64 99, [[D]]
 ; DEFAULT-NEXT:    br label %[[LOOP_LATCH]]
 ; DEFAULT:       [[LOOP_LATCH]]:
-; DEFAULT-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[DIV_I]], %[[ELSE]] ], [ 0, %[[LOOP_HEADER]] ]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[DIV_I]], %[[ELSE]] ]
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2:.*]]
+; DEFAULT:       [[PRED_UDIV_IF1]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE2]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE2]]:
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF3:.*]], label %[[PRED_UDIV_CONTINUE4:.*]]
+; DEFAULT:       [[PRED_UDIV_IF3]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE4]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE4]]:
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF5:.*]], label %[[PRED_UDIV_CONTINUE6:.*]]
+; DEFAULT:       [[PRED_UDIV_IF5]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE6]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE6]]:
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF7:.*]], label %[[PRED_UDIV_CONTINUE8:.*]]
+; DEFAULT:       [[PRED_UDIV_IF7]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE8]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE8]]:
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF9:.*]], label %[[PRED_UDIV_CONTINUE10:.*]]
+; DEFAULT:       [[PRED_UDIV_IF9]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE10]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE10]]:
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF11:.*]], label %[[PRED_UDIV_CONTINUE12:.*]]
+; DEFAULT:       [[PRED_UDIV_IF11]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE12]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE12]]:
+; DEFAULT-NEXT:    br i1 [[TMP0]], label %[[PRED_UDIV_IF13:.*]], label %[[PRED_UDIV_CONTINUE14]]
+; DEFAULT:       [[PRED_UDIV_IF13]]:
+; DEFAULT-NEXT:    br label %[[PRED_UDIV_CONTINUE14]]
+; DEFAULT:       [[PRED_UDIV_CONTINUE14]]:
+; DEFAULT-NEXT:    [[RETVAL_0_I:%.*]] = select i1 [[C]], i64 0, i64 [[TMP2]]
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[DST]], i64 [[RETVAL_0_I]]
 ; DEFAULT-NEXT:    store i16 0, ptr [[GEP]], align 2
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; DEFAULT-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    br label %[[LOOP_HEADER1:.*]]
+; DEFAULT:       [[LOOP_HEADER1]]:
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
+; DEFAULT-NEXT:    br i1 [[C]], label %[[LOOP_LATCH1]], label %[[ELSE1:.*]]
+; DEFAULT:       [[ELSE1]]:
+; DEFAULT-NEXT:    [[DIV_I1:%.*]] = udiv i64 99, [[D]]
+; DEFAULT-NEXT:    br label %[[LOOP_LATCH1]]
+; DEFAULT:       [[LOOP_LATCH1]]:
+; DEFAULT-NEXT:    [[RETVAL_0_I1:%.*]] = phi i64 [ [[DIV_I1]], %[[ELSE1]] ], [ 0, %[[LOOP_HEADER1]] ]
+; DEFAULT-NEXT:    [[GEP1:%.*]] = getelementptr i16, ptr [[DST]], i64 [[RETVAL_0_I1]]
+; DEFAULT-NEXT:    store i16 0, ptr [[GEP1]], align 2
 ; DEFAULT-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], 101
-; DEFAULT-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER]], label %[[EXIT:.*]]
+; DEFAULT-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER1]], label %[[EXIT:.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; DEFAULT:       [[EXIT]]:
 ; DEFAULT-NEXT:    ret void
 ;
