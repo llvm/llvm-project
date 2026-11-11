@@ -31,6 +31,7 @@
 #include <limits>
 #include <numeric>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "test_execution_policies.h"
@@ -148,11 +149,11 @@ struct TestInt {
         test(Iter1(std::begin(a)), Iter1(std::begin(a) + i), 2, mult, negate, exp_mul_neg_2, exp_mul_neg_2 + i);
       }
     }
-    { // Constuct iota from std::plus<> and add_one
+    { // Construct iota from std::plus<> and add_one
       int ia[1073];
       int ib[1073];
       std::fill(std::begin(ia), std::end(ia), 0);
-      runway_sample(std::size(ia) + 1, [&](size_t i) {
+      runway_sample(std::size(ia) + 1, [&](std::size_t i) {
         Iter2 r = std::transform_exclusive_scan(
             policy,
             Iter1(std::begin(ia)),
@@ -162,7 +163,7 @@ struct TestInt {
             std::plus<>{},
             add_one{});
         assert(r == Iter2(std::begin(ib) + i));
-        for (size_t j = 0; j < i; ++j) {
+        for (std::size_t j = 0; j < i; ++j) {
           assert(ib[j] == static_cast<int>(j) + 1);
         }
         std::fill(std::begin(ib), std::begin(ib) + i, -1);
@@ -179,7 +180,7 @@ struct TestUnsignedCharToSize_t {
     unsigned char a[1073];
     std::size_t b[1073];
     std::fill(std::begin(a), std::end(a), static_cast<unsigned char>(254));
-    runway_sample(std::size(a) + 1, [&](size_t i) {
+    runway_sample(std::size(a) + 1, [&](std::size_t i) {
       std::transform_exclusive_scan(
           policy,
           Iter1(std::begin(a)),

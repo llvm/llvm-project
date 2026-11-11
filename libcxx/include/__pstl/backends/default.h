@@ -62,11 +62,11 @@ namespace __pstl {
 // This backend implements all the PSTL algorithms based on the following basis operations:
 //
 // find_end family
-// ------------------
+// ---------------
 // No other algorithms based on find_end
 //
 // is_heap_until family
-// --------------
+// --------------------
 // - is_heap
 //
 // find_if family
@@ -80,11 +80,11 @@ namespace __pstl {
 // - find_first_of
 //
 // min_element family
-// ---------------
+// ------------------
 // - max_element
 //
 // minmax_element family
-// -------------------
+// ---------------------
 // No other algorithms based on minmax_element
 //
 // mismatch family
@@ -118,15 +118,15 @@ namespace __pstl {
 // No other algorithms based on merge
 //
 // reverse family
-// ------------
+// --------------
 // No other algorithms based on reverse
 //
 // search family
-// ------------
+// -------------
 // No other algorithms based on search
 //
 // search_n family
-// ------------------
+// ---------------
 // No other algorithms based on search_n
 //
 // stable_sort family
@@ -134,7 +134,7 @@ namespace __pstl {
 // - sort
 //
 // swap_ranges family
-// ------------
+// ------------------
 // No other algorithms based on swap_ranges
 //
 // transform_reduce and transform_reduce_binary family
@@ -157,11 +157,11 @@ namespace __pstl {
 // - rotate_copy
 //
 // uninitialized_copy family
-// -------------------------------------
+// -------------------------
 // - uninitialized_copy_n
 //
 // uninitialized_move family
-// -------------------------------------
+// -------------------------
 // - uninitialized_move_n
 //
 // transform_inclusive_scan_init family
@@ -171,8 +171,9 @@ namespace __pstl {
 // - __transform_inclusive_scan
 //
 // transform_exclusive_scan family
-// -------------------------------------
+// -------------------------------
 // - __exclusive_scan
+//
 
 //////////////////////////////////////////////////////////////
 // find_if family

@@ -26,6 +26,7 @@
 #include <limits>
 #include <numeric>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "test_execution_policies.h"
@@ -104,10 +105,10 @@ struct TestInt {
       int a[1073];
       int b[1073];
       std::fill(std::begin(a), std::end(a), 1);
-      runway_sample(std::size(a) + 1, [&](size_t i) {
+      runway_sample(std::size(a) + 1, [&](std::size_t i) {
         Iter2 r = std::exclusive_scan(policy, Iter1(std::begin(a)), Iter1(std::begin(a) + i), Iter2(std::begin(b)), 0);
         assert(r == Iter2(std::begin(b) + i));
-        for (size_t j = 0; j < i; ++j) {
+        for (std::size_t j = 0; j < i; ++j) {
           assert(b[j] == static_cast<int>(j));
         }
         std::fill(std::begin(b), std::begin(b) + i, -1);
@@ -124,7 +125,7 @@ struct TestUnsignedCharToSize_t {
     unsigned char a[1073];
     std::size_t b[1073];
     std::fill(std::begin(a), std::end(a), static_cast<unsigned char>(255));
-    runway_sample(std::size(a) + 1, [&](size_t i) {
+    runway_sample(std::size(a) + 1, [&](std::size_t i) {
       std::exclusive_scan(policy, Iter1(std::begin(a)), Iter1(std::begin(a) + i), Iter2(std::begin(b)), std::size_t{0});
       for (std::size_t k = 0; k < i; ++k)
         assert(b[k] == 255 * k);
