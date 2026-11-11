@@ -479,6 +479,9 @@ TransferOpOfSubViewOpFolder::matchAndRewrite(VectorTransferOpInterface op,
 
   // The region of a `vector.mask` can only hold the masked op, so create the
   // new indices above it.
+  // TODO: Move this into a `MaskableOpInterfaceRewritePattern` (an interface
+  // version of `MaskableOpRewritePattern` that supports in-place updates) once
+  // it exists.
   auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
   OpBuilder::InsertionGuard guard(rewriter);
   if (maskableOp.isMasked())
@@ -541,6 +544,9 @@ LogicalResult TransferOpOfExpandShapeOpFolder::matchAndRewrite(
 
   // The region of a `vector.mask` can only hold the masked op, so create the
   // new indices above it.
+  // TODO: Move this into a `MaskableOpInterfaceRewritePattern` (an interface
+  // version of `MaskableOpRewritePattern` that supports in-place updates) once
+  // it exists.
   auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
   OpBuilder::InsertionGuard guard(rewriter);
   if (maskableOp.isMasked())
@@ -593,6 +599,9 @@ LogicalResult TransferOpOfCollapseShapeOpFolder::matchAndRewrite(
 
   // The region of a `vector.mask` can only hold the masked op, so create the
   // new indices above it.
+  // TODO: Move this into a `MaskableOpInterfaceRewritePattern` (an interface
+  // version of `MaskableOpRewritePattern` that supports in-place updates) once
+  // it exists.
   auto maskableOp = cast<vector::MaskableOpInterface>(op.getOperation());
   OpBuilder::InsertionGuard guard(rewriter);
   if (maskableOp.isMasked())

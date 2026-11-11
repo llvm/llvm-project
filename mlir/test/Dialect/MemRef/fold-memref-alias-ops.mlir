@@ -315,7 +315,10 @@ func.func @fold_masked_vector_transfer_read_with_subview(
 
 // -----
 
-func.func @fold_region_masked_transfer_read_with_subview(
+// Same as @fold_masked_vector_transfer_read_with_subview, but masked with
+// `vector.mask`. Checks that the new indices are created outside the mask
+// region.
+func.func @fold_transfer_read_with_subview_masked(
     %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
     %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
     %arg6 : index, %mask : vector<4xi1>) -> vector<4xf32> {
@@ -330,7 +333,7 @@ func.func @fold_region_masked_transfer_read_with_subview(
   return %1 : vector<4xf32>
 }
 //   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//       CHECK: func @fold_region_masked_transfer_read_with_subview
+//       CHECK: func @fold_transfer_read_with_subview_masked
 //  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
 //  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index
@@ -1092,7 +1095,10 @@ func.func @fold_vector_transfer_read_expand_shape(
 
 // -----
 
-func.func @fold_region_masked_transfer_read_expand_shape(
+// Same as @fold_vector_transfer_read_expand_shape, but masked with
+// `vector.mask`. Checks that the new index is created outside the mask region
+// and isn't marked `disjoint`.
+func.func @fold_vector_transfer_read_expand_shape_masked(
   %arg0 : memref<32xf32>, %arg1 : index, %mask : vector<8xi1>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %pad = ub.poison : f32
@@ -1101,7 +1107,7 @@ func.func @fold_region_masked_transfer_read_expand_shape(
   return %1 : vector<8xf32>
 }
 
-// CHECK-LABEL: func @fold_region_masked_transfer_read_expand_shape
+// CHECK-LABEL: func @fold_vector_transfer_read_expand_shape_masked
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //  CHECK-SAME:   %[[MASK:[a-zA-Z0-9_]+]]: vector<8xi1>
@@ -1307,7 +1313,10 @@ func.func @fold_collapse_shape_transfer_read(
 
 // -----
 
-func.func @fold_region_masked_transfer_read_collapse_shape(
+// Same as @fold_collapse_shape_transfer_read, but masked with `vector.mask`.
+// Checks that the new indices are created outside the mask region and that the
+// outer bound isn't assumed.
+func.func @fold_collapse_shape_transfer_read_masked(
     %arg0 : memref<4x4x8xf32>, %arg1 : index, %mask : vector<8xi1>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %pad = ub.poison : f32
@@ -1316,7 +1325,7 @@ func.func @fold_region_masked_transfer_read_collapse_shape(
   return %1 : vector<8xf32>
 }
 
-// CHECK-LABEL: func @fold_region_masked_transfer_read_collapse_shape
+// CHECK-LABEL: func @fold_collapse_shape_transfer_read_masked
 // CHECK-SAME:    %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x4x8xf32>
 // CHECK-SAME:    %[[ARG1:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:    %[[MASK:[a-zA-Z0-9_]+]]: vector<8xi1>
