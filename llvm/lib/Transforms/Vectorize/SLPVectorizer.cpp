@@ -21611,8 +21611,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         const TreeEntry *VTE = *It;
         if (none_of(TE->CombinedEntriesWithIndices,
                     [&](const auto &P) { return P.first == VTE->Idx; })) {
-          Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+          // The emitted split node goes after the vectors of its operands,
+          // which may follow its last instruction. Check the vector instead.
+          auto *LastBundleInst =
+              dyn_cast_if_present<Instruction>(VTE->VectorizedValue);
+          if (!LastBundleInst)
+            LastBundleInst = &getLastInstructionInBundle(VTE);
+          if (LastBundleInst == TEInsertPt || !CheckOrdering(LastBundleInst))
             continue;
         }
         // The node is reused - exit.
