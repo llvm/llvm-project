@@ -901,6 +901,11 @@ def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
 def OpGroupNonUniformQuadSwap: OpGroupNU4<"QuadSwap", 366>;
 
+// SPV_KHR_quad_control
+def OpGroupNonUniformQuadAllKHR
+    : Op<5110, (outs ID:$res), (ins TYPE:$ty, ID:$pred),
+         "$res = OpGroupNonUniformQuadAllKHR $ty $pred">;
+
 // SPV_KHR_subgroup_rotate
 def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
                   (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),

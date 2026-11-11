@@ -322,13 +322,8 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
     endif()
     string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
   endif()
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID)
-    # ARM on Linux might use the slow unwinder as default and the unwind table
-    # is required to get a complete stacktrace.
-    string(APPEND ${cflags_out} " -funwind-tables")
-    if(CMAKE_SYSROOT)
-      string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
-    endif()
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID AND CMAKE_SYSROOT)
+    string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
   endif()
 endmacro()
 
