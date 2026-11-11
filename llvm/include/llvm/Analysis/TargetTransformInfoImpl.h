@@ -602,9 +602,9 @@ public:
     return TargetTransformInfo::TCC_Basic;
   }
 
-  virtual DenormalMode
-  getTargetConstFoldDenormMode(FPOp Opcode, const fltSemantics &Semantics,
-                               DenormalMode DM) const {
+  virtual DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
+                                                    ArrayRef<APFloat> Args,
+                                                    DenormalMode DM) const {
     return DenormalMode::getIEEE();
   }
 

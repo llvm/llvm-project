@@ -219,10 +219,10 @@ public:
 class LLVM_ABI TargetLoweringBase {
 public:
   /// Return the target's denormal mode for constant folding \p Opcode with
-  /// \p Semantics in the denormal environment described by \p DM.
-  virtual DenormalMode
-  getTargetConstFoldDenormMode(FPOp Opcode, const fltSemantics &Semantics,
-                               DenormalMode DM) const {
+  /// unflushed operands \p Args in the denormal environment described by \p DM.
+  virtual DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
+                                                    ArrayRef<APFloat> Args,
+                                                    DenormalMode DM) const {
     return DenormalMode::getIEEE();
   }
 

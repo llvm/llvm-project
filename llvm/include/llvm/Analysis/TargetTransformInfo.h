@@ -1308,10 +1308,11 @@ public:
   /// Return the target's preferred denormal mode for constant folding.
   /// The input DenormalMode is the one specified by the denormal_fpenv
   /// function attribute, but some targets may override this for folding.
-  /// The preferred mode may depend on the specific operation being performed,
-  /// or the float semantics of the type the operation is being performed on.
-  LLVM_ABI DenormalMode getTargetConstFoldDenormMode(
-      FPOp Opcode, const fltSemantics &Semantics, DenormalMode DM) const;
+  /// The preferred mode may depend on the operation and the values or float
+  /// semantics of its unflushed operands in Args.
+  LLVM_ABI DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
+                                                     ArrayRef<APFloat> Args,
+                                                     DenormalMode DM) const;
 
   /// Return the expected cost of materializing for the given integer
   /// immediate of the specified type.

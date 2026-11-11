@@ -34,8 +34,7 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
-                                            const fltSemantics &Semantics,
+  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode, ArrayRef<APFloat> Args,
                                             DenormalMode DM) const override {
     // NVPTX prefers the constant-folding results to obey the specified
     // denormal_fpenv where possible, as the outputs are more likely to match

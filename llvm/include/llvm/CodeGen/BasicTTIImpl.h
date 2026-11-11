@@ -682,10 +682,9 @@ public:
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
 
-  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
-                                            const fltSemantics &Semantics,
+  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode, ArrayRef<APFloat> Args,
                                             DenormalMode DM) const override {
-    return getTLI()->getTargetConstFoldDenormMode(Opcode, Semantics, DM);
+    return getTLI()->getTargetConstFoldDenormMode(Opcode, Args, DM);
   }
 
   InstructionCost getFPOpCost(Type *Ty) const override {

@@ -49,7 +49,7 @@ enum class FPOp {
 /// adapter. A missing target conservatively uses dynamic denormal handling.
 class TargetFPInfo {
   using GetTargetConstFoldDenormModeFn = DenormalMode (*)(const void *, FPOp,
-                                                          const fltSemantics &,
+                                                          ArrayRef<APFloat>,
                                                           DenormalMode);
 
   const void *Target = nullptr;
@@ -63,17 +63,15 @@ public:
     if (!Target)
       return;
     GetTargetConstFoldDenormMode = [](const void *Target, FPOp Opcode,
-                                      const fltSemantics &Semantics,
-                                      DenormalMode DM) {
+                                      ArrayRef<APFloat> Args, DenormalMode DM) {
       return static_cast<const T *>(Target)->getTargetConstFoldDenormMode(
-          Opcode, Semantics, DM);
+          Opcode, Args, DM);
     };
   }
 
-  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode,
-                                            const fltSemantics &Semantics,
+  DenormalMode getTargetConstFoldDenormMode(FPOp Opcode, ArrayRef<APFloat> Args,
                                             DenormalMode DM) const {
-    return Target ? GetTargetConstFoldDenormMode(Target, Opcode, Semantics, DM)
+    return Target ? GetTargetConstFoldDenormMode(Target, Opcode, Args, DM)
                   : DenormalMode::getDynamic();
   }
 };
