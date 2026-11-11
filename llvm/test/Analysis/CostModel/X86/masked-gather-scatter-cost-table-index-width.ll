@@ -15,7 +15,7 @@
 define <12 x i32> @gather_v12i32_dword_index(ptr %base, <12 x i32> %idx, <12 x i1> %mask) {
 ; FEATURE-LABEL: 'gather_v12i32_dword_index'
 ; FEATURE-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <12 x i32> %idx
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:50 SizeLat:14 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:1 Lat:50 SizeLat:14 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <12 x i32> %v
 ;
 ; GENERIC-LABEL: 'gather_v12i32_dword_index'
@@ -31,7 +31,7 @@ define <12 x i32> @gather_v12i32_dword_index(ptr %base, <12 x i32> %idx, <12 x i
 define void @scatter_v12i32_dword_index(<12 x i32> %val, ptr %base, <12 x i32> %idx, <12 x i1> %mask) {
 ; FEATURE-LABEL: 'scatter_v12i32_dword_index'
 ; FEATURE-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <12 x i32> %idx
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:14 SizeLat:14 for: call void @llvm.masked.scatter.v12i32.v12p0(<12 x i32> %val, <12 x ptr> align 4 %ptrs, <12 x i1> %mask)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:47 CodeSize:1 Lat:14 SizeLat:14 for: call void @llvm.masked.scatter.v12i32.v12p0(<12 x i32> %val, <12 x ptr> align 4 %ptrs, <12 x i1> %mask)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GENERIC-LABEL: 'scatter_v12i32_dword_index'
@@ -49,7 +49,7 @@ define void @scatter_v12i32_dword_index(<12 x i32> %val, ptr %base, <12 x i32> %
 define <12 x i32> @gather_v12i32_qword_index(ptr %base, <12 x i64> %idx, <12 x i1> %mask) {
 ; FEATURE-LABEL: 'gather_v12i32_qword_index'
 ; FEATURE-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <12 x i64> %idx
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <12 x i32> %v
 ;
 ; GENERIC-LABEL: 'gather_v12i32_qword_index'
@@ -67,7 +67,7 @@ define <12 x i32> @gather_v12i32_qword_index(ptr %base, <12 x i64> %idx, <12 x i
 define <16 x i32> @gather_v16i32_dword_index(ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
 ; FEATURE-LABEL: 'gather_v16i32_dword_index'
 ; FEATURE-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <16 x i32> %idx
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:66 SizeLat:18 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:1 Lat:66 SizeLat:18 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %v
 ;
 ; GENERIC-LABEL: 'gather_v16i32_dword_index'
@@ -86,7 +86,7 @@ define <16 x i32> @gather_v16i32_dword_index(ptr %base, <16 x i32> %idx, <16 x i
 ; VPSCATTERQQZ and VPSCATTERDQZ.
 define void @scatter_v8i64_qword_index(<8 x i64> %val, <8 x ptr> %ptrs, <8 x i1> %mask) {
 ; FEATURE-LABEL: 'scatter_v8i64_qword_index'
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:35 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GENERIC-LABEL: 'scatter_v8i64_qword_index'
@@ -100,7 +100,7 @@ define void @scatter_v8i64_qword_index(<8 x i64> %val, <8 x ptr> %ptrs, <8 x i1>
 define void @scatter_v8i64_dword_index(<8 x i64> %val, ptr %base, <8 x i32> %idx, <8 x i1> %mask) {
 ; FEATURE-LABEL: 'scatter_v8i64_dword_index'
 ; FEATURE-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i64, ptr %base, <8 x i32> %idx
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GENERIC-LABEL: 'scatter_v8i64_dword_index'
@@ -122,7 +122,7 @@ define void @scatter_v8i64_dword_index(<8 x i64> %val, ptr %base, <8 x i32> %idx
 define <12 x i32> @gather_v12i32_struct_stride(ptr %base, <12 x i32> %idx, <12 x i1> %mask) {
 ; FEATURE-LABEL: 'gather_v12i32_struct_stride'
 ; FEATURE-NEXT:  Cost Model: Found costs of 1 for: %ptrs = getelementptr inbounds { i32, i32, i32 }, ptr %base, <12 x i32> %idx, i32 0
-; FEATURE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; FEATURE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:2 Lat:52 SizeLat:16 for: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
 ; FEATURE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <12 x i32> %v
 ;
 ; GENERIC-LABEL: 'gather_v12i32_struct_stride'

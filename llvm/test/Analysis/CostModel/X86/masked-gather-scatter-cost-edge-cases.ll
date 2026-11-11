@@ -6,12 +6,12 @@
 ; RUN:   -passes="print<cost-model>" -disable-output -cost-kind=code-size \
 ; RUN:   -mcpu=znver4 2>&1 | FileCheck %s --check-prefix=SIZE
 
-; Irregular widths are charged per live lane here, so each comes out below the
-; power-of-two gather shape CodeGen pads it to.
+; Irregular widths are padded or split into the power-of-two gather shapes
+; emitted by CodeGen instead of falling back to the flat generic cost.
 
 define <3 x i32> @gather_v3i32(<3 x ptr> %ptrs, <3 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v3i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v = call <3 x i32> @llvm.masked.gather.v3i32.v3p0(<3 x ptr> align 4 %ptrs, <3 x i1> %mask, <3 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v = call <3 x i32> @llvm.masked.gather.v3i32.v3p0(<3 x ptr> align 4 %ptrs, <3 x i1> %mask, <3 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <3 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v3i32'
@@ -24,7 +24,7 @@ define <3 x i32> @gather_v3i32(<3 x ptr> %ptrs, <3 x i1> %mask) {
 
 define <5 x i32> @gather_v5i32(<5 x ptr> %ptrs, <5 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v5i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %v = call <5 x i32> @llvm.masked.gather.v5i32.v5p0(<5 x ptr> align 4 %ptrs, <5 x i1> %mask, <5 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <5 x i32> @llvm.masked.gather.v5i32.v5p0(<5 x ptr> align 4 %ptrs, <5 x i1> %mask, <5 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <5 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v5i32'
@@ -37,7 +37,7 @@ define <5 x i32> @gather_v5i32(<5 x ptr> %ptrs, <5 x i1> %mask) {
 
 define <6 x i32> @gather_v6i32(<6 x ptr> %ptrs, <6 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v6i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <6 x i32> @llvm.masked.gather.v6i32.v6p0(<6 x ptr> align 4 %ptrs, <6 x i1> %mask, <6 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <6 x i32> @llvm.masked.gather.v6i32.v6p0(<6 x ptr> align 4 %ptrs, <6 x i1> %mask, <6 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <6 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v6i32'
@@ -50,7 +50,7 @@ define <6 x i32> @gather_v6i32(<6 x ptr> %ptrs, <6 x i1> %mask) {
 
 define <7 x i32> @gather_v7i32(<7 x ptr> %ptrs, <7 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v7i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v = call <7 x i32> @llvm.masked.gather.v7i32.v7p0(<7 x ptr> align 4 %ptrs, <7 x i1> %mask, <7 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <7 x i32> @llvm.masked.gather.v7i32.v7p0(<7 x ptr> align 4 %ptrs, <7 x i1> %mask, <7 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <7 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v7i32'
@@ -63,7 +63,7 @@ define <7 x i32> @gather_v7i32(<7 x ptr> %ptrs, <7 x i1> %mask) {
 
 define <12 x i32> @gather_v12i32(<12 x ptr> %ptrs, <12 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v12i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> align 4 %ptrs, <12 x i1> %mask, <12 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <12 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v12i32'
@@ -76,7 +76,7 @@ define <12 x i32> @gather_v12i32(<12 x ptr> %ptrs, <12 x i1> %mask) {
 
 define <24 x i32> @gather_v24i32(<24 x ptr> %ptrs, <24 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v24i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 67 for instruction: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <24 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v24i32'
@@ -89,7 +89,7 @@ define <24 x i32> @gather_v24i32(<24 x ptr> %ptrs, <24 x i1> %mask) {
 
 define void @scatter_v24i32(<24 x i32> %src, <24 x ptr> %ptrs, <24 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'scatter_v24i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v24i32'
@@ -108,7 +108,7 @@ define void @scatter_v24i32(<24 x i32> %src, <24 x ptr> %ptrs, <24 x i1> %mask) 
 
 define void @scatter_v24i32_allones(<24 x i32> %src, <24 x ptr> %ptrs) {
 ; THROUGHPUT-LABEL: 'scatter_v24i32_allones'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v24i32_allones'
@@ -121,7 +121,7 @@ define void @scatter_v24i32_allones(<24 x i32> %src, <24 x ptr> %ptrs) {
 
 define <24 x i32> @gather_v24i32_allones(<24 x ptr> %ptrs) {
 ; THROUGHPUT-LABEL: 'gather_v24i32_allones'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true), <24 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 63 for instruction: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true), <24 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <24 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v24i32_allones'
@@ -139,7 +139,7 @@ define <24 x i32> @gather_v24i32_allones(<24 x ptr> %ptrs) {
 
 define void @scatter_v8i64_as270(<8 x i64> %src, <8 x ptr addrspace(270)> %ptrs, <8 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'scatter_v8i64_as270'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i64.v8p270(<8 x i64> %src, <8 x ptr addrspace(270)> align 4 %ptrs, <8 x i1> %mask)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v8i64.v8p270(<8 x i64> %src, <8 x ptr addrspace(270)> align 4 %ptrs, <8 x i1> %mask)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v8i64_as270'
@@ -154,7 +154,7 @@ define void @scatter_v8i64_dword_index(ptr %base, <8 x i64> %src, <8 x i32> %ind
 ; THROUGHPUT-LABEL: 'scatter_v8i64_dword_index'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sext = sext <8 x i32> %index to <8 x i64>
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i64, ptr %base, <8 x i64> %sext
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %src, <8 x ptr> align 4 %ptrs, <8 x i1> %mask)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %src, <8 x ptr> align 4 %ptrs, <8 x i1> %mask)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v8i64_dword_index'
@@ -175,7 +175,7 @@ define void @scatter_v8i64_dword_index(ptr %base, <8 x i64> %src, <8 x i32> %ind
 define <8 x i32> @gather_v8i32_i32_index(ptr %base, <8 x i32> %index, <8 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v8i32_i32_index'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <8 x i32> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v8i32_i32_index'
@@ -191,7 +191,7 @@ define <8 x i32> @gather_v8i32_i32_index(ptr %base, <8 x i32> %index, <8 x i1> %
 define <8 x i32> @gather_v8i32_i64_index(ptr %base, <8 x i64> %index, <8 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v8i32_i64_index'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <8 x i64> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> %mask, <8 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v8i32_i64_index'
@@ -207,7 +207,7 @@ define <8 x i32> @gather_v8i32_i64_index(ptr %base, <8 x i64> %index, <8 x i1> %
 define void @scatter_v8i64_i32_index(<8 x i64> %src, ptr %base, <8 x i32> %index, <8 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'scatter_v8i64_i32_index'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i64, ptr %base, <8 x i32> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %src, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %src, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v8i64_i32_index'
@@ -223,7 +223,7 @@ define void @scatter_v8i64_i32_index(<8 x i64> %src, ptr %base, <8 x i32> %index
 define void @scatter_v8i64_i64_index(<8 x i64> %src, ptr %base, <8 x i64> %index, <8 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'scatter_v8i64_i64_index'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i64, ptr %base, <8 x i64> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %src, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %src, <8 x ptr> align 8 %ptrs, <8 x i1> %mask)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v8i64_i64_index'
@@ -243,13 +243,13 @@ define void @scatter_v8i64_i64_index(<8 x i64> %src, ptr %base, <8 x i64> %index
 ; -mprefer-vector-width=256: prefer-vector-width=256 together with
 ; min-legal-vector-width=0. That combination stops CodeGen using zmm at all, so
 ; the operation becomes several ymm gathers instead of one zmm gather: two for
-; the dword index and four for the qword one. The control above costs 18 for
-; its single gather. These cost 24 and 28.
+; the dword index and four for the qword one. The control above is the same
+; shape without the attributes.
 
 define <16 x i32> @gather_v16i32_i32_index(ptr %base, <16 x i32> %index, <16 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'gather_v16i32_i32_index'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v16i32_i32_index'
@@ -265,7 +265,7 @@ define <16 x i32> @gather_v16i32_i32_index(ptr %base, <16 x i32> %index, <16 x i
 define <16 x i32> @gather_v16i32_i32_index_prefer256(ptr %base, <16 x i32> %index, <16 x i1> %mask) #0 {
 ; THROUGHPUT-LABEL: 'gather_v16i32_i32_index_prefer256'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i32> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v16i32_i32_index_prefer256'
@@ -281,7 +281,7 @@ define <16 x i32> @gather_v16i32_i32_index_prefer256(ptr %base, <16 x i32> %inde
 define <16 x i32> @gather_v16i32_i64_index_prefer256(ptr %base, <16 x i64> %index, <16 x i1> %mask) #0 {
 ; THROUGHPUT-LABEL: 'gather_v16i32_i64_index_prefer256'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr i32, ptr %base, <16 x i64> %index
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %v
 ;
 ; SIZE-LABEL: 'gather_v16i32_i64_index_prefer256'

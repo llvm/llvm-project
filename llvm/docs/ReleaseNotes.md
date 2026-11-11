@@ -429,6 +429,13 @@ Makes programs 10x faster by doing Special New Thing.
   pointers live in and a mask known at compile time are both honoured. These
   costs mostly go down, so some loops vectorize at a wider factor and more
   gathers survive at `-Os`.
+* The cost model now uses per-shape masked gather/scatter costs for `znver4`,
+  `znver5` and `znver6`, enabled via the `prefer-gs-cost-table` tuning feature,
+  replacing the flat AVX-512 overhead for those targets at reciprocal
+  throughput, which is the only cost kind the feature moves. Most totals were
+  swept on znver5. The two v16 scatter rows were placed against the v8 row
+  rather than swept, and the rows are applied to `znver4` and `znver6`
+  unvalidated, which `getZenGSCalibratedTotal` records.
 
 * Non-temporal stores (`!nontemporal` metadata) now have the same
   memory-ordering semantics as normal stores, as is required by the LLVM IR

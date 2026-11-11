@@ -281,9 +281,37 @@ private:
                   unsigned AddressSpace, const Value *Mask = nullptr,
                   std::optional<bool> UniformBase = std::nullopt,
                   const Instruction *CtxI = nullptr) const;
+  // Width of the index operand CodeGen will really use, in bits. It sets how
+  // many lanes fit a part and which body is charged per part. It does not pick
+  // a Zen row, which follows the element type and the live lane count.
+  unsigned getGSIndexSizeInBits(const Value *Ptr, unsigned PtrSizeInBits,
+                                unsigned VF, std::optional<bool> UniformBase,
+                                const Instruction *CtxI) const;
+  InstructionCost
+  getZenGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                     Type *DataTy, const Value *Ptr, bool VariableMask,
+                     Align Alignment, unsigned AddressSpace,
+                     const Value *Mask = nullptr,
+                     std::optional<bool> UniformBase = std::nullopt,
+                     const Instruction *CtxI = nullptr) const;
 
   int getGatherOverhead() const;
   int getScatterOverhead() const;
+  // Per-shape calibrated profitability threshold for AMD znver4+
+  // gather/scatter: the total at which the LoopVectorizer makes the intended
+  // choice for that shape, not where the hardware cost crosses the scalar one.
+  // The premium is this minus the schedule-model body from
+  // getModeledGSInstrCost.
+  std::optional<unsigned> getZenGSCalibratedTotal(bool IsLoad,
+                                                  Type *SrcVTy) const;
+  // Hardware body cost of a single (non-split) masked gather/scatter, read
+  // live from this subtarget's schedule model, or nullopt to fall back.
+  // WidenWithoutVLX prices the wider instruction CodeGen emits for a narrow
+  // shape when AVX512VL is absent; clear it to ask for the shape as written.
+  std::optional<unsigned>
+  getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
+                        TTI::TargetCostKind CostKind,
+                        bool WidenWithoutVLX = true) const;
 
   /// @}
 };

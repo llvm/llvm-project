@@ -39,13 +39,16 @@ exit:
   ret double %ret
 }
 
-; --- Case 2: i64 indirect-load gather, chosen on both --------------------
-; The positive CHECK on vector.body distinguishes "vectorized without a gather"
-; from "did not vectorize at all". Without it, a run that stops forming the
-; gather because it stopped vectorizing would pass a CHECK-NOT vacuously.
+; --- Case 2: i64 indirect-load gather is NOT chosen on znver5 ------------
+; The i64 rows are calibrated high on purpose, to suppress vpgatherqq for
+; harmful patterns (cf. llvm#198850).
+; The positive CHECK on vector.body distinguishes "vectorized without a
+; gather" from "did not vectorize at all" -- without it, a future regression
+; that fails to vectorize the loop entirely would pass CHECK-NOT vacuously.
+; SKX takes the gather here, so the two runs isolate the cost difference itself.
 ; CHECK-LABEL: define i64 @i64_indirect_gather_avoided
 ; CHECK:       vector.body
-; ZNVER5:      call <{{[0-9]+}} x i64> @llvm.masked.gather.v{{[0-9]+}}i64
+; ZNVER5-NOT:  call <{{[0-9]+}} x i64> @llvm.masked.gather.v{{[0-9]+}}i64
 ; SKX:         call <{{[0-9]+}} x i64> @llvm.masked.gather.v{{[0-9]+}}i64
 define i64 @i64_indirect_gather_avoided(ptr noundef readonly %data, ptr noundef readonly %idx, i32 noundef %n) {
 entry:
@@ -120,12 +123,13 @@ exit:
   ret void
 }
 
-; --- Case 5: i64 indirect-store scatter, chosen on both ------------------
-; The same vector.body anchor as Case 2, so a run that stops scattering can be
-; read as a cost decision rather than a refusal to vectorize at all.
+; --- Case 5: i64 indirect-store scatter is NOT chosen on znver5 ----------
+; Same vector.body anchor as Case 2, and the same SKX contrast: SKX scatters
+; here, so the znver5 CHECK-NOT records a cost decision rather than an
+; unconditional refusal to scatter.
 ; CHECK-LABEL: define void @i64_indirect_scatter_avoided
 ; CHECK:       vector.body
-; ZNVER5:      call void @llvm.masked.scatter.v{{[0-9]+}}i64
+; ZNVER5-NOT:  call void @llvm.masked.scatter.v{{[0-9]+}}i64
 ; SKX:         call void @llvm.masked.scatter.v{{[0-9]+}}i64
 define void @i64_indirect_scatter_avoided(ptr noalias noundef writeonly %data, ptr noalias noundef readonly %idx, ptr noalias noundef readonly %src, i32 noundef %n) {
 entry:
@@ -148,13 +152,14 @@ exit:
   ret void
 }
 
-; --- Case 6: i32 indirect store, the only 32-bit shape here --------------
-; Both targets scatter. The width difference between them follows from
-; prefer-256-bit, which skylake-avx512 sets and znver5 does not. The case earns
-; its place because nothing else in this file uses a 32-bit element.
+; --- Case 6: i32 indirect store reaches the 32-bit scatter rows ----------
+; The only 32-bit element in this file. The loop vectorizes at the same width
+; either way and the sixteen stores are scalarized rather than scattered, so
+; the vector.body anchor and the SKX contrast together make the ZNVER5-NOT a
+; cost decision.
 ; CHECK-LABEL: define void @i32_indirect_scatter_avoided
 ; CHECK:       vector.body
-; ZNVER5:      call void @llvm.masked.scatter.v{{[0-9]+}}i32
+; ZNVER5-NOT:  call void @llvm.masked.scatter.v{{[0-9]+}}i32
 ; SKX:         call void @llvm.masked.scatter.v{{[0-9]+}}i32
 define void @i32_indirect_scatter_avoided(ptr noalias noundef writeonly %data, ptr noalias noundef readonly %idx, i32 noundef %n) {
 entry:

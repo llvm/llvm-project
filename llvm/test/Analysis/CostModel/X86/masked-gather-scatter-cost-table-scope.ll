@@ -79,7 +79,7 @@ define <16 x i32> @gather_v16i32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 ; ZEN-TPUT-OFF-LABEL: 'gather_v16i32'
 ; ZEN-TPUT-OFF: Cost Model: Found an estimated cost of 20 for instruction: %v = call
 ; ZEN-TPUT-ON-LABEL: 'gather_v16i32'
-; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 20 for instruction: %v = call
+; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 36 for instruction: %v = call
 ; ZEN-LAT-LABEL: 'gather_v16i32'
 ; ZEN-LAT: Cost Model: Found an estimated cost of 68 for instruction: %v = call
 ; ZEN-SIZELAT-LABEL: 'gather_v16i32'
@@ -102,7 +102,7 @@ define <12 x i32> @gather_v12i32(<12 x ptr> %ptrs, <12 x i1> %mask) {
 ; ZEN-TPUT-OFF-LABEL: 'gather_v12i32'
 ; ZEN-TPUT-OFF: Cost Model: Found an estimated cost of 16 for instruction: %v = call
 ; ZEN-TPUT-ON-LABEL: 'gather_v12i32'
-; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 16 for instruction: %v = call
+; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 36 for instruction: %v = call
 ; ZEN-LAT-LABEL: 'gather_v12i32'
 ; ZEN-LAT: Cost Model: Found an estimated cost of 52 for instruction: %v = call
 ; ZEN-SIZELAT-LABEL: 'gather_v12i32'
@@ -121,7 +121,7 @@ define <8 x i32> @gather_v8i32(<8 x ptr> %ptrs, <8 x i1> %mask) {
 ; ZEN-TPUT-OFF-LABEL: 'gather_v8i32'
 ; ZEN-TPUT-OFF: Cost Model: Found an estimated cost of 10 for instruction:
 ; ZEN-TPUT-ON-LABEL: 'gather_v8i32'
-; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 10 for instruction:
+; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 25 for instruction:
 ; ZEN-LAT-LABEL: 'gather_v8i32'
 ; ZEN-LAT: Cost Model: Found an estimated cost of 34 for instruction: %v = call
 ; ZEN-SIZELAT-LABEL: 'gather_v8i32'
@@ -140,7 +140,7 @@ define void @scatter_v8i64(<8 x i64> %val, <8 x ptr> %ptrs, <8 x i1> %mask) {
 ; ZEN-TPUT-OFF-LABEL: 'scatter_v8i64'
 ; ZEN-TPUT-OFF: Cost Model: Found an estimated cost of 10 for instruction:
 ; ZEN-TPUT-ON-LABEL: 'scatter_v8i64'
-; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 10 for instruction:
+; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 35 for instruction:
 ; ZEN-LAT-LABEL: 'scatter_v8i64'
 ; ZEN-LAT: Cost Model: Found an estimated cost of 10 for instruction: call void
 ; ZEN-SIZELAT-LABEL: 'scatter_v8i64'
@@ -167,7 +167,7 @@ define <12 x i32> @gather_v12i32_dword_gep(ptr %base, <12 x i32> %idx, <12 x i1>
 ; SKX-OFF-LABEL: 'gather_v12i32_dword_gep'
 ; SKX-OFF: Cost Model: Found costs of RThru:14 CodeSize:1 Lat:50 SizeLat:14 for: %v = call
 ; SKX-ON-LABEL: 'gather_v12i32_dword_gep'
-; SKX-ON: Cost Model: Found costs of RThru:14 CodeSize:1 Lat:50 SizeLat:14 for: %v = call
+; SKX-ON: Cost Model: Found costs of RThru:35 CodeSize:1 Lat:50 SizeLat:14 for: %v = call
   %ptrs = getelementptr inbounds i32, ptr %base, <12 x i32> %idx
   %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> %ptrs, i32 4, <12 x i1> %mask, <12 x i32> poison)
   ret <12 x i32> %v
@@ -180,7 +180,7 @@ define <24 x i32> @gather_v24i32_varmask(<24 x ptr> %ptrs, <24 x i1> %mask) {
 ; ZEN-TPUT-OFF-LABEL: 'gather_v24i32_varmask'
 ; ZEN-TPUT-OFF: Cost Model: Found an estimated cost of 34 for instruction: %v = call
 ; ZEN-TPUT-ON-LABEL: 'gather_v24i32_varmask'
-; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 34 for instruction: %v = call
+; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 67 for instruction: %v = call
 ; ZEN-LAT-LABEL: 'gather_v24i32_varmask'
 ; ZEN-LAT: Cost Model: Found an estimated cost of 106 for instruction: %v = call
 ; ZEN-SIZELAT-LABEL: 'gather_v24i32_varmask'
@@ -198,7 +198,7 @@ define <8 x i32> @gather_v8i32_four_active_lanes(<8 x ptr> %ptrs) {
 ; ZEN-TPUT-OFF-LABEL: 'gather_v8i32_four_active_lanes'
 ; ZEN-TPUT-OFF: Cost Model: Found an estimated cost of 6 for instruction: %v = call
 ; ZEN-TPUT-ON-LABEL: 'gather_v8i32_four_active_lanes'
-; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 6 for instruction: %v = call
+; ZEN-TPUT-ON: Cost Model: Found an estimated cost of 16 for instruction: %v = call
 ; ZEN-LAT-LABEL: 'gather_v8i32_four_active_lanes'
 ; ZEN-LAT: Cost Model: Found an estimated cost of 18 for instruction: %v = call
 ; ZEN-SIZELAT-LABEL: 'gather_v8i32_four_active_lanes'

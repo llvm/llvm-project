@@ -16,7 +16,7 @@ define <8 x i32> @ref_gather_v8i32(ptr %base, <8 x i64> %idx) {
 ;
 ; ZEN-LABEL: 'ref_gather_v8i32'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:34 SizeLat:10 for: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true), <8 x i32> poison)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:34 SizeLat:10 for: %v = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true), <8 x i32> poison)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> %idx
@@ -30,7 +30,7 @@ define void @ref_scatter_v8i32(<8 x i32> %val, ptr %base, <8 x i64> %idx) {
 ;
 ; ZEN-LABEL: 'ref_scatter_v8i32'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true))
+; ZEN-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true))
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> %idx
@@ -45,7 +45,7 @@ define <24 x i32> @gather_v24i32_first_part(ptr %base, <24 x i64> %idx) {
 ;
 ; ZEN-LABEL: 'gather_v24i32_first_part'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:34 SizeLat:10 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <24 x i32> poison)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:34 SizeLat:10 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <24 x i32> poison)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -59,7 +59,7 @@ define void @scatter_v24i32_first_part(<24 x i32> %val, ptr %base, <24 x i64> %i
 ;
 ; ZEN-LABEL: 'scatter_v24i32_first_part'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -74,7 +74,7 @@ define <24 x i32> @gather_v24i32_middle_part(ptr %base, <24 x i64> %idx) {
 ;
 ; ZEN-LABEL: 'gather_v24i32_middle_part'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:34 SizeLat:10 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <24 x i32> poison)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:34 SizeLat:10 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <24 x i32> poison)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -82,13 +82,13 @@ define <24 x i32> @gather_v24i32_middle_part(ptr %base, <24 x i64> %idx) {
   ret <24 x i32> %v
 }
 
-; Eight live lanes spread across all three parts. The per-lane term follows the
-; lanes and the flat overhead follows the parts, so this sits above the eight
-; contiguous lanes priced as one instruction and below the all-true cost.
+; Eight live lanes spread across all three parts: the premium follows the lanes
+; and the body follows the parts, so this sits above the eight contiguous lanes
+; priced as one instruction and below the all-true cost of the full shape.
 define <24 x i32> @gather_v24i32_dispersed_lanes(ptr %base, <24 x i64> %idx) {
 ; ZEN-LABEL: 'gather_v24i32_dispersed_lanes'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:3 Lat:38 SizeLat:14 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>, <24 x i32> poison)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:3 Lat:38 SizeLat:14 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>, <24 x i32> poison)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -99,7 +99,7 @@ define <24 x i32> @gather_v24i32_dispersed_lanes(ptr %base, <24 x i64> %idx) {
 define void @scatter_v24i32_dispersed_lanes(<24 x i32> %val, ptr %base, <24 x i64> %idx) {
 ; ZEN-LABEL: 'scatter_v24i32_dispersed_lanes'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:3 Lat:14 SizeLat:14 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:3 Lat:14 SizeLat:14 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false>)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -129,7 +129,7 @@ define <24 x i32> @gather_v24i32_all_lanes(ptr %base, <24 x i64> %idx) {
 ;
 ; ZEN-LABEL: 'gather_v24i32_all_lanes'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:3 Lat:102 SizeLat:30 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true), <24 x i32> poison)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:63 CodeSize:3 Lat:102 SizeLat:30 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true), <24 x i32> poison)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -144,7 +144,7 @@ define <24 x i32> @gather_v24i32_variable_mask(ptr %base, <24 x i64> %idx, <24 x
 ;
 ; ZEN-LABEL: 'gather_v24i32_variable_mask'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:3 Lat:106 SizeLat:34 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:67 CodeSize:3 Lat:106 SizeLat:34 for: %v = call <24 x i32> @llvm.masked.gather.v24i32.v24p0(<24 x ptr> align 4 %ptrs, <24 x i1> %mask, <24 x i32> poison)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <24 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -159,7 +159,7 @@ define void @scatter_v24i32_all_lanes(<24 x i32> %val, ptr %base, <24 x i64> %id
 ;
 ; ZEN-LABEL: 'scatter_v24i32_all_lanes'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:3 Lat:30 SizeLat:30 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
+; ZEN-NEXT:  Cost Model: Found costs of RThru:79 CodeSize:3 Lat:30 SizeLat:30 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -175,7 +175,7 @@ define void @scatter_v24i32_variable_mask(<24 x i32> %val, ptr %base, <24 x i64>
 ;
 ; ZEN-LABEL: 'scatter_v24i32_variable_mask'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:4 Lat:36 SizeLat:36 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:4 Lat:36 SizeLat:36 for: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
@@ -184,14 +184,16 @@ define void @scatter_v24i32_variable_mask(<24 x i32> %val, ptr %base, <24 x i64>
 }
 
 ; Turning lanes off must never raise the cost. These two emit the same single
-; VPSCATTERDDZ256, so the masked one must not be charged above the full one.
+; VPSCATTERDDZ256, and the four-lane scatter row carries a larger premium than
+; the eight-lane one, so charging the narrowest row that holds the live lanes
+; would price the masked one above the full one.
 define void @scatter_v8i32_half_live(<8 x i32> %val, ptr %base, <8 x i32> %idx) {
 ;
 ;
 ;
 ; ZEN-LABEL: 'scatter_v8i32_half_live'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:6 SizeLat:6 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>)
+; ZEN-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:6 SizeLat:6 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>)
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx
@@ -205,7 +207,7 @@ define void @scatter_v8i32_all_live(<8 x i32> %val, ptr %base, <8 x i32> %idx) {
 ;
 ; ZEN-LABEL: 'scatter_v8i32_all_live'
 ; ZEN-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx
-; ZEN-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true))
+; ZEN-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:1 Lat:10 SizeLat:10 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true))
 ; ZEN-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i32> %idx

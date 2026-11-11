@@ -33,11 +33,11 @@ define void @scatter_v48i32_qword_index(<48 x i32> %val, <48 x ptr> %ptrs, <48 x
 ; NOBW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; BW-RTHRU-LABEL: 'scatter_v48i32_qword_index'
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 165 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v48i32_qword_index'
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 135 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> %ptrs, i32 4, <48 x i1> %mask)
@@ -66,12 +66,12 @@ define void @scatter_v48i32_dword_index(<48 x i32> %val, ptr %base, <48 x i32> %
 ;
 ; BW-RTHRU-LABEL: 'scatter_v48i32_dword_index'
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <48 x i32> %idx
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 173 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v48i32_dword_index'
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <48 x i32> %idx
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 141 for instruction: call void @llvm.masked.scatter.v48i32.v48p0(<48 x i32> %val, <48 x ptr> align 4 %ptrs, <48 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <48 x i32> %idx
@@ -99,11 +99,11 @@ define void @scatter_v65i32_qword_index(<65 x i32> %val, <65 x ptr> %ptrs, <65 x
 ; NOBW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; BW-RTHRU-LABEL: 'scatter_v65i32_qword_index'
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 101 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 259 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v65i32_qword_index'
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 85 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 225 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> %ptrs, i32 4, <65 x i1> %mask)
@@ -130,12 +130,12 @@ define void @scatter_v65i32_dword_index(<65 x i32> %val, ptr %base, <65 x i32> %
 ;
 ; BW-RTHRU-LABEL: 'scatter_v65i32_dword_index'
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <65 x i32> %idx
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 89 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 271 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v65i32_dword_index'
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <65 x i32> %idx
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 75 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 235 for instruction: call void @llvm.masked.scatter.v65i32.v65p0(<65 x i32> %val, <65 x ptr> align 4 %ptrs, <65 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <65 x i32> %idx
@@ -161,11 +161,11 @@ define void @scatter_v24i32_qword_index(<24 x i32> %val, <24 x ptr> %ptrs, <24 x
 ; NOBW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; BW-RTHRU-LABEL: 'scatter_v24i32_qword_index'
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v24i32_qword_index'
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> %ptrs, i32 4, <24 x i1> %mask)
@@ -191,11 +191,11 @@ define void @scatter_v56i32_qword_index(<56 x i32> %val, <56 x ptr> %ptrs, <56 x
 ; NOBW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; BW-RTHRU-LABEL: 'scatter_v56i32_qword_index'
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: call void @llvm.masked.scatter.v56i32.v56p0(<56 x i32> %val, <56 x ptr> align 4 %ptrs, <56 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: call void @llvm.masked.scatter.v56i32.v56p0(<56 x i32> %val, <56 x ptr> align 4 %ptrs, <56 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v56i32_qword_index'
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: call void @llvm.masked.scatter.v56i32.v56p0(<56 x i32> %val, <56 x ptr> align 4 %ptrs, <56 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: call void @llvm.masked.scatter.v56i32.v56p0(<56 x i32> %val, <56 x ptr> align 4 %ptrs, <56 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v56i32.v56p0(<56 x i32> %val, <56 x ptr> %ptrs, i32 4, <56 x i1> %mask)
@@ -221,11 +221,11 @@ define <48 x i32> @gather_v48i32_qword_index(<48 x ptr> %ptrs, <48 x i1> %mask) 
 ; NOBW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <48 x i32> %v
 ;
 ; BW-RTHRU-LABEL: 'gather_v48i32_qword_index'
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v = call <48 x i32> @llvm.masked.gather.v48i32.v48p0(<48 x ptr> align 4 %ptrs, <48 x i1> %mask, <48 x i32> poison)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %v = call <48 x i32> @llvm.masked.gather.v48i32.v48p0(<48 x ptr> align 4 %ptrs, <48 x i1> %mask, <48 x i32> poison)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <48 x i32> %v
 ;
 ; NOBW-RTHRU-LABEL: 'gather_v48i32_qword_index'
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v = call <48 x i32> @llvm.masked.gather.v48i32.v48p0(<48 x ptr> align 4 %ptrs, <48 x i1> %mask, <48 x i32> poison)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v = call <48 x i32> @llvm.masked.gather.v48i32.v48p0(<48 x ptr> align 4 %ptrs, <48 x i1> %mask, <48 x i32> poison)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <48 x i32> %v
 ;
   %v = call <48 x i32> @llvm.masked.gather.v48i32.v48p0(<48 x ptr> %ptrs, i32 4, <48 x i1> %mask, <48 x i32> poison)
@@ -253,11 +253,11 @@ define void @scatter_v17i32_qword_index_256bit(<17 x i32> %val, <17 x ptr> %ptrs
 ; NOBW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; BW-RTHRU-LABEL: 'scatter_v17i32_qword_index_256bit'
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v17i32_qword_index_256bit'
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 79 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> %ptrs, i32 4, <17 x i1> %mask)
@@ -287,12 +287,12 @@ define void @scatter_v17i32_dword_index_256bit(ptr %base, <17 x i32> %idx, <17 x
 ;
 ; BW-RTHRU-LABEL: 'scatter_v17i32_dword_index_256bit'
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <17 x i32> %idx
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 95 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v17i32_dword_index_256bit'
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <17 x i32> %idx
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 91 for instruction: call void @llvm.masked.scatter.v17i32.v17p0(<17 x i32> %val, <17 x ptr> align 4 %ptrs, <17 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <17 x i32> %idx
@@ -323,12 +323,12 @@ define void @scatter_v17i64_dword_index_256bit(ptr %base, <17 x i32> %idx, <17 x
 ;
 ; BW-RTHRU-LABEL: 'scatter_v17i64_dword_index_256bit'
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i64, ptr %base, <17 x i32> %idx
-; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: call void @llvm.masked.scatter.v17i64.v17p0(<17 x i64> %val, <17 x ptr> align 8 %ptrs, <17 x i1> %mask)
+; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 109 for instruction: call void @llvm.masked.scatter.v17i64.v17p0(<17 x i64> %val, <17 x ptr> align 8 %ptrs, <17 x i1> %mask)
 ; BW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NOBW-RTHRU-LABEL: 'scatter_v17i64_dword_index_256bit'
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i64, ptr %base, <17 x i32> %idx
-; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: call void @llvm.masked.scatter.v17i64.v17p0(<17 x i64> %val, <17 x ptr> align 8 %ptrs, <17 x i1> %mask)
+; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 93 for instruction: call void @llvm.masked.scatter.v17i64.v17p0(<17 x i64> %val, <17 x ptr> align 8 %ptrs, <17 x i1> %mask)
 ; NOBW-RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i64, ptr %base, <17 x i32> %idx

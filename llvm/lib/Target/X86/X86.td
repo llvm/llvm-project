@@ -812,6 +812,17 @@ def TuningFastGather
                        "Indicates if gather is reasonably fast (this is true for Skylake client and all AVX-512 CPUs)",
                        [], InlineIgnore>;
 
+// Use AMD Zen-tuned cost tables for masked gather/scatter intrinsics in the
+// X86 TargetTransformInfo cost model, in place of the flat overhead other
+// AVX-512 targets take. See getZenGSCalibratedTotal for where the totals came
+// from and which targets they were validated on. ZN4Tuning carries it to every
+// znver4+ CPU. Pre-AVX-512 Zen parts scalarise masked gather anyway.
+def TuningPreferGSCostTable
+    : SubtargetFeature<"prefer-gs-cost-table",
+                       "HasPreferGSCostTable", "true",
+                       "Use per-shape gather/scatter cost tables in the cost model",
+                       [], InlineIgnore>;
+
 // Generate vpdpwssd instead of vpmaddwd+vpaddd sequence.
 def TuningFastDPWSSD
     : SubtargetFeature<
@@ -1746,7 +1757,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
                                                 TuningSlowVecCompressStore,
                                                 TuningCOMPRESSFalseDeps,
-                                                TuningEXPANDFalseDeps];
+                                                TuningEXPANDFalseDeps,
+                                                TuningPreferGSCostTable];
   list<SubtargetFeature> ZN4Tuning =
     !listremove(!listconcat(ZN3Tuning, ZN4AdditionalTuning),
                 [TuningSlowVecMaskStore]);

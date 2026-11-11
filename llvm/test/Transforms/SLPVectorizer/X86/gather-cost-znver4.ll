@@ -13,11 +13,26 @@
 define void @gather4(ptr %base, ptr %idxp, ptr noalias %out) {
 ; ZNVER4-LABEL: define void @gather4
 ; ZNVER4-SAME: (ptr [[BASE:%.*]], ptr [[IDXP:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; ZNVER4-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[IDXP]], align 4
-; ZNVER4-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> poison, ptr [[BASE]], i64 0
-; ZNVER4-NEXT:    [[TMP3:%.*]] = shufflevector <4 x ptr> [[TMP2]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; ZNVER4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, <4 x ptr> [[TMP3]], <4 x i32> [[TMP1]]
-; ZNVER4-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true), <4 x float> poison)
+; ZNVER4-NEXT:    [[I0:%.*]] = load i32, ptr [[IDXP]], align 4
+; ZNVER4-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[IDXP]], i64 1
+; ZNVER4-NEXT:    [[I1:%.*]] = load i32, ptr [[G1]], align 4
+; ZNVER4-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[IDXP]], i64 2
+; ZNVER4-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[IDXP]], i64 3
+; ZNVER4-NEXT:    [[I3:%.*]] = load i32, ptr [[G3]], align 4
+; ZNVER4-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[G2]], align 4
+; ZNVER4-NEXT:    [[I2:%.*]] = load i32, ptr [[G2]], align 4
+; ZNVER4-NEXT:    [[P0:%.*]] = getelementptr inbounds float, ptr [[BASE]], i32 [[I0]]
+; ZNVER4-NEXT:    [[V0:%.*]] = load float, ptr [[P0]], align 4
+; ZNVER4-NEXT:    [[P1:%.*]] = getelementptr inbounds float, ptr [[BASE]], i32 [[I1]]
+; ZNVER4-NEXT:    [[V1:%.*]] = load float, ptr [[P1]], align 4
+; ZNVER4-NEXT:    [[P2:%.*]] = getelementptr inbounds float, ptr [[BASE]], i32 [[I2]]
+; ZNVER4-NEXT:    [[V2:%.*]] = load float, ptr [[P2]], align 4
+; ZNVER4-NEXT:    [[P3:%.*]] = getelementptr inbounds float, ptr [[BASE]], i32 [[I3]]
+; ZNVER4-NEXT:    [[V3:%.*]] = load float, ptr [[P3]], align 4
+; ZNVER4-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[V0]], i64 0
+; ZNVER4-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[V1]], i64 1
+; ZNVER4-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[V2]], i64 2
+; ZNVER4-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[V3]], i64 3
 ; ZNVER4-NEXT:    store <4 x float> [[TMP5]], ptr [[OUT]], align 4
 ; ZNVER4-NEXT:    ret void
 ;
