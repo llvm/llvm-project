@@ -221,20 +221,17 @@ tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_FMT_8_SNORM,BUF_DAT
 // CHECK-NEXT:{{^}}                                                         ^
 
 //==============================================================================
-// duplicate format
-
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
-// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate format
-// CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
-// CHECK-NEXT:{{^}}                                                            ^
-
-//==============================================================================
 // not a valid operand
 
 v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
 // CHECK-NEXT:{{^}}                       ^
+
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]
+// CHECK-NEXT:{{^}}                                                            ^
 
 //==============================================================================
 // out of range dfmt
