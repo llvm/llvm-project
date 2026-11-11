@@ -85,10 +85,10 @@ define i8 @f2() #0 {
 ; RV64I-NEXT:    lui a0, 16
 ; RV64I-NEXT:    sub t1, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa t1, 65536
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB2_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB2_1
 ; RV64I-NEXT:  # %bb.2: # %entry
@@ -109,10 +109,10 @@ define i8 @f2() #0 {
 ; RV32I-NEXT:    lui a0, 16
 ; RV32I-NEXT:    sub t1, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa t1, 65536
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB2_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB2_1
 ; RV32I-NEXT:  # %bb.2: # %entry
@@ -230,10 +230,10 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; RV64I-NEXT:    lui a0, 256
 ; RV64I-NEXT:    sub t1, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa t1, 1048576
-; RV64I-NEXT:    lui t2, 16
+; RV64I-NEXT:    lui t0, 16
 ; RV64I-NEXT:  .LBB5_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB5_1
 ; RV64I-NEXT:  # %bb.2: # %entry
@@ -254,10 +254,10 @@ define i8 @f5() #0 "stack-probe-size"="65536" {
 ; RV32I-NEXT:    lui a0, 256
 ; RV32I-NEXT:    sub t1, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa t1, 1048576
-; RV32I-NEXT:    lui t2, 16
+; RV32I-NEXT:    lui t0, 16
 ; RV32I-NEXT:  .LBB5_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB5_1
 ; RV32I-NEXT:  # %bb.2: # %entry
@@ -286,10 +286,10 @@ define i8 @f6() #0 {
 ; RV64I-NEXT:    lui a0, 262144
 ; RV64I-NEXT:    sub t1, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa t1, 1073741824
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB6_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB6_1
 ; RV64I-NEXT:  # %bb.2: # %entry
@@ -310,10 +310,10 @@ define i8 @f6() #0 {
 ; RV32I-NEXT:    lui a0, 262144
 ; RV32I-NEXT:    sub t1, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa t1, 1073741824
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB6_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB6_1
 ; RV32I-NEXT:  # %bb.2: # %entry
@@ -342,10 +342,10 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; RV64I-NEXT:    lui a0, 244128
 ; RV64I-NEXT:    sub t1, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa t1, 999948288
-; RV64I-NEXT:    lui t2, 16
+; RV64I-NEXT:    lui t0, 16
 ; RV64I-NEXT:  .LBB7_1: # %entry
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB7_1
 ; RV64I-NEXT:  # %bb.2: # %entry
@@ -368,10 +368,10 @@ define i8 @f7() #0 "stack-probe-size"="65536" {
 ; RV32I-NEXT:    lui a0, 244128
 ; RV32I-NEXT:    sub t1, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa t1, 999948288
-; RV32I-NEXT:    lui t2, 16
+; RV32I-NEXT:    lui t0, 16
 ; RV32I-NEXT:  .LBB7_1: # %entry
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB7_1
 ; RV32I-NEXT:  # %bb.2: # %entry
@@ -622,9 +622,9 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    lui a2, 15
 ; RV64I-NEXT:    sub t1, sp, a2
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB11_1
 ; RV64I-NEXT:  # %bb.2:
@@ -681,9 +681,9 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    lui a2, 15
 ; RV32I-NEXT:    sub t1, sp, a2
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB11_1: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB11_1
 ; RV32I-NEXT:  # %bb.2:
@@ -745,9 +745,9 @@ define void @f12() #0 {
 ; RV64I-NEXT:    lui a0, 9
 ; RV64I-NEXT:    sub t1, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa t1, 38896
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB12_1
 ; RV64I-NEXT:  # %bb.2:
@@ -775,9 +775,9 @@ define void @f12() #0 {
 ; RV32I-NEXT:    lui a0, 9
 ; RV32I-NEXT:    sub t1, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa t1, 38896
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB12_1: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB12_1
 ; RV32I-NEXT:  # %bb.2:

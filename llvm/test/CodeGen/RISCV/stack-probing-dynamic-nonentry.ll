@@ -32,10 +32,10 @@ define void @f(i64 %n) #0 {
 ; RV64-NEXT:    mv sp, a0
 ; RV64-NEXT:    lui a1, 5
 ; RV64-NEXT:    sub t1, sp, a1
-; RV64-NEXT:    lui t2, 1
+; RV64-NEXT:    lui t0, 1
 ; RV64-NEXT:  .LBB0_3: # %entry
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    sub sp, sp, t2
+; RV64-NEXT:    sub sp, sp, t0
 ; RV64-NEXT:    sd zero, 0(sp)
 ; RV64-NEXT:    bne sp, t1, .LBB0_3
 ; RV64-NEXT:  # %bb.4: # %entry
@@ -81,10 +81,10 @@ define void @f(i64 %n) #0 {
 ; RV32-NEXT:    mv sp, a0
 ; RV32-NEXT:    lui a1, 5
 ; RV32-NEXT:    sub t1, sp, a1
-; RV32-NEXT:    lui t2, 1
+; RV32-NEXT:    lui t0, 1
 ; RV32-NEXT:  .LBB0_3: # %entry
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    sub sp, sp, t2
+; RV32-NEXT:    sub sp, sp, t0
 ; RV32-NEXT:    sw zero, 0(sp)
 ; RV32-NEXT:    bne sp, t1, .LBB0_3
 ; RV32-NEXT:  # %bb.4: # %entry

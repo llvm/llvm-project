@@ -66,12 +66,12 @@ define <vscale x 1 x i64> @probe_fixed_and_vector_objects(ptr %val, <vscale x 1 
 ; RV64IV-NEXT:    .cfi_def_cfa_offset 528
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -8
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB2_1: # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB2_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB2_1
 ; RV64IV-NEXT:  # %bb.2:
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
