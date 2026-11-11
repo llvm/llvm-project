@@ -130,7 +130,8 @@ public:
   void collectMappings() {
     for (const auto *RC : register_classes())
       for (const auto &[Mode, RSI] : RC->RSI)
-        PartialMappings.emplace(RSI.RegSize);
+        if (RSI.RegSize != 0)
+          PartialMappings.emplace(RSI.RegSize);
 
     for (const auto *IgnoreDef :
          TheDef.getValueAsListOfDefs("IgnoredPartialMappings"))
@@ -609,9 +610,12 @@ void RegisterBankEmitter::emitBaseClassImplementation(
     OS << "};\n\n";
 
     for (const auto &Bank : Banks) {
+      const std::vector<ValueMapping> &ValueMappings = Bank.getValueMappings();
       OS << "static constexpr RegisterBankInfo::ValueMapping\n"
          << "Generated" << Bank.getName() << "ValueMappings[] = {\n";
-      for (const auto &Mapping : Bank.getValueMappings())
+      if (ValueMappings.empty())
+        OS << "  {nullptr, 0},\n";
+      for (const auto &Mapping : ValueMappings)
         OS << "  {&GeneratedPartialMappings[" << Mapping.getPartialMappingIdx()
            << "], " << Mapping.getNumBreakDowns() << "},\n";
       OS << "};\n\n";
@@ -630,7 +634,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
       std::vector<ValueMapping> ValueMappings = Bank.getValueMappings();
       OS << "    case " << Bank.getEnumeratorName() << ": {\n";
       size_t ScalableMappingSize = Bank.getScalableMappingSize();
-      OS << "      uint64_t S = Size";
+      OS << "      [[maybe_unused]] uint64_t S = Size";
       if (ScalableMappingSize == 0) {
         OS << ";\n";
       } else {
