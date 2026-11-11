@@ -1440,10 +1440,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     verifyVectorElementMatch(DstTy, MaskTy, MI);
     break;
   }
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_TRUNC: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (DstTy.isFloat() != SrcTy.isFloat()) {
+      report("g_trunc and g_anyext should keep the type the same", MI);
+    }
+    break;
+  }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
-  case TargetOpcode::G_ANYEXT:
-  case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_TRUNC_SSAT_S:
   case TargetOpcode::G_TRUNC_SSAT_U:
   case TargetOpcode::G_TRUNC_USAT_U:
