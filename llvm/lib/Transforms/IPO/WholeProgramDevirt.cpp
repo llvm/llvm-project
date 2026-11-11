@@ -1236,10 +1236,7 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
             return VD.Value == TargetGUID;
           });
           if (It == ValueData.end()) {
-            // Not found is not confirmed cold. it could be a truncated
-            // profile, so do not guess a direction.
-            Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
-                *CB.getFunction(), DEBUG_TYPE);
+            Weights = MDB.createLikelyBranchWeights();
           } else {
             uint64_t FallbackCount =
                 TotalCount - std::min(TotalCount, It->Count);
