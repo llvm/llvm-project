@@ -2391,8 +2391,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
       static const unsigned InvalidOffsetIdx = 0xf;
 
       unsigned OffsetIdx;
-      uint64_t SingleComponentSizeInBits =
-          IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
+      // Set for tbuffer loads, whose component size comes from the format.
+      unsigned FormatBitsPerComp = 0;
       switch (II.getIntrinsicID()) {
       case Intrinsic::amdgcn_raw_buffer_load:
       case Intrinsic::amdgcn_raw_ptr_buffer_load:
@@ -2442,7 +2442,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
         }
         Args[FormatIdx] =
             ConstantInt::get(Args[FormatIdx]->getType(), NewFormat->Format);
-        SingleComponentSizeInBits = OldFormat->BitsPerComp;
+        FormatBitsPerComp = OldFormat->BitsPerComp;
         break;
       }
       default:
@@ -2456,6 +2456,10 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(const GCNSubtarget &ST,
         // Clear demanded bits and update the offset.
         DemandedElts &= ~((1 << UnusedComponentsAtFront) - 1);
         auto *Offset = Args[OffsetIdx];
+        uint64_t SingleComponentSizeInBits =
+            FormatBitsPerComp
+                ? FormatBitsPerComp
+                : IC.getDataLayout().getTypeSizeInBits(EltTy).getFixedValue();
         OffsetAdd = UnusedComponentsAtFront * SingleComponentSizeInBits / 8;
         auto *OffsetAddVal = ConstantInt::get(Offset->getType(), OffsetAdd);
         Args[OffsetIdx] = IC.Builder.CreateAdd(Offset, OffsetAddVal);

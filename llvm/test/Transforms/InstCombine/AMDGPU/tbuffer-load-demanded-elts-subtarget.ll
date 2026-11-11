@@ -6,38 +6,38 @@
 ; the table of the subtarget. 77 is 32_32_32_32_FLOAT on gfx10 but not a gfx11+
 ; format; 63 is 32_32_32_32_FLOAT on gfx11+ but 32_32_SINT on gfx10.
 
-define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_77(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) {
+define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_77(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) {
 ; GFX10-LABEL: define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_77(
-; GFX10-SAME: <4 x i32> inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
+; GFX10-SAME: ptr addrspace(8) inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
 ; GFX10-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0]], 4
-; GFX10-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC]], i32 [[TMP1]], i32 [[ARG1]], i32 74, i32 0)
+; GFX10-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC]], i32 [[TMP1]], i32 [[ARG1]], i32 74, i32 0)
 ; GFX10-NEXT:    ret <2 x float> [[DATA]]
 ;
 ; GFX12-LABEL: define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_77(
-; GFX12-SAME: <4 x i32> inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
-; GFX12-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC]], i32 [[ARG0]], i32 [[ARG1]], i32 77, i32 0)
+; GFX12-SAME: ptr addrspace(8) inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
+; GFX12-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC]], i32 [[ARG0]], i32 [[ARG1]], i32 77, i32 0)
 ; GFX12-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; GFX12-NEXT:    ret <2 x float> [[SHUF]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 77, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 77, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %shuf
 }
 
-define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_63(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) {
+define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_63(ptr addrspace(8) inreg %rsrc, i32 %arg0, i32 inreg %arg1) {
 ; GFX10-LABEL: define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_63(
-; GFX10-SAME: <4 x i32> inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
-; GFX10-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.tbuffer.load.v3f32(<4 x i32> [[RSRC]], i32 [[ARG0]], i32 [[ARG1]], i32 63, i32 0)
+; GFX10-SAME: ptr addrspace(8) inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
+; GFX10-NEXT:    [[DATA:%.*]] = call <3 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v3f32(ptr addrspace(8) [[RSRC]], i32 [[ARG0]], i32 [[ARG1]], i32 63, i32 0)
 ; GFX10-NEXT:    [[SHUF:%.*]] = shufflevector <3 x float> [[DATA]], <3 x float> poison, <2 x i32> <i32 1, i32 2>
 ; GFX10-NEXT:    ret <2 x float> [[SHUF]]
 ;
 ; GFX12-LABEL: define amdgpu_ps <2 x float> @extract_elt1_elt2_fmt_63(
-; GFX12-SAME: <4 x i32> inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
+; GFX12-SAME: ptr addrspace(8) inreg [[RSRC:%.*]], i32 [[ARG0:%.*]], i32 inreg [[ARG1:%.*]]) {
 ; GFX12-NEXT:    [[TMP1:%.*]] = add i32 [[ARG0]], 4
-; GFX12-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.tbuffer.load.v2f32(<4 x i32> [[RSRC]], i32 [[TMP1]], i32 [[ARG1]], i32 60, i32 0)
+; GFX12-NEXT:    [[DATA:%.*]] = call <2 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v2f32(ptr addrspace(8) [[RSRC]], i32 [[TMP1]], i32 [[ARG1]], i32 60, i32 0)
 ; GFX12-NEXT:    ret <2 x float> [[DATA]]
 ;
-  %data = call <4 x float> @llvm.amdgcn.raw.tbuffer.load.v4f32(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 63, i32 0)
+  %data = call <4 x float> @llvm.amdgcn.raw.ptr.tbuffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %arg0, i32 %arg1, i32 63, i32 0)
   %shuf = shufflevector <4 x float> %data, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %shuf
 }
