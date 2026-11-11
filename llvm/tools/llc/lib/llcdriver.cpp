@@ -724,11 +724,14 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
 
   for (auto &Plugin : PluginList) {
     CodeGenFileType CGFT = codegen::getFileType(Context.getLibraryOptions());
-    if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os())) {
+    if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os(),
+                                        DwoOut ? &DwoOut->os() : nullptr)) {
       // TODO: Deduplicate code with below and the NewPMDriver.
       if (Context.getDiagHandlerPtr()->HasErrors)
         exit(1);
       Out->keep();
+      if (DwoOut)
+        DwoOut->keep();
       return 0;
     }
   }

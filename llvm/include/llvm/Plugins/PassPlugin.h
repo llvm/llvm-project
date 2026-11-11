@@ -58,11 +58,13 @@ struct PassPluginLibraryInfo {
   void (*RegisterPassBuilderCallbacks)(PassBuilder &) = nullptr;
 
   /// Callback called before running the back-end passes on the module. The
-  /// callback can generate code itself by writing the expected output to OS and
-  /// returning true to prevent the default pipeline and further plugin
-  /// callbacks from running.
+  /// callback can generate code itself by writing the expected output to OS
+  /// and returning true to prevent the default pipeline and further plugin
+  /// callbacks from running. DwoOS behaves the same way with respect to the
+  /// return value. It is null unless the .dwo contents go to a separate file.
   bool (*PreCodeGenCallback)(Module &, TargetMachine &, CodeGenFileType,
-                             raw_pwrite_stream &OS) = nullptr;
+                             raw_pwrite_stream &OS,
+                             raw_pwrite_stream *DwoOS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
   /// -plugin-arg=<PluginName>,<arg>, in order.
@@ -105,10 +107,10 @@ public:
 
   /// Invoke the pre-codegen callback.
   bool invokePreCodeGenCallback(Module &M, TargetMachine &TM,
-                                CodeGenFileType CGFT,
-                                raw_pwrite_stream &OS) const {
+                                CodeGenFileType CGFT, raw_pwrite_stream &OS,
+                                raw_pwrite_stream *DwoOS) const {
     if (Info.PreCodeGenCallback)
-      return Info.PreCodeGenCallback(M, TM, CGFT, OS);
+      return Info.PreCodeGenCallback(M, TM, CGFT, OS, DwoOS);
     return false;
   }
 

@@ -551,12 +551,21 @@ Makes programs 10x faster by doing Special New Thing.
 
 * `llvm-mc` now supports `--verify[=<prefixes>]` to check diagnostics against `<prefix>-<kind> {{...}}` comments in the input instead of printing them.
 
+* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
+  Pass them with `-plugin-arg=<plugin>,<arg>` (see below).
+
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.
   A plugin that defines `cl::opt` has to call `cl::ParseCommandLineOptions` itself inside `ParseArguments`.
   `LLVM_PLUGIN_API_VERSION` is now 3.
 
-* `opt` and `llc` load `-load-pass-plugin` plugins after parsing the command line, so a loaded plugin's options are no longer accepted as ordinary options.
-  Pass them with `-plugin-arg=<plugin>,<arg>`.
+* `PassPluginLibraryInfo::PreCodeGenCallback` receives the output stream for
+  split DWARF as an additional `raw_pwrite_stream *DwoOS` parameter, which
+  aligns its signature with the new `llvm::runCodeGenPipeline()`.
+  `DwoOS` is null unless the `.dwo` contents go to a separate file.
+  If set, it behaves like `OS` with respect to the result of
+  `invokePreCodeGenCallback()`: returning true means that the plugin wrote the
+  `.dwo` contents, otherwise another plugin or the default pipeline writes them.
+  This is also covered by the `LLVM_PLUGIN_API_VERSION` bump to 3.
 
 * llvm-offload-binary can now compress packaged binaries using zstd or zlib.
 
