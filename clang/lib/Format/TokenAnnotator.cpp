@@ -4229,6 +4229,15 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
       for (auto *Tok = ClosingParen->Next; Tok; Tok = Tok->Next) {
         if (Tok->is(TT_CtorInitializerColon))
           break;
+        // A binary operator at the level of the parameter list, e.g. `<<` in
+        // `MACRO foo() << a->b;`, can't precede a trailing return arrow. `&`
+        // and `&&` are exempt as a ref-qualifier may be annotated as a binary
+        // operator, e.g. in `auto f() const & NOEXCEPT -> int;`.
+        if (Tok->is(TT_BinaryOperator) &&
+            Tok->isNoneOf(tok::amp, tok::ampamp) &&
+            Tok->NestingLevel == ClosingParen->MatchingParen->NestingLevel) {
+          break;
+        }
         if (Tok->is(tok::arrow)) {
           Tok->overwriteFixedType(TT_TrailingReturnArrow);
           break;
