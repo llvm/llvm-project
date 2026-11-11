@@ -273,7 +273,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
   for (auto *MD = State ? State->getLatest() : nullptr; MD;
        MD = MD->getPrevious()) {
     llvm::errs() << " ";
-    MD->dump(SourceMgr);
+    MD->dump(&SourceMgr);
   }
 
   // Dump module macros.
