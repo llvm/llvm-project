@@ -536,6 +536,21 @@ void CombinerHelper::applyCombineShuffleOfBuildVector(MachineInstr &MI) const {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::applyCombineTruncOfShuffle(MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  auto *Shuffle = getOpcodeDef<GShuffleVector>(MI.getOperand(1).getReg(), MRI);
+  Register SrcVec1 = Shuffle->getSrc1Reg();
+  Register SrcVec2 = Shuffle->getSrc2Reg();
+  LLT SrcTy = MRI.getType(SrcVec1);
+  LLT DstTy = MRI.getType(DstReg);
+  LLT TruncVT = SrcTy.changeElementType(DstTy.getScalarType());
+
+  SrcVec1 = Builder.buildTrunc(TruncVT, SrcVec1).getReg(0);
+  SrcVec2 = Builder.buildTrunc(TruncVT, SrcVec2).getReg(0);
+  Builder.buildShuffleVector(DstReg, SrcVec1, SrcVec2, Shuffle->getMask());
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::matchCombineShuffleConcat(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();

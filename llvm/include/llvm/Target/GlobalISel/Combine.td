@@ -2542,6 +2542,13 @@ def combine_shuffle_of_buildvectors_to_buildvector : GICombineRule<
          (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
 
+// Combines trunc of shuffles
+def combine_trunc_of_shuffle : GICombineRule<
+  (defs root:$root),
+  (match (G_SHUFFLE_VECTOR $tmp, $src1, $src2, $mask),
+         (G_TRUNC $dst, $tmp):$root),
+  (apply [{ Helper.applyCombineTruncOfShuffle(*${root}); }])>;
+
 // Combines buildvector operations
 def combine_build_vector_of_bitcast : GICombineRule<
   (defs root:$root, register_vector_matchinfo:$matchinfo),
@@ -3265,7 +3272,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
-    sub_add_reg, select_to_minmax,
+    sub_add_reg, select_to_minmax, combine_trunc_of_shuffle,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
