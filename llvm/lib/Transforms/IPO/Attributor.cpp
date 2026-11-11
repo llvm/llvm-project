@@ -1407,8 +1407,8 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   }
 }
 
-void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
+void IRPosition::verify() {
   switch (getPositionKind()) {
   case IRP_INVALID:
     assert((CBContext == nullptr) &&
@@ -1472,8 +1472,8 @@ void IRPosition::verify() {
     return;
   }
   }
-#endif
 }
+#endif
 
 std::optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,

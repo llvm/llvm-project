@@ -498,6 +498,9 @@ Makes programs 10x faster by doing Special New Thing.
   alternative to `LLVMParseCommandLineOptions()` that also captures any error
   during parsing.
 
+* Added `LLVMPrintMetadataToString()` to obtain a `LLVMMetadataRef`'s string
+  representation without having to convert it to a `LLVMValueRef` first.
+
 ### Changes to the CodeGen infrastructure
 
 * `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
