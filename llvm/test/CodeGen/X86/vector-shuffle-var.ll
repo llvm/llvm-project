@@ -11,7 +11,7 @@
 
 ; A mask element type narrower or wider than the data element type.
 
-define <4 x i32> @shuffle_v4i32_i8_mask(<4 x i32> %v, <4 x i8> %mask) {
+define <4 x i32> @shuffle_v4i32_i8_mask(<4 x i32> %v, <4 x i8> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v4i32_i8_mask:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
@@ -72,7 +72,7 @@ define <4 x i32> @shuffle_v4i32_i8_mask(<4 x i32> %v, <4 x i8> %mask) {
   ret <4 x i32> %res
 }
 
-define <16 x i8> @shuffle_v16i8_i32_mask(<16 x i8> %v, <16 x i32> %mask) {
+define <16 x i8> @shuffle_v16i8_i32_mask(<16 x i8> %v, <16 x i32> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_i32_mask:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,1,1]
@@ -506,11 +506,10 @@ define <16 x i8> @shuffle_v16i8_i32_mask(<16 x i8> %v, <16 x i32> %mask) {
 
 ; A mask element type too narrow to index the whole source.
 
-define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) {
+define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v8i32_i2_mask:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $136, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 144
 ; SSE2-NEXT:    pextrw $4, %xmm2, %eax
 ; SSE2-NEXT:    pextrw $5, %xmm2, %ecx
 ; SSE2-NEXT:    pextrw $6, %xmm2, %edx
@@ -558,13 +557,11 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) {
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    addq $136, %rsp
-; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8i32_i2_mask:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    subq $136, %rsp
-; SSSE3-NEXT:    .cfi_def_cfa_offset 144
 ; SSSE3-NEXT:    pextrw $4, %xmm2, %eax
 ; SSSE3-NEXT:    pextrw $5, %xmm2, %ecx
 ; SSSE3-NEXT:    pextrw $6, %xmm2, %edx
@@ -612,13 +609,11 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) {
 ; SSSE3-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSSE3-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSSE3-NEXT:    addq $136, %rsp
-; SSSE3-NEXT:    .cfi_def_cfa_offset 8
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v8i32_i2_mask:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    subq $136, %rsp
-; SSE41-NEXT:    .cfi_def_cfa_offset 144
 ; SSE41-NEXT:    pextrw $7, %xmm2, %eax
 ; SSE41-NEXT:    pextrw $6, %xmm2, %ecx
 ; SSE41-NEXT:    pextrw $4, %xmm2, %esi
@@ -660,7 +655,6 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) {
 ; SSE41-NEXT:    andl $3, %eax
 ; SSE41-NEXT:    pinsrd $3, 64(%rsp,%rax,4), %xmm1
 ; SSE41-NEXT:    addq $136, %rsp
-; SSE41-NEXT:    .cfi_def_cfa_offset 8
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: shuffle_v8i32_i2_mask:
@@ -725,7 +719,7 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) {
 
 ; A single-element source can only select element 0.
 
-define <1 x i32> @shuffle_v1i32(<1 x i32> %v, <1 x i32> %mask) {
+define <1 x i32> @shuffle_v1i32(<1 x i32> %v, <1 x i32> %mask) nounwind {
 ; SSE-LABEL: shuffle_v1i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movl %edi, %eax
@@ -746,7 +740,7 @@ define <1 x i32> @shuffle_v1i32(<1 x i32> %v, <1 x i32> %mask) {
 
 ; A constant mask becomes an ordinary shufflevector.
 
-define <4 x i32> @shuffle_v4i32_const_mask(<4 x i32> %v) {
+define <4 x i32> @shuffle_v4i32_const_mask(<4 x i32> %v) nounwind {
 ; SSE-LABEL: shuffle_v4i32_const_mask:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
@@ -766,7 +760,7 @@ define <4 x i32> @shuffle_v4i32_const_mask(<4 x i32> %v) {
 }
 
 ; Must not be constant folded elementwise.
-define <4 x i32> @shuffle_v4i32_const() {
+define <4 x i32> @shuffle_v4i32_const() nounwind {
 ; SSE2-LABEL: shuffle_v4i32_const:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [40,30,20,10]

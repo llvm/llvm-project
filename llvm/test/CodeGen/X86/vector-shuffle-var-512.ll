@@ -5,7 +5,7 @@
 
 ; 512-bit vectors.
 
-define <16 x i32> @shuffle_v16i32(<16 x i32> %v, <16 x i32> %mask) {
+define <16 x i32> @shuffle_v16i32(<16 x i32> %v, <16 x i32> %mask) nounwind {
 ; AVX512-LABEL: shuffle_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
@@ -14,7 +14,7 @@ define <16 x i32> @shuffle_v16i32(<16 x i32> %v, <16 x i32> %mask) {
   ret <16 x i32> %res
 }
 
-define <8 x i64> @shuffle_v8i64(<8 x i64> %v, <8 x i64> %mask) {
+define <8 x i64> @shuffle_v8i64(<8 x i64> %v, <8 x i64> %mask) nounwind {
 ; AVX512-LABEL: shuffle_v8i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
@@ -23,14 +23,11 @@ define <8 x i64> @shuffle_v8i64(<8 x i64> %v, <8 x i64> %mask) {
   ret <8 x i64> %res
 }
 
-define <64 x i8> @shuffle_v64i8(<64 x i8> %v, <64 x i8> %mask) {
+define <64 x i8> @shuffle_v64i8(<64 x i8> %v, <64 x i8> %mask) nounwind {
 ; AVX512F-LABEL: shuffle_v64i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
 ; AVX512F-NEXT:    subq $64, %rsp
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
@@ -250,16 +247,12 @@ define <64 x i8> @shuffle_v64i8(<64 x i8> %v, <64 x i8> %mask) {
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512F-NEXT:    movq %rbp, %rsp
 ; AVX512F-NEXT:    popq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v64i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    pushq %rbp
-; AVX512BW-NEXT:    .cfi_def_cfa_offset 16
-; AVX512BW-NEXT:    .cfi_offset %rbp, -16
 ; AVX512BW-NEXT:    movq %rsp, %rbp
-; AVX512BW-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512BW-NEXT:    andq $-64, %rsp
 ; AVX512BW-NEXT:    subq $64, %rsp
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm2
@@ -479,7 +472,6 @@ define <64 x i8> @shuffle_v64i8(<64 x i8> %v, <64 x i8> %mask) {
 ; AVX512BW-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    movq %rbp, %rsp
 ; AVX512BW-NEXT:    popq %rbp
-; AVX512BW-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: shuffle_v64i8:
@@ -492,18 +484,14 @@ define <64 x i8> @shuffle_v64i8(<64 x i8> %v, <64 x i8> %mask) {
 
 ; Half and bfloat vectors.
 
-define <32 x half> @shuffle_v32f16(<32 x half> %v, <32 x i16> %mask) {
+define <32 x half> @shuffle_v32f16(<32 x half> %v, <32 x i16> %mask) nounwind {
 ; AVX512F-LABEL: shuffle_v32f16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    andq $-64, %rsp
 ; AVX512F-NEXT:    addq $-128, %rsp
-; AVX512F-NEXT:    .cfi_offset %rbx, -24
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vpextrw $0, %xmm2, %eax
 ; AVX512F-NEXT:    vpextrw $1, %xmm2, %ecx
@@ -640,7 +628,6 @@ define <32 x half> @shuffle_v32f16(<32 x half> %v, <32 x i16> %mask) {
 ; AVX512F-NEXT:    leaq -8(%rbp), %rsp
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v32f16:
@@ -656,14 +643,11 @@ define <32 x half> @shuffle_v32f16(<32 x half> %v, <32 x i16> %mask) {
   ret <32 x half> %res
 }
 
-define <32 x bfloat> @shuffle_v32bf16(<32 x bfloat> %v, <32 x i16> %mask) {
+define <32 x bfloat> @shuffle_v32bf16(<32 x bfloat> %v, <32 x i16> %mask) nounwind {
 ; AVX512F-LABEL: shuffle_v32bf16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    pushq %r15
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %r13
@@ -671,11 +655,6 @@ define <32 x bfloat> @shuffle_v32bf16(<32 x bfloat> %v, <32 x i16> %mask) {
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    andq $-64, %rsp
 ; AVX512F-NEXT:    subq $192, %rsp
-; AVX512F-NEXT:    .cfi_offset %rbx, -56
-; AVX512F-NEXT:    .cfi_offset %r12, -48
-; AVX512F-NEXT:    .cfi_offset %r13, -40
-; AVX512F-NEXT:    .cfi_offset %r14, -32
-; AVX512F-NEXT:    .cfi_offset %r15, -24
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; AVX512F-NEXT:    vpextrw $0, %xmm3, %edi
 ; AVX512F-NEXT:    vpextrw $1, %xmm3, %esi
@@ -901,7 +880,6 @@ define <32 x bfloat> @shuffle_v32bf16(<32 x bfloat> %v, <32 x i16> %mask) {
 ; AVX512F-NEXT:    popq %r14
 ; AVX512F-NEXT:    popq %r15
 ; AVX512F-NEXT:    popq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v32bf16:

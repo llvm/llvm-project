@@ -11,7 +11,7 @@
 
 ; 128-bit vectors.
 
-define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) {
+define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
@@ -120,7 +120,7 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) {
   ret <16 x i8> %res
 }
 
-define <8 x i16> @shuffle_v8i16(<8 x i16> %v, <8 x i16> %mask) {
+define <8 x i16> @shuffle_v8i16(<8 x i16> %v, <8 x i16> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pextrw $0, %xmm1, %eax
@@ -206,7 +206,7 @@ define <8 x i16> @shuffle_v8i16(<8 x i16> %v, <8 x i16> %mask) {
   ret <8 x i16> %res
 }
 
-define <4 x i32> @shuffle_v4i32(<4 x i32> %v, <4 x i32> %mask) {
+define <4 x i32> @shuffle_v4i32(<4 x i32> %v, <4 x i32> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v4i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
@@ -263,7 +263,7 @@ define <4 x i32> @shuffle_v4i32(<4 x i32> %v, <4 x i32> %mask) {
   ret <4 x i32> %res
 }
 
-define <2 x i64> @shuffle_v2i64(<2 x i64> %v, <2 x i64> %mask) {
+define <2 x i64> @shuffle_v2i64(<2 x i64> %v, <2 x i64> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
@@ -316,7 +316,7 @@ define <2 x i64> @shuffle_v2i64(<2 x i64> %v, <2 x i64> %mask) {
   ret <2 x i64> %res
 }
 
-define <4 x float> @shuffle_v4f32(<4 x float> %v, <4 x i32> %mask) {
+define <4 x float> @shuffle_v4f32(<4 x float> %v, <4 x i32> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
@@ -373,7 +373,7 @@ define <4 x float> @shuffle_v4f32(<4 x float> %v, <4 x i32> %mask) {
   ret <4 x float> %res
 }
 
-define <2 x double> @shuffle_v2f64(<2 x double> %v, <2 x i64> %mask) {
+define <2 x double> @shuffle_v2f64(<2 x double> %v, <2 x i64> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v2f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
@@ -426,7 +426,7 @@ define <2 x double> @shuffle_v2f64(<2 x double> %v, <2 x i64> %mask) {
 
 ; Half and bfloat vectors.
 
-define <8 x half> @shuffle_v8f16(<8 x half> %v, <8 x i16> %mask) {
+define <8 x half> @shuffle_v8f16(<8 x half> %v, <8 x i16> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v8f16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pextrw $0, %xmm1, %eax
@@ -504,7 +504,7 @@ define <8 x half> @shuffle_v8f16(<8 x half> %v, <8 x i16> %mask) {
   ret <8 x half> %res
 }
 
-define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) {
+define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
 ; SSE-LABEL: shuffle_v8bf16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pextrw $7, %xmm1, %eax
