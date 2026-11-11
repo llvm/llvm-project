@@ -1376,6 +1376,11 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
+      // The interleave analysis takes strides as int (isStrided,
+      // createInterleaveGroup, InterleaveGroup); treat strides that do not
+      // fit as unknown.
+      if (!isInt<32>(Stride))
+        Stride = 0;
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,

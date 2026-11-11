@@ -1828,15 +1828,41 @@ define void @stride_does_not_fit(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 4294967298
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 4294967298)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP17]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i8> [[WIDE_VEC]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i64> [[TMP17]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP29]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP17]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP30]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP9]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> poison, i8 [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i8> [[TMP14]], i8 [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> [[TMP15]], i8 [[TMP12]], i64 2
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = insertelement <4 x i8> [[TMP16]], i8 [[TMP13]], i64 3
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP30]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP9]], i64 1
+; CHECK-NEXT:    [[TMP22:%.*]] = load i8, ptr [[TMP18]], align 1
+; CHECK-NEXT:    [[TMP23:%.*]] = load i8, ptr [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP20]], align 1
+; CHECK-NEXT:    [[TMP25:%.*]] = load i8, ptr [[TMP21]], align 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i8> poison, i8 [[TMP22]], i64 0
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i8> [[TMP26]], i8 [[TMP23]], i64 1
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x i8> [[TMP27]], i8 [[TMP24]], i64 2
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = insertelement <4 x i8> [[TMP28]], i8 [[TMP25]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STRIDED_VEC]], [[STRIDED_VEC1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP40:![0-9]+]]
 ; CHECK:       middle.block:
