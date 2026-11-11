@@ -1096,7 +1096,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
 ChangeStatus AbstractAttribute::update(Attributor &A) {
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
-  if (getState().isAtFixpoint())
+  if (isStateAtFixpoint())
     return HasChanged;
 
   LLVM_DEBUG(dbgs() << "[Attributor] Update: " << *this << "\n");
@@ -2261,14 +2261,13 @@ void Attributor::runTillFixpoint() {
     // Update all abstract attribute in the work list and record the ones that
     // changed.
     for (AbstractAttribute *AA : Worklist) {
-      const auto &AAState = AA->getState();
-      if (!AAState.isAtFixpoint())
+      if (!AA->isStateAtFixpoint())
         if (updateAA(*AA) == ChangeStatus::CHANGED)
           ChangedAAs.push_back(AA);
 
       // Use the InvalidAAs vector to propagate invalid states fast transitively
       // without requiring updates.
-      if (!AAState.isValidState())
+      if (!AA->getState().isValidState())
         InvalidAAs.insert(AA);
     }
 
@@ -2350,7 +2349,7 @@ ChangeStatus Attributor::manifestAttributes() {
     // optimistic state. This is correct because we enforced a pessimistic one
     // on abstract attributes that were transitively dependent on a changed one
     // already above.
-    if (!State.isAtFixpoint())
+    if (!AA->isStateAtFixpoint())
       State.indicateOptimisticFixpoint();
 
     // We must not manifest Attributes that use Callbase info.
@@ -2783,7 +2782,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
                      /* CheckBBLivenessOnly */ true))
     CS = AA.update(*this);
 
-  if (!AA.isQueryAA() && DV.empty() && !AA.getState().isAtFixpoint()) {
+  if (!AA.isQueryAA() && DV.empty() && !AA.isStateAtFixpoint()) {
     // If the AA did not rely on outside information but changed, we run it
     // again to see if it found a fixpoint. Most AAs do but we don't require
     // them to. Hence, it might take the AA multiple iterations to get to a
@@ -2799,7 +2798,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
       AAState.indicateOptimisticFixpoint();
   }
 
-  if (!AAState.isAtFixpoint())
+  if (!AA.isStateAtFixpoint())
     rememberDependences();
 
   // Verify the stack was used properly, that is we pop the dependence vector we
@@ -3401,7 +3400,7 @@ void Attributor::recordDependence(const AbstractAttribute &FromAA,
   // put all AAs into the initial worklist anyway.
   if (DependenceStack.empty())
     return;
-  if (FromAA.getState().isAtFixpoint())
+  if (FromAA.isStateAtFixpoint())
     return;
   DependenceStack.back()->push_back({&FromAA, &ToAA, DepClass});
 }
