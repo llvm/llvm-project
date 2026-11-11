@@ -26,12 +26,12 @@ smt.vmadot1 v0, v3, v4
 # YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (78)>): match success using generic matcher
 yadd a0, a1, x0
 
-## TODO: parseGPRPair should not mutate a0 from GPR (77) into GPRPair (388)
-## before instruction matching, which prevents matching MCK_GPR on LD.
+## Verify that GPR operands are not mutated into GPRPair before instruction
+## matching.
 # RV32:      Trying to match opcode LD
-# RV32-NEXT:   Matching formal operand class MCK_GPR against actual operand at index 1 (<reg: a0 (388)>): operand match failed, recording near-miss
+# RV32-NEXT:   Matching formal operand class MCK_GPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
 # RV32:      Trying to match opcode LD_RV32
-# RV32-NEXT:   Matching formal operand class MCK_GPRPairRV32 against actual operand at index 1 (<reg: a0 (388)>): match success using generic matcher
+# RV32-NEXT:   Matching formal operand class MCK_GPRPair against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
 ld a0, 0(a3)
 
 ## TODO: parseGPRPairAsFPR64 should not mutate a0/a2/a4 from GPR (77/79/81) into

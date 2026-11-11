@@ -457,22 +457,35 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = XLenPairRI, CopyCost = 2 in {
-def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (add
+class GPRPairRegisterClass<dag regList>
+    : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT,
+                          XLenPairVecI16VT, XLenPairVecI32VT], 64, regList> {
+  let RegInfos = XLenPairRI;
+  let CopyCost = 2;
+  let CoerceFromRegClass = GPR;
+}
+
+def GPRPair : GPRPairRegisterClass<(add
     X10_X11, X12_X13, X14_X15, X16_X17,
     X6_X7,
     X28_X29, X30_X31,
     X8_X9,
     X18_X19, X20_X21, X22_X23, X24_X25, X26_X27,
     X0_Pair, X2_X3, X4_X5
-)>;
+)> {
+  let DiagnosticString = "register must be even";
+}
 
-def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (sub GPRPair, X0_Pair)>;
+def GPRPairNoX0 : GPRPairRegisterClass<(sub GPRPair, X0_Pair)> {
+  let DiagnosticString =
+      "register pair must start with an even GPR other than x0";
+}
 
-def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT, XLenPairVecI8VT, XLenPairVecI16VT, XLenPairVecI32VT], 64, (add
+def GPRPairC : GPRPairRegisterClass<(add
   X10_X11, X12_X13, X14_X15, X8_X9
-)>;
-} // let RegInfos = XLenPairRI, CopyCost = 2
+)> {
+  let DiagnosticString = "register pair must start with x8, x10, x12, or x14";
+}
 
 //===----------------------------------------------------------------------===//
 // Floating Point registers
