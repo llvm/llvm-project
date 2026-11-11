@@ -20,7 +20,7 @@ class Version<int major, int minor> {
 }
 
 // Valid DXIL Version records
-foreach i = 0...8 in {
+foreach i = 0...10 in {
   def DXIL1_ #i : Version<1, i>;
 }
 
@@ -103,6 +103,7 @@ defset list<DXILOpClass> OpClasses = {
   def createNodeOutputHandle : DXILOpClass;
   def cutStream : DXILOpClass;
   def cycleCounterLegacy : DXILOpClass;
+  def debugBreak : DXILOpClass;
   def discard : DXILOpClass;
   def dispatchMesh : DXILOpClass;
   def dispatchRaysDimensions : DXILOpClass;
@@ -1710,4 +1711,12 @@ def StartInstanceLocation : DXILOp<257, startInstanceLocation> {
   let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
   let stages = [Stages<DXIL1_8, [vertex]>];
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
+}
+
+def DebugBreak : DXILOp<343, debugBreak> {
+  let Doc = "triggers a breakpoint if a debugger is attached";
+  let intrinsics = [IntrinSelect<int_debugtrap>];
+  let arguments = [];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_10, [all_stages]>];
 }
