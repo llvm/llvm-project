@@ -271,6 +271,18 @@ static bool isBlockInCFGLoop(Block *block) {
   return false;
 }
 
+/// Return true if `block` or any of its ancestor blocks is part of a CFG
+/// cycle, which `LoopLikeOpInterface` does not cover.
+static bool isInCFGLoop(Block *block) {
+  while (block) {
+    if (isBlockInCFGLoop(block))
+      return true;
+    Operation *parent = block->getParentOp();
+    block = parent ? parent->getBlock() : nullptr;
+  }
+  return false;
+}
+
 namespace {
 /// Rewrite a WarpExecuteOnLane0Op into a predicated scf.if op where the single
 /// thread `laneId` executes the entirety of the computation.
@@ -335,7 +347,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // iteration's result loads.
     SmallVector<std::pair<Value, /*consumed=*/bool>> reusableArgBuffers;
     bool canReuseArgBuffers = !warpOp->getParentOfType<LoopLikeOpInterface>() &&
-                              !isBlockInCFGLoop(warpOp->getBlock());
+                              !isInCFGLoop(warpOp->getBlock());
     if (canReuseArgBuffers)
       reusableArgBuffers.reserve(warpOp.getArgs().size());
     for (const auto &it : llvm::enumerate(warpOp.getArgs())) {

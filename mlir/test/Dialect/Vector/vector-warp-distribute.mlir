@@ -147,6 +147,50 @@ func.func @warp_op_inside_loop(%lane: index, %out: memref<2x32xindex>) {
 
 // -----
 
+// Warp op inside an scf.if nested in a CFG loop: the loop check walks ancestor
+// blocks, so the args buffer must still not be reused.
+
+// CHECK-SCF-IF-LABEL: func @warp_op_inside_scf_if_in_cfg_loop(
+//  CHECK-SCF-IF-SAME:     %[[lane:.*]]: index, %[[out:.*]]: memref<2x32xindex>, %[[c:.*]]: i1)
+func.func @warp_op_inside_scf_if_in_cfg_loop(%lane: index, %out: memref<2x32xindex>, %c: i1) {
+//       CHECK-SCF-IF:   cf.cond_br
+//       CHECK-SCF-IF:   %[[arg_buf:.*]] = memref.get_global @__shared_64xindex
+//       CHECK-SCF-IF:   %[[res_buf:.*]] = memref.get_global @__shared_32xindex
+//   CHECK-SCF-IF-NOT:   memref.subview
+//       CHECK-SCF-IF:   scf.if
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  cf.br ^bb1(%c0 : index)
+^bb1(%i: index):
+  %cond = arith.cmpi slt, %i, %c2 : index
+  cf.cond_br %cond, ^bb2, ^bb3
+^bb2:
+  %v = vector.broadcast %i : index to vector<2xindex>
+  %r = scf.if %c -> vector<1xindex> {
+    %w = gpu.warp_execute_on_lane_0(%lane)[32]
+        args(%v : vector<2xindex>) -> (vector<1xindex>) {
+      ^bb0(%arg: vector<64xindex>):
+        %s = vector.extract_strided_slice %arg
+            offsets = [0], sizes = [32], strides = [1]
+            : vector<64xindex> to vector<32xindex>
+        gpu.yield %s : vector<32xindex>
+    }
+    scf.yield %w : vector<1xindex>
+  } else {
+    %z = arith.constant dense<0> : vector<1xindex>
+    scf.yield %z : vector<1xindex>
+  }
+  %x = vector.extract %r[0] : index from vector<1xindex>
+  memref.store %x, %out[%i, %lane] : memref<2x32xindex>
+  %next = arith.addi %i, %c1 : index
+  cf.br ^bb1(%next : index)
+^bb3:
+  return
+}
+
+// -----
+
 // CHECK-D-DAG: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 * 2 + 32)>
 
 // CHECK-DIST-AND-PROP-LABEL: func @warp(
