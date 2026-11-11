@@ -95,9 +95,7 @@ entry:
 define <4 x i64> @xvbitrev_b(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: xvbitrev_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr2, 1
-; CHECK-NEXT:    xvsll.b $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitrev.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %b to <32 x i8>
@@ -111,9 +109,7 @@ entry:
 define <4 x i64> @xvbitrev_b_nomask(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: xvbitrev_b_nomask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.b $xr2, 1
-; CHECK-NEXT:    xvsll.b $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitrev.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %b to <32 x i8>
@@ -126,9 +122,7 @@ entry:
 define <4 x i64> @xvbitrev_h(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: xvbitrev_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr2, 1
-; CHECK-NEXT:    xvsll.h $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitrev.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %b to <16 x i16>
@@ -142,9 +136,7 @@ entry:
 define <4 x i64> @xvbitrev_h_nomask(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: xvbitrev_h_nomask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.h $xr2, 1
-; CHECK-NEXT:    xvsll.h $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitrev.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %b to <16 x i16>
@@ -157,9 +149,7 @@ entry:
 define <4 x i64> @xvbitrev_w(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: xvbitrev_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.w $xr2, 1
-; CHECK-NEXT:    xvsll.w $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvbitrev.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %b to <8 x i32>
@@ -173,9 +163,7 @@ entry:
 define <4 x i64> @xvbitrev_w_nomask(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: xvbitrev_w_nomask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvrepli.w $xr2, 1
-; CHECK-NEXT:    xvsll.w $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvxor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitrev.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x i64> %b to <8 x i32>
