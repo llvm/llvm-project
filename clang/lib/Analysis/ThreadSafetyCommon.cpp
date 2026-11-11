@@ -472,8 +472,12 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
         // parameters of a prototype nested in a declarator's type, such as a
         // function pointer's, have no function and stay there. An attribute on
         // the declarator can only name one of those, from its own type or a
-        // redeclaration's, so we know this must be a correct match.
-        Match = true;
+        // redeclaration's. When the declarator is itself a parameter, its
+        // attribute may also name a sibling parameter, which is no deeper
+        // than it is; only one nested deeper is of its own prototype.
+        Match = !isa<ParmVarDecl>(Ctx->AttrDecl) ||
+                PV->getFunctionScopeDepth() >
+                    cast<ParmVarDecl>(Ctx->AttrDecl)->getFunctionScopeDepth();
       else
         llvm_unreachable("ParmVarDecl does not belong to current declaration");
 
