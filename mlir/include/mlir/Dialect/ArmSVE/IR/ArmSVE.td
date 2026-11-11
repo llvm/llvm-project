@@ -722,7 +722,7 @@ def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
 
 def FmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"fmla.lane">,
-  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnySignlessInteger)>;
+  Arguments<(ins AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnyScalableVectorOfRank1, AnySignlessInteger)>;
 
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,
