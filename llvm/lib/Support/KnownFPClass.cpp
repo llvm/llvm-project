@@ -539,23 +539,21 @@ static KnownFPClass fadd_impl(const KnownFPClass &KnownLHS,
 }
 
 KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
-                                const KnownFPClass &KnownRHS_,
+                                const KnownFPClass &KnownRHS_, RoundingMode RM,
                                 DenormalMode Mode) {
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
-  KnownFPClass Known =
-      fadd_impl(KnownLHS, KnownRHS, RoundingMode::NearestTiesToEven);
+  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, RM);
 
   return applyOutputDenormalMode(Known, Mode);
 }
 
 KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
-                                     DenormalMode Mode) {
+                                     RoundingMode RM, DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
 
-  KnownFPClass Known =
-      fadd_impl(KnownSrc, KnownSrc, RoundingMode::NearestTiesToEven);
+  KnownFPClass Known = fadd_impl(KnownSrc, KnownSrc, RM);
 
   if (KnownSrc.isKnownNever(fcPosSubnormal))
     Known.knownNot(fcPosSubnormal);
@@ -570,7 +568,7 @@ KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
 }
 
 KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
-                                const KnownFPClass &KnownRHS_,
+                                const KnownFPClass &KnownRHS_, RoundingMode RM,
                                 DenormalMode Mode) {
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
@@ -579,8 +577,7 @@ KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
   // flushed.
   KnownRHS.fneg();
 
-  KnownFPClass Known =
-      fadd_impl(KnownLHS, KnownRHS, RoundingMode::NearestTiesToEven);
+  KnownFPClass Known = fadd_impl(KnownLHS, KnownRHS, RM);
 
   return applyOutputDenormalMode(Known, Mode);
 }
@@ -900,7 +897,8 @@ KnownFPClass KnownFPClass::fmuladd(const KnownFPClass &KnownLHS,
   // fmuladd can lower to either fma(x, y, z) or fadd(fmul(x, y), z). Compute
   // the intersection of both possibilities.
   KnownFPClass FMA = fma(KnownLHS, KnownRHS, KnownAddend, Mode);
-  KnownFPClass MulAdd = fadd(fmul(KnownLHS, KnownRHS, Mode), KnownAddend, Mode);
+  KnownFPClass MulAdd = fadd(fmul(KnownLHS, KnownRHS, Mode), KnownAddend,
+                             RoundingMode::NearestTiesToEven, Mode);
   return FMA.intersectWith(MulAdd);
 }
 
@@ -928,7 +926,8 @@ KnownFPClass KnownFPClass::fmuladd_square(const KnownFPClass &KnownSquared,
                                           const KnownFPClass &KnownAddend,
                                           DenormalMode Mode) {
   KnownFPClass FMA = fma_square(KnownSquared, KnownAddend, Mode);
-  KnownFPClass MulAdd = fadd(square(KnownSquared, Mode), KnownAddend, Mode);
+  KnownFPClass MulAdd = fadd(square(KnownSquared, Mode), KnownAddend,
+                             RoundingMode::NearestTiesToEven, Mode);
   return FMA.intersectWith(MulAdd);
 }
 

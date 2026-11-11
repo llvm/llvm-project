@@ -584,8 +584,8 @@ body:             |
   ; CHECK-NEXT: %load:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %lhs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %rhs:_ FPClasses:(psub) SignBitKnown:0
-  ; CHECK-NEXT: %fadd:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fadd:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(pinf zero psub pnorm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %load:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %lhs:_(f32) = nnan ninf G_FABS %load
@@ -597,14 +597,14 @@ body:             |
 name:            FstrictSub_NnanNinfFabs
 body:             |
   bb.0:
-  ; CHECK-LABEL: name: @FstrictSub_NoNanNoInf
+  ; CHECK-LABEL: name: @FstrictSub_NnanNinfFabs
   ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %load_lhs:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %load_rhs:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %lhs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
   ; CHECK-NEXT: %rhs:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %fsub:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %fsub:_ FPClasses:(inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(inf zero sub norm) SignBitKnown:?
     %ptr:_(p0) = G_IMPLICIT_DEF
     %load_lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
     %load_rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
