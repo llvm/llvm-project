@@ -37,7 +37,6 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/StringUtil/error_to_string.h"
-#include "src/__support/integer_to_string.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -65,7 +64,7 @@ constexpr const char *CompareMessage[] = {
 template <typename T> struct Comparator {
   CompareAction cmp;
   T expected;
-  bool compare(T actual) const {
+  bool compare(T actual) {
     switch (cmp) {
     case CompareAction::EQ:
       return actual == expected;
@@ -86,9 +85,9 @@ template <typename T> struct Comparator {
   // The NVPTX backend cannot handle circular dependencies on global variables.
   // We provide a constant dummy implementation to prevent this from occurring.
 #ifdef LIBC_TARGET_ARCH_IS_NVPTX
-  constexpr const char *str() const { return ""; }
+  constexpr const char *str() { return ""; }
 #else
-  const char *str() const { return CompareMessage[static_cast<int>(cmp)]; }
+  const char *str() { return CompareMessage[static_cast<int>(cmp)]; }
 #endif
 };
 
@@ -131,25 +130,25 @@ public:
     return false;
   }
 
-  template <typename Stream> void print_expected(Stream &os) const {
+  void print_expected() const {
     if (type == Type::EQ) {
       auto expected_str = try_get_errno_name(expected);
-      os << "equal to " << (expected_str ? *expected_str : "<unknown>") << "("
-         << expected << ")";
+      tlog << "equal to " << (expected_str ? *expected_str : "<unknown>") << "("
+           << expected << ")";
     } else if (type == Type::NE) {
       auto expected_str = try_get_errno_name(expected);
-      os << "not equal to " << (expected_str ? *expected_str : "<unknown>")
-         << "(" << expected << ")";
+      tlog << "not equal to " << (expected_str ? *expected_str : "<unknown>")
+           << "(" << expected << ")";
     } else if (type == Type::ANY_OF) {
-      os << "one of [";
+      tlog << "one of [";
       for (size_t i = 0; i < list_count; ++i) {
         auto expected_str = try_get_errno_name(expected_list[i]);
-        os << (expected_str ? *expected_str : "<unknown>") << "("
-           << expected_list[i] << ")";
+        tlog << (expected_str ? *expected_str : "<unknown>") << "("
+             << expected_list[i] << ")";
         if (i + 1 < list_count)
-          os << ", ";
+          tlog << ", ";
       }
-      os << "]";
+      tlog << "]";
     }
   }
 };
@@ -157,13 +156,8 @@ public:
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   Comparator<T> return_cmp;
   ErrnoCheck errno_cmp;
-  // EXPECT_THAT copies the matcher per assertion and calls MatchAndExplain
-  // twice when a match fails: once with an uninterested listener to test the
-  // condition, and again with a live listener to format the explanation. Cache
-  // libc_errno before resetting it on the first call so the explanation pass
-  // sees the original errno value.
-  mutable int actual_errno = 0;
-  mutable bool has_errno = false;
+  T actual_return;
+  int actual_errno;
 
   // Even though this is a errno matcher primarily, it has to cater to platforms
   // which do not have an errno. This predicate checks if errno matching is to
@@ -186,50 +180,39 @@ public:
     return *this;
   }
 
-  bool MatchAndExplain(T got, MatchResultListener *listener) const {
-    if constexpr (!ignore_errno()) {
-      if (!has_errno) {
-        actual_errno = libc_errno;
-        libc_errno = 0;
-        has_errno = true;
-      }
-    }
-    bool ret_ok = return_cmp.compare(got);
-    bool errno_ok = ignore_errno() || errno_cmp.compare(actual_errno);
-    if (ret_ok && errno_ok)
-      return true;
-    if (!listener->IsInterested())
-      return false;
-
-    if (!ret_ok) {
+  void explainError() override {
+    if (!return_cmp.compare(actual_return)) {
       if constexpr (cpp::is_floating_point_v<T>) {
-        *listener << "Expected return value to be " << return_cmp.str() << ": "
-                  << str(fputil::FPBits<T>(return_cmp.expected)) << '\n'
-                  << "                    But got: "
-                  << str(fputil::FPBits<T>(got)) << '\n';
-      } else if constexpr (cpp::is_pointer_v<T>) {
-        const IntegerToString<uintptr_t, radix::Hex::WithPrefix> exp_hex(
-            reinterpret_cast<uintptr_t>(return_cmp.expected));
-        const IntegerToString<uintptr_t, radix::Hex::WithPrefix> got_hex(
-            reinterpret_cast<uintptr_t>(got));
-        *listener << "Expected return value to be " << return_cmp.str() << " "
-                  << exp_hex.view() << " but got " << got_hex.view() << ".\n";
+        tlog << "Expected return value to be " << return_cmp.str() << ": "
+             << str(fputil::FPBits<T>(return_cmp.expected)) << '\n'
+             << "                    But got: "
+             << str(fputil::FPBits<T>(actual_return)) << '\n';
       } else {
-        *listener << "Expected return value to be " << return_cmp.str() << " "
-                  << return_cmp.expected << " but got " << got << ".\n";
+        tlog << "Expected return value to be " << return_cmp.str() << " "
+             << return_cmp.expected << " but got " << actual_return << ".\n";
       }
     }
 
     if constexpr (!ignore_errno()) {
-      if (!errno_ok) {
+      if (!errno_cmp.compare(actual_errno)) {
         auto actual_str = try_get_errno_name(actual_errno);
-        *listener << "Expected errno to be ";
-        errno_cmp.print_expected(*listener);
-        *listener << " but got " << (actual_str ? *actual_str : "<unknown>")
-                  << "(" << actual_errno << ").\n";
+        tlog << "Expected errno to be ";
+        errno_cmp.print_expected();
+        tlog << " but got " << (actual_str ? *actual_str : "<unknown>") << "("
+             << actual_errno << ").\n";
       }
     }
-    return false;
+  }
+
+  bool match(T got) {
+    actual_return = got;
+    actual_errno = libc_errno;
+    libc_errno = 0;
+    if constexpr (ignore_errno())
+      return return_cmp.compare(actual_return);
+    else
+      return return_cmp.compare(actual_return) &&
+             errno_cmp.compare(actual_errno);
   }
 };
 
