@@ -836,8 +836,8 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
   // With --sycl-device-link the images are already linked. Embed them as
-  // finalized images, so that a later host link through this tool does not
-  // link them again.
+  // finalized images, so that a later host link through clang-linker-wrapper
+  // does not link them again.
   bool IsFinalizedImage = Kind == OFK_SYCL && Args.hasArg(OPT_sycl_device_link);
 
   // We use the discrete tools if we are in verbose mode with '--save-temps'.
@@ -1509,13 +1509,10 @@ getDeviceInput(const ArgList &Args) {
   SmallVector<OffloadFile> ArchiveFilesToExtract;
   DenseMap<StringRef, StringRef> SourceForImage;
 
-  // With --sycl-device-link no host linker runs, so report missing inputs here.
-  // This tool does not know every host linker option, so a missing input is
-  // not reported if it may not be a file:
-  // - it follows an unknown option and may be its value, e.g. 'now' in
-  //   '-z now'. A file after an unknown option without a value is also skipped.
-  // - it is a link.exe option, e.g. '/nologo'.
   bool ReportMissingInputs = Args.hasArg(OPT_sycl_device_link);
+  // Positions of the options that clang-linker-wrapper does not know. A word
+  // right after one may be its value, e.g. 'now' in '-z now'. This also hides
+  // a missing file after an unknown option that takes no value.
   DenseSet<unsigned> UnknownOptionIndices;
   for (const opt::Arg *Arg : Args.filtered(OPT_UNKNOWN))
     if (Arg->getSpelling() != "--") // '--' ends the options and has no value.
@@ -1538,8 +1535,9 @@ getDeviceInput(const ArgList &Args) {
     bool IsWholeArchiveFile = Arg->getOption().matches(OPT_wholearchive_file);
     if (Arg->getOption().matches(OPT_INPUT)) {
       // '/WHOLEARCHIVE:file' in a case other than the option table's lower
-      // case is a library to extract whole. '/WHOLEARCHIVE' and '/LIBPATH:dir'
-      // were handled above. Anything else, e.g. '/wholearchive-dir/a.obj', is
+      // case is a library to extract whole. '/WHOLEARCHIVE' was handled when
+      // setting WholeArchive and '/LIBPATH:dir' when collecting the search
+      // paths, so skip them. Anything else, e.g. '/wholearchive-dir/a.obj', is
       // an input path.
       if (std::optional<StringRef> File =
               getCOFFOptionValue(Input, "wholearchive:", HostTriple)) {
@@ -1560,10 +1558,10 @@ getDeviceInput(const ArgList &Args) {
       return createStringError("unable to find library -l%s", Arg->getValue());
 
     // The input was not found. With --sycl-device-link no host linker runs to
-    // report it, so report it here. Do not report words that may not be
-    // files: the value of an unknown option, e.g. 'now' in '-z now', or a
-    // link.exe option such as '/nologo'. Those are ignored, as in a normal
-    // link.
+    // report it, so clang-linker-wrapper reports it. Do not report words that
+    // may not be files: the value of an unknown option, e.g. 'now' in
+    // '-z now', or a link.exe option such as '/nologo'. Those are ignored, as
+    // in a normal link.
     if (!Filename || !sys::fs::exists(*Filename)) {
       if (ReportMissingInputs && !FollowsUnknownOption(Arg) &&
           !isCOFFLinkerOption(Input, HostTriple))
