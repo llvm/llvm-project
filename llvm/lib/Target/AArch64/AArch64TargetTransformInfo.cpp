@@ -5036,8 +5036,7 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
           // Non-FMul uses of other values aren't relevant here (and the FMul
           // uses are only relevant if they have Scalar as one of their
           // operands, which is checked below).
-          else
-            continue;
+          continue;
         }
         auto *FMul = cast<BinaryOperator>(U);
         auto *Op0 = FMul->getOperand(0);
@@ -5050,9 +5049,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
           // need an extract.
           const auto *OtherEE =
               dyn_cast<ExtractElementInst>(Op0 == Scalar ? Op1 : Op0);
-          if (OtherEE && !IsLaneZeroExtract(OtherEE)) {
+          if (OtherEE && !IsLaneZeroExtract(OtherEE))
             return false;
-          }
         } else {
           // If there's a different value used in an FMul that Scalar is used
           // in, then if that also has nonzero lane then we need an extract.
