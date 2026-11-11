@@ -507,13 +507,34 @@ public:
     setAlignment(2);
   }
 
-  size_t getSize() const override { return sizeof(tailMergeARM); }
+  size_t getSize() const override {
+    return sizeof(tailMergeARM) + (extended ? sizeof(armThunk) : 0);
+  }
   MachineTypes getMachine() const override { return ARMNT; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeARM, sizeof(tailMergeARM));
     applyMOV32T(buf + 14, desc->getRVA() + ctx.config.imageBase);
-    applyBranch24T(buf + 22, helper->getRVA() - rva - 26);
+    uint64_t target = helper->getRVA();
+    if (extended) {
+      // Call the helper through a range extension thunk after the code.
+      uint64_t thunk = rva + sizeof(tailMergeARM);
+      memcpy(buf + sizeof(tailMergeARM), armThunk, sizeof(armThunk));
+      applyMOV32T(buf + sizeof(tailMergeARM), target - thunk - 12);
+      target = thunk;
+    }
+    applyBranch24T(buf + 22, target - rva - 26);
+  }
+
+  bool verifyRanges() override {
+    return extended || isInt<25>(helper->getRVA() - rva - 26);
+  }
+
+  uint32_t extendRanges() override {
+    if (verifyRanges())
+      return 0;
+    extended = true;
+    return sizeof(armThunk);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
@@ -522,6 +543,7 @@ public:
 
   Chunk *desc = nullptr;
   Defined *helper = nullptr;
+  bool extended = false;
 
 private:
   const COFFLinkerContext &ctx;

@@ -648,6 +648,9 @@ private:
   ImportFile *file;
 };
 
+// The code of RangeExtensionThunkARM. Synthetic chunks can inline it.
+extern const uint8_t armThunk[10];
+
 class RangeExtensionThunkARM : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM(COFFLinkerContext &ctx, Defined *t)
