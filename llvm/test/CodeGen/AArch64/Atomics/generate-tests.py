@@ -24,6 +24,9 @@ class ByteSizes:
     def __iter__(self):
         return iter(self._data)
 
+    def __add__(self, other):
+        return self._data + other._data
+
 
 # fmt: off
 Type = ByteSizes([
@@ -320,14 +323,14 @@ def emit_load_tests(f, datatypes, alignments, orderings):
 
 
 def all_load(f, feature):
-    emit_load_tests(f, Type, Aligned, ATOMIC_LOAD_ORDERS)
+    emit_load_tests(f, Type + FPType, Aligned, ATOMIC_LOAD_ORDERS)
     if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128]:
         emit_load_tests(f, FP128LoadType, [Aligned.aligned], [AtomicOrder.seq_cst])
 
 
 def all_store(f):
     for aligned in Aligned:
-        for ty, val in Type:
+        for ty, val in Type + FPType:
             alignval = align(val, aligned)
             for ordering in ATOMIC_STORE_ORDERS:  # FIXME stores
                 name = f"store_atomic_{ty}_{aligned}_{ordering}"
