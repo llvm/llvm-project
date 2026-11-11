@@ -56,8 +56,8 @@ public:
   ///
   /// This, and HasSourceFiles(), allow clients to find out if it is worth
   /// searching the symbol table for specific symbols without needing to
-  /// iterate over all of the symbols themselves. The values are calculated
-  /// the first time either is requested, and are recalculated after symbols
+  /// iterate over all of the symbols themselves. Each value is calculated
+  /// the first time it is requested, and is recalculated after symbols
   /// are added with AddSymbol() or Resize().
   ///
   /// \return
@@ -300,7 +300,8 @@ protected:
       FileRangeToIndexMap;
   void InitNameIndexes();
   void InitAddressIndexes();
-  void CalculateHasDebugMapAndSourceFiles() const;
+  void CalculateHasDebugMap() const;
+  void CalculateHasSourceFiles() const;
 
   /// Provide thread safety for this symbol table.
   mutable std::recursive_mutex m_mutex;

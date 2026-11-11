@@ -81,38 +81,30 @@ size_t Symtab::GetNumSymbols() const {
   return m_symbols.size();
 }
 
-void Symtab::CalculateHasDebugMapAndSourceFiles() const {
-  // Stop once both have been found. Each N_OSO debug map symbol directly
-  // follows its N_SO source file symbol, so for binaries with a debug map this
-  // happens at the first N_OSO symbol.
-  bool has_debug_map = false;
-  bool has_source_files = false;
-  for (const Symbol &symbol : m_symbols) {
-    const SymbolType type = symbol.GetType();
-    if (type == eSymbolTypeSourceFile) {
-      has_source_files = true;
-    } else if (type == eSymbolTypeObjectFile &&
-               symbol.GetFlags() == kDebugMapOSOSymbolFlagsValue) {
-      has_debug_map = true;
-      if (has_source_files)
-        break;
-    }
-  }
-  m_has_debug_map = has_debug_map;
-  m_has_source_files = has_source_files;
+void Symtab::CalculateHasDebugMap() const {
+  m_has_debug_map = llvm::any_of(m_symbols, [](const Symbol &symbol) {
+    return symbol.GetType() == eSymbolTypeObjectFile &&
+           symbol.GetFlags() == kDebugMapOSOSymbolFlagsValue;
+  });
+}
+
+void Symtab::CalculateHasSourceFiles() const {
+  m_has_source_files = llvm::any_of(m_symbols, [](const Symbol &symbol) {
+    return symbol.GetType() == eSymbolTypeSourceFile;
+  });
 }
 
 bool Symtab::HasDebugMap() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_has_debug_map)
-    CalculateHasDebugMapAndSourceFiles();
+    CalculateHasDebugMap();
   return *m_has_debug_map;
 }
 
 bool Symtab::HasSourceFiles() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_has_source_files)
-    CalculateHasDebugMapAndSourceFiles();
+    CalculateHasSourceFiles();
   return *m_has_source_files;
 }
 
