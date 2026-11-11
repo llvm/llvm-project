@@ -3358,6 +3358,35 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   SelectCode(N);
 }
 
+void AMDGPUDAGToDAGISel::SelectWQMVote(SDNode *N) {
+  SDLoc SL(N);
+  SDValue Src = N->getOperand(1);
+  const bool IsWave32 = Subtarget->isWave32();
+
+  if (auto *C = dyn_cast<ConstantSDNode>(Src)) {
+    // Constant false can be simplified to 0
+    if (C->isZero()) {
+      // (wqm_vote 0) -> (S_MOV 0)
+      CurDAG->SelectNodeTo(N, IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64,
+                           N->getVTList(), Src);
+      return;
+    }
+
+    // (wqm_vote 1) -> (S_WQM EXEC)
+    Src =
+        CurDAG->getRegister(IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC, MVT::i1);
+  } else {
+    // (wqm_vote src) -> (S_WQM (S_AND src, EXEC))
+    unsigned AndOpc = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
+    SDValue Exec =
+        CurDAG->getRegister(IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC, MVT::i1);
+    Src = SDValue(CurDAG->getMachineNode(AndOpc, SL, MVT::i1, {Src, Exec}), 0);
+  }
+
+  CurDAG->SelectNodeTo(N, IsWave32 ? AMDGPU::S_WQM_B32 : AMDGPU::S_WQM_B64,
+                       N->getVTList(), Src);
+}
+
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(0);
   unsigned Opcode = AMDGPU::INSTRUCTION_LIST_END;
@@ -3388,6 +3417,9 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
     break;
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
+    return;
+  case Intrinsic::amdgcn_wqm_vote:
+    SelectWQMVote(N);
     return;
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap: {

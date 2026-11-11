@@ -38,7 +38,7 @@ main_body:
 define amdgpu_ps float @true() #1 {
 ; GFX8-SDAG-LABEL: true:
 ; GFX8-SDAG:       ; %bb.0: ; %main_body
-; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], -1
+; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], exec
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GFX8-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -51,7 +51,7 @@ define amdgpu_ps float @true() #1 {
 ;
 ; GFX10-SDAG-LABEL: true:
 ; GFX10-SDAG:       ; %bb.0: ; %main_body
-; GFX10-SDAG-NEXT:    s_wqm_b32 s0, -1
+; GFX10-SDAG-NEXT:    s_wqm_b32 s0, exec_lo
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -64,7 +64,7 @@ define amdgpu_ps float @true() #1 {
 ;
 ; GFX11-SDAG-LABEL: true:
 ; GFX11-SDAG:       ; %bb.0: ; %main_body
-; GFX11-SDAG-NEXT:    s_wqm_b32 s0, -1
+; GFX11-SDAG-NEXT:    s_wqm_b32 s0, exec_lo
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
@@ -85,40 +85,40 @@ main_body:
 define amdgpu_ps float @false() #1 {
 ; GFX8-SDAG-LABEL: false:
 ; GFX8-SDAG:       ; %bb.0: ; %main_body
-; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GFX8-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-GISEL-LABEL: false:
 ; GFX8-GISEL:       ; %bb.0: ; %main_body
-; GFX8-GISEL-NEXT:    s_wqm_b64 s[0:1], 0
+; GFX8-GISEL-NEXT:    s_cmp_lg_u64 0, 0
 ; GFX8-GISEL-NEXT:    s_cselect_b32 s0, 1.0, 0
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-SDAG-LABEL: false:
 ; GFX10-SDAG:       ; %bb.0: ; %main_body
-; GFX10-SDAG-NEXT:    s_wqm_b32 s0, 0
+; GFX10-SDAG-NEXT:    s_mov_b32 s0, 0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: false:
 ; GFX10-GISEL:       ; %bb.0: ; %main_body
-; GFX10-GISEL-NEXT:    s_wqm_b32 s0, 0
+; GFX10-GISEL-NEXT:    s_cmp_lg_u32 0, 0
 ; GFX10-GISEL-NEXT:    s_cselect_b32 s0, 1.0, 0
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SDAG-LABEL: false:
 ; GFX11-SDAG:       ; %bb.0: ; %main_body
-; GFX11-SDAG-NEXT:    s_wqm_b32 s0, 0
+; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: false:
 ; GFX11-GISEL:       ; %bb.0: ; %main_body
-; GFX11-GISEL-NEXT:    s_wqm_b32 s0, 0
+; GFX11-GISEL-NEXT:    s_cmp_lg_u32 0, 0
 ; GFX11-GISEL-NEXT:    s_cselect_b32 s0, 1.0, 0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s0
@@ -404,13 +404,12 @@ end:
   ret float %r
 }
 
-; FIXME: Inactive lanes should not influence wqm_vote. For one quad:
+; Inactive lanes in each branch must not influence wqm_vote. For one quad:
 ;   %vote     = 0b0010
 ;   exec      = 0b1111
 ;   if_cond   = 0b0001
 ;   else_cond = 0b1110
 ;   %w1 expected = 0b0000
-;   %w1 actual   = s_wqm(%vote) = 0b1111
 define amdgpu_ps float @vote_in_both_branches(i32 %a, i32 %b, i32 %x, float %y) #1 {
 ; GFX8-LABEL: vote_in_both_branches:
 ; GFX8:       ; %bb.0: ; %entry
@@ -420,13 +419,15 @@ define amdgpu_ps float @vote_in_both_branches(i32 %a, i32 %b, i32 %x, float %y) 
 ; GFX8-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
 ; GFX8-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; GFX8-NEXT:  ; %bb.1: ; %else
+; GFX8-NEXT:    s_and_b64 s[0:1], vcc, exec
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 0x40400000
-; GFX8-NEXT:    s_wqm_b64 s[0:1], vcc
+; GFX8-NEXT:    s_wqm_b64 s[0:1], s[0:1]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 4.0, v0, s[0:1]
 ; GFX8-NEXT:  ; %bb.2: ; %Flow
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[0:1], s[2:3]
 ; GFX8-NEXT:  ; %bb.3: ; %then
-; GFX8-NEXT:    s_wqm_b64 s[2:3], vcc
+; GFX8-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX8-NEXT:    s_wqm_b64 s[2:3], s[2:3]
 ; GFX8-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s[2:3]
 ; GFX8-NEXT:  ; %bb.4: ; %end
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[0:1]
@@ -441,12 +442,14 @@ define amdgpu_ps float @vote_in_both_branches(i32 %a, i32 %b, i32 %x, float %y) 
 ; GFX10-NEXT:    s_and_saveexec_b32 s1, s0
 ; GFX10-NEXT:    s_xor_b32 s0, exec_lo, s1
 ; GFX10-NEXT:  ; %bb.1: ; %else
-; GFX10-NEXT:    s_wqm_b32 s1, vcc_lo
+; GFX10-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
+; GFX10-NEXT:    s_wqm_b32 s1, s1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 4.0, 0x40400000, s1
 ; GFX10-NEXT:  ; %bb.2: ; %Flow
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s0, s0
 ; GFX10-NEXT:  ; %bb.3: ; %then
-; GFX10-NEXT:    s_wqm_b32 s1, vcc_lo
+; GFX10-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
+; GFX10-NEXT:    s_wqm_b32 s1, s1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s1
 ; GFX10-NEXT:  ; %bb.4: ; %end
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -462,14 +465,16 @@ define amdgpu_ps float @vote_in_both_branches(i32 %a, i32 %b, i32 %x, float %y) 
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s1
 ; GFX11-NEXT:  ; %bb.1: ; %else
-; GFX11-NEXT:    s_wqm_b32 s1, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_wqm_b32 s1, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 4.0, 0x40400000, s1
 ; GFX11-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:  ; %bb.3: ; %then
-; GFX11-NEXT:    s_wqm_b32 s1, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_wqm_b32 s1, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s1
 ; GFX11-NEXT:  ; %bb.4: ; %end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -497,12 +502,11 @@ end:
   ret float %r
 }
 
-; FIXME: Inactive lanes should not influence wqm_vote. For one quad:
+; Inactive lanes must not influence wqm_vote. For one quad:
 ;   %cond     = 0b0001
 ;   exec      = 0b1111
 ;   %not.cond = 0b1110
 ;   %w expected = 0b0000
-;   %w actual   = s_wqm(%not.cond) = 0b1111
 define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX8-SDAG-LABEL: vote_not_branch_cond:
 ; GFX8-SDAG:       ; %bb.0: ; %entry
@@ -511,7 +515,8 @@ define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc
 ; GFX8-SDAG-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
 ; GFX8-SDAG-NEXT:  ; %bb.1: ; %if
-; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], vcc
+; GFX8-SDAG-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], s[0:1]
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s[0:1]
 ; GFX8-SDAG-NEXT:  ; %bb.2: ; %end
 ; GFX8-SDAG-NEXT:    s_or_b64 exec, exec, s[2:3]
@@ -526,6 +531,7 @@ define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX8-GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX8-GISEL-NEXT:  ; %bb.1: ; %if
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[2:3], vcc, s[2:3]
+; GFX8-GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX8-GISEL-NEXT:    s_wqm_b64 s[2:3], s[2:3]
 ; GFX8-GISEL-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s[2:3]
 ; GFX8-GISEL-NEXT:  ; %bb.2: ; %end
@@ -540,7 +546,8 @@ define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
 ; GFX10-SDAG-NEXT:    s_and_saveexec_b32 s1, s0
 ; GFX10-SDAG-NEXT:  ; %bb.1: ; %if
-; GFX10-SDAG-NEXT:    s_wqm_b32 s0, vcc_lo
+; GFX10-SDAG-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
+; GFX10-SDAG-NEXT:    s_wqm_b32 s0, s0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s0
 ; GFX10-SDAG-NEXT:  ; %bb.2: ; %end
 ; GFX10-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s1
@@ -555,6 +562,7 @@ define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX10-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-GISEL-NEXT:  ; %bb.1: ; %if
 ; GFX10-GISEL-NEXT:    s_xor_b32 s1, vcc_lo, s1
+; GFX10-GISEL-NEXT:    s_and_b32 s1, s1, exec_lo
 ; GFX10-GISEL-NEXT:    s_wqm_b32 s1, s1
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s1
 ; GFX10-GISEL-NEXT:  ; %bb.2: ; %end
@@ -569,8 +577,9 @@ define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc_lo
 ; GFX11-SDAG-NEXT:    s_and_saveexec_b32 s1, s0
 ; GFX11-SDAG-NEXT:  ; %bb.1: ; %if
-; GFX11-SDAG-NEXT:    s_wqm_b32 s0, vcc_lo
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_wqm_b32 s0, s0
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s0
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s1
@@ -587,7 +596,9 @@ define amdgpu_ps float @vote_not_branch_cond(i32 %x, float %y) #1 {
 ; GFX11-GISEL-NEXT:  ; %bb.1: ; %if
 ; GFX11-GISEL-NEXT:    s_xor_b32 s1, vcc_lo, s1
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, exec_lo
 ; GFX11-GISEL-NEXT:    s_wqm_b32 s1, s1
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 2.0, 1.0, s1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -611,21 +622,20 @@ end:
   ret float %r
 }
 
-; FIXME: Wrong on GlobalISel. The first wqm_vote sets inactive lanes, the xor
-; with exec keeps them set, and the second wqm_vote counts them. For one quad:
+; The second wqm_vote must not count inactive lanes set by the first vote.
+; For one quad:
 ;   exec = 0b0111
 ;   %c   = 0b0111
 ;   %w1  = 0b1111
 ;   %n  expected = 0b0000
-;   %n  actual   = %w1 ^ exec = 0b1000
 ;   %w2 expected = 0b0000
-;   %w2 actual   = s_wqm(%n)  = 0b1111
 define amdgpu_ps float @vote_not_vote(i32 %v0, i32 %v1) #1 {
 ; GFX8-SDAG-LABEL: vote_not_vote:
 ; GFX8-SDAG:       ; %bb.0: ; %main_body
 ; GFX8-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], vcc
 ; GFX8-SDAG-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
+; GFX8-SDAG-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX8-SDAG-NEXT:    s_wqm_b64 s[0:1], s[0:1]
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GFX8-SDAG-NEXT:    ; return to shader part epilog
@@ -635,6 +645,7 @@ define amdgpu_ps float @vote_not_vote(i32 %v0, i32 %v1) #1 {
 ; GFX8-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
 ; GFX8-GISEL-NEXT:    s_wqm_b64 s[2:3], vcc
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
+; GFX8-GISEL-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX8-GISEL-NEXT:    s_wqm_b64 s[0:1], s[0:1]
 ; GFX8-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
@@ -644,6 +655,7 @@ define amdgpu_ps float @vote_not_vote(i32 %v0, i32 %v1) #1 {
 ; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX10-SDAG-NEXT:    s_wqm_b32 s0, vcc_lo
 ; GFX10-SDAG-NEXT:    s_xor_b32 s0, s0, -1
+; GFX10-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX10-SDAG-NEXT:    s_wqm_b32 s0, s0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
@@ -653,6 +665,7 @@ define amdgpu_ps float @vote_not_vote(i32 %v0, i32 %v1) #1 {
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX10-GISEL-NEXT:    s_wqm_b32 s1, vcc_lo
 ; GFX10-GISEL-NEXT:    s_xor_b32 s0, s1, exec_lo
+; GFX10-GISEL-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX10-GISEL-NEXT:    s_wqm_b32 s0, s0
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
@@ -663,8 +676,9 @@ define amdgpu_ps float @vote_not_vote(i32 %v0, i32 %v1) #1 {
 ; GFX11-SDAG-NEXT:    s_wqm_b32 s0, vcc_lo
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_xor_b32 s0, s0, -1
+; GFX11-SDAG-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_wqm_b32 s0, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -674,8 +688,9 @@ define amdgpu_ps float @vote_not_vote(i32 %v0, i32 %v1) #1 {
 ; GFX11-GISEL-NEXT:    s_wqm_b32 s1, vcc_lo
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_xor_b32 s0, s1, exec_lo
+; GFX11-GISEL-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_wqm_b32 s0, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX11-GISEL-NEXT:    ; return to shader part epilog
 main_body:
