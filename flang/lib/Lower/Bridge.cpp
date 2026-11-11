@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -57,6 +58,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Runtime/iostat-consts.h"
@@ -546,6 +548,60 @@ private:
 };
 
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
+
+/// Expression visitor that collects the symbols whose address is taken by a
+/// LOC or %LOC reference.
+struct LocArgumentSymbols
+    : public Fortran::evaluate::SetTraverse<
+          LocArgumentSymbols, Fortran::semantics::UnorderedSymbolSet> {
+  using Base =
+      Fortran::evaluate::SetTraverse<LocArgumentSymbols,
+                                     Fortran::semantics::UnorderedSymbolSet>;
+  LocArgumentSymbols() : Base{*this} {}
+  using Base::operator();
+
+  Fortran::semantics::UnorderedSymbolSet
+  operator()(const Fortran::evaluate::ProcedureRef &call) const {
+    Fortran::semantics::UnorderedSymbolSet symbols = Base::operator()(call);
+    const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+        call.proc().GetSpecificIntrinsic();
+    if (!intrinsic || intrinsic->name != "loc" ||
+        call.arguments().size() != 1 || !call.arguments()[0])
+      return symbols;
+    const Fortran::lower::SomeExpr *arg = call.arguments()[0]->UnwrapExpr();
+    if (const Fortran::semantics::Symbol *symbol =
+            arg ? Fortran::evaluate::GetFirstSymbol(*arg) : nullptr)
+      symbols.insert(*symbol);
+    return symbols;
+  }
+};
+
+/// Parse tree visitor that collects the symbols whose address is taken by a
+/// LOC or %LOC reference.
+struct LocArgumentVisitor {
+  template <typename A>
+  bool Pre(const A &) {
+    return true;
+  }
+  template <typename A>
+  void Post(const A &) {}
+
+  bool Pre(const Fortran::parser::Expr &expr) {
+    // Some parse tree expressions may legitimately be un-analyzed after
+    // semantics. Visit their operands instead.
+    const Fortran::lower::SomeExpr *typedExpr =
+        Fortran::semantics::GetExpr(nullptr, expr);
+    if (!typedExpr)
+      return true;
+    for (const Fortran::semantics::Symbol &symbol :
+         LocArgumentSymbols{}(*typedExpr))
+      symbols.push_back(&symbol);
+    // The typed expression already covers the operands.
+    return false;
+  }
+
+  llvm::SmallVector<const Fortran::semantics::Symbol *> symbols;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -7045,44 +7101,37 @@ private:
     }
   }
 
-  /// Collect entities used in visible Cray pointer associations.
+  /// Collect the entities that a Cray pointer in \p funit may visibly be
+  /// associated with: the arguments of LOC and %LOC references anywhere in
+  /// \p funit, in its host, or in their internal procedures, and the entities
+  /// that share storage with them through EQUIVALENCE or COMMON.
   void collectVisibleCrayPointerTargets(
-      Fortran::lower::pft::EvaluationList &evaluationList) {
-    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
-      eval.visit(Fortran::common::visitors{
-          [&](const Fortran::parser::AssignmentStmt &stmt) {
-            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
-              return;
-            const Fortran::evaluate::Assignment &assignment =
-                *stmt.typedAssignment->v;
-            const Fortran::semantics::Symbol *pointer =
-                Fortran::evaluate::GetLastSymbol(assignment.lhs);
-            if (!pointer || !pointer->GetUltimate().test(
-                                Fortran::semantics::Symbol::Flag::CrayPointer))
-              return;
-
-            const Fortran::evaluate::ProcedureRef *procedure =
-                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
-            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
-                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
-            if (!intrinsic || intrinsic->name != "loc" ||
-                procedure->arguments().size() != 1 ||
-                !procedure->arguments()[0])
-              return;
-
-            const Fortran::lower::SomeExpr *targetExpr =
-                procedure->arguments()[0]->UnwrapExpr();
-            const Fortran::semantics::Symbol *target =
-                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
-                           : nullptr;
-            if (!target)
-              return;
-
-            visibleCrayPointerTargets.insert(&target->GetUltimate());
-          },
-          [](const auto &) {}});
-      if (eval.hasNestedEvaluations())
-        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
+      Fortran::lower::pft::FunctionLikeUnit &funit) {
+    Fortran::lower::pft::FunctionLikeUnit *host =
+        funit.parent.getIf<Fortran::lower::pft::FunctionLikeUnit>();
+    LocArgumentVisitor visitor;
+    (host ? *host : funit).visit([&](const auto &functionParserNode) {
+      Fortran::parser::Walk(functionParserNode, visitor);
+    });
+    llvm::SmallVector<const Fortran::semantics::Symbol *> worklist =
+        std::move(visitor.symbols);
+    while (!worklist.empty()) {
+      const Fortran::semantics::Symbol &symbol =
+          worklist.pop_back_val()->GetUltimate();
+      if (!visibleCrayPointerTargets.insert(&symbol).second)
+        continue;
+      worklist.push_back(&Fortran::semantics::GetAssociationRoot(symbol));
+      if (const Fortran::semantics::EquivalenceSet *equivalenceSet =
+              Fortran::semantics::FindEquivalenceSet(symbol))
+        for (const Fortran::semantics::EquivalenceObject &object :
+             *equivalenceSet)
+          worklist.push_back(&object.symbol);
+      if (const Fortran::semantics::Symbol *commonBlock =
+              Fortran::semantics::FindCommonBlockContaining(symbol))
+        for (const Fortran::semantics::MutableSymbolRef &object :
+             commonBlock->get<Fortran::semantics::CommonBlockDetails>()
+                 .objects())
+          worklist.push_back(&*object);
     }
   }
 
@@ -7104,7 +7153,7 @@ private:
     assert(visibleCrayPointerTargets.empty() &&
            "Cray pointer targets must not outlive a procedure");
     if (hasCrayPointer(funit.getScope()))
-      collectVisibleCrayPointerTargets(funit.evaluationList);
+      collectVisibleCrayPointerTargets(funit);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
