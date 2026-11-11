@@ -111,7 +111,9 @@ add_libc_test(
     setvbuf_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
@@ -545,7 +547,9 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       rename_test.cpp
     DEPENDS
+      libc.hdr.fcntl_macros
       libc.hdr.sys_stat_macros
+      libc.hdr.unistd_macros
       libc.src.fcntl.open
       libc.src.stdio.rename
       libc.src.unistd.access
@@ -574,7 +578,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )
-
 
   add_libc_test(
     fdopen_test

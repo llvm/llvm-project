@@ -102,7 +102,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     initReg(MCI, ImpUse, PredReg, isTrue);
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
-                             HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
+                             HexagonMCInstrInfo::hasHxxTmp(MCII, MCI)) &&
                             STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.

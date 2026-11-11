@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/char_vector.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
@@ -31,11 +32,16 @@ TEST(LlvmLibcQueueTest, SList) {
   struct Contains : public testing::Matcher<Head> {
     string s;
     Contains(string s) : s(s) {}
-    bool match(Head head) {
+    bool MatchAndExplain(Head head,
+                         testing::MatchResultListener *listener) const {
       Entry *e;
       CharVector v;
       SLIST_FOREACH(e, &head, entries) { v.append(e->c); }
-      return s == v.c_str();
+      if (s == v.c_str())
+        return true;
+      *listener << "expected elements: " << s << "\nactual elements: "
+                << cpp::string_view(v.c_str(), v.length()) << '\n';
+      return false;
     }
   };
 
@@ -98,11 +104,16 @@ TEST(LlvmLibcQueueTest, STailQ) {
   struct Contains : public testing::Matcher<Head> {
     string s;
     Contains(string s) : s(s) {}
-    bool match(Head head) {
+    bool MatchAndExplain(Head head,
+                         testing::MatchResultListener *listener) const {
       Entry *e;
       CharVector v;
       STAILQ_FOREACH(e, &head, entries) { v.append(e->c); }
-      return s == v.c_str();
+      if (s == v.c_str())
+        return true;
+      *listener << "expected elements: " << s << "\nactual elements: "
+                << cpp::string_view(v.c_str(), v.length()) << '\n';
+      return false;
     }
   };
 

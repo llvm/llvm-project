@@ -13820,6 +13820,15 @@ def warn_riscv_attribute_interrupt_duplicate_type : Warning<
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
+// RISC-V errors
+def err_riscv_call_invalid_features : Error<
+  "call to an attributed function requires %0">;
+def err_missing_riscv_state : Error<"missing state for %0">;
+def err_unknown_riscv_state : Error<"unknown state '%0'">;
+def err_conflicting_attributes_riscv_state : Error<
+  "conflicting attribute. Description: %0">;
+def err_mutually_exclusive_attributes_riscv_state : Error<
+  "mutually exclusive attributes for state '%0'">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
@@ -14088,6 +14097,7 @@ defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|"
   "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+defvar UnsafeBufferLibcCallMsg = "function %0 is unsafe";
 def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_variable_main_argv : Warning<UnsafeBufferVariableMsg>,
@@ -14096,9 +14106,25 @@ def warn_unsafe_buffer_operation : Warning<UnsafeBufferOperationMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation_main_argv : Warning<UnsafeBufferOperationMsg>,
   InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
-def warn_unsafe_buffer_libc_call : Warning<
-  "function %0 is unsafe">,
+def warn_unsafe_buffer_libc_call : Warning<UnsafeBufferLibcCallMsg>,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_numeric_conversion :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallNumericConversion>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_string_manipulation :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallStringManipulation>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_string_examination :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallStringExamination>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_memory : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallMemory>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_io : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallIO>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_printf : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallPrintf>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_scanf : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallScanf>, DefaultIgnore;
 def warn_unsafe_buffer_format_attr_call : Warning<
   "formatting function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInFormatAttrCall>, DefaultIgnore;
