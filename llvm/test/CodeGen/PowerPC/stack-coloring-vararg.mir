@@ -59,7 +59,6 @@
 ---
 name:            atf_tc_fail_nonfatal
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprc }
   - { id: 1, class: gprc }

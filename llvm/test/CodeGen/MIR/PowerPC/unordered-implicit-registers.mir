@@ -20,7 +20,6 @@
 ...
 ---
 name:            main
-tracksRegLiveness: true
 registers:
   - { id: 0, class: g8rc_and_g8rc_nox0 }
   - { id: 1, class: gprc }

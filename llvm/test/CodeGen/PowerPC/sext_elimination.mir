@@ -8,7 +8,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 frameInfo:
@@ -84,7 +83,6 @@ body:             |
 # the original subregister.
 ---
 name:            elim_extsw_subreg_src
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
 body:             |

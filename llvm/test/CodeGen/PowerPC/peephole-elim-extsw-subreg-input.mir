@@ -7,7 +7,6 @@
 
 ---
 name:            extsw_elim_subreg_input
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3
@@ -32,7 +31,6 @@ body:             |
 # LWZ/LWZX defs, so these subregister cases are left as a separate load + extsw.
 ---
 name:            extsw_lwz8_subreg_input
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3
@@ -54,7 +52,6 @@ body:             |
 # Indexed load (X-form, no alignment requirement).
 ---
 name:            extsw_lwzx8_subreg_input
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3, $x4
@@ -78,7 +75,6 @@ body:             |
 # 32-bit result EXTSW_32.
 ---
 name:            extsw32_lwz8_subreg_input
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3
@@ -104,7 +100,6 @@ body:             |
 # 32-bit result EXTSW_32, indexed load.
 ---
 name:            extsw32_lwzx8_subreg_input
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3, $x4
@@ -132,7 +127,6 @@ body:             |
 # Negative test: no fold, the D-form displacement is not 4-byte aligned.
 ---
 name:            extsw_lwz8_subreg_input_unaligned
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3
@@ -154,7 +148,6 @@ body:             |
 # Negative test: no fold, the load has another use besides the sign-extension.
 ---
 name:            extsw_lwz8_subreg_input_multiuse
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x3

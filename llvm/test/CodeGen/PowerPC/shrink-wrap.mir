@@ -51,7 +51,6 @@
 ...
 ---
 name:            shrinkwrapme
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: shrinkwrapme
   ; CHECK: bb.0.entry:

@@ -79,7 +79,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
@@ -140,7 +139,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
@@ -200,7 +198,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc, preferred-register: '' }
@@ -260,7 +257,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: g8rc, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
@@ -315,7 +311,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
@@ -369,7 +364,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:       
   - { id: 0, class: g8rc_and_g8rc_nox0, preferred-register: '' }
   - { id: 1, class: g8rc_and_g8rc_nox0, preferred-register: '' }
