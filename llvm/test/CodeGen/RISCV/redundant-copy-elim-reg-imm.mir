@@ -15,7 +15,6 @@
 ...
 ---
 name:            beq_reg_imm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: beq_reg_imm
   ; CHECK: bb.0:
@@ -51,7 +50,6 @@ body:             |
 
 ---
 name:            bne_reg_imm
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: bne_reg_imm
   ; CHECK: bb.0:
@@ -85,7 +83,6 @@ body:             |
 
 ---
 name:            clobber_const
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: clobber_const
   ; CHECK: bb.0:
@@ -123,7 +120,6 @@ body:             |
 
 ---
 name:            clobber_target
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: clobber_target
   ; CHECK: bb.0:
@@ -164,7 +160,6 @@ body:             |
 
 ---
 name:            inequality_edge
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: inequality_edge
   ; CHECK: bb.0:
@@ -200,7 +195,6 @@ body:             |
 
 ---
 name:            beq_x0_is_zero
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: beq_x0_is_zero
   ; CHECK: bb.0:
@@ -232,7 +226,6 @@ body:             |
 
 ---
 name:            bne_x0_is_zero
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: bne_x0_is_zero
   ; CHECK: bb.0:
@@ -265,7 +258,6 @@ body:             |
 
 ---
 name:            beq_reg_imm_swapped
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: beq_reg_imm_swapped
   ; CHECK: bb.0:
@@ -304,7 +296,6 @@ body:             |
 
 ---
 name:            bne_reg_imm_swapped
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: bne_reg_imm_swapped
   ; CHECK: bb.0:

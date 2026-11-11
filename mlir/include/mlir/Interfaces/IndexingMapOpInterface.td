@@ -22,6 +22,7 @@ def IndexingMapOpInterface : OpInterface<"IndexingMapOpInterface"> {
     domain and operand index spaces.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/IndexingMapOpInterface.h"];
   let methods = [
     InterfaceMethod<
       /*desc=*/[{

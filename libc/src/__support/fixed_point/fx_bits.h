@@ -390,13 +390,16 @@ divifx(IntType n, FXType d) {
 
   constexpr int F = FXRep::FRACTION_LEN;
 
-  constexpr int INTERMEDIATE_BITS =
-      sizeof(IntType) * 8 - cpp::is_signed_v<IntType> + F;
+  constexpr int INTERMEDIATE_BITS = cpp::numeric_limits<IntType>::digits + F;
 
   using WideType = cpp::conditional_t<
       cpp::is_signed_v<IntType>,
-      cpp::conditional_t<INTERMEDIATE_BITS <= 64, int64_t, Int128>,
-      cpp::conditional_t<INTERMEDIATE_BITS <= 64, uint64_t, UInt128>>;
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<int64_t>::digits,
+                         int64_t, Int128>,
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<uint64_t>::digits,
+                         uint64_t, UInt128>>;
 
   WideType scaled_n = static_cast<WideType>(n) << F;
   WideType result = scaled_n / static_cast<WideType>(d_comp);

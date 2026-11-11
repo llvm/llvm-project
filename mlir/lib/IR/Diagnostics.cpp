@@ -36,24 +36,23 @@ using namespace mlir::detail;
 /// Construct from an Attribute.
 DiagnosticArgument::DiagnosticArgument(Attribute attr)
     : kind(DiagnosticArgumentKind::Attribute),
-      opaqueVal(reinterpret_cast<intptr_t>(attr.getAsOpaquePointer())) {}
+      opaqueVal(const_cast<void *>(attr.getAsOpaquePointer())) {}
 
 /// Construct from a Type.
 DiagnosticArgument::DiagnosticArgument(Type val)
     : kind(DiagnosticArgumentKind::Type),
-      opaqueVal(reinterpret_cast<intptr_t>(val.getAsOpaquePointer())) {}
+      opaqueVal(const_cast<void *>(val.getAsOpaquePointer())) {}
 
 /// Returns this argument as an Attribute.
 Attribute DiagnosticArgument::getAsAttribute() const {
   assert(getKind() == DiagnosticArgumentKind::Attribute);
-  return Attribute::getFromOpaquePointer(
-      reinterpret_cast<const void *>(opaqueVal));
+  return Attribute::getFromOpaquePointer(opaqueVal);
 }
 
 /// Returns this argument as a Type.
 Type DiagnosticArgument::getAsType() const {
   assert(getKind() == DiagnosticArgumentKind::Type);
-  return Type::getFromOpaquePointer(reinterpret_cast<const void *>(opaqueVal));
+  return Type::getFromOpaquePointer(opaqueVal);
 }
 
 /// Outputs this argument to a stream.
