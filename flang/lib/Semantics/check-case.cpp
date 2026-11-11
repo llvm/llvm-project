@@ -40,6 +40,8 @@ public:
 private:
   using Value = evaluate::Scalar<T>;
 
+  // operator< on the integer value type performs signed comparison.
+  // For unsigned types, we must explicitly use unsigned comparison (BLT).
   static bool LessThan(const Value &x, const Value &y) {
     if constexpr (T::category == TypeCategory::Unsigned) {
       return x.BLT(y);

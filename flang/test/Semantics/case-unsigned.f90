@@ -35,3 +35,37 @@ subroutine s_inverted(u1)
   end select
 end subroutine
 
+subroutine s_straddle(u1)
+  unsigned(1), intent(in) :: u1
+  select case (u1)
+  case (100u_1:200u_1)
+  case (201u_1:)
+  end select
+end subroutine
+
+subroutine s_conflict_straddle(u1)
+  unsigned(1), intent(in) :: u1
+  select case (u1)
+  case (100u_1:200u_1)
+  !ERROR: CASE (150U_1:250U_1) conflicts with previous cases
+  case (150u_1:250u_1)
+  end select
+end subroutine
+
+subroutine s_conflict_open(u1)
+  unsigned(1), intent(in) :: u1
+  select case (u1)
+  case (:200u_1)
+  !ERROR: CASE (100U_1:) conflicts with previous cases
+  case (100u_1:)
+  end select
+end subroutine
+
+subroutine s_conflict_k8(u8)
+  unsigned(8), intent(in) :: u8
+  select case (u8)
+  case (9223372036854775808u_8:9223372036854775809u_8)
+  !ERROR: CASE (1U_8:9223372036854775808U_8) conflicts with previous cases
+  case (1u_8:9223372036854775808u_8)
+  end select
+end subroutine
