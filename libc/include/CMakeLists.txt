@@ -457,6 +457,7 @@ add_header_macro(
     .llvm-libc-types.tss_t
     .llvm-libc-types.tss_dtor_t
     .llvm-libc-types.struct_timespec
+    .time
 )
 
 add_header_macro(
@@ -586,6 +587,22 @@ add_header_macro(
 )
 
 add_header_macro(
+  sched
+  ../libc/include/sched.yaml
+  sched.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sched_macros
+    .llvm-libc-types.cpu_set_t
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.struct_sched_param
+    # Needed according to posix standard
+    .llvm-libc-types.time_t
+    .llvm-libc-types.struct_timespec
+)
+
+add_header_macro(
   pthread
   ../libc/include/pthread.yaml
   pthread.h
@@ -613,6 +630,8 @@ add_header_macro(
     .llvm-libc-types.pthread_id_np_t
     .llvm-libc-types.struct_timespec
     .llvm_libc_common_h
+    .sched
+    .time
 )
 
 add_header_macro(
@@ -626,7 +645,7 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
-if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+if(LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV)
   add_header_macro(
     ucontext
     ../libc/include/ucontext.yaml
@@ -647,22 +666,6 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .ucontext
   )
 endif()
-
-add_header_macro(
-  sched
-  ../libc/include/sched.yaml
-  sched.h
-  DEPENDS
-    .llvm_libc_common_h
-    .llvm-libc-macros.sched_macros
-    .llvm-libc-types.cpu_set_t
-    .llvm-libc-types.pid_t
-    .llvm-libc-types.size_t
-    .llvm-libc-types.struct_sched_param
-    # Needed according to posix standard
-    .llvm-libc-types.time_t
-    .llvm-libc-types.struct_timespec
-)
 
 add_header_macro(
   semaphore
@@ -690,6 +693,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  elf
+  ../libc/include/elf.yaml
+  elf.h
+  DEPENDS
+    .llvm-libc-proxy.elf_proxy
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   link
   ../libc/include/link.yaml
   link.h
@@ -700,15 +712,7 @@ add_header_macro(
     .llvm-libc-types.struct_link_map
     .llvm-libc-types.struct_r_debug
     .llvm-libc-types.__dl_iterate_phdr_callback_t
-)
-
-add_header_macro(
-  elf
-  ../libc/include/elf.yaml
-  elf.h
-  DEPENDS
-    .llvm-libc-proxy.elf_proxy
-    .llvm_libc_common_h
+    .elf
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -929,6 +933,7 @@ add_header_macro(
     .llvm-libc-types.struct_semid_ds
     .llvm-libc-types.struct_sembuf
     .llvm-libc-types.struct_seminfo
+    .sys_ipc
 )
 
 add_header_macro(

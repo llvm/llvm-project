@@ -4069,6 +4069,19 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return InstructionCost::getInvalid();
   }
 
+  // A non-power-of-2 i1 vector that fits in a single register has no bitmask
+  // lowering, so its lanes are extracted and combined one by one.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      ISD == ISD::BITCAST && SrcVTy && Dst->isIntegerTy() &&
+      Src->isIntOrIntVectorTy(1) && !isPowerOf2_32(SrcVTy->getNumElements()) &&
+      getTypeLegalizationCost(SrcVTy).first == 1) {
+    unsigned NumElts = SrcVTy->getNumElements();
+    return getScalarizationOverhead(SrcVTy, APInt::getAllOnes(NumElts),
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind) +
+           NumElts - 1;
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
@@ -6257,9 +6270,13 @@ bool AArch64TTIImpl::hasMultiVectorLoadStore(
   if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
     return false;
 
-  // TODO: Support masked multi-vector loads/stores.
-  if (Mask != TTI::MaskSource::None)
+  switch (Mask) {
+  case TTI::MaskSource::ArbitraryPredicate:
     return false;
+  case TTI::MaskSource::None:
+  case TTI::MaskSource::ActiveLaneMask:
+    break;
+  }
 
   // A null vector type queries whether the target supports multi-vector memory
   // operations in general.
@@ -6276,12 +6293,22 @@ bool AArch64TTIImpl::hasMultiVectorLoadStore(
       (CastHint == Instruction::ZExt || CastHint == Instruction::SExt))
     return false;
 
+  TypeSize VectorWidth = DL.getTypeSizeInBits(VectorTy);
+  if (!VectorWidth.isKnownMultipleOf(AArch64::SVEBitsPerBlock))
+    return false;
+
+  // For masked loads/stores only allow operations that map to two or four
+  // vectors (as these can use a single predicate-as-counter).
+  if (Mask == TTI::MaskSource::ActiveLaneMask) {
+    unsigned NumSVEVectors = (VectorWidth * NumVectors).getKnownMinValue() /
+                             AArch64::SVEBitsPerBlock;
+    return NumSVEVectors == 2 || NumSVEVectors == 4;
+  }
+
   // For unpredicated loads/stores allow any pow-of-two multiple of a vector >=
   // to a single z-register. We can split operations wider than a single
   // multi-vector load/store during ISEL.
-  return isPowerOf2_32(NumVectors) &&
-         DL.getTypeSizeInBits(VectorTy).isKnownMultipleOf(
-             AArch64::SVEBitsPerBlock);
+  return isPowerOf2_32(NumVectors);
 }
 
 unsigned

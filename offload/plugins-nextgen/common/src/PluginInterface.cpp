@@ -10,7 +10,6 @@
 
 #include "PluginInterface.h"
 
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 
 #include "ErrorReporting.h"

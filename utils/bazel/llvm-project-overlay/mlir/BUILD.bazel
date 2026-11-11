@@ -4717,6 +4717,7 @@ cc_library(
         ":DataLayoutInterfaces",
         ":FunctionInterfaces",
         ":IR",
+        ":Support",
         "//llvm:ABI",
         "//llvm:Support",
     ],

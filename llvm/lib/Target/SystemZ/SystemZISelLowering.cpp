@@ -1579,6 +1579,14 @@ bool SystemZTargetLowering::isTruncateFree(EVT FromVT, EVT ToVT) const {
   return FromBits > ToBits;
 }
 
+bool SystemZTargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  unsigned Opc = N->getOpcode();
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) && VT.isVector() &&
+      VT.getScalarSizeInBits() < N->getValueType(0).getScalarSizeInBits())
+    return false;
+  return TargetLowering::isTypeDesirableForOp(N, VT);
+}
+
 //===----------------------------------------------------------------------===//
 // Inline asm support
 //===----------------------------------------------------------------------===//
@@ -2426,8 +2434,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
 
   // FIXME: z/OS support to be added in later.
-  if (Subtarget.isTargetXPLINK64())
+  if (Subtarget.isTargetXPLINK64()) {
+    if (CLI.CB && CLI.CB->isMustTailCall())
+      report_fatal_error("musttail call is not supported on XPLINK64");
     IsTailCall = false;
+  }
 
   // Integer args <=32 bits should have an extension attribute.
   verifyNarrowIntegerArgs_Call(CLI, Outs, &MF.getFunction(), Callee);
@@ -2441,6 +2452,10 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // sibling calls.
   if (IsTailCall && !canUseSiblingCall(ArgCCInfo, ArgLocs, Outs))
     IsTailCall = false;
+
+  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
+    report_fatal_error("failed to perform tail call elimination on a call "
+                       "site marked musttail");
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getStackSize();
