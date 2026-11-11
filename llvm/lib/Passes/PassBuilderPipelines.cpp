@@ -1001,14 +1001,17 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   return MPM;
 }
 
-ModulePassManager
-PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
-                                               ThinOrFullLTOPhase Phase) {
+ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
+    OptimizationLevel Level, ThinOrFullLTOPhase Phase,
+    const ModuleSummaryIndex *ImportSummary) {
   assert(Level != OptimizationLevel::O0 &&
          "Should not be used for O0 pipeline");
 
   assert(!isFullLTOPostLink(Phase) &&
          "FullLTOPostLink shouldn't call buildModuleSimplificationPipeline!");
+
+  assert((!ImportSummary || isThinLTOPostLink(Phase)) &&
+         "ImportSummary is only meaningful in the ThinLTO post link phase");
 
   ModulePassManager MPM;
 
@@ -1040,7 +1043,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // the sample profile in the ThinLTO backend, we ideally shouldn't have to
   // provide the sample profile file.
   if (isThinLTOPostLink(Phase) && !LoadSampleProfile)
-    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */, HasSampleProfile));
+    MPM.addPass(PGOIndirectCallPromotion(true /* InLTO */, HasSampleProfile,
+                                         ImportSummary));
 
   // Create an early function pass manager to cleanup the output of the
   // frontend. Not necessary with LTO post link pipelines since the pre link
@@ -1081,8 +1085,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       // This is important for the ThinLTO backend phase because otherwise
       // imported available_externally functions look unreferenced and are
       // removed.
-      MPM.addPass(
-          PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
+      MPM.addPass(PGOIndirectCallPromotion(
+          true /* IsInLTO */, true /* SamplePGO */, ImportSummary));
   }
 
   // Try to perform OpenMP specific optimizations on the module. This is a
@@ -1900,7 +1904,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   } else {
     // Add the core simplification pipeline.
     MPM.addPass(buildModuleSimplificationPipeline(
-        Level, ThinOrFullLTOPhase::ThinLTOPostLink));
+        Level, ThinOrFullLTOPhase::ThinLTOPostLink, ImportSummary));
   }
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(
