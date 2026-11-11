@@ -1,4 +1,4 @@
-// Test end-to-end ThinLTO optimization pipeline with PGHO, that it does not
+// Test end-to-end ThinLTO optimization pipeline with MemPGO, that it does not
 // interfere with other allocation instrumentation features.
 //
 // REQUIRES: x86-registered-target
