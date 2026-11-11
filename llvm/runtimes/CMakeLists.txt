@@ -118,7 +118,9 @@ endmacro()
 # Wire build-order dependencies on flang for targets that invoke it. This
 # allows us to configure the runtimes without first building flang. Attaches the
 # flang dependency to the main build target and any fortran module file builds,
-# like 'install-libomp-mod' or `install-flang-rt-mod'.
+# like 'install-libomp-mod' or `install-flang-rt-mod'. Also attaches it to test
+# targets that need the module files, like 'check-flang-rt' or
+# 'runtimes-test-depends'.
 function(add_flang_mod_deps build_target)
   if(NOT TARGET flang)
     return ()
@@ -128,7 +130,9 @@ function(add_flang_mod_deps build_target)
     add_dependencies(${build_target} flang)
   endif()
   foreach(tgt IN LISTS ARGN)
-    if(tgt MATCHES "-mod($|-)" OR tgt MATCHES "check-(flang-rt|openmp)($|-)")
+    if(tgt MATCHES "-mod($|-)" OR
+       tgt MATCHES "check-(flang-rt|openmp)($|-)" OR
+       tgt MATCHES "^runtimes-test-depends($|-)")
       if(TARGET ${tgt})
         add_dependencies(${tgt} flang)
       endif()
