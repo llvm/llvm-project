@@ -21,9 +21,11 @@ define dso_local i32 @main() nounwind uwtable {
 ; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    pmovsxbd %xmm0, %xmm0
 ; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    rcpps %xmm0, %xmm0
 ; CHECK-NEXT:    pmovsxbd %xmm1, %xmm1
 ; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
-; CHECK-NEXT:    divps %xmm0, %xmm1
+; CHECK-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    mulps %xmm0, %xmm1
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm0
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    packsswb %xmm0, %xmm0

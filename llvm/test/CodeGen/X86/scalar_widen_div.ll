@@ -13,9 +13,11 @@ define void @div_extract(ptr %dst, ptr %lhs, ptr %rhs) nounwind {
 ; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    rcpps %xmm1, %xmm1
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
-; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    mulps %xmm1, %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    pextrb $0, %xmm0, (%rdi)
 ; CHECK-NEXT:    pextrb $4, %xmm0, 1(%rdi)
@@ -79,9 +81,11 @@ define <3 x i8> @test_char_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-NEXT:    pinsrb $2, %r9d, %xmm1
 ; CHECK-NEXT:    pmovsxbd %xmm1, %xmm1
 ; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    rcpps %xmm1, %xmm1
 ; CHECK-NEXT:    pmovsxbd %xmm0, %xmm0
 ; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
-; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    mulps %xmm1, %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    packssdw %xmm0, %xmm0
 ; CHECK-NEXT:    packsswb %xmm0, %xmm0
@@ -107,9 +111,11 @@ define <3 x i8> @test_uchar_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-NEXT:    pinsrb $2, %r9d, %xmm1
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    rcpps %xmm1, %xmm1
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
-; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    mulps %xmm1, %xmm0
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    packusdw %xmm0, %xmm0
 ; CHECK-NEXT:    packuswb %xmm0, %xmm0
@@ -242,9 +248,11 @@ define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pmovsxbd %xmm1, %xmm2
 ; CHECK-NEXT:    cvtdq2ps %xmm2, %xmm2
+; CHECK-NEXT:    rcpps %xmm2, %xmm2
 ; CHECK-NEXT:    pmovsxbd %xmm0, %xmm3
 ; CHECK-NEXT:    cvtdq2ps %xmm3, %xmm3
-; CHECK-NEXT:    divps %xmm2, %xmm3
+; CHECK-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; CHECK-NEXT:    mulps %xmm2, %xmm3
 ; CHECK-NEXT:    cvttps2dq %xmm3, %xmm2
 ; CHECK-NEXT:    packssdw %xmm2, %xmm2
 ; CHECK-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
