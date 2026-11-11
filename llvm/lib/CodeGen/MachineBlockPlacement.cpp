@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
@@ -44,6 +45,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TailDuplicator.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -241,9 +243,6 @@ extern cl::opt<unsigned> ProfileLikelyProb;
 // -view-block-layout-with-bfi=
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
 
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
 } // namespace llvm
 
 namespace {
@@ -669,6 +668,7 @@ public:
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -3030,7 +3030,9 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    const Align TLIAlign = TLI->getPrefLoopAlignment(L);
+    // Query the block being aligned rather than only the LoopInfo header.
+    // After loop rotation, ChainBB can be a different backedge destination.
+    const Align TLIAlign = TLI->getPrefLoopAlignment(L, ChainBB);
     unsigned MDAlign = 1;
     MDNode *LoopID = L->getLoopID();
     if (LoopID) {
@@ -3042,11 +3044,8 @@ void MachineBlockPlacement::alignBlocks() {
         if (S == nullptr)
           continue;
         if (S->getString() == "llvm.loop.align") {
-          assert(MD->getNumOperands() == 2 &&
-                 "per-loop align metadata should have two operands.");
           MDAlign =
               mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-          assert(MDAlign >= 1 && "per-loop align value must be positive.");
         }
       }
     }
@@ -3117,10 +3116,10 @@ void MachineBlockPlacement::alignBlocks() {
     // Align all of the blocks in the function to a specific alignment.
     for (MachineBasicBlock &MBB : *F) {
       if (HasMaxBytesOverride)
-        MBB.setAlignment(Align(1ULL << AlignAllBlock),
+        MBB.setAlignment(Align::fromLog2(AlignAllBlock),
                          MaxBytesForAlignmentOverride);
       else
-        MBB.setAlignment(Align(1ULL << AlignAllBlock));
+        MBB.setAlignment(Align::fromLog2(AlignAllBlock));
     }
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
@@ -3129,10 +3128,10 @@ void MachineBlockPlacement::alignBlocks() {
       auto LayoutPred = std::prev(MBI);
       if (!LayoutPred->isSuccessor(&*MBI)) {
         if (HasMaxBytesOverride)
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks),
+          MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);
         else
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
+          MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks));
       }
     }
   }
@@ -3665,9 +3664,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   ChainAllocator.DestroyAll();
 
   // View the function.
-  if (ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F->getFunction().getName() == ViewBlockFreqFuncName)) {
+  StringRef ViewFuncName =
+      getViewBlockFreqFuncName(F->getFunction().getContext());
+  if (ViewBlockLayoutWithBFI != GVDAGType::None &&
+      (ViewFuncName.empty() || F->getFunction().getName() == ViewFuncName)) {
     if (RenumberBlocksBeforeView)
       MF.RenumberBlocks();
     MBFI->view("MBP." + MF.getName(), false);

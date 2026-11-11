@@ -16,6 +16,7 @@ class DataFormatterVarScriptFormatting(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", " // Set breakpoint here.")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_run_command(self):
         """Test using Python synthetic children provider."""
         self.build()

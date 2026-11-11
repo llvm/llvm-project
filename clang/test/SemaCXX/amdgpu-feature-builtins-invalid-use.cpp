@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx900 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu9.00-amd-amdhsa -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fsyntax-only -verify=expected,spirv %s
 
 bool predicate(bool x);

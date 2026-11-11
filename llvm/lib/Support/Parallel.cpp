@@ -278,9 +278,12 @@ void llvm::parallelFor(size_t Begin, size_t End,
       }
     };
 
+    // Run one worker on the calling thread: starts working immediately and
+    // avoids an idle thread.
     TaskGroup TG;
-    for (size_t I = 0; I != NumWorkers; ++I)
+    while (--NumWorkers)
       TG.spawn(Worker);
+    Worker();
     return;
   }
 #endif

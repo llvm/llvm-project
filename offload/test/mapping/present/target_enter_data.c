@@ -18,9 +18,9 @@ int main() {
   // CHECK: i is present
   fprintf(stderr, "i is present\n");
 
-  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK: omptarget error: Call to getTargetPointer returned null pointer ('present' map type modifier).
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK: error: Call to getTargetPointer returned null pointer ('present' map type modifier).
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target enter data map(present, alloc : i)
 
   // CHECK-NOT: i is present

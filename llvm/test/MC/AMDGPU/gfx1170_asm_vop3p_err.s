@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1170 %s 2>&1 | FileCheck --check-prefix=GFX1170 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.70 %s 2>&1 | FileCheck --check-prefix=GFX1170 --implicit-check-not=error: %s
 
 v_dot4_f32_fp8_bf8 v0, v1, v2, v3 clamp
 // GFX1170: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

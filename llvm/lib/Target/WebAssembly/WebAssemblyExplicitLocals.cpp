@@ -22,9 +22,12 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -32,14 +35,13 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-explicit-locals"
 
 namespace {
-class WebAssemblyExplicitLocals final : public MachineFunctionPass {
+class WebAssemblyExplicitLocalsLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override {
     return "WebAssembly Explicit Locals";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -47,16 +49,16 @@ class WebAssemblyExplicitLocals final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyExplicitLocals() : MachineFunctionPass(ID) {}
+  WebAssemblyExplicitLocalsLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyExplicitLocals::ID = 0;
-INITIALIZE_PASS(WebAssemblyExplicitLocals, DEBUG_TYPE,
+char WebAssemblyExplicitLocalsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyExplicitLocalsLegacy, DEBUG_TYPE,
                 "Convert registers to WebAssembly locals", false, false)
 
-FunctionPass *llvm::createWebAssemblyExplicitLocals() {
-  return new WebAssemblyExplicitLocals();
+FunctionPass *llvm::createWebAssemblyExplicitLocalsLegacyPass() {
+  return new WebAssemblyExplicitLocalsLegacy();
 }
 
 static void checkFrameBase(WebAssemblyFunctionInfo &MFI, unsigned Local,
@@ -228,7 +230,7 @@ static void removeFakeUses(MachineFunction &MF) {
     MI->eraseFromParent();
 }
 
-bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
+static bool explicitLocals(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Make Locals Explicit **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -243,6 +245,18 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   // Map non-stackified virtual registers to their local ids.
   DenseMap<unsigned, unsigned> Reg2Local;
 
+  // Start assigning local numbers after the last parameter and after any
+  // already-assigned locals.
+  unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
+  CurLocal += static_cast<unsigned>(MFI.getLocals().size());
+
+  // ABI contract: the async context must always be available in local 0. If
+  // something else defines the register of the swiftasync argument too, for
+  // example a value that register coalescing merged with it, that register
+  // gets its own local.
+  Register SwiftAsyncReg = WebAssembly::getSwiftAsyncArgReg(MF);
+  bool CopySwiftAsyncArg = SwiftAsyncReg && !MRI.hasOneDef(SwiftAsyncReg);
+
   // Handle ARGUMENTS first to ensure that they get the designated numbers.
   for (MachineBasicBlock::iterator I = MF.begin()->begin(),
                                    E = MF.begin()->end();
@@ -253,6 +267,18 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
     Register Reg = MI.getOperand(0).getReg();
     assert(!MFI.isVRegStackified(Reg));
     auto Local = static_cast<unsigned>(MI.getOperand(1).getImm());
+    if (Reg == SwiftAsyncReg && CopySwiftAsyncArg) {
+      const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+      Register Tmp = MRI.createVirtualRegister(RC);
+      BuildMI(*MI.getParent(), MI, DebugLoc(), TII->get(getLocalGetOpcode(RC)),
+              Tmp)
+          .addImm(Local);
+      MFI.stackifyVReg(MRI, Tmp);
+      Local = CurLocal++;
+      BuildMI(*MI.getParent(), MI, DebugLoc(), TII->get(getLocalSetOpcode(RC)))
+          .addImm(Local)
+          .addReg(Tmp);
+    }
     Reg2Local[Reg] = Local;
     checkFrameBase(MFI, Local, Reg);
 
@@ -262,11 +288,6 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
     MI.eraseFromParent();
     Changed = true;
   }
-
-  // Start assigning local numbers after the last parameter and after any
-  // already-assigned locals.
-  unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
-  CurLocal += static_cast<unsigned>(MFI.getLocals().size());
 
   // Precompute the set of registers that are unused, so that we can insert
   // drops to their defs.
@@ -375,11 +396,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
               MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
           if (UseEmpty[OldReg.virtRegIndex()] && !NeedsRegForDebug) {
             unsigned Opc = getDropOpcode(RC);
-            MachineInstr *Drop =
-                BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
-                    .addReg(NewReg);
-            // After the drop instruction, this reg operand will not be used
-            Drop->getOperand(0).setIsKill();
+            BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
+                .addReg(NewReg);
             if (MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg())
               MFI.clearFrameBaseVreg();
           } else {
@@ -499,4 +517,17 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 #endif
 
   return Changed;
+}
+
+bool WebAssemblyExplicitLocalsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return explicitLocals(MF);
+}
+
+PreservedAnalyses
+WebAssemblyExplicitLocalsPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  return explicitLocals(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                  .preserveSet<CFGAnalyses>()
+                            : PreservedAnalyses::all();
 }

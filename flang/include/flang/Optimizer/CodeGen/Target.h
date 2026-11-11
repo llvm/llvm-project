@@ -39,14 +39,23 @@ public:
 
   Attributes(unsigned short alignment = 0, bool byval = false,
              bool sret = false, bool append = false,
-             IntegerExtension intExt = IntegerExtension::None)
+             IntegerExtension intExt = IntegerExtension::None,
+             bool indirect = false)
       : alignment{alignment}, byval{byval}, sret{sret}, append{append},
-        intExt{intExt} {}
+        indirect{indirect}, intExt{intExt} {}
 
   unsigned getAlignment() const { return alignment; }
   bool hasAlignment() const { return alignment != 0; }
   bool isByVal() const { return byval; }
   bool isSRet() const { return sret; }
+  /// The argument is passed indirectly: the caller materializes a copy of the
+  /// aggregate and passes the address of that copy, which the ABI assigns to a
+  /// register like any other pointer. Like `byval` this requires the caller to
+  /// make a copy, but the pointer itself is the argument, so no `llvm.byval`
+  /// attribute is attached and the target does not lower it as a by-value
+  /// aggregate. Some ABIs (e.g. AAPCS64) require this form for aggregates that
+  /// are too large to be passed in registers.
+  bool isIndirect() const { return indirect; }
   bool isAppend() const { return append; }
   bool isZeroExt() const { return intExt == IntegerExtension::Zero; }
   bool isSignExt() const { return intExt == IntegerExtension::Sign; }
@@ -57,6 +66,7 @@ private:
   bool byval : 1;
   bool sret : 1;
   bool append : 1;
+  bool indirect : 1;
   IntegerExtension intExt;
 };
 

@@ -1,30 +1,30 @@
 # BOLT Address Translation (BAT)
-# Purpose
+## Purpose
 A regular profile collection for BOLT involves collecting samples from
 unoptimized binary. BOLT Address Translation allows collecting profile
 from BOLT-optimized binary and using it for optimizing the input (pre-BOLT)
 binary.
 
-# Overview
+## Overview
 BOLT Address Translation is an extra section (`.note.bolt_bat`) inserted by BOLT
 into the output binary containing translation tables and split functions linkage
 information. This information enables mapping the profile back from optimized
 binary onto the original binary.
 
-# Usage
+## Usage
 `--enable-bat` flag controls the generation of BAT section. Sampled profile
 needs to be passed along with the optimized binary containing BAT section to
 `perf2bolt` which reads BAT section and produces profile for the original
 binary.
 
-# Internals
-## Section contents
+## Internals
+### Section contents
 The section is organized as follows:
 - Hot functions table
   - Address translation tables
 - Cold functions table
 
-## Construction and parsing
+### Construction and parsing
 BAT section is created from `BoltAddressTranslation` class which captures
 address translation information provided by BOLT linker. It is then encoded as a
 note section in the output binary.
@@ -34,12 +34,12 @@ During profile conversion when BAT-enabled binary is passed to perf2bolt,
 queried by `DataAggregator` during sample processing to reconstruct addresses/
 offsets in the input binary.
 
-## Encoding format
+### Encoding format
 The encoding is specified in
 [BoltAddressTranslation.h](https://github.com/llvm/llvm-project/blob/main/bolt/include/bolt/Profile/BoltAddressTranslation.h)
 and [BoltAddressTranslation.cpp](https://github.com/llvm/llvm-project/blob/main/bolt/lib/Profile/BoltAddressTranslation.cpp).
 
-### Layout
+#### Layout
 The general layout is as follows:
 ```
 Hot functions table
@@ -59,7 +59,7 @@ Functions table:
 
 ```
 
-### Functions table
+#### Functions table
 Hot and cold functions tables share the encoding except differences marked below.
 
 Header:
@@ -91,7 +91,7 @@ Function header is followed by *Address Translation Table* with `NumEntries`
 total entries, and *Secondary Entry Points* table with `NumSecEntryPoints`
 entries (hot functions only).
 
-### Address translation table
+#### Address translation table
 Delta encoding means that only the difference with the previous corresponding
 entry is encoded. Input offsets implicitly start at zero.
 | Entry  | Encoding | Description | Branch/BB |
@@ -115,7 +115,7 @@ Deleted basic blocks are emitted as having `OutputOffset` equal to the size of
 the function. They don't affect address translation and only participate in
 input basic block mapping.
 
-### Secondary Entry Points table
+#### Secondary Entry Points table
 The table is emitted for hot fragments only. It contains `NumSecEntryPoints`
 offsets denoting secondary entry points, delta encoded, implicitly starting at zero.
 | Entry | Encoding | Description |

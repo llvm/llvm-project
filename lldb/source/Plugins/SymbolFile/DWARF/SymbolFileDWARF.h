@@ -94,6 +94,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
+  static llvm::StringRef GetDwoDiagnosticSuffix();
+
   static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
@@ -110,7 +112,7 @@ public:
 
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
 
-  XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) override;
+  XcodeSDKAndSysroot ParseXcodeSDK(CompileUnit &comp_unit) override;
 
   size_t ParseFunctions(CompileUnit &comp_unit) override;
 
@@ -377,6 +379,8 @@ public:
 
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
+
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override;
 
 private:
   /// Find the definition DIE for the specified \c label in this

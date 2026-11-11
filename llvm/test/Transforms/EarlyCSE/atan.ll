@@ -17,7 +17,7 @@ define float @callatanInf() {
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float +inf)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @atanf(float 0x7FF0000000000000)
+  %call = call float @atanf(float +inf)
   ret float %call
 }
 
@@ -27,7 +27,7 @@ define float @callatanNaN() {
 ; CHECK-NEXT:    [[CALL:%.*]] = call float @atanf(float +qnan)
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @atanf(float 0x7FF8000000000000)
+  %call = call float @atanf(float +qnan)
   ret float %call
 }
 
@@ -138,7 +138,7 @@ define float @callatan2_NaN() {
 ; CHECK-LABEL: @callatan2_NaN(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %call = call float @atan2f(float 0x7FF8000000000000, float 0x7FF8000000000000)
+  %call = call float @atan2f(float +qnan, float +qnan)
   ret float %call
 }
 
@@ -146,7 +146,7 @@ define float @callatan2_Inf() {
 ; CHECK-LABEL: @callatan2_Inf(
 ; CHECK-NEXT:    ret float f0x3F490FDB
 ;
-  %call = call float @atan2f(float 0x7FF0000000000000, float 0x7FF0000000000000)
+  %call = call float @atan2f(float +inf, float +inf)
   ret float %call
 }
 

@@ -137,7 +137,7 @@ protected:
     Next &= Written;
     // Gen
     if (!this->BC.MIB->isCFI(Point)) {
-      if (BC.MIB->isCleanRegXOR(Point))
+      if (BC.MIB->isCleanReg(Point))
         return Next;
 
       BitVector Used = BitVector(NumRegs, false);

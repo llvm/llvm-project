@@ -89,11 +89,6 @@ private:
 
 } // namespace
 
-namespace clang::ssaf {
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFTestTransformationAnchorSource = 0;
-} // namespace clang::ssaf
-
 static TransformationRegistry::Add<TestTransformation>
     RegisterTestTransformation("test-transformation",
                                "Test transformation for the SSAF "

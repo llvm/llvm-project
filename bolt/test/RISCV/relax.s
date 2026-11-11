@@ -18,9 +18,8 @@
 
 // OBJDUMP:      0000000000600000 <_start>:
 // OBJDUMP-NEXT:     jal 0x600040 <near_f>
-// OBJDUMP-NEXT:     nop
 // OBJDUMP-NEXT:     auipc ra, 0x200
-// OBJDUMP-NEXT:     jalr 0x78(ra)
+// OBJDUMP-NEXT:     jalr 0x7c(ra)
 // OBJDUMP-NEXT:     j 0x600040 <near_f>
 // OBJDUMP:      0000000000600040 <near_f>:
 // OBJDUMP:      0000000000800080 <far_f>:

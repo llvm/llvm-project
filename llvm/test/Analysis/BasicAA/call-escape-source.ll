@@ -7,7 +7,7 @@ define i32 @test() {
 ; CHECK-LABEL: Function: test
 ; CHECK-NEXT: MustAlias: i32* %a, i32* %p7
   %a = alloca i32
-  %p1 = call ptr @llvm.strip.invariant.group.p0(ptr %a)
+  %p1 = call ptr @llvm.launder.invariant.group.p0(ptr %a)
   %p2 = getelementptr i8, ptr %p1, i64 1
   %p3 = getelementptr i8, ptr %p2, i64 -1
   %p4 = getelementptr i8, ptr %p3, i64 1
@@ -19,4 +19,4 @@ define i32 @test() {
   ret i32 %v
 }
 
-declare ptr @llvm.strip.invariant.group.p0(ptr)
+declare ptr @llvm.launder.invariant.group.p0(ptr)

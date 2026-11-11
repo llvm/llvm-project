@@ -1,36 +1,61 @@
-add_custom_target(libc_sys_uio_unittests)
+add_libc_testsuite(libc-sys-uio-tests)
 
-add_libc_unittest(
+add_libc_test(
   writev_test
   SUITE
-    libc_sys_uio_unittests
+    libc-sys-uio-tests
   SRCS
     writev_test.cpp
   DEPENDS
     libc.hdr.types.struct_iovec
     libc.src.__support.common
-    libc.src.errno.errno
-    libc.src.fcntl.open
     libc.src.sys.uio.writev
     libc.src.unistd.close
-    libc.src.unistd.unlink
+    libc.src.unistd.pipe
+    libc.src.unistd.read
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_unittest(
+add_libc_test(
   readv_test
   SUITE
-    libc_sys_uio_unittests
+    libc-sys-uio-tests
   SRCS
     readv_test.cpp
   DEPENDS
     libc.hdr.types.struct_iovec
     libc.src.__support.common
-    libc.src.errno.errno
-    libc.src.fcntl.open
     libc.src.sys.uio.readv
     libc.src.unistd.close
-    libc.src.unistd.unlink
+    libc.src.unistd.pipe
     libc.src.unistd.write
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  process_vm_readv_test
+  SUITE
+    libc-sys-uio-tests
+  SRCS
+    process_vm_readv_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_iovec
+    libc.src.__support.common
+    libc.src.sys.uio.process_vm_readv
+    libc.src.unistd.getpid
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  process_vm_writev_test
+  SUITE
+    libc-sys-uio-tests
+  SRCS
+    process_vm_writev_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_iovec
+    libc.src.__support.common
+    libc.src.sys.uio.process_vm_writev
+    libc.src.unistd.getpid
     libc.test.UnitTest.ErrnoSetterMatcher
 )

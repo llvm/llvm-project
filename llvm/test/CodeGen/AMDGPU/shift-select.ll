@@ -76,7 +76,7 @@ define amdgpu_kernel void @s_shl_i64(ptr addrspace(1) %out, i64 %lhs, i64 %rhs) 
 
 ; GCN-LABEL: name:            v_shl_i64
 ; GFX6: V_LSHL_B64
-; GFX8: V_LSHLREV_B64
+; GFX8PLUS: V_LSHLREV_B64
 define amdgpu_kernel void @v_shl_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idx = zext i32 %tid to i64
@@ -98,7 +98,7 @@ define amdgpu_kernel void @s_lshr_i64(ptr addrspace(1) %out, i64 %lhs, i64 %rhs)
 
 ; GCN-LABEL: name:            v_lshr_i64
 ; GFX6: V_LSHR_B64
-; GFX8: V_LSHRREV_B64
+; GFX8PLUS: V_LSHRREV_B64
 define amdgpu_kernel void @v_lshr_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idx = zext i32 %tid to i64
@@ -120,7 +120,7 @@ define amdgpu_kernel void @s_ashr_i64(ptr addrspace(1) %out, i64 %lhs, i64 %rhs)
 
 ; GCN-LABEL: name:            v_ashr_i64
 ; GFX6: V_ASHR_I64
-; GFX8: V_ASHRREV_I64
+; GFX8PLUS: V_ASHRREV_I64
 define amdgpu_kernel void @v_ashr_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %idx = zext i32 %tid to i64

@@ -10,7 +10,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[#SRV:]]:
   ; CHECK:   Name: One
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 0
+  ; CHECK:     Binding ID: 0
   ; CHECK:     Space: 0
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 4294967295
@@ -27,7 +27,7 @@ define void @test_typedbuffer() {
   ; CHECK: Resource [[#UAV:]]:
   ; CHECK:   Name: Two
   ; CHECK:   Binding:
-  ; CHECK:     Record ID: 0
+  ; CHECK:     Binding ID: 0
   ; CHECK:     Space: 0
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 4294967262

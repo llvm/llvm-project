@@ -69,10 +69,6 @@ public:
   LLVM_ABI llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
 
 private:
-
-  /// Parse the DWARF in the object file and convert it into the GsymCreator.
-  Error parse();
-
   /// Handle any DIE (debug info entry) from the DWARF.
   ///
   /// This function will find all DW_TAG_subprogram DIEs that convert them into
@@ -104,8 +100,6 @@ private:
   GsymCreator &Gsym;
   bool LoadDwarfCallSites;
   bool IsMachO;
-
-  friend class DwarfTransformerTest;
 };
 
 } // namespace gsym

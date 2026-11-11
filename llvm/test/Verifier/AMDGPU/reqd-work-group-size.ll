@@ -17,7 +17,7 @@
 ; NON-INTEGER-REQD: reqd_work_group_size operands must be integer constants
 
 ;--- missing-flat.ll
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 define amdgpu_kernel void @missing_flat() !reqd_work_group_size !0 {
   ret void
@@ -26,7 +26,7 @@ define amdgpu_kernel void @missing_flat() !reqd_work_group_size !0 {
 !0 = !{i32 32, i32 2, i32 1}
 
 ;--- broad-flat.ll
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 define amdgpu_kernel void @broad_flat() "amdgpu-flat-work-group-size"="16,128" !reqd_work_group_size !0 {
   ret void
@@ -35,7 +35,7 @@ define amdgpu_kernel void @broad_flat() "amdgpu-flat-work-group-size"="16,128" !
 !0 = !{i32 32, i32 2, i32 1}
 
 ;--- wrong-flat.ll
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 define amdgpu_kernel void @wrong_flat() "amdgpu-flat-work-group-size"="128,128" !reqd_work_group_size !0 {
   ret void
@@ -44,7 +44,7 @@ define amdgpu_kernel void @wrong_flat() "amdgpu-flat-work-group-size"="128,128" 
 !0 = !{i32 32, i32 2, i32 1}
 
 ;--- malformed-flat.ll
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 define amdgpu_kernel void @malformed_flat() "amdgpu-flat-work-group-size"="64" !reqd_work_group_size !0 {
   ret void
@@ -71,7 +71,7 @@ define spir_kernel void @non_integer_reqd() !reqd_work_group_size !0 {
 !0 = !{!"32", i32 2, i32 1}
 
 ;--- valid.ll
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 define amdgpu_kernel void @valid() "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
   ret void

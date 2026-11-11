@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConvertMemberFunctionsToStaticCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -15,18 +16,13 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
 namespace {
 
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
-
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  return Node.isOverloadedOperator();
-}
 
 AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
   return Node.hasAnyDependentBases();
@@ -91,8 +87,8 @@ AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
   if (LookupResult.isSingleResult())
     return false;
 
-  auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
-                                  const CXXMethodDecl &MD2) {
+  const auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
+                                        const CXXMethodDecl &MD2) {
     if (MD1.getNumParams() != MD2.getNumParams())
       return false;
     for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)
@@ -148,7 +144,7 @@ static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
                                       const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
-  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>();
   assert(FTL);
 
   const SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),

@@ -311,9 +311,10 @@ sw.epilog:                                        ; preds = %sw.bb.2, %sw.bb.1, 
 define  i32 @test5(i32 %x, i32 %y)  #0 {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,2), %eax
 ; CHECK-NEXT:    retq
 entry:
   %mul = mul nsw i32 %y, -2
@@ -338,9 +339,10 @@ entry:
 define  i32 @test7(i32 %x, i32 %y)  #0 {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $2, %esi
-; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 entry:
   %mul = mul nsw i32 %y, -4
@@ -365,9 +367,10 @@ entry:
 define  i32 @test9(i32 %x, i32 %y) #0 {
 ; CHECK-LABEL: test9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    addl %esi, %esi
-; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,2), %eax
 ; CHECK-NEXT:    retq
 entry:
   %mul = mul nsw i32 -2, %y
@@ -392,9 +395,10 @@ entry:
 define  i32 @test11(i32 %x, i32 %y) #0 {
 ; CHECK-LABEL: test11:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $2, %esi
-; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 entry:
   %mul = mul nsw i32 -4, %y
@@ -418,9 +422,8 @@ entry:
 define  i64 @test13(i64 %x, i64 %y) #0 {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shlq $2, %rsi
-; CHECK-NEXT:    subq %rsi, %rax
+; CHECK-NEXT:    negq %rsi
+; CHECK-NEXT:    leaq (%rdi,%rsi,4), %rax
 ; CHECK-NEXT:    retq
 entry:
   %mul = mul nsw i64 -4, %y
@@ -444,9 +447,10 @@ entry:
 define  zeroext i16 @test15(i16 zeroext %x, i16 zeroext %y) #0 {
 ; CHECK-LABEL: test15:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $3, %esi
-; CHECK-NEXT:    subl %esi, %eax
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %esi
+; CHECK-NEXT:    leal (%rdi,%rsi,8), %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 entry:

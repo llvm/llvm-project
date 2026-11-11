@@ -86,26 +86,33 @@ ExceptionSpecAnalyzer::analyzeRecord(const CXXRecordDecl *RecordDecl,
       if (getDefaultableMemberKind(MethodDecl) == Kind)
         return analyze(MethodDecl);
 
+  State Result = State::NotThrowing;
   for (const auto &BaseSpec : RecordDecl->bases()) {
-    const State Result = analyzeBase(BaseSpec, Kind);
-    if (Result == State::Throwing || Result == State::Unknown)
-      return Result;
+    const State CurrentState = analyzeBase(BaseSpec, Kind);
+    if (CurrentState == State::Throwing)
+      return CurrentState;
+    if (CurrentState == State::Unknown)
+      Result = CurrentState;
   }
 
   for (const auto &BaseSpec : RecordDecl->vbases()) {
-    const State Result = analyzeBase(BaseSpec, Kind);
-    if (Result == State::Throwing || Result == State::Unknown)
-      return Result;
+    const State CurrentState = analyzeBase(BaseSpec, Kind);
+    if (CurrentState == State::Throwing)
+      return CurrentState;
+    if (CurrentState == State::Unknown)
+      Result = CurrentState;
   }
 
   for (const auto *FDecl : RecordDecl->fields())
     if (!FDecl->isInvalidDecl() && !FDecl->isUnnamedBitField()) {
-      const State Result = analyzeFieldDecl(FDecl, Kind);
-      if (Result == State::Throwing || Result == State::Unknown)
-        return Result;
+      const State CurrentState = analyzeFieldDecl(FDecl, Kind);
+      if (CurrentState == State::Throwing)
+        return CurrentState;
+      if (CurrentState == State::Unknown)
+        Result = CurrentState;
     }
 
-  return State::NotThrowing;
+  return Result;
 }
 
 ExceptionSpecAnalyzer::State

@@ -8,8 +8,13 @@
 
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterType.h"
+#include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/Stream.h"
+
+#include "llvm/Support/Casting.h"
+
+#include <cinttypes>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -62,7 +67,7 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
   }
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
-                     invalidates, read_from, in_sets, info.flags_type,
+                     invalidates, read_from, in_sets, info.register_type,
                      terminal_width);
 }
 
@@ -88,7 +93,7 @@ void lldb_private::DoDumpRegisterInfo(
     Stream &strm, const char *name, const char *alt_name, uint32_t byte_size,
     const std::vector<const char *> &invalidates,
     const std::vector<const char *> &read_from,
-    const std::vector<SetInfo> &in_sets, const RegisterFlags *flags_type,
+    const std::vector<SetInfo> &in_sets, const RegisterType *register_type,
     uint32_t terminal_width) {
   strm << "       Name: " << name;
   if (alt_name)
@@ -111,11 +116,25 @@ void lldb_private::DoDumpRegisterInfo(
   };
   DumpList(strm, "    In sets: ", in_sets, emit_set);
 
-  if (flags_type) {
+  if (auto flags_type =
+          llvm::dyn_cast_if_present<RegisterTypeFlags>(register_type)) {
     strm.Printf("\n\n%s", flags_type->AsTable(terminal_width).c_str());
 
     std::string enumerators = flags_type->DumpEnums(terminal_width);
     if (enumerators.size())
       strm << "\n\n" << enumerators;
+  } else if (auto *union_type =
+                 llvm::dyn_cast_if_present<RegisterTypeUnion>(register_type)) {
+    strm << "\n\n  Union members:";
+    for (const RegisterTypeUnion::Field &field : union_type->GetFields()) {
+      strm.Printf("\n    %s (%s", field.GetName().c_str(),
+                  field.GetType()->GetID().c_str());
+      if (std::optional<uint64_t> byte_size = field.GetType()->GetByteSize())
+        strm.Printf(", %" PRIu64 " bytes", *byte_size);
+      strm.PutChar(')');
+    }
+  } else if (auto *vector_type =
+                 llvm::dyn_cast_if_present<RegisterTypeVector>(register_type)) {
+    strm.Printf("\n\n  Vector elements: %u", vector_type->GetCount());
   }
 }

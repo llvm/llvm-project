@@ -107,12 +107,15 @@ public:
   lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
+  bool GetEnableLLDBIndexCacheMemoryModules() const;
+  bool SetEnableLLDBIndexCacheMemoryModules(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
   uint64_t GetLLDBIndexCacheMaxPercent();
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
   bool GetLoadSymbolOnDemand() const;
+  uint64_t GetDemangledNameInfoCacheSize() const;
   lldb::SymbolDownload GetSymbolAutoDownload() const;
   PathMappingList GetSymlinkMappings() const;
 };
@@ -497,7 +500,8 @@ public:
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool invoke_locate_callback = true);
+                  bool *did_create_ptr, bool invoke_locate_callback = true,
+                  bool invoke_symbol_locators = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 

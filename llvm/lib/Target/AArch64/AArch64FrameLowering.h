@@ -96,6 +96,15 @@ public:
   int64_t getArgumentStackToRestore(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const;
 
+  /// Whether the return address is authenticated before the epilogue starts,
+  /// in the return block MBB, with the authenticated value then kept in LR
+  /// instead of being restored from the stack by the epilogue.
+  ///
+  /// We need to do this on Windows when doing tail calls where the caller
+  /// and callee use different amounts of stack space for arguments.
+  bool authenticatesReturnAddressEarly(MachineFunction &MF,
+                                       MachineBasicBlock &MBB) const;
+
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
   bool
@@ -158,8 +167,6 @@ public:
 
   bool isFPReserved(const MachineFunction &MF) const;
 
-  bool needsWinCFI(const MachineFunction &MF) const;
-
   bool requiresSaveVG(const MachineFunction &MF) const;
 
   /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
@@ -212,8 +219,8 @@ private:
                                 BitVector &SavedRegs) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   void inlineStackProbe(MachineFunction &MF,

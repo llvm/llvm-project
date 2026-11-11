@@ -1,5 +1,4 @@
 ; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -mattr=+fullfp16 | FileCheck %s
-; RUN: llc < %s -O3 -mtriple=arm64-apple-ios -fp-contract=fast -mattr=+fullfp16 | FileCheck %s
 
 define void @foo_2d(ptr %src) {
 entry:

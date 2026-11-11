@@ -13,7 +13,7 @@ func.func @single_loop_remark(%arg0: memref<100xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<100xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -31,7 +31,7 @@ func.func @nested_loop_remark(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -50,7 +50,7 @@ func.func @unknown_tile_remark(%arg0: memref<1000xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<1000xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -70,6 +70,6 @@ func.func @multiple_unknown_tiles_remark(%arg0: memref<100x100xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x100xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }

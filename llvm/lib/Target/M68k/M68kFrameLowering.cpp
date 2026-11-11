@@ -29,7 +29,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -46,9 +45,8 @@ bool M68kFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-         TRI->hasStackRealignment(MF);
+  return MF.disableFramePointerElim() || MFI.hasVarSizedObjects() ||
+         MFI.isFrameAddressTaken() || TRI->hasStackRealignment(MF);
 }
 
 // FIXME Make sure no other factors prevent us from reserving call frame

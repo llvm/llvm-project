@@ -2,12 +2,12 @@ if(LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 
-add_custom_target(libc_unittest_tests)
+add_libc_testsuite(libc-unittest-tests)
 
-add_libc_unittest(
+add_libc_test(
   testfilter_test
   SUITE
-    libc_unittest_tests
+    libc-unittest-tests
   SRCS
     testfilter_test.cpp
   DEPENDS

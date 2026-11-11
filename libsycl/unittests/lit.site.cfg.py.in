@@ -1,0 +1,10 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+config.unittest_dir = "@LIBSYCL_UNITTEST_DIR@"
+config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
+config.bin_dir = "@LLVM_TOOLS_BINARY_DIR@"
+config.library_dir = "@LIBSYCL_LIBRARY_DIR@"
+config.operating_system = "@CMAKE_SYSTEM_NAME@"
+
+# Let the main config do the real work.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

@@ -15,7 +15,6 @@
 #include "SIPostRABundler.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
@@ -68,10 +67,6 @@ INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false,
 char SIPostRABundlerLegacy::ID = 0;
 
 char &llvm::SIPostRABundlerLegacyID = SIPostRABundlerLegacy::ID;
-
-FunctionPass *llvm::createSIPostRABundlerPass() {
-  return new SIPostRABundlerLegacy();
-}
 
 bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
   if (!MI.mayLoad())

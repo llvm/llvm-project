@@ -278,8 +278,9 @@ OPENMP_NUMTASKS_MODIFIER(strict)
 OPENMP_NUMTEAMS_MODIFIER(lower_bound)
 OPENMP_NUMTEAMS_MODIFIER(dims)
 
-// Modifiers for the 'num_tasks' clause.
+// Modifiers for the 'num_threads' clause.
 OPENMP_NUMTHREADS_MODIFIER(strict)
+OPENMP_NUMTHREADS_MODIFIER(dims)
 
 // Modifiers for the 'thread_limit' clause.
 OPENMP_THREADLIMIT_MODIFIER(dims)

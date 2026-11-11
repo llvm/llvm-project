@@ -12,7 +12,7 @@
 
 @class NSString;
 
-// CHECK: @"OBJC_METACLASS_$_C" = global %struct._class_t { ptr ptrauth (ptr @"OBJC_METACLASS_$_Base", i32 2, i64 27361, ptr @"OBJC_METACLASS_$_C"), ptr ptrauth (ptr @"OBJC_METACLASS_$_Base", i32 2, i64 46507, ptr getelementptr inbounds (%struct._class_t, ptr @"OBJC_METACLASS_$_C", i32 0, i32 1)), ptr @_objc_empty_cache, ptr null, ptr @"_OBJC_METACLASS_RO_$_C" }
+// CHECK: @"OBJC_METACLASS_$_C" = global %struct._class_t { ptr ptrauth (ptr @"OBJC_METACLASS_$_Base", i32 2, i64 27361, ptr @"OBJC_METACLASS_$_C"), ptr ptrauth (ptr @"OBJC_METACLASS_$_Base", i32 2, i64 46507, ptr getelementptr inbounds (i8, ptr @"OBJC_METACLASS_$_C", i64 8)), ptr @_objc_empty_cache, ptr null, ptr @"_OBJC_METACLASS_RO_$_C" }
 // CHECK: @"OBJC_CLASSLIST_SUP_REFS_$_" = private global ptr @"OBJC_METACLASS_$_C"
 // CHECK: @OBJC_METH_VAR_NAME_ = private unnamed_addr constant [5 x i8] c"test\00"
 // CHECK: @OBJC_SELECTOR_REFERENCES_ = internal externally_initialized global ptr @OBJC_METH_VAR_NAME_
@@ -20,12 +20,12 @@
 // CHECK: @OBJC_CLASS_NAME_ = private unnamed_addr constant [2 x i8] c"C\00"
 // CHECK: @OBJC_METH_VAR_NAME_.1 = private unnamed_addr constant [11 x i8] c"super_test\00"
 // CHECK: @OBJC_METH_VAR_TYPE_ = private unnamed_addr constant [8 x i8] c"v16@0:8\00"
-// CHECK: @"_OBJC_$_CLASS_METHODS_C" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.1, ptr @OBJC_METH_VAR_TYPE_, ptr ptrauth (ptr @"\01+[C super_test]", i32 0, i64 0, ptr getelementptr inbounds ({ i32, i32, [1 x %struct._objc_method] }, ptr @"_OBJC_$_CLASS_METHODS_C", i32 0, i32 2, i32 0, i32 2)) }] }
-// CHECK: @"_OBJC_METACLASS_RO_$_C" = internal global %struct._class_ro_t { i32 129, i32 40, i32 40, ptr null, ptr @OBJC_CLASS_NAME_, ptr ptrauth (ptr @"_OBJC_$_CLASS_METHODS_C", i32 2, i64 49936, ptr getelementptr inbounds (%struct._class_ro_t, ptr @"_OBJC_METACLASS_RO_$_C", i32 0, i32 5)), ptr null, ptr null, ptr null, ptr null }
+// CHECK: @"_OBJC_$_CLASS_METHODS_C" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @OBJC_METH_VAR_NAME_.1, ptr @OBJC_METH_VAR_TYPE_, ptr ptrauth (ptr @"\01+[C super_test]", i32 0, i64 0, ptr getelementptr inbounds (i8, ptr @"_OBJC_$_CLASS_METHODS_C", i64 24)) }] }
+// CHECK: @"_OBJC_METACLASS_RO_$_C" = internal global %struct._class_ro_t { i32 129, i32 40, i32 40, ptr null, ptr @OBJC_CLASS_NAME_, ptr ptrauth (ptr @"_OBJC_$_CLASS_METHODS_C", i32 2, i64 49936, ptr getelementptr inbounds (i8, ptr @"_OBJC_METACLASS_RO_$_C", i64 32)), ptr null, ptr null, ptr null, ptr null }
 // CHECK: @"OBJC_CLASS_$_Base" = external global %struct._class_t
 // CHECK: @"_OBJC_CLASS_RO_$_C" = internal global %struct._class_ro_t { i32 128, i32 0, i32 0, ptr null, ptr @OBJC_CLASS_NAME_, ptr null, ptr null, ptr null, ptr null, ptr null }
-//        @"_OBJC_CLASS_RO_$_C" = internal global %struct._class_ro_t { i32 128, i32 0, i32 0, ptr null, ptr @OBJC_CLASS_NAME_, ptr ptrauth (ptr null, i32 2, i64 49936, ptr getelementptr inbounds (%struct._class_ro_t, ptr @"_OBJC_CLASS_RO_$_C", i32 0, i32 5)), ptr null, ptr null, ptr null, ptr null }
-// CHECK: @"OBJC_CLASS_$_C" = global %struct._class_t { ptr ptrauth (ptr @"OBJC_METACLASS_$_C", i32 2, i64 27361, ptr @"OBJC_CLASS_$_C"), ptr ptrauth (ptr @"OBJC_CLASS_$_Base", i32 2, i64 46507, ptr getelementptr inbounds (%struct._class_t, ptr @"OBJC_CLASS_$_C", i32 0, i32 1)), ptr @_objc_empty_cache, ptr null, ptr @"_OBJC_CLASS_RO_$_C" }
+//        @"_OBJC_CLASS_RO_$_C" = internal global %struct._class_ro_t { i32 128, i32 0, i32 0, ptr null, ptr @OBJC_CLASS_NAME_, ptr ptrauth (ptr null, i32 2, i64 49936, ptr getelementptr inbounds (i8, ptr @"_OBJC_CLASS_RO_$_C", i64 32)), ptr null, ptr null, ptr null, ptr null }
+// CHECK: @"OBJC_CLASS_$_C" = global %struct._class_t { ptr ptrauth (ptr @"OBJC_METACLASS_$_C", i32 2, i64 27361, ptr @"OBJC_CLASS_$_C"), ptr ptrauth (ptr @"OBJC_CLASS_$_Base", i32 2, i64 46507, ptr getelementptr inbounds (i8, ptr @"OBJC_CLASS_$_C", i64 8)), ptr @_objc_empty_cache, ptr null, ptr @"_OBJC_CLASS_RO_$_C" }
 // CHECK: @"OBJC_LABEL_CLASS_$" = private global [1 x ptr] [ptr @"OBJC_CLASS_$_C"]
 
 @interface Base

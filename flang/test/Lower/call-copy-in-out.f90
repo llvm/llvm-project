@@ -7,10 +7,10 @@
 subroutine test_assumed_shape_to_array(x)
   real :: x(:)
 ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %[[x]]
-! CHECK: %[[copy_in:.*]]:2 = hlfir.copy_in %[[x_decl]]#0 {{.*}}
+! CHECK: %[[copy_in:.*]]:3 = hlfir.copy_in %[[x_decl]]#0 {{.*}}
 ! CHECK: %[[addr:.*]] = fir.box_addr %[[copy_in]]#0
 ! CHECK: fir.call @_QPbar(%[[addr]])
-! CHECK: hlfir.copy_out %{{.*}}, %[[copy_in]]#1 to %[[x_decl]]#0
+! CHECK: hlfir.copy_out %{{.*}}, %[[copy_in]]#1, %[[copy_in]]#2 to %[[x_decl]]#0
   call bar(x)
 end subroutine
 
@@ -80,7 +80,7 @@ subroutine test_intent_in(x)
 ! CHECK: hlfir.copy_in
 ! CHECK: fir.call @_QPbar_intent_in
 ! CHECK: hlfir.copy_out
-! CHECK-SAME: %{{.*}}, %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
+! CHECK-SAME: %{{.*}}, %{{.*}}, %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xf32>>>, i1, i1) -> ()
   call bar_intent_in(x)
 end subroutine
 
@@ -104,7 +104,7 @@ end subroutine
 ! at the inner call site, so the inner procedure still generates copy-back.
 ! The outer array must therefore not be marked fir.read_only.
 ! CHECK-LABEL: func.func @_QPtest_forwarded_intent_in(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_in>}) {
 subroutine test_forwarded_intent_in(x)
   real, intent(in) :: x(4)
   call test_forwarded_without_intent(x)
@@ -142,7 +142,7 @@ end subroutine
 ! the target's contents, so the callee may define the target and copy-out is
 ! required.
 ! CHECK-LABEL: func.func @_QPtest_actual_intent_in_pointer(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pi", fir.read_only}) {
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pi", fir.fortran_attrs = #fir.var_attrs<intent_in>, fir.read_only}) {
 subroutine test_actual_intent_in_pointer(pi)
   integer, intent(in), pointer :: pi(:)
 ! CHECK: hlfir.copy_in

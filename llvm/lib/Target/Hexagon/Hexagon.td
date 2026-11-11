@@ -85,6 +85,20 @@ def ExtensionHVXV81: SubtargetFeature<"hvxv81", "HexagonHVXVersion",
        ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
        ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79]>;
 
+def ExtensionHVXV83: SubtargetFeature<"hvxv83", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V83", "Hexagon HVX instructions",
+      [ExtensionHVXV65, ExtensionHVXV66, ExtensionHVXV67,
+       ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79,
+       ExtensionHVXV81]>;
+
+def ExtensionHVXV85: SubtargetFeature<"hvxv85", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V85", "Hexagon HVX instructions",
+      [ExtensionHVXV65, ExtensionHVXV66, ExtensionHVXV67,
+       ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79,
+       ExtensionHVXV81, ExtensionHVXV83]>;
+
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
@@ -120,6 +134,14 @@ foreach i = {6-28} in
     def FeatureReservedR#i : SubtargetFeature<"reserved-r"#i,
         "UserReservedRegister[Hexagon::R"#i#"]",
         "true", "Reserve register R"#i>;
+// Selects which register holds the shadow call stack pointer.  Only the
+// callee-saved registers (R16-R27, see the Hexagon ABI "Register usage across
+// calls") can hold a value across a call, so only those are offered here.  At
+// most one may be selected; if none is, R18 is used (see getSCSPReg()).
+foreach i = {16-27} in
+    def FeatureSCSRegR#i : SubtargetFeature<"scs-reg-r"#i,
+        "SCSPointerRegister[Hexagon::R"#i#"]",
+        "true", "Use register R"#i#" as the shadow call stack pointer">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
       "NoreturnStackElim", "true",
       "Eliminate stack allocation in a noreturn function when possible">;
@@ -161,6 +183,10 @@ def UseHVXV79          : Predicate<"HST->useHVXV79Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV79)>;
 def UseHVXV81          : Predicate<"HST->useHVXV81Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV81)>;
+def UseHVXV83          : Predicate<"HST->useHVXV83Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV83)>;
+def UseHVXV85          : Predicate<"HST->useHVXV85Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV85)>;
 def UseAudio           : Predicate<"HST->useAudioOps()">,
                          AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
@@ -207,7 +233,6 @@ class PredNewRel: PredRel;
 class NewValueRel: PredNewRel;
 class AddrModeRel: NewValueRel;
 class PostInc_BaseImm;
-class IntrinsicsRel;
 // ... through here.
 
 //===----------------------------------------------------------------------===//
@@ -389,13 +414,6 @@ def takenBranchPrediction : InstrMapping {
   let ValueCols = [["true"]];
 }
 
-def getRealHWInstr : InstrMapping {
-  let FilterClass = "IntrinsicsRel";
-  let RowFields = ["BaseOpcode"];
-  let ColFields = ["InstrType"];
-  let KeyCol = ["Pseudo"];
-  let ValueCols = [["Pseudo"], ["Real"]];
-}
 //===----------------------------------------------------------------------===//
 // Register File, Instruction Descriptions
 //===----------------------------------------------------------------------===//
@@ -503,6 +521,18 @@ def : Proc<"hexagonv79", HexagonModelV79,
 def : Proc<"hexagonv81", HexagonModelV81,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
             ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv83", HexagonModelV83,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
+            ArchV83,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv85", HexagonModelV85,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
+            ArchV83, ArchV85,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 

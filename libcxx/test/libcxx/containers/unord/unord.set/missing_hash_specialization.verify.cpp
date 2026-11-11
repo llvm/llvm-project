@@ -47,6 +47,7 @@ int main(int, char**) {
   {
     using Set = std::unordered_set<VT>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+    (void)s;
 
     // FIXME: It would be great to suppress the below diagnostic all together.
     //        but for now it's sufficient that it appears last. However there is
@@ -56,14 +57,17 @@ int main(int, char**) {
   {
     using Set = std::unordered_set<int, BadHashNoCopy>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+    (void)s;
   }
   {
     using Set = std::unordered_set<int, BadHashNoCall>;
     Set s; // expected-error@__hash_table:* {{the specified hash does not meet the Hash requirements}}
+    (void)s;
   }
   {
     using Set = std::unordered_set<int, GoodHashNoDefault>;
     Set s(/*bucketcount*/ 42, GoodHashNoDefault(nullptr));
+    (void)s;
   }
 
   return 0;

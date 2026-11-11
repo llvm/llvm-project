@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s | FileCheck -enable-var-scope -check-prefixes=GCN,UNPACKED %s
 ; RUN: llc -mtriple=amdgpu8.10-amd-amdhsa < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED %s
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -mtriple=amdgpu12.00-amd-amdhsa -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-FAKE16 %s
 
 define amdgpu_kernel void @buffer_store_format_d16_x(<4 x i32> %rsrc, [8 x i32], half %data, [8 x i32], i32 %voffset) {
 ; GCN-LABEL: buffer_store_format_d16_x:
@@ -14,6 +18,52 @@ define amdgpu_kernel void @buffer_store_format_d16_x(<4 x i32> %rsrc, [8 x i32],
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    buffer_store_format_d16_x v0, v1, s[0:3], 0 offen
 ; GCN-NEXT:    s_endpgm
+;
+; GFX11-TRUE16-LABEL: buffer_store_format_d16_x:
+; GFX11-TRUE16:       ; %bb.0: ; %main_body
+; GFX11-TRUE16-NEXT:    s_clause 0x2
+; GFX11-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x30
+; GFX11-TRUE16-NEXT:    s_load_b32 s7, s[4:5], 0x54
+; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s6
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s7
+; GFX11-TRUE16-NEXT:    buffer_store_d16_format_x v0, v1, s[0:3], 0 offen
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: buffer_store_format_d16_x:
+; GFX11-FAKE16:       ; %bb.0: ; %main_body
+; GFX11-FAKE16-NEXT:    s_clause 0x2
+; GFX11-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x30
+; GFX11-FAKE16-NEXT:    s_load_b32 s7, s[4:5], 0x54
+; GFX11-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX11-FAKE16-NEXT:    buffer_store_d16_format_x v0, v1, s[0:3], 0 offen
+; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX12-TRUE16-LABEL: buffer_store_format_d16_x:
+; GFX12-TRUE16:       ; %bb.0: ; %main_body
+; GFX12-TRUE16-NEXT:    s_clause 0x2
+; GFX12-TRUE16-NEXT:    s_load_b32 s6, s[4:5], 0x30
+; GFX12-TRUE16-NEXT:    s_load_b32 s7, s[4:5], 0x54
+; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s6
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, s7
+; GFX12-TRUE16-NEXT:    buffer_store_d16_format_x v0, v1, s[0:3], null offen
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: buffer_store_format_d16_x:
+; GFX12-FAKE16:       ; %bb.0: ; %main_body
+; GFX12-FAKE16-NEXT:    s_clause 0x2
+; GFX12-FAKE16-NEXT:    s_load_b32 s6, s[4:5], 0x30
+; GFX12-FAKE16-NEXT:    s_load_b32 s7, s[4:5], 0x54
+; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX12-FAKE16-NEXT:    buffer_store_d16_format_x v0, v1, s[0:3], null offen
+; GFX12-FAKE16-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.store.format.f16(half %data, <4 x i32> %rsrc, i32 %voffset, i32 0, i32 0)
   ret void
@@ -42,6 +92,26 @@ define amdgpu_kernel void @buffer_store_format_d16_xy(<4 x i32> %rsrc, <2 x half
 ; PACKED-NEXT:    v_mov_b32_e32 v1, s5
 ; PACKED-NEXT:    buffer_store_format_d16_xy v0, v1, s[0:3], 0 offen
 ; PACKED-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_format_d16_xy:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    buffer_store_d16_format_xy v0, v1, s[0:3], 0 offen
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_format_d16_xy:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX12-NEXT:    buffer_store_d16_format_xy v0, v1, s[0:3], null offen
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.store.format.v2f16(<2 x half> %data, <4 x i32> %rsrc, i32 %voffset, i32 0, i32 0)
   ret void
@@ -76,6 +146,33 @@ define amdgpu_kernel void @buffer_store_format_d16_xyz(<4 x i32> %rsrc, <4 x hal
 ; PACKED-NEXT:    v_mov_b32_e32 v2, s6
 ; PACKED-NEXT:    buffer_store_format_d16_xyz v[0:1], v2, s[0:3], 0 offen
 ; PACKED-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_format_d16_xyz:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX11-NEXT:    s_load_b32 s8, s[4:5], 0x18
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s4, s7, 0xffff
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s4
+; GFX11-NEXT:    v_mov_b32_e32 v2, s8
+; GFX11-NEXT:    buffer_store_d16_format_xyz v[0:1], v2, s[0:3], 0 offen
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_format_d16_xyz:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    s_load_b96 s[8:10], s[4:5], 0x10
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_and_b32 s4, s9, 0xffff
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s4
+; GFX12-NEXT:    v_mov_b32_e32 v2, s10
+; GFX12-NEXT:    buffer_store_d16_format_xyz v[0:1], v2, s[0:3], null offen
+; GFX12-NEXT:    s_endpgm
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
   call void @llvm.amdgcn.raw.buffer.store.format.v3f16(<3 x half> %data_subvec, <4 x i32> %rsrc, i32 %voffset, i32 0, i32 0)
@@ -112,6 +209,29 @@ define amdgpu_kernel void @buffer_store_format_d16_xyzw(<4 x i32> %rsrc, <4 x ha
 ; PACKED-NEXT:    v_mov_b32_e32 v2, s6
 ; PACKED-NEXT:    buffer_store_format_d16_xyzw v[0:1], v2, s[0:3], 0 offen
 ; PACKED-NEXT:    s_endpgm
+;
+; GFX11-LABEL: buffer_store_format_d16_xyzw:
+; GFX11:       ; %bb.0: ; %main_body
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX11-NEXT:    s_load_b32 s8, s[4:5], 0x18
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
+; GFX11-NEXT:    v_mov_b32_e32 v2, s8
+; GFX11-NEXT:    buffer_store_d16_format_xyzw v[0:1], v2, s[0:3], 0 offen
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: buffer_store_format_d16_xyzw:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    s_load_b96 s[8:10], s[4:5], 0x10
+; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s9
+; GFX12-NEXT:    v_mov_b32_e32 v2, s10
+; GFX12-NEXT:    buffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null offen
+; GFX12-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 %voffset, i32 0, i32 0)
   ret void

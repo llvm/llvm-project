@@ -350,6 +350,30 @@ Module.parse("...", context=standalone_ctx)
 
 The context object remains live as long as there are IR objects referencing it.
 
+##### Transient Scope
+
+MLIR contexts also support a *transient scope* context manager (`with ctx.transient_scope():`).
+Within a transient scope, any newly created types, attributes, affine expressions, and unregistered operations
+are recorded in a transient layer. When exiting the scope, all transient allocations are rolled back and reclaimed
+without tearing down loaded dialects or modifying the base context state:
+
+```python
+from mlir.ir import Context, IntegerType, Module
+
+with Context() as ctx:
+  i32 = IntegerType.get_signless(32)  # Base type
+
+  with ctx.transient_scope():
+    # Transient types and IR construction
+    i64 = IntegerType.get_signless(64)
+    # ... perform temporary transformations or speculative compilation ...
+
+  # Exiting the transient scope invalidates transient IR entities.
+  # The base state (e.g. `i32` and loaded dialects) is preserved.
+```
+
+Note: Any Python objects referencing transient IR entities must not be accessed after exiting the transient scope.
+
 #### Insertion Points and Locations
 
 When constructing an MLIR operation, two pieces of information are required:
@@ -570,7 +594,7 @@ The former provides all the generic functionality such as comparison, type
 access and printing. The latter provide access to the defining block or
 operation and the position of the value within it. By default, the generic
 `Value` objects are returned from IR traversals. Downcasting is implemented
-through concrete subclass constructors, similarly to attribtues and types:
+through concrete subclass constructors, similarly to attributes and types:
 
 ```python
 from mlir.ir import BlockArgument, OpResult, Value

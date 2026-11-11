@@ -48,8 +48,8 @@ entry:
   ret void
 }
 
-; Should no be vectorized with a undef/poison element as padding, as
-; division by undef/poison may cause UB.  Must use VL predication or
+; Should no be vectorized with a poison element as padding, as
+; division by poison may cause UB.  Must use VL predication or
 ; masking instead, where RISCV wins.
 define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-LABEL: @v3_load_i32_udiv_by_constant_store(
@@ -508,18 +508,23 @@ define i32 @dot_product_i32(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_i32(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load i32, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
+; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load i32, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load i32, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
+; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load i32, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load i32, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP1]], [[TMP2]]
-; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP3]])
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = mul nsw i32 [[L_A_0]], [[L_B_0]]
+; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_1]], [[L_B_1]]
+; POW2-ONLY-NEXT:    [[MUL_3:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD_0]], [[MUL_2]]
-; POW2-ONLY-NEXT:    ret i32 [[ADD_1]]
+; POW2-ONLY-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[MUL_3]]
+; POW2-ONLY-NEXT:    ret i32 [[ADD_2]]
 ;
   %gep.a.0 = getelementptr inbounds i32, ptr %a, i32 0
   %l.a.0 = load i32, ptr %gep.a.0, align 4
@@ -558,18 +563,23 @@ define i32 @dot_product_i32_reorder(ptr %a, ptr %b) {
 ;
 ; POW2-ONLY-LABEL: @dot_product_i32_reorder(
 ; POW2-ONLY-NEXT:    [[GEP_A_0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_A_0:%.*]] = load i32, ptr [[GEP_A_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 1
+; POW2-ONLY-NEXT:    [[L_A_1:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_A_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 2
 ; POW2-ONLY-NEXT:    [[L_A_2:%.*]] = load i32, ptr [[GEP_A_2]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_0:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load i32, ptr [[GEP_B_0]], align 4
+; POW2-ONLY-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 1
+; POW2-ONLY-NEXT:    [[L_B_1:%.*]] = load i32, ptr [[GEP_B_1]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 2
 ; POW2-ONLY-NEXT:    [[L_B_2:%.*]] = load i32, ptr [[GEP_B_2]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[GEP_A_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[GEP_B_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = mul nsw <2 x i32> [[TMP1]], [[TMP2]]
-; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
-; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP3]])
+; POW2-ONLY-NEXT:    [[MUL_2:%.*]] = mul nsw i32 [[L_A_0]], [[L_B_0]]
+; POW2-ONLY-NEXT:    [[ADD_0:%.*]] = mul nsw i32 [[L_A_1]], [[L_B_1]]
+; POW2-ONLY-NEXT:    [[MUL_3:%.*]] = mul nsw i32 [[L_A_2]], [[L_B_2]]
 ; POW2-ONLY-NEXT:    [[ADD_1:%.*]] = add i32 [[ADD_0]], [[MUL_2]]
-; POW2-ONLY-NEXT:    ret i32 [[ADD_1]]
+; POW2-ONLY-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[MUL_3]]
+; POW2-ONLY-NEXT:    ret i32 [[ADD_2]]
 ;
   %gep.a.0 = getelementptr inbounds i32, ptr %a, i32 0
   %l.a.0 = load i32, ptr %gep.a.0, align 4

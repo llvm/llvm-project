@@ -86,12 +86,8 @@ enum LegalizeAction : std::uint8_t {
   /// operand and type. A callback will be issued when it is needed.
   Custom,
 
-  /// This operation is completely unsupported on the target. A programming
-  /// error has occurred.
+  /// This operation is completely unsupported on the target.
   Unsupported,
-
-  /// Sentinel value for when no action was found in the specified table.
-  NotFound,
 };
 } // end namespace LegalizeActions
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
@@ -127,9 +123,13 @@ struct LegalityQuery {
   /// memory type for each MMO.
   ArrayRef<MemDesc> MMODescrs;
 
+  ArrayRef<int64_t> Immediates;
+
   constexpr LegalityQuery(unsigned Opcode, ArrayRef<LLT> Types,
-                          ArrayRef<MemDesc> MMODescrs = {})
-      : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs) {}
+                          ArrayRef<MemDesc> MMODescrs = {},
+                          ArrayRef<int64_t> Immediates = {})
+      : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs),
+        Immediates(Immediates) {}
 
   LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
@@ -326,6 +326,14 @@ LLVM_ABI LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 /// stronger.
 LLVM_ABI LegalityPredicate
 atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx, AtomicOrdering Ordering);
+
+/// True iff the immediate at the given index has the specified value.
+LLVM_ABI LegalityPredicate immIs(unsigned ImmIdx, int64_t Imm);
+/// True iff the immediate at the given index has one of the specified values.
+LLVM_ABI LegalityPredicate immInSet(unsigned ImmIdx,
+                                    std::initializer_list<int64_t> ImmsInit);
+/// True iff the immediate at the given index does not have the specified value.
+LLVM_ABI LegalityPredicate immIsNot(unsigned ImmIdx, int64_t Imm);
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {
@@ -1153,7 +1161,7 @@ public:
         LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
-                 Query.Types[TypeIdx].getSizeInBits();
+                 Query.Types[TypeIdx].getScalarSizeInBits();
         },
         LegalizeMutations::changeElementSizeTo(TypeIdx, LargeTypeIdx));
   }
@@ -1165,7 +1173,7 @@ public:
         LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
-                 Query.Types[TypeIdx].getSizeInBits();
+                 Query.Types[TypeIdx].getScalarSizeInBits();
         },
         LegalizeMutations::changeElementSizeTo(TypeIdx, NarrowTypeIdx));
   }
@@ -1206,7 +1214,8 @@ public:
                  Predicate(Query);
         },
         [=](const LegalityQuery &Query) {
-          LLT T = Query.Types[SmallTypeIdx];
+          LLT T = Query.Types[TypeIdx].changeElementSize(
+              Query.Types[SmallTypeIdx].getScalarSizeInBits());
           return std::make_pair(TypeIdx, T);
         });
   }

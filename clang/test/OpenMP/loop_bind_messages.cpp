@@ -1,6 +1,7 @@
 #ifndef HEADER
 #define HEADER
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -verify %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=60 -verify %s
 
 #define NNN 50
 int aaa[NNN];
@@ -220,12 +221,39 @@ void orphan_loops() {
   }
 }
 
+// A loop construct is simdizable if and only if its binding region is not
+// defined, i.e. it has no bind clause or bind(thread).
+void loop_in_simd() {
+  #pragma omp simd
+  for (int j = 0; j < NNN; j++) {
+    #pragma omp loop
+    for (int i = 0; i < NNN; i++)
+      aaa[i] = i;
+  }
+
+  #pragma omp simd
+  for (int j = 0; j < NNN; j++) {
+    #pragma omp loop bind(thread)
+    for (int i = 0; i < NNN; i++)
+      aaa[i] = i;
+  }
+
+  #pragma omp simd
+  for (int j = 0; j < NNN; j++) {
+    // expected-error@+1 {{may not be nested inside a simd region}}
+    #pragma omp loop bind(parallel)
+    for (int i = 0; i < NNN; i++)
+      aaa[i] = i;
+  }
+}
+
 int main(int argc, char *argv[]) {
   parallel_loop();
   teams_loop();
   thread_loop();
   parallel_for_with_loop_teams_bind();
   orphan_loops();
+  loop_in_simd();
 }
 
 #endif

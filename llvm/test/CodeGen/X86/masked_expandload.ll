@@ -4,8 +4,10 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx     | FileCheck %s --check-prefixes=AVX1OR2,AVX1
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx2    | FileCheck %s --check-prefixes=AVX1OR2,AVX2
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f | FileCheck %s --check-prefixes=AVX512,AVX512F
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vbmi2 | FileCheck %s --check-prefixes=AVX512,AVX512VBMI2
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL,AVX512VLDQ
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512bw,avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL,AVX512VLBW
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vbmi2,avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512VL,AVX512VLVBMI2
 
 ;
 ; vXf64
@@ -88,6 +90,18 @@ define <2 x double> @expandload_v2f64_v2i64(ptr %base, <2 x double> %src0, <2 x 
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: expandload_v2f64_v2i64:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    vptestnmq %zmm1, %zmm1, %k0
+; AVX512VBMI2-NEXT:    kshiftlb $6, %k0, %k0
+; AVX512VBMI2-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VBMI2-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: expandload_v2f64_v2i64:
 ; AVX512VL:       ## %bb.0:
@@ -276,6 +290,17 @@ define <4 x double> @expandload_v4f64_v4i64(ptr %base, <4 x double> %src0, <4 x 
 ; AVX512F-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: expandload_v4f64_v4i64:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
+; AVX512VBMI2-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VBMI2-NEXT:    vptestnmq %zmm1, %zmm1, %k0
+; AVX512VBMI2-NEXT:    kshiftlb $4, %k0, %k0
+; AVX512VBMI2-NEXT:    kshiftrb $4, %k0, %k1
+; AVX512VBMI2-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: expandload_v4f64_v4i64:
 ; AVX512VL:       ## %bb.0:
@@ -519,6 +544,13 @@ define <8 x double> @expandload_v8f64_v8i1(ptr %base, <8 x double> %src0, <8 x i
 ; AVX512F-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v8f64_v8i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vpsllw $15, %xmm1, %xmm1
+; AVX512VBMI2-NEXT:    vpmovw2m %zmm1, %k1
+; AVX512VBMI2-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v8f64_v8i1:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    vpmovsxwd %xmm1, %ymm1
@@ -533,6 +565,13 @@ define <8 x double> @expandload_v8f64_v8i1(ptr %base, <8 x double> %src0, <8 x i
 ; AVX512VLBW-NEXT:    vpmovw2m %xmm1, %k1
 ; AVX512VLBW-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v8f64_v8i1:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    vpsllw $15, %xmm1, %xmm1
+; AVX512VLVBMI2-NEXT:    vpmovw2m %xmm1, %k1
+; AVX512VLVBMI2-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %res = call <8 x double> @llvm.masked.expandload.v8f64(ptr %base, <8 x i1> %mask, <8 x double> %src0)
   ret <8 x double>%res
 }
@@ -1016,6 +1055,21 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512F-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v16f64_v16i32:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
+; AVX512VBMI2-NEXT:    vptestnmd %zmm3, %zmm3, %k1
+; AVX512VBMI2-NEXT:    vptestnmd %zmm2, %zmm2, %k2
+; AVX512VBMI2-NEXT:    kmovb %k2, %eax
+; AVX512VBMI2-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VBMI2-NEXT:    shrl $3, %eax
+; AVX512VBMI2-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VBMI2-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VBMI2-NEXT:    shrl $28, %eax
+; AVX512VBMI2-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
+; AVX512VBMI2-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v16f64_v16i32:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
@@ -1046,6 +1100,21 @@ define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <
 ; AVX512VLBW-NEXT:    shrl $28, %eax
 ; AVX512VLBW-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v16f64_v16i32:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
+; AVX512VLVBMI2-NEXT:    vptestnmd %ymm3, %ymm3, %k1
+; AVX512VLVBMI2-NEXT:    vptestnmd %ymm2, %ymm2, %k2
+; AVX512VLVBMI2-NEXT:    kmovb %k2, %eax
+; AVX512VLVBMI2-NEXT:    imull $134480385, %eax, %eax ## imm = 0x8040201
+; AVX512VLVBMI2-NEXT:    shrl $3, %eax
+; AVX512VLVBMI2-NEXT:    andl $286331153, %eax ## imm = 0x11111111
+; AVX512VLVBMI2-NEXT:    imull $286331153, %eax, %eax ## imm = 0x11111111
+; AVX512VLVBMI2-NEXT:    shrl $28, %eax
+; AVX512VLVBMI2-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
+; AVX512VLVBMI2-NEXT:    vexpandpd (%rdi), %zmm0 {%k2}
+; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
   %res = call <16 x double> @llvm.masked.expandload.v16f64(ptr %base, <16 x i1> %mask, <16 x double> %src0)
   ret <16 x double> %res
@@ -1140,6 +1209,18 @@ define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v2f32_v2i1:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512VBMI2-NEXT:    kshiftlw $14, %k0, %k0
+; AVX512VBMI2-NEXT:    kshiftrw $14, %k0, %k1
+; AVX512VBMI2-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v2f32_v2i1:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    vptestnmd %xmm1, %xmm1, %k0
@@ -1155,6 +1236,14 @@ define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32
 ; AVX512VLBW-NEXT:    kshiftrw $14, %k0, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v2f32_v2i1:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    vptestnmd %xmm1, %xmm1, %k0
+; AVX512VLVBMI2-NEXT:    kshiftlb $6, %k0, %k0
+; AVX512VLVBMI2-NEXT:    kshiftrb $6, %k0, %k1
+; AVX512VLVBMI2-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
   %res = call <2 x float> @llvm.masked.expandload.v2f32(ptr %base, <2 x i1> %mask, <2 x float> %src0)
   ret <2 x float> %res
@@ -1194,6 +1283,16 @@ define <4 x float> @expandload_v4f32_const(ptr %base, <4 x float> %src0) {
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v4f32_const:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    movw $7, %ax
+; AVX512VBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VBMI2-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v4f32_const:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    movb $7, %al
@@ -1207,6 +1306,13 @@ define <4 x float> @expandload_v4f32_const(ptr %base, <4 x float> %src0) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v4f32_const:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    movb $7, %al
+; AVX512VLVBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VLVBMI2-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %res = call <4 x float> @llvm.masked.expandload.v4f32(ptr %base, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x float> %src0)
   ret <4 x float>%res
 }
@@ -1258,6 +1364,13 @@ define <16 x float> @expandload_v16f32_const(ptr %base, <16 x float> %src0) {
 ; AVX512F-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v16f32_const:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    movw $30719, %ax ## imm = 0x77FF
+; AVX512VBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VBMI2-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v16f32_const:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    movw $30719, %ax ## imm = 0x77FF
@@ -1271,6 +1384,13 @@ define <16 x float> @expandload_v16f32_const(ptr %base, <16 x float> %src0) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v16f32_const:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    movw $30719, %ax ## imm = 0x77FF
+; AVX512VLVBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VLVBMI2-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %res = call <16 x float> @llvm.masked.expandload.v16f32(ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>, <16 x float> %src0)
   ret <16 x float>%res
 }
@@ -1310,6 +1430,13 @@ define <16 x float> @expandload_v16f32_const_undef(ptr %base) {
 ; AVX512F-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v16f32_const_undef:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    movw $-2049, %ax ## imm = 0xF7FF
+; AVX512VBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VBMI2-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v16f32_const_undef:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    movw $-2049, %ax ## imm = 0xF7FF
@@ -1323,6 +1450,13 @@ define <16 x float> @expandload_v16f32_const_undef(ptr %base) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v16f32_const_undef:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    movw $-2049, %ax ## imm = 0xF7FF
+; AVX512VLVBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VLVBMI2-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
+; AVX512VLVBMI2-NEXT:    retq
   %res = call <16 x float> @llvm.masked.expandload.v16f32(ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
@@ -2620,8 +2754,10 @@ define <32 x float> @expandload_v32f32_v32i32(ptr %base, <32 x float> %src0, <32
 ; AVX512-NEXT:    shrl $4, %ecx
 ; AVX512-NEXT:    addl %eax, %ecx
 ; AVX512-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512-NEXT:    shrl $24, %eax
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    shrl $8, %eax
+; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    movzbl %al, %eax
 ; AVX512-NEXT:    vexpandps (%rdi,%rax,4), %zmm1 {%k2}
 ; AVX512-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
 ; AVX512-NEXT:    retq
@@ -2661,6 +2797,16 @@ define <2 x i64> @expandload_v2i64_const(ptr %base, <2 x i64> %src0) {
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v2i64_const:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    movb $2, %al
+; AVX512VBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VBMI2-NEXT:    vpexpandq (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v2i64_const:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    movb $2, %al
@@ -2674,6 +2820,13 @@ define <2 x i64> @expandload_v2i64_const(ptr %base, <2 x i64> %src0) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vpexpandq (%rdi), %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v2i64_const:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    movb $2, %al
+; AVX512VLVBMI2-NEXT:    kmovd %eax, %k1
+; AVX512VLVBMI2-NEXT:    vpexpandq (%rdi), %xmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %res = call <2 x i64> @llvm.masked.expandload.v2i64(ptr %base, <2 x i1> <i1 false, i1 true>, <2 x i64> %src0)
   ret <2 x i64>%res
 }
@@ -2813,6 +2966,18 @@ define <4 x i32> @expandload_v4i32_v4i32(ptr %base, <4 x i32> %src0, <4 x i32> %
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
+;
+; AVX512VBMI2-LABEL: expandload_v4i32_v4i32:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    vptestnmd %zmm1, %zmm1, %k0
+; AVX512VBMI2-NEXT:    kshiftlw $12, %k0, %k0
+; AVX512VBMI2-NEXT:    kshiftrw $12, %k0, %k1
+; AVX512VBMI2-NEXT:    vpexpandd (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: expandload_v4i32_v4i32:
 ; AVX512VL:       ## %bb.0:
@@ -3042,6 +3207,17 @@ define <8 x i16> @expandload_v8i16_v8i16(ptr %base, <8 x i16> %src0, <8 x i16> %
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v8i16_v8i16:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    vptestnmw %zmm1, %zmm1, %k0
+; AVX512VBMI2-NEXT:    kmovb %k0, %k1
+; AVX512VBMI2-NEXT:    vpexpandw (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v8i16_v8i16:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -3181,6 +3357,12 @@ define <8 x i16> @expandload_v8i16_v8i16(ptr %base, <8 x i16> %src0, <8 x i16> %
 ; AVX512VLBW-NEXT:  LBB11_15: ## %cond.load25
 ; AVX512VLBW-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v8i16_v8i16:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    vptestnmw %xmm1, %xmm1, %k1
+; AVX512VLVBMI2-NEXT:    vpexpandw (%rdi), %xmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
   %res = call <8 x i16> @llvm.masked.expandload.v8i16(ptr %base, <8 x i1> %mask, <8 x i16> %src0)
   ret <8 x i16>%res
@@ -3816,6 +3998,17 @@ define <16 x i8> @expandload_v16i8_v16i8(ptr %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512F-NEXT:    vpinsrb $15, (%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
+; AVX512VBMI2-LABEL: expandload_v16i8_v16i8:
+; AVX512VBMI2:       ## %bb.0:
+; AVX512VBMI2-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    vptestnmb %zmm1, %zmm1, %k0
+; AVX512VBMI2-NEXT:    kmovw %k0, %k1
+; AVX512VBMI2-NEXT:    vpexpandb (%rdi), %zmm0 {%k1}
+; AVX512VBMI2-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    vzeroupper
+; AVX512VBMI2-NEXT:    retq
+;
 ; AVX512VLDQ-LABEL: expandload_v16i8_v16i8:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
@@ -4080,6 +4273,12 @@ define <16 x i8> @expandload_v16i8_v16i8(ptr %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512VLBW-NEXT:  LBB12_31: ## %cond.load57
 ; AVX512VLBW-NEXT:    vpinsrb $15, (%rdi), %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI2-LABEL: expandload_v16i8_v16i8:
+; AVX512VLVBMI2:       ## %bb.0:
+; AVX512VLVBMI2-NEXT:    vptestnmb %xmm1, %xmm1, %k1
+; AVX512VLVBMI2-NEXT:    vpexpandb (%rdi), %xmm0 {%k1}
+; AVX512VLVBMI2-NEXT:    retq
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
   %res = call <16 x i8> @llvm.masked.expandload.v16i8(ptr %base, <16 x i1> %mask, <16 x i8> %src0)
   ret <16 x i8>%res

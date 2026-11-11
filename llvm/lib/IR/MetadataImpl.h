@@ -33,6 +33,7 @@ template <class T> T *MDNode::storeImpl(T *N, StorageType Storage) {
     N->storeDistinctInContext();
     break;
   case Temporary:
+    N->getContext().pImpl->TemporaryMDNodes.insert(N);
     break;
   }
   return N;
@@ -48,6 +49,7 @@ T *MDNode::storeImpl(T *N, StorageType Storage, StoreT &Store) {
     N->storeDistinctInContext();
     break;
   case Temporary:
+    N->getContext().pImpl->TemporaryMDNodes.insert(N);
     break;
   }
   return N;

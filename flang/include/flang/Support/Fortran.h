@@ -105,7 +105,7 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
     std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
     bool isHostDeviceProcedure,
     const LanguageFeatureControl *features = nullptr,
-    bool actualIsVariable = true);
+    bool actualIsVariable = true, bool actualIsAllocatableOrPointer = false);
 
 // Format vector type as Fortran string
 std::string FormatVectorTypeAsFortran(

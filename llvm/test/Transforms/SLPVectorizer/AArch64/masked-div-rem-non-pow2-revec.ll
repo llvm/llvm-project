@@ -7,7 +7,10 @@ define void @udiv_v3v2i32(ptr noalias %dst, ptr noalias %x, ptr noalias %y) vsca
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <6 x i32>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <6 x i32>, ptr [[Y]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv <6 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x i32> [[TMP0]], <6 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i32> [[TMP1]], <6 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> [[TMP5]], <8 x i32> [[TMP3]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    store <6 x i32> [[TMP2]], ptr [[DST]], align 8
 ; CHECK-NEXT:    ret void
 ;

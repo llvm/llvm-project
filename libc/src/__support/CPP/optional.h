@@ -13,6 +13,7 @@
 #include "src/__support/CPP/utility.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -109,27 +110,72 @@ public:
   LIBC_INLINE constexpr void reset() { storage.reset(); }
 
   LIBC_INLINE constexpr const T &value() const & {
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
     return storage.stored_value;
   }
 
-  LIBC_INLINE constexpr T &value() & { return storage.stored_value; }
+  LIBC_INLINE constexpr T &value() & {
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+    return storage.stored_value;
+  }
 
   LIBC_INLINE constexpr explicit operator bool() const {
     return storage.in_use;
   }
   LIBC_INLINE constexpr bool has_value() const { return storage.in_use; }
   LIBC_INLINE constexpr const T *operator->() const {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
     return &storage.stored_value;
   }
-  LIBC_INLINE constexpr T *operator->() { return &storage.stored_value; }
+  LIBC_INLINE constexpr T *operator->() {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
+    return &storage.stored_value;
+  }
   LIBC_INLINE constexpr const T &operator*() const & {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
     return storage.stored_value;
   }
-  LIBC_INLINE constexpr T &operator*() & { return storage.stored_value; }
+  LIBC_INLINE constexpr T &operator*() & {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
+    return storage.stored_value;
+  }
 
-  LIBC_INLINE constexpr T &&value() && { return move(storage.stored_value); }
-  LIBC_INLINE constexpr T &&operator*() && {
+  LIBC_INLINE constexpr T &&value() && {
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
     return move(storage.stored_value);
+  }
+  LIBC_INLINE constexpr T &&operator*() && {
+#ifndef NDEBUG
+    if (LIBC_UNLIKELY(!storage.in_use))
+      __builtin_trap();
+#endif
+    return move(storage.stored_value);
+  }
+
+  template <typename U>
+  LIBC_INLINE constexpr T value_or(U &&default_value) const & {
+    return has_value() ? storage.stored_value
+                       : static_cast<T>(forward<U>(default_value));
+  }
+
+  template <typename U> LIBC_INLINE constexpr T value_or(U &&default_value) && {
+    return has_value() ? move(storage.stored_value)
+                       : static_cast<T>(forward<U>(default_value));
   }
 };
 

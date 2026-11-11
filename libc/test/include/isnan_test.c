@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 #include "include/llvm-libc-macros/math-function-macros.h"
-
-#include <assert.h>
+#include "test/UnitTest/LibcCTest.h"
 
 // check if macro is defined
 #ifndef isnan
 #error "isnan macro is not defined"
 #else
-int main(void) {
-  assert(!isnan(1.0f));
-  assert(!isnan(1.0));
-  assert(!isnan(1.0L));
-  return 0;
+TEST(isnan) {
+  EXPECT_FALSE(isnan(1.0f));
+  EXPECT_FALSE(isnan(1.0));
+  EXPECT_FALSE(isnan(1.0L));
 }
 #endif

@@ -25,7 +25,7 @@ llvm.func @taskwait_depend_iterator(%x: !llvm.ptr) {
 
 // CHECK-LABEL: define void @taskwait_depend_iterator
 // CHECK-SAME: (ptr[[xaddr:.+]])
-// CHECK: %[[dep_arr_addr:.+]] = tail call ptr @malloc(i64 %mallocsize)
+// CHECK: %[[dep_arr_addr:.+]] = tail call ptr @malloc(i64 200)
 //
 // CHECK: omp_dep_iterator.header:
 // CHECK: %[[iv:.*]] = phi i64 [ 0, %omp_dep_iterator.preheader ], [ %[[next:.*]], %omp_dep_iterator.inc ]
@@ -51,3 +51,10 @@ llvm.func @taskwait_depend_iterator(%x: !llvm.ptr) {
 // CHECK: %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num({{.+}})
 // CHECK: call void @__kmpc_omp_taskwait_deps_51(ptr @{{.+}}, i32 %[[omp_global_thread_num]], i32 10, ptr %[[dep_arr_addr]], i32 0, ptr null, i32 0)
 // CHECK: tail call void @free(ptr %[[dep_arr_addr:.+]])
+
+llvm.func @taskwait_depend_nowait(%x: !llvm.ptr) {
+  omp.taskwait depend(taskdependout -> %x : !llvm.ptr) nowait
+  llvm.return
+}
+// CHECK-LABEL: define void @taskwait_depend_nowait
+// CHECK: call void @__kmpc_omp_taskwait_deps_51(ptr @{{.+}}, i32 %{{.+}}, i32 1, ptr %{{.+}}, i32 0, ptr null, i32 1)

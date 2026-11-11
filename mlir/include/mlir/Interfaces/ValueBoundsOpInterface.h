@@ -353,7 +353,9 @@ public:
 
   /// Debugging only: Dump the constraint set and the column-to-value/dim
   /// mapping to llvm::errs.
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Dimension identifier to indicate a value is index-typed. This is used for
@@ -460,7 +462,10 @@ protected:
   DenseMap<ValueDim, int64_t> valueDimToPosition;
 
   /// Worklist of values/shape dimensions that have not been processed yet.
-  std::queue<int64_t> worklist;
+  /// Entries are identified by ValueDim, not by constraint-set column.
+  /// Inserting a SetDim shifts symbol columns, so a queued column index would
+  /// go stale.
+  std::queue<ValueDim> worklist;
 
   /// Constraint system of equalities and inequalities.
   FlatLinearConstraints cstr;

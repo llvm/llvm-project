@@ -1,0 +1,84 @@
+# A plain C global has a DW_AT_name but no DW_AT_linkage_name, and the
+# WebAssembly "name" section names only functions, not data. LLDB must still
+# synthesize a data symbol from the DWARF so the global's address resolves back
+# to its name (e.g. so a pointer into it can be symbolicated). Previously only
+# variables with a linkage name (such as a C++ vtable) were recovered.
+#
+# The global g_global lives at linear-memory address 0x10000 and the pointer
+# g_keep at 0x10004.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb %t \
+# RUN:   -o "image lookup -a 0x10000" \
+# RUN:   -o "image lookup -a 0x10004" \
+# RUN:   -o exit 2>&1 | FileCheck %s
+
+# CHECK-LABEL: image lookup -a 0x10000
+# CHECK: Summary: {{.*}}g_global
+# CHECK-LABEL: image lookup -a 0x10004
+# CHECK: Summary: {{.*}}g_keep
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x2
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   8
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           65536
+        Content:         2A00000000000100
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E0000023400030E49133F193A0B3B0B02180000032400030E3E0B0B0B0000040F004913000000
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         4900000004000000000004012A0000001D0023000000000000000B000000021A0000002F0000000101050300000100030000000005040204000000470000000102050304000100042F00000000
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         696E7400675F6B656570002F746D702F7761736D726570726F00675F676C6F62616C00676C6F622E6300636C616E672076657273696F6E2032322E312E302D776173692D73646B202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420343433346461626236393931363835366238323466363861363462303239633637313735653533322900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         2400000004001E000000010101FB0E0D00010101010000000100000100676C6F622E630000000000
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            __wasm_call_ctors
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+    DataSegmentNames:
+      - Index:           0
+        Name:            .data
+...

@@ -23,16 +23,18 @@ unsigned CIRCXXABI::getPtrSizeInBits() const {
 }
 
 void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
+                                clang::CharUnits elementAlign,
                                 const mlir::DataLayout &dataLayout,
                                 CIRBaseBuilderTy &builder,
                                 mlir::Value &numElements, mlir::Value &allocPtr,
                                 clang::CharUnits &cookieSize) const {
-  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8));
+  mlir::ptr::MemorySpaceAttrInterface addrSpace =
+      mlir::cast<cir::PointerType>(elementPtr.getType()).getAddrSpace();
+  auto u8PtrTy = builder.getPointerTo(builder.getUIntNTy(8), addrSpace);
   auto ptrDiffTy = builder.getSIntNTy(getPtrSizeInBits());
-  auto voidPtrTy = builder.getVoidPtrTy();
+  auto voidPtrTy = builder.getVoidPtrTy(addrSpace);
 
-  auto ptrTy = mlir::cast<cir::PointerType>(elementPtr.getType());
-  cookieSize = getArrayCookieSizeImpl(ptrTy.getPointee(), dataLayout);
+  cookieSize = getArrayCookieSizeImpl(elementAlign);
 
   mlir::Value bytePtr = cir::CastOp::create(builder, loc, u8PtrTy,
                                             cir::CastKind::bitcast, elementPtr);
@@ -45,13 +47,11 @@ void CIRCXXABI::readArrayCookie(mlir::Location loc, mlir::Value elementPtr,
   allocPtr = cir::CastOp::create(builder, loc, voidPtrTy,
                                  cir::CastKind::bitcast, allocBytePtr);
 
-  // cookieSize is always a multiple of the element ABI alignment (both are
+  // cookieSize is always a multiple of the element alignment (both are
   // powers of 2 and cookieSize >= elementAlign), so subtracting it preserves
   // alignment. The cookie alignment therefore equals the element alignment.
-  clang::CharUnits cookieAlignment = clang::CharUnits::fromQuantity(
-      dataLayout.getTypePreferredAlignment(ptrTy.getPointee()));
-  numElements = readArrayCookieImpl(loc, allocBytePtr, cookieSize,
-                                    cookieAlignment, dataLayout, builder);
+  numElements = readArrayCookieImpl(loc, allocBytePtr, cookieSize, elementAlign,
+                                    dataLayout, builder);
 }
 
 } // namespace cir

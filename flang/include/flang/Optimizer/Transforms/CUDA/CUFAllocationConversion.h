@@ -10,6 +10,7 @@
 #define FORTRAN_OPTIMIZER_TRANSFORMS_CUDA_CUFALLOCATIONCONVERSION_H_
 
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace fir {
 class LLVMTypeConverter;
@@ -23,9 +24,14 @@ class SymbolTable;
 namespace cuf {
 
 /// Patterns that convert CUF operations to runtime calls.
+/// \p descriptorAllocFunction / \p descriptorFreeFunction, when non-empty,
+/// override the runtime functions used for descriptor allocations / frees
+/// (same signatures as CUFAllocDescriptor / CUFFreeDescriptor).
 void populateCUFAllocationConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::DataLayout &dl,
-    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns);
+    const mlir::SymbolTable &symtab, mlir::RewritePatternSet &patterns,
+    llvm::StringRef descriptorAllocFunction = {},
+    llvm::StringRef descriptorFreeFunction = {});
 
 } // namespace cuf
 

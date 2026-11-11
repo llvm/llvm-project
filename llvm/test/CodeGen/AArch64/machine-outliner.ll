@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -mcpu=cortex-a53 -enable-misched=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
-; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -stop-after=machine-outliner < %s | FileCheck %s -check-prefix=TARGET_FEATURES
+; RUN: llc -enable-machine-outliner -mtriple=aarch64-apple-darwin -stop-after=machine-outliner < %s | FileCheck %s -check-prefix=TARGET_FEATURES
 
 ; Make sure that we inherit target features from functions and make sure we have
 ; the right function attributes.

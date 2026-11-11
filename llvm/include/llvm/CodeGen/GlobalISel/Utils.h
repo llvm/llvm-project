@@ -64,6 +64,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -81,6 +83,8 @@ class APFloat;
   case TargetOpcode::G_VECREDUCE_FMIN:                                         \
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:                                     \
   case TargetOpcode::G_VECREDUCE_FMINIMUM:                                     \
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:                                  \
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:                                  \
   case TargetOpcode::G_VECREDUCE_ADD:                                          \
   case TargetOpcode::G_VECREDUCE_MUL:                                          \
   case TargetOpcode::G_VECREDUCE_AND:                                          \
@@ -223,7 +227,9 @@ struct FPValueAndVReg {
 };
 
 /// If \p VReg is defined by a statically evaluable chain of instructions rooted
-/// on a G_FCONSTANT returns its APFloat value and def register.
+/// on a G_FCONSTANT returns its APFloat value and def register. The value uses
+/// \p VReg's FP semantics when it has a known FP type, otherwise the
+/// G_FCONSTANT's unless the chain changed the bit width.
 LLVM_ABI std::optional<FPValueAndVReg>
 getFConstantVRegValWithLookThrough(Register VReg,
                                    const MachineRegisterInfo &MRI,
@@ -317,6 +323,12 @@ LLVM_ABI SmallVector<APInt>
 ConstantFoldVectorBinop(unsigned Opcode, const Register Op1, const Register Op2,
                         const MachineRegisterInfo &MRI);
 
+/// Tries to constant fold a vector floating-point binop with sources \p Op1 and
+/// \p Op2. Returns an empty vector on failure.
+LLVM_ABI SmallVector<APFloat>
+ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
+                          const Register Op2, const MachineRegisterInfo &MRI);
+
 LLVM_ABI std::optional<APInt>
 ConstantFoldCastOp(unsigned Opcode, LLT DstTy, const Register Op0,
                    const MachineRegisterInfo &MRI);
@@ -337,6 +349,12 @@ LLVM_ABI SmallVector<APInt>
 ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
+/// Tries to constant fold a unary floating-point operation on \p Src.
+/// If \p Src is a vector then it tries to do an element-wise constant fold.
+LLVM_ABI SmallVector<APFloat>
+ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
+                      const MachineRegisterInfo &MRI);
+
 LLVM_ABI std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
                  unsigned DstScalarSizeInBits, unsigned ExtOp,
@@ -346,11 +364,12 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set. When \p OrNegative is true, the value is also considered a power of two
 /// if its negation is a power of two (i.e. its absolute value is a power of
-/// two).
+/// two). When \p OrZero is true, the value is also considered a power of two if
+/// it may be zero (i.e. it is known to be either zero or a power of two).
 LLVM_ABI bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
                        GISelValueTracking *ValueTracking = nullptr,
-                       bool OrNegative = false);
+                       bool OrNegative = false, bool OrZero = false);
 
 LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);
@@ -397,31 +416,6 @@ LLVM_ABI LLVM_READNONE
 ///
 /// In the worst case, this returns LLT::scalar(1)
 LLVM_ABI LLVM_READNONE LLT getGCDType(LLT OrigTy, LLT TargetTy);
-
-/// Represents a value which can be a Register or a constant.
-///
-/// This is useful in situations where an instruction may have an interesting
-/// register operand or interesting constant operand. For a concrete example,
-/// \see getVectorSplat.
-class RegOrConstant {
-  int64_t Cst;
-  Register Reg;
-  bool IsReg;
-
-public:
-  explicit RegOrConstant(Register Reg) : Reg(Reg), IsReg(true) {}
-  explicit RegOrConstant(int64_t Cst) : Cst(Cst), IsReg(false) {}
-  bool isReg() const { return IsReg; }
-  bool isCst() const { return !IsReg; }
-  Register getReg() const {
-    assert(isReg() && "Expected a register!");
-    return Reg;
-  }
-  int64_t getCst() const {
-    assert(isCst() && "Expected a constant!");
-    return Cst;
-  }
-};
 
 /// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
 /// If \p MI is not a splat, returns std::nullopt.
@@ -515,27 +509,9 @@ LLVM_ABI bool isAllOnesOrAllOnesSplat(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       bool AllowUndefs = false);
 
-/// \returns a value when \p MI is a vector splat. The splat can be either a
-/// Register or a constant.
-///
-/// Examples:
-///
-/// \code
-///   %reg = COPY $physreg
-///   %reg_splat = G_BUILD_VECTOR %reg, %reg, ..., %reg
-/// \endcode
-///
-/// If called on the G_BUILD_VECTOR above, this will return a RegOrConstant
-/// containing %reg.
-///
-/// \code
-///   %cst = G_CONSTANT iN 4
-///   %constant_splat = G_BUILD_VECTOR %cst, %cst, ..., %cst
-/// \endcode
-///
-/// In the above case, this will return a RegOrConstant containing 4.
-LLVM_ABI std::optional<RegOrConstant>
-getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
+/// \returns a value when \p MI is a vector splat.
+LLVM_ABI std::optional<Register> getVectorSplat(const MachineInstr &MI,
+                                                const MachineRegisterInfo &MRI);
 
 /// Determines if \p MI defines a constant integer or a build vector of
 /// constant integers. Treats undef values as constants.
@@ -559,7 +535,7 @@ isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 /// value was undef.
 LLVM_ABI bool
 matchUnaryPredicate(const MachineRegisterInfo &MRI, Register Reg,
-                    std::function<bool(const Constant *ConstVal)> Match,
+                    llvm::function_ref<bool(const Constant *ConstVal)> Match,
                     bool AllowUndefs = false);
 
 /// Returns true if given the TargetLowering's boolean contents information,

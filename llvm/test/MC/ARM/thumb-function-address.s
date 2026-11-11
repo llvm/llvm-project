@@ -1,10 +1,8 @@
 @ RUN: llvm-mc -filetype=obj -triple=armv7-linux-gnueabi %s -o %t
 @ RUN: llvm-readelf -s %t | FileCheck %s
 
-@@ GNU as sets the thumb state according to the thumb state of the label. If a
-@@ .type directive is placed after the label, set the symbol's thumb state
-@@ according to the thumb state of the .type directive. This matches GNU as in
-@@ most cases.
+@@ Set a symbol's thumb state according to the state in which its label was
+@@ emitted, including when its .type directive appears later.
 
 .syntax unified
 .text
@@ -21,7 +19,6 @@ foo_resolver:
 .type foo, %gnu_indirect_function
 .set foo, foo_resolver
 
-@@ Note: GNU as sets the value to 1.
 .thumb
 label:
   bx lr
@@ -30,7 +27,7 @@ label:
 .type label, %function
 
 @@ Check func_label, foo_impl, foo_resolver, and foo addresses have bit 0 set.
-@@ Check label has bit 0 unset.
+@@ Check label has bit 0 set even though its .type directive is in ARM state.
 @ CHECK:      Value Size Type   Bind  Vis     Ndx Name
 @ CHECK-NEXT: 00000000 0 NOTYPE LOCAL DEFAULT     UND
 @ CHECK-NEXT: 00000001 0 FUNC   LOCAL DEFAULT 2   func_label
@@ -38,5 +35,5 @@ label:
 @ CHECK-NEXT: 00000000 0 NOTYPE LOCAL DEFAULT 2   $t
 @ CHECK-NEXT: 00000003 0 FUNC   LOCAL DEFAULT 2   foo_resolver
 @ CHECK-NEXT: 00000003 0 IFUNC  LOCAL DEFAULT 2   foo
-@ CHECK-NEXT: 00000004 0 FUNC   LOCAL DEFAULT 2   label
+@ CHECK-NEXT: 00000005 0 FUNC   LOCAL DEFAULT 2   label
 @ CHECK-NEXT: 00000008 0 NOTYPE LOCAL DEFAULT 2   $a

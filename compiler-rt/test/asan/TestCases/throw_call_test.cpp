@@ -1,9 +1,23 @@
+// REQUIRES: shared_cxxabi
+
 // RUN: %clangxx_asan %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -fno-sanitize-address-use-after-scope %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -fsanitize-address-use-after-scope %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always %s -o %t && %run %t
 // http://code.google.com/p/address-sanitizer/issues/detail?id=147 (not fixed).
 // BROKEN: %clangxx_asan %s -o %t -static-libstdc++ && %run %t
 
 // MSVC doesn't support GCC style inline ASM
 // UNSUPPORTED: msvc
+
+// The current implementation of this functionality requires special
+// combination of libraries that are not used by default on NetBSD
+// XFAIL: target={{.*netbsd.*}}
+// FIXME: https://github.com/llvm/llvm-project/issues/42048
+// XFAIL: target={{.*solaris.*}}
+
+// FIXME: https://github.com/llvm/llvm-project/issues/236665
+// XFAIL: android
 
 #include "defines.h"
 #include <stdio.h>

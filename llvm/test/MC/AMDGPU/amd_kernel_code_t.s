@@ -1,5 +1,5 @@
-; RUN: llvm-mc -triple=amdgcn-mesa-mesa3d -mcpu=gfx900 -filetype=asm < %s | FileCheck --check-prefix=ASM %s
-; RUN: llvm-mc -triple=amdgcn-mesa-mesa3d -mcpu=gfx900 -filetype=obj < %s > %t
+; RUN: llvm-mc -triple=amdgpu9.00-mesa-mesa3d -filetype=asm < %s | FileCheck --check-prefix=ASM %s
+; RUN: llvm-mc -triple=amdgpu9.00-mesa-mesa3d -filetype=obj < %s > %t
 ; RUN: llvm-objdump -s %t | FileCheck --check-prefix=OBJDUMP %s
 
 ; OBJDUMP: Contents of section .known_is_dynamic_callstack:

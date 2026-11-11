@@ -2,6 +2,11 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare double @erf(double)
+declare double @asin(double)
+declare double @asinh(double)
+declare double @atan(double)
+declare double @atan2(double, double)
+declare double @cbrt(double)
 declare double @cos(double)
 declare double @fabs(double)
 
@@ -16,6 +21,88 @@ define double @test_erf(double %x) {
 ;
   %neg_x = fneg double %x
   %res = tail call reassoc double @erf(double %neg_x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Check odd parity: -asin(-x) == asin(x)
+define double @test_asin(double %x) {
+; CHECK-LABEL: define double @test_asin(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @asin(double [[X]])
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_x = fneg double %x
+  %res = tail call reassoc double @asin(double %neg_x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Check odd parity: -asinh(-x) == asinh(x)
+define double @test_asinh(double %x) {
+; CHECK-LABEL: define double @test_asinh(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @asinh(double [[X]])
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_x = fneg double %x
+  %res = tail call reassoc double @asinh(double %neg_x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Check odd parity: -atan(-x) == atan(x)
+define double @test_atan(double %x) {
+; CHECK-LABEL: define double @test_atan(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @atan(double [[X]])
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_x = fneg double %x
+  %res = tail call reassoc double @atan(double %neg_x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Check odd parity: -atan2(-y, x) == atan2(y, x)
+define double @test_atan2(double %y, double %x) {
+; CHECK-LABEL: define double @test_atan2(
+; CHECK-SAME: double [[Y:%.*]], double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_Y:%.*]] = fneg double [[Y]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @atan2(double [[NEG_Y]], double [[X]])
+; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_y = fneg double %y
+  %res = tail call reassoc double @atan2(double %neg_y, double %x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Negative test: -atan2(y, -x) != atan2(y, x)
+define double @test_atan2_neg_x_does_not_fold(double %y, double %x) {
+; CHECK-LABEL: define double @test_atan2_neg_x_does_not_fold(
+; CHECK-SAME: double [[Y:%.*]], double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_X:%.*]] = fneg double [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call reassoc double @atan2(double [[Y]], double [[NEG_X]])
+; CHECK-NEXT:    [[NEG_RES:%.*]] = fneg double [[RES]]
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_x = fneg double %x
+  %res = tail call reassoc double @atan2(double %y, double %neg_x)
+  %neg_res = fneg double %res
+  ret double %neg_res
+}
+
+; Check odd parity: -cbrt(-x) == cbrt(x)
+define double @test_cbrt(double %x) {
+; CHECK-LABEL: define double @test_cbrt(
+; CHECK-SAME: double [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG_RES:%.*]] = tail call reassoc double @cbrt(double [[X]])
+; CHECK-NEXT:    ret double [[NEG_RES]]
+;
+  %neg_x = fneg double %x
+  %res = tail call reassoc double @cbrt(double %neg_x)
   %neg_res = fneg double %res
   ret double %neg_res
 }

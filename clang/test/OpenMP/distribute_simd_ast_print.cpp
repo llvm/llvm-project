@@ -54,23 +54,40 @@ public:
   S7(typename T::type v) : a(v) {
 #pragma omp target
 #pragma omp teams
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp distribute simd private(a) private(this->a) private(T::a) allocate(T::a)
+#else
+#pragma omp distribute simd private(a) private(this->a) private(T::a)
+#endif
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }
   S7 &operator=(S7 &s) {
 #pragma omp target
 #pragma omp teams
+#if defined(OMP5) || defined(OMP51) || defined(OMP52)
 #pragma omp distribute simd allocate(a) private(a) private(this->a)
+#else
+#pragma omp distribute simd private(a) private(this->a)
+#endif
     for (int k = 0; k < s.a.a; ++k)
       ++s.a.a;
     return *this;
   }
 };
 
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
-// CHECK: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
-// CHECK: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
+// OMP45: #pragma omp distribute simd private(this->a) private(this->a) private(T::a){{$}}
+// OMP50: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// OMP51: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// OMP52: #pragma omp distribute simd private(this->a) private(this->a) private(T::a) allocate(T::a){{$}}
+// OMP45: #pragma omp distribute simd private(this->a) private(this->a)
+// OMP50: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// OMP51: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// OMP52: #pragma omp distribute simd allocate(this->a) private(this->a) private(this->a)
+// OMP45: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a)
+// OMP50: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
+// OMP51: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
+// OMP52: #pragma omp distribute simd private(this->a) private(this->a) private(this->S::a) allocate(this->S::a)
 
 class S8 : public S7<S> {
   S8() {}

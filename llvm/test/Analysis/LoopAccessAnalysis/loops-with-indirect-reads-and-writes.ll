@@ -25,12 +25,12 @@ define void @test_indirect_read_write_loop_also_modifies_pointer_array(ptr nound
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
-; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
+; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !0 ->
-; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !0
+; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -230,12 +230,12 @@ define void @test_indirect_read_write_loop_does_not_modify_pointer_array(ptr nou
 ; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
-; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !4 ->
-; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !4
+; CHECK-NEXT:            %l.2 = load i64, ptr %l.1, align 8, !tbaa !{{[0-9]+}} ->
+; CHECK-NEXT:            store i64 %inc, ptr %l.1, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:        Unknown:
 ; CHECK-NEXT:            %l.3 = load i64, ptr %gep.arr2.iv.1, align 8 ->
-; CHECK-NEXT:            store i64 %inc.2, ptr %gep.arr2.iv.2, align 8, !tbaa !0
+; CHECK-NEXT:            store i64 %inc.2, ptr %gep.arr2.iv.2, align 8, !tbaa !{{[0-9]+}}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:

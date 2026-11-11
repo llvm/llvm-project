@@ -126,10 +126,13 @@ private:
   /// the same register.  In that case, the instruction may depend on those
   /// operands reading the same dont-care value.  For example:
   ///
-  ///   %1 = XOR undef %2, undef %2
+  ///   $eax = XOR32rr undef $eax, undef $eax
   ///
-  /// Any register can be used for %2, and its value doesn't matter, but
-  /// the two operands must be the same register.
+  /// Any register can be used, and its value doesn't matter, but the operands
+  /// must be the same register.  Rewriting a tie renames only the tied
+  /// operand, so an undef use of a virtual register may not be tied to a def
+  /// of another register while another undef operand reads the same register;
+  /// read an IMPLICIT_DEF instead.
   ///
   unsigned IsUndef : 1;
 
@@ -401,7 +404,7 @@ public:
 
   bool isKill() const {
     assert(isReg() && "Wrong MachineOperand accessor");
-    return IsDeadOrKill & !IsDef;
+    return IsDeadOrKill && !IsDef;
   }
 
   bool isUndef() const {

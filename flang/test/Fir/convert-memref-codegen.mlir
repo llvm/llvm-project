@@ -21,7 +21,7 @@
 // CHECK:         %[[POISON1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:         %[[DESC2:.*]] = llvm.insertvalue %[[BUF]], %[[POISON1]][0] : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:         %[[DESC3:.*]] = llvm.insertvalue %[[BUF]], %[[DESC2]][1] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:         %[[ZERO:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:         %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:         %[[DESC4:.*]] = llvm.insertvalue %[[ZERO]], %[[DESC3]][2] : !llvm.struct<(ptr, ptr, i64)>
 //
 // CHECK-NOT:     fir.convert
@@ -48,7 +48,7 @@ func.func @memref_to_ref_convert(%arg0: memref<f32>) {
 // CHECK:           %[[MLIR_1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:           %[[INSERTVALUE_3:.*]] = llvm.insertvalue %[[GETELEMENTPTR_0]], %[[MLIR_1]][0] : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:           %[[INSERTVALUE_4:.*]] = llvm.insertvalue %[[GETELEMENTPTR_0]], %[[INSERTVALUE_3]][1] : !llvm.struct<(ptr, ptr, i64)>
-// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[INSERTVALUE_5:.*]] = llvm.insertvalue %[[MLIR_2]], %[[INSERTVALUE_4]][2] : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:           llvm.return %[[INSERTVALUE_5]] : !llvm.struct<(ptr, ptr, i64)>
 // CHECK:         }
@@ -78,15 +78,15 @@ func.func @memref_to_memref_convert(%arg0: memref<f32>) -> memref<i1> {
 // CHECK:           %[[MLIR_1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[INSERTVALUE_5:.*]] = llvm.insertvalue %[[GETELEMENTPTR_0]], %[[MLIR_1]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           %[[INSERTVALUE_6:.*]] = llvm.insertvalue %[[GETELEMENTPTR_0]], %[[INSERTVALUE_5]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[INSERTVALUE_7:.*]] = llvm.insertvalue %[[MLIR_2]], %[[INSERTVALUE_6]][2] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_3:.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK:           %[[MLIR_3:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK:           %[[INSERTVALUE_8:.*]] = llvm.insertvalue %[[MLIR_3]], %[[INSERTVALUE_7]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_4:.*]] = llvm.mlir.constant(3 : index) : i64
+// CHECK:           %[[MLIR_4:.*]] = llvm.mlir.constant(3 : i64) : i64
 // CHECK:           %[[INSERTVALUE_9:.*]] = llvm.insertvalue %[[MLIR_4]], %[[INSERTVALUE_8]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_5:.*]] = llvm.mlir.constant(3 : index) : i64
+// CHECK:           %[[MLIR_5:.*]] = llvm.mlir.constant(3 : i64) : i64
 // CHECK:           %[[INSERTVALUE_10:.*]] = llvm.insertvalue %[[MLIR_5]], %[[INSERTVALUE_9]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-// CHECK:           %[[MLIR_6:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[MLIR_6:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[INSERTVALUE_11:.*]] = llvm.insertvalue %[[MLIR_6]], %[[INSERTVALUE_10]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:           llvm.return %[[INSERTVALUE_11]] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:         }

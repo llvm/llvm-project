@@ -45,7 +45,7 @@ end module
 ! The imported operator reduction is materialized on demand for the clause inside
 ! the submodule, named from rmod's scope and source ultimate (op.plusb.), and the
 ! clause binds that same op; no TODO aborts the compile.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.plusb\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.plusb\.[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
 ! CHECK-NOT: not yet implemented

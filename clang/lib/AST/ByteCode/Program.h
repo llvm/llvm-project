@@ -13,10 +13,12 @@
 #ifndef LLVM_CLANG_AST_INTERP_PROGRAM_H
 #define LLVM_CLANG_AST_INTERP_PROGRAM_H
 
+#include "DeclOrExpr.h"
 #include "Function.h"
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Reflect.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"
@@ -41,30 +43,23 @@ public:
     // Manually destroy all the blocks. They are almost all harmless,
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
-    for (Global *G : Globals)
-      if (Block *B = G->block(); B->isInitialized())
-        B->invokeDtor();
+    for (Block *G : Globals)
+      if (G->isInitialized())
+        G->invokeDtor();
 
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
     // here manually so they are properly freeing their resources.
-    for (auto RecordPair : Records) {
+    for (const auto &RecordPair : Records) {
       if (Record *R = RecordPair.second)
         R->~Record();
     }
+
+    for (Function *F : Funcs.values())
+      F->~Function();
   }
 
   const Context &getContext() const { return Ctx; }
-
-  /// Marshals a native pointer to an ID for embedding in bytecode.
-  unsigned getOrCreateNativePointer(const void *Ptr);
-
-  /// Returns the value of a marshalled native pointer.
-  const void *getNativePointer(unsigned Idx) const;
-
-  /// Emits a string literal among global data.
-  unsigned createGlobalString(const StringLiteral *S,
-                              const Expr *Base = nullptr);
 
   /// Returns a pointer to a global.
   Pointer getPtrGlobal(unsigned Idx) const;
@@ -72,7 +67,7 @@ public:
   /// Returns the value of a global.
   Block *getGlobal(unsigned Idx) {
     assert(Idx < Globals.size());
-    return Globals[Idx]->block();
+    return Globals[Idx];
   }
 
   bool isGlobalInitialized(unsigned Index) const {
@@ -87,12 +82,10 @@ public:
   UnsignedOrNone getOrCreateGlobal(const ValueDecl *VD,
                                    const Expr *Init = nullptr);
 
-  /// Returns or creates a dummy value for unknown declarations.
-  unsigned getOrCreateDummy(DeclTy D, bool IsConstexprUnknown = false);
-
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
-                              bool IsConstexprUnknown = false);
+                              bool IsConstexprUnknown = false,
+                              bool CanBeExtern = true);
 
   /// Creates a global from a lifetime-extended temporary.
   UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
@@ -100,14 +93,15 @@ public:
   /// Creates a new function from a code range.
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&...Args) {
-    Def = Def->getCanonicalDecl();
-    auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
-    Funcs.insert({Def, std::unique_ptr<Function>(Func)});
+    Def = Def->getFirstDecl();
+    auto *Func = new (Allocate(sizeof(Function)))
+        Function(Def, std::forward<Ts>(Args)...);
+    Funcs.insert({Def, Func});
     return Func;
   }
   /// Creates an anonymous function.
   template <typename... Ts> Function *createFunction(Ts &&...Args) {
-    auto *Func = new Function(*this, std::forward<Ts>(Args)...);
+    auto *Func = new Function(std::forward<Ts>(Args)...);
     AnonFuncs.emplace_back(Func);
     return Func;
   }
@@ -119,27 +113,25 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+  Descriptor *createDescriptor(DeclOrExpr D, PrimType T,
                                const Type *SourceTy = nullptr,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false,
                                bool IsVolatile = false) {
-    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
-                              IsMutable, IsVolatile);
+    return allocateDescriptor(D, SourceTy, T, IsConst, IsTemporary, IsMutable,
+                              IsVolatile);
   }
 
   /// Creates a descriptor for a composite type.
-  Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
+  Descriptor *createDescriptor(DeclOrExpr D, const Type *Ty,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
 
-  void *Allocate(size_t Size, unsigned Align = 8) const {
+  void *Allocate(size_t Size, unsigned Align = 8) {
     return Allocator.Allocate(Size, Align);
   }
-  template <typename T> T *Allocate(size_t Num = 1) const {
+  template <typename T> T *Allocate(size_t Num = 1) {
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
   void Deallocate(void *Ptr) const {}
@@ -168,63 +160,27 @@ public:
 private:
   friend class DeclScope;
 
-  UnsignedOrNone createGlobal(const DeclTy &D, QualType Ty, bool IsStatic,
-                              bool IsExtern, bool IsWeak,
-                              bool IsConstexprUnknown,
+  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
+                              bool IsWeak, bool IsConstexprUnknown,
                               const Expr *Init = nullptr);
 
   /// Reference to the VM context.
   Context &Ctx;
   /// Mapping from decls to cached bytecode functions.
-  llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
+  llvm::DenseMap<const FunctionDecl *, Function *> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
 
-  /// Native pointers referenced by bytecode.
-  std::vector<const void *> NativePointers;
-  /// Cached native pointer indices.
-  llvm::DenseMap<const void *, unsigned> NativePointerIndices;
-
-  /// Custom allocator for global storage.
-  using PoolAllocTy = llvm::BumpPtrAllocator;
-
-  /// Descriptor + storage for a global object.
-  ///
-  /// Global objects never go out of scope, thus they do not track pointers.
-  class Global {
-  public:
-    /// Create a global descriptor for string literals.
-    template <typename... Tys>
-    Global(Tys... Args) : B(std::forward<Tys>(Args)...) {}
-
-    /// Allocates the global in the pool, reserving storate for data.
-    void *operator new(size_t Meta, PoolAllocTy &Alloc, size_t Data) {
-      return Alloc.Allocate(Meta + Data, alignof(void *));
-    }
-
-    /// Return a pointer to the data.
-    std::byte *data() { return B.data(); }
-    /// Return a pointer to the block.
-    Block *block() { return &B; }
-    const Block *block() const { return &B; }
-
-  private:
-    Block B;
-  };
-
   /// Allocator for globals.
-  mutable PoolAllocTy Allocator;
+  llvm::BumpPtrAllocator Allocator;
 
   /// Global objects.
-  std::vector<Global *> Globals;
+  std::vector<Block *> Globals;
   /// Cached global indices.
   llvm::DenseMap<const void *, unsigned> GlobalIndices;
 
   /// Mapping from decls to record metadata.
   llvm::DenseMap<const RecordDecl *, Record *> Records;
-
-  /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const void *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts> Descriptor *allocateDescriptor(Ts &&...Args) {
@@ -247,16 +203,15 @@ public:
 } // namespace interp
 } // namespace clang
 
-inline void *operator new(size_t Bytes, const clang::interp::Program &C,
+inline void *operator new(size_t Bytes, clang::interp::Program &C,
                           size_t Alignment = 8) {
   return C.Allocate(Bytes, Alignment);
 }
 
-inline void operator delete(void *Ptr, const clang::interp::Program &C,
-                            size_t) {
+inline void operator delete(void *Ptr, clang::interp::Program &C, size_t) {
   C.Deallocate(Ptr);
 }
-inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
+inline void *operator new[](size_t Bytes, clang::interp::Program &C,
                             size_t Alignment = 8) {
   return C.Allocate(Bytes, Alignment);
 }

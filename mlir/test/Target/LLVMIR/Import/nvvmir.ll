@@ -82,7 +82,7 @@ define void @llvm_nvvm_barrier0() {
 
 ; CHECK-LABEL: @llvm_nvvm_barrier_sync_all
 define void @llvm_nvvm_barrier_sync_all(i32 %bar) {
-  ; CHECK: nvvm.barrier id = %{{.*}} {aligned = false}
+; CHECK: nvvm.barrier id = %{{.*}} aligned = false
   ; CHECK-NOT: number_of_threads
   call void @llvm.nvvm.barrier.cta.sync.all(i32 %bar)
   ret void
@@ -99,7 +99,7 @@ define void @llvm_nvvm_barrier_sync_aligned_all(i32 %bar) {
 
 ; CHECK-LABEL: @llvm_nvvm_barrier_sync_count
 define void @llvm_nvvm_barrier_sync_count(i32 %bar, i32 %n) {
-  ; CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} {aligned = false}
+; CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} aligned = false
   call void @llvm.nvvm.barrier.cta.sync.count(i32 %bar, i32 %n)
   ret void
 }

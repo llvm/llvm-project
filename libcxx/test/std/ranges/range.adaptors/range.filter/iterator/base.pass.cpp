@@ -37,7 +37,7 @@ constexpr void test() {
 
   // Test the const& version
   {
-    FilterIterator const iter(view, Iter(array.data()));
+    FilterIterator const iter = view.begin();
     Iter const& result = iter.base();
     ASSERT_SAME_TYPE(Iter const&, decltype(iter.base()));
     ASSERT_NOEXCEPT(iter.base());
@@ -46,7 +46,7 @@ constexpr void test() {
 
   // Test the && version
   {
-    FilterIterator iter(view, Iter(array.data()));
+    FilterIterator iter = view.begin();
     Iter result = std::move(iter).base();
     ASSERT_SAME_TYPE(Iter, decltype(std::move(iter).base()));
     assert(base(result) == array.data());

@@ -1,5 +1,5 @@
 ; RUN:  llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr7 \
-; RUN:     -mattr=+altivec  -vec-extabi -xcoff-traceback-table=true 2>&1 < %s | \
+; RUN:     -mattr=+altivec  -target-abi=vec-extabi -xcoff-traceback-table=true 2>&1 < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-ASM %s 
 
 ;; void f(vector float vf, ...) {

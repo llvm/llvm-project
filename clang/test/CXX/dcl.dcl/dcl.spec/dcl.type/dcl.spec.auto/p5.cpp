@@ -56,8 +56,8 @@ void j() {
   (void)reinterpret_cast<auto>(n);    // expected-error{{'auto' not allowed here}}
   (void)const_cast<auto>(n);          // expected-error{{'auto' not allowed here}}
   (void)(auto)(n);                    // expected-error{{'auto' not allowed here}}
-  (void)auto(n);                      // expected-error{{'auto' not allowed here}}
-  (void)auto{n};                      // expected-error{{'auto' not allowed here}}
+  (void)auto(n);                      // expected-warning{{'auto' as a functional-style cast is a C++23 extension}}
+  (void)auto{n};                      // expected-warning{{'auto' as a functional-style cast is a C++23 extension}}
 }
 
 template <auto a = 10> class C { }; // expected-error{{'auto' not allowed in template parameter}}

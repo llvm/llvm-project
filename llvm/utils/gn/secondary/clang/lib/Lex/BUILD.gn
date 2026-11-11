@@ -33,5 +33,6 @@ static_library("Lex") {
     "TextEncoding.cpp",
     "TokenConcatenation.cpp",
     "TokenLexer.cpp",
+    "UnicodeCharSetsGenerated.cpp",
   ]
 }

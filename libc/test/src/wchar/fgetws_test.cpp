@@ -30,8 +30,7 @@ using LlvmLibcFgetwsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 // assert macros (e.g., EXPECT_STREQ for wchar_t) once they are supported
 // natively by the LLVM-libc test framework, instead of calling wcscmp.
 TEST_F(LlvmLibcFgetwsTest, ReadWideString) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_string.test"));
+  const auto FILENAME = libc_make_test_file_path("fgetws_string.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -66,8 +65,7 @@ TEST_F(LlvmLibcFgetwsTest, ReadWideString) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, ReadBounded) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_bounded.test"));
+  const auto FILENAME = libc_make_test_file_path("fgetws_bounded.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -101,8 +99,7 @@ TEST_F(LlvmLibcFgetwsTest, ReadBounded) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, NewlineStops) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_newline.test"));
+  const auto FILENAME = libc_make_test_file_path("fgetws_newline.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -126,8 +123,7 @@ TEST_F(LlvmLibcFgetwsTest, NewlineStops) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, InvalidStream) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_invalid.test"));
+  const auto FILENAME = libc_make_test_file_path("fgetws_invalid.test");
 
   // Create the file first
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -150,8 +146,7 @@ TEST_F(LlvmLibcFgetwsTest, InvalidStream) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, EncodingErrorEILSEQ) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_eilseq.test"));
+  const auto FILENAME = libc_make_test_file_path("fgetws_eilseq.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
   ASSERT_FALSE(file == nullptr);
 
@@ -177,8 +172,7 @@ TEST_F(LlvmLibcFgetwsTest, EncodingErrorEILSEQ) {
 }
 
 TEST_F(LlvmLibcFgetwsTest, ByteModeFailure) {
-  const auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("fgetws_bytemode.test"));
+  const auto FILENAME = libc_make_test_file_path("fgetws_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 

@@ -515,6 +515,9 @@ StringRef ELFObjectFileBase::getNVPTXCPUName() const {
   case ELF::EF_CUDA_SM103:
     return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_103a"
                                                           : "sm_103";
+  case ELF::EF_CUDA_SM107:
+    return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_107a"
+                                                          : "sm_107";
   case ELF::EF_CUDA_SM110:
     return getPlatformFlags() & ELF::EF_CUDA_ACCELERATORS ? "sm_110a"
                                                           : "sm_110";
@@ -659,6 +662,10 @@ ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
     case Triple::riscv32:
     case Triple::riscv64:
       JumpSlotReloc = ELF::R_RISCV_JUMP_SLOT;
+      break;
+    case Triple::loongarch32:
+    case Triple::loongarch64:
+      JumpSlotReloc = ELF::R_LARCH_JUMP_SLOT;
       break;
     default:
       return {};

@@ -17,6 +17,7 @@
 #include <optional>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::performance {
 using utils::decl_ref_expr::allDeclRefExprs;
@@ -50,17 +51,18 @@ firstLocAfterNewLine(SourceLocation Loc, const SourceManager &SM) {
 
 static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
                           const DiagnosticBuilder &Diagnostic) {
-  auto &SM = Context.getSourceManager();
+  const auto &SM = Context.getSourceManager();
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,
                                                          Context.getLangOpts());
   std::optional<SourceLocation> PastNewLine =
       firstLocAfterNewLine(Stmt.getEndLoc(), SM);
   if (Tok && PastNewLine) {
-    auto BeforeFirstTokenAfterComment = Tok->getLocation().getLocWithOffset(-1);
+    const auto BeforeFirstTokenAfterComment =
+        Tok->getLocation().getLocWithOffset(-1);
     // Remove until the end of the line or the end of a trailing comment which
     // ever comes first.
-    auto End =
+    const auto End =
         SM.isBeforeInTranslationUnit(*PastNewLine, BeforeFirstTokenAfterComment)
             ? *PastNewLine
             : BeforeFirstTokenAfterComment;
@@ -102,8 +104,6 @@ AST_MATCHER_FUNCTION_P(StatementMatcher,
                                 hasArgument(0, hasType(ReceiverType)))));
 }
 
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
   // Only allow initialization of a const reference from a free function or
   // static member function if it has no arguments. Otherwise it could return
@@ -119,7 +119,7 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
 
 AST_MATCHER_FUNCTION_P(StatementMatcher, initializerReturnsReferenceToConst,
                        std::vector<StringRef>, ExcludedContainerTypes) {
-  auto OldVarDeclRef =
+  const auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
   return expr(
       anyOf(isConstRefReturningFunctionCall(),
@@ -161,7 +161,7 @@ static bool isInitializingVariableImmutable(
   if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit())
     return true;
 
-  auto Matches =
+  const auto Matches =
       match(initializerReturnsReferenceToConst(ExcludedContainerTypes),
             *InitializingVar.getInit(), Context);
   // The reference is initialized from a free function without arguments
@@ -187,7 +187,7 @@ static bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
 
 static const SubstTemplateTypeParmType *
 getSubstitutedType(const QualType &Type, ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       qualType(anyOf(substTemplateTypeParmType().bind("subst"),
                      hasDescendant(substTemplateTypeParmType().bind("subst")))),
       Type, Context);
@@ -231,7 +231,7 @@ UnnecessaryCopyInitializationCheck::UnnecessaryCopyInitializationCheck(
           Options.get("ExcludedContainerTypes", ""))) {}
 
 void UnnecessaryCopyInitializationCheck::registerMatchers(MatchFinder *Finder) {
-  auto LocalVarCopiedFrom =
+  const auto LocalVarCopiedFrom =
       [this](const ast_matchers::internal::Matcher<Expr> &CopyCtorArg) {
         return compoundStmt(
                    forEachDescendant(

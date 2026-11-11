@@ -22,9 +22,9 @@ func.func @test_any_(%arg0: !fir.ref<!fir.array<3xi32>> {fir.bindc_name = "a"}, 
   %c3 = arith.constant 3 : index
   %0 = fir.undefined !fir.dscope
   %1 = fir.shape %c3 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFtest_anyEa"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xi32>>
-  %3 = fir.declare %arg1(%1) dummy_scope %0 {uniq_name = "_QFtest_anyEb"} : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xi32>>
-  %res = fir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtest_anyEres"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> !fir.ref<!fir.logical<4>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFtest_anyEa") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xi32>>
+  %3 = fir.declare %arg1(%1) dummy_scope %0 uniq_name("_QFtest_anyEb") : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<3xi32>>
+  %res = fir.declare %arg2 dummy_scope %0 uniq_name("_QFtest_anyEres") : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> !fir.ref<!fir.logical<4>>
   %loop = fir.do_loop %arg3 = %c1 to %c3 step %c1 iter_args(%arg4 = %false) -> (i1) {
     %6 = fir.array_coor %2(%1) %arg3 : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
     %7 = fir.array_coor %3(%1) %arg3 : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>

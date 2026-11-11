@@ -4,6 +4,7 @@
 
 // CHECK-DAG: [[$MAP_PLUS_1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 // CHECK-DAG: [[$MAP_DIV_OFFSET:#map[0-9]*]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)>
+// CHECK-DAG: [[$MAP_CLEANUP_LB:#map[0-9]*]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1, 1)>
 // CHECK-DAG: [[$MAP_SYM_UB:#map[0-9]*]] = affine_map<()[s0, s1] -> (s0, s1, 1024)>
 
 // UJAM-FOUR-DAG: [[$UBMAP:#map[0-9]*]] = affine_map<()[s0] -> (s0 + 8)>
@@ -96,8 +97,8 @@ func.func @loop_nest_unknown_count_1(%N : index) {
   // CHECK-NEXT:     "foo"() : () -> i32
   // CHECK-NEXT:   }
   // CHECK-NEXT: }
-  // A cleanup loop should be generated here.
-  // CHECK-NEXT: affine.for %{{.*}} = [[$MAP_DIV_OFFSET]]()[%[[N]]] to %[[N]] {
+  // A cleanup loop should be generated here. It must not execute if %N < 1.
+  // CHECK-NEXT: affine.for %{{.*}} = max [[$MAP_CLEANUP_LB]]()[%[[N]]] to %[[N]] {
   // CHECK-NEXT:   affine.for %{{.*}} = 1 to 100 {
   // CHECK-NEXT:     "foo"() : () -> i32
   // CHECK-NEXT:   }
@@ -176,16 +177,16 @@ func.func @no_unroll_jam_dependent_ubound(%in0: memref<?xf32, 1>) {
 // CHECK-NEXT: }
 // CHECK-NEXT: return
 
-// Inner loop with one iter_arg.
-// CHECK-LABEL: func @unroll_jam_one_iter_arg
-func.func @unroll_jam_one_iter_arg() {
+// Inner loop attrs survive append-only iter_arg extension.
+// CHECK-LABEL: func @unroll_jam_one_iter_arg_preserves_attrs
+func.func @unroll_jam_one_iter_arg_preserves_attrs() {
   affine.for %i = 0 to 101 {
     %cst = arith.constant 1 : i32
     %x = "addi32"(%i, %i) : (index, index) -> i32
     %red = affine.for %j = 0 to 17 iter_args(%acc = %cst) -> (i32) {
       %y = "bar"(%i, %j, %acc) : (index, index, i32) -> i32
       affine.yield %y : i32
-    }
+    } {test.keep = "inner"}
     %w = "foo"(%i, %x, %red) : (index, i32, i32) -> i32
   }
   return
@@ -201,7 +202,7 @@ func.func @unroll_jam_one_iter_arg() {
 // CHECK-NEXT:     [[INC1:%[0-9]+]] = affine.apply [[$MAP_PLUS_1]]([[IV0]])
 // CHECK-NEXT:     [[RES5:%[0-9]+]] = "bar"([[INC1]], [[IV1]], [[ACC2]])
 // CHECK-NEXT:     affine.yield [[RES4]], [[RES5]]
-// CHECK-NEXT:   }
+// CHECK-NEXT:   } {test.keep = "inner"}
 // CHECK:        "foo"([[IV0]], [[RES1]], [[RES3]]#0)
 // CHECK-NEXT:   affine.apply [[$MAP_PLUS_1]]([[IV0]])
 // CHECK-NEXT:   "foo"({{.*}}, [[RES2]], [[RES3]]#1)

@@ -100,3 +100,12 @@ ascii3 x - y z 1
 ascii3 1, (2 3)
 # CHECK: .ascii "1|(2 3)|"
 ascii3 1 (2 3)
+
+## '@', '#' and '?' are identifier characters, but they terminate a macro argument name.
+.macro charset a
+.ascii "\a?x|\a?|\a@x|\a#x|\a!x"
+\a?y:
+.endm
+# CHECK:      .ascii "fo?x|fo?|fo@x|fo#x|fo!x"
+# CHECK-NEXT: "fo?y":
+charset fo

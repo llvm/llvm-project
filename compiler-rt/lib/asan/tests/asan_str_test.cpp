@@ -492,7 +492,16 @@ static std::string OverlapErrorMessage(const std::string &func) {
   return func + "-param-overlap";
 }
 
-TEST(AddressSanitizer, StrArgsOverlapTest) {
+// Waiting for https://github.com/llvm/llvm-project/pull/237000: Android 17
+// Bionic strcat calls strcpy@plt(dst + strlen(dst), src), triggering
+// strcpy-param-overlap on strcat(str, str + 10).
+#if defined(__ANDROID__) && defined(__aarch64__)
+#  define MAYBE_StrArgsOverlapTest DISABLED_StrArgsOverlapTest
+#else
+#  define MAYBE_StrArgsOverlapTest StrArgsOverlapTest
+#endif
+
+TEST(AddressSanitizer, MAYBE_StrArgsOverlapTest) {
   size_t size = Ident(100);
   char *str = Ident((char*)malloc(size));
 
@@ -555,6 +564,17 @@ TEST(AddressSanitizer, StrArgsOverlapTest) {
   str[10] = '\0';
   EXPECT_DEATH(strncat(str + 5, str, 6), OverlapErrorMessage("strncat"));
   EXPECT_DEATH(strncat(str, str + 9, 10), OverlapErrorMessage("strncat"));
+  memset(str, 'z', size);
+  str[5] = '\0';
+  str[15] = '\0';
+  EXPECT_DEATH(strncat(str, str + 10, 10), OverlapErrorMessage("strncat"));
+  str[15] = 'z';
+  str[16] = '\0';
+  strncat(str, str + 11, 10);
+  str[5] = '\0';
+  str[10] = 'z';
+  EXPECT_DEATH(strncat(str + 5, str, 10), OverlapErrorMessage("strncat"));
+  strncat(str + 6, str, 10);
 
   free(str);
 }

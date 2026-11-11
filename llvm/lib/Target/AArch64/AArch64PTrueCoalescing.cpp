@@ -30,16 +30,11 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-ptrue-coalesce"
-
-static cl::opt<bool> EnablePTrueCoalescing(
-    "aarch64-enable-ptrue-coalescing", cl::init(false), cl::Hidden,
-    cl::desc("Enable coalescing of compatible AArch64 SVE PTRUE instructions"));
 
 namespace {
 
@@ -113,7 +108,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -193,7 +187,6 @@ bool AArch64PTrueCoalescingImpl::tryCoalesce(PredicateInfo &DomPI,
   }
 
   MRI->replaceRegWith(CanReg, DomReg);
-  MRI->clearKillFlags(DomReg);
   CanMI->eraseFromParent();
 
   // Update DomPI based on uses inherited from CanPI.
@@ -204,8 +197,9 @@ bool AArch64PTrueCoalescingImpl::tryCoalesce(PredicateInfo &DomPI,
 }
 
 bool AArch64PTrueCoalescingImpl::run(MachineFunction &MF) {
-  if (!EnablePTrueCoalescing ||
-      !MF.getSubtarget<AArch64Subtarget>().isSVEorStreamingSVEAvailable())
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (!ST.getCLOpts().enable_ptrue_coalescing ||
+      !ST.isSVEorStreamingSVEAvailable())
     return false;
 
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
@@ -264,7 +258,6 @@ AArch64PTrueCoalescingPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

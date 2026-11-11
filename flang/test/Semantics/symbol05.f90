@@ -115,3 +115,29 @@ subroutine s7
   !DEF: /s7/j VOLATILE Use INTEGER(4)
   volatile :: j
 end subroutine
+
+!DEF: /m8 Module
+module m8
+  !DEF: /m8/n PRIVATE ObjectEntity INTEGER(4)
+  integer, private :: n = 1
+  !DEF: /m8/k PUBLIC ObjectEntity INTEGER(4)
+  integer :: k = 2
+end module
+!REF: /m8
+!DEF: /m8/subm Module
+submodule(m8) subm
+  ! VOLATILE/ASYNCHRONOUS on host-associated module variables create HostAssoc
+  ! symbols in the submodule scope (F2023 19.5.1.4 p1).
+  !DEF: /m8/subm/n PRIVATE, VOLATILE HostAssoc INTEGER(4)
+  volatile :: n
+  !DEF: /m8/subm/k ASYNCHRONOUS, PUBLIC HostAssoc INTEGER(4)
+  asynchronous :: k
+end submodule
+!REF: /m8
+!REF: /m8/subm
+!DEF: /m8/subm/subsubm Module
+submodule(m8:subm) subsubm
+  ! Attributes accumulate through sub-submodule chains.
+  !DEF: /m8/subm/subsubm/k ASYNCHRONOUS, PUBLIC, VOLATILE HostAssoc INTEGER(4)
+  volatile :: k
+end submodule

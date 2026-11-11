@@ -15,6 +15,7 @@ llvm-addr2line
 llvm-ar
 llvm-as
 llvm-bcanalyzer
+llvm-calc-occupancy
 llvm-cgdata
 llvm-config
 llvm-cov
@@ -28,6 +29,7 @@ llvm-dwarfutil
 llvm-exegesis
 llvm-extract
 llvm-extract-bundle-entry
+llvm-gsymutil
 llvm-ifs
 llvm-install-name-tool
 llvm-ir2vec
@@ -89,6 +91,7 @@ interested in.
 * {doc}`llvm-dwarfdump`
 * {doc}`llvm-dwarfutil`
 * {doc}`llvm-extract-bundle-entry`
+* {doc}`llvm-gsymutil`
 * {doc}`llvm-ir2vec`
 * {doc}`llvm-lib`
 * {doc}`llvm-libtool-darwin`
@@ -143,6 +146,7 @@ interested in.
 * {doc}`llvm-profgen`
 * {doc}`llvm-tli-checker`
 * {doc}`llvm-offload-binary`
+* {doc}`llvm-calc-occupancy`
 
 ## Remarks Tools
 

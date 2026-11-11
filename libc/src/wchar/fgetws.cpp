@@ -39,7 +39,7 @@ LLVM_LIBC_FUNCTION(wchar_t *, fgetws,
     return ws;
   }
 
-  f->lock();
+  File::FileLock lock(f);
 
   wchar_t *result = ws;
   int chars_read = 0;
@@ -62,7 +62,6 @@ LLVM_LIBC_FUNCTION(wchar_t *, fgetws,
   if (result != nullptr)
     ws[chars_read] = L'\0';
 
-  f->unlock();
   return result;
 }
 

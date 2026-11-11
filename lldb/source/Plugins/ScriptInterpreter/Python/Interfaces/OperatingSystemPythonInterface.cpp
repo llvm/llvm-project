@@ -38,24 +38,20 @@ OperatingSystemPythonInterface::CreatePluginObject(
 StructuredData::DictionarySP
 OperatingSystemPythonInterface::CreateThread(lldb::tid_t tid,
                                              lldb::addr_t context) {
-  Status error;
-  StructuredData::DictionarySP dict = Dispatch<StructuredData::DictionarySP>(
-      "create_thread", error, tid, context);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
-                                                    error))
+  StructuredData::DictionarySP dict = LogAndDefault(
+      Dispatch<StructuredData::DictionarySP>("create_thread", tid, context),
+      LLVM_PRETTY_FUNCTION);
+  if (!dict)
     return {};
 
   return dict;
 }
 
 StructuredData::ArraySP OperatingSystemPythonInterface::GetThreadInfo() {
-  Status error;
   StructuredData::ArraySP arr =
-      Dispatch<StructuredData::ArraySP>("get_thread_info", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr,
-                                                    error))
+      LogAndDefault(Dispatch<StructuredData::ArraySP>("get_thread_info"),
+                    LLVM_PRETTY_FUNCTION);
+  if (!arr)
     return {};
 
   return arr;
@@ -67,24 +63,21 @@ StructuredData::DictionarySP OperatingSystemPythonInterface::GetRegisterInfo() {
 
 std::optional<std::string>
 OperatingSystemPythonInterface::GetRegisterContextForTID(lldb::tid_t tid) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_register_data", error, tid);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_register_data", tid), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
-  return obj->GetAsString()->GetValue().str();
+  return obj->GetStringValue().str();
 }
 
 std::optional<bool> OperatingSystemPythonInterface::DoesPluginReportAllThreads() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("does_plugin_report_all_threads", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("does_plugin_report_all_threads"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
-  return obj->GetAsBoolean()->GetValue();
+  return obj->GetBooleanValue();
 }
 
 void OperatingSystemPythonInterface::Initialize() {

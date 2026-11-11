@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class CallCPPFunctionTestCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)

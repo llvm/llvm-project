@@ -24,13 +24,12 @@ public:
   AvailabilityPredicate(const Record *Def) : TheDef(Def) {
     if (!TheDef)
       return;
+    // An unset CondDag means the libcall is always available.
     if (const RecordVal *RV = TheDef->getValue("CondDag")) {
-      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue())) {
+      if (const auto *Dag = dyn_cast_or_null<DagInit>(RV->getValue());
+          Dag && !isa<UnsetInit>(Dag->getOperator()))
         PredicateString = lowerCondDag(TheDef, Dag);
-        return;
-      }
     }
-    PredicateString = TheDef->getValueAsString("Cond").str();
   }
 
   const Record *getDef() const { return TheDef; }
@@ -102,6 +101,9 @@ public:
 class RuntimeLibcallImpl {
   const Record *TheDef;
   const RuntimeLibcall *Provides = nullptr;
+  const RuntimeLibcall *ProvidesF80 = nullptr;
+  const RuntimeLibcall *ProvidesF128 = nullptr;
+  const RuntimeLibcall *ProvidesPPCF128 = nullptr;
   const size_t EnumVal;
 
 public:
@@ -110,8 +112,15 @@ public:
       const DenseMap<const Record *, const RuntimeLibcall *> &ProvideMap,
       size_t EnumVal)
       : TheDef(Def), EnumVal(EnumVal) {
-    if (const Record *ProvidesDef = Def->getValueAsDef("Provides"))
+    if (const Record *ProvidesDef = Def->getValueAsOptionalDef("Provides"))
       Provides = ProvideMap.lookup(ProvidesDef);
+
+    if (Def->isSubClassOf("LongDoubleLibcallImpl")) {
+      ProvidesF80 = ProvideMap.lookup(Def->getValueAsDef("ProvidesF80"));
+      ProvidesF128 = ProvideMap.lookup(Def->getValueAsDef("ProvidesF128"));
+      ProvidesPPCF128 =
+          ProvideMap.lookup(Def->getValueAsDef("ProvidesPPCF128"));
+    }
   }
 
   ~RuntimeLibcallImpl() = default;
@@ -124,6 +133,12 @@ public:
 
   const RuntimeLibcall *getProvides() const { return Provides; }
 
+  bool isLongDouble() const { return ProvidesF80 != nullptr; }
+
+  const RuntimeLibcall *getProvidesF80() const { return ProvidesF80; }
+  const RuntimeLibcall *getProvidesF128() const { return ProvidesF128; }
+  const RuntimeLibcall *getProvidesPPCF128() const { return ProvidesPPCF128; }
+
   StringRef getLibcallFuncName() const {
     return TheDef->getValueAsString("LibCallFuncName");
   }
@@ -135,8 +150,6 @@ public:
   void emitQuotedLibcallFuncName(raw_ostream &OS) const {
     OS << '\"' << getLibcallFuncName() << '\"';
   }
-
-  bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
 
   void emitEnumEntry(raw_ostream &OS) const {
     OS << "RTLIB::impl_" << this->getName();
@@ -174,8 +187,7 @@ private:
   std::vector<RuntimeLibcall> RuntimeLibcallDefList;
   std::vector<RuntimeLibcallImpl> RuntimeLibcallImplDefList;
 
-  DenseMap<const RuntimeLibcall *, const RuntimeLibcallImpl *>
-      LibCallToDefaultImpl;
+  std::vector<const Record *> FuncArgTypeList;
 
 public:
   RuntimeLibcalls(const RecordKeeper &Records);
@@ -194,6 +206,10 @@ public:
 
   const RuntimeLibcallImpl *getRuntimeLibcallImpl(const Record *Def) const {
     return Def2RuntimeLibcallImpl.lookup(Def);
+  }
+
+  ArrayRef<const Record *> getFuncArgTypeList() const {
+    return FuncArgTypeList;
   }
 };
 

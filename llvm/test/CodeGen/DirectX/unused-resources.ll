@@ -7,6 +7,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; - unused resource initialization calls
 ; - unused cbuffers and associated global variables
 ; - resource name strings
+; - unused resource handles created from the descriptor heap
 
 %__cblayout_CB = type <{ i32, float }>
 %"__cblayout_$Globals" = type <{ i32, float }>
@@ -37,6 +38,10 @@ entry:
             @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, ptr @Buf.str)
   store target("dx.RawBuffer", i16, 1, 0) %uav_handle, ptr @_ZL3Buf, align 4
 
+; Heap resource
+  %heap_handle = call target("dx.RawBuffer", i16, 1, 0)
+            @llvm.dx.resource.handlefromheap(i32 0)
+
   ret void
 }
 
@@ -55,6 +60,7 @@ entry:
 ; CHECK-NOT: @Buf.str  
 ; CHECK-NOT: call {{.*}} llvm.dx.resource.handlefrombinding
 ; CHECK-NOT: call {{.*}} llvm.dx.resource.handlefromimplicitbinding
+; CHECK-NOT: call {{.*}} llvm.dx.resource.handlefromheap
 
 ; Make sure the resource bindings table is empty
 ; CHECK-PRINT: ; Resource Bindings:

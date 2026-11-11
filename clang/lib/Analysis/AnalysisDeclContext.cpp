@@ -411,11 +411,11 @@ const StackFrame *StackFrameManager::getStackFrame(
     const Expr *E, const CFGBlock *B, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
   StackFrame::Profile(ID, Ctx, Parent, Data, E, B, BlockCount, StmtIdx);
-  void *InsertPos;
-  StackFrame *SF = Frames.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  StackFrame *SF = Frames.lookup(ID, InsertToken);
   if (!SF) {
     SF = new StackFrame(Ctx, Parent, Data, E, B, BlockCount, StmtIdx, ++NewID);
-    Frames.InsertNode(SF, InsertPos);
+    Frames.insert(SF, InsertToken);
   }
   return SF;
 }

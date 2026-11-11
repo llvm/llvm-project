@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -o - | FileCheck %s --check-prefix=NEW
 // RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -debug-info-macro-expansion-loc -o - | FileCheck %s --check-prefix=OLD
+// RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -debug-info-macro-max-depth=15 -o - | FileCheck %s --check-prefix=DEPTH15
+// RUN: %clang_cc1 %s -debug-info-kind=standalone -emit-llvm -debug-info-macro-max-depth=14 -o - | FileCheck %s --check-prefix=DEPTH14
 
 #define GLOBAL(num) global## num
 #define DECL_GLOBAL(x) int x
@@ -39,3 +41,27 @@ DECL_GLOBAL(
 // OLD: DIGlobalVariable(name: "global4",{{.*}} line: [[@LINE-2]]
   GLOBAL(  // <- global4
     4));
+
+// Very deep macro argument expansion chain.
+#define ID1(x) x
+#define ID2(x) ID1(ID1(x))
+#define ID4(x) ID2(ID2(x))
+#define ID8(x) ID4(ID4(x))
+#define ID16(x) ID8(ID8(x))
+#define ID32(x) ID16(ID16(x))
+#define ID64(x) ID32(ID32(x))
+#define ID128(x) ID64(ID64(x))
+#define ID256(x) ID128(ID128(x))
+#define ID512(x) ID256(ID256(x))
+
+ID8(
+// NEW: DIGlobalVariable(name: "global5",{{.*}} line: [[@LINE+4]]
+// OLD: DIGlobalVariable(name: "global5",{{.*}} line: [[@LINE-2]]
+// DEPTH15: DIGlobalVariable(name: "global5",{{.*}} line: [[@LINE+2]]
+// DEPTH14: DIGlobalVariable(name: "global5",{{.*}} line: [[@LINE-4]]
+  int global5);
+
+ID512(
+// NEW: DIGlobalVariable(name: "global6",{{.*}} line: [[@LINE-1]]
+// OLD: DIGlobalVariable(name: "global6",{{.*}} line: [[@LINE-2]]
+  int global6);

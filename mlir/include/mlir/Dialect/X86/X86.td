@@ -77,7 +77,8 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
                    OptionalAttr<ElementsAttr>:$constant_src);
   let results = (outs VectorOfLengthAndType<[16, 8],
                                             [F32, I32, F64, I64]>:$dst);
-  let assemblyFormat = "$k `,` $a (`,` $src^)? attr-dict"
+  let assemblyFormat = "$k `,` $a (`,` $src^)? "
+                       "(`constant_src` `=` $constant_src^)? attr-dict"
                        " `:` type($dst) (`,` type($src)^)?";
   let hasVerifier = 1;
 
@@ -691,6 +692,7 @@ def CvtPackedOddIndexedToF32Op
 
 class AMX_Type<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<X86_Dialect, "AMX" # typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/X86/X86Dialect.h"];
   let mnemonic = "amx." # typeMnemonic;
 }
 
@@ -1005,9 +1007,9 @@ def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
       } else if (elementType.isBF16()) {
         intr += "bf16";
       } else if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
-        intr += elementType.isF8E4M3FN() ? "b" : "h";
+        intr += elementType.isF8E4M3FN() ? "h" : "b";
         if (elementType != elementTypeRhs)
-          intr += elementTypeRhs.isF8E4M3FN() ? "b" : "h";
+          intr += elementTypeRhs.isF8E4M3FN() ? "h" : "b";
         intr += "f8";
       }
 

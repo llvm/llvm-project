@@ -6,13 +6,16 @@
 vsetvli a0, zero, e888, m1, ta, ma
 
 # Invalid ci
-# CHECK-ERROR: immediate must be an integer in the range [0, 7]{{$}}
-vfwbdota.vv v8, v16, v12, 8
+# CHECK-ERROR: immediate must be a multiple of 8 in the range [0, 56]{{$}}
+vfwbdota.vv v8, v16, v12, 4
+
+# CHECK-ERROR: immediate must be a multiple of 8 in the range [0, 56]{{$}}
+vfwbdota.vv v8, v16, v12, 64
 
 # Invalid vs2
 # CHECK-ERROR: invalid operand for instruction{{$}}
-vfwbdota.vv v8, v17, v12, 1
+vfwbdota.vv v8, v17, v12, 8
 
 # Invalid vs2 and ci
 # CHECK-ERROR: :[[@LINE+1]]:17: error: invalid operand for instruction{{$}}
-vfwbdota.vv v8, v17, v12, 8
+vfwbdota.vv v8, v17, v12, 4

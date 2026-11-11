@@ -507,15 +507,17 @@ entry:
   ret i32 %call
 }
 
-attributes #0 = { noinline nounwind readnone "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { nounwind readonly "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #2 = { noinline nounwind readonly "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #3 = { nounwind "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { noinline nounwind readnone }
+attributes #1 = { nounwind readonly }
+attributes #2 = { noinline nounwind readonly }
+attributes #3 = { nounwind }
 attributes #4 = { nounwind }
 attributes #5 = { nobuiltin }
 
-!0 = !{!"int", !1}
+!0 = !{!5, !5, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
-!3 = !{!"short", !1}
+!3 = !{!6, !6, i64 0}
 !4 = !{i64 0, i64 4, !0, i64 4, i64 2, !3, i64 8, i64 4, !0, i64 12, i64 2, !3, i64 16, i64 4, !0, i64 20, i64 2, !3}
+!5 = !{!"int", !1}
+!6 = !{!"short", !1}

@@ -14,9 +14,7 @@
 // HST-NEXT:    [[DOTADDR1:%.*]] = alloca i16, align 2
 // HST-NEXT:    [[DOTADDR2:%.*]] = alloca ptr, align 4
 // HST-NEXT:    [[DOTADDR3:%.*]] = alloca ptr, align 4
-// HST-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[TMP0]], align 16
-// HST-NEXT:    [[KERNEL_ARGS_PTRS:%.*]] = alloca [4 x ptr], align 16
-// HST-NEXT:    [[KERNEL_LAUNCH_PARAMS:%.*]] = alloca [[TMP1]], align 16
+// HST-NEXT:    [[KERNEL_LAUNCH_PARAMS:%.*]] = alloca [[TMP0]], align 16
 // HST-NEXT:    [[GRID_DIM:%.*]] = alloca [[STRUCT_DIM3:%.*]], align 8
 // HST-NEXT:    [[BLOCK_DIM:%.*]] = alloca [[STRUCT_DIM3]], align 8
 // HST-NEXT:    [[SHMEM_SIZE:%.*]] = alloca i32, align 4
@@ -25,34 +23,34 @@
 // HST-NEXT:    store i16 [[TMP1]], ptr [[DOTADDR1]], align 2
 // HST-NEXT:    store ptr [[TMP2]], ptr [[DOTADDR2]], align 4
 // HST-NEXT:    store ptr [[TMP3]], ptr [[DOTADDR3]], align 4
-// HST-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[TMP1]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 0
-// HST-NEXT:    store i32 4, ptr [[TMP4]], align 16
-// HST-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[TMP1]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 1
-// HST-NEXT:    store ptr [[KERNEL_ARGS_PTRS]], ptr [[TMP5]], align 4
-// HST-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTADDR]], align 4
-// HST-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// HST-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 16
-// HST-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 0
-// HST-NEXT:    store ptr [[TMP7]], ptr [[TMP8]], align 16
-// HST-NEXT:    [[TMP9:%.*]] = load i16, ptr [[DOTADDR1]], align 2
-// HST-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 1
-// HST-NEXT:    store i16 [[TMP9]], ptr [[TMP10]], align 4
-// HST-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 1
-// HST-NEXT:    store ptr [[TMP10]], ptr [[TMP11]], align 4
-// HST-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[DOTADDR2]], align 4
-// HST-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 2
-// HST-NEXT:    store ptr [[TMP12]], ptr [[TMP13]], align 8
-// HST-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 2
-// HST-NEXT:    store ptr [[TMP13]], ptr [[TMP14]], align 8
-// HST-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTADDR3]], align 4
-// HST-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_ARGS]], i32 0, i32 3
-// HST-NEXT:    store ptr [[TMP15]], ptr [[TMP16]], align 4
-// HST-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [4 x ptr], ptr [[KERNEL_ARGS_PTRS]], i32 0, i32 3
-// HST-NEXT:    store ptr [[TMP16]], ptr [[TMP17]], align 4
-// HST-NEXT:    [[TMP18:%.*]] = call i32 @__llvmPopCallConfiguration(ptr [[GRID_DIM]], ptr [[BLOCK_DIM]], ptr [[SHMEM_SIZE]], ptr [[STREAM]])
-// HST-NEXT:    [[TMP19:%.*]] = load i32, ptr [[SHMEM_SIZE]], align 4
-// HST-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[STREAM]], align 4
-// HST-NEXT:    [[CALL:%.*]] = call noundef i32 @llvmLaunchKernel(ptr noundef @_Z18__device_stub__fooisPvS_, ptr noundef byval([[STRUCT_DIM3]]) align 4 [[GRID_DIM]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[BLOCK_DIM]], ptr noundef [[KERNEL_LAUNCH_PARAMS]], i32 noundef [[TMP19]], ptr noundef [[TMP20]]) #[[ATTR3:[0-9]+]]
+// HST-NEXT:    [[KERNEL_ARGS:%.*]] = alloca ptr, i32 4, align 16
+// HST-NEXT:    [[KERNEL_ARG_SIZES:%.*]] = alloca i32, i32 4, align 16
+// HST-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 0
+// HST-NEXT:    store ptr [[KERNEL_ARGS]], ptr [[TMP4]], align 16
+// HST-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 1
+// HST-NEXT:    store i64 4, ptr [[TMP5]], align 8
+// HST-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [[TMP0]], ptr [[KERNEL_LAUNCH_PARAMS]], i32 0, i32 2
+// HST-NEXT:    store ptr [[KERNEL_ARG_SIZES]], ptr [[TMP6]], align 16
+// HST-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[KERNEL_ARGS]], i32 0
+// HST-NEXT:    store ptr [[DOTADDR]], ptr [[TMP7]], align 4
+// HST-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[KERNEL_ARG_SIZES]], i32 0
+// HST-NEXT:    store i32 4, ptr [[TMP8]], align 4
+// HST-NEXT:    [[TMP9:%.*]] = getelementptr ptr, ptr [[KERNEL_ARGS]], i32 1
+// HST-NEXT:    store ptr [[DOTADDR1]], ptr [[TMP9]], align 4
+// HST-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[KERNEL_ARG_SIZES]], i32 1
+// HST-NEXT:    store i32 2, ptr [[TMP10]], align 4
+// HST-NEXT:    [[TMP11:%.*]] = getelementptr ptr, ptr [[KERNEL_ARGS]], i32 2
+// HST-NEXT:    store ptr [[DOTADDR2]], ptr [[TMP11]], align 4
+// HST-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[KERNEL_ARG_SIZES]], i32 2
+// HST-NEXT:    store i32 4, ptr [[TMP12]], align 4
+// HST-NEXT:    [[TMP13:%.*]] = getelementptr ptr, ptr [[KERNEL_ARGS]], i32 3
+// HST-NEXT:    store ptr [[DOTADDR3]], ptr [[TMP13]], align 4
+// HST-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[KERNEL_ARG_SIZES]], i32 3
+// HST-NEXT:    store i32 4, ptr [[TMP14]], align 4
+// HST-NEXT:    [[TMP15:%.*]] = call i32 @__llvmPopCallConfiguration(ptr [[GRID_DIM]], ptr [[BLOCK_DIM]], ptr [[SHMEM_SIZE]], ptr [[STREAM]])
+// HST-NEXT:    [[TMP16:%.*]] = load i32, ptr [[SHMEM_SIZE]], align 4
+// HST-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[STREAM]], align 4
+// HST-NEXT:    [[CALL:%.*]] = call noundef i32 @llvmLaunchKernel(ptr noundef @_Z18__device_stub__fooisPvS_, ptr noundef byval([[STRUCT_DIM3]]) align 4 [[GRID_DIM]], ptr noundef byval([[STRUCT_DIM3]]) align 4 [[BLOCK_DIM]], ptr noundef [[KERNEL_LAUNCH_PARAMS]], i32 noundef [[TMP16]], ptr noundef [[TMP17]]) #[[ATTR3:[0-9]+]]
 // HST-NEXT:    br label %[[SETUP_END:.*]]
 // HST:       [[SETUP_END]]:
 // HST-NEXT:    ret void

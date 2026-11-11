@@ -26,7 +26,7 @@ simd.if.end:
 }
 
 !0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}
 !2 = !{!"llvm.loop.isvectorized"}
 
 

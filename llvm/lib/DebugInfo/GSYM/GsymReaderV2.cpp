@@ -11,7 +11,6 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/GSYM/GlobalData.h"
 #include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/Support/FormatVariadic.h"

@@ -30,7 +30,7 @@ RWBuffer<float> Buf[10][10] : register(u4294967234);
 
 // test a standard resource array
 // expected-error@+1 {{register number should not exceed 4294967295}}
-RWBuffer<float> Buf2[10] : register(u4294967294); 
+RWBuffer<float> Buf2[10] : register(u4294967294);
 
 // test directly an excessively high register number.
 // expected-error@+1 {{register number should not exceed 4294967295}}
@@ -44,15 +44,15 @@ cbuffer MyCB : register(b9995294967294) {
 };
 
 struct MySRV {
-  __hlsl_resource_t [[hlsl::resource_class(SRV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("SRV")]] x;
 };
 
 struct MySampler {
-  __hlsl_resource_t [[hlsl::resource_class(Sampler)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("Sampler")]] x;
 };
 
 struct MyUAV {
-  __hlsl_resource_t [[hlsl::resource_class(UAV)]] x;
+  __hlsl_resource_t [[hlsl::resource_class("UAV")]] x;
 };
 
 // test that different resource classes don't contribute to the
@@ -79,12 +79,10 @@ MyResources M3 : register(t2) : register(s3) : register(u4294967280);
 
 
 // expected-error@+1 {{register number should be an integer}}
-RWBuffer<float> Buf3[10][10] : register(ud); 
+RWBuffer<float> Buf3[10][10] : register(ud);
 
 // this should work
 RWBuffer<float> GoodBuf : register(u4294967295);
 
 // no errors expected, all 100 register numbers are occupied here
-RWBuffer<float> GoodBufArray[10][10] : register(u4294967194); 
-
-
+RWBuffer<float> GoodBufArray[10][10] : register(u4294967194);

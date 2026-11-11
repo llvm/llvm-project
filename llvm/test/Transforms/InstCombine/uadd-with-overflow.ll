@@ -147,3 +147,74 @@ define { <2 x i32>, <2 x i1> } @fold_simple_splat_constant_with_or_fail(<2 x i32
   %b = tail call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> <i32 30, i32 30>)
   ret { <2 x i32>, <2 x i1> } %b
 }
+
+define i32 @uadd_with_zext(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  %cmp = icmp ugt i64 %add, 4294967295
+  %cond = zext i1 %cmp to i32
+  ret i32 %cond
+}
+
+define i32 @uadd_with_zext_use_and(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext_use_and(
+; CHECK-NEXT:    [[UADD_VALUE:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[UADD_VALUE]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UADD_VALUE]], 65535
+; CHECK-NEXT:    [[AND:%.*]] = zext nneg i32 [[TMP1]] to i64
+; CHECK-NEXT:    call void @usei64(i64 [[AND]])
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  %and = and i64 %add, 65535
+  call void @usei64(i64 %and)
+  %cmp = icmp ugt i64 %add, 4294967295
+  %cond = zext i1 %cmp to i32
+  ret i32 %cond
+}
+
+define i32 @uadd_with_zext_inverse(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext_inverse(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  %cmp = icmp ule i64 %add, 4294967295
+  %cond = zext i1 %cmp to i32
+  ret i32 %cond
+}
+
+define i32 @uadd_with_zext_neg_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @uadd_with_zext_neg_use(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
+; CHECK-NEXT:    call void @usei64(i64 [[ADD]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i64 [[ADD]], 4294967295
+; CHECK-NEXT:    [[COND:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %conv = zext i32 %x to i64
+  %conv1 = zext i32 %y to i64
+  %add = add i64 %conv, %conv1
+  call void @usei64(i64 %add)
+  %cmp = icmp ugt i64 %add, 4294967295
+  %cond = zext i1 %cmp to i32
+  ret i32 %cond
+}
+
+declare void @usei64(i64)

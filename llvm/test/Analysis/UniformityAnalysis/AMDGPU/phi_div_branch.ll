@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 ;
 ; This is to test an if-then-else case with some unmerged basic blocks
 ; (https://github.com/llvm/llvm-project/issues/137277)

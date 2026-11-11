@@ -31,7 +31,7 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPa() -> i32 attributes {{.+}} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFFaEa"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "a", uniq_name = "_QFFaEa"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.volatile_cast %[[VAL_1]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {{.+}} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
 ! CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_3]]#0 : i32, !fir.ref<i32, volatile>
@@ -42,7 +42,7 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPb() -> i32 attributes {{.+}} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 2 : i32
-! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "r", uniq_name = "_QFFbEr"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "r", uniq_name = "_QFFbEr"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.volatile_cast %[[VAL_1]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {{.+}} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
 ! CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_3]]#0 : i32, !fir.ref<i32, volatile>
@@ -53,7 +53,7 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPc() -> f32 attributes {{.+}} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 3.000000e+00 : f32
-! CHECK:           %[[VAL_1:.*]] = fir.alloca f32 {bindc_name = "r", uniq_name = "_QFFcEr"}
+! CHECK:           %[[VAL_1:.*]] = fir.alloca f32 <{bindc_name = "r", uniq_name = "_QFFcEr"}>
 ! CHECK:           %[[VAL_2:.*]] = fir.volatile_cast %[[VAL_1]] : (!fir.ref<f32>) -> !fir.ref<f32, volatile>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {{.+}} : (!fir.ref<f32, volatile>) -> (!fir.ref<f32, volatile>, !fir.ref<f32, volatile>)
 ! CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_3]]#0 : f32, !fir.ref<f32, volatile>

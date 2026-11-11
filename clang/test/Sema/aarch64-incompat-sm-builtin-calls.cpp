@@ -110,7 +110,7 @@ svbool_t streaming_caller_ptrue(void) __arm_streaming {
 }
 
 svint8_t missing_za(svint8_t zd, svbool_t pg, uint32_t slice_base) __arm_streaming {
-  // expected-warning@+1 {{builtin call is not valid when calling from a function without active ZA state}}
+  // expected-error@+1 {{builtin call is not valid when calling from a function without active ZA state}}
     return svread_hor_za8_s8_m(zd, pg, 0, slice_base);
 }
 
@@ -120,7 +120,7 @@ svint8_t new_za(svint8_t zd, svbool_t pg, uint32_t slice_base) __arm_streaming {
 }
 
 void missing_zt0(void) __arm_streaming {
-  // expected-warning@+1 {{builtin call is not valid when calling from a function without active ZT0 state}}
+  // expected-error@+1 {{builtin call is not valid when calling from a function without active ZT0 state}}
   svzero_zt(0);
 }
 

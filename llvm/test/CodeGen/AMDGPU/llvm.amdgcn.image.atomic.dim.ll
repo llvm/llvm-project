@@ -1,7 +1,6 @@
 ; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefixes=GCN,GFX6789 %s
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX6789 %s
 ; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck -check-prefixes=GCN,GFX90A %s
-; RUN: llc -mtriple=amdgpu9.0a -early-live-intervals < %s | FileCheck -check-prefixes=GCN,GFX90A %s
 ; RUN: llc -mtriple=amdgpu10.10 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgpu11.00 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgpu12.00 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,GFX12PLUS %s

@@ -1,0 +1,63 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// A context holds a single record per kind and name, so a second definition of
+// a name must have the same body as the first.
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external @a = #cir.zero : !cir.struct<"S" {data !s32i}>
+  // expected-error @below {{record 'S' redefined with a different body}}
+  cir.global external @b = #cir.zero : !cir.struct<"S" {data !cir.double, data !s32i}>
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external @a = #cir.zero : !cir.struct<"S" {data !s32i}>
+  // expected-error @below {{record 'S' redefined with a different body}}
+  cir.global external @b = #cir.zero : !cir.struct<"S" packed {data !s32i}>
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+module {
+  cir.global external @a = #cir.zero : !cir.struct<"S" {data !u8i}>
+  // expected-error @below {{record 'S' redefined with a different body}}
+  cir.global external @b = #cir.zero : !cir.struct<"S" {pad !u8i}>
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external @a = #cir.zero : !cir.union<"U" {data !s32i}>
+  // expected-error @below {{record 'U' redefined with a different body}}
+  cir.global external @b = #cir.zero : !cir.union<"U" {data !s32i, data !cir.float}>
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external @a = #cir.zero : !cir.union<"U" {data !s32i}>
+  // expected-error @below {{record 'U' redefined with a different body}}
+  cir.global external @b = #cir.zero : !cir.union<"U" {data !s32i}, padding = {!cir.array<!u8i x 4>}>
+}
+
+// -----
+
+// Still accepted: an identical redefinition, completing a record first seen
+// incomplete, and a struct, a class and a union that share a name, which are
+// distinct records.
+!s32i = !cir.int<s, 32>
+module {
+  cir.global external @a = #cir.zero : !cir.struct<"S" {data !s32i}>
+  cir.global external @b = #cir.zero : !cir.struct<"S" {data !s32i}>
+  cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<"F" incomplete>>
+  cir.global external @f = #cir.zero : !cir.struct<"F" {data !s32i}>
+  cir.global external @c = #cir.zero : !cir.struct<class "S" {data !cir.double}>
+  cir.global external @u = #cir.zero : !cir.union<"S" {data !s32i, data !cir.float}>
+}

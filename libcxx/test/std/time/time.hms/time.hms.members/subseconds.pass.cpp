@@ -39,6 +39,8 @@ int main(int, char**)
     static_assert( check_subseconds(std::chrono::seconds( 1)) == 0, "");
     static_assert( check_subseconds(std::chrono::seconds(-1)) == 0, "");
 
+    static_assert(check_subseconds(std::chrono::duration<unsigned, std::milli>(123456789)) == 789, "");
+
     assert( check_subseconds(std::chrono::seconds( 5000)) == 0);
     assert( check_subseconds(std::chrono::seconds(-5000)) == 0);
     assert( check_subseconds(std::chrono::minutes( 5000)) == 0);

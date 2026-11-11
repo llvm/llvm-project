@@ -37,8 +37,8 @@ body:             |
   bb.0.entry:
     %0:gr16_abcd = MOV16ri 0
     DBG_VALUE %0.sub_8bit:gr16_abcd, $noreg, !11, !DIExpression(), debug-location !13
-    undef %6.sub_8bit:gr16_abcd = COPY killed %0.sub_8bit
-    dead $dx = COPY killed %6
+    undef %6.sub_8bit:gr16_abcd = COPY %0.sub_8bit
+    dead $dx = COPY %6
 
 ...
 

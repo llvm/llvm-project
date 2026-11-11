@@ -48,4 +48,10 @@ export namespace std {
     using std::__cpo::weak_order;
   } // namespace __cpo
 
+#if _LIBCPP_STD_VER >= 26 && __has_builtin(__builtin_type_order)
+  // [compare.type], type ordering
+  using std::type_order;
+  using std::type_order_v;
+#endif
+
 } // namespace std

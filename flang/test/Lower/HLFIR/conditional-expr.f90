@@ -115,13 +115,10 @@ subroutine test_char_constant_len(flag)
   str1 = "HELLO"
   str2 = "WORLD"
   result = (flag ? str1 : str2)
-  ! Constant length: use scalar temp path.
-  ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.char<1,5> {bindc_name = ".cond.scalar"
-  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] typeparams {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,5>> {
+  ! CHECK:   hlfir.yield %{{.*}} : !fir.ref<!fir.char<1,5>>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0
+  ! CHECK:   hlfir.yield %{{.*}} : !fir.ref<!fir.char<1,5>>
   ! CHECK: }
 end subroutine
 
@@ -133,16 +130,10 @@ subroutine test_char_deferred_len(flag)
   str2 = "A MUCH LONGER STRING"
   ! Result length comes from selected branch
   result = (flag ? str1 : str2)
-  ! CHECK-DAG: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".cond.char"
-  ! CHECK-DAG: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.char<1,?>>
-  ! CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-  ! CHECK: %[[BOX:.*]] = fir.embox %[[UNALLOC]] typeparams %[[C0]]
-  ! CHECK: fir.store %[[BOX]] to %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-  ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX_ALLOC]] {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -153,16 +144,10 @@ subroutine test_array(flag)
   arr1 = 1
   arr2 = 2
   result = (flag ? arr1 : arr2)
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<{{.*}}xi32>>> {bindc_name = ".cond.array"
-  ! CHECK: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.array<{{.*}}xi32>>
-  ! CHECK: %[[SHAPE:.*]] = fir.shape
-  ! CHECK: %[[BOX:.*]] = fir.embox %[[UNALLOC]](%[[SHAPE]])
-  ! CHECK: fir.store %[[BOX]] to %[[BOX_ALLOC]]
-  ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX_ALLOC]] {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<?xi32> {
+  ! CHECK:   hlfir.yield %{{.*}} : !fir.ref<!fir.array<10xi32>>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}} : !fir.ref<!fir.array<10xi32>>
   ! CHECK: }
 end subroutine
 
@@ -176,12 +161,10 @@ subroutine test_derived_type(flag)
   p1 = point(1.0, 2.0)
   p2 = point(3.0, 4.0)
   result = (flag ? p1 : p2)
-  ! CHECK: %[[TEMP:.*]] = fir.alloca !fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}> {bindc_name = ".cond.scalar"
-  ! CHECK: %[[TEMP_DECL:.*]]:2 = hlfir.declare %[[TEMP]] {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>>, !fir.ref<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>>
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>> {
+  ! CHECK:   hlfir.yield %{{.*}} : !fir.ref<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>>
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[TEMP_DECL]]#0 : !fir.ref<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>>, !fir.ref<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>>
+  ! CHECK:   hlfir.yield %{{.*}} : !fir.ref<!fir.type<_QFtest_derived_typeTpoint{x:f32,y:f32}>>
   ! CHECK: }
 end subroutine
 
@@ -227,12 +210,10 @@ subroutine test_assumed_length_char(flag, str1, str2)
   character(len=*) :: str1, str2
   character(len=100) :: result
   result = (flag ? str1 : str2)
-  ! Deferred length path since len=* is not constant
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = ".cond.char"
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -266,11 +247,10 @@ subroutine test_array_section(flag)
   logical :: flag
   integer :: arr1(20), arr2(20), result(10)
   result = (flag ? arr1(1:10) : arr2(11:20))
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<{{.*}}xi32>>> {bindc_name = ".cond.array"
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<?xi32> {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -280,11 +260,10 @@ subroutine test_noncontiguous_section(flag)
   integer :: arr1(20), arr2(20), result(5)
   ! Non-contiguous stride-2 sections: result must be contiguous.
   result = (flag ? arr1(1:10:2) : arr2(2:10:2))
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<{{.*}}xi32>>> {bindc_name = ".cond.array"
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<?xi32> {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to {{.*}} realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -296,17 +275,12 @@ subroutine test_polymorphic(flag, x, y)
   logical :: flag
   class(base_type), intent(in) :: x, y
   type(base_type) :: result
-  ! Polymorphic conditional: uses fir.class (not fir.box) to carry dynamic type.
+  ! Polymorphic conditional: uses hlfir.conditional with polymorphic expr type.
   result = (flag ? x : y)
-  ! CHECK: %[[BOX_ALLOC:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
-  ! CHECK: %[[UNALLOC:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>
-  ! CHECK: %[[BOX:.*]] = fir.embox %[[UNALLOC]] : (!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QFtest_polymorphicTbase_type{val:i32}>>>
-  ! CHECK: fir.store %[[BOX]] to %[[BOX_ALLOC]]
-  ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX_ALLOC]] {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} {{.*}} {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[BOX_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -318,14 +292,12 @@ subroutine test_polymorphic_array(flag, x, y)
   logical :: flag
   class(base_type), intent(in) :: x(:), y(:)
   type(base_type), allocatable :: result(:)
-  ! Polymorphic array: uses fir.class (not fir.box) for the allocatable temp.
+  ! Polymorphic array: hlfir.conditional with polymorphic array expr type.
   result = (flag ? x : y)
-  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.array<?x!fir.type<_QFtest_polymorphic_arrayTbase_type{val:i32}>>>> {bindc_name = ".cond.array"
-  ! CHECK: %[[PA_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[PA_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} {{.*}} {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[PA_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -339,13 +311,10 @@ subroutine test_polymorphic_char_component(flag, x, y)
   class(named_type), intent(in) :: x, y
   type(named_type), allocatable :: result
   result = (flag ? x : y)
-  ! The alloca type proves fir.class is used for the polymorphic temp.
-  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphic_char_componentTnamed_type{name:!fir.char<1,20>,id:i32}>>> {bindc_name = ".cond.polymorphic"
-  ! CHECK: %[[PC_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[PC_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} {{.*}} {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[PC_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -358,15 +327,12 @@ subroutine test_mixed_type_class(flag, x, y)
   type(base_type), intent(in) :: x
   class(base_type), intent(in) :: y
   type(base_type) :: result
-  ! Mixed TYPE(t)/CLASS(t): GetType() returns polymorphic when either branch
-  ! is polymorphic, so the result must use fir.class (not fir.box).
+  ! Mixed TYPE(t)/CLASS(t): result is polymorphic when either branch is.
   result = (flag ? x : y)
-  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_mixed_type_classTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
-  ! CHECK: %[[MX_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[MX_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} {{.*}} {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[MX_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: }
 end subroutine
 
@@ -382,13 +348,37 @@ subroutine test_polymorphic_extends(flag, x, y)
   class(base_type), intent(in) :: x, y
   type(base_type) :: result
   ! Polymorphic with type hierarchy: x or y may hold extended_type at runtime.
-  ! The lowering must use fir.class to preserve dynamic type info.
   result = (flag ? x : y)
-  ! CHECK: fir.alloca !fir.class<!fir.heap<!fir.type<_QFtest_polymorphic_extendsTbase_type{val:i32}>>> {bindc_name = ".cond.polymorphic"
-  ! CHECK: %[[PE_DECL:.*]]:2 = hlfir.declare {{.*}} {uniq_name = ".cond.result"}
-  ! CHECK: fir.if
-  ! CHECK:   hlfir.assign {{.*}} to %[[PE_DECL]]#0 realloc temporary_lhs
+  ! CHECK: %[[RESULT:.*]] = hlfir.conditional %{{.*}} {{.*}} {
+  ! CHECK:   hlfir.yield %{{.*}}
   ! CHECK: } else {
-  ! CHECK:   hlfir.assign {{.*}} to %[[PE_DECL]]#0 realloc temporary_lhs
+  ! CHECK:   hlfir.yield %{{.*}}
+  ! CHECK: }
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_chained_char_conditional(
+subroutine test_chained_char_conditional(flag1, flag2, flag3)
+  logical :: flag1, flag2, flag3
+  character(len=:), allocatable :: s1, s2, s3, s4, result
+  s1 = "A"
+  s2 = "BB"
+  s3 = "CCC"
+  s4 = "DDDD"
+  ! Chained conditional with different-length character branches.
+  result = (flag1 ? s1 : flag2 ? s2 : flag3 ? s3 : s4)
+  ! CHECK: %[[OUTER:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:   hlfir.yield %{{.*}}
+  ! CHECK: } else {
+  ! CHECK:   %[[MID:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:     hlfir.yield %{{.*}}
+  ! CHECK:   } else {
+  ! CHECK:     %[[INNER:.*]] = hlfir.conditional %{{.*}} : (i1) -> !hlfir.expr<!fir.char<1,?>> {
+  ! CHECK:       hlfir.yield %{{.*}}
+  ! CHECK:     } else {
+  ! CHECK:       hlfir.yield %{{.*}}
+  ! CHECK:     }
+  ! CHECK:     hlfir.yield %[[INNER]] : !hlfir.expr<!fir.char<1,?>>
+  ! CHECK:   }
+  ! CHECK:   hlfir.yield %[[MID]] : !hlfir.expr<!fir.char<1,?>>
   ! CHECK: }
 end subroutine

@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 -mattr=+neon -fp-contract=fast -regalloc=pbqp -pbqp-coalescing | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 -mattr=+neon -regalloc=pbqp -pbqp-coalescing | FileCheck %s
 
 %pl = type { i32, i32, i32, i32, ptr, ptr, ptr }
 %p = type { i32, ptr, [27 x ptr], ptr, ptr, ptr, i32 }

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include <optional>
 
@@ -39,7 +40,7 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<CSKYELFTargetObjectFile>()) {
@@ -59,10 +60,14 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
+  FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
+
   std::string Key = CPU + TuneCPU + FS;
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
   auto &I = SubtargetMap[Key];
   if (!I) {
-    I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS, *this);
+    I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS,
+                                        FloatABI, *this);
     if (I->useHardFloat() && !I->hasAnyFloatExt())
       errs() << "Hard-float can't be used with current CPU,"
                 " set to Soft-float\n";

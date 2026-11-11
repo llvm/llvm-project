@@ -5,8 +5,8 @@
 ; No error would be reported in comparison to Khronos llvm-spirv, because type adjustments to integer size are made 
 ; in case no appropriate extension is enabled. Here we expect that the type is adjusted to 8 bits.
 
-; CHECK-SPIRV: Capability ArbitraryPrecisionIntegersALTERA
-; CHECK-SPIRV: Extension "SPV_ALTERA_arbitrary_precision_integers"
+; CHECK-INT-4: OpCapability ArbitraryPrecisionIntegersALTERA
+; CHECK-INT-4: OpExtension "SPV_ALTERA_arbitrary_precision_integers"
 ; CHECK-INT-4: %[[#Int4:]] = OpTypeInt 4 0
 ; CHECK-INT-8: %[[#Int4:]] = OpTypeInt 8 0
 ; CHECK: OpTypeFunction %[[#]] %[[#Int4]]

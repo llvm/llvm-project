@@ -392,8 +392,9 @@ public:
   bool MaybeDiagnoseMissingCompleteType(SourceLocation Loc,
                                         QualType T) override;
 
-  // Inform all attached sources that a mangling number was assigned.
-  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
+  void StartedQualifiedLookup(const DeclContext *DC) override;
+
+  void FinishedQualifiedLookup(const DeclContext *DC) override;
 
   /// LLVM-style RTTI.
   /// \{

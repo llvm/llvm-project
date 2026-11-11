@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-unknown-linux -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -run-pass=aarch64-ldst-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-linux -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
 ---
 name: pair-sve-fill-spill
 tracksRegLiveness: true

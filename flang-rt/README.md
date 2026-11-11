@@ -157,7 +157,7 @@ CMake itself provide.
    independent of `FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA` and only
    requires a
    [CUDA Toolkit installation](https://cmake.org/cmake/help/latest/module/FindCUDAToolkit.html)
-   (no `CMAKE_CUDA_COMPILER`).
+   12.8 or later (no `CMAKE_CUDA_COMPILER`).
 
 
 ### Experimental CUDA Support

@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
@@ -133,7 +134,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+  I->dropUBImplyingAttrsAndUnknownMetadata(ProfileMetadataToPreserve);
 
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
@@ -197,7 +198,7 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (CondBrInst *BI = dyn_cast_or_null<CondBrInst>(Latch->getTerminator()))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(Latch->getTerminator()))
       return dyn_cast<ICmpInst>(BI->getCondition());
 
   return nullptr;
@@ -408,8 +409,6 @@ CondBrInst *Loop::getLoopGuardBranch() const {
   if (!GuardBB)
     return nullptr;
 
-  assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
-
   CondBrInst *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
   if (!GuardBI)
     return nullptr;
@@ -442,7 +441,7 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   if (IndDesc.getInductionOpcode() != Instruction::Add)
     return false;
 
-  ConstantInt *Step = IndDesc.getConstIntStepValue();
+  std::optional<APInt> Step = IndDesc.getConstStepValue();
   if (!Step || !Step->isOne())
     return false;
 
@@ -526,6 +525,32 @@ bool Loop::isSafeToClone() const {
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (CB->cannotDuplicate())
           return false;
+  }
+  return true;
+}
+
+bool Loop::isSafeToCloneConditionally(const DominatorTree &DT) const {
+  if (!isSafeToClone())
+    return false;
+
+  for (BasicBlock *BB : this->blocks()) {
+    for (Instruction &I : *BB) {
+      // Token-like values cannot be used in PHI nodes, so cloning is only
+      // possible if all their uses are contained in the loop. Uses within
+      // the loop (even across blocks) are fine: cloning only requires
+      // forming phis for values that are live-out of the loop.
+      if (I.getType()->isTokenLikeTy()) {
+        for (const Use &U : I.uses()) {
+          if (!loopContainsUser(*this, *BB, U, DT))
+            return false;
+        }
+      }
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        assert(!CB->cannotDuplicate() && "Checked by isSafeToClone().");
+        if (CB->isConvergent())
+          return false;
+      }
+    }
   }
   return true;
 }
@@ -1011,7 +1036,10 @@ LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.analyze(&F, [&]() -> const DominatorTree & {
+    return AM.getResult<DominatorTreeAnalysis>(F);
+  });
   return LI;
 }
 
@@ -1190,6 +1218,33 @@ bool llvm::isFinite(const Loop *L) {
   return L->getHeader()->getParent()->willReturn();
 }
 
+bool llvm::isLoopNestFinite(Loop *L, ScalarEvolution &SE, const LoopInfo &LI) {
+  // An assumption on L covers every cycle inside it.
+  if (SE.loopIsFiniteByAssumption(L))
+    return true;
+
+  // An irreducible cycle has no Loop to prove finite.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(&LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
+    return false;
+
+  // Likewise, a sub-loop that is finite by assumption covers its own sub-loops.
+  if (isa<SCEVCouldNotCompute>(SE.getConstantMaxBackedgeTakenCount(L)))
+    return false;
+  SmallVector<Loop *, 8> WorkList(L->begin(), L->end());
+  while (!WorkList.empty()) {
+    Loop *Current = WorkList.pop_back_val();
+    if (SE.loopIsFiniteByAssumption(Current))
+      continue;
+    if (isa<SCEVCouldNotCompute>(SE.getConstantMaxBackedgeTakenCount(Current)))
+      return false;
+    WorkList.append(Current->begin(), Current->end());
+  }
+
+  return true;
+}
+
 static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
 
 bool llvm::hasMustProgress(const Loop *L) {
@@ -1268,10 +1323,8 @@ void LoopInfoWrapperPass::verifyAnalysis() const {
   // -verify-loop-info option can enable this. In order to perform some
   // checking by default, LoopPass has been taught to call verifyLoop manually
   // during loop pass sequences.
-  if (VerifyLoopInfo) {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LI.verify(DT);
-  }
+  if (VerifyLoopInfo)
+    LI.verify();
 }
 
 void LoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1286,8 +1339,7 @@ void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
 PreservedAnalyses LoopVerifierPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  LI.verify(DT);
+  LI.verify();
   return PreservedAnalyses::all();
 }
 

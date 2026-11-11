@@ -14,6 +14,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/printf_core/printf_config.h"
 
 #include <inttypes.h>
@@ -66,10 +67,10 @@ enum FormatFlags : uint8_t {
   //  locale_digits = 0x40,  // I
 };
 
-struct FormatSection {
+template <typename CharT> struct FormatSection {
   bool has_conv;
 
-  cpp::string_view raw_string;
+  cpp::basic_string_view<CharT> raw_string;
 
   // Format Specifier Values
   FormatFlags flags = FormatFlags(0);
@@ -81,7 +82,7 @@ struct FormatSection {
   AnyFloatStorageType conv_val_raw;
   void *conv_val_ptr;
 
-  char conv_name;
+  CharT conv_name;
 
   // This operator is only used for testing and should be automatically
   // optimized out for release builds.
@@ -101,9 +102,10 @@ struct FormatSection {
             (conv_name == other.conv_name)))
         return false;
 
-      if (conv_name == 'p' || conv_name == 'n' || conv_name == 's')
+      if (conv_name == CharT{'p'} || conv_name == CharT{'n'} ||
+          conv_name == CharT{'s'})
         return (conv_val_ptr == other.conv_val_ptr);
-      else if (conv_name != '%')
+      else if (conv_name != CharT{'%'})
         return (conv_val_raw == other.conv_val_raw);
     }
     return true;

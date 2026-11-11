@@ -8,7 +8,13 @@ target_compile_definitions(omptarget.rtl.cuda PRIVATE OFFLOAD_MIN_CUDA_VERSION=$
 
 find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
 
-if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+if (WIN32 AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
+  message(WARNING "Direct linking against libcuda is not supported on Windows; "
+                  "falling back to dlopen. Add 'cuda' to "
+                  "LIBOMPTARGET_DLOPEN_PLUGINS to silence this warning.")
+endif()
+
+if(CUDAToolkit_FOUND AND NOT "cuda" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS AND NOT WIN32)
   message(STATUS "Building CUDA plugin linked against libcuda")
   target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
 else()

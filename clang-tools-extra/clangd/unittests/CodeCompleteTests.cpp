@@ -841,7 +841,7 @@ TEST(CompletionTest, Kinds) {
   EXPECT_THAT(
       Results.Completions,
       UnorderedElementsAre(
-          AllOf(named("complete_class"), kind(CompletionItemKind::Class)),
+          AllOf(named("complete_class"), kind(CompletionItemKind::Struct)),
           AllOf(named("complete_function"), kind(CompletionItemKind::Function)),
           AllOf(named("complete_type_alias"),
                 kind(CompletionItemKind::Interface)),
@@ -2996,6 +2996,8 @@ TEST(CompletionTest, ArgumentListsPolicy) {
       template <class T>
       class foo_class{};
       template <class T>
+      struct foo_struct{};
+      template <class T>
       using foo_alias = T**;
       template <class T>
       T foo_var = T{};
@@ -3004,8 +3006,34 @@ TEST(CompletionTest, ArgumentListsPolicy) {
     EXPECT_THAT(
         Results.Completions,
         UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_struct"), snippetSuffix("<$0>")),
                              AllOf(named("foo_alias"), snippetSuffix("<$0>")),
                              AllOf(named("foo_var"), snippetSuffix("<$0>"))));
+  }
+  {
+    const char *Header = R"cpp(
+      template <class T>
+      class foo_class{};
+      template <class T>
+      struct foo_struct{};
+      template <class T>
+      using foo_alias = T**;
+      template <class T>
+      T foo_var = T{};
+    )cpp";
+    auto Index = TestTU::withHeaderCode(Header).index();
+    Opts.Index = Index.get();
+    auto Results = completions(
+        R"cpp(
+      void f() { foo_^ })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("foo_class"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_struct"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_alias"), snippetSuffix("<$0>")),
+                             AllOf(named("foo_var"), snippetSuffix("<$0>"))));
+    Opts.Index = nullptr;
   }
   {
     auto Results = completions(
@@ -3498,6 +3526,67 @@ TEST(SignatureHelpTest, VariadicType) {
     const auto Result = signatures(Header + "get_fun()(1, 2, ^);}");
     EXPECT_EQ(1, Result.activeParameter);
     EXPECT_THAT(Result.signatures, UnorderedElementsAre(sig(ExpectedSig)));
+  }
+}
+
+TEST(SignatureHelpTest, StaticCallOperator) {
+  Annotations Code(R"cpp(
+    struct A { static void operator()(bool a); };
+    struct B { static void operator()(bool a, bool b); };
+    struct C { template <typename T> static void operator()(T a); };
+    struct D { template <typename T> static void operator()(T a, bool b); };
+    void test() {
+      A{}($a^);
+      B{}($b^);
+      B{}(true, $b2^);
+      C{}($c^);
+      D{}($d^);
+      D{}(true, $d2^);
+      B::operator()($static^);
+      B::operator()(true, $static2^);
+      D::operator()($staticTemplate^);
+      D::operator()(true, $staticTemplate2^);
+      auto Lambda = [](bool a, bool b) static {};
+      Lambda($lambda^);
+      Lambda(true, $lambda2^);
+      auto GenericLambda = []<typename T>(T a, bool b) static -> void {};
+      GenericLambda($genericLambda^);
+      GenericLambda(true, $genericLambda2^);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  const struct {
+    const char *Point;
+    const char *Signature;
+    int ActiveParameter;
+  } Cases[] = {
+      {"a", "operator()([[bool a]]) -> void", 0},
+      {"b", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"b2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"c", "operator()([[T a]]) -> void", 0},
+      {"d", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"d2", "operator()([[T a]], [[bool b]]) -> void", 1},
+      {"static", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"static2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"staticTemplate", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"staticTemplate2", "operator()([[T a]], [[bool b]]) -> void", 1},
+      {"lambda", "operator()([[bool a]], [[bool b]]) -> void", 0},
+      {"lambda2", "operator()([[bool a]], [[bool b]]) -> void", 1},
+      {"genericLambda", "operator()([[T a]], [[bool b]]) -> void", 0},
+      {"genericLambda2", "operator()([[T a]], [[bool b]]) -> void", 1},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Point);
+    auto Result = signatureHelp(testPath(TU.Filename), Code.point(Case.Point),
+                                *Preamble, Inputs, MarkupKind::PlainText);
+    EXPECT_THAT(Result.signatures, ElementsAre(sig(Case.Signature)));
+    EXPECT_EQ(Case.ActiveParameter, Result.activeParameter);
   }
 }
 
@@ -4325,6 +4414,62 @@ TEST(CompletionTest, ReplaceRangeNoCompile) {
   Results = completionsNoCompile(NoReplace, /*IndexSymbols=*/{}, Opts);
   EXPECT_EQ(Results.InsertRange, Annotations(NoReplace).range());
   EXPECT_EQ(Results.ReplaceRange, std::nullopt);
+}
+
+TEST(CompletionTest, ReplaceRangeInclude) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableInsertReplace = true;
+
+  TestTU TU;
+  TU.AdditionalFiles["include/sub/foo.h"] = "";
+  TU.AdditionalFiles["include/sub/u00e9/bar.h"] = "";
+  TU.ExtraArgs = {"-Iinclude"};
+
+  // Replace range starts after a preceding path component and includes the
+  // closing angle bracket.
+  const char *NestedPath = R"cpp(#include <sub/[[fo^o.h>]])cpp";
+  Annotations A(NestedPath);
+  TU.Code = A.code();
+  CodeCompleteResult Results =
+      completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // Replace range starts after a preceding path component and includes the
+  // closing quote.
+  const char *WithQuote = R"cpp(#include "sub/[[fo^o.h"]])cpp";
+  A = Annotations(WithQuote);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // Replace range includes the path component and its trailing separator.
+  const char *PathComponent = R"cpp(#include "[[su^b/]]foo.h")cpp";
+  A = Annotations(PathComponent);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+
+  // A UCN-like escape is not interpreted in a header name.
+  TU.ExtraArgs.push_back("-fno-ms-compatibility");
+  const char *UnicodeLike = R"cpp(#include "[[su^\u00e9/]]foo.h")cpp";
+  A = Annotations(UnicodeLike);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
+  TU.ExtraArgs.pop_back();
+
+  // In MSVC compatibility mode, backslash is a path separator.
+  TU.ExtraArgs.push_back("-fms-compatibility");
+  const char *UnicodeLikeMs = R"cpp(#include "[[su^\]]u00e9/bar.h")cpp";
+  A = Annotations(UnicodeLikeMs);
+  TU.Code = A.code();
+  Results = completions(TU, A.point(), /*IndexSymbols=*/{}, Opts);
+  EXPECT_EQ(Results.InsertRange, A.range());
+  EXPECT_EQ(Results.ReplaceRange, A.range());
 }
 
 TEST(NoCompileCompletionTest, Basic) {

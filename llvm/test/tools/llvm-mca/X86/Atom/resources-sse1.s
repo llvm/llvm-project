@@ -249,7 +249,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   movhps	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00           *            movlps	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00    *                   movlps	(%rax), %xmm2
-# CHECK-NEXT:  1      3     3.00                        movmskps	%xmm0, %ecx
+# CHECK-NEXT:  1      4     2.00                        movmskps	%xmm0, %ecx
 # CHECK-NEXT:  1      1     1.00           *            movntps	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00    *      *      U     movntq	%mm0, (%rax)
 # CHECK-NEXT:  1      1     0.50                        movss	%xmm0, %xmm2
@@ -279,7 +279,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   pminsw	(%rax), %mm2
 # CHECK-NEXT:  1      1     0.50                        pminub	%mm0, %mm2
 # CHECK-NEXT:  1      1     1.00    *                   pminub	(%rax), %mm2
-# CHECK-NEXT:  1      3     3.00                        pmovmskb	%mm0, %ecx
+# CHECK-NEXT:  1      4     2.00                        pmovmskb	%mm0, %ecx
 # CHECK-NEXT:  1      4     1.00                        pmulhuw	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   pmulhuw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00    *      *            prefetcht0	(%rax)
@@ -325,7 +325,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 747.00 702.00
+# CHECK-NEXT: 745.00 702.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -384,7 +384,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     movhps	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -     movlps	%xmm0, (%rax)
 # CHECK-NEXT: 1.00    -     movlps	(%rax), %xmm2
-# CHECK-NEXT: 3.00    -     movmskps	%xmm0, %ecx
+# CHECK-NEXT: 2.00    -     movmskps	%xmm0, %ecx
 # CHECK-NEXT: 1.00    -     movntps	%xmm0, (%rax)
 # CHECK-NEXT: 1.00    -     movntq	%mm0, (%rax)
 # CHECK-NEXT: 0.50   0.50   movss	%xmm0, %xmm2
@@ -414,7 +414,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 1.00    -     pminsw	(%rax), %mm2
 # CHECK-NEXT: 0.50   0.50   pminub	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     pminub	(%rax), %mm2
-# CHECK-NEXT: 3.00    -     pmovmskb	%mm0, %ecx
+# CHECK-NEXT: 2.00    -     pmovmskb	%mm0, %ecx
 # CHECK-NEXT: 1.00    -     pmulhuw	%mm0, %mm2
 # CHECK-NEXT: 1.00    -     pmulhuw	(%rax), %mm2
 # CHECK-NEXT: 1.00    -     prefetcht0	(%rax)

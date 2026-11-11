@@ -19,10 +19,12 @@
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
 class BasicBlock;
+class ModuleSlotTracker;
 class CallBase;
 class DbgVariableIntrinsic;
 class Function;
@@ -50,6 +52,7 @@ public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
                bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
                bool preferUnregisteredIntrinsics, bool importStructsAsLiterals);
+  ~ModuleImport();
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -314,6 +317,13 @@ public:
   }
 
 private:
+  /// Renders `value` into a bounded string for a diagnostic.
+  std::string renderValue(const llvm::Value &value);
+  /// Renders `node` into a bounded string for a diagnostic.
+  std::string renderMetadata(const llvm::Metadata *node);
+  /// Shared slot tracker for diagnostics, created on first use.
+  llvm::ModuleSlotTracker &getDiagSlotTracker();
+
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
     valueMapping.clear();
@@ -378,6 +388,19 @@ private:
   /// the resulting dialect attributes to the converted operation `op`. Emits a
   /// warning if the conversion of a supported metadata kind fails.
   void setNonDebugMetadataAttrs(llvm::Instruction *inst, Operation *op);
+  /// Returns the symbol reference for a global value that has a corresponding
+  /// imported MLIR symbol, or a null attribute otherwise.
+  FlatSymbolRefAttr getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global);
+  /// Returns a symbol ref if `md` refers to an imported global value.
+  FlatSymbolRefAttr getMetadataOperandSymbolRef(const llvm::Metadata *md);
+  /// Converts `md` to the matching LLVM dialect metadata attribute, or returns
+  /// a null attribute if the metadata cannot be represented.
+  Attribute convertMetadataToAttr(const llvm::Metadata *md);
+  /// Recursively converts `md` and tracks the current path and previously
+  /// converted nodes to reject cycles and preserve shared subgraphs.
+  Attribute convertMetadataToAttrImpl(
+      const llvm::Metadata *md, SmallPtrSetImpl<const llvm::Metadata *> &path,
+      DenseMap<const llvm::Metadata *, Attribute> &attrMap);
   /// Imports `inst` and populates valueMapping[inst] with the result of the
   /// imported operation or noResultOpMapping[inst] with the imported operation
   /// if it has no result.
@@ -525,6 +548,13 @@ private:
   std::unique_ptr<detail::DebugImporter> debugImporter;
   /// Loop annotation importer.
   std::unique_ptr<detail::LoopAnnotationImporter> loopAnnotationImporter;
+  /// Slot tracker shared by every diagnostic that renders an LLVM entity.
+  /// Metadata::print and Value::print each construct their own tracker when
+  /// not given one, and building one walks the module, so a per-call tracker
+  /// makes a per-instruction diagnostic quadratic in module size. Sharing one
+  /// makes that walk a per-import cost instead. Created lazily, so an import
+  /// that renders nothing never pays for it at all.
+  std::unique_ptr<llvm::ModuleSlotTracker> diagSlotTracker;
 
   /// An option to control if expensive but uncritical diagnostics should be
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and

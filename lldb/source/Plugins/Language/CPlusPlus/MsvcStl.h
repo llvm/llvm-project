@@ -60,6 +60,10 @@ bool IsMsvcStlSmartPointer(ValueObject &valobj);
 bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
                                         const TypeSummaryOptions &options);
 
+bool DumpMsvcStlSmartPointerSummary(ValueObject &ptr, ValueObject &rep,
+                                    uint64_t ctrl_addr, Stream &stream,
+                                    const TypeSummaryOptions &options);
+
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
@@ -81,6 +85,9 @@ MsvcStlTupleSyntheticFrontEndCreator(CXXSyntheticChildren *,
 bool IsMsvcStlVector(ValueObject &valobj);
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlVectorSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp);
 
 // MSVC STL std::list and std::forward_list
 bool IsMsvcStlList(ValueObject &valobj);
@@ -106,7 +113,7 @@ MsvcStlVariantSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                        lldb::ValueObjectSP valobj_sp);
 
 // MSVC STL std::atomic<>
-bool IsMsvcStlAtomic(ValueObject &valobj);
+bool IsMsvcStlAtomic(ValueObject &valobj, bool *is_smart_ptr = nullptr);
 bool MsvcStlAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);
 SyntheticChildrenFrontEnd *
@@ -141,6 +148,31 @@ bool IsMsvcStlSpan(ValueObject &valobj);
 SyntheticChildrenFrontEnd *
 MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                     lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::bitset<>
+bool IsMsvcStlBitset(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::expected<>
+bool IsMsvcStlExpected(ValueObject &valobj);
+bool MsvcStlExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::valarray<>
+bool IsMsvcStlValarray(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::source_location
+bool IsMsvcStlSourceLocation(ValueObject &valobj);
+bool MsvcStlSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options);
 
 } // namespace formatters
 } // namespace lldb_private

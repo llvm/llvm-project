@@ -1,4 +1,4 @@
-//===- Passes.h - HLFIR pass entry points ----------------------*- C++ -*-===//
+//===- Passes.h - HLFIR pass entry points -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 #define FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Support/FPMaxminBehavior.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"

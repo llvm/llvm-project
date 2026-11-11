@@ -33,7 +33,6 @@ extern cl::OptionCategory BoltCategory;
 static cl::opt<uint32_t>
 DynoStatsScale("dyno-stats-scale",
   cl::desc("scale to be applied while reporting dyno stats"),
-  cl::Optional,
   cl::init(1),
   cl::Hidden,
   cl::cat(BoltCategory));

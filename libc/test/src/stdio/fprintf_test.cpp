@@ -38,7 +38,7 @@ using ::fread;
 using LlvmLibcFPrintfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST(LlvmLibcFPrintfTest, WriteToFile) {
-  const char *FILENAME = APPEND_LIBC_TEST("fprintf_output.test");
+  const char *FILENAME = "fprintf_output.test";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = printf_test::fopen(FILE_PATH, "w");
@@ -93,7 +93,7 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
     !defined(LIBC_COPT_PRINTF_DISABLE_WRITE_INT) &&                            \
     !defined(LIBC_TARGET_ARCH_IS_GPU)
 TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
-  const char *FILENAME = APPEND_LIBC_TEST("fprintf_nullptr.test");
+  const char *FILENAME = "fprintf_nullptr.test";
   auto FILE_PATH = libc_make_test_file_path(FILENAME);
 
   ::FILE *file = printf_test::fopen(FILE_PATH, "w");

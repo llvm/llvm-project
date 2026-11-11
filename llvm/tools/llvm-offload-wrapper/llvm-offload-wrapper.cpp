@@ -18,19 +18,14 @@
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
-
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 static cl::OptionCategory
     OffloadWrapeprCategory("llvm-offload-wrapper options");
@@ -114,11 +109,6 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(
       argc, argv,
       "Generate runtime registration code for a device binary image\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return EXIT_SUCCESS;
-  }
 
   auto ReportError = [argv](Error E) {
     logAllUnhandledErrors(std::move(E), WithColor::error(errs(), argv[0]));

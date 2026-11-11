@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=armv7 -mattr=+neon %s -o - | FileCheck %s --check-prefix=ARMV7
 ; RUN: llc -mtriple=armv7 -mattr=+fp-armv8 %s -o - | FileCheck %s --check-prefix=ARMV8
 ; RUN: llc -mtriple=armv8.2a -mattr=+fp-armv8 %s -o - | FileCheck %s --check-prefix=ARMV8
-; RUN: llc -mtriple=armv8.1m-none-none-eabi -mattr=+mve.fp,+fp64 %s -o - | FileCheck %s --check-prefix=ARMV8M
+; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp,+fp64 %s -o - | FileCheck %s --check-prefix=ARMV8M
 
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
@@ -999,11 +999,12 @@ define <2 x double> @fminnumv264_one_zero_intrinsic(<2 x double> %x) {
 ; ARMV8M-NEXT:    vmov d1, r2, r3
 ; ARMV8M-NEXT:    vldr d0, .LCPI27_0
 ; ARMV8M-NEXT:    vcmp.f64 d1, #0
-; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV8M-NEXT:    vmov d2, r0, r1
+; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV8M-NEXT:    vmov.f64 d3, #-1.000000e+00
-; ARMV8M-NEXT:    vcmp.f64 d3, d2
+; ARMV8M-NEXT:    it lt
 ; ARMV8M-NEXT:    vmovlt.f64 d0, d1
+; ARMV8M-NEXT:    vcmp.f64 d3, d2
 ; ARMV8M-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARMV8M-NEXT:    vmov r2, r3, d0
 ; ARMV8M-NEXT:    vselgt.f64 d1, d2, d3
@@ -1312,7 +1313,7 @@ define void @pr65820(ptr %y, <4 x float> %splat) {
 ; ARMV8M-NEXT:    vmov r1, s0
 ; ARMV8M-NEXT:    vmov.i32 q0, #0x0
 ; ARMV8M-NEXT:    vdup.32 q1, r1
-; ARMV8M-NEXT:    vcmp.f32 gt, q1, zr
+; ARMV8M-NEXT:    vpt.f32 gt, q1, zr
 ; ARMV8M-NEXT:    vdupt.32 q0, r1
 ; ARMV8M-NEXT:    vstrw.32 q0, [r0]
 ; ARMV8M-NEXT:    bx lr

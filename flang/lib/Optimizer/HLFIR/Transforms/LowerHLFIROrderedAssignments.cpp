@@ -1120,7 +1120,9 @@ computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
 static std::optional<int64_t> unwrapConstantInt(mlir::Value value) {
   while (auto convert = value.getDefiningOp<fir::ConvertOp>())
     value = convert.getValue();
-  return fir::getIntIfConstant(value);
+  if (std::optional<llvm::APInt> constant = fir::getIntIfConstant(value))
+    return constant->trySExtValue();
+  return std::nullopt;
 }
 
 /// Compute the extents and lower bounds of \p loopNest, in the same order as

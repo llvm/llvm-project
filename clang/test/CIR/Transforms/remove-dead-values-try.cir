@@ -1,0 +1,40 @@
+// RUN: cir-opt %s -remove-dead-values -o - | FileCheck %s
+
+// The handler runs only when @may_throw throws, which is not a region branch
+// point. The handler region must still count as reachable, or generic passes
+// such as -remove-dead-values erase its contents.
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+  cir.func private @may_throw()
+
+  cir.func @catch_all(%p : !cir.ptr<!s32i>) {
+    cir.scope {
+      cir.try {
+        cir.call @may_throw() : () -> ()
+        cir.yield
+      } catch all (%eh : !cir.eh_token) {
+        %ct, %exn = cir.begin_catch %eh : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        %c = cir.const #cir.int<7> : !s32i
+        cir.store %c, %p : !s32i, !cir.ptr<!s32i>
+        cir.end_catch %ct : !cir.catch_token
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @catch_all
+  // CHECK:         cir.try {
+  // CHECK-NEXT:      cir.call @may_throw() : () -> ()
+  // CHECK-NEXT:      cir.yield
+  // CHECK-NEXT:    } catch all (%[[EH:.*]]: !cir.eh_token) {
+  // CHECK-NEXT:      %[[CT:.*]], %{{.*}} = cir.begin_catch %[[EH]]
+  // CHECK-NEXT:      %[[C:.*]] = cir.const #cir.int<7> : !s32i
+  // CHECK-NEXT:      cir.store %[[C]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT:      cir.end_catch %[[CT]] : !cir.catch_token
+  // CHECK-NEXT:      cir.yield
+  // CHECK-NEXT:    }
+}

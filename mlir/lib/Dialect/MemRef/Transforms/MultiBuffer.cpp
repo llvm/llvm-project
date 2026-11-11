@@ -224,8 +224,9 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   Location loc = allocOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(allocOp);
-  auto mbAlloc = memref::AllocOp::create(rewriter, loc, mbMemRefType,
-                                         ValueRange{}, allocOp->getAttrs());
+  auto mbAlloc = memref::AllocOp::create(
+      rewriter, loc, mbMemRefType, ValueRange{}, allocOp.getAlignmentAttr());
+  mbAlloc->setDiscardableAttrs(allocOp->getDiscardableAttrDictionary());
   LLVM_DEBUG(DBGS() << "--multi-buffered alloc: " << mbAlloc << "\n");
 
   // 3. Within the loop, build the modular leading index (i.e. each loop

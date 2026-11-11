@@ -57,6 +57,12 @@ inline bool CheckPosixMemalignAlignment(uptr alignment) {
          (alignment % sizeof(void *)) == 0;
 }
 
+// Checks the std::align_val_t argument of aligned operator new, verifies that
+// the alignment is a power of two.
+inline bool CheckAlignedNewAlignment(uptr alignment) {
+  return alignment != 0 && IsPowerOfTwo(alignment);
+}
+
 // Returns true if calloc(size, n) call overflows on size*n calculation.
 inline bool CheckForCallocOverflow(uptr size, uptr n) {
   if (!size)

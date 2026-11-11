@@ -10,4 +10,4 @@
 
 #include "src/math/fdiv.h"
 
-LIST_DIV_TESTS(float, double, LIBC_NAMESPACE::fdiv)
+LIST_DIV_TESTS(Fdiv, float, double, LIBC_NAMESPACE::fdiv)

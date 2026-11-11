@@ -369,17 +369,25 @@ let mayLoad = 1 in
 class MxMOVEM_RM_Pseudo<MxType TYPE, MxOperand MEMOp>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins MEMOp:$src)>;
 
+// Note that MOVEM doesn't natively support 8-bit values; the pseudos for these
+// get expanded to MOVM16. But they keep the instruction verifier from reporting
+// a mismatch on physical registers.
+
 // Mem <- Reg
+def MOVM8jm_P : MxMOVEM_MR_Pseudo<MxType8d, MxType8.JOp>;
 def MOVM16jm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32jm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.JOp>;
 
+def MOVM8pm_P : MxMOVEM_MR_Pseudo<MxType8d, MxType8.POp>;
 def MOVM16pm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32pm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.POp>;
 
 // Reg <- Mem
+def MOVM8mj_P : MxMOVEM_RM_Pseudo<MxType8d, MxType8.JOp>;
 def MOVM16mj_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32mj_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.JOp>;
 
+def MOVM8mp_P : MxMOVEM_RM_Pseudo<MxType8d, MxType8.POp>;
 def MOVM16mp_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 
@@ -395,7 +403,6 @@ def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [CCR] in {
 class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs CCRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -406,7 +413,6 @@ class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
 
 class MxMoveToCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs CCRC:$dst), (ins MEMOp:$src)>;
-} // let Defs = [CCR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSrcAMs in {
@@ -415,8 +421,8 @@ foreach AM = MxMoveSrcAMs in {
   def MOV8c # AM  : MxMoveToCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
 } // foreach AM
 
-// Only data register is allowed.
 def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+def MOV16ci : MxMoveToCCR<MxOp16AddrMode_i.Op, MxEncAddrMode_i<"src", 16>>;
 
 /// Move from CCR
 /// --------------------------------------------------
@@ -425,7 +431,6 @@ def MOV16cd : MxMoveToCCR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  0  1  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Uses = [CCR] in {
 class MxMoveFromCCR_R
     : MxInst<(outs MxDRD16:$dst), (ins CCRC:$src), "move.w\t$src, $dst", []>,
       Requires<[ AtLeastM68010 ]> {
@@ -445,7 +450,6 @@ class MxMoveFromCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs), (ins MEMOp:$dst, CCRC:$src)>;
 class MxMoveFromCCR_RPseudo<MxOperand MEMOp>
     : MxPseudo<(outs MEMOp:$dst), (ins CCRC:$src)>;
-} // let Uses = [CCR]
 
 let mayStore = 1 in
 foreach AM = MxMoveDstAMs in {
@@ -456,7 +460,6 @@ foreach AM = MxMoveDstAMs in {
     : MxMoveFromCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
 } // foreach AM
 
-// Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
 
 /// Move to SR
@@ -466,7 +469,6 @@ def MOV16dc : MxMoveFromCCR_R;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  1  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [SR] in {
 class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs SRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -474,7 +476,6 @@ class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     SRC_ENC.Supplement
   );
 }
-} // let Defs = [SR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSrcAMs in {
@@ -483,6 +484,7 @@ foreach AM = MxMoveSrcAMs in {
 } // foreach AM
 
 def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+def MOV16si : MxMoveToSR<MxOp16AddrMode_i.Op, MxEncAddrMode_i<"src", 16>>;
 
 /// Move from SR
 /// --------------------------------------------------
@@ -491,20 +493,20 @@ def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  0  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Uses = [SR] in {
 class MxMoveFromSR_R
-    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []> {
+    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ IsM68000 ]> {
   let Inst = (descend 0b0100000011, MxEncAddrMode_d<"dst">.EA);
 }
 
 class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
-    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []> {
+    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ IsM68000 ]> {
   let Inst = (ascend
     (descend 0b0100000011, DST_ENC.EA),
     DST_ENC.Supplement
   );
 }
-} // let Uses = [SR]
 
 let mayStore = 1 in
 foreach AM = MxMoveDstAMs in {
@@ -603,6 +605,9 @@ class MxPseudoMove_RM<MxType DST, MxOperand SRCOpd, list<dag> PAT = []>
 // depending on size, destination register class, and immediate value.
 // This is done with pseudoinstructions in order to not constrain RA to
 // data registers if moveq matches.
+// TODO: We should be more deliberate about whether or not these instructions
+// are expected to preserve the upper bits of the register, because the free
+// sext of moveq and movea have different utility from non-ext move.[bw].
 class MxPseudoMove_DI<MxType TYPE>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.IOp:$src),
                [(set TYPE.ROp:$dst, imm:$src)]>;
@@ -610,7 +615,7 @@ class MxPseudoMove_DI<MxType TYPE>
 // i8 imm -> reg can always be converted to moveq,
 // but we still emit a pseudo for consistency.
 def MOVI8di  : MxPseudoMove_DI<MxType8d>;
-def MOVI16ri : MxPseudoMove_DI<MxType16r>;
+def MOVI16di : MxPseudoMove_DI<MxType16d>;
 def MOVI32ri : MxPseudoMove_DI<MxType32r>;
 } // let Defs = [CCR]
 
@@ -620,130 +625,85 @@ def MOVI32ri : MxPseudoMove_DI<MxType32r>;
 /// what registers are allocated for the operands and if they overlap we just
 /// extend the value if the registers are completely different we need to move
 /// first.
-foreach EXT = ["S", "Z"] in {
-  let hasSideEffects = 0 in {
-
-    def MOV#EXT#Xd16d8  : MxPseudoMove_RR<MxType16d,  MxType8d>;
-    def MOV#EXT#Xd32d8  : MxPseudoMove_RR<MxType32d,  MxType8d>;
-    def MOV#EXT#Xd32d16 : MxPseudoMove_RR<MxType32r, MxType16r>;
-
+/// The MOVX group is similar to the others but does NOT do any value extension,
+/// they just load a smaller register into the lower part of another register
+/// if operands' real registers are different or does nothing if they are the
+/// same.
+let hasSideEffects = 0 in {
+  foreach AM = MxMoveSrcAMs in {
+    defvar OpB8 = !cast<MxOpBundle>("MxOp8AddrMode_"#AM);
+    defvar OpB16 = !cast<MxOpBundle>("MxOp16AddrMode_"#AM);
     let mayLoad = 1 in {
-
-      def MOV#EXT#Xd16j8   : MxPseudoMove_RM<MxType16d,  MxType8.JOp>;
-      def MOV#EXT#Xd32j8   : MxPseudoMove_RM<MxType32d,  MxType8.JOp>;
-      def MOV#EXT#Xd32j16  : MxPseudoMove_RM<MxType32d, MxType16.JOp>;
-
-      def MOV#EXT#Xd16p8   : MxPseudoMove_RM<MxType16d,  MxType8.POp>;
-      def MOV#EXT#Xd32p8   : MxPseudoMove_RM<MxType32d,  MxType8.POp>;
-      def MOV#EXT#Xd32p16  : MxPseudoMove_RM<MxType32d, MxType16.POp>;
-
-      def MOV#EXT#Xd16f8   : MxPseudoMove_RM<MxType16d,  MxType8.FOp>;
-      def MOV#EXT#Xd32f8   : MxPseudoMove_RM<MxType32d,  MxType8.FOp>;
-      def MOV#EXT#Xd32f16  : MxPseudoMove_RM<MxType32d, MxType16.FOp>;
-
-      def MOV#EXT#Xd16q8   : MxPseudoMove_RM<MxType16d,  MxType8.QOp>;
-      def MOV#EXT#Xd32q8   : MxPseudoMove_RM<MxType32d,  MxType8.QOp>;
-      def MOV#EXT#Xd32q16  : MxPseudoMove_RM<MxType32d,  MxType16.QOp>;
-
+      def MOVSXd16#AM#8 : MxPseudoMove_RM<MxType16d, OpB8.Op>;
+      def MOVSXd32#AM#8 : MxPseudoMove_RM<MxType32d, OpB8.Op>;
+      def MOVSXr32#AM#16 : MxPseudoMove_RM<MxType32r, OpB16.Op>;
+      def MOVZXd16#AM#8 : MxPseudoMove_RM<MxType16d, OpB8.Op>;
+      def MOVZXd32#AM#8 : MxPseudoMove_RM<MxType32d, OpB8.Op>;
+      def MOVZXd32#AM#16 : MxPseudoMove_RM<MxType32d, OpB16.Op>;
+      def MOVXd16#AM#8 : MxPseudoMove_RM<MxType16d, OpB8.Op>;
+      def MOVXd32#AM#8 : MxPseudoMove_RM<MxType32d, OpB8.Op>;
+      def MOVXr32#AM#16 : MxPseudoMove_RM<MxType32r, OpB16.Op>;
     }
   }
-}
 
-/// This group of instructions is similar to the group above but DOES NOT do
-/// any value extension, they just load a smaller register into the lower part
-/// of another register if operands' real registers are different or does
-/// nothing if they are the same.
-def MOVXd16d8  : MxPseudoMove_RR<MxType16d,  MxType8d>;
-def MOVXd32d8  : MxPseudoMove_RR<MxType32d,  MxType8d>;
-def MOVXd32d16 : MxPseudoMove_RR<MxType32r, MxType16r>;
+  def MOVSXd16d8  : MxPseudoMove_RR<MxType16d,  MxType8d>;
+  def MOVSXd32d8  : MxPseudoMove_RR<MxType32d,  MxType8d>;
+  def MOVSXr32r16 : MxPseudoMove_RR<MxType32r, MxType16r>;
+  def MOVZXd16d8  : MxPseudoMove_RR<MxType16d,  MxType8d>;
+  def MOVZXd32d8  : MxPseudoMove_RR<MxType32d,  MxType8d>;
+  def MOVZXd32r16 : MxPseudoMove_RR<MxType32d, MxType16r>;
+  // TODO: MOVX d8 -> r16/32 is possible, but it causes regalloc to make bad
+  // decisions in handling 8-bit register spills. Test in register-spills.ll
+  // for future experimentation.
+  def MOVXd16d8  : MxPseudoMove_RR<MxType16d,  MxType8d>;
+  def MOVXd32d8  : MxPseudoMove_RR<MxType32d,  MxType8d>;
+  def MOVXr32r16 : MxPseudoMove_RR<MxType32r, MxType16r>;
+}
 
 //===----------------------------------------------------------------------===//
 // Extend/Truncate Patterns
 //===----------------------------------------------------------------------===//
 
-// i16 <- sext i8
-def: Pat<(i16 (sext i8:$src)),
-          (EXTRACT_SUBREG (MOVSXd32d8 MxDRD8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxSExtLoadi16i8 MxCP_ARI:$src),
-          (EXTRACT_SUBREG (MOVSXd32j8 MxARI8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxSExtLoadi16i8 MxCP_ARID:$src),
-          (EXTRACT_SUBREG (MOVSXd32p8 MxARID8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxSExtLoadi16i8 MxCP_ARII:$src),
-          (EXTRACT_SUBREG (MOVSXd32f8 MxARII8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxSExtLoadi16i8 MxCP_PCD:$src), (MOVSXd16q8 MxPCD8:$src)>;
+foreach AM = MxMoveSrcAMs in {
+  defvar OpB8 = !cast<MxOpBundle>("MxOp8AddrMode_"#AM);
+  defvar OpB16 = !cast<MxOpBundle>("MxOp16AddrMode_"#AM);
+  def : Pat<(MxSExtLoadi16i8 OpB8.Pat:$src),
+            (!cast<MxInst>("MOVSXd16"#AM#"8") OpB8.Op:$src)>;
+  def : Pat<(MxSExtLoadi32i8 OpB8.Pat:$src),
+            (!cast<MxInst>("MOVSXd32"#AM#"8") OpB8.Op:$src)>;
+  def : Pat<(MxSExtLoadi32i16 OpB16.Pat:$src),
+            (!cast<MxInst>("MOVSXr32"#AM#"16") OpB16.Op:$src)>;
+  def : Pat<(MxZExtLoadi16i8 OpB8.Pat:$src),
+            (!cast<MxInst>("MOVZXd16"#AM#"8") OpB8.Op:$src)>;
+  def : Pat<(MxZExtLoadi32i8 OpB8.Pat:$src),
+            (!cast<MxInst>("MOVZXd32"#AM#"8") OpB8.Op:$src)>;
+  def : Pat<(MxZExtLoadi32i16 OpB16.Pat:$src),
+            (!cast<MxInst>("MOVZXd32"#AM#"16") OpB16.Op:$src)>;
+  def : Pat<(MxExtLoadi16i8 OpB8.Pat:$src),
+            (!cast<MxInst>("MOVXd16"#AM#"8") OpB8.Op:$src)>;
+  def : Pat<(MxExtLoadi32i8 OpB8.Pat:$src),
+            (!cast<MxInst>("MOVXd32"#AM#"8") OpB8.Op:$src)>;
+  def : Pat<(MxExtLoadi32i16 OpB16.Pat:$src),
+            (!cast<MxInst>("MOVXr32"#AM#"16") OpB16.Op:$src)>;
+}
 
-// i32 <- sext i8
+def: Pat<(i16 (sext i8:$src)), (MOVSXd16d8 MxDRD8:$src)>;
 def: Pat<(i32 (sext i8:$src)), (MOVSXd32d8 MxDRD8:$src)>;
-def: Pat<(MxSExtLoadi32i8 MxCP_ARI :$src), (MOVSXd32j8 MxARI8 :$src)>;
-def: Pat<(MxSExtLoadi32i8 MxCP_ARID:$src), (MOVSXd32p8 MxARID8:$src)>;
-def: Pat<(MxSExtLoadi32i8 MxCP_ARII:$src), (MOVSXd32f8 MxARII8:$src)>;
-def: Pat<(MxSExtLoadi32i8 MxCP_PCD:$src),  (MOVSXd32q8 MxPCD8:$src)>;
-
-// i32 <- sext i16
-def: Pat<(i32 (sext i16:$src)), (MOVSXd32d16 MxDRD16:$src)>;
-def: Pat<(MxSExtLoadi32i16 MxCP_ARI :$src), (MOVSXd32j16 MxARI16 :$src)>;
-def: Pat<(MxSExtLoadi32i16 MxCP_ARID:$src), (MOVSXd32p16 MxARID16:$src)>;
-def: Pat<(MxSExtLoadi32i16 MxCP_ARII:$src), (MOVSXd32f16 MxARII16:$src)>;
-def: Pat<(MxSExtLoadi32i16 MxCP_PCD:$src),  (MOVSXd32q16 MxPCD16:$src)>;
-
-// i16 <- zext i8
-def: Pat<(i16 (zext i8:$src)),
-          (EXTRACT_SUBREG (MOVZXd32d8 MxDRD8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxZExtLoadi16i8 MxCP_ARI:$src),
-          (EXTRACT_SUBREG (MOVZXd32j8 MxARI8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxZExtLoadi16i8 MxCP_ARID:$src),
-          (EXTRACT_SUBREG (MOVZXd32p8 MxARID8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxZExtLoadi16i8 MxCP_ARII:$src),
-          (EXTRACT_SUBREG (MOVZXd32f8 MxARII8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxZExtLoadi16i8 MxCP_PCD :$src), (MOVZXd16q8 MxPCD8 :$src)>;
-
-// i32 <- zext i8
+def: Pat<(i32 (sext i16:$src)), (MOVSXr32r16 MxXRD16:$src)>;
+def: Pat<(i16 (zext i8:$src)), (MOVZXd16d8 MxDRD8:$src)>;
 def: Pat<(i32 (zext i8:$src)), (MOVZXd32d8 MxDRD8:$src)>;
-def: Pat<(MxZExtLoadi32i8 MxCP_ARI :$src), (MOVZXd32j8 MxARI8 :$src)>;
-def: Pat<(MxZExtLoadi32i8 MxCP_ARID:$src), (MOVZXd32p8 MxARID8:$src)>;
-def: Pat<(MxZExtLoadi32i8 MxCP_ARII:$src), (MOVZXd32f8 MxARII8:$src)>;
-def: Pat<(MxZExtLoadi32i8 MxCP_PCD :$src), (MOVZXd32q8 MxPCD8 :$src)>;
-
-// i32 <- zext i16
-def: Pat<(i32 (zext i16:$src)), (MOVZXd32d16 MxDRD16:$src)>;
-def: Pat<(MxZExtLoadi32i16 MxCP_ARI :$src), (MOVZXd32j16 MxARI16 :$src)>;
-def: Pat<(MxZExtLoadi32i16 MxCP_ARID:$src), (MOVZXd32p16 MxARID16:$src)>;
-def: Pat<(MxZExtLoadi32i16 MxCP_ARII:$src), (MOVZXd32f16 MxARII16:$src)>;
-def: Pat<(MxZExtLoadi32i16 MxCP_PCD :$src), (MOVZXd32q16 MxPCD16 :$src)>;
-
-// i16 <- anyext i8
-def: Pat<(i16 (anyext i8:$src)),
-          (EXTRACT_SUBREG (MOVZXd32d8 MxDRD8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxExtLoadi16i8 MxCP_ARI:$src),
-          (EXTRACT_SUBREG (MOVZXd32j8 MxARI8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxExtLoadi16i8 MxCP_ARID:$src),
-          (EXTRACT_SUBREG (MOVZXd32p8 MxARID8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxExtLoadi16i8 MxCP_ARII:$src),
-          (EXTRACT_SUBREG (MOVZXd32f8 MxARII8:$src), MxSubRegIndex16Lo)>;
-def: Pat<(MxExtLoadi16i8 MxCP_PCD:$src),
-          (EXTRACT_SUBREG (MOVZXd32q8 MxPCD8:$src), MxSubRegIndex16Lo)>;
-
-// i32 <- anyext i8
-def: Pat<(i32 (anyext i8:$src)), (MOVZXd32d8 MxDRD8:$src)>;
-def: Pat<(MxExtLoadi32i8 MxCP_ARI :$src), (MOVZXd32j8 MxARI8 :$src)>;
-def: Pat<(MxExtLoadi32i8 MxCP_ARID:$src), (MOVZXd32p8 MxARID8:$src)>;
-def: Pat<(MxExtLoadi32i8 MxCP_ARII:$src), (MOVZXd32f8 MxARII8:$src)>;
-def: Pat<(MxExtLoadi32i8 MxCP_PCD:$src), (MOVZXd32q8 MxPCD8:$src)>;
-
-// i32 <- anyext i16
-def: Pat<(i32 (anyext i16:$src)), (MOVZXd32d16 MxDRD16:$src)>;
-def: Pat<(MxExtLoadi32i16 MxCP_ARI :$src), (MOVZXd32j16 MxARI16 :$src)>;
-def: Pat<(MxExtLoadi32i16 MxCP_ARID:$src), (MOVZXd32p16 MxARID16:$src)>;
-def: Pat<(MxExtLoadi32i16 MxCP_ARII:$src), (MOVZXd32f16 MxARII16:$src)>;
-def: Pat<(MxExtLoadi32i16 MxCP_PCD:$src), (MOVZXd32q16 MxPCD16:$src)>;
+def: Pat<(i32 (zext i16:$src)), (MOVZXd32r16 MxXRD16:$src)>;
+def: Pat<(i16 (anyext i8:$src)), (MOVXd16d8 MxDRD8:$src)>;
+def: Pat<(i32 (anyext i8:$src)), (MOVXd32d8 MxDRD8:$src)>;
+def: Pat<(i32 (anyext i16:$src)), (MOVXr32r16 MxXRD16:$src)>;
 
 // trunc patterns
 def : Pat<(i16 (trunc i32:$src)),
           (EXTRACT_SUBREG MxXRD32:$src, MxSubRegIndex16Lo)>;
 def : Pat<(i8  (trunc i32:$src)),
-          (EXTRACT_SUBREG MxXRD32:$src, MxSubRegIndex8Lo)>;
+          (EXTRACT_SUBREG MxDRD32:$src, MxSubRegIndex8Lo)>;
 def : Pat<(i8  (trunc i16:$src)),
-          (EXTRACT_SUBREG MxXRD16:$src, MxSubRegIndex8Lo)>;
+          (EXTRACT_SUBREG MxDRD16:$src, MxSubRegIndex8Lo)>;
 
 //===----------------------------------------------------------------------===//
 // FMOVE

@@ -10,30 +10,10 @@
 #define ATOMIC_SUPPORT_H
 
 #include <__config>
-#include <memory> // for __libcpp_relaxed_load
-
-#if defined(__clang__) && __has_builtin(__atomic_load_n) && __has_builtin(__atomic_store_n) &&                         \
-    __has_builtin(__atomic_add_fetch) && __has_builtin(__atomic_exchange_n) &&                                         \
-    __has_builtin(__atomic_compare_exchange_n) && defined(__ATOMIC_RELAXED) && defined(__ATOMIC_CONSUME) &&            \
-    defined(__ATOMIC_ACQUIRE) && defined(__ATOMIC_RELEASE) && defined(__ATOMIC_ACQ_REL) && defined(__ATOMIC_SEQ_CST)
-#  define _LIBCPP_HAS_ATOMIC_BUILTINS
-#elif defined(_LIBCPP_COMPILER_GCC)
-#  define _LIBCPP_HAS_ATOMIC_BUILTINS
-#endif
-
-#if !defined(_LIBCPP_HAS_ATOMIC_BUILTINS) && _LIBCPP_HAS_THREADS
-#  if defined(_LIBCPP_WARNING)
-_LIBCPP_WARNING("Building libc++ without __atomic builtins is unsupported")
-#  else
-#    warning Building libc++ without __atomic builtins is unsupported
-#  endif
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-namespace {
-
-#if defined(_LIBCPP_HAS_ATOMIC_BUILTINS) && _LIBCPP_HAS_THREADS
+#if _LIBCPP_HAS_THREADS
 
 enum __libcpp_atomic_order {
   _AO_Relaxed = __ATOMIC_RELAXED,
@@ -80,6 +60,16 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange(
   return __atomic_compare_exchange_n(__val, __expected, __after, true, __success_order, __fail_order);
 }
 
+template <class _ValueType>
+inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
+    _ValueType* __val,
+    _ValueType* __expected,
+    _ValueType __after,
+    int __success_order = _AO_Seq,
+    int __fail_order    = _AO_Seq) {
+  return __atomic_compare_exchange_n(__val, __expected, __after, false, __success_order, __fail_order);
+}
+
 #else // _LIBCPP_HAS_THREADS
 
 enum __libcpp_atomic_order { _AO_Relaxed, _AO_Consume, _AO_Acquire, _AO_Release, _AO_Acq_Rel, _AO_Seq };
@@ -123,9 +113,18 @@ __libcpp_atomic_compare_exchange(_ValueType* __val, _ValueType* __expected, _Val
   return false;
 }
 
-#endif // _LIBCPP_HAS_THREADS
+template <class _ValueType>
+inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_atomic_compare_exchange_strong(
+    _ValueType* __val, _ValueType* __expected, _ValueType __after, int = 0, int = 0) {
+  if (*__val == *__expected) {
+    *__val = __after;
+    return true;
+  }
+  *__expected = *__val;
+  return false;
+}
 
-} // namespace
+#endif // _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_NAMESPACE_STD
 

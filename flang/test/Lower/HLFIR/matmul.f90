@@ -12,7 +12,7 @@ endsubroutine
 ! CHECK-DAG:     %[[LHS_VAR:.*]]:2 = hlfir.declare %[[LHS]]
 ! CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[RHS]]
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_VAR]]#0 %[[RHS_VAR]]#0 fastmath(contract) : (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>) -> !hlfir.expr<?x?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 : !hlfir.expr<?x?xi32>, !fir.box<!fir.array<?x?xi32>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
@@ -35,26 +35,23 @@ subroutine matmul2(c)
 endsubroutine
 ! CHECK-LABEL: func.func @_QPmatmul2
 ! CHECK:           %[[C_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-! CHECK:         %[[B_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "b"
-! CHECK:         %[[B_BOX_DECL:.*]]:2 = hlfir.declare %[[B_BOX_ALLOC]] {{.*}} uniq_name = "_QFmatmul2Eb"
+! CHECK:         %[[B_BOX_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> <{bindc_name = "b"
+! CHECK:         %[[B_BOX_DECL:.*]]:2 = hlfir.declare %[[B_BOX_ALLOC]] {{.*}}uniq_name("_QFmatmul2Eb")
 
 
 ! CHECK:         fir.call @_QPfill
 ! CHECK:         fir.call @_QPfill
 ! CHECK:         fir.call @_QPfill
 ! CHECK-NEXT:    %[[B_BOX:.*]] = fir.load %[[B_BOX_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-! CHECK-NEXT:    %[[C0:.*]] = arith.constant 0 : index
-! CHECK-NEXT:    %[[B_DIMS_0:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C0]]
-! CHECK-NEXT:    %[[C1:.*]] = arith.constant 1 : index
-! CHECK-NEXT:    %[[B_DIMS_1:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C1]]
-! CHECK-NEXT:    %[[B_SHAPE:.*]] = fir.shape %[[B_DIMS_0]]#1, %[[B_DIMS_1]]#1
-! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %[[B_SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
+! The elemental shape is taken from the constant-shape operand "x" (see above),
+! so "b - x" is inferred as a 4x4 array rather than a dynamically shaped one.
+! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<2>) -> !hlfir.expr<4x4xi32> {
 
 ! CHECK:         }
 ! CHECK-NEXT:    %[[A_BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 
 ! The shapes in these types are what is being tested:
-! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?x4xi32>
+! CHECK-NEXT:    %[[MATMUL:.*]] = hlfir.matmul %[[A_BOX]] %[[ELEMENTAL]] {{.*}} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !hlfir.expr<4x4xi32>) -> !hlfir.expr<?x4xi32>
 
 subroutine matmul3(lhs, rhs, res)
   integer, allocatable :: lhs(:,:), rhs(:,:), res(:,:)
@@ -69,7 +66,7 @@ endsubroutine
 ! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
 ! CHECK-NEXT:    %[[LHS_LD:.*]] = fir.load %[[LHS_VAR]]#0
 ! CHECK-NEXT:    %[[RHS_LD:.*]] = fir.load %[[RHS_VAR]]#0
-! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_LD]] %[[RHS_LD]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.matmul %[[LHS_LD]] %[[RHS_LD]] fastmath(contract) : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 realloc : !hlfir.expr<?x?xi32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return

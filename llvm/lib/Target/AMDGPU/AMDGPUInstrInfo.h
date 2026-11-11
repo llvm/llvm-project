@@ -40,12 +40,6 @@ struct RsrcIntrinsic {
 };
 const RsrcIntrinsic *lookupRsrcIntrinsic(unsigned Intr);
 
-struct D16ImageDimIntrinsic {
-  unsigned Intr;
-  unsigned D16HelperIntr;
-};
-const D16ImageDimIntrinsic *lookupD16ImageDimIntrinsic(unsigned Intr);
-
 struct ImageDimIntrinsicInfo {
   unsigned Intr;
   unsigned BaseOpcode;

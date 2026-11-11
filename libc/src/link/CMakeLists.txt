@@ -1,4 +1,16 @@
 add_entrypoint_object(
+  _r_debug
+  SRCS
+    _r_debug.cpp
+  HDRS
+    _r_debug.h
+  DEPENDS
+    libc.hdr.types.struct_r_debug
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   dl_iterate_phdr
   SRCS
     dl_iterate_phdr.cpp

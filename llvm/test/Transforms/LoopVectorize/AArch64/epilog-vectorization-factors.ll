@@ -13,7 +13,7 @@ define void @add_i8(ptr noalias nocapture noundef writeonly %A, ptr nocapture no
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[ITERATIONS]], 64
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ITERATIONS]], 64
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ITERATIONS]], 63
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ITERATIONS]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -57,7 +57,7 @@ define void @add_i8(ptr noalias nocapture noundef writeonly %A, ptr nocapture no
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF9:%.*]] = urem i64 [[ITERATIONS]], 8
+; CHECK-NEXT:    [[N_MOD_VF9:%.*]] = and i64 [[ITERATIONS]], 7
 ; CHECK-NEXT:    [[N_VEC10:%.*]] = sub i64 [[ITERATIONS]], [[N_MOD_VF9]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
@@ -122,23 +122,23 @@ define void @add_i16(ptr noalias nocapture noundef writeonly %A, ptr nocapture n
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[ITERATIONS]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ITERATIONS]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ITERATIONS]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ITERATIONS]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i64 24
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i16>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i16>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i16>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[C:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i64 8
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i64 16
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i64 24
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 32
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i16>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <8 x i16>, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <8 x i16>, ptr [[TMP9]], align 1
@@ -148,9 +148,9 @@ define void @add_i16(ptr noalias nocapture noundef writeonly %A, ptr nocapture n
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <8 x i16> [[WIDE_LOAD7]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add <8 x i16> [[WIDE_LOAD8]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i64 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i64 16
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[TMP15]], i64 24
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 16
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 32
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 48
 ; CHECK-NEXT:    store <8 x i16> [[TMP11]], ptr [[TMP15]], align 1
 ; CHECK-NEXT:    store <8 x i16> [[TMP12]], ptr [[TMP17]], align 1
 ; CHECK-NEXT:    store <8 x i16> [[TMP13]], ptr [[TMP18]], align 1
@@ -166,7 +166,7 @@ define void @add_i16(ptr noalias nocapture noundef writeonly %A, ptr nocapture n
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF9:%.*]] = urem i64 [[ITERATIONS]], 4
+; CHECK-NEXT:    [[N_MOD_VF9:%.*]] = and i64 [[ITERATIONS]], 3
 ; CHECK-NEXT:    [[N_VEC10:%.*]] = sub i64 [[ITERATIONS]], [[N_MOD_VF9]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
@@ -231,23 +231,23 @@ define void @add_i32(ptr noalias nocapture noundef writeonly %A, ptr nocapture n
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[ITERATIONS]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ITERATIONS]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[ITERATIONS]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ITERATIONS]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 12
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 12
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 32
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP9]], align 1
@@ -257,9 +257,9 @@ define void @add_i32(ptr noalias nocapture noundef writeonly %A, ptr nocapture n
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i32> [[WIDE_LOAD8]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 4
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 8
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 12
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 16
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 32
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP15]], i64 48
 ; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP15]], align 1
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[TMP17]], align 1
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP18]], align 1
@@ -275,7 +275,7 @@ define void @add_i32(ptr noalias nocapture noundef writeonly %A, ptr nocapture n
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF9:%.*]] = urem i64 [[ITERATIONS]], 4
+; CHECK-NEXT:    [[N_MOD_VF9:%.*]] = and i64 [[ITERATIONS]], 3
 ; CHECK-NEXT:    [[N_VEC10:%.*]] = sub i64 [[ITERATIONS]], [[N_MOD_VF9]]
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
@@ -334,8 +334,8 @@ exit:
 define void @small_trip_count_loop(ptr %arg, ptr %arg2) {
 ; CHECK-LABEL: @small_trip_count_loop(
 ; CHECK-NEXT:  iter.check:
-; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoaddr ptr [[ARG:%.*]] to i64
 ; CHECK-NEXT:    [[ARG21:%.*]] = ptrtoaddr ptr [[ARG2:%.*]] to i64
+; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoaddr ptr [[ARG:%.*]] to i64
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[ARG21]], [[ARG3]]
@@ -436,9 +436,9 @@ define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i64 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i64 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[NEXT_GEP]], i64 12
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 48
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP9]], align 4
@@ -451,11 +451,10 @@ define void @trip_count_based_on_ptrtoint(i64 %x) "target-cpu"="apple-m1" {
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF11]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 0, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 32
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ 0, [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT5:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX3]], 2
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PTR_START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[NEXT_GEP4]], align 4

@@ -11,7 +11,6 @@
 
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td"
-include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -27,7 +26,7 @@ class Bufferization_Op<string mnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
-    [AttrSizedOperandSegments, BufferizableOpInterface,
+    [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
        "reifyResultShapes"]>]> {
   let summary = "allocate buffer for a tensor";
@@ -41,6 +40,9 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     If `copy` is specified, no dynamic sizes should be passed, since they are
     the same as the dynamic sizes of the `copy` operand.
+
+    The result may be any tensor-like type. `dynamic_sizes` and `size_hint`
+    apply only to a ranked tensor result.
 
     `alloc_tensor` is a helper op for bufferization. The operation is provided
     as an anchor that marks the beginning of a new tensor SSA use-def chain. It
@@ -86,65 +88,42 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
-                       Optional<AnyTensor>:$copy,
+                       Optional<Bufferization_TensorLikeTypeInterface>:$copy,
                        Optional<Index>:$size_hint,
                        OptionalAttr<AnyAttr>:$memory_space);
 
-  let results = (outs AnyTensor:$result);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$result);
 
   let extraClassDeclaration = [{
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-
-    bool resultBufferizesToMemoryWrite(OpResult opResult,
-                                       const AnalysisState &state);
-
-    bool bufferizesToAllocation(Value value) { return true; }
-
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state);
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state);
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state);
-
-    FailureOr<BufferLikeType> getBufferType(
-        Value value, const BufferizationOptions &options,
-        const BufferizationState &state,
-        SmallVector<Value> &invocationStack);
-
-    RankedTensorType getType() {
-      return ::llvm::cast<RankedTensorType>(getResult().getType());
-    }
-
-    // Return true if the size of the tensor is dynamic at `idx`
+    // Return true if the size of the tensor is dynamic at `idx`. Requires a
+    // ranked tensor result.
     bool isDynamicDim(unsigned idx) {
-      return getType().isDynamicDim(idx);
+      assert(::llvm::isa<RankedTensorType>(getType()) &&
+             "expected a ranked tensor result");
+      return ::llvm::cast<RankedTensorType>(getType()).isDynamicDim(idx);
     }
 
     // Return the argument position that contains the dynamic size of
-    // the tensor at dimension `idx`. Asserts that the shape is
-    // dynamic at that `idx`.
+    // the tensor at dimension `idx`. Requires a ranked tensor result that is
+    // dynamic at `idx`.
     unsigned getIndexOfDynamicSize(unsigned idx) {
       assert(!getCopy() && "no dim sizes specified when copying a tensor");
       assert(isDynamicDim(idx) && "expected dynamic size");
-      ArrayRef<int64_t> shape = getType().getShape();
+      ArrayRef<int64_t> shape =
+          ::llvm::cast<RankedTensorType>(getType()).getShape();
       return std::count_if(shape.begin(), shape.begin() + idx,
                            ShapedType::isDynamic);
     }
 
     // Return the Value of the dynamic size of the tensor at dimension
-    // `idx`. Asserts that the shape is dynamic at that `idx.
+    // `idx`. Requires a ranked tensor result that is dynamic at `idx`.
     Value getDynamicSize(OpBuilder &b, unsigned idx);
 
-    // Assert that the size of the result tensor is static at `idx`
-    // and return the shape.
+    // Return the static size of the tensor at dimension `idx`. Requires a
+    // ranked tensor result that is static at `idx`.
     int64_t getStaticSize(unsigned idx) {
       assert(!isDynamicDim(idx) && "expected static size");
-      return getType().getShape()[idx];
+      return ::llvm::cast<RankedTensorType>(getType()).getShape()[idx];
     }
   }];
 
@@ -159,6 +138,15 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     // Build an op without `size_hint`.
     OpBuilder<(ins "TensorType":$type, "ValueRange":$dynamicSizes,
                    "Value":$copy, "IntegerAttr":$memory_space)>,
+
+    // Build an op without `memory_space` or `size_hint`.
+    OpBuilder<(ins "TensorLikeType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy)>,
+
+    // Build an op; the other builders call this one.
+    OpBuilder<(ins "TensorLikeType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy, "Value":$size_hint,
+                   "Attribute":$memory_space)>,
   ];
 
   let hasCanonicalizer = 1;
@@ -219,7 +207,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
         [AllElementTypesMatch<["source", "dest"]>,
-         BufferizableOpInterface, DestinationStyleOpInterface,
+         DestinationStyleOpInterface,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
            "reifyResultShapes"]>,
          DeclareOpInterfaceMethods<SubsetOpInterface,
@@ -283,32 +271,11 @@ def Bufferization_MaterializeInDestinationOp
   let results = (outs Optional<AnyTensor>:$result);
 
   let extraClassDeclaration = [{
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state);
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state);
-
-    bool bufferizesToElementwiseAccess(const AnalysisState &state,
-                                       ArrayRef<OpOperand *> opOperands);
-
-    bool mustBufferizeInPlace(OpOperand &opOperand,
-                              const AnalysisState &state);
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state);
-
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
 
     MutableOperandRange getDpsInitsMutable();
-
-    bool isWritable(Value value, const AnalysisState &state);
   }];
 
   let builders = [
@@ -329,8 +296,7 @@ def Bufferization_MaterializeInDestinationOp
 // DeallocTensorOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
-    [BufferizableOpInterface]> {
+def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor"> {
   string summary = "release underlying storage format of given tensor";
   string description = [{
     `bufferization.dealloc_tensor` is a buffer deallocation in tensor land. This
@@ -360,27 +326,6 @@ def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
   let arguments = (ins AnyTensor:$tensor);
   let results = (outs);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
-
-  let extraClassDeclaration = [{
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state) const {
-      return false;
-    }
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state) const {
-      return false;
-    }
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state) const {
-      return {};
-    }
-
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -396,9 +341,6 @@ class Bufferization_TensorAndBufferMatch<string tensor, string buffer> : PredOpT
 >;
 
 def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
-    BufferizableOpInterface,
-    SameOperandsAndResultShape,
-    SameOperandsAndResultElementType,
     Bufferization_TensorAndBufferMatch<"result", "buffer">
   ]> {
   let summary = "create a tensor-like type from a buffer-like type";
@@ -464,25 +406,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     ::mlir::bufferization::TensorLikeType getType() {
       return getResult().getType();
     }
-
-    //===------------------------------------------------------------------===//
-    // BufferizableOpInterface implementation
-    //===------------------------------------------------------------------===//
-
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state) const {
-      // to_tensor/to_buffer pairs fold away after bufferization.
-      return success();
-    }
-
-    bool isWritable(Value value, const AnalysisState &state);
-
-    FailureOr<BufferLikeType> getBufferType(
-        Value value, const BufferizationOptions &options,
-        const BufferizationState &state, SmallVector<Value> &invocationStack) {
-      return getBuffer().getType();
-    }
   }];
 
   let assemblyFormat = [{
@@ -500,9 +423,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 //===----------------------------------------------------------------------===//
 
 def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
-    BufferizableOpInterface,
-    SameOperandsAndResultShape,
-    SameOperandsAndResultElementType,
     Pure,
     Bufferization_TensorAndBufferMatch<"tensor", "buffer">
   ]> {
@@ -526,38 +446,6 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
 
   let arguments = (ins Bufferization_TensorLikeTypeInterface:$tensor, UnitAttr:$read_only);
   let results = (outs Bufferization_BufferLikeTypeInterface:$buffer);
-
-  let extraClassDeclaration = [{
-    //===------------------------------------------------------------------===//
-    // BufferizableOpInterface implementation
-    //===------------------------------------------------------------------===//
-
-    // Note: ToBufferOp / ToTensorOp are temporary ops that are inserted at the
-    // bufferization boundary. When One-Shot bufferization is complete, there
-    // should be no such ops left over. If `allowUnknownOps` (or after running a
-    // partial bufferization pass), such ops may be part of the resulting IR,
-    // but such IR may no longer be analyzable by One-Shot analysis.
-
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state) const {
-      // It is unknown whether the resulting memref will be read or not.
-      return true;
-    }
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state) {
-      return !getReadOnly();
-    }
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state) const {
-      return {};
-    }
-
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-  }];
 
   let assemblyFormat = [{
     $tensor (`read_only` $read_only^)? attr-dict `:` type($tensor) `to` type($buffer)

@@ -42,12 +42,22 @@ auto catchAll(F &&func) {
     ze_result_t status = (call);                                               \
     if (status != ZE_RESULT_SUCCESS) {                                         \
       const char *errorString;                                                 \
-      zeDriverGetLastErrorDescription(NULL, &errorString);                     \
-      std::cerr << "L0 error " << status << ": " << errorString << std::endl;  \
+      ze_result_t descriptionStatus =                                          \
+          zeDriverGetLastErrorDescriptionWrapper(&errorString);                \
+      if (descriptionStatus == ZE_RESULT_SUCCESS && errorString)               \
+        std::cerr << "L0 error " << status << ": " << errorString              \
+                  << std::endl;                                                \
+      else                                                                     \
+        std::cerr << "Level Zero call failed: " << #call << ", status=0x"      \
+                  << std::hex << static_cast<uint32_t>(status) << std::dec     \
+                  << std::endl;                                                \
       std::abort();                                                            \
     }                                                                          \
   }
 } // namespace
+
+static ze_result_t
+zeDriverGetLastErrorDescriptionWrapper(const char **errorString);
 
 //===----------------------------------------------------------------------===//
 // L0 RT context & device setters
@@ -336,6 +346,11 @@ static L0RTContextWrapper &getRtContext() {
 static DynamicEventPool &getDynamicEventPool() {
   thread_local static DynamicEventPool dynEventPool{&getRtContext()};
   return dynEventPool;
+}
+
+static ze_result_t
+zeDriverGetLastErrorDescriptionWrapper(const char **errorString) {
+  return zeDriverGetLastErrorDescription(getRtContext().driver, errorString);
 }
 
 struct StreamWrapper {

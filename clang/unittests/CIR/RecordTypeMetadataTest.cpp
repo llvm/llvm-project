@@ -60,10 +60,26 @@ TEST_F(RecordLayoutAttrTest, HighAlignment) {
   EXPECT_EQ(attr.getRecordAlign(), 32u);
 }
 
+TEST_F(RecordLayoutAttrTest, UnadjustedAlignDefaultsToRecordAlign) {
+  auto attr =
+      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 16);
+  EXPECT_EQ(attr.getRecordAlign(), 16u);
+  EXPECT_EQ(attr.getUnadjustedAlign(), 16u);
+}
+
+TEST_F(RecordLayoutAttrTest, UnadjustedAlignDistinct) {
+  auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
+                                    true, 16, /*unadjusted_align=*/4,
+                                    /*transparent_union=*/false);
+  EXPECT_EQ(attr.getRecordAlign(), 16u);
+  EXPECT_EQ(attr.getUnadjustedAlign(), 4u);
+}
+
 TEST_F(RecordLayoutAttrTest, RecordTypeUnchanged) {
   IntType i32 = IntType::get(&context, 32, true);
   auto ty = StructType::get(&context, getName("Foo"), /*is_class=*/false);
-  ty.complete({i32, i32}, /*packed=*/false, /*padded=*/false);
+  mlir::Type members[] = {i32, i32};
+  ty.complete(members, /*packed=*/false, RecordType::getAllDataKinds(members));
   EXPECT_TRUE(ty.isComplete());
   EXPECT_EQ(ty.getMembers().size(), 2u);
 }

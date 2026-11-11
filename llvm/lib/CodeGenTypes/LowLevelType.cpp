@@ -16,7 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-bool LLT::ExtendedLLT = false;
+std::atomic<bool> LLT::ExtendedLLT = false;
 
 static LLT::FpSemantics getFpSemanticsForMVT(MVT VT) {
   switch (VT.getScalarType().SimpleTy) {
@@ -40,7 +40,7 @@ static LLT::FpSemantics getFpSemanticsForMVT(MVT VT) {
 }
 
 LLT::LLT(MVT VT) {
-  if (!ExtendedLLT) {
+  if (!getUseExtended()) {
     if (VT.isVector()) {
       bool AsVector = VT.getVectorMinNumElements() > 1 || VT.isScalableVector();
       Kind Info = AsVector ? Kind::VECTOR_ANY : Kind::ANY_SCALAR;

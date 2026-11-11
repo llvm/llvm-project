@@ -67,7 +67,6 @@ static cl::opt<bool>
 SuppressMergedDataOutput("q",
   cl::desc("do not print merged data to stdout"),
   cl::init(false),
-  cl::Optional,
   cl::cat(MergeFdataCategory));
 
 static cl::opt<std::string>

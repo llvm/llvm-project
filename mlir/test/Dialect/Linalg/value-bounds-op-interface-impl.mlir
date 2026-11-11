@@ -62,3 +62,51 @@ func.func @linalg_index(%arg0: memref<?x?xf32>,
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @linalg_index_scalar_input(
+func.func @linalg_index_scalar_input(%scalar: i32, %out: tensor<4xi32>) -> tensor<4xi32> {
+  %result = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> ()>, affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]}
+      ins(%scalar : i32) outs(%out : tensor<4xi32>) {
+  ^bb0(%in: i32, %old: i32):
+    %i = linalg.index 0 : index
+    // CHECK: %[[UB:.*]] = arith.constant 4 : index
+    // CHECK: %[[VALUE:.*]] = arith.index_cast %[[UB]] : index to i32
+    // CHECK: linalg.yield %[[VALUE]] : i32
+    %ub = "test.reify_bound"(%i) {type = "UB"} : (index) -> index
+    %value = arith.index_cast %ub : index to i32
+    linalg.yield %value : i32
+  } -> tensor<4xi32>
+  return %result : tensor<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @linalg_index_scalar_input_dynamic(
+// CHECK-SAME: %[[OUT:[^ ,:]+]]: tensor<?x?xi32>
+func.func @linalg_index_scalar_input_dynamic(%input: tensor<?xi32>, %scalar: i32,
+                                           %rank_zero: tensor<i32>,
+                                           %out: tensor<?x?xi32>) -> tensor<?x?xi32> {
+  %result = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1) -> (d0)>,
+                       affine_map<(d0, d1) -> ()>,
+                       affine_map<(d0, d1) -> ()>,
+                       affine_map<(d0, d1) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%input, %scalar, %rank_zero : tensor<?xi32>, i32, tensor<i32>)
+      outs(%out : tensor<?x?xi32>) {
+  ^bb0(%in: i32, %s: i32, %r: i32, %old: i32):
+    %i = linalg.index 1 : index
+    // CHECK: %[[C1:.*]] = arith.constant 1 : index
+    // CHECK: %[[UB:.*]] = tensor.dim %[[OUT]], %[[C1]]
+    // CHECK: %[[VALUE:.*]] = arith.index_cast %[[UB]] : index to i32
+    // CHECK: linalg.yield %[[VALUE]] : i32
+    %ub = "test.reify_bound"(%i) {type = "UB"} : (index) -> index
+    %value = arith.index_cast %ub : index to i32
+    linalg.yield %value : i32
+  } -> tensor<?x?xi32>
+  return %result : tensor<?x?xi32>
+}

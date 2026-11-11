@@ -13,6 +13,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   BitwiseShiftChecker.cpp
   BlockInCriticalSectionChecker.cpp
   BoolAssignmentChecker.cpp
+  BoundsChecking.cpp
   BuiltinFunctionChecker.cpp
   CStringChecker.cpp
   CStringSyntaxChecker.cpp
@@ -101,7 +102,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   ReturnValueChecker.cpp
   RunLoopAutoreleaseLeakChecker.cpp
   SetgidSetuidOrderChecker.cpp
-  SimpleStreamChecker.cpp
   SmartPtrChecker.cpp
   SmartPtrModeling.cpp
   StackAddrEscapeChecker.cpp
@@ -145,6 +145,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   WebKit/RawPtrRefLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp
   WebKit/RawPtrRefMemberChecker.cpp
+  WebKit/RawPtrRefSafetyModel.cpp
 
   LINK_LIBS
   clangAST

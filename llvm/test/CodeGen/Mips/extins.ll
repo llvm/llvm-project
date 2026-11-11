@@ -22,3 +22,21 @@ entry:
   store i32 %or, ptr %d, align 4
   ret void
 }
+
+; Sink the shared shift to combine it with the mask in a successor block.
+define i32 @ext_in_successor(i32 %s, i1 zeroext %cond) {
+; 32R2-LABEL: ext_in_successor:
+; 32R2: ext ${{[0-9]+}}, $4, 5, 9
+; 16-LABEL: ext_in_successor:
+; 16-NOT: ext ${{[0-9]+}}
+entry:
+  %shr = lshr i32 %s, 5
+  br i1 %cond, label %extract, label %full
+
+extract:
+  %masked = and i32 %shr, 511
+  ret i32 %masked
+
+full:
+  ret i32 %shr
+}

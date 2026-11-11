@@ -539,6 +539,30 @@ define <2 x float> @pow_sitofp_const_base_2_no_fast_vector(<2 x i8> %x) {
   ret <2 x float> %r
 }
 
+define <2 x float> @pow_sitofp_vector_exp(<2 x float> %base, <2 x i16> %x) {
+; CHECK-LABEL: define <2 x float> @pow_sitofp_vector_exp(
+; CHECK-SAME: <2 x float> [[BASE:%.*]], <2 x i16> [[X:%.*]]) {
+; CHECK-NEXT:    [[S:%.*]] = sitofp <2 x i16> [[X]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> [[BASE]], <2 x float> [[S]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = sitofp <2 x i16> %x to <2 x float>
+  %r = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> %base, <2 x float> %s)
+  ret <2 x float> %r
+}
+
+define <2 x float> @pow_uitofp_vector_exp(<2 x float> %base, <2 x i16> %x) {
+; CHECK-LABEL: define <2 x float> @pow_uitofp_vector_exp(
+; CHECK-SAME: <2 x float> [[BASE:%.*]], <2 x i16> [[X:%.*]]) {
+; CHECK-NEXT:    [[S:%.*]] = uitofp <2 x i16> [[X]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> [[BASE]], <2 x float> [[S]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = uitofp <2 x i16> %x to <2 x float>
+  %r = tail call afn <2 x float> @llvm.pow.v2f32(<2 x float> %base, <2 x float> %s)
+  ret <2 x float> %r
+}
+
 declare float @llvm.pow.f32(float, float)
 declare double @llvm.pow.f64(double, double)
 declare <2 x float> @llvm.pow.v2f32(<2 x float>, <2 x float>)

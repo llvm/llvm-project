@@ -187,7 +187,8 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     // All block arguments are non-successor-inputs.
-    return visitNonControlFlowArgumentsImpl(block->getParentOp(),
+    return visitNonControlFlowArgumentsImpl(getProgramPointBefore(block),
+                                            block->getParentOp(),
                                             RegionSuccessor(block->getParent()),
                                             block->getArguments(), argLattices);
   }
@@ -252,9 +253,23 @@ LogicalResult AbstractSparseForwardDataFlowAnalysis::visitCallOperation(
     setAllToEntryStates(resultLattices);
     return success();
   }
+
+  // Only the forwarded results receive the values returned by the callee. Any
+  // other result is produced by the call operation itself and nothing is known
+  // about it here.
+  ResultRange forwardedResults = call.getForwardedResults();
+  unsigned firstForwarded = forwardedResults.empty()
+                                ? resultLattices.size()
+                                : forwardedResults[0].getResultNumber();
+  setAllToEntryStates(resultLattices.take_front(firstForwarded));
+  setAllToEntryStates(
+      resultLattices.drop_front(firstForwarded + forwardedResults.size()));
+  ArrayRef<AbstractSparseLattice *> forwardedResultLattices =
+      resultLattices.slice(firstForwarded, forwardedResults.size());
+
   for (Operation *predecessor : predecessors->getKnownPredecessors())
     for (auto &&[operand, resLattice] :
-         llvm::zip(predecessor->getOperands(), resultLattices))
+         llvm::zip_equal(predecessor->getOperands(), forwardedResultLattices))
       join(resLattice,
            *getLatticeElementFor(getProgramPointAfter(call), operand));
   return success();
@@ -320,7 +335,8 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
             branch.getNonSuccessorInputs(successor);
         SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
             llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
-        visitNonControlFlowArgumentsImpl(branch, successor, nonSuccessorInputs,
+        visitNonControlFlowArgumentsImpl(point, branch, successor,
+                                         nonSuccessorInputs,
                                          nonSuccessorInputLattices);
       } else {
         if (!inputs.empty())
@@ -330,7 +346,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
             branch.getNonSuccessorInputs(RegionSuccessor(region));
         SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
             llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
-        visitNonControlFlowArgumentsImpl(branch, RegionSuccessor(region),
+        visitNonControlFlowArgumentsImpl(point, branch, RegionSuccessor(region),
                                          nonSuccessorInputs,
                                          nonSuccessorInputLattices);
       }
@@ -585,8 +601,12 @@ LogicalResult AbstractSparseBackwardDataFlowAnalysis::visitCallableOperation(
       getProgramPointAfter(op), getProgramPointAfter(callable));
   if (callsites->allPredecessorsKnown()) {
     for (Operation *call : callsites->getKnownPredecessors()) {
+      // Only the forwarded results of the call receive the values returned by
+      // the callee.
+      ResultRange forwardedResults =
+          cast<CallOpInterface>(call).getForwardedResults();
       SmallVector<const AbstractSparseLattice *> callResultLattices =
-          getLatticeElementsFor(getProgramPointAfter(op), call->getResults());
+          getLatticeElementsFor(getProgramPointAfter(op), forwardedResults);
       for (auto [op, result] : llvm::zip(operandLattices, callResultLattices))
         meet(op, *result);
     }

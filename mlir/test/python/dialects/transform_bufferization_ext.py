@@ -101,7 +101,7 @@ def testOneShotBufferizeOpAttributes():
     # CHECK-SAME: allow_return_allocs_from_loops = true
     # CHECK-SAME: allow_unknown_ops = true
     # CHECK-SAME: bufferize_function_boundaries = true
-    # CHECK-SAME: memcpy_op = "linalg.copy"
-    # CHECK-SAME: print_conflicts = true
     # CHECK-SAME: test_analysis_only = true
+    # CHECK-SAME: print_conflicts = true
+    # CHECK-SAME: memcpy_op = "linalg.copy"
     # CHECK-SAME: (!transform.any_op) -> !transform.any_op

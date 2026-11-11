@@ -37,10 +37,10 @@ end
 !CHECK: %[[Z:[0-9]+]]:2 = hlfir.declare %arg2
 !CHECK: %[[LOAD_Y:[0-9]+]] = fir.load %[[Y]]#0 : !fir.ref<complex<f32>>
 !CHECK: %[[LOAD_Z:[0-9]+]] = fir.load %[[Z]]#0 : !fir.ref<complex<f32>>
-!CHECK: %[[Y_Z:[0-9]+]] = fir.addc %[[LOAD_Y]], %[[LOAD_Z]] {fastmath = #arith.fastmath<fast>} : complex<f32>
+!CHECK: %[[Y_Z:[0-9]+]] = fir.addc %[[LOAD_Y]], %[[LOAD_Z]] fastmath("fast") : complex<f32>
 !CHECK: omp.atomic.update memory_order(relaxed) %[[X]]#0 : !fir.ref<complex<f32>> {
 !CHECK: ^bb0(%[[ARG:arg[0-9]+]]: complex<f32>):
-!CHECK:   %[[ARG_P:[0-9]+]] = fir.addc %[[ARG]], %[[Y_Z]] {fastmath = #arith.fastmath<fast>} : complex<f32>
+!CHECK:   %[[ARG_P:[0-9]+]] = fir.addc %[[ARG]], %[[Y_Z]] fastmath("fast") : complex<f32>
 !CHECK:   omp.yield(%[[ARG_P]] : complex<f32>)
 !CHECK: }
 

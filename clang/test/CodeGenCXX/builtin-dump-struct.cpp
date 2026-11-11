@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -Wformat-pedantic -Werror -emit-llvm -o /dev/null -verify -DTEST_WERROR %s
 
 // CHECK-DAG: @[[STR_0:.*]] = {{.*}} [3 x i8] c"%s\00",
 // CHECK-DAG: @[[STR_1:.*]] = {{.*}} [2 x i8] c"C\00",
@@ -123,3 +124,19 @@ void h(X &x) {
   // CHECK: call {{.*}} @_Z6formatIJEEiiPKcDpT_(i32 noundef 0, ptr noundef @[[STR_19]])
   __builtin_dump_struct(&x, format, 0);
 }
+
+#ifdef TEST_WERROR
+namespace GH211943 {
+int printflike(const char *__restrict__ x, ...) __attribute__((__format__(__printf__, 1, 2)));
+
+struct Foo {
+    int *x;
+};
+
+void test() {
+    __builtin_dump_struct(&(struct Foo){0}, printflike); // expected-error {{taking the address of a temporary object of type 'struct Foo'}} \
+                                                         // expected-error {{format specifies type 'void *' but the argument has type 'int *'}} \
+                                                         // expected-note {{in call to printing function}}
+}
+} // namespace GH211943
+#endif

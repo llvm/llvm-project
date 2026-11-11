@@ -20,6 +20,9 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -27,8 +30,67 @@
 #include <cstdint>
 #include <optional>
 
+namespace clang::lifetimes {
+
+/// How an origin is used: by an expression, or implicitly at scope exit by a
+/// destructor or a cleanup callback that may read the borrows it holds.
+enum class UseKind { Explicit, Destructor, Cleanup };
+
+/// Where and how an origin is used, for diagnostics.
+class UseSite {
+  /// The use expression for an explicit use, or the variable destroyed or
+  /// cleaned up for an implicit one. Null for an explicit use known only by
+  /// its location.
+  llvm::PointerUnion<const Expr *, const VarDecl *> ExprOrVD;
+  /// Used when there is no expression.
+  SourceLocation Loc;
+  UseKind Kind = UseKind::Explicit;
+
+  UseSite(llvm::PointerUnion<const Expr *, const VarDecl *> ExprOrVD,
+          SourceLocation Loc, UseKind Kind)
+      : ExprOrVD(ExprOrVD), Loc(Loc), Kind(Kind) {}
+
+public:
+  static UseSite fromExpr(const Expr &E) {
+    return UseSite(&E, SourceLocation(), UseKind::Explicit);
+  }
+  static UseSite at(SourceLocation Loc) {
+    return UseSite(nullptr, Loc, UseKind::Explicit);
+  }
+  static UseSite scopeExit(SourceLocation Loc, const VarDecl &VD,
+                           UseKind Kind) {
+    assert((Kind == UseKind::Destructor || Kind == UseKind::Cleanup) &&
+           "scope-exit uses are destructor or cleanup uses");
+    return UseSite(&VD, Loc, Kind);
+  }
+
+  UseKind getKind() const { return Kind; }
+  /// Null for an implicit use or one known only by its location.
+  const Expr *getExpr() const {
+    return dyn_cast_if_present<const Expr *>(ExprOrVD);
+  }
+  /// The variable destroyed or cleaned up, for implicit uses.
+  const VarDecl *getScopeExitVD() const {
+    return dyn_cast_if_present<const VarDecl *>(ExprOrVD);
+  }
+  SourceLocation getLoc() const {
+    if (const Expr *E = getExpr())
+      return E->getExprLoc();
+    return Loc;
+  }
+  /// Empty unless there is a use expression.
+  SourceRange getRange() const {
+    if (const Expr *E = getExpr())
+      return E->getSourceRange();
+    return SourceRange();
+  }
+};
+
+} // namespace clang::lifetimes
+
 namespace clang::lifetimes::internal {
 
+class FactsGenerator;
 class LoanPropagationAnalysis;
 
 using FactID = utils::ID<struct FactTag>;
@@ -171,6 +233,8 @@ public:
     Return, /// Escapes via return statement.
     Field,  /// Escapes via assignment to a field.
     Global, /// Escapes via assignment to global storage.
+    This,   /// Escapes via the enclosing object `this`, which outlives the
+            /// method.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -240,24 +304,46 @@ public:
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
 
+/// Represents an origin escaping through the enclosing object `this`, which
+/// outlives the current method. Emitted for `this` at function exit so a borrow
+/// still held by the object there is seen as escaping -- e.g. a borrow captured
+/// via [[clang::lifetime_capture_by_this]] that outlived the captured local is
+/// reported as a use-after-scope.
+class ThisEscapeFact : public OriginEscapesFact {
+  SourceLocation Loc;
+
+public:
+  ThisEscapeFact(OriginID OID, SourceLocation Loc)
+      : OriginEscapesFact(OID, EscapeKind::This), Loc(Loc) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::This;
+  }
+  SourceLocation getLoc() const { return Loc; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
+            const LoanPropagationAnalysis *LPA = nullptr) const override;
+};
+
 class UseFact : public Fact {
-  const Expr *UseExpr;
+  UseSite Site;
   const OriginList *OList;
-  // True if this use is a write operation (e.g., left-hand side of assignment).
-  // Write operations are exempted from use-after-free checks.
-  bool IsWritten = false;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr, const OriginList *OList)
-      : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
+  UseFact(const Expr &UseExpr, const OriginList *OList)
+      : Fact(Kind::Use), Site(UseSite::fromExpr(UseExpr)), OList(OList) {}
+  UseFact(const UseSite &ImplicitSite, const OriginList *OList)
+      : Fact(Kind::Use), Site(ImplicitSite), OList(OList) {
+    assert(Site.getKind() != UseKind::Explicit);
+  }
 
   const OriginList *getUsedOrigins() const { return OList; }
-  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
-  const Expr *getUseExpr() const { return UseExpr; }
-  void markAsWritten() { IsWritten = true; }
-  bool isWritten() const { return IsWritten; }
+  /// Null for an implicit use.
+  const Expr *getUseExpr() const { return Site.getExpr(); }
+  const UseSite &getUseSite() const { return Site; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
@@ -389,18 +475,54 @@ public:
 
   unsigned getNumFacts() const { return NextFactID.Value; }
 
+  /// Returns the origins that are referenced from more than one basic block.
+  /// Only those need to survive block boundaries in the dataflow analyses; the
+  /// rest are block-local.
+  const llvm::BitVector &getPersistentOrigins() const {
+    assert(PersistentOrigins.size() == OriginMgr.getNumOrigins() &&
+           "persistent origins have not been computed");
+    return PersistentOrigins;
+  }
+
   LoanManager &getLoanMgr() { return LoanMgr; }
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
 
+  void addCapturedField(const FieldDecl *FD) { CapturedFields.insert(FD); }
+  bool isFieldCapturedByLambda(const FieldDecl *FD) const {
+    return IsThisCapturedByLambda || CapturedFields.contains(FD);
+  }
+  void setThisCapturedByLambda() { IsThisCapturedByLambda = true; }
+
 private:
+  /// Classifies every origin as persistent or block-local. Called by
+  /// `FactsGenerator` once all facts and origins have been created.
+  void computePersistentOrigins(const CFG &Cfg);
+
+  friend class FactsGenerator;
+
   FactID NextFactID{0};
   LoanManager LoanMgr;
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
+  /// Bit vector indexed by origin ID. If set, the origin is referenced from
+  /// more than one basic block and must participate in join operations. If
+  /// unset, the origin is block-local and can be discarded at block
+  /// boundaries.
+  ///
+  /// Shared by every analysis so that they all agree on which origins cross
+  /// block boundaries.
+  llvm::BitVector PersistentOrigins;
+
+  /// Set of field declarations that are explicitly or init-captured in any
+  /// lambda within the analyzed function.
+  llvm::DenseSet<const FieldDecl *> CapturedFields;
+  /// Whether the 'this' pointer is captured by any lambda within the analyzed
+  /// function. When true, any field of 'this' is considered captured.
+  bool IsThisCapturedByLambda = false;
 };
 } // namespace clang::lifetimes::internal
 

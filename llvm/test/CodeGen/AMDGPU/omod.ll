@@ -546,6 +546,32 @@ define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
   ret void
 }
 
+define amdgpu_ps void @v_omod_mul4_f32_imm_first(float %a) #0 {
+; SI-LABEL: v_omod_mul4_f32_imm_first:
+; SI:       ; %bb.0:
+; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: v_omod_mul4_f32_imm_first:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
+; VI-NEXT:    flat_store_dword v[0:1], v0
+; VI-NEXT:    s_endpgm
+;
+; GFX11PLUS-LABEL: v_omod_mul4_f32_imm_first:
+; GFX11PLUS:       ; %bb.0:
+; GFX11PLUS-NEXT:    v_add_f32_e64 v0, v0, 1.0 mul:4
+; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11PLUS-NEXT:    s_endpgm
+  %add = fadd float %a, 1.0
+  %div2 = fmul nsz float 4.0, %add
+  store float %div2, ptr addrspace(1) poison
+  ret void
+}
+
 define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
 ; SI-LABEL: v_omod_mul4_f64:
 ; SI:       ; %bb.0:
@@ -574,6 +600,38 @@ define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
 ; GFX12-NEXT:    s_endpgm
   %add = fadd nsz double %a, 1.0
   %div2 = fmul nsz double %add, 4.0
+  store double %div2, ptr addrspace(1) poison
+  ret void
+}
+
+define amdgpu_ps void @v_omod_mul4_f64_imm_first(double %a) #5 {
+; SI-LABEL: v_omod_mul4_f64_imm_first:
+; SI:       ; %bb.0:
+; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:4
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: v_omod_mul4_f64_imm_first:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:4
+; VI-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; VI-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_omod_mul4_f64_imm_first:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0 mul:4
+; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_omod_mul4_f64_imm_first:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_add_f64_e64 v[0:1], v[0:1], 1.0 mul:4
+; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off
+; GFX12-NEXT:    s_endpgm
+  %add = fadd nsz double %a, 1.0
+  %div2 = fmul nsz double 4.0, %add
   store double %div2, ptr addrspace(1) poison
   ret void
 }
@@ -1239,6 +1297,54 @@ define amdgpu_ps void @v_omod_div2_f16_no_denormals(half %a) #3 {
 ; GFX12-FAKE16-NEXT:    s_endpgm
   %add = fadd half %a, 1.0
   %div2 = fmul nsz half %add, 0.5
+  store half %div2, ptr addrspace(1) poison
+  ret void
+}
+
+define amdgpu_ps void @v_omod_div2_f16_no_denormals_imm_first(half %a) #3 {
+; SI-LABEL: v_omod_div2_f16_no_denormals_imm_first:
+; SI:       ; %bb.0:
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e64 v0, v0 div:2
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: v_omod_div2_f16_no_denormals_imm_first:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_add_f16_e64 v0, v0, 1.0 div:2
+; VI-NEXT:    flat_store_short v[0:1], v0
+; VI-NEXT:    s_endpgm
+;
+; GFX11-TRUE16-LABEL: v_omod_div2_f16_no_denormals_imm_first:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    v_add_f16_e64 v0.l, v0.l, 1.0 div:2
+; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: v_omod_div2_f16_no_denormals_imm_first:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    v_add_f16_e64 v0, v0, 1.0 div:2
+; GFX11-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX11-FAKE16-NEXT:    s_endpgm
+;
+; GFX12-TRUE16-LABEL: v_omod_div2_f16_no_denormals_imm_first:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    v_add_f16_e64 v0.l, v0.l, 1.0 div:2
+; GFX12-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: v_omod_div2_f16_no_denormals_imm_first:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    v_add_f16_e64 v0, v0, 1.0 div:2
+; GFX12-FAKE16-NEXT:    global_store_b16 v[0:1], v0, off
+; GFX12-FAKE16-NEXT:    s_endpgm
+  %add = fadd half %a, 1.0
+  %div2 = fmul nsz half 0.5, %add
   store half %div2, ptr addrspace(1) poison
   ret void
 }

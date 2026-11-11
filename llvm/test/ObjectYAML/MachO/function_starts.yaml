@@ -1,4 +1,5 @@
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C
@@ -176,7 +177,7 @@ LinkEditData:
   FunctionStarts:  [ 0x3F80, 0x3F84 ]
 ...
 
-# RUN: yaml2obj %s -o=%t
+# RUN: yaml2obj %s -o %t
 # RUN: obj2yaml %t | FileCheck %s
 # CHECK: FunctionStarts:  [ 0x3F80, 0x3F84 ]
 

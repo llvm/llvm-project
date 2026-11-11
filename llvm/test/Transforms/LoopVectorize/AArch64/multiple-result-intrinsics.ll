@@ -27,38 +27,38 @@ define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP6:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> [[WIDE_LOAD1:%.*]])
-; CHECK:    [[TMP8:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP6]], 0
-; CHECK:    [[TMP10:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP6]], 1
-; CHECK:    store <2 x float> [[TMP8]], ptr [[TMP12:%.*]], align 4
-; CHECK:    store <2 x float> [[TMP10]], ptr [[TMP11:%.*]], align 4
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP1]], 1
+; CHECK:    store <2 x float> [[TMP2]], ptr [[TMP4:%.*]], align 4
+; CHECK:    store <2 x float> [[TMP3]], ptr [[TMP5:%.*]], align 4
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 ; CHECK-ARMPL-LABEL: define void @sincos_f32(
 ; CHECK-ARMPL-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-ARMPL:  [[VECTOR_BODY1:.*:]]
-; CHECK-ARMPL:  [[VEC_EPILOG_MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[VEC_EPILOG_SCALAR_PH:.*:]]
-; CHECK-ARMPL:    [[TMP8:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP9:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP8]], 0
-; CHECK-ARMPL:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]], 0
-; CHECK-ARMPL:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP8]], 1
-; CHECK-ARMPL:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP9]], 1
+; CHECK-ARMPL:  [[ENTRY:.*:]]
+; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
+; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP6]], 0
+; CHECK-ARMPL:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 1
+; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP6]], 1
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP11:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP8]], ptr [[TMP12:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP9]], ptr [[TMP13:%.*]], align 4
 ; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP10]], ptr [[TMP14:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP11]], ptr [[TMP17:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP12]], ptr [[TMP18:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP13]], ptr [[TMP21:%.*]], align 4
-; CHECK-ARMPL:  [[FOR_BODY1:.*:]]
-; CHECK-ARMPL:  [[EXIT:.*:]]
+; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
+; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
 ; CHECK-ARMPL:  [[FOR_BODY:.*:]]
 ; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[IN_VAL:%.*]])
 ; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
 ; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
 ; CHECK-ARMPL:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
 ; CHECK-ARMPL:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
-; CHECK-ARMPL:  [[EXIT1:.*:]]
+; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
   br label %for.body
@@ -100,38 +100,38 @@ define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP6:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[WIDE_LOAD1:%.*]])
-; CHECK:    [[TMP8:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP6]], 0
-; CHECK:    [[TMP10:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP6]], 1
-; CHECK:    store <2 x double> [[TMP8]], ptr [[TMP12:%.*]], align 8
-; CHECK:    store <2 x double> [[TMP10]], ptr [[TMP11:%.*]], align 8
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 1
+; CHECK:    store <2 x double> [[TMP2]], ptr [[TMP4:%.*]], align 8
+; CHECK:    store <2 x double> [[TMP3]], ptr [[TMP5:%.*]], align 8
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 ; CHECK-ARMPL-LABEL: define void @sincos_f64(
 ; CHECK-ARMPL-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
+; CHECK-ARMPL:  [[ENTRY:.*:]]
+; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP6]], 0
+; CHECK-ARMPL:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 1
+; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP6]], 1
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP7]], ptr [[TMP11:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP8]], ptr [[TMP12:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP13:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
-; CHECK-ARMPL:    [[TMP8:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP9:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP8]], 0
-; CHECK-ARMPL:    [[TMP11:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]], 0
-; CHECK-ARMPL:    [[TMP12:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP8]], 1
-; CHECK-ARMPL:    [[TMP13:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP9]], 1
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP11]], ptr [[TMP17:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP12]], ptr [[TMP18:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP13]], ptr [[TMP21:%.*]], align 8
 ; CHECK-ARMPL:  [[FOR_BODY:.*:]]
-; CHECK-ARMPL:  [[EXIT:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY1:.*:]]
 ; CHECK-ARMPL:    [[CALL:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[IN_VAL:%.*]])
 ; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
 ; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
 ; CHECK-ARMPL:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
 ; CHECK-ARMPL:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
-; CHECK-ARMPL:  [[EXIT1:.*:]]
+; CHECK-ARMPL:  [[EXIT:.*:]]
 ;
 entry:
   br label %for.body
@@ -190,12 +190,12 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:    [[TMP10:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP10]], 0
-; CHECK-ARMPL:    [[TMP12:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP10]], 1
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP11]], ptr align 4 [[TMP13:%.*]], <vscale x 4 x i1> [[TMP9:%.*]])
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP12]], ptr align 4 [[TMP14:%.*]], <vscale x 4 x i1> [[TMP9]])
-; CHECK-ARMPL:  [[IF_MERGE:.*:]]
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 1
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP6]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[TMP4:%.*]])
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP7]], ptr align 4 [[TMP9:%.*]], <vscale x 4 x i1> [[TMP4]])
+; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[FOR_END:.*:]]
 ;
 entry:
@@ -249,32 +249,32 @@ define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
-; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
-; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP1]], 1
+; CHECK:    store <2 x float> [[TMP2]], ptr [[TMP4:%.*]], align 4
+; CHECK:    store <2 x float> [[TMP3]], ptr [[TMP5:%.*]], align 4
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 ; CHECK-ARMPL-LABEL: define void @modf_f32(
 ; CHECK-ARMPL-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
+; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:  [[VECTOR_BODY1:.*:]]
-; CHECK-ARMPL:    [[TMP12:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.modf.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP13:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.modf.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP14:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 0
-; CHECK-ARMPL:    [[TMP15:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP13]], 0
-; CHECK-ARMPL:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 1
-; CHECK-ARMPL:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP13]], 1
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP14]], ptr [[TMP19:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP15]], ptr [[TMP22:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP16]], ptr [[TMP24:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP17]], ptr [[TMP27:%.*]], align 4
-; CHECK-ARMPL:  [[VEC_EPILOG_MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[VEC_EPILOG_SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY1:.*:]]
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.modf.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.modf.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP6]], 0
+; CHECK-ARMPL:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 1
+; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP6]], 1
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP11:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP8]], ptr [[TMP12:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP9]], ptr [[TMP13:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP10]], ptr [[TMP14:%.*]], align 4
+; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
+; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
+; CHECK-ARMPL:  [[FOR_BODY:.*:]]
 ; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.modf.f32(float [[IN_VAL:%.*]])
 ; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
 ; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
@@ -322,12 +322,12 @@ define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
-; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
-; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x double>, <2 x double> } @llvm.modf.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 1
+; CHECK:    store <2 x double> [[TMP2]], ptr [[TMP4:%.*]], align 8
+; CHECK:    store <2 x double> [[TMP3]], ptr [[TMP5:%.*]], align 8
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 ; CHECK-ARMPL-LABEL: define void @modf_f64(
@@ -335,16 +335,16 @@ define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:    [[TMP12:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.modf.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP13:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.modf.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP14:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP12]], 0
-; CHECK-ARMPL:    [[TMP15:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP13]], 0
-; CHECK-ARMPL:    [[TMP16:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP12]], 1
-; CHECK-ARMPL:    [[TMP17:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP13]], 1
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP14]], ptr [[TMP19:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP15]], ptr [[TMP22:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP16]], ptr [[TMP24:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP17]], ptr [[TMP27:%.*]], align 8
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.modf.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.modf.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP6]], 0
+; CHECK-ARMPL:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 1
+; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP6]], 1
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP7]], ptr [[TMP11:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP8]], ptr [[TMP12:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP13:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
 ; CHECK-ARMPL:  [[FOR_BODY:.*:]]
@@ -399,32 +399,32 @@ define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincospi.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
-; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
-; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincospi.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP1]], 1
+; CHECK:    store <2 x float> [[TMP2]], ptr [[TMP4:%.*]], align 4
+; CHECK:    store <2 x float> [[TMP3]], ptr [[TMP5:%.*]], align 4
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 ; CHECK-ARMPL-LABEL: define void @sincospi_f32(
 ; CHECK-ARMPL-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0]] {
+; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:  [[VECTOR_BODY1:.*:]]
-; CHECK-ARMPL:    [[TMP12:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincospi.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP13:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincospi.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP14:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 0
-; CHECK-ARMPL:    [[TMP15:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP13]], 0
-; CHECK-ARMPL:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 1
-; CHECK-ARMPL:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP13]], 1
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP14]], ptr [[TMP19:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP15]], ptr [[TMP22:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP16]], ptr [[TMP24:%.*]], align 4
-; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP17]], ptr [[TMP27:%.*]], align 4
-; CHECK-ARMPL:  [[VEC_EPILOG_MIDDLE_BLOCK:.*:]]
-; CHECK-ARMPL:  [[VEC_EPILOG_SCALAR_PH:.*:]]
-; CHECK-ARMPL:  [[FOR_BODY1:.*:]]
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincospi.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincospi.nxv4f32(<vscale x 4 x float> [[WIDE_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP6]], 0
+; CHECK-ARMPL:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 1
+; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP6]], 1
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP7]], ptr [[TMP11:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP8]], ptr [[TMP12:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP9]], ptr [[TMP13:%.*]], align 4
+; CHECK-ARMPL:    store <vscale x 4 x float> [[TMP10]], ptr [[TMP14:%.*]], align 4
+; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
+; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
+; CHECK-ARMPL:  [[FOR_BODY:.*:]]
 ; CHECK-ARMPL:    [[CALL:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[IN_VAL:%.*]])
 ; CHECK-ARMPL:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
 ; CHECK-ARMPL:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
@@ -472,12 +472,12 @@ define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP3:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincospi.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
-; CHECK:    [[TMP4:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 0
-; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
-; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
-; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
-; CHECK:  [[FOR_BODY:.*:]]
+; CHECK:    [[TMP1:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincospi.v2f64(<2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 0
+; CHECK:    [[TMP3:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP1]], 1
+; CHECK:    store <2 x double> [[TMP2]], ptr [[TMP4:%.*]], align 8
+; CHECK:    store <2 x double> [[TMP3]], ptr [[TMP5:%.*]], align 8
+; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
 ; CHECK-ARMPL-LABEL: define void @sincospi_f64(
@@ -485,16 +485,16 @@ define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:    [[TMP12:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincospi.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
-; CHECK-ARMPL:    [[TMP13:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincospi.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP14:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP12]], 0
-; CHECK-ARMPL:    [[TMP15:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP13]], 0
-; CHECK-ARMPL:    [[TMP16:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP12]], 1
-; CHECK-ARMPL:    [[TMP17:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP13]], 1
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP14]], ptr [[TMP19:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP15]], ptr [[TMP22:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP16]], ptr [[TMP24:%.*]], align 8
-; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP17]], ptr [[TMP27:%.*]], align 8
+; CHECK-ARMPL:    [[TMP5:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincospi.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-ARMPL:    [[TMP6:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincospi.nxv2f64(<vscale x 2 x double> [[WIDE_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 0
+; CHECK-ARMPL:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP6]], 0
+; CHECK-ARMPL:    [[TMP9:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 1
+; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP6]], 1
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP7]], ptr [[TMP11:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP8]], ptr [[TMP12:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP9]], ptr [[TMP13:%.*]], align 8
+; CHECK-ARMPL:    store <vscale x 2 x double> [[TMP10]], ptr [[TMP14:%.*]], align 8
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[SCALAR_PH:.*:]]
 ; CHECK-ARMPL:  [[FOR_BODY:.*:]]
@@ -534,8 +534,8 @@ exit:
 ; CHECK-COST: Cost of 7 for VF 8: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST: Cost of 13 for VF 16: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sadd.with.overflow.i32(ir<%val_a>, ir<%val_b>)
-; CHECK-COST: Cost of 4 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
-; CHECK-COST: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST: Cost of 6 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST: Cost of 6 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 
 ; CHECK-COST-ARMPL-LABEL: sadd_with_overflow_i32
 ; CHECK-COST-ARMPL: LV: Found an estimated cost of 1 for VF 1 For instruction:   %call = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %val_a, i32 %val_b)
@@ -544,8 +544,8 @@ exit:
 ; CHECK-COST-ARMPL: Cost of 7 for VF 8: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST-ARMPL: Cost of 13 for VF 16: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 ; CHECK-COST-ARMPL: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @llvm.sadd.with.overflow.i32(ir<%val_a>, ir<%val_b>)
-; CHECK-COST-ARMPL: Cost of 4 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
-; CHECK-COST-ARMPL: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST-ARMPL: Cost of 6 for VF vscale x 2: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
+; CHECK-COST-ARMPL: Cost of 6 for VF vscale x 4: WIDEN-INTRINSIC ir<%call> = call llvm.sadd.with.overflow(ir<%val_a>, ir<%val_b>)
 
 define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr noalias writeonly %out_result, ptr noalias writeonly %out_overflow) {
 ; CHECK-LABEL: define void @sadd_with_overflow_i32(
@@ -553,11 +553,11 @@ define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr no
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP9:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]])
-; CHECK:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP9]], 0
-; CHECK:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP9]], 1
-; CHECK:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP10]], ptr align 4 [[TMP13:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; CHECK:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP12:%.*]], ptr align 1 [[TMP14:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK:    [[TMP4:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]])
+; CHECK:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 0
+; CHECK:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 1
+; CHECK:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP5]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; CHECK:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP7:%.*]], ptr align 1 [[TMP9:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
 ;
@@ -566,11 +566,11 @@ define void @sadd_with_overflow_i32(ptr noalias %in_a, ptr noalias %in_b, ptr no
 ; CHECK-ARMPL:  [[ENTRY:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_PH:.*:]]
 ; CHECK-ARMPL:  [[VECTOR_BODY:.*:]]
-; CHECK-ARMPL:    [[TMP9:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]])
-; CHECK-ARMPL:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP9]], 0
-; CHECK-ARMPL:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP9]], 1
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP10]], ptr align 4 [[TMP13:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP12:%.*]], ptr align 1 [[TMP14:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-ARMPL:    [[TMP4:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.sadd.with.overflow.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD:%.*]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD1:%.*]])
+; CHECK-ARMPL:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 0
+; CHECK-ARMPL:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP4]], 1
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP5]], ptr align 4 [[TMP8:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK:%.*]])
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4i8.p0(<vscale x 4 x i8> [[TMP7:%.*]], ptr align 1 [[TMP9:%.*]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-ARMPL:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK-ARMPL:  [[EXIT:.*:]]
 ;

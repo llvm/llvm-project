@@ -6,6 +6,7 @@
 
 # MCFG-NOT: digraph "Machine CFG for 'func1' function"
 name: func1
+tracksRegLiveness: false
 body: |
   bb.0:
     $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
@@ -18,6 +19,7 @@ body: |
 # MCFG: Node{{[0-9A-Za-z]*}} [shape=record,label="{bb.0:\l| $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0\l $sgpr1 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0\l $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0\l S_ENDPGM 0\l}"];
 ---
 name: func2
+tracksRegLiveness: false
 body: |
   bb.0:
     $sgpr0 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0

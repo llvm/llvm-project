@@ -3,6 +3,8 @@ add_subdirectory(Transforms)
 set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend/OpenMP/OMP.td)
 mlir_tablegen(OmpCommon.td --gen-directive-decl --directives-dialect=OpenMP)
 add_mlir_dialect_tablegen_target(omp_common_td)
+# Subsequent TableGen inputs include the generated OmpCommon.td file.
+list(APPEND LLVM_TARGET_DEPENDS omp_common_td)
 
 set(LLVM_TARGET_DEFINITIONS OpenMPOps.td)
 

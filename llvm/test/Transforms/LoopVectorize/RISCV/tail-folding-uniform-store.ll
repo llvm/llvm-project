@@ -20,13 +20,13 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[SPEC_SELECT]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 [[SPEC_SELECT]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nuw nsw i64 1, [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[ARRAYIDX13]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[REVERSE]], ptr align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP10]], [[EVL_BASED_IV]]
@@ -58,5 +58,5 @@ exit:
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
+!3 = !{!"llvm.loop.vectorize.enable"}

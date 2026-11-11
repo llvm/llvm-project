@@ -973,10 +973,13 @@ foreach mx = SchedMxList in {
   // The following group slide up and down together, so we use the worst-case
   // (slide down) for all.
   let Latency = VSlideDownLat, ReleaseAtCycles =[VSlideDownOcc] in {
-    defm "" : LMULWriteResMX<"WriteVSlideI", [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1Up", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1Down", [SMX60_VIEU], mx, IsWorstCase>;
 
-    defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VFP], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1Up", [SMX60_VFP], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1Down", [SMX60_VFP], mx, IsWorstCase>;
   }
 }
 

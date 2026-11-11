@@ -154,6 +154,25 @@ struct MachOBuilderLoadCommand<MachO::LC_RPATH>
   std::string Path;
 };
 
+template <>
+struct MachOBuilderLoadCommand<MachO::LC_TARGET_TRIPLE>
+    : public MachOBuilderLoadCommandImplBase<MachO::LC_TARGET_TRIPLE> {
+  MachOBuilderLoadCommand(std::string TargetTriple)
+      : MachOBuilderLoadCommandImplBase(12u),
+        TargetTriple(std::move(TargetTriple)) {
+    cmdsize += (this->TargetTriple.size() + 1 + 3) & ~0x3;
+  }
+
+  size_t write(MutableArrayRef<char> Buf, size_t Offset,
+               bool SwapStruct) override {
+    Offset = writeMachOStruct(Buf, Offset, rawStruct(), SwapStruct);
+    strcpy(Buf.data() + Offset, TargetTriple.data());
+    return Offset + ((TargetTriple.size() + 1 + 3) & ~0x3);
+  }
+
+  std::string TargetTriple;
+};
+
 // Builds MachO objects.
 template <typename MachOTraits> class MachOBuilder {
 private:

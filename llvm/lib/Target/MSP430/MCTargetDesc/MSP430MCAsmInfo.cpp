@@ -32,6 +32,4 @@ MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT,
   UsesELFSectionDirectiveForBSS = true;
 
   SupportsDebugInformation = true;
-
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

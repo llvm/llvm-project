@@ -14,21 +14,21 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
-namespace {
-
 /// Calculate trip count for a loop: (ub - lb + step) / step
 /// If inclusiveUpperbound is false, subtracts 1 from ub first.
-static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
-                                Value step, bool inclusiveUpperbound) {
+Value acc::calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
+                              Value step, bool inclusiveUpperbound) {
   Type type = b.getIndexType();
 
   // Convert original loop arguments to index type
@@ -65,8 +65,8 @@ static void mapACCLoopIVsToSCFIVs(acc::LoopOp accLoop, ValueRange newIVs,
 /// Normalize IV uses after converting to normalized loop form.
 /// For normalized loops (lb=0, step=1), we need to denormalize the IV:
 /// original_iv = new_iv * orig_step + orig_lb
-static void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
-                            Value origStep) {
+void acc::normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
+                          Value origStep) {
   Type indexType = b.getIndexType();
   Value lb = getValueOrCreateCastToIndexLike(b, loc, indexType, origLB);
   Value step = getValueOrCreateCastToIndexLike(b, loc, indexType, origStep);
@@ -97,7 +97,14 @@ static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
   return ip;
 }
 
-} // namespace
+/// Copy the discardable LLVM loop annotation attribute from an acc.loop to the
+/// lowered SCF op so later SCF to CFG/LLVM lowering can emit !llvm.loop
+/// metadata.
+static void copyLoopAnnotationAttr(Operation *from, Operation *to) {
+  if (Attribute ann =
+          from->getDiscardableAttr(LLVM::getLoopAnnotationAttrName()))
+    to->setDiscardableAttr(LLVM::getLoopAnnotationAttrName(), ann);
+}
 
 namespace mlir {
 namespace acc {
@@ -121,8 +128,9 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
     for (auto [replacement, orig] :
          llvm::zip(yieldOp.getOperands(), resultsToReplace)) {
       replaceAllUsesInRegionWith(orig, replacement, *dest->getParent());
-      replacements.push_back(replacement);
     }
+    replacements.append(yieldOp.getOperands().begin(),
+                        yieldOp.getOperands().end());
     ip = std::prev(yieldOp->getIterator());
     yieldOp.erase();
   } else {
@@ -234,9 +242,20 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     scfIVs.push_back(forOp.getInductionVar());
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, rewriter, mapping);
 
-  // Clone the loop body into the innermost scf.for
-  cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
-                            rewriter.getInsertionPoint(), mapping, rewriter);
+  // Clone the loop body into the innermost scf.for. scf.for has a single-block
+  // region, so a multi-block body is wrapped in scf.execute_region, matching
+  // convertACCLoopToSCFParallel.
+  if (!loopOp.getRegion().hasOneBlock()) {
+    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
+        loopOp.getRegion(), mapping, loc, rewriter);
+    if (!exeRegion) {
+      rewriter.eraseOp(forOps.front());
+      return nullptr;
+    }
+  } else {
+    cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
+                              rewriter.getInsertionPoint(), mapping, rewriter);
+  }
 
   // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
   for (size_t idx = 0; idx < forOps.size(); ++idx) {
@@ -257,6 +276,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
       setCollapseCountAttr(forOps.front(), numCollapsed);
   }
 
+  copyLoopAnnotationAttr(loopOp, forOps.front());
   return forOps.front();
 }
 
@@ -320,6 +340,8 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
       normalizeIVUses(rewriter, loc, iv, loopOp.getLowerbound()[idx],
                       loopOp.getStep()[idx]);
 
+  setCollapseCountAttr(parallelOp, parallelOp.getNumLoops());
+  copyLoopAnnotationAttr(loopOp, parallelOp);
   return parallelOp;
 }
 
@@ -339,12 +361,14 @@ convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
 }
 
 void setCollapseCountAttr(Operation *op, uint64_t count) {
-  op->setAttr(getCollapseCountAttrName(),
-              IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
+  op->setDiscardableAttr(
+      getCollapseCountAttrName(),
+      IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
 }
 
 uint64_t getCollapseCount(Operation *op) {
-  if (auto attr = op->getAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
+  if (auto attr =
+          op->getDiscardableAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
     return attr.getValue().getZExtValue();
   return 1;
 }

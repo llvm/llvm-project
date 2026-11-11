@@ -18,9 +18,11 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CachePruning.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <string>
 
 namespace lld::coff {
@@ -145,6 +147,7 @@ struct Configuration {
   bool printSearchPaths = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::cl::LibraryOptionsContext libraryOptions;
   std::vector<std::string> natvisFiles;
   llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;
@@ -357,6 +360,11 @@ struct Configuration {
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
   BuildIDHash buildIDHash = BuildIDHash::None;
+  llvm::StringRef optRemarksFilename;
+  llvm::StringRef optRemarksPasses;
+  llvm::StringRef optRemarksFormat;
+  bool optRemarksWithHotness = false;
+  std::optional<uint64_t> optRemarksHotnessThreshold = 0;
 };
 
 struct COFFSyncStream : SyncStream {

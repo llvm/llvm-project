@@ -2,7 +2,6 @@
 Test the lldb command line completion mechanism.
 """
 
-
 import os
 from multiprocessing import Process
 import lldb
@@ -12,7 +11,7 @@ from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # driver cannot launch a Wasm inferior
+@requireNotWasm("driver cannot launch a Wasm inferior")
 class CommandLineCompletionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -254,9 +253,13 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("log enable lldb expr -f " + src_dir, ["main.cpp"])
 
     def test_log_dir(self):
-        # Complete our source directory.
-        src_dir = os.path.dirname(os.path.realpath(__file__))
-        self.complete_from_to("log enable lldb expr -f " + src_dir, [src_dir + os.sep])
+        # Complete a directory we create ourselves. Don't use the directory of
+        # this file: it may not be writable in all environments.
+        test_dir = os.path.realpath(self.getBuildArtifact("log_dir"))
+        os.makedirs(test_dir, exist_ok=True)
+        self.complete_from_to(
+            "log enable lldb expr -f " + test_dir, [test_dir + os.sep]
+        )
 
     # <rdar://problem/11052829>
     def test_infinite_loop_while_completing(self):
@@ -943,7 +946,9 @@ class CommandLineCompletionTestCase(TestBase):
         self.build()
         error = lldb.SBError()
         # Create a target, but don't load dependent modules
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"), None, None, False, error)
+        target = self.dbg.CreateTarget(
+            self.getBuildArtifact("a.out"), None, None, False, error
+        )
         self.assertSuccess(error)
         self.registerSharedLibrariesWithTarget(target, ["shared"])
 

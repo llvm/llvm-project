@@ -46,8 +46,8 @@ func.func @test_alloc_tensor_op(%t: tensor<?x5xf32>, %sz: index)
   %c100 = arith.constant 100 : index
   // CHECK: bufferization.alloc_tensor() size_hint=
   %6 = bufferization.alloc_tensor() size_hint=%c100 : tensor<100x100xf64, #CSR>
-  // CHECK: bufferization.alloc_tensor(%{{.+}}) {memory_space = "foo"} : tensor<?xf32>
-  %7 = bufferization.alloc_tensor(%sz) {memory_space = "foo"} : tensor<?xf32>
+  // CHECK: bufferization.alloc_tensor(%{{.+}}) <{memory_space = "foo"}> {escape = true} : tensor<?xf32>
+  %7 = bufferization.alloc_tensor(%sz) <{memory_space = "foo"}> {escape = true} : tensor<?xf32>
   return %1 : tensor<?x5xf32>
 }
 
@@ -119,4 +119,16 @@ func.func @test_custom_builtin_custom_type_conversion(%t: !test.test_tensor<[42]
 
   // CHECK: return %[[tensor]]
   return %tensor : !test.test_tensor<[42], f32>
+}
+
+// CHECK-LABEL: func @test_unshaped_type_conversion
+func.func @test_unshaped_type_conversion(%t: !test.test_unshaped<f32>)
+    -> !test.test_unshaped<f32> {
+  // CHECK: bufferization.to_buffer %{{.*}} : !test.test_unshaped<f32> to memref<?xf32>
+  %buffer = bufferization.to_buffer %t
+    : !test.test_unshaped<f32> to memref<?xf32>
+  // CHECK: bufferization.to_tensor %{{.*}} : memref<?xf32> to !test.test_unshaped<f32>
+  %tensor = bufferization.to_tensor %buffer
+    : memref<?xf32> to !test.test_unshaped<f32>
+  return %tensor : !test.test_unshaped<f32>
 }

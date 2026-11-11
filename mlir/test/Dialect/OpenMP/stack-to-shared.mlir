@@ -25,11 +25,11 @@ omp.private {type = firstprivate} @firstprivatizer_f32 : !llvm.ptr copy {
   omp.yield(%arg0 : !llvm.ptr)
 }
 
-llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>}
+llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>}
 
 // CHECK-LABEL: llvm.func @device_func(
 // CHECK-SAME:  %[[N:.*]]: i64, %[[COND:.*]]: i1)
-llvm.func @device_func(%arg0: i64, %cond: i1) attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>} {
+llvm.func @device_func(%arg0: i64, %cond: i1) attributes {omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = to>} {
   // CHECK: %[[ALLOC0:.*]] = omp.alloc_shared_mem %[[N]] x i64 : (i64) -> !llvm.ptr
   %0 = llvm.alloca %arg0 x i64 : (i64) -> !llvm.ptr
   // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem %[[N]] x f32 : (i64) align(128) -> !llvm.ptr

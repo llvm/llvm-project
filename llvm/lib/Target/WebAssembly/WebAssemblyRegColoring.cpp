@@ -18,10 +18,15 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -29,10 +34,10 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-reg-coloring"
 
 namespace {
-class WebAssemblyRegColoring final : public MachineFunctionPass {
+class WebAssemblyRegColoringLegacy final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyRegColoring() : MachineFunctionPass(ID) {}
+  WebAssemblyRegColoringLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Register Coloring";
@@ -42,23 +47,19 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
 };
 } // end anonymous namespace
 
-char WebAssemblyRegColoring::ID = 0;
-INITIALIZE_PASS(WebAssemblyRegColoring, DEBUG_TYPE,
+char WebAssemblyRegColoringLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyRegColoringLegacy, DEBUG_TYPE,
                 "Minimize number of registers used", false, false)
 
-FunctionPass *llvm::createWebAssemblyRegColoring() {
-  return new WebAssemblyRegColoring();
+FunctionPass *llvm::createWebAssemblyRegColoringLegacyPass() {
+  return new WebAssemblyRegColoringLegacy();
 }
 
 // Compute the total spill weight for VReg.
@@ -217,23 +218,14 @@ static void undefInvalidDbgValues(
   }
 }
 
-bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
+static bool regColoring(MachineFunction &MF, LiveIntervals *Liveness,
+                        const MachineBlockFrequencyInfo *MBFI) {
   LLVM_DEBUG({
     dbgs() << "********** Register Coloring **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
 
-  // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
-  // registers could be modified before the longjmp is executed, resulting in
-  // the wrong value being used afterwards.
-  // TODO: Does WebAssembly need to care about setjmp for register coloring?
-  if (MF.exposesReturnsTwice())
-    return false;
-
   MachineRegisterInfo *MRI = &MF.getRegInfo();
-  LiveIntervals *Liveness = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  const MachineBlockFrequencyInfo *MBFI =
-      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
   // We don't preserve SSA form.
@@ -278,6 +270,11 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     return *LHS < *RHS;
   });
 
+  // ABI contract: the async context must always be available in local 0.
+  // Another value in the same register would make WebAssemblyExplicitLocals
+  // copy the argument to another local.
+  Register SwiftAsyncReg = WebAssembly::getSwiftAsyncArgReg(MF);
+
   LLVM_DEBUG(dbgs() << "Coloring register intervals:\n");
   SmallVector<unsigned, 16> SlotMapping(SortedIntervals.size(), -1u);
   SmallVector<SmallVector<LiveInterval *, 4>, 16> Assignments(
@@ -291,9 +288,10 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     const TargetRegisterClass *RC = MRI->getRegClass(Old);
 
     // Check if it's possible to reuse any of the used colors.
-    if (!MRI->isLiveIn(Old))
+    if (!MRI->isLiveIn(Old) && Old != SwiftAsyncReg)
       for (unsigned C : UsedColors.set_bits()) {
-        if (MRI->getRegClass(SortedIntervals[C]->reg()) != RC)
+        if (MRI->getRegClass(SortedIntervals[C]->reg()) != RC ||
+            SortedIntervals[C]->reg() == SwiftAsyncReg)
           continue;
         for (LiveInterval *OtherLI : Assignments[C])
           if (!OtherLI->empty() && OtherLI->overlaps(*LI))
@@ -328,4 +326,37 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
       MRI->replaceRegWith(Old, New);
   }
   return true;
+}
+
+bool WebAssemblyRegColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
+  // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
+  // registers could be modified before the longjmp is executed, resulting in
+  // the wrong value being used afterwards.
+  // TODO: Does WebAssembly need to care about setjmp for register coloring?
+  if (MF.exposesReturnsTwice())
+    return false;
+
+  LiveIntervals *Liveness = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  const MachineBlockFrequencyInfo *MBFI =
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  return regColoring(MF, Liveness, MBFI);
+}
+
+PreservedAnalyses
+WebAssemblyRegColoringPass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  // If there are calls to setjmp or sigsetjmp, don't perform coloring. Virtual
+  // registers could be modified before the longjmp is executed, resulting in
+  // the wrong value being used afterwards.
+  // TODO: Does WebAssembly need to care about setjmp for register coloring?
+  if (MF.exposesReturnsTwice())
+    return PreservedAnalyses::all();
+
+  LiveIntervals *Liveness = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  const MachineBlockFrequencyInfo *MBFI =
+      &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  return regColoring(MF, Liveness, MBFI)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

@@ -272,12 +272,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 }
 
 Register XtensaTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Xtensa::A2;
 }
 
 Register XtensaTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Xtensa::A3;
 }
 
@@ -287,9 +287,10 @@ bool XtensaTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool XtensaTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return false;
+TargetLowering::FPImmAction
+XtensaTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//

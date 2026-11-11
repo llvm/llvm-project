@@ -20,9 +20,18 @@
 
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
+
+using namespace llvm;
 
 namespace llvm {
 
@@ -197,22 +206,11 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   if (FrameSize) {
-    unsigned Opcode;
-
-    // Select the optimal opcode depending on how big it is.
-    if (isUInt<6>(FrameSize) && STI.hasADDSUBIW()) {
-      Opcode = AVR::ADIWRdK;
-    } else {
-      Opcode = AVR::SUBIWRdK;
-      FrameSize = -FrameSize;
-    }
-
     // Restore the frame pointer by doing FP += <size>.
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(Opcode), AVR::R29R28)
-                           .addReg(AVR::R29R28, RegState::Kill)
-                           .addImm(FrameSize);
-    // The SREG implicit def is dead.
-    MI->getOperand(3).setIsDead();
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::ADIWRdKP), AVR::R29R28)
+        .addReg(AVR::R29R28, RegState::Kill)
+        .addImm(FrameSize)
+        .setOperandDead(3); // implicit-def $sreg
   }
 
   // Write back R29R28 to SP and temporarily disable interrupts.
@@ -222,21 +220,59 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   restoreStatusRegister(MF, MBB);
 }
 
+StackOffset AVRFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
+  int64_t Offset;
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  switch (MFI.getStackID(FI)) {
+  case TargetStackID::Default:
+    Offset = MFI.getObjectOffset(FI) + MFI.getOffsetAdjustment() +
+             MFI.getStackSize() - getOffsetOfLocalArea() + 1;
+
+    assert(Offset > 0);
+    break;
+
+  case TargetStackID::AvrAlign:
+    Offset = MFI.getObjectOffset(FI);
+    assert(Offset >= 0);
+    break;
+
+  default:
+    llvm_unreachable("Unsupported stack!");
+  }
+
+  // Frame indices are addressed relative to the frame register (see
+  // AVRRegisterInfo::eliminateFrameIndex); callers such as the DWARF
+  // debug info emitter rely on it being reported back here.
+  FrameReg = MF.getSubtarget().getRegisterInfo()->getFrameRegister(MF);
+
+  return StackOffset::getFixed(Offset);
+}
+
 // Return true if the specified function should have a dedicated frame
 // pointer register. This is true if the function meets any of the following
 // conditions:
 //  - a register has been spilled
 //  - has allocas
 //  - input arguments are passed using the stack
+//  - has variable sized objects
+//  - the frame address is taken (llvm.frameaddress)
+//  - the return address is taken (llvm.returnaddress)
 //
 // Notice that strictly this is not a frame pointer because it contains SP after
 // frame allocation instead of having the original SP in function entry.
 bool AVRFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const AVRMachineFunctionInfo *FuncInfo = MF.getInfo<AVRMachineFunctionInfo>();
 
+  // Note that reading the return address requires a frame index, and that frame
+  // indexes are always referenced through Y (see
+  // AVRRegisterInfo::eliminateFrameIndex).
   return (FuncInfo->getHasSpills() || FuncInfo->getHasAllocas() ||
-          FuncInfo->getHasStackArgs() ||
-          MF.getFrameInfo().hasVarSizedObjects());
+          FuncInfo->getHasStackArgs() || MFI.hasVarSizedObjects() ||
+          MFI.isFrameAddressTaken() || MFI.isReturnAddressTaken());
 }
 
 bool AVRFrameLowering::spillCalleeSavedRegisters(
@@ -389,23 +425,12 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
     // with a few pop instructions instead of the 8-9 instructions now
     // required.
 
-    // Select the best opcode to adjust SP based on the offset size.
-    unsigned AddOpcode;
-
-    if (isUInt<6>(Amount) && STI.hasADDSUBIW()) {
-      AddOpcode = AVR::ADIWRdK;
-    } else {
-      AddOpcode = AVR::SUBIWRdK;
-      Amount = -Amount;
-    }
-
-    // Build the instruction sequence.
     BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
 
-    MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AddOpcode), AVR::R31R30)
-                            .addReg(AVR::R31R30, RegState::Kill)
-                            .addImm(Amount);
-    New->getOperand(3).setIsDead();
+    BuildMI(MBB, MI, DL, TII.get(AVR::ADIWRdKP), AVR::R31R30)
+        .addReg(AVR::R31R30, RegState::Kill)
+        .addImm(Amount)
+        .setOperandDead(3); // implicit-def $sreg
 
     BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
         .addReg(AVR::R31R30, RegState::Kill);
@@ -425,73 +450,96 @@ void AVRFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(AVR::R28);
   }
 }
+
+} // end of namespace llvm
+
+namespace {
 /// The frame analyzer pass.
 ///
 /// Scans the function for allocas and used arguments
 /// that are passed through the stack.
-struct AVRFrameAnalyzer : public MachineFunctionPass {
+struct AVRFrameAnalyzerLegacy : public MachineFunctionPass {
   static char ID;
-  AVRFrameAnalyzer() : MachineFunctionPass(ID) {}
+  AVRFrameAnalyzerLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-    // If there are no fixed frame indexes during this stage it means there
-    // are allocas present in the function.
-    if (MFI.getNumObjects() != MFI.getNumFixedObjects()) {
-      // Check for the type of allocas present in the function. We only care
-      // about fixed size allocas so do not give false positives if only
-      // variable sized allocas are present.
-      for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
-        // Variable sized objects have size 0.
-        if (MFI.getObjectSize(i)) {
-          AFI->setHasAllocas(true);
-          break;
-        }
+  StringRef getPassName() const override { return "AVR Frame Analyzer"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+
+} // namespace
+
+char AVRFrameAnalyzerLegacy::ID = 0;
+
+/// Creates instance of the frame analyzer pass.
+FunctionPass *llvm::createAVRFrameAnalyzerLegacyPass() {
+  return new AVRFrameAnalyzerLegacy();
+}
+
+static bool runFrameAnalyzer(MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  // If there are no fixed frame indexes during this stage it means there
+  // are allocas present in the function.
+  if (MFI.getNumObjects() != MFI.getNumFixedObjects()) {
+    // Check for the type of allocas present in the function. We only care
+    // about fixed size allocas so do not give false positives if only
+    // variable sized allocas are present.
+    for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
+      if (!MFI.isVariableSizedObjectIndex(i) && !MFI.isDeadObjectIndex(i)) {
+        AFI->setHasAllocas(true);
+        break;
       }
     }
+  }
 
-    // If there are fixed frame indexes present, scan the function to see if
-    // they are really being used.
-    if (MFI.getNumFixedObjects() == 0) {
-      return false;
-    }
-
-    // Ok fixed frame indexes present, now scan the function to see if they
-    // are really being used, otherwise we can ignore them.
-    for (const MachineBasicBlock &BB : MF) {
-      for (const MachineInstr &MI : BB) {
-        int Opcode = MI.getOpcode();
-
-        if ((Opcode != AVR::LDDRdPtrQ) && (Opcode != AVR::LDDWRdPtrQ) &&
-            (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr) &&
-            (Opcode != AVR::FRMIDX)) {
-          continue;
-        }
-
-        for (const MachineOperand &MO : MI.operands()) {
-          if (!MO.isFI()) {
-            continue;
-          }
-
-          if (MFI.isFixedObjectIndex(MO.getIndex())) {
-            AFI->setHasStackArgs(true);
-            return false;
-          }
-        }
-      }
-    }
-
+  // If there are fixed frame indexes present, scan the function to see if
+  // they are really being used.
+  if (MFI.getNumFixedObjects() == 0) {
     return false;
   }
 
-  StringRef getPassName() const override { return "AVR Frame Analyzer"; }
-};
+  // Ok fixed frame indexes present, now scan the function to see if they
+  // are really being used, otherwise we can ignore them.
+  for (const MachineBasicBlock &BB : MF) {
+    for (const MachineInstr &MI : BB) {
+      int Opcode = MI.getOpcode();
 
-char AVRFrameAnalyzer::ID = 0;
+      if ((Opcode != AVR::LDDRdPtrQ) && (Opcode != AVR::LDDWRdPtrQ) &&
+          (Opcode != AVR::STDPtrQRr) && (Opcode != AVR::STDWPtrQRr) &&
+          (Opcode != AVR::FRMIDX)) {
+        continue;
+      }
 
-/// Creates instance of the frame analyzer pass.
-FunctionPass *createAVRFrameAnalyzerPass() { return new AVRFrameAnalyzer(); }
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI()) {
+          continue;
+        }
 
-} // end of namespace llvm
+        if (MFI.isFixedObjectIndex(MO.getIndex())) {
+          AFI->setHasStackArgs(true);
+          return false;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool AVRFrameAnalyzerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runFrameAnalyzer(MF);
+}
+
+PreservedAnalyses
+AVRFrameAnalyzerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  runFrameAnalyzer(MF);
+  return PreservedAnalyses::all();
+}

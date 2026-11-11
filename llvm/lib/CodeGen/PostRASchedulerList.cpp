@@ -80,12 +80,14 @@ class PostRAScheduler {
   MachineLoopInfo *MLI = nullptr;
   AliasAnalysis *AA = nullptr;
   const TargetMachine *TM = nullptr;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RegClassInfo = nullptr;
 
 public:
   PostRAScheduler(MachineFunction &MF, MachineLoopInfo *MLI, AliasAnalysis *AA,
-                  const TargetMachine *TM)
-      : TII(MF.getSubtarget().getInstrInfo()), MLI(MLI), AA(AA), TM(TM) {}
+                  const TargetMachine *TM,
+                  const RegisterClassInfo *RegClassInfo)
+      : TII(MF.getSubtarget().getInstrInfo()), MLI(MLI), AA(AA), TM(TM),
+        RegClassInfo(RegClassInfo) {}
   bool run(MachineFunction &MF);
 };
 
@@ -98,10 +100,8 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<TargetPassConfig>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -201,8 +201,11 @@ private:
 
 char &llvm::PostRASchedulerID = PostRASchedulerLegacy::ID;
 
-INITIALIZE_PASS(PostRASchedulerLegacy, DEBUG_TYPE,
-                "Post RA top-down list latency scheduler", false, false)
+INITIALIZE_PASS_BEGIN(PostRASchedulerLegacy, DEBUG_TYPE,
+                      "Post RA top-down list latency scheduler", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(PostRASchedulerLegacy, DEBUG_TYPE,
+                    "Post RA top-down list latency scheduler", false, false)
 
 SchedulePostRATDList::SchedulePostRATDList(
     MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
@@ -291,11 +294,10 @@ bool PostRAScheduler::run(MachineFunction &MF) {
   }
   SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
   Subtarget.getCriticalPathRCs(CriticalPathRCs);
-  RegClassInfo.runOnMachineFunction(MF);
 
   LLVM_DEBUG(dbgs() << "PostRAScheduler\n");
 
-  SchedulePostRATDList Scheduler(MF, *MLI, AA, RegClassInfo, AntiDepMode,
+  SchedulePostRATDList Scheduler(MF, *MLI, AA, *RegClassInfo, AntiDepMode,
                                  CriticalPathRCs);
 
   // Loop over all of the basic blocks
@@ -365,7 +367,9 @@ bool PostRASchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   const TargetMachine *TM =
       &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  PostRAScheduler Impl(MF, MLI, AA, TM);
+  RegisterClassInfo *RegClassInfo =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  PostRAScheduler Impl(MF, MLI, AA, TM, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -378,15 +382,15 @@ PostRASchedulerPass::run(MachineFunction &MF,
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   AliasAnalysis *AA = &FAM.getResult<AAManager>(MF.getFunction());
-  PostRAScheduler Impl(MF, MLI, AA, TM);
+  const RegisterClassInfo &RegClassInfo =
+      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  PostRAScheduler Impl(MF, MLI, AA, TM, &RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
 

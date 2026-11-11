@@ -32,8 +32,7 @@ define <1 x i32> @smulo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    imull %esi, %edi
-; CHECK-NEXT:    seto %al
-; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    retq
   %t = call {<1 x i32>, <1 x i1>} @llvm.smul.with.overflow.v1i32(<1 x i32> %a0, <1 x i32> %a1)
@@ -2804,13 +2803,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    imulq %rdx, %rsi
 ; SSE2-NEXT:    movq $-1, %rdx
 ; SSE2-NEXT:    movl $0, %r9d
-; SSE2-NEXT:    cmovoq %rdx, %r9
+; SSE2-NEXT:    cmovbq %rdx, %r9
 ; SSE2-NEXT:    movq %rsi, %xmm1
 ; SSE2-NEXT:    imulq %rax, %rcx
 ; SSE2-NEXT:    movq %rcx, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-NEXT:    movq %r9, %xmm0
-; SSE2-NEXT:    cmovoq %rdx, %r8
+; SSE2-NEXT:    cmovbq %rdx, %r8
 ; SSE2-NEXT:    movq %r8, %xmm2
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -2829,13 +2828,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    imulq %rdx, %rsi
 ; SSSE3-NEXT:    movq $-1, %rdx
 ; SSSE3-NEXT:    movl $0, %r9d
-; SSSE3-NEXT:    cmovoq %rdx, %r9
+; SSSE3-NEXT:    cmovbq %rdx, %r9
 ; SSSE3-NEXT:    movq %rsi, %xmm1
 ; SSSE3-NEXT:    imulq %rax, %rcx
 ; SSSE3-NEXT:    movq %rcx, %xmm0
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSSE3-NEXT:    movq %r9, %xmm0
-; SSSE3-NEXT:    cmovoq %rdx, %r8
+; SSSE3-NEXT:    cmovbq %rdx, %r8
 ; SSSE3-NEXT:    movq %r8, %xmm2
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -2852,13 +2851,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    imulq %rdx, %rsi
 ; SSE41-NEXT:    movq $-1, %rdx
 ; SSE41-NEXT:    movl $0, %r9d
-; SSE41-NEXT:    cmovoq %rdx, %r9
+; SSE41-NEXT:    cmovbq %rdx, %r9
 ; SSE41-NEXT:    movq %rsi, %xmm0
 ; SSE41-NEXT:    imulq %rax, %rcx
 ; SSE41-NEXT:    movq %rcx, %xmm1
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE41-NEXT:    movq %r9, %xmm0
-; SSE41-NEXT:    cmovoq %rdx, %r8
+; SSE41-NEXT:    cmovbq %rdx, %r8
 ; SSE41-NEXT:    movq %r8, %xmm2
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
@@ -2875,13 +2874,13 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    imulq %rdx, %rsi
 ; AVX-NEXT:    movq $-1, %rdx
 ; AVX-NEXT:    movl $0, %r9d
-; AVX-NEXT:    cmovoq %rdx, %r9
+; AVX-NEXT:    cmovbq %rdx, %r9
 ; AVX-NEXT:    vmovq %rsi, %xmm0
 ; AVX-NEXT:    imulq %rax, %rcx
 ; AVX-NEXT:    vmovq %rcx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; AVX-NEXT:    vmovq %r9, %xmm0
-; AVX-NEXT:    cmovoq %rdx, %r8
+; AVX-NEXT:    cmovbq %rdx, %r8
 ; AVX-NEXT:    vmovq %r8, %xmm2
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -2895,12 +2894,12 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vmovq %xmm1, %rdx
 ; AVX512-NEXT:    vmovq %xmm0, %rsi
 ; AVX512-NEXT:    imulq %rdx, %rsi
-; AVX512-NEXT:    seto %dl
+; AVX512-NEXT:    setb %dl
 ; AVX512-NEXT:    imulq %rax, %rcx
 ; AVX512-NEXT:    vmovq %rcx, %xmm0
 ; AVX512-NEXT:    vmovq %rsi, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; AVX512-NEXT:    seto %al
+; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vmovd %edx, %xmm0
 ; AVX512-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero

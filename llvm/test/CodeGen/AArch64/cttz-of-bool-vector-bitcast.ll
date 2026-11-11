@@ -880,7 +880,6 @@ define i2 @cttz_v2i8(<2 x i8> %v) {
 ; CHECK-LE-LABEL: cttz_v2i8:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    shl v0.2s, v0.2s, #24
-; CHECK-LE-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-LE-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-LE-NEXT:    fmov x8, d0
 ; CHECK-LE-NEXT:    rbit x8, x8
@@ -911,7 +910,6 @@ define i4 @cttz_v4i8(<4 x i8> %v) {
 ; CHECK-LE-LABEL: cttz_v4i8:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-LE-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-LE-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-LE-NEXT:    fmov x8, d0
 ; CHECK-LE-NEXT:    rbit x8, x8

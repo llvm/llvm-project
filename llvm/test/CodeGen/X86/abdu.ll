@@ -949,6 +949,69 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
   ret i128 %sub
 }
 
+define i32 @abs_sub_abdu_sign_check(i32 %p0) {
+; X86-LABEL: abs_sub_abdu_sign_check:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1000000000, %eax # imm = 0x3B9ACA00
+; X86-NEXT:    movl $-2039640824, %ecx # imm = 0x866D8D08
+; X86-NEXT:    cmovel %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abs_sub_abdu_sign_check:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $1000000000, %eax # imm = 0x3B9ACA00
+; X64-NEXT:    movl $-2039640824, %ecx # imm = 0x866D8D08
+; X64-NEXT:    cmovel %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp eq i32 %p0, 0
+  %v = select i1 %cmp, i32 0, i32 1255326472
+  %s = sub i32 %v, -1000000000
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
+  ret i32 %a
+}
+
+; l < 2^63 <= r, so abdu(l, r) == r - l: should not become abs(sub).
+define i64 @abd_select_known_order_i64(i64 %a, i64 %b) nounwind {
+; X86-LABEL: abd_select_known_order_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    shrdl $1, %esi, %ecx
+; X86-NEXT:    shrl %esi
+; X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: abd_select_known_order_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    shrq %rdi
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    orq %rsi, %rax
+; X64-NEXT:    subq %rdi, %rax
+; X64-NEXT:    retq
+  %l = lshr i64 %a, 1
+  %r = or i64 %b, -9223372036854775808
+  %c = icmp ugt i64 %l, %r
+  %s1 = sub i64 %l, %r
+  %s2 = sub i64 %r, %l
+  %res = select i1 %c, i64 %s1, i64 %s2
+  ret i64 %res
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)

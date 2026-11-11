@@ -1,0 +1,45 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A call to a BIND(C) procedure carries the CUDA data attribute of its dummy
+! arguments, whether the procedure is called directly or through a procedure
+! pointer. A call to a non-BIND(C) procedure does not.
+
+module m
+  interface
+    subroutine claunch(x, inc) bind(c)
+      real, device :: x(:)
+      real, value :: inc
+    end subroutine
+    subroutine chost(x) bind(c)
+      real :: x(:)
+    end subroutine
+  end interface
+  abstract interface
+    subroutine iface(x, inc) bind(c)
+      real, device :: x(:)
+      real, value :: inc
+    end subroutine
+  end interface
+contains
+  subroutine fsub(x)
+    real, device :: x(:)
+  end subroutine
+end module
+
+subroutine test(b, h)
+  use m
+  real, device :: b(:)
+  real :: h(:)
+  procedure(iface), pointer :: pp
+  call claunch(b, 2.0)
+  pp => claunch
+  call pp(b, 2.0)
+  call chost(h)
+  call fsub(b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest(
+! CHECK: fir.call @claunch(%{{.*}}, %{{.*}}) proc_attrs<bind_c> {{.*}}: (!fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>}, f32) -> ()
+! CHECK: fir.call %{{.*}}(%{{.*}}, %{{.*}}) proc_attrs<bind_c> {{.*}}: (!fir.box<!fir.array<?xf32>> {cuf.data_attr = #cuf.cuda<device>}, f32) -> ()
+! CHECK: fir.call @chost(%{{.*}}) proc_attrs<bind_c> {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK: fir.call @_QMmPfsub(%{{.*}}) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()

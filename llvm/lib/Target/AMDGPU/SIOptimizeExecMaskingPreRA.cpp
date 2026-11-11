@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -80,10 +79,6 @@ INITIALIZE_PASS_END(SIOptimizeExecMaskingPreRALegacy, DEBUG_TYPE,
 char SIOptimizeExecMaskingPreRALegacy::ID = 0;
 
 char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
-
-FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
-  return new SIOptimizeExecMaskingPreRALegacy();
-}
 
 // See if there is a def between \p AndIdx and \p SelIdx that needs to live
 // beyond \p AndIdx.
@@ -455,9 +450,13 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     //    %1:sreg_64 = S_AND_B64 %0:sreg_64, %2:sreg_64
     // =>
     //    %1 = S_AND_B64 $exec, %2:sreg_64
-    unsigned ScanThreshold = 10;
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E
-         && ScanThreshold--; ++I) {
+    constexpr unsigned ScanThreshold = 10;
+    unsigned ScanCount = 0;
+    for (auto I = MBB.rbegin(), E = MBB.rend();
+         I != E && ScanCount < ScanThreshold; ++I) {
+      if (I->isMetaInstruction())
+        continue;
+      ++ScanCount;
       // Continue scanning if this is not a full exec copy
       if (!(I->isFullCopy() && I->getOperand(1).getReg() == Register(ExecReg)))
         continue;

@@ -11,6 +11,10 @@
 # RUN: llvm-readelf -S %t/bin3 | FileCheck --check-prefixes=UNNECESSARY-GOT %s
 # RUN: ld.lld -T %t/lds4 %t/a.o -o %t/bin4
 # RUN: llvm-objdump -d %t/bin4 | FileCheck --check-prefix=DISASM4 %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/b.s -o %t/b.o
+# RUN: ld.lld -T %t/lds1 %t/b.o -o %t/bin5
+# RUN: llvm-objdump -d %t/bin5 | FileCheck --check-prefix=DISASM5 %s
+# RUN: llvm-readelf -S %t/bin5 | FileCheck --check-prefixes=GOT5 %s
 
 # DISASM:      <_foo>:
 # DISASM-NEXT: movl    0x1ffffa(%rip), %eax
@@ -27,10 +31,14 @@
 # DISASM4-NEXT: addq    0x1ff3(%rip), %rax
 # DISASM4-NEXT: addq    $0x7fffffff, %rax
 
+# DISASM5:      <_start>:
+# DISASM5-NEXT: addq    0xffff9(%rip), %rax
+
 # In our implementation, .got is retained even if all GOT-generating relocations are optimized.
 # Make sure .got still exists with the right size.
 # UNNECESSARY-GOT: .got PROGBITS 0000000000300000 101020 000000 00 WA 0 0 8
 #             GOT: .got PROGBITS 0000000000300000 102000 000018 00 WA 0 0 8
+#            GOT5: .got PROGBITS 0000000000300000 002000 000008 00 WA 0 0 8
 
 #--- a.s
 .section .text.foo,"ax"
@@ -91,3 +99,11 @@ SECTIONS {
   foo 0x7fffffff : { *(foo) }
   data 0x80001000 : { *(data) }
 }
+
+#--- b.s
+.globl _start
+_start:
+  addq __stop_data@GOTPCREL(%rip), %rax  # out of range
+
+.section data,"aw",@progbits
+.space 13

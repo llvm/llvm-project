@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=armv4t-unknown-unknown -start-after=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+# RUN: llc -mtriple=armv4t-unknown-unknown -start-after=live-debug-values -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 # This reproducer is based on the following C code:
 #
@@ -12,7 +12,7 @@
 #
 # and was generated using the following commands:
 # $ clang -O1 -g --target=armv4t -S -emit-llvm
-# $ llc -O1 -stop-after=livedebugvalues
+# $ llc -O1 -stop-after=live-debug-values
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

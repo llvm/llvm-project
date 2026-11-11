@@ -1,22 +1,24 @@
 #include "../CodeGenCUDA/Inputs/cuda.h"
 
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu gfx1100 -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu11.00-amd-amdhsa -x hip -std=c++11 \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 // CIR-LABEL: @_Z11test_logbfff
 // CIR: cir.call_llvm_intrinsic "frexp" {{.*}} : (!cir.float) -> {{.*}}
 // LLVM: define{{.*}} float @_Z11test_logbfff(
 // LLVM: call { float, i32 } @llvm.frexp.f32.i32(float {{.*}})
+// LLVM: add nsw i32 %{{.*}}, -1
+// LLVM: fcmp{{.*}} one float %{{.*}}, +inf
 __device__ float test_logbff(float a) {
   return __builtin_logbf(a);
 }
@@ -25,6 +27,8 @@ __device__ float test_logbff(float a) {
 // CIR: cir.call_llvm_intrinsic "frexp" {{.*}} : (!cir.double) -> {{.*}}
 // LLVM: define{{.*}} double @_Z11test_logbddd(
 // LLVM: call { double, i32 } @llvm.frexp.f64.i32(double {{.*}})
+// LLVM: add nsw i32 %{{.*}}, -1
+// LLVM: fcmp{{.*}} one double %{{.*}}, +inf
 __device__ double test_logbdd(double a) {
   return __builtin_logb(a);
 }

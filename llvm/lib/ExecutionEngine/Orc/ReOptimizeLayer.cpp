@@ -1,5 +1,8 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 using namespace llvm;
 using namespace orc;
@@ -27,10 +30,10 @@ void ReOptimizeLayer::ReOptMaterializationUnitState::reoptimizeFailed() {
 }
 
 static void orc_rt_lite_reoptimize_helper(
-    shared::CWrapperFunctionBuffer (*JITDispatch)(void *Ctx, void *Tag,
+    shared::CWrapperFunctionBuffer (*JITDispatch)(void *Ctx, const void *Tag,
                                                   const char *Data,
                                                   size_t Size),
-    void *JITDispatchCtx, void *Tag, uint64_t MUID, uint32_t CurVersion) {
+    void *JITDispatchCtx, const void *Tag, uint64_t MUID, uint32_t CurVersion) {
   // Serialize the arguments into a WrapperFunctionBuffer and call dispatch.
   using SPSArgs = shared::SPSArgList<uint64_t, uint32_t>;
   auto ArgBytes =
@@ -55,8 +58,9 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
   auto Ctx = std::make_unique<LLVMContext>();
   auto Mod = std::make_unique<Module>("orc-rt-lite-reoptimize.ll", *Ctx);
   Mod->setDataLayout(DL);
+  Mod->setTargetTriple(ES.getTargetTriple());
 
-  IRBuilder<> Builder(*Ctx);
+  IRBuilder<> Builder(*Mod);
 
   // Create basic types portably
   Type *VoidTy = Type::getVoidTy(*Ctx);
@@ -93,17 +97,18 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
   BasicBlock *Entry = BasicBlock::Create(*Ctx, "entry", ReOptimizeFn);
   Builder.SetInsertPoint(Entry);
 
-  // Create absolute address constants
-  auto &JDI = PlatformJD.getExecutionSession()
-                  .getExecutorProcessControl()
-                  .getJITDispatchInfo();
+  ExecutorAddr JITDispatchSym, JITDispatchCtxSym;
+  if (auto Err =
+          lookupAndApply(ES.getBootstrapJITDylib(),
+                         {recordAddr(rt::DispatchName, &JITDispatchSym),
+                          recordAddr(rt::DispatchCtxName, &JITDispatchCtxSym)}))
+    return Err;
 
   Type *IntPtrTy = DL.getIntPtrType(*Ctx);
   Constant *JITDispatchPtr = ConstantExpr::getIntToPtr(
-      ConstantInt::get(IntPtrTy, JDI.JITDispatchFunction.getValue()),
-      VoidPtrTy);
+      ConstantInt::get(IntPtrTy, JITDispatchSym.getValue()), VoidPtrTy);
   Constant *JITDispatchCtxPtr = ConstantExpr::getIntToPtr(
-      ConstantInt::get(IntPtrTy, JDI.JITDispatchContext.getValue()), VoidPtrTy);
+      ConstantInt::get(IntPtrTy, JITDispatchCtxSym.getValue()), VoidPtrTy);
   Constant *HelperFnAddr = ConstantExpr::getIntToPtr(
       ConstantInt::get(IntPtrTy, reinterpret_cast<uintptr_t>(
                                      &orc_rt_lite_reoptimize_helper)),
@@ -125,12 +130,11 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
 }
 
 Error ReOptimizeLayer::registerRuntimeFunctions(JITDylib &PlatformJD) {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
   using ReoptimizeSPSSig = shared::SPSError(uint64_t, uint32_t);
-  WFs[Mangle("__orc_rt_reoptimize_tag")] =
-      ES.wrapAsyncWithSPS<ReoptimizeSPSSig>(this,
-                                            &ReOptimizeLayer::rt_reoptimize);
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD, bindCallControllerHandlerSPS<ReoptimizeSPSSig>(
+                      SymbolNameSpec::c("__orc_rt_reoptimize_tag"), this,
+                      &ReOptimizeLayer::rt_reoptimize));
 }
 
 void ReOptimizeLayer::emit(std::unique_ptr<MaterializationResponsibility> R,

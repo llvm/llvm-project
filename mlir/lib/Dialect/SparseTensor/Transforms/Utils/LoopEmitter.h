@@ -257,7 +257,8 @@ private:
         : tidLvls(tidLvls), loop(loop), userCodeBlock(userBlock), iv(iv) {
       // Attached a special tag to loop emitter generated loop.
       if (loopTag)
-        loop->setAttr(LoopEmitter::getLoopEmitterLoopAttrName(), loopTag);
+        loop->setDiscardableAttr(LoopEmitter::getLoopEmitterLoopAttrName(),
+                                 loopTag);
     }
     // The set of <tensor, lvl>, with *only* trivial index expressions, that are
     // used as the condition for the generated loop. Extra information is

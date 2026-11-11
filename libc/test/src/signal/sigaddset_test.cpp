@@ -21,13 +21,19 @@ TEST(LlvmLibcSignalTest, SigaddsetInvalid) {
 
   sigset_t sigset;
   EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, -1), Fails(EINVAL));
+  EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, 0), Fails(EINVAL));
 
+#if defined(__APPLE__)
+  // On Darwin, NSIG is one greater than the highest valid signal number.
+  EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, NSIG), Fails(EINVAL));
+  EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, NSIG - 1), Succeeds());
+#else
   // This doesn't use NSIG because LIBC_NAMESPACE::sigaddset error checking is
   // against sizeof(sigset_t) not NSIG.
   constexpr int bitsInSigsetT = 8 * sizeof(sigset_t);
 
   EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, bitsInSigsetT + 1),
               Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, 0), Fails(EINVAL));
   EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, bitsInSigsetT), Succeeds());
+#endif
 }

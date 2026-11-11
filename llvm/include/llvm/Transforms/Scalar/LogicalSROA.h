@@ -22,12 +22,12 @@ namespace llvm {
 
 class Function;
 
-class LogicalSROAPass : public PassInfoMixin<LogicalSROAPass> {
+class LogicalSROAPass : public OptionalPassInfoMixin<LogicalSROAPass> {
 public:
-  LogicalSROAPass();
+  LLVM_ABI LogicalSROAPass();
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

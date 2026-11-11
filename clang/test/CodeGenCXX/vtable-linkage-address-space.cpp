@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -o %t
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -std=c++03 -o %t.03
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -std=c++11 -o %t.11
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -disable-llvm-passes -O3 -emit-llvm -o %t.opt
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -o %t
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -std=c++03 -o %t.03
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -std=c++11 -o %t.11
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -disable-llvm-passes -O3 -emit-llvm -o %t.opt
 // RUN: FileCheck %s < %t
 // RUN: FileCheck %s < %t.03
 // RUN: FileCheck %s < %t.11

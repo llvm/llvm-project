@@ -43,9 +43,6 @@ private:
 
   // StubMap typedefs.
 
-  Expected<JITSymbolResolver::LookupResult>
-  lookup(const JITSymbolResolver::LookupSet &Symbols) const;
-
   bool isSymbolValid(StringRef Symbol) const;
   uint64_t getSymbolLocalAddr(StringRef Symbol) const;
   uint64_t getSymbolRemoteAddr(StringRef Symbol) const;
@@ -66,8 +63,6 @@ private:
   getStubOrGOTAddrFor(StringRef StubContainerName, StringRef Symbol,
                       StringRef StubKindFilter, bool IsInsideLoad,
                       bool IsStubAddr) const;
-
-  std::optional<uint64_t> getSectionLoadAddress(void *LocalAddr) const;
 
   IsSymbolValidFunction IsSymbolValid;
   GetSymbolInfoFunction GetSymbolInfo;

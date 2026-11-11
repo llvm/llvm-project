@@ -37,7 +37,7 @@ tail_call:
 // CHECK-LABEL: Name: .retplne (2E 72 65 74 70 6C 6E 65)
 // CHECK-NEXT:  VirtualSize: 0x0
 // CHECK-NEXT:  VirtualAddress: 0x0
-// CHECK-NEXT:  RawDataSize: 44
+// CHECK-NEXT:  RawDataSize: 0x2C
 // CHECK-NEXT:  PointerToRawData:
 // CHECK-NEXT:  PointerToRelocations:
 // CHECK-NEXT:  PointerToLineNumbers:

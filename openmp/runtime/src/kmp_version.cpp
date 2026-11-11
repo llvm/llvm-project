@@ -91,10 +91,23 @@
 #define KMP_LIBRARY KMP_LIB_TYPE " library (" KMP_LINK_TYPE ")"
 #define KMP_COPYRIGHT ""
 
+#if defined(KMP_GOMP_COMPAT)
+char const __kmp_version_alt_comp[] =
+    KMP_VERSION_PREFIX "alternative compiler support: yes";
+#endif /* defined(KMP_GOMP_COMPAT) */
+
+char const __kmp_version_omp_api[] = KMP_VERSION_PREFIX
+    "API version: " stringer(KMP_SPEC_VERSION) " (" stringer(KMP_SPEC_DATE) ")";
+
+#ifdef KMP_DEBUG
+char const __kmp_version_lock[] =
+    KMP_VERSION_PREFIX "lock type: run time selectable";
+#endif /* KMP_DEBUG */
+
 int const __kmp_version_major = KMP_VERSION_MAJOR;
 int const __kmp_version_minor = KMP_VERSION_MINOR;
 int const __kmp_version_build = KMP_VERSION_BUILD;
-int const __kmp_openmp_version = 201611;
+int const __kmp_openmp_version = KMP_SPEC_DATE;
 
 /* Do NOT change the format of this string!  Intel(R) Thread Profiler checks for
    a specific format some changes in the recognition routine there need to be

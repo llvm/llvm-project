@@ -19,9 +19,9 @@ void test_lvalue_cast() {
   (*(void (*)(int))f)(42);
 }
 
-// CIR-LABEL:   cir.func{{.*}} @f()
 // CIR:         cir.func{{.*}} @f1()
 // CIR:         cir.return{{.*}}
+// CIR-LABEL:   cir.func{{.*}} @f()
 
 // CIR-LABEL:   cir.func{{.*}} @f2()
 // CIR:         cir.call @f() : () -> ()

@@ -63,13 +63,6 @@ static std::string getEnqueuedBlockSymbolName(const AMDGPUTargetMachine &TM,
 
 namespace llvm {
 
-static cl::opt<bool> DumpHSAMetadata(
-    "amdgpu-dump-hsa-metadata",
-    cl::desc("Dump AMDGPU HSA Metadata"));
-static cl::opt<bool> VerifyHSAMetadata(
-    "amdgpu-verify-hsa-metadata",
-    cl::desc("Verify AMDGPU HSA Metadata"));
-
 namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
@@ -507,7 +500,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
                                 ProgramInfo.DynamicCallStack);
   }
 
-  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.hasSupportsWGP())
     Kern[".workgroup_processor_mode"] =
         Kern.getDocument()->getNode(ProgramInfo.WgpMode);
 
@@ -572,9 +565,9 @@ void MetadataStreamerMsgPackV4::end() {
   raw_string_ostream StrOS(HSAMetadataString);
   HSAMetadataDoc->toYAML(StrOS);
 
-  if (DumpHSAMetadata)
+  if (CLOpts.dump_hsa_metadata)
     dump(StrOS.str());
-  if (VerifyHSAMetadata)
+  if (CLOpts.verify_hsa_metadata)
     verify(StrOS.str());
 }
 

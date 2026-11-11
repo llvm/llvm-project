@@ -407,7 +407,7 @@ protected:
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
-    M->setDataLayout(TM->createDataLayout());
+    M->setDataLayout(TM->getTargetTriple().computeDataLayout());
     PM.run(*M);
     // Now check that we can run it twice.
     AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));

@@ -58,7 +58,7 @@ protected:
       GTEST_SKIP();
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
-    PassBuilder PB(TM.get());
+    PassBuilder PB(Context, TM.get());
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);
@@ -77,7 +77,7 @@ protected:
       return false;
 
     Mod = MIR->parseIRModule();
-    Mod->setDataLayout(TM->createDataLayout());
+    Mod->setDataLayout(TM->getTargetTriple().computeDataLayout());
     if (MIR->parseMachineFunctions(*Mod, MAM)) {
       Mod.reset();
       return false;

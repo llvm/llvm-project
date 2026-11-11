@@ -968,6 +968,65 @@ TEST(StringRefTest, consumeIntegerSigned) {
   }
 }
 
+TEST(StringRefTest, consumeIntegerAPIntBitWidth) {
+  // Decimal large number (12535824225335233)
+  // Fits in 64 bits, so should not grow beyond initial 64 bits.
+  {
+    APInt U;
+    StringRef Str = "12535824225335233";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+  }
+
+  // Hex version of same number (2c894405eaf7c1)
+  // Fits in 64 bits, so should not grow beyond initial 64 bits.
+  {
+    APInt U;
+    StringRef Str = "2c894405eaf7c1";
+    bool Success = Str.consumeInteger(16, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+  }
+
+  // A very large decimal number (100 digits)
+  // Needs 333 bits. Started at 64, doubled to 128, 256, 512.
+  {
+    APInt U;
+    std::string LargeDec(100, '9');
+    StringRef Str = LargeDec;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getBitWidth(), 512U);
+  }
+
+  // Trailing garbage should not trigger growth or failure.
+  {
+    APInt U;
+    StringRef Str = "123g";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 123ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+    EXPECT_EQ(Str, "g");
+  }
+
+  // Very long trailing garbage should also not trigger growth or failure.
+  {
+    APInt U;
+    std::string LongGarbage = "1";
+    LongGarbage.append(10000, 'g');
+    StringRef Str = LongGarbage;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 1ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+    EXPECT_EQ(Str.size(), 10000U);
+  }
+}
+
 struct GetDoubleStrings {
   const char *Str;
   bool AllowInexact;

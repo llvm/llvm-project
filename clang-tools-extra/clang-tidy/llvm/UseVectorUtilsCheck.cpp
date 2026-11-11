@@ -64,7 +64,8 @@ void UseVectorUtilsCheck::check(const MatchFinder::MatchResult &Result) {
       InnerFuncNameToReplacementFuncName.lookup(InnerFuncName);
   assert(!ReplacementFuncName.empty() && "Unhandled function?");
 
-  auto Diag = diag(OuterCall->getBeginLoc(), "use '%0'") << ReplacementFuncName;
+  const auto Diag = diag(OuterCall->getBeginLoc(), "use '%0'")
+                    << ReplacementFuncName;
 
   // Replace the outer function name (preserving qualifier and template args),
   // and then remove the inner call's callee and opening paren and closing

@@ -13,7 +13,7 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyTargetMachine.h"
+#include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
@@ -185,9 +185,7 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
 
 bool WebAssembly::canLowerMultivalueReturn(
     const WebAssemblySubtarget *Subtarget) {
-  const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
-      Subtarget->getTargetLowering()->getTargetMachine());
-  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+  return Subtarget->hasMultivalue() && Subtarget->usesMultivalueABI();
 }
 
 bool WebAssembly::canLowerReturn(size_t ResultSize,
@@ -216,4 +214,18 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
   if (Chain.getNode())
     return DAG.getMachineNode(Opcode, DL, {PtrVT, MVT::Other}, {Sym, Chain});
   return DAG.getMachineNode(Opcode, DL, PtrVT, Sym);
+}
+
+Register WebAssembly::getSwiftAsyncArgReg(const MachineFunction &MF) {
+  if (none_of(MF.getFunction().args(), [](const Argument &Arg) {
+        return Arg.hasAttribute(Attribute::SwiftAsync);
+      }))
+    return Register();
+  for (const MachineInstr &MI : MF.front()) {
+    if (!isArgument(MI.getOpcode()))
+      break;
+    if (MI.getOperand(1).getImm() == 0)
+      return MI.getOperand(0).getReg();
+  }
+  return Register();
 }

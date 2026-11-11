@@ -1,6 +1,6 @@
-; REQUIRES: x86_64-linux
-; RUN: llvm-profdata merge %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pass-remarks-analysis=memprof -S 2>&1 | FileCheck %s
+; RUN: rm -rf %t && split-file %s %t
+; RUN: llvm-profdata merge %t/a.yaml -o %t/a.memprofdata
+; RUN: opt < %t/a.ll -passes='memprof-use<profile-filename=%t/a.memprofdata>' -pass-remarks-analysis=memprof -S 2>&1 | FileCheck %s
 
 ; CHECK: remark: memprof.cc:5:10: frame: [[FOO:[0-9]+]] _Z3foov:1:10
 ; CHECK: remark: memprof.cc:5:10: inline call stack: [[FOO]]
@@ -8,6 +8,7 @@
 ; CHECK: remark: memprof.cc:9:12: frame: [[BAZ:[0-9]+]] _Z3bazv:3:13
 ; CHECK: remark: memprof.cc:9:12: inline call stack: [[BAR]],[[BAZ]]
 
+;--- a.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -37,3 +38,22 @@ entry:
 !8 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 7, type: !5, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !6)
 !9 = !DILocation(line: 12, column: 13, scope: !10)
 !10 = distinct !DISubprogram(name: "baz", linkageName: "_Z3bazv", scope: !1, file: !1, line: 9, type: !5, scopeLine: 9, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !6)
+
+;--- a.yaml
+---
+HeapProfileRecords:
+  - GUID:            _Z3barv
+    CallSites:
+      - Frames:
+          - { Function: _Z3barv, LineOffset: 1, Column: 10, IsInlineFrame: false }
+  - GUID:            _Z3foov
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 1, Column: 10, IsInlineFrame: false }
+          - { Function: main, LineOffset: 6, Column: 13, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       10
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 20000
+...

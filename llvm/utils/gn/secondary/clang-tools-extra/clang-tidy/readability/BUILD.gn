@@ -62,6 +62,7 @@ static_library("readability") {
     "RedundantStringCStrCheck.cpp",
     "RedundantStringInitCheck.cpp",
     "RedundantTypenameCheck.cpp",
+    "RedundantZeroInitializerCheck.cpp",
     "ReferenceToConstructedTemporaryCheck.cpp",
     "SimplifyBooleanExprCheck.cpp",
     "SimplifySubscriptExprCheck.cpp",

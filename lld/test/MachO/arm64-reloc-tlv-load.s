@@ -31,7 +31,7 @@
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Sections:
 # DYLIB-NEXT:  Idx   Name          Size     VMA              Type
-# DYLIB:       [[#]] __thread_ptrs 00000010 {{0*}}[[#TLV]]   DATA
+# DYLIB:       [[#]] __got         00000010 {{0*}}[[#TLV]]   DATA
 
 #--- main.s
 .globl _main, _foo, _bar

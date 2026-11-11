@@ -6,7 +6,7 @@ target triple = "arm64-apple-macosx"
 ; Test that epilogue vectorization is not selected when the main vector loop
 ; covers all iterations after narrowInterleaveGroups reduces the effective
 ; step from VF * UF to UF.
-define void @no_epilogue_when_narrowed_covers_all(ptr %p) {
+define void @no_epilogue_when_narrowed_covers_all(ptr %p) vscale_range(1,16) {
 ; CHECK-LABEL: define void @no_epilogue_when_narrowed_covers_all(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -15,7 +15,7 @@ define void @no_epilogue_when_narrowed_covers_all(ptr %p) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -55,7 +55,7 @@ exit:
 ; Test that epilogue vectorization does not crash when narrowInterleaveGroups
 ; materializes VFxUF and the canonical IV increment step gets simplified
 ; (e.g. mul to shl) by later recipe simplification passes.
-define fastcc i32 @narrow_interleave_epilogue_unknown_tc(ptr %end) {
+define fastcc i32 @narrow_interleave_epilogue_unknown_tc(ptr %end) vscale_range(1,16) {
 ; CHECK-LABEL: define fastcc i32 @narrow_interleave_epilogue_unknown_tc(
 ; CHECK:       vector.body:
 ; CHECK:       ret i32 0

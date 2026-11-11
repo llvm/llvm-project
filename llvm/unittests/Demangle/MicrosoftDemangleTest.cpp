@@ -291,10 +291,39 @@ TEST(MicrosoftDemangle, demangleIndirectVariables) {
 TEST(MicrosoftDemangle, demangleFunctionPointers) {
   EXPECT_EQ(microsoftDemangleString("?funcPtr@@3P6AXXZA", MSDF_None),
             "void (__cdecl *funcPtr)(void)");
+  EXPECT_EQ(
+      microsoftDemangleString("?funcPtr@@3P6AXXZA", MSDF_NoCallingConvention),
+      "void (*funcPtr)(void)");
   EXPECT_EQ(microsoftDemangleString("?funcPtr@@3P6AXXZA", MSDF_NoVariableType),
             "funcPtr");
   EXPECT_EQ(microsoftDemangleString("?funcPtr@@3P6AHXZA", MSDF_NoVoidParameter),
             "int (__cdecl *funcPtr)()");
+  // A function pointer's return type is part of its type. Therefore
+  // MSDF_NoReturnType leaves it untouched.
+  EXPECT_EQ(microsoftDemangleString("?funcPtr@@3P6AHXZA", MSDF_NoReturnType),
+            "int (__cdecl *funcPtr)(void)");
+}
+
+TEST(MicrosoftDemangle, demangleNestedMemberPointers) {
+  EXPECT_EQ(
+      microsoftDemangleString("?nestedMemberPtr@@3R8B@@EAAP6AHXZXZEQ1@",
+                              MSDF_None),
+      "int (__cdecl * (__cdecl B::*volatile nestedMemberPtr)(void))(void)");
+  EXPECT_EQ(microsoftDemangleString("?nestedMemberPtr@@3R8B@@EAAP6AHXZXZEQ1@",
+                                    MSDF_NoCallingConvention),
+            "int (* (B::*volatile nestedMemberPtr)(void))(void)");
+  EXPECT_EQ(microsoftDemangleString("?nestedMemberPtr@@3R8B@@EAAP6AHXZXZEQ1@",
+                                    MSDF_NoVariableType),
+            "nestedMemberPtr");
+  EXPECT_EQ(microsoftDemangleString("?nestedMemberPtr@@3R8B@@EAAP6AHXZXZEQ1@",
+                                    MSDF_NoVoidParameter),
+            "int (__cdecl * (__cdecl B::*volatile nestedMemberPtr)())()");
+  // A function pointer's return type is part of its type. Therefore
+  // MSDF_NoReturnType leaves it untouched.
+  EXPECT_EQ(
+      microsoftDemangleString("?nestedMemberPtr@@3R8B@@EAAP6AHXZXZEQ1@",
+                              MSDF_NoReturnType),
+      "int (__cdecl * (__cdecl B::*volatile nestedMemberPtr)(void))(void)");
 }
 
 TEST(MicrosoftDemangle, demangleNestedClass) {
@@ -317,4 +346,48 @@ TEST(MicrosoftDemangle, demangleStdcallFunction) {
   EXPECT_EQ(
       microsoftDemangleString("?stdcallFunc@@YGXXZ", MSDF_NoCallingConvention),
       "void stdcallFunc(void)");
+}
+
+TEST(MicrosoftDemangle, compactTemplateLists) {
+  EXPECT_EQ(microsoftDemangleString("??_7?$Pair@HM@@6B@", MSDF_None),
+            "const Pair<int, float>::`vftable'");
+  EXPECT_EQ(
+      microsoftDemangleString("??_7?$Pair@HM@@6B@", MSDF_CompactTemplateLists),
+      "const Pair<int,float>::`vftable'");
+
+  EXPECT_EQ(
+      microsoftDemangleString("??$taker@HHU?$Single@U?$Pair@DF@@@@@@YAHHHU?$"
+                              "Single@U?$Pair@DF@@@@@Z",
+                              MSDF_None),
+      "int __cdecl taker<int, int, struct Single<struct Pair<char, "
+      "short>>>(int, int, struct Single<struct Pair<char, short>>)");
+  EXPECT_EQ(
+      microsoftDemangleString("??$taker@HHU?$Single@U?$Pair@DF@@@@@@YAHHHU?$"
+                              "Single@U?$Pair@DF@@@@@Z",
+                              MSDF_CompactTemplateLists),
+      "int __cdecl taker<int,int,struct Single<struct Pair<char,short>>>(int, "
+      "int, struct Single<struct Pair<char,short>>)");
+}
+
+TEST(MicrosoftDemangle, splitTemplateClosers) {
+  EXPECT_EQ(
+      microsoftDemangleString("??_7?$Single@U?$Pair@DF@@@@6B@", MSDF_None),
+      "const Single<struct Pair<char, short>>::`vftable'");
+  EXPECT_EQ(microsoftDemangleString("??_7?$Single@U?$Pair@DF@@@@6B@",
+                                    MSDF_SplitTemplateClosers),
+            "const Single<struct Pair<char, short> >::`vftable'");
+
+  EXPECT_EQ(
+      microsoftDemangleString("??$taker@HHU?$Single@U?$Pair@DF@@@@@@YAHHHU?$"
+                              "Single@U?$Pair@DF@@@@@Z",
+                              MSDF_None),
+      "int __cdecl taker<int, int, struct Single<struct Pair<char, "
+      "short>>>(int, int, struct Single<struct Pair<char, short>>)");
+  EXPECT_EQ(
+      microsoftDemangleString("??$taker@HHU?$Single@U?$Pair@DF@@@@@@YAHHHU?$"
+                              "Single@U?$Pair@DF@@@@@Z",
+                              MSDF_SplitTemplateClosers),
+      "int __cdecl taker<int, int, struct Single<struct Pair<char, short> > "
+      ">(int, "
+      "int, struct Single<struct Pair<char, short> >)");
 }

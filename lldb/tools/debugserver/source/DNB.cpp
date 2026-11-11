@@ -1465,7 +1465,7 @@ nub_bool_t DNBThreadGetStopReason(nub_process_t pid, nub_thread_t tid,
 
 // Return string description for the specified thread.
 //
-// RETURNS: NULL if the thread isn't valid, else a NULL terminated C
+// RETURNS: NULL if the thread isn't valid, else a null-terminated C
 // string from a static buffer that must be copied prior to subsequent
 // calls.
 const char *DNBThreadGetInfo(nub_process_t pid, nub_thread_t tid) {
@@ -1873,7 +1873,8 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
                                               CPU_SUBTYPE_X86_64_H);
     else if (strstr(arch, "arm64_32") == arch ||
              strstr(arch, "aarch64_32") == arch)
-      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32);
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32,
+                                              CPU_SUBTYPE_ARM64_32_V8);
     else if (strstr(arch, "arm64e") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
                                               CPU_SUBTYPE_ARM64E);

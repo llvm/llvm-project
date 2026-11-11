@@ -23,10 +23,8 @@ define <vscale x 1 x bfloat> @vpmerge_vf_nxv1bf16(bfloat %a, <vscale x 1 x bfloa
 ; CHECK-LABEL: vpmerge_vf_nxv1bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <vscale x 1 x bfloat> %elt.head, <vscale x 1 x bfloat> poison, <vscale x 1 x i32> zeroinitializer
@@ -49,10 +47,8 @@ define <vscale x 2 x bfloat> @vpmerge_vf_nxv2bf16(bfloat %a, <vscale x 2 x bfloa
 ; CHECK-LABEL: vpmerge_vf_nxv2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <vscale x 2 x bfloat> %elt.head, <vscale x 2 x bfloat> poison, <vscale x 2 x i32> zeroinitializer
@@ -75,10 +71,8 @@ define <vscale x 4 x bfloat> @vpmerge_vf_nxv4bf16(bfloat %a, <vscale x 4 x bfloa
 ; CHECK-LABEL: vpmerge_vf_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <vscale x 4 x bfloat> %elt.head, <vscale x 4 x bfloat> poison, <vscale x 4 x i32> zeroinitializer
@@ -101,10 +95,8 @@ define <vscale x 8 x bfloat> @vpmerge_vf_nxv8bf16(bfloat %a, <vscale x 8 x bfloa
 ; CHECK-LABEL: vpmerge_vf_nxv8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <vscale x 8 x bfloat> %elt.head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
@@ -127,10 +119,8 @@ define <vscale x 16 x bfloat> @vpmerge_vf_nxv16bf16(bfloat %a, <vscale x 16 x bf
 ; CHECK-LABEL: vpmerge_vf_nxv16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v12, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <vscale x 16 x bfloat> %elt.head, <vscale x 16 x bfloat> poison, <vscale x 16 x i32> zeroinitializer
@@ -153,10 +143,8 @@ define <vscale x 32 x bfloat> @vpmerge_vf_nxv32bf16(bfloat %a, <vscale x 32 x bf
 ; CHECK-LABEL: vpmerge_vf_nxv32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vmv.v.x v16, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v16, v0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <vscale x 32 x bfloat> %elt.head, <vscale x 32 x bfloat> poison, <vscale x 32 x i32> zeroinitializer

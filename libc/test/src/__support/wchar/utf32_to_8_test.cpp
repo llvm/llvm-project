@@ -7,18 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
 
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcCharacterConverterUTF32To8Test, OneByte) {
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::TypeList<char32_t, wchar_t>;
+#else
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::TypeList<char32_t>;
+#endif
+
+TYPED_TEST(LlvmLibcCharacterConverterUTF32To8Test, OneByte,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
   cr.clear();
 
   // utf8 1-byte encodings are identical to their utf32 representations
-  char32_t utf32_A = 0x41; // 'A'
+  CharType32 utf32_A = 0x41; // 'A'
   cr.push(utf32_A);
   ASSERT_TRUE(cr.isFull());
   auto popped = cr.pop_utf8();
@@ -26,7 +36,7 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, OneByte) {
   ASSERT_EQ(static_cast<char>(popped.value()), 'A');
   ASSERT_TRUE(cr.isEmpty());
 
-  char32_t utf32_B = 0x42; // 'B'
+  CharType32 utf32_B = 0x42; // 'B'
   cr.push(utf32_B);
   ASSERT_TRUE(cr.isFull());
   popped = cr.pop_utf8();
@@ -39,13 +49,16 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, OneByte) {
   ASSERT_FALSE(popped.has_value());
 }
 
-TEST(LlvmLibcCharacterConverterUTF32To8Test, TwoByte) {
+TYPED_TEST(LlvmLibcCharacterConverterUTF32To8Test, TwoByte,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
   cr.clear();
 
   // testing utf32: 0xff -> utf8: 0xc3 0xbf
-  char32_t utf32 = 0xff;
+  CharType32 utf32 = 0xff;
   cr.push(utf32);
   ASSERT_TRUE(cr.isFull());
   auto popped = cr.pop_utf8();
@@ -75,13 +88,16 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, TwoByte) {
   ASSERT_FALSE(popped.has_value());
 }
 
-TEST(LlvmLibcCharacterConverterUTF32To8Test, ThreeByte) {
+TYPED_TEST(LlvmLibcCharacterConverterUTF32To8Test, ThreeByte,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
   cr.clear();
 
   // testing utf32: 0xac15 -> utf8: 0xea 0xb0 0x95
-  char32_t utf32 = 0xac15;
+  CharType32 utf32 = 0xac15;
   cr.push(utf32);
   ASSERT_TRUE(cr.isFull());
   auto popped = cr.pop_utf8();
@@ -119,13 +135,16 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, ThreeByte) {
   ASSERT_FALSE(popped.has_value());
 }
 
-TEST(LlvmLibcCharacterConverterUTF32To8Test, FourByte) {
+TYPED_TEST(LlvmLibcCharacterConverterUTF32To8Test, FourByte,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
   cr.clear();
 
   // testing utf32: 0x1f921 -> utf8: 0xf0 0x9f 0xa4 0xa1
-  char32_t utf32 = 0x1f921;
+  CharType32 utf32 = 0x1f921;
   cr.push(utf32);
   ASSERT_TRUE(cr.isFull());
   auto popped = cr.pop_utf8();
@@ -171,13 +190,16 @@ TEST(LlvmLibcCharacterConverterUTF32To8Test, FourByte) {
   ASSERT_FALSE(popped.has_value());
 }
 
-TEST(LlvmLibcCharacterConverterUTF32To8Test, CantPushMidConversion) {
+TYPED_TEST(LlvmLibcCharacterConverterUTF32To8Test, CantPushMidConversion,
+           TestCharTypesUTF32) {
+  using CharType32 = ParamType;
+
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::CharacterConverter cr(&state);
   cr.clear();
 
   // testing utf32: 0x12121 -> utf8: 0xf0 0x92 0x84 0xa1
-  char32_t utf32 = 0x12121;
+  CharType32 utf32 = 0x12121;
   ASSERT_EQ(cr.push(utf32), 0);
   auto popped = cr.pop_utf8();
   ASSERT_TRUE(popped.has_value());

@@ -6,7 +6,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "riscv64"
 
-define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_add(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_add(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -51,7 +51,7 @@ for.end:
 
 
 ; a[b[i]] = v, exercise scatter support
-define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @indexed_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -65,7 +65,7 @@ define void @indexed_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[BROADCAST_SPLAT]], <vscale x 2 x ptr> align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP7]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP12]], [[EVL_BASED_IV]]
@@ -94,7 +94,7 @@ for.end:
   ret void
 }
 
-define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @indexed_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -107,7 +107,7 @@ define i64 @indexed_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[A:%.*]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP10]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = add <vscale x 2 x i64> [[VEC_PHI]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP11]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP12]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP7]])
@@ -141,7 +141,7 @@ for.end:
   ret i64 %sum.next
 }
 
-define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @splat_int(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @splat_int(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -180,7 +180,7 @@ for.end:
   ret void
 }
 
-define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) {
+define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @uniform_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -221,7 +221,7 @@ for.end:
   ret void
 }
 
-define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %n) {
+define i64 @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @uniform_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
@@ -263,7 +263,7 @@ for.end:
 }
 
 
-define void @vector_add_trip1024(ptr noalias nocapture %a, i64 %v, i64 %n) {
+define void @vector_add_trip1024(ptr noalias nocapture %a, i64 %v, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: @vector_add_trip1024(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]

@@ -44,12 +44,14 @@ write_cmake_config("Config") {
     values += [
       "CLANG_HAVE_DLADDR=1",
       "CLANG_HAVE_DLFCN_H=1",
+      "CLANG_HAVE_EMUTLS_GET_ADDRESS=1",
       "CLANG_HAVE_RLIMITS=1",
     ]
   } else {
     values += [
       "CLANG_HAVE_DLADDR=",
       "CLANG_HAVE_DLFCN_H=",
+      "CLANG_HAVE_EMUTLS_GET_ADDRESS=",
       "CLANG_HAVE_RLIMITS=",
     ]
   }

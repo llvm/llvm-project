@@ -117,10 +117,8 @@ class Char1632TestCase(TestBase):
 
         # check that zero values are properly handles
         self.expect_expr("cs16_zero", result_summary="U+0000 u'\\0'")
-        self.expect_expr("cs32_zero", result_summary="U+0x00000000 U'\\0'")
+        self.expect_expr("cs32_zero", result_summary="U+0000 U'\\0'")
 
         # Check that we can run expressions that return charN_t
         self.expect_expr("u'a'", result_type="char16_t", result_summary="U+0061 u'a'")
-        self.expect_expr(
-            "U'a'", result_type="char32_t", result_summary="U+0x00000061 U'a'"
-        )
+        self.expect_expr("U'a'", result_type="char32_t", result_summary="U+0061 U'a'")

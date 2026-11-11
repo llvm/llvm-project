@@ -112,7 +112,8 @@ public:
                                Register, Mask, ExclusiveMask, MinPrecision});
   }
 
-  LLVM_ABI void write(raw_ostream &OS);
+  /// Legacy validator versions through 1.6 require unpadded signature parts.
+  LLVM_ABI void write(raw_ostream &OS, bool PadToDword = true);
 };
 
 } // namespace mcdxbc

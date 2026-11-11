@@ -10,4 +10,5 @@
 
 #include "src/math/fminimum_numf16.h"
 
-LIST_FMINIMUM_NUM_TESTS(float16, LIBC_NAMESPACE::fminimum_numf16)
+LIST_FMINIMUM_NUM_TESTS(FminimumNumf16, float16,
+                        LIBC_NAMESPACE::fminimum_numf16)

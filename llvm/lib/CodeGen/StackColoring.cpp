@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -525,6 +526,7 @@ INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
 
 void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -925,17 +927,12 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   // Keep a list of allocas which has been affected by the remap.
   SmallPtrSet<const AllocaInst*, 32> MergedAllocas;
 
-  for (const std::pair<int, int> &SI : SlotRemap) {
-    const AllocaInst *From = MFI->getObjectAllocation(SI.first);
-    const AllocaInst *To = MFI->getObjectAllocation(SI.second);
+  for (const auto &[FromIdx, ToIdx] : SlotRemap) {
+    AllocaInst *From =
+        const_cast<AllocaInst *>(MFI->getObjectAllocation(FromIdx));
+    AllocaInst *To = const_cast<AllocaInst *>(MFI->getObjectAllocation(ToIdx));
     assert(To && From && "Invalid allocation object");
     Allocas[From] = To;
-
-    // If From is before wo, its possible that there is a use of From between
-    // them.
-    if (From->comesBefore(To))
-      const_cast<AllocaInst *>(To)->moveBefore(
-          const_cast<AllocaInst *>(From)->getIterator());
 
     // AA might be used later for instruction scheduling, and we need it to be
     // able to deduce the correct aliasing releationships between pointers
@@ -943,12 +940,15 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // The only safe way, without directly informing AA about the remapping
     // somehow, is to directly update the IR to reflect the change being made
     // here.
-    Instruction *Inst = const_cast<AllocaInst *>(To);
-    if (From->getType() != To->getType()) {
-      BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst->getIterator());
-      Inst = Cast;
-    }
+
+    // If From is before wo, its possible that there is a use of From between
+    // them.
+    if (From->comesBefore(To))
+      To->moveBefore(From->getIterator());
+
+    // Inherit maximum alignment.
+    if (From->getAlign() > To->getAlign())
+      To->setAlignment(From->getAlign());
 
     // We keep both slots to maintain AliasAnalysis metadata later.
     MergedAllocas.insert(From);
@@ -957,30 +957,23 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // Transfer the stack protector layout tag, but make sure that SSPLK_AddrOf
     // does not overwrite SSPLK_SmallArray or SSPLK_LargeArray, and make sure
     // that SSPLK_SmallArray does not overwrite SSPLK_LargeArray.
-    MachineFrameInfo::SSPLayoutKind FromKind
-        = MFI->getObjectSSPLayout(SI.first);
-    MachineFrameInfo::SSPLayoutKind ToKind = MFI->getObjectSSPLayout(SI.second);
+    MachineFrameInfo::SSPLayoutKind FromKind = MFI->getObjectSSPLayout(FromIdx);
+    MachineFrameInfo::SSPLayoutKind ToKind = MFI->getObjectSSPLayout(ToIdx);
     if (FromKind != MachineFrameInfo::SSPLK_None &&
         (ToKind == MachineFrameInfo::SSPLK_None ||
          (ToKind != MachineFrameInfo::SSPLK_LargeArray &&
           FromKind != MachineFrameInfo::SSPLK_AddrOf)))
-      MFI->setObjectSSPLayout(SI.second, FromKind);
+      MFI->setObjectSSPLayout(ToIdx, FromKind);
 
     // The new alloca might not be valid in a llvm.dbg.declare for this
     // variable, so poison out the use to make the verifier happy.
-    AllocaInst *FromAI = const_cast<AllocaInst *>(From);
-    if (FromAI->isUsedByMetadata())
-      ValueAsMetadata::handleRAUW(FromAI, PoisonValue::get(FromAI->getType()));
-    for (auto &Use : FromAI->uses()) {
-      if (BitCastInst *BCI = dyn_cast<BitCastInst>(Use.get()))
-        if (BCI->isUsedByMetadata())
-          ValueAsMetadata::handleRAUW(BCI, PoisonValue::get(BCI->getType()));
-    }
+    if (From->isUsedByMetadata())
+      ValueAsMetadata::handleRAUW(From, PoisonValue::get(From->getType()));
 
     // Note that this will not replace uses in MMOs (which we'll update below),
     // or anywhere else (which is why we won't delete the original
     // instruction).
-    FromAI->replaceAllUsesWith(Inst);
+    From->replaceAllUsesWith(To);
   }
 
   // Remap all instructions to the new stack slots.
@@ -1068,9 +1061,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         if (MMO->getAAInfo()) {
           if (const Value *MMOV = MMO->getValue()) {
             SmallVector<Value *, 4> Objs;
-            getUnderlyingObjectsForCodeGen(MMOV, Objs);
 
-            if (Objs.empty())
+            if (!getUnderlyingObjectsForCodeGen(MMOV, Objs) || Objs.empty())
               MayHaveConflictingAAMD = true;
             else
               for (Value *V : Objs) {
@@ -1194,8 +1186,13 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
-  if (SC.run(MF))
-    return getMachineFunctionPassPreservedAnalyses();
+  bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
+                           shouldSkipOptimizationForOptBisect(MF.getFunction());
+  if (SC.run(MF, OnlyRemoveMarkers)) {
+    auto PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserve<MachineRegisterClassAnalysis>();
+    return PA;
+  }
   return PreservedAnalyses::all();
 }
 

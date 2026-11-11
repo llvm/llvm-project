@@ -3327,7 +3327,7 @@ bool ARMDAGToDAGISel::transformFixedFloatingPointConversion(SDNode *N,
     return false;
 
   SmallVector<SDValue, 3> Ops{
-      VecVal, CurDAG->getConstant(FracBits, SDLoc(N), MVT::i32)};
+      VecVal, CurDAG->getTargetConstant(FracBits, SDLoc(N), MVT::i32)};
   AddEmptyMVEPredicateToOps(Ops, SDLoc(N), Type);
 
   unsigned int Opcode;

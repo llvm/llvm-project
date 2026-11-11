@@ -30,6 +30,7 @@ class Builtin_Attr<string name, string attrMnemonic, list<Trait> traits = [],
     : AttrDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
   let attrName = "builtin." # attrMnemonic;
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -160,6 +161,9 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
           $_allocator.allocate($_self.size(), alignof(uint64_t)));
       llvm::uninitialized_copy($_self, alloc);
       $_dst = ArrayRef<char>(alloc, $_self.size());
+    } else {
+      // Align possibly unaligned empty range.
+      $_dst = {};
     }
   }];
 }

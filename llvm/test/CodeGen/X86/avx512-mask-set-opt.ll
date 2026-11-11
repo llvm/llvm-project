@@ -79,8 +79,8 @@ define <16 x float> @mask_v16i1_lower8(ptr %ptr) {
 define <16 x float> @gather_all(ptr %base, <16 x i32> %ind, i16 %mask) {
 ; AVX512-LABEL: gather_all:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    kxnorw %k0, %k0, %k1
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    kxnorw %k0, %k0, %k1
 ; AVX512-NEXT:    vgatherdps (%rdi,%zmm0,4), %zmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %zmm1, %zmm0
 ; AVX512-NEXT:    retq

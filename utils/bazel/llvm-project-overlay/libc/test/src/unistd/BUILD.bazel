@@ -107,11 +107,8 @@ libc_test(
     srcs = ["read_write_test.cpp"],
     deps = [
         "//libc:close",
-        "//libc:fsync",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
+        "//libc:pipe",
         "//libc:read",
-        "//libc:remove",
         "//libc:write",
     ],
 )
@@ -207,6 +204,22 @@ libc_test(
     srcs = ["geteuid_test.cpp"],
     deps = [
         "//libc:geteuid",
+    ],
+)
+
+libc_test(
+    name = "getgid_test",
+    srcs = ["getgid_test.cpp"],
+    deps = [
+        "//libc:getgid",
+    ],
+)
+
+libc_test(
+    name = "getegid_test",
+    srcs = ["getegid_test.cpp"],
+    deps = [
+        "//libc:getegid",
     ],
 )
 

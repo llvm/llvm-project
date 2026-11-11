@@ -14,7 +14,7 @@ define void @nvvm_tcgen05_ld_32x32b_min_i32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<263>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_32x32b_min_i32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_32x32b_min_i32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x2.min.u32 {%r2, %r3}, %r4, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x4.min.u32 {%r5, %r6, %r7, %r8}, %r9, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x8.min.u32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1];
@@ -39,7 +39,7 @@ define void @nvvm_tcgen05_ld_32x32b_max_i32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<263>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_32x32b_max_i32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_32x32b_max_i32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x2.max.u32 {%r2, %r3}, %r4, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x4.max.u32 {%r5, %r6, %r7, %r8}, %r9, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x8.max.u32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1];
@@ -64,7 +64,7 @@ define void @nvvm_tcgen05_ld_16x32bx2_min_i32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<263>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_min_i32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_min_i32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x2.min.u32 {%r2, %r3}, %r4, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x4.min.u32 {%r5, %r6, %r7, %r8}, %r9, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x8.min.u32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1], 0;
@@ -89,7 +89,7 @@ define void @nvvm_tcgen05_ld_16x32bx2_max_i32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<263>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_max_i32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_max_i32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x2.max.u32 {%r2, %r3}, %r4, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x4.max.u32 {%r5, %r6, %r7, %r8}, %r9, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x8.max.u32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1], 0;
@@ -114,7 +114,7 @@ define void @nvvm_tcgen05_ld_32x32b_min_f32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<1046>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_32x32b_min_f32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_32x32b_min_f32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x2.min.f32 {%r2, %r3}, %r4, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x4.min.f32 {%r5, %r6, %r7, %r8}, %r9, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x8.min.f32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1];
@@ -184,7 +184,7 @@ define void @nvvm_tcgen05_ld_32x32b_max_f32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<1046>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_32x32b_max_f32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_32x32b_max_f32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x2.max.f32 {%r2, %r3}, %r4, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x4.max.f32 {%r5, %r6, %r7, %r8}, %r9, [%r1];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.32x32b.x8.max.f32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1];
@@ -254,7 +254,7 @@ define void @nvvm_tcgen05_ld_16x32bx2_min_f32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<1046>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_min_f32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_min_f32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x2.min.f32 {%r2, %r3}, %r4, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x4.min.f32 {%r5, %r6, %r7, %r8}, %r9, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x8.min.f32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1], 0;
@@ -324,7 +324,7 @@ define void @nvvm_tcgen05_ld_16x32bx2_max_f32(ptr addrspace(6) %taddr) {
 ; CHECK-NEXT:    .reg .b32 %r<1046>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_max_f32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [nvvm_tcgen05_ld_16x32bx2_max_f32_param_0];
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x2.max.f32 {%r2, %r3}, %r4, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x4.max.f32 {%r5, %r6, %r7, %r8}, %r9, [%r1], 0;
 ; CHECK-NEXT:    tcgen05.ld.red.sync.aligned.16x32bx2.x8.max.f32 {%r10, %r11, %r12, %r13, %r14, %r15, %r16, %r17}, %r18, [%r1], 0;

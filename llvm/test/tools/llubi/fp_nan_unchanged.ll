@@ -2,7 +2,7 @@
 ; RUN: llubi --nan-behavior=unchanged --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
-    %qnan_zero_payload = fadd double 1.0, 0x7FF8000000000000
+    %qnan_zero_payload = fadd double 1.0, +qnan
     %qnan_nonzero_payload = fadd double 1.0, 0x7FF8000000000001
     %snan = fadd double 1.0, 0x7FF0000000000001
 

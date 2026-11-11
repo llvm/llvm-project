@@ -111,13 +111,16 @@ void Sema::checkFunctionDeclVerbatimLine(const BlockCommandComment *Comment) {
         DiagSelect = diag::CallableKind::FunctionGroup;
       break;
     case CommandTraits::KCI_method:
-      DiagSelect = diag::CallableKind::Method;
+      if (!isObjCMethodDecl())
+        DiagSelect = diag::CallableKind::Method;
       break;
     case CommandTraits::KCI_methodgroup:
-      DiagSelect = diag::CallableKind::MethodGroup;
+      if (!isObjCMethodDecl())
+        DiagSelect = diag::CallableKind::MethodGroup;
       break;
     case CommandTraits::KCI_callback:
-      DiagSelect = diag::CallableKind::Callback;
+      if (!isFunctionPointerVarDecl())
+        DiagSelect = diag::CallableKind::Callback;
       break;
   }
   if (DiagSelect)

@@ -156,6 +156,11 @@ public:
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
 
+  // Returns the paths of every source file opened so far: the main file and any
+  // files pulled in by INCLUDE lines or #include directives. Paths are returned
+  // without duplicates, in the order they were first opened.
+  std::vector<std::string> GetIncludedFilePaths() const;
+
   ProvenanceRange AddIncludedFile(
       const SourceFile &, ProvenanceRange, bool isModule = false);
   ProvenanceRange AddMacroCall(

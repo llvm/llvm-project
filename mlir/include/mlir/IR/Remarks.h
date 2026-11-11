@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -24,6 +25,8 @@
 #include "mlir/IR/Value.h"
 
 #include <atomic>
+#include <mutex>
+#include <optional>
 
 namespace mlir::remark {
 
@@ -172,6 +175,8 @@ public:
     /// Optional attribute storage for Attribute-based args. Allows streamers
     /// to access the original attribute for custom handling.
     std::optional<Attribute> attr;
+    /// Generated RelatedTo argument, distinct from a user-supplied argument.
+    bool isLink = false;
 
     Arg(llvm::StringRef m) : key("Remark"), val(m) {}
     Arg(llvm::StringRef k, llvm::StringRef v) : key(k), val(v) {}
@@ -238,6 +243,7 @@ public:
 
   std::string getMsg() const;
 
+  /// Return arguments, owned until mutation or destruction.
   ArrayRef<Arg> getArgs() const { return args; }
 
   llvm::remarks::Type getRemarkType() const;
@@ -259,13 +265,17 @@ public:
   /// Get the list of related remark IDs.
   ArrayRef<RemarkId> getRelatedRemarkIds() const { return relatedRemarks; }
 
-  /// Add a reference to a related remark. Also adds it as an Arg for
-  /// serialization.
+  /// Replace the list of related remark IDs.
+  void setRelatedRemarkIds(ArrayRef<RemarkId> ids);
+
+  /// Add a related ID and its generated argument.
   void addRelatedRemark(RemarkId relatedId) {
-    if (relatedId) {
-      relatedRemarks.push_back(relatedId);
-      args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
-    }
+    if (!relatedId)
+      return;
+    relatedRemarks.push_back(relatedId);
+    Arg &arg =
+        args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
+    arg.isLink = true;
   }
 
   /// Check if this remark has any related remarks.
@@ -515,30 +525,6 @@ private:
   /// Atomic counter for generating unique remark IDs.
   std::atomic<uint64_t> nextRemarkId{1};
 
-  /// Return true if missed optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isMissedOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if passed optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isPassedOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if analysis optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isAnalysisOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if analysis optimization remarks are enabled, override
-  /// to provide different implementation.
-  bool isFailedOptRemarkEnabled(StringRef categoryName) const;
-
-  /// Return true if any type of remarks are enabled for this pass.
-  bool isAnyRemarkEnabled(StringRef categoryName) const {
-    return isMissedOptRemarkEnabled(categoryName) ||
-           isPassedOptRemarkEnabled(categoryName) ||
-           isFailedOptRemarkEnabled(categoryName) ||
-           isAnalysisOptRemarkEnabled(categoryName);
-  }
-
   /// Emit a remark using the given maker function, which should return
   /// a Remark instance. The remark will be emitted using the main
   /// remark streamer.
@@ -579,6 +565,45 @@ public:
   /// Generate a unique ID for a new remark.
   RemarkId generateRemarkId() {
     return RemarkId(nextRemarkId.fetch_add(1, std::memory_order_relaxed));
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Remark Filtering - query which remarks are enabled
+  //===--------------------------------------------------------------------===//
+
+  /// Return true if missed optimization remarks are enabled for the given
+  /// category.
+  bool isMissedOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if passed optimization remarks are enabled for the given
+  /// category.
+  bool isPassedOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if analysis remarks are enabled for the given category.
+  bool isAnalysisOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if failed optimization remarks are enabled for the given
+  /// category.
+  bool isFailedOptRemarkEnabled(StringRef categoryName) const;
+
+  /// Return true if remarks of the given kind are enabled for the given
+  /// category. Always returns false for `RemarkKind::RemarkUnknown`.
+  bool isRemarkEnabled(RemarkKind kind, StringRef categoryName) const;
+
+  /// Return true if any kind of remark is enabled for the given category.
+  bool isAnyRemarkEnabled(StringRef categoryName) const {
+    return isMissedOptRemarkEnabled(categoryName) ||
+           isPassedOptRemarkEnabled(categoryName) ||
+           isFailedOptRemarkEnabled(categoryName) ||
+           isAnalysisOptRemarkEnabled(categoryName);
+  }
+
+  /// Return true if any kind of remark is enabled for any category, i.e. if at
+  /// least one category filter is active. This is a cheap check that external
+  /// remark producers can use before doing any work to build a remark.
+  bool isAnyRemarkEnabled() const {
+    return missFilter.has_value() || passedFilter.has_value() ||
+           analysisFilter.has_value() || failedFilter.has_value();
   }
 
   //===--------------------------------------------------------------------===//
@@ -650,25 +675,27 @@ public:
   void finalize() override {}
 };
 
-/// Policy that emits final remarks. Stores all remarks until finalize(),
-/// which enables query-based linking via findRemarks().
+/// Policy that emits only the last remark reported for each identity, see
+/// DenseMapInfo<Remark>. Remarks are stored until finalize().
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
-private:
-  /// user can intercept them for custom processing via a registered callback,
-  /// otherwise they will be reported on engine destruction.
-  llvm::DenseSet<detail::Remark> postponedRemarks;
-
 public:
   RemarkEmittingPolicyFinal();
 
-  void reportRemark(const detail::Remark &remark) override {
-    postponedRemarks.erase(remark);
-    postponedRemarks.insert(remark);
-  }
+  void reportRemark(const detail::Remark &remark) override;
 
-  /// Emits all stored remarks. Related remarks are printed as nested notes
-  /// under the remark that references them.
+  /// Emit each survivor once, grouping related remarks after their parents.
+  /// Visit roots with IDs in ID order, then ID-less roots in unspecified order.
+  /// Finally, start traversals from any unvisited remarks in ID order.
+  /// Links to IDs replaced in this batch are removed; IDs outside this batch
+  /// are preserved without validation. Call after reporting stops; callbacks
+  /// must not reenter the policy. A later call emits only new remarks.
   void finalize() override;
+
+private:
+  std::mutex mutex;
+  llvm::DenseSet<detail::Remark> pendingRemarks;
+  /// IDs replaced in the current batch.
+  llvm::DenseSet<uint64_t> discardedIds;
 };
 
 /// Create a Reason with llvm::formatv formatting.
@@ -745,20 +772,11 @@ LogicalResult enableOptimizationRemarks(
 
 } // namespace mlir::remark
 
-// DenseMapInfo specialization for Remark
+/// Two remarks are the same for RemarkEmittingPolicyFinal when they have the
+/// same location, remark name, combined category name and kind.
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::remark::detail::Remark> {
-  static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
-
-  /// Helper to provide a static dummy context for sentinel keys.
-  static mlir::MLIRContext *getStaticDummyContext() {
-    static mlir::MLIRContext dummyContext;
-    return &dummyContext;
-  }
-
-  /// Create an empty remark
-  /// Compute the hash value of the remark
   static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
     return llvm::hash_combine(
         remark.getLocation().getAsOpaquePointer(),
@@ -769,12 +787,6 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
 
   static bool isEqual(const mlir::remark::detail::Remark &lhs,
                       const mlir::remark::detail::Remark &rhs) {
-    // Check for empty keys first.
-    if (lhs.getRemarkName() == kEmptyKey || rhs.getRemarkName() == kEmptyKey) {
-      return lhs.getRemarkName() == rhs.getRemarkName();
-    }
-
-    // For regular remarks, compare key identifying fields
     return lhs.getLocation() == rhs.getLocation() &&
            lhs.getRemarkName() == rhs.getRemarkName() &&
            lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName() &&

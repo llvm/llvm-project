@@ -59,13 +59,13 @@ define i32 @mbcnt_lo_hi(i32 %x, i32 %y, i32 %z) {
 define i32 @ockl_lane_u32() {
 ; DEFAULT-LABEL: define i32 @ockl_lane_u32() {
 ; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @ockl_lane_u32
 ; WAVE64-SAME: () #[[ATTR1]] {
 ; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -90,12 +90,12 @@ define i32 @mbcnt_lo_and63() {
 
 define i32 @mbcnt_hi_and31() {
 ; DEFAULT-LABEL: define i32 @mbcnt_hi_and31() {
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @mbcnt_hi_and31
 ; WAVE64-SAME: () #[[ATTR1]] {
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 0)
@@ -106,13 +106,13 @@ define i32 @mbcnt_hi_and31() {
 define i32 @ockl_lane_u32_and127() {
 ; DEFAULT-LABEL: define i32 @ockl_lane_u32_and127() {
 ; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @ockl_lane_u32_and127
 ; WAVE64-SAME: () #[[ATTR1]] {
 ; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -170,12 +170,12 @@ define i32 @mbcnt_hi_add_unknown(i32 %unknown) {
 define i32 @known_range_mbcnt_hi(i32 %unknown) {
 ; DEFAULT-LABEL: define i32 @known_range_mbcnt_hi
 ; DEFAULT-SAME: (i32 [[UNKNOWN:%.*]]) {
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 [[UNKNOWN]], i32 0)
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.hi(i32 [[UNKNOWN]], i32 0)
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @known_range_mbcnt_hi
 ; WAVE64-SAME: (i32 [[UNKNOWN:%.*]]) #[[ATTR1]] {
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.hi(i32 [[UNKNOWN]], i32 0)
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.mbcnt.hi(i32 [[UNKNOWN]], i32 0)
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %unknown, i32 0)
@@ -186,13 +186,13 @@ define i32 @known_range_mbcnt_hi(i32 %unknown) {
 define i32 @known_range_mbcnt_lo_hi() {
 ; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi() {
 ; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi
 ; WAVE64-SAME: () #[[ATTR1]] {
 ; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 64) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -226,20 +226,20 @@ define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable(i32 range(i32 0, 
 ; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable
 ; DEFAULT-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) {
 ; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
-; DEFAULT-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 64)
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 63)
 ; DEFAULT-NEXT:    ret i32 [[MIN]]
 ;
 ; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_unfoldable
 ; WAVE64-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
-; WAVE64-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 64)
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[HI]], i32 63)
 ; WAVE64-NEXT:    ret i32 [[MIN]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 %unknown)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %min = call i32 @llvm.umin.i32(i32 %hi, i32 64)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 63)
   ret i32 %min
 }
 
@@ -247,18 +247,18 @@ define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable(i32 range(i32 0, 2)
 ; DEFAULT-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable
 ; DEFAULT-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) {
 ; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
-; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; DEFAULT-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; DEFAULT-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @known_range_mbcnt_lo_hi_add_known_range_foldable
 ; WAVE64-SAME: (i32 range(i32 0, 2) [[UNKNOWN:%.*]]) #[[ATTR1]] {
 ; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 0, 34) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 [[UNKNOWN]])
-; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 66) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE64-NEXT:    [[HI:%.*]] = call range(i32 0, 65) i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
 ; WAVE64-NEXT:    ret i32 [[HI]]
 ;
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 %unknown)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %min = call i32 @llvm.umin.i32(i32 %hi, i32 65)
+  %min = call i32 @llvm.umin.i32(i32 %hi, i32 64)
   ret i32 %min
 }
 
@@ -290,6 +290,66 @@ define i32 @known_range_mbcnt_lo_refineable_range(i32 %unknown) {
 ;
   %lo = call range(i32 0, 128) i32 @llvm.amdgcn.mbcnt.lo(i32 %unknown, i32 0)
   ret i32 %lo
+}
+
+; A non-zero mask is lane-varying, so the call must not become a constant.
+define i32 @mbcnt_lo_nonzero_mask() {
+; DEFAULT-LABEL: define i32 @mbcnt_lo_nonzero_mask() {
+; DEFAULT-NEXT:    [[LO:%.*]] = call range(i32 48938, 48971) i32 @llvm.amdgcn.mbcnt.lo(i32 48938, i32 48938)
+; DEFAULT-NEXT:    [[XOR:%.*]] = xor i32 [[LO]], 1
+; DEFAULT-NEXT:    ret i32 [[XOR]]
+;
+; WAVE64-LABEL: define i32 @mbcnt_lo_nonzero_mask
+; WAVE64-SAME: () #[[ATTR1]] {
+; WAVE64-NEXT:    [[LO:%.*]] = call range(i32 48938, 48971) i32 @llvm.amdgcn.mbcnt.lo(i32 48938, i32 48938)
+; WAVE64-NEXT:    [[XOR:%.*]] = xor i32 [[LO]], 1
+; WAVE64-NEXT:    ret i32 [[XOR]]
+;
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 48938, i32 48938)
+  %xor = xor i32 %lo, 1
+  ret i32 %xor
+}
+
+; The mask load is live. Different masks must not fold the two calls together.
+define i32 @mbcnt_hi_load_mask(ptr addrspace(1) %in) {
+; DEFAULT-LABEL: define i32 @mbcnt_hi_load_mask
+; DEFAULT-SAME: (ptr addrspace(1) [[IN:%.*]]) {
+; DEFAULT-NEXT:    [[MASK:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
+; DEFAULT-NEXT:    [[HI0:%.*]] = call range(i32 793772030, 793772062) i32 @llvm.amdgcn.mbcnt.hi(i32 793772030, i32 793772030)
+; DEFAULT-NEXT:    [[HI1:%.*]] = call range(i32 793772030, 793772062) i32 @llvm.amdgcn.mbcnt.hi(i32 [[MASK]], i32 793772030)
+; DEFAULT-NEXT:    [[XOR:%.*]] = xor i32 [[HI0]], [[HI1]]
+; DEFAULT-NEXT:    [[MIX:%.*]] = xor i32 [[XOR]], 1
+; DEFAULT-NEXT:    ret i32 [[MIX]]
+;
+; WAVE64-LABEL: define i32 @mbcnt_hi_load_mask
+; WAVE64-SAME: (ptr addrspace(1) [[IN:%.*]]) #[[ATTR1]] {
+; WAVE64-NEXT:    [[MASK:%.*]] = load i32, ptr addrspace(1) [[IN]], align 4
+; WAVE64-NEXT:    [[HI0:%.*]] = call range(i32 793772030, 793772062) i32 @llvm.amdgcn.mbcnt.hi(i32 793772030, i32 793772030)
+; WAVE64-NEXT:    [[HI1:%.*]] = call range(i32 793772030, 793772062) i32 @llvm.amdgcn.mbcnt.hi(i32 [[MASK]], i32 793772030)
+; WAVE64-NEXT:    [[XOR:%.*]] = xor i32 [[HI0]], [[HI1]]
+; WAVE64-NEXT:    [[MIX:%.*]] = xor i32 [[XOR]], 1
+; WAVE64-NEXT:    ret i32 [[MIX]]
+;
+  %mask = load i32, ptr addrspace(1) %in, align 4
+  %hi0 = call i32 @llvm.amdgcn.mbcnt.hi(i32 793772030, i32 793772030)
+  %hi1 = call i32 @llvm.amdgcn.mbcnt.hi(i32 %mask, i32 793772030)
+  %xor = xor i32 %hi0, %hi1
+  %mix = xor i32 %xor, 1
+  ret i32 %mix
+}
+
+; The range [32, 64) implies bit 5 is set.
+define i32 @known_range_mbcnt_hi_known_one_bit() {
+; DEFAULT-LABEL: define i32 @known_range_mbcnt_hi_known_one_bit() {
+; DEFAULT-NEXT:    ret i32 32
+;
+; WAVE64-LABEL: define i32 @known_range_mbcnt_hi_known_one_bit
+; WAVE64-SAME: () #[[ATTR1]] {
+; WAVE64-NEXT:    ret i32 32
+;
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 32)
+  %and = and i32 %hi, 32
+  ret i32 %and
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

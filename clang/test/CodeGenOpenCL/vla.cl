@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple "spir-unknown-unknown" -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,SPIR %s
-// RUN: %clang_cc1 -emit-llvm -triple amdgcn-amd-amdhsa -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 -emit-llvm -triple amdgpu-amd-amdhsa -O0 -cl-std=CL2.0 -o - %s | FileCheck -check-prefixes=CHECK,AMDGCN %s
 
 constant int sz0 = 5;
 // SPIR: @sz0 ={{.*}} addrspace(2) constant i32 5

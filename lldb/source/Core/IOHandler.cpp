@@ -394,24 +394,25 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   if (!got_line && in) {
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
-#ifdef _WIN32
-      // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
-      // according to the docs on MSDN. However, this has evidently been a
-      // known bug since Windows 8. Therefore, we can't detect if a signal
-      // interrupted in the fgets. So pressing ctrl-c causes the repl to end
-      // and the process to exit. A temporary workaround is just to attempt to
-      // fgets twice until this bug is fixed.
-      if (r == nullptr)
-        r = fgets(buffer, sizeof(buffer), in);
-      // this is the equivalent of EINTR for Windows
-      if (r == nullptr && GetLastError() == ERROR_OPERATION_ABORTED)
-        continue;
-#endif
       if (r == nullptr) {
+        if (feof(in)) {
+          got_line = SplitLineEOF(m_line_buffer);
+          break;
+        }
         if (ferror(in) && errno == EINTR)
           continue;
-        if (feof(in))
-          got_line = SplitLineEOF(m_line_buffer);
+#ifdef _WIN32
+        // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
+        // according to the docs on MSDN. However, this has evidently been a
+        // known bug since Windows 8. Therefore, we can't detect if a signal
+        // interrupted in the fgets. So pressing ctrl-c causes the repl to end
+        // and the process to exit. A temporary workaround is just to attempt
+        // to fgets twice until this bug is fixed.
+        if (GetLastError() == ERROR_OPERATION_ABORTED) {
+          clearerr(in);
+          continue;
+        }
+#endif
         break;
       }
       m_line_buffer += buffer;
@@ -663,12 +664,14 @@ void IOHandlerEditline::PrintAsync(const char *s, size_t len, bool is_stdout) {
 #endif
   {
 #ifdef _WIN32
-    const char *prompt = GetPrompt();
+    const char *prompt = nullptr;
+    CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
+    HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (GetIsInteractive() &&
+        GetConsoleScreenBufferInfo(console_handle, &screen_buffer_info))
+      prompt = GetPrompt();
     if (prompt) {
       // Back up over previous prompt using Windows API
-      CONSOLE_SCREEN_BUFFER_INFO screen_buffer_info;
-      HANDLE console_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-      GetConsoleScreenBufferInfo(console_handle, &screen_buffer_info);
       COORD coord = screen_buffer_info.dwCursorPosition;
       coord.X -= strlen(prompt);
       if (coord.X < 0)

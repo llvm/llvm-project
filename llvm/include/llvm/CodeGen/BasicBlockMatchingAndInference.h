@@ -52,6 +52,7 @@ private:
   StringMap<WeightInfo> ProgramWeightInfo;
 
   WeightInfo initWeightInfoByMatching(MachineFunction &MF);
+  WeightInfo initWeightInfoByBBID(MachineFunction &MF, const CFGProfile &CFG);
 
   void generateWeightInfoByInference(MachineFunction &MF,
                                      WeightInfo &MatchWeight);

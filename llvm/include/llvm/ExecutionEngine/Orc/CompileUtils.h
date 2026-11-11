@@ -50,9 +50,6 @@ public:
   Expected<CompileResult> operator()(Module &M) override;
 
 private:
-  IRSymbolMapper::ManglingOptions
-  manglingOptionsForTargetMachine(const TargetMachine &TM);
-
   CompileResult tryToLoadFromObjectCache(const Module &M);
   void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer);
 

@@ -8,19 +8,20 @@
 
 #include "SingleStepCheck.h"
 
-#include <csignal>
-#include <sched.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-#include "NativeProcessLinux.h"
-
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "lldb/Utility/Status.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errno.h"
 
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Host/linux/Ptrace.h"
-#include "lldb/Utility/Status.h"
+#include <csignal>
+
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <sched.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 using namespace lldb;
 using namespace lldb_private;

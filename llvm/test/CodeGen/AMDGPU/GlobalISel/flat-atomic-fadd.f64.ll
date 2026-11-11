@@ -32,11 +32,9 @@ define amdgpu_ps double @flat_atomic_fadd_f64_rtn_atomicrmw(ptr %ptr, double %da
   ; GFX90A_GFX942-NEXT:   [[FLAT_ATOMIC_ADD_F64_RTN:%[0-9]+]]:vreg_64_align2 = FLAT_ATOMIC_ADD_F64_RTN [[REG_SEQUENCE]], [[REG_SEQUENCE1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (f64) on %ir.ptr, !noalias.addrspace !0)
   ; GFX90A_GFX942-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[FLAT_ATOMIC_ADD_F64_RTN]].sub0
   ; GFX90A_GFX942-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[FLAT_ATOMIC_ADD_F64_RTN]].sub1
-  ; GFX90A_GFX942-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
-  ; GFX90A_GFX942-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX90A_GFX942-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
-  ; GFX90A_GFX942-NEXT:   $sgpr1 = COPY [[V_READFIRSTLANE_B32_1]]
-  ; GFX90A_GFX942-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
+  ; GFX90A_GFX942-NEXT:   $vgpr0 = COPY [[COPY4]]
+  ; GFX90A_GFX942-NEXT:   $vgpr1 = COPY [[COPY5]]
+  ; GFX90A_GFX942-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %ret = atomicrmw fadd ptr %ptr, double %data syncscope("wavefront") monotonic, !noalias.addrspace !1, !amdgpu.no.fine.grained.memory !0
   ret double %ret
 }

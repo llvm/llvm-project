@@ -1241,6 +1241,9 @@ func.func @maximum(%v1: vector<4xf32>, %v2: vector<4xf32>,
   %maxnum_vector = arith.maxnumf %v1, %v2 : vector<4xf32>
   %maxnum_scalable_vector = arith.maxnumf %sv1, %sv2 : vector<[4]xf32>
   %maxnum_float = arith.maxnumf %f1, %f2 : f32
+  %maximumnum_vector = arith.maximumnumf %v1, %v2 : vector<4xf32>
+  %maximumnum_scalable_vector = arith.maximumnumf %sv1, %sv2 : vector<[4]xf32>
+  %maximumnum_float = arith.maximumnumf %f1, %f2 : f32
   %max_signed = arith.maxsi %i1, %i2 : i32
   %max_unsigned = arith.maxui %i1, %i2 : i32
   return
@@ -1257,6 +1260,9 @@ func.func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
   %minnum_vector = arith.minnumf %v1, %v2 : vector<4xf32>
   %minnum_scalable_vector = arith.minnumf %sv1, %sv2 : vector<[4]xf32>
   %minnum_float = arith.minnumf %f1, %f2 : f32
+  %minimumnum_vector = arith.minimumnumf %v1, %v2 : vector<4xf32>
+  %minimumnum_scalable_vector = arith.minimumnumf %sv1, %sv2 : vector<[4]xf32>
+  %minimumnum_float = arith.minimumnumf %f1, %f2 : f32
   %min_signed = arith.minsi %i1, %i2 : i32
   %min_unsigned = arith.minui %i1, %i2 : i32
   return
@@ -1334,4 +1340,3 @@ func.func @intflags_func(%arg0: i64, %arg1: i64) {
   %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
   return
 }
-

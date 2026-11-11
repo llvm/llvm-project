@@ -11,8 +11,8 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest(
 ! CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare {{.*}}"_QFtestEa"
 ! CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare {{.*}}"_QFtestEb"
-! CHECK:           %[[DEVICEPTR_0:.*]] = acc.deviceptr var(%[[DECLARE_0]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "a"}
-! CHECK:           %[[DEVICEPTR_1:.*]] = acc.deviceptr var(%[[DECLARE_1]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "b"}
+! CHECK:           %[[DEVICEPTR_0:.*]] = acc.deviceptr var(%[[DECLARE_0]]#0 : !fir.box<!fir.array<?xf64>>) name("a") -> !fir.box<!fir.array<?xf64>>
+! CHECK:           %[[DEVICEPTR_1:.*]] = acc.deviceptr var(%[[DECLARE_1]]#0 : !fir.box<!fir.array<?xf64>>) name("b") -> !fir.box<!fir.array<?xf64>>
 ! CHECK:           acc.parallel combined(loop) dataOperands(%[[DEVICEPTR_0]], %[[DEVICEPTR_1]] : !fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>) {
 ! CHECK:             %[[DECLARE_4:.*]]:2 = hlfir.declare %[[DEVICEPTR_0]]
 ! CHECK:             %[[DECLARE_5:.*]]:2 = hlfir.declare %[[DEVICEPTR_1]]

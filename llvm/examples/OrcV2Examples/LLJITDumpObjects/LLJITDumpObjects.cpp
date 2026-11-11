@@ -23,15 +23,14 @@ ExitOnError ExitOnErr;
 
 static cl::opt<bool> DumpJITdObjects("dump-jitted-objects",
                                      cl::desc("dump jitted objects"),
-                                     cl::Optional, cl::init(true));
+                                     cl::init(true));
 
-static cl::opt<std::string> DumpDir("dump-dir",
-                                    cl::desc("directory to dump objects to"),
-                                    cl::Optional, cl::init(""));
+static cl::opt<std::string>
+    DumpDir("dump-dir", cl::desc("directory to dump objects to"), cl::init(""));
 
 static cl::opt<std::string>
     DumpFileStem("dump-file-stem", cl::desc("Override default dump names"),
-                 cl::Optional, cl::init(""));
+                 cl::init(""));
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.

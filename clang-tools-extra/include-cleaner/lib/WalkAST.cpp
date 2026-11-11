@@ -12,24 +12,29 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/ExprObjC.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <utility>
 
 namespace clang::include_cleaner {
 namespace {
@@ -41,8 +46,44 @@ bool isOperatorNewDelete(OverloadedOperatorKind OpKind) {
 using DeclCallback =
     llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>;
 
+using SelectorMap = llvm::DenseMap<Selector, SmallVector<NamedDecl *, 2>>;
+
+class TargetedSelectorDeclCollector
+    : public RecursiveASTVisitor<TargetedSelectorDeclCollector> {
+public:
+  explicit TargetedSelectorDeclCollector(
+      const llvm::DenseSet<Selector> &NeededSelectors)
+      : NeededSelectors(NeededSelectors) {}
+
+  SelectorMap takeMap() { return std::move(Map); }
+
+  bool VisitObjCContainerDecl(ObjCContainerDecl *Container) {
+    for (auto *M : Container->methods()) {
+      auto Selector = M->getSelector();
+      if (!M->isPropertyAccessor() && NeededSelectors.contains(Selector))
+        Map[Selector].push_back(M);
+    }
+    for (auto *Prop : Container->properties()) {
+      if (auto Getter = Prop->getGetterName();
+          !Getter.isNull() && NeededSelectors.contains(Getter))
+        Map[Getter].push_back(Prop);
+      if (!Prop->isReadOnly()) {
+        if (auto Setter = Prop->getSetterName();
+            !Setter.isNull() && NeededSelectors.contains(Setter))
+          Map[Setter].push_back(Prop);
+      }
+    }
+    return true;
+  }
+
+private:
+  const llvm::DenseSet<Selector> &NeededSelectors;
+  SelectorMap Map;
+};
+
 class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   DeclCallback Callback;
+  SmallVector<ObjCSelectorExpr *, 4> RecordedSelectors;
 
   void report(SourceLocation Loc, NamedDecl *ND,
               RefType RT = RefType::Explicit) {
@@ -85,7 +126,7 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
     // implies we'll point at the using-decl even when there's an explicit
     // specializaiton using the exported name, but that's rare.
     auto *ND = resolveTemplateName(TST->getTemplateName());
-    if (llvm::isa_and_present<UsingShadowDecl, TypeAliasTemplateDecl>(ND))
+    if (isa_and_present<UsingShadowDecl, TypeAliasTemplateDecl>(ND))
       return ND;
     // This is the underlying decl used by TemplateSpecializationType, can be
     // null when type is dependent or not resolved to a pattern yet.
@@ -106,6 +147,10 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
 public:
   ASTWalker(DeclCallback Callback) : Callback(Callback) {}
 
+  ArrayRef<ObjCSelectorExpr *> getRecordedSelectors() const {
+    return RecordedSelectors;
+  }
+
   // Operators are almost always ADL extension points and by design references
   // to them doesn't count as uses (generally the type should provide them, so
   // ignore them).
@@ -115,13 +160,12 @@ public:
     if (!WalkUpFromCXXOperatorCallExpr(S))
       return false;
     if (auto *CD = S->getCalleeDecl()) {
-      if (llvm::isa<CXXMethodDecl>(CD)) {
+      if (isa<CXXMethodDecl>(CD)) {
         // Treat this as a regular member reference.
         report(S->getOperatorLoc(), getMemberProvider(S->getArg(0)->getType()),
                RefType::Implicit);
       } else {
-        report(S->getOperatorLoc(), llvm::dyn_cast<NamedDecl>(CD),
-               RefType::Implicit);
+        report(S->getOperatorLoc(), dyn_cast<NamedDecl>(CD), RefType::Implicit);
       }
     }
     for (auto *Arg : S->arguments())
@@ -149,13 +193,13 @@ public:
     // Prefer the underlying decl if FoundDecl isn't a shadow decl, e.g:
     // - For templates, found-decl is always primary template, but we want the
     // specializaiton itself.
-    if (!llvm::isa<UsingShadowDecl>(FD))
+    if (!isa<UsingShadowDecl>(FD))
       FD = DRE->getDecl();
-    // For refs to non-meber-like decls, use the found decl.
+    // For refs to non-member-like decls, use the found decl.
     // For member-like decls, we should have a reference from the qualifier to
     // the container decl instead, which is preferred as it'll handle
     // aliases/exports properly.
-    if (!FD->isCXXClassMember() && !llvm::isa<EnumConstantDecl>(FD)) {
+    if (!FD->isCXXClassMember() && !isa<EnumConstantDecl>(FD)) {
       // Global operator new/delete [] is available implicitly in every
       // translation unit, even without including any explicit headers. So treat
       // those as ambigious to not force inclusion in TUs that transitively
@@ -173,7 +217,7 @@ public:
     //
     // If it's an enum constant, it must be due to prior decl. Report references
     // to it when qualifier isn't a type.
-    if (llvm::isa<EnumConstantDecl>(FD) && qualifierIsNamespaceOrNone(DRE))
+    if (isa<EnumConstantDecl>(FD) && qualifierIsNamespaceOrNone(DRE))
       report(DRE->getLocation(), FD);
     return true;
   }
@@ -195,7 +239,7 @@ public:
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    // Always treat consturctor calls as implicit. We'll have an explicit
+    // Always treat constructor calls as implicit. We'll have an explicit
     // reference for the constructor calls that mention the type-name (through
     // TypeLocs). This reference only matters for cases where there's no
     // explicit syntax at all or there're only braces.
@@ -214,13 +258,13 @@ public:
   // Report all (partial) specializations of a class/var template decl.
   template <typename TemplateDeclType, typename ParitialDeclType>
   void reportSpecializations(SourceLocation Loc, NamedDecl *ND) {
-    const auto *TD = llvm::dyn_cast<TemplateDeclType>(ND);
+    const auto *TD = dyn_cast<TemplateDeclType>(ND);
     if (!TD)
       return;
 
     for (auto *Spec : TD->specializations())
       report(Loc, Spec, RefType::Ambiguous);
-    llvm::SmallVector<ParitialDeclType *> PartialSpecializations;
+    SmallVector<ParitialDeclType *> PartialSpecializations;
     TD->getPartialSpecializations(PartialSpecializations);
     for (auto *PartialSpec : PartialSpecializations)
       report(Loc, PartialSpec, RefType::Ambiguous);
@@ -232,7 +276,7 @@ public:
       // transitive dependencies. Hence we only want to report explicit
       // references for those if they're used.
       // But for record decls, spelling of the type always refers to primary
-      // decl non-ambiguously. Hence spelling is already a use.
+      // decl unambiguously. Hence spelling is already a use.
       auto IsUsed = TD->isUsed() || TD->isReferenced() || !TD->getAsFunction();
       report(UD->getLocation(), TD,
              IsUsed ? RefType::Explicit : RefType::Ambiguous);
@@ -246,7 +290,7 @@ public:
       reportSpecializations<VarTemplateDecl,
                             VarTemplatePartialSpecializationDecl>(
           UD->getLocation(), TD);
-      if (const auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
+      if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(TD))
         for (auto *Spec : FTD->specializations())
           report(UD->getLocation(), Spec, RefType::Ambiguous);
     }
@@ -259,7 +303,7 @@ public:
       report(FD->getLocation(), FD);
     // Explicit specializaiton/instantiations of a function template requires
     // primary template.
-    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+    if (isTemplateExplicitInstantiationOrSpecialization(
             FD->getTemplateSpecializationKind()))
       report(FD->getLocation(), FD->getPrimaryTemplate());
     return true;
@@ -267,7 +311,7 @@ public:
   bool VisitVarDecl(VarDecl *VD) {
     // Ignore the parameter decl itself (its children were handled elsewhere),
     // as they don't contribute to the main-file #include.
-    if (llvm::isa<ParmVarDecl>(VD))
+    if (isa<ParmVarDecl>(VD))
       return true;
     // Mark declaration from definition as it needs type-checking.
     if (VD->isThisDeclarationADefinition())
@@ -300,14 +344,14 @@ public:
   // specialized template. Implicit ones are filtered out by RAV.
   bool
   VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *CTSD) {
-    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+    if (isTemplateExplicitInstantiationOrSpecialization(
             CTSD->getTemplateSpecializationKind()))
       report(CTSD->getLocation(),
              CTSD->getSpecializedTemplate()->getTemplatedDecl());
     return true;
   }
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *VTSD) {
-    if (clang::isTemplateExplicitInstantiationOrSpecialization(
+    if (isTemplateExplicitInstantiationOrSpecialization(
             VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
@@ -330,9 +374,8 @@ public:
     // outer type-location somewhere, which will trigger an explicit reference
     // and per IWYS, it's that spelling's responsibility to bring in necessary
     // declarations.
-    RefType RT = llvm::isa<RecordDecl>(ND->getDeclContext())
-                     ? RefType::Implicit
-                     : RefType::Explicit;
+    RefType RT = isa<RecordDecl>(ND->getDeclContext()) ? RefType::Implicit
+                                                       : RefType::Explicit;
     return report(RefLoc, ND, RT);
   }
 
@@ -395,12 +438,257 @@ public:
     report(E->getExprLoc(), E->getOperatorDelete(), RefType::Ambiguous);
     return true;
   }
+
+  // Objective-C support
+
+  bool VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
+    reportType(TL.getNameLoc(), TL.getIFaceDecl());
+    return true;
+  }
+
+  // Protocols are odd in that they are covered by Traverse instead of Visit.
+  bool TraverseObjCProtocolLoc(ObjCProtocolLoc ProtocolLoc) {
+    if (auto *Proto = ProtocolLoc.getProtocol()) {
+      report(ProtocolLoc.getLocation(), Proto);
+    }
+    return true;
+  }
+
+  bool VisitObjCImplementationDecl(ObjCImplementationDecl *D) {
+    if (auto *Interface = D->getClassInterface()) {
+      report(D->getLocation(), Interface);
+    }
+    return true;
+  }
+
+  bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
+    auto StartLoc = E->getSelectorStartLoc();
+    // Identify the selector and the method declaration
+    if (auto *Method = E->getMethodDecl()) {
+      // Report the method as a used symbol
+      report(StartLoc, Method);
+    }
+
+    // If it's a class message, report the interface/class as used
+    if (E->getReceiverKind() == ObjCMessageExpr::Class) {
+      if (auto *Interface = E->getReceiverInterface()) {
+        report(E->getReceiverRange().getBegin(), Interface);
+      }
+      return true;
+    }
+    if (auto *Interface = E->getReceiverInterface()) {
+      report(StartLoc, Interface, RefType::Implicit);
+    }
+    QualType Type = E->getReceiverType();
+    if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
+      for (auto *Proto : ObjCPtr->quals()) {
+        report(StartLoc, Proto, RefType::Implicit);
+      }
+    }
+    return true;
+  }
+
+  bool VisitObjCPropertyDecl(ObjCPropertyDecl *PD) {
+    reportType(PD->getLocation(), PD);
+    return true;
+  }
+
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *E) {
+    // Unconditionally report property declarations and their backing accessor
+    // methods. Dot-notation or pseudo-object references (`foo.bar`) require
+    // the underlying property definition or getters/setters to compile.
+    // Bypassing transient compiler state flags (isMessagingGetter/
+    // isMessagingSetter) guarantees that the declaring
+    // header keeps the properties recorded as used.
+    if (E->isExplicitProperty()) {
+      if (auto *Prop = E->getExplicitProperty()) {
+        report(E->getLocation(), Prop);
+        if (auto *Getter = Prop->getGetterMethodDecl())
+          report(E->getLocation(), Getter);
+        if (auto *Setter = Prop->getSetterMethodDecl())
+          report(E->getLocation(), Setter);
+      }
+    } else {
+      if (auto *Getter = E->getImplicitPropertyGetter())
+        report(E->getLocation(), Getter);
+      if (auto *Setter = E->getImplicitPropertySetter())
+        report(E->getLocation(), Setter);
+    }
+    return true;
+  }
+
+  bool VisitObjCProtocolExpr(ObjCProtocolExpr *E) {
+    if (auto *Proto = E->getProtocol()) {
+      report(E->getProtocolIdLoc(), Proto);
+    }
+    return true;
+  }
+
+  bool VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
+    RecordedSelectors.push_back(E);
+    return true;
+  }
+
+  bool VisitCastExpr(CastExpr *E) {
+    // Handle implicit or explicit casts between Objective-C object pointers
+    // aimed towards protocol-qualification (e.g., `ClassName *` to
+    // `id<Proto>`), as well as C-pointer-to-ObjC and id-to-ObjC pointer casts.
+    const auto *DestPtr = E->getType()->getAs<ObjCObjectPointerType>();
+
+    if (!DestPtr)
+      return true;
+
+    const auto *SrcPtr =
+        E->getSubExpr()->getType()->getAs<ObjCObjectPointerType>();
+
+    // Handles non-arc CPointer to ObjCPointer and id to ObjCPointer casts.
+    if (isa<ImplicitCastExpr>(E) &&
+        (E->getCastKind() == CK_CPointerToObjCPointerCast ||
+         (SrcPtr && SrcPtr->isObjCIdType())))
+      report(E->getExprLoc(), DestPtr->getInterfaceDecl(), RefType::Implicit);
+
+    if (!SrcPtr)
+      return true;
+
+    // If we're casting from a known class pointer to protocol conformance.
+    const ObjCInterfaceDecl *Class = SrcPtr->getInterfaceDecl();
+    if (!Class)
+      return true;
+
+    ASTContext &Ctx = Class->getASTContext();
+
+    // For every protocol required by the destination type.
+    for (ObjCProtocolDecl *Proto : DestPtr->quals()) {
+      const ObjCInterfaceDecl *Current = Class;
+      // Search the inheritance hierarchy for the provider of conformance.
+      while (Current) {
+        bool ConformsDirectly = false;
+        for (auto *PI : Current->protocols()) {
+          if (Ctx.ProtocolCompatibleWithProtocol(Proto, PI)) {
+            ConformsDirectly = true;
+            break;
+          }
+        }
+        // If the class itself provides the conformance directly, we don't
+        // need to keep searching Categories.
+        if (ConformsDirectly)
+          break;
+
+        // If the class doesn't declare direct conformance but conformance is
+        // injected via a visible Category attached to this class, note that
+        // the category header is required by recording an Implicit reference
+        // to it.
+        for (auto *Cat : Current->visible_categories())
+          for (auto *PI : Cat->protocols())
+            if (Ctx.ProtocolCompatibleWithProtocol(Proto, PI))
+              report(E->getExprLoc(), Cat, RefType::Implicit);
+        Current = Current->getSuperClass();
+      }
+    }
+    return true;
+  }
+
+  bool VisitObjCCategoryDecl(ObjCCategoryDecl *D) {
+    // A category declaration depends on its base interface.
+    if (auto *Interface = D->getClassInterface()) {
+      report(D->getLocation(), Interface);
+    }
+    return true;
+  }
+
+  bool VisitObjCCategoryImplDecl(ObjCCategoryImplDecl *D) {
+    // Implementation requires the base interface.
+    if (auto *Interface = D->getClassInterface()) {
+      report(D->getLocation(), Interface);
+    }
+    // Implementation requires the category declaration.
+    if (auto *Category = D->getCategoryDecl()) {
+      report(D->getCategoryNameLoc(), Category);
+    }
+    return true;
+  }
+
+  bool VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *D) {
+    // An alias declaration requires the underlying class.
+    if (auto *Aliased = D->getClassInterface()) {
+      report(D->getLocation(), Aliased);
+    }
+    return true;
+  }
+
+  bool VisitObjCIvarRefExpr(ObjCIvarRefExpr *E) {
+    if (auto *Ivar = E->getDecl()) {
+      report(E->getLocation(), Ivar);
+    }
+    return true;
+  }
+
+  void reportObjCLiteralMethod(SourceLocation Loc, ObjCMethodDecl *Method) {
+    if (!Method)
+      return;
+    report(Loc, Method->getClassInterface());
+  }
+
+  bool VisitObjCBoxedExpr(ObjCBoxedExpr *E) {
+    // Handles NSNumber literals and NSValue literals.
+    reportObjCLiteralMethod(E->getBeginLoc(), E->getBoxingMethod());
+    return true;
+  }
+
+  bool VisitObjCArrayLiteral(ObjCArrayLiteral *E) {
+    reportObjCLiteralMethod(E->getBeginLoc(), E->getArrayWithObjectsMethod());
+    return true;
+  }
+
+  bool VisitObjCDictionaryLiteral(ObjCDictionaryLiteral *E) {
+    reportObjCLiteralMethod(E->getBeginLoc(), E->getDictWithObjectsMethod());
+    return true;
+  }
+
+  bool VisitObjCStringLiteral(ObjCStringLiteral *E) {
+    report(E->getBeginLoc(),
+           E->getType()->getAs<ObjCObjectPointerType>()->getInterfaceDecl());
+    return true;
+  }
 };
 
 } // namespace
 
-void walkAST(Decl &Root, DeclCallback Callback) {
-  ASTWalker(Callback).TraverseDecl(&Root);
+void walkAST(llvm::ArrayRef<Decl *> Roots, DeclCallback Callback) {
+  if (Roots.empty())
+    return;
+  ASTWalker Walker(Callback);
+  for (auto *Root : Roots)
+    Walker.TraverseDecl(Root);
+
+  ASTContext &Ctx = Roots.front()->getASTContext();
+  if (!Ctx.getLangOpts().ObjC)
+    return;
+
+  auto RecordedSelectors = Walker.getRecordedSelectors();
+  if (RecordedSelectors.empty())
+    return;
+
+  llvm::DenseSet<Selector> NeededSelectors;
+  for (const auto *E : RecordedSelectors)
+    NeededSelectors.insert(E->getSelector());
+  TargetedSelectorDeclCollector Collector(NeededSelectors);
+  Collector.TraverseDecl(Ctx.getTranslationUnitDecl());
+  auto Map = Collector.takeMap();
+  llvm::SmallVector<NamedDecl *, 4> UniqueDecls;
+  for (const auto *E : RecordedSelectors) {
+    auto It = Map.find(E->getSelector());
+    UniqueDecls.clear();
+    if (It != Map.end()) {
+      for (NamedDecl *ND : It->second) {
+        NamedDecl *Canonical = cast<NamedDecl>(ND->getCanonicalDecl());
+        if (!llvm::is_contained(UniqueDecls, Canonical)) {
+          UniqueDecls.push_back(Canonical);
+          Callback(E->getSelectorNameLoc(), *Canonical, RefType::Ambiguous);
+        }
+      }
+    }
+  }
 }
 
 } // namespace clang::include_cleaner

@@ -70,6 +70,7 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
+struct LateParsedTypeAttribute;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -1634,6 +1635,9 @@ public:
   /// Strip Objective-C "__kindof" types from the given type.
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
+  /// Strip nullability attributes from the given type.
+  QualType stripNullability(const ASTContext &ctx) const;
+
   /// Remove all qualifiers including _Atomic.
   ///
   /// Like getUnqualifiedType(), the type may still be qualified if it is a
@@ -2129,7 +2133,7 @@ protected:
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
     LLVM_PREFERRED_TYPE(VectorKind)
-    unsigned VecKind : 4;
+    unsigned VecKind : 6;
     /// The number of elements in the vector.
     uint32_t NumElements;
   };
@@ -2266,7 +2270,7 @@ protected:
     /// increments towards the beginning.
     /// Positive non-zero number represents the index + 1.
     /// Zero means this is not substituted from an expansion.
-    unsigned PackIndex : 15;
+    unsigned PackIndex : 16;
   };
 
   class SubstPackTypeBitfields {
@@ -2766,6 +2770,7 @@ public:
   bool isUndeducedAutoType() const;             // C++11 auto or
                                                 // C++14 decltype(auto)
   bool isTypedefNameType() const;               // typedef or alias template
+  bool isMetaInfoType() const;                  // C++26 std::meta::info
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
@@ -2792,8 +2797,11 @@ public:
 
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/HLSLPackedTypes.def"
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
+  bool isHLSLBuiltinPackedType() const;
   bool isHLSLAttributedResourceType() const;
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
@@ -2802,6 +2810,9 @@ public:
   bool isHLSLIntangibleType() const;
   // User-defined HLSL records or arrays of such records in standard layout
   bool isHLSLStandardLayoutRecordOrArrayOf() const;
+
+#define SPIRV_TYPE(Name, Id, SingletonId) bool is##Id##Type() const;
+#include "clang/Basic/SPIRVTypes.def"
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -2812,6 +2823,12 @@ public:
   bool isCUDADeviceBuiltinSurfaceType() const;
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
+
+  /// Check if the type is the AMDGPU named barrier type, or an array thereof.
+  bool isAMDGPUNamedBarrierType() const;
+  /// Check if the type is the AMDGPU named barrier type/a RecordType of a named
+  /// barrier wrapper, or an array thereof.
+  bool isAMDGPUNamedBarrierTypeOrWrapper() const;
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -3252,6 +3269,12 @@ public:
 // HLSL intangible Types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/HLSLIntangibleTypes.def"
+// HLSL packed types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/HLSLPackedTypes.def"
+// SPIRV types
+#define SPIRV_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/SPIRVTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -3351,13 +3374,7 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Element) {
-    ID.AddPointer(Element.getAsOpaquePtr());
-  }
+  QualType getKey() const { return getElementType(); }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Complex; }
 };
@@ -3377,13 +3394,7 @@ public:
   bool isSugared() const { return true; }
   QualType desugar() const { return getInnerType(); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getInnerType());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Inner) {
-    Inner.Profile(ID);
-  }
+  QualType getKey() const { return getInnerType(); }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Paren; }
 };
@@ -3404,13 +3415,7 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee) {
-    ID.AddPointer(Pointee.getAsOpaquePtr());
-  }
+  QualType getKey() const { return getPointeeType(); }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Pointer; }
 };
@@ -3458,6 +3463,13 @@ protected:
   BoundsAttributedType(TypeClass TC, QualType Wrapped, QualType Canon);
 
 public:
+  enum BoundsAttrKind {
+    CountedBy = 0,
+    SizedBy,
+    CountedByOrNull,
+    SizedByOrNull,
+  };
+
   bool isSugared() const { return true; }
   QualType desugar() const { return WrappedTy; }
 
@@ -3494,10 +3506,7 @@ public:
 
 /// Represents a sugar type with `__counted_by` or `__sized_by` annotations,
 /// including their `_or_null` variants.
-class CountAttributedType final
-    : public BoundsAttributedType,
-      public llvm::TrailingObjects<CountAttributedType,
-                                   TypeCoupledDeclRefInfo> {
+class CountAttributedType final : public BoundsAttributedType {
   friend class ASTContext;
 
   Expr *CountExpr;
@@ -3507,27 +3516,36 @@ class CountAttributedType final
   /// __counted_by_or_null or __sized_by_or_null) \p CoupledDecls contains the
   /// list of declarations referenced by \p CountExpr, which the type depends on
   /// for the bounds information.
+  ///
+  /// \p CountExpr may be null, and \p CoupledDecls empty, for a type created by
+  /// a late-parsed attribute whose argument has not been parsed yet; such a
+  /// type is completed by \c complete once the enclosing scope is known. See
+  /// \c Parser::CompleteLateParsedTypeAttributes.
   CountAttributedType(QualType Wrapped, QualType Canon, Expr *CountExpr,
                       bool CountInBytes, bool OrNull,
                       ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
-  unsigned numTrailingObjects(OverloadToken<TypeCoupledDeclRefInfo>) const {
-    return CountAttributedTypeBits.NumCoupledDecls;
-  }
+  /// Allocate and construct a \c CountAttributedType in \p Ctx, including its
+  /// coupled-declaration array. \p CountExpr may be null (with \p CoupledDecls
+  /// empty) for a late-parsed attribute whose argument is not yet parsed;
+  /// complete such a node later with \c complete.
+  static CountAttributedType *
+  Create(const ASTContext &Ctx, QualType Wrapped, QualType Canon,
+         Expr *CountExpr, bool CountInBytes, bool OrNull,
+         ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
+
+  /// Supply the count expression and coupled declarations for a node created by
+  /// \c Create with a null count -- a late-parsed attribute whose argument has
+  /// now been parsed. Allocates the decl array in \p Ctx, so the node owns it.
+  void complete(const ASTContext &Ctx, Expr *E,
+                ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
 public:
-  enum DynamicCountPointerKind {
-    CountedBy = 0,
-    SizedBy,
-    CountedByOrNull,
-    SizedByOrNull,
-  };
-
   Expr *getCountExpr() const { return CountExpr; }
   bool isCountInBytes() const { return CountAttributedTypeBits.CountInBytes; }
   bool isOrNull() const { return CountAttributedTypeBits.OrNull; }
 
-  DynamicCountPointerKind getKind() const {
+  BoundsAttrKind getKind() const {
     if (isOrNull())
       return isCountInBytes() ? SizedByOrNull : CountedByOrNull;
     return isCountInBytes() ? SizedBy : CountedBy;
@@ -3545,6 +3563,40 @@ public:
   }
 
   StringRef getAttributeName(bool WithMacroPrefix) const;
+};
+
+/// Represents a placeholder type for late-parsed type attributes.
+/// This type wraps another type and holds an opaque pointer to a
+/// LateParsedTypeAttribute that will be parsed later (e.g., in ActOnFields).
+/// Once parsed, this type is replaced with the appropriate attributed type
+/// (e.g., CountAttributedType for `__counted_by`).
+///
+/// Its canonical type is that of the wrapped type, so a consumer walking the
+/// AST during late parsing must treat this as "attribute unresolved", not "no
+/// attribute here".
+class LateParsedAttrType : public Type {
+  friend class ASTContext; // ASTContext creates these.
+
+  QualType WrappedTy;
+  LateParsedTypeAttribute *LateParsedTypeAttr;
+
+  LateParsedAttrType(QualType Wrapped, QualType Canon,
+                     LateParsedTypeAttribute *Attr)
+      : Type(LateParsedAttr, Canon, Wrapped->getDependence()),
+        WrappedTy(Wrapped), LateParsedTypeAttr(Attr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedTy; }
+  LateParsedTypeAttribute *getLateParsedAttribute() const {
+    return LateParsedTypeAttr;
+  }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return WrappedTy; }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == LateParsedAttr;
+  }
 };
 
 /// Represents a type which was implicitly adjusted by the semantic
@@ -3571,13 +3623,8 @@ public:
   bool isSugared() const { return true; }
   QualType desugar() const { return AdjustedTy; }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, OriginalTy, AdjustedTy);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Orig, QualType New) {
-    ID.AddPointer(Orig.getAsOpaquePtr());
-    ID.AddPointer(New.getAsOpaquePtr());
+  std::pair<QualType, QualType> getKey() const {
+    return {OriginalTy, AdjustedTy};
   }
 
   static bool classof(const Type *T) {
@@ -3620,13 +3667,7 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-      Profile(ID, getPointeeType());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee) {
-      ID.AddPointer(Pointee.getAsOpaquePtr());
-  }
+  QualType getKey() const { return getPointeeType(); }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == BlockPointer;
@@ -3652,23 +3693,16 @@ public:
 
   QualType getPointeeTypeAsWritten() const { return PointeeType; }
 
+  std::pair<QualType, bool> getKey() const {
+    return {getPointeeTypeAsWritten(), isSpelledAsLValue()};
+  }
+
   QualType getPointeeType() const {
     // FIXME: this might strip inner qualifiers; okay?
     const ReferenceType *T = this;
     while (T->isInnerRef())
       T = T->PointeeType->castAs<ReferenceType>();
     return T->PointeeType;
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, PointeeType, isSpelledAsLValue());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      QualType Referencee,
-                      bool SpelledAsLValue) {
-    ID.AddPointer(Referencee.getAsOpaquePtr());
-    ID.AddBoolean(SpelledAsLValue);
   }
 
   static bool classof(const Type *T) {
@@ -4221,15 +4255,140 @@ enum class VectorKind {
   SveFixedLengthPredicate,
 
   /// is RISC-V RVV fixed-length data vector
-  RVVFixedLengthData,
+  RVVFixedLengthData_MF8,
+  RVVFixedLengthData_MF4,
+  RVVFixedLengthData_MF2,
+  RVVFixedLengthData_M1,
+  RVVFixedLengthData_M2,
+  RVVFixedLengthData_M4,
+  RVVFixedLengthData_M8,
 
-  /// is RISC-V RVV fixed-length mask vector
-  RVVFixedLengthMask,
-
-  RVVFixedLengthMask_1,
-  RVVFixedLengthMask_2,
-  RVVFixedLengthMask_4
+  /// is RISC-V RVV fixed-length mask vector of vbool<R>_t; the _<L> kinds
+  /// have only L lanes in a single byte
+  RVVFixedLengthMaskRatio1,
+  RVVFixedLengthMaskRatio1_1,
+  RVVFixedLengthMaskRatio1_2,
+  RVVFixedLengthMaskRatio1_4,
+  RVVFixedLengthMaskRatio2,
+  RVVFixedLengthMaskRatio2_1,
+  RVVFixedLengthMaskRatio2_2,
+  RVVFixedLengthMaskRatio2_4,
+  RVVFixedLengthMaskRatio4,
+  RVVFixedLengthMaskRatio4_1,
+  RVVFixedLengthMaskRatio4_2,
+  RVVFixedLengthMaskRatio4_4,
+  RVVFixedLengthMaskRatio8,
+  RVVFixedLengthMaskRatio8_1,
+  RVVFixedLengthMaskRatio8_2,
+  RVVFixedLengthMaskRatio8_4,
+  RVVFixedLengthMaskRatio16,
+  RVVFixedLengthMaskRatio16_1,
+  RVVFixedLengthMaskRatio16_2,
+  RVVFixedLengthMaskRatio16_4,
+  RVVFixedLengthMaskRatio32,
+  RVVFixedLengthMaskRatio32_1,
+  RVVFixedLengthMaskRatio32_2,
+  RVVFixedLengthMaskRatio32_4,
+  RVVFixedLengthMaskRatio64,
+  RVVFixedLengthMaskRatio64_1,
+  RVVFixedLengthMaskRatio64_2,
+  RVVFixedLengthMaskRatio64_4
 };
+
+// The helpers below rely on the order of the RVV fixed-length kinds:
+// RVVFixedLengthData_MF8 .. _M8 by LMUL, then RVVFixedLengthMaskRatio<R>,
+// <R>_1, <R>_2 and <R>_4 for R = 1 .. 64.
+static_assert(unsigned(VectorKind::RVVFixedLengthData_M1) ==
+                      unsigned(VectorKind::RVVFixedLengthData_MF8) + 3 &&
+                  unsigned(VectorKind::RVVFixedLengthData_M8) ==
+                      unsigned(VectorKind::RVVFixedLengthData_MF8) + 6,
+              "unexpected order of the RVV fixed-length data vector kinds");
+static_assert(unsigned(VectorKind::RVVFixedLengthMaskRatio1_4) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 3 &&
+                  unsigned(VectorKind::RVVFixedLengthMaskRatio2) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 4 &&
+                  unsigned(VectorKind::RVVFixedLengthMaskRatio64_4) ==
+                      unsigned(VectorKind::RVVFixedLengthMaskRatio1) + 27,
+              "unexpected order of the RVV fixed-length mask vector kinds");
+
+/// True if \p VK is one of the RVV fixed-length data vector kinds, i.e. a
+/// riscv_rvv_vector_bits typedef of a data (non-mask) RVV type.
+inline bool isRVVFixedLengthDataVectorKind(VectorKind VK) {
+  return VK >= VectorKind::RVVFixedLengthData_MF8 &&
+         VK <= VectorKind::RVVFixedLengthData_M8;
+}
+
+/// Return log2 of the LMUL recorded in an RVV fixed-length data vector kind:
+/// MF8 -> -3, ..., M1 -> 0, ..., M8 -> 3.
+inline int getRVVFixedLengthDataLMulLog2(VectorKind VK) {
+  assert(isRVVFixedLengthDataVectorKind(VK) &&
+         "not an RVV fixed-length data vector kind");
+  return int(VK) - int(VectorKind::RVVFixedLengthData_M1);
+}
+
+/// Inverse of getRVVFixedLengthDataLMulLog2().
+inline VectorKind getRVVFixedLengthDataVectorKind(int LMulLog2) {
+  assert(LMulLog2 >= -3 && LMulLog2 <= 3 &&
+         "LMUL out of range for an RVV type");
+  return VectorKind(int(VectorKind::RVVFixedLengthData_M1) + LMulLog2);
+}
+
+/// True if \p VK is one of the RVV fixed-length mask vector kinds, i.e. a
+/// riscv_rvv_vector_bits typedef of a vbool<R>_t type.
+inline bool isRVVFixedLengthMaskVectorKind(VectorKind VK) {
+  return VK >= VectorKind::RVVFixedLengthMaskRatio1 &&
+         VK <= VectorKind::RVVFixedLengthMaskRatio64_4;
+}
+
+/// Return log2 of the R of the vbool<R>_t type recorded in an RVV fixed-length
+/// mask vector kind: Ratio1 -> 0, Ratio2 -> 1, ..., Ratio64 -> 6.
+inline unsigned getRVVFixedLengthMaskRatioLog2(VectorKind VK) {
+  assert(isRVVFixedLengthMaskVectorKind(VK) &&
+         "not an RVV fixed-length mask vector kind");
+  return (unsigned(VK) - unsigned(VectorKind::RVVFixedLengthMaskRatio1)) / 4;
+}
+
+/// True if \p VK is one of the RVV fixed-length data or mask vector kinds.
+inline bool isRVVFixedLengthVectorKind(VectorKind VK) {
+  return isRVVFixedLengthDataVectorKind(VK) ||
+         isRVVFixedLengthMaskVectorKind(VK);
+}
+
+/// Return the LMUL of an RVV fixed-length data vector kind, "mf8" .. "m8", or
+/// the ratio of a mask vector kind, "1" .. "64".
+inline StringRef getRVVFixedLengthString(VectorKind VK) {
+  if (isRVVFixedLengthDataVectorKind(VK)) {
+    static constexpr const char *LMuls[] = {"mf8", "mf4", "mf2", "m1",
+                                            "m2",  "m4",  "m8"};
+    return LMuls[getRVVFixedLengthDataLMulLog2(VK) + 3];
+  }
+  static constexpr const char *Ratios[] = {"1",  "2",  "4", "8",
+                                           "16", "32", "64"};
+  return Ratios[getRVVFixedLengthMaskRatioLog2(VK)];
+}
+
+/// Return the number of lanes (1, 2 or 4) of an RVV fixed-length mask vector
+/// kind that fits in less than one byte, or 0 if its lanes fill whole bytes.
+inline unsigned getRVVFixedLengthMaskSubByteLanes(VectorKind VK) {
+  assert(isRVVFixedLengthMaskVectorKind(VK) &&
+         "not an RVV fixed-length mask vector kind");
+  unsigned Col =
+      (unsigned(VK) - unsigned(VectorKind::RVVFixedLengthMaskRatio1)) % 4;
+  return Col ? 1u << (Col - 1) : 0;
+}
+
+/// Inverse of getRVVFixedLengthMaskRatioLog2() and
+/// getRVVFixedLengthMaskSubByteLanes().
+inline VectorKind getRVVFixedLengthMaskVectorKind(unsigned RatioLog2,
+                                                  unsigned SubByteLanes) {
+  assert(RatioLog2 < 7 && "ratio out of range for an RVV mask type");
+  assert((SubByteLanes == 0 || SubByteLanes == 1 || SubByteLanes == 2 ||
+          SubByteLanes == 4) &&
+         "unexpected sub-byte lane count");
+  unsigned Col = SubByteLanes == 0 ? 0 : llvm::Log2_32(SubByteLanes) + 1;
+  return VectorKind(unsigned(VectorKind::RVVFixedLengthMaskRatio1) +
+                    RatioLog2 * 4 + Col);
+}
 
 /// Represents a GCC generic vector type. This type is created using
 /// __attribute__((vector_size(n)), where "n" specifies the vector size in
@@ -4258,6 +4417,13 @@ public:
 
   VectorKind getVectorKind() const {
     return VectorKind(VectorTypeBits.VecKind);
+  }
+
+  /// Return the number of lanes of an RVV fixed-length mask vector. Its
+  /// elements are bytes, but each lane is a single bit.
+  unsigned getRVVFixedLengthMaskLanes() const {
+    unsigned SubByteLanes = getRVVFixedLengthMaskSubByteLanes(getVectorKind());
+    return SubByteLanes ? SubByteLanes : getNumElements() * 8;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -4402,9 +4568,14 @@ class MatrixType : public Type, public llvm::FoldingSetNode {
 protected:
   friend class ASTContext;
 
+public:
+  enum class LayoutKind : uint8_t { RowMajor, ColumnMajor };
+
+private:
   /// The element type of the matrix.
   QualType ElementType;
 
+protected:
   MatrixType(QualType ElementTy, QualType CanonElementTy);
 
   MatrixType(TypeClass TypeClass, QualType ElementTy, QualType CanonElementTy,
@@ -4455,12 +4626,15 @@ protected:
   /// Number of rows and columns.
   unsigned NumRows;
   unsigned NumColumns;
+  std::optional<LayoutKind> Layout;
 
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType);
+                     unsigned NColumns, QualType CanonElementType,
+                     std::optional<LayoutKind> Layout);
 
   ConstantMatrixType(TypeClass typeClass, QualType MatrixType, unsigned NRows,
-                     unsigned NColumns, QualType CanonElementType);
+                     unsigned NColumns, QualType CanonElementType,
+                     std::optional<LayoutKind> Layout);
 
 public:
   /// Returns the number of rows in the matrix.
@@ -4468,6 +4642,8 @@ public:
 
   /// Returns the number of columns in the matrix.
   unsigned getNumColumns() const { return NumColumns; }
+
+  std::optional<LayoutKind> getLayout() const { return Layout; }
 
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
@@ -4514,16 +4690,17 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getNumRows(), getNumColumns(),
+    Profile(ID, getElementType(), getNumRows(), getNumColumns(), getLayout(),
             getTypeClass());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
                       unsigned NumRows, unsigned NumColumns,
-                      TypeClass TypeClass) {
+                      std::optional<LayoutKind> Layout, TypeClass TypeClass) {
     ID.AddPointer(ElementType.getAsOpaquePtr());
     ID.AddInteger(NumRows);
     ID.AddInteger(NumColumns);
+    ID.AddInteger(Layout ? llvm::to_underlying(*Layout) + 1 : 0);
     ID.AddInteger(TypeClass);
   }
 
@@ -4817,13 +4994,16 @@ public:
     unsigned HasArmTypeAttributes : 1;
 
     LLVM_PREFERRED_TYPE(bool)
+    unsigned HasRISCVTypeAttributes : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
     unsigned EffectsHaveConditions : 1;
     unsigned NumFunctionEffects : 4;
 
     FunctionTypeExtraBitfields()
         : NumExceptionType(0), HasExtraAttributeInfo(false),
-          HasArmTypeAttributes(false), EffectsHaveConditions(false),
-          NumFunctionEffects(0) {}
+          HasArmTypeAttributes(false), HasRISCVTypeAttributes(false),
+          EffectsHaveConditions(false), NumFunctionEffects(0) {}
   };
 
   /// A holder for extra information from attributes which aren't part of an
@@ -4869,12 +5049,57 @@ public:
     ARM_InOut = 4,
   };
 
+  /// RISC-V type attributes for states.
+  enum RISCVTypeAttributes : unsigned {
+    RISCVNormalFunction = 0,
+
+    // Describes the value of the xsfmm tile state using RISCVStateValue.
+    // Each tile gets 3 bits to store its state.
+    RISCVXsfmmShift = 0,
+    RISCVXsfmmMask = 0b111 << RISCVXsfmmShift,
+
+    // Currently using 3 bits for xsfmm
+    RISCVAttributeMask = 0b111
+  };
+
+  enum RISCVStateValue : unsigned {
+    RISCVNone = 0,
+    RISCVIn = 1,
+    RISCVOut = 2,
+    RISCVInOut = 3,
+    RISCVPreserves = 4,
+    RISCVNew = 5,
+  };
+
+  static const char *ToRISCVStateString(RISCVStateValue St) {
+    switch (St) {
+    case RISCVNone:
+      return "none";
+    case RISCVIn:
+      return "__riscv_in";
+    case RISCVOut:
+      return "__riscv_out";
+    case RISCVInOut:
+      return "__riscv_inout";
+    case RISCVPreserves:
+      return "__riscv_preserves";
+    case RISCVNew:
+      return "__riscv_new";
+    }
+    llvm_unreachable("Invalid RISC-V state value");
+  }
+
   static ArmStateValue getArmZAState(unsigned AttrBits) {
     return static_cast<ArmStateValue>((AttrBits & SME_ZAMask) >> SME_ZAShift);
   }
 
   static ArmStateValue getArmZT0State(unsigned AttrBits) {
     return static_cast<ArmStateValue>((AttrBits & SME_ZT0Mask) >> SME_ZT0Shift);
+  }
+
+  static RISCVStateValue getRISCVXsfmmState(unsigned AttrBits) {
+    return static_cast<RISCVStateValue>((AttrBits & RISCVXsfmmMask) >>
+                                        RISCVXsfmmShift);
   }
 
   /// A holder for Arm type attributes as described in the Arm C/C++
@@ -4887,6 +5112,13 @@ public:
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
+  };
+
+  struct alignas(void *) FunctionTypeRISCVAttributes {
+    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
+    unsigned RISCVAttributes : 3;
+
+    FunctionTypeRISCVAttributes() : RISCVAttributes(RISCVNormalFunction) {}
   };
 
 protected:
@@ -5366,9 +5598,11 @@ class FunctionProtoType final
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeExtraAttributeInfo,
-          FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
-          FunctionEffect, EffectConditionExpr> {
+          FunctionType::FunctionTypeArmAttributes,
+          FunctionType::FunctionTypeRISCVAttributes,
+          FunctionType::ExceptionType, Expr *, FunctionDecl *,
+          FunctionType::ExtParameterInfo, Qualifiers, FunctionEffect,
+          EffectConditionExpr> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -5471,14 +5705,18 @@ public:
     unsigned CFIUncheckedCallee : 1;
     LLVM_PREFERRED_TYPE(AArch64SMETypeAttributes)
     unsigned AArch64SMEAttributes : 9;
+    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
+    unsigned RISCVAttributes : 3;
 
     ExtProtoInfo()
         : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
-          AArch64SMEAttributes(SME_NormalFunction) {}
+          AArch64SMEAttributes(SME_NormalFunction),
+          RISCVAttributes(RISCVNormalFunction) {}
 
     ExtProtoInfo(CallingConv CC)
         : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
-          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction) {}
+          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction),
+          RISCVAttributes(RISCVNormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
@@ -5495,6 +5733,7 @@ public:
     bool requiresFunctionProtoTypeExtraBitfields() const {
       return ExceptionSpec.Type == EST_Dynamic ||
              requiresFunctionProtoTypeArmAttributes() ||
+             requiresFunctionProtoTypeRISCVAttributes() ||
              requiresFunctionProtoTypeExtraAttributeInfo() ||
              !FunctionEffects.empty();
     }
@@ -5513,6 +5752,17 @@ public:
       else
         AArch64SMEAttributes &= ~Kind;
     }
+
+    bool requiresFunctionProtoTypeRISCVAttributes() const {
+      return RISCVAttributes != RISCVNormalFunction;
+    }
+
+    void setRISCVAttribute(RISCVTypeAttributes Kind, bool Enable = true) {
+      if (Enable)
+        RISCVAttributes |= Kind;
+      else
+        RISCVAttributes &= ~Kind;
+    }
   };
 
 private:
@@ -5526,6 +5776,11 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeArmAttributes>) const {
     return hasArmTypeAttributes();
+  }
+
+  unsigned
+  numTrailingObjects(OverloadToken<FunctionTypeRISCVAttributes>) const {
+    return hasRISCVTypeAttributes();
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
@@ -5641,6 +5896,12 @@ private:
                ->HasArmTypeAttributes;
   }
 
+  bool hasRISCVTypeAttributes() const {
+    return FunctionTypeBits.HasExtraBitfields &&
+           getTrailingObjects<FunctionTypeExtraBitfields>()
+               ->HasRISCVTypeAttributes;
+  }
+
   bool hasExtQualifiers() const {
     return FunctionTypeBits.HasExtQuals;
   }
@@ -5670,6 +5931,7 @@ public:
     EPI.ExtParameterInfos = getExtParameterInfosOrNull();
     EPI.ExtraAttributeInfo = getExtraAttributeInfo();
     EPI.AArch64SMEAttributes = getAArch64SMEAttributes();
+    EPI.RISCVAttributes = getRISCVAttributes();
     EPI.FunctionEffects = getFunctionEffects();
     return EPI;
   }
@@ -5872,6 +6134,12 @@ public:
         ->AArch64SMEAttributes;
   }
 
+  unsigned getRISCVAttributes() const {
+    if (!hasRISCVTypeAttributes())
+      return RISCVNormalFunction;
+    return getTrailingObjects<FunctionTypeRISCVAttributes>()->RISCVAttributes;
+  }
+
   ExtParameterInfo getExtParameterInfo(unsigned I) const {
     assert(I < getNumParams() && "parameter index out of range");
     if (hasExtParameterInfos())
@@ -5961,8 +6229,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                       param_type_iterator ArgTys, unsigned NumArgs,
-                      const ExtProtoInfo &EPI, const ASTContext &Context,
-                      bool Canonical);
+                      const ExtProtoInfo &EPI, const ASTContext &Context);
 };
 
 /// The elaboration keyword that precedes a qualified type name or
@@ -6465,7 +6732,7 @@ class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   };
 
 private:
@@ -6496,15 +6763,8 @@ public:
     return T->getTypeClass() == UnaryTransform;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getBaseType(), getUnderlyingType(), getUTTKind());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType BaseType,
-                      QualType UnderlyingType, UTTKind UKind) {
-    BaseType.Profile(ID);
-    UnderlyingType.Profile(ID);
-    ID.AddInteger(UKind);
+  std::tuple<QualType, QualType, UTTKind> getKey() const {
+    return {getBaseType(), getUnderlyingType(), getUTTKind()};
   }
 };
 
@@ -6799,9 +7059,10 @@ private:
 
   QualType UnderlyingType;
   OverflowBehaviorKind BehaviorKind;
+  const ASTContext &Context;
 
-  OverflowBehaviorType(QualType Canon, QualType Underlying,
-                       OverflowBehaviorKind Kind);
+  OverflowBehaviorType(const ASTContext &Context, QualType Canon,
+                       QualType Underlying, OverflowBehaviorKind Kind);
 
 public:
   QualType getUnderlyingType() const { return UnderlyingType; }
@@ -6813,14 +7074,10 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return getUnderlyingType(); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, UnderlyingType, BehaviorKind);
-  }
+  SplitQualType getSplitUnqualifiedType() const;
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
-                      OverflowBehaviorKind Kind) {
-    ID.AddPointer(Underlying.getAsOpaquePtr());
-    ID.AddInteger((int)Kind);
+  std::pair<QualType, OverflowBehaviorKind> getKey() const {
+    return {UnderlyingType, BehaviorKind};
   }
 
   static bool classof(const Type *T) {
@@ -6847,27 +7104,37 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsArray : 1;
 
+    /// The N in Texture2DMS<T, N>; null for every resource that is not
+    /// multisampled. A multisampled resource always carries a sample count,
+    /// defaulting to 0, which means the count comes from the bound resource
+    /// at runtime rather than denoting zero samples.
+    Expr *SampleCountExpr;
+
     Attributes(llvm::dxil::ResourceClass ResourceClass,
                llvm::dxil::ResourceDimension ResourceDimension,
                bool IsROV = false, bool RawBuffer = false,
-               bool IsCounter = false, bool IsArray = false)
+               bool IsCounter = false, bool IsArray = false,
+               Expr *SampleCountExpr = nullptr)
         : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
           IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter),
-          IsArray(IsArray) {}
+          IsArray(IsArray), SampleCountExpr(SampleCountExpr) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
         : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
-                     llvm::dxil::ResourceDimension::Unknown, false, false,
-                     false, false) {}
+                     llvm::dxil::ResourceDimension::Unknown) {}
+
+    bool isMultiSampled() const { return SampleCountExpr != nullptr; }
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
-                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArray) ==
+                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArray,
+                      LHS.SampleCountExpr) ==
              std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
-                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArray);
+                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArray,
+                      RHS.SampleCountExpr);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6882,16 +7149,18 @@ private:
   const Attributes Attrs;
 
   HLSLAttributedResourceType(QualType Wrapped, QualType Contained,
-                             const Attributes &Attrs)
-      : Type(HLSLAttributedResource, QualType(),
-             Contained.isNull() ? TypeDependence::None
-                                : Contained->getDependence()),
-        WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+                             const Attributes &Attrs);
+
+  /// WrappedType is always __hlsl_resource_t, so it never contributes.
+  static TypeDependence computeDependence(QualType Contained,
+                                          const Attributes &Attrs);
 
 public:
   QualType getWrappedType() const { return WrappedType; }
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
+  Expr *getSampleCountExpr() const { return Attrs.SampleCountExpr; }
+  bool isMultiSampled() const { return Attrs.isMultiSampled(); }
   const Attributes &getAttrs() const { return Attrs; }
   bool isRaw() const { return Attrs.RawBuffer; }
   bool isStructured() const { return !ContainedType->isChar8Type(); }
@@ -6899,21 +7168,13 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, WrappedType, ContainedType, Attrs);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, WrappedType, ContainedType, Attrs);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
-                      QualType Contained, const Attributes &Attrs) {
-    ID.AddPointer(Wrapped.getAsOpaquePtr());
-    ID.AddPointer(Contained.getAsOpaquePtr());
-    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
-    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
-    ID.AddBoolean(Attrs.IsROV);
-    ID.AddBoolean(Attrs.RawBuffer);
-    ID.AddBoolean(Attrs.IsCounter);
-    ID.AddBoolean(Attrs.IsArray);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      QualType Wrapped, QualType Contained,
+                      const Attributes &Attrs);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == HLSLAttributedResource;
@@ -7088,17 +7349,9 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getDepth(), getIndex(), isParameterPack(), getDecl());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, unsigned Depth,
-                      unsigned Index, bool ParameterPack,
-                      TemplateTypeParmDecl *TTPDecl) {
-    ID.AddInteger(Depth);
-    ID.AddInteger(Index);
-    ID.AddBoolean(ParameterPack);
-    ID.AddPointer(TTPDecl);
+  std::tuple<unsigned, unsigned, unsigned, TemplateTypeParmDecl *>
+  getKey() const {
+    return {getDepth(), getIndex(), isParameterPack(), getDecl()};
   }
 
   static bool classof(const Type *T) {
@@ -7159,14 +7412,11 @@ public:
   bool isSugared() const { return true; }
   QualType desugar() const { return getReplacementType(); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex(), getFinal());
+  std::tuple<QualType, Decl *, unsigned, unsigned, unsigned> getKey() const {
+    return {getReplacementType(), getAssociatedDecl(), getIndex(),
+            SubstTemplateTypeParmTypeBits.PackIndex,
+            SubstTemplateTypeParmTypeBits.Final};
   }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
-                      const Decl *AssociatedDecl, unsigned Index,
-                      UnsignedOrNone PackIndex, bool Final);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == SubstTemplateTypeParm;
@@ -7324,10 +7574,10 @@ public:
 class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  TemplateDecl *TypeConstraintConcept;
+  TemplateName TypeConstraintConcept;
 
   AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-           AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+           AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -7336,13 +7586,11 @@ public:
             AutoTypeBits.NumArgs};
   }
 
-  TemplateDecl *getTypeConstraintConcept() const {
+  TemplateName getTypeConstraintConcept() const {
     return TypeConstraintConcept;
   }
 
-  bool isConstrained() const {
-    return TypeConstraintConcept != nullptr;
-  }
+  bool isConstrained() const { return !TypeConstraintConcept.isNull(); }
 
   bool isDecltypeAuto() const {
     return getKeyword() == AutoTypeKeyword::DecltypeAuto;
@@ -7359,7 +7607,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       DeducedKind DK, QualType Deduced, AutoTypeKeyword Keyword,
-                      TemplateDecl *CD, ArrayRef<TemplateArgument> Arguments);
+                      TemplateName CD, ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
@@ -7381,6 +7629,9 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
       : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
                        DeducedAsTypeOrCanon),
         Template(Template) {
+
+    assert(!Template.isNull());
+
     auto Dep = toTypeDependence(Template.getDependence());
     // A deduced AutoType only syntactically depends on its template name.
     if (DK == DeducedKind::Deduced)
@@ -7659,14 +7910,8 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPattern(), getNumExpansions());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Pattern,
-                      UnsignedOrNone NumExpansions) {
-    ID.AddPointer(Pattern.getAsOpaquePtr());
-    ID.AddInteger(NumExpansions.toInternalRepresentation());
+  std::pair<QualType, unsigned> getKey() const {
+    return {getPattern(), getNumExpansions().toInternalRepresentation()};
   }
 
   static bool classof(const Type *T) {
@@ -7770,13 +8015,13 @@ public:
     return T->getTypeClass() == ObjCTypeParam;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID);
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const ObjCTypeParamDecl *OTPDecl,
-                      QualType CanonicalType,
-                      ArrayRef<ObjCProtocolDecl *> protocols);
-
   ObjCTypeParamDecl *getDecl() const { return OTPDecl; }
+
+  std::tuple<const ObjCTypeParamDecl *, QualType, ArrayRef<ObjCProtocolDecl *>>
+  getKey() const {
+    return {getDecl(), getCanonicalTypeInternal(),
+            llvm::ArrayRef(qual_begin(), getNumProtocols())};
+  }
 };
 
 /// Represents a class type in Objective C.
@@ -8219,13 +8464,7 @@ public:
   const ObjCObjectPointerType *stripObjCKindOfTypeAndQuals(
                                  const ASTContext &ctx) const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getPointeeType());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType T) {
-    ID.AddPointer(T.getAsOpaquePtr());
-  }
+  QualType getKey() const { return getPointeeType(); }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ObjCObjectPointer;
@@ -8245,16 +8484,10 @@ public:
   /// the type returned by performing an atomic load of this atomic type.
   QualType getValueType() const { return ValueType; }
 
+  QualType getKey() const { return getValueType(); }
+
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getValueType());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType T) {
-    ID.AddPointer(T.getAsOpaquePtr());
-  }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Atomic;
@@ -8279,13 +8512,8 @@ public:
 
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), isReadOnly());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType T, bool isRead) {
-    ID.AddPointer(T.getAsOpaquePtr());
-    ID.AddBoolean(isRead);
+  std::pair<QualType, bool> getKey() const {
+    return {getElementType(), isReadOnly()};
   }
 
   static bool classof(const Type *T) {
@@ -8313,14 +8541,8 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, isUnsigned(), getNumBits());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, bool IsUnsigned,
-                      unsigned NumBits) {
-    ID.AddBoolean(IsUnsigned);
-    ID.AddInteger(NumBits);
+  std::pair<unsigned, unsigned> getKey() const {
+    return {isUnsigned(), getNumBits()};
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == BitInt; }
@@ -8992,6 +9214,18 @@ inline bool Type::isOpenCLSpecificType() const {
   }
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/HLSLPackedTypes.def"
+
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  inline bool Type::is##Id##Type() const {                                     \
+    return isSpecificBuiltinType(BuiltinType::Id);                             \
+  }
+#include "clang/Basic/SPIRVTypes.def"
+
 inline bool Type::isHLSLBuiltinIntangibleType() const {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) is##Id##Type() ||
   return
@@ -8999,9 +9233,16 @@ inline bool Type::isHLSLBuiltinIntangibleType() const {
       false;
 }
 
+inline bool Type::isHLSLBuiltinPackedType() const {
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) is##Id##Type() ||
+  return
+#include "clang/Basic/HLSLPackedTypes.def"
+      false;
+}
+
 inline bool Type::isHLSLSpecificType() const {
   return isHLSLBuiltinIntangibleType() || isHLSLAttributedResourceType() ||
-         isHLSLInlineSpirvType();
+         isHLSLInlineSpirvType() || isHLSLBuiltinPackedType();
 }
 
 inline bool Type::isHLSLAttributedResourceType() const {
@@ -9049,6 +9290,10 @@ inline bool Type::isNonOverloadPlaceholderType() const {
 
 inline bool Type::isVoidType() const {
   return isSpecificBuiltinType(BuiltinType::Void);
+}
+
+inline bool Type::isMetaInfoType() const {
+  return isSpecificBuiltinType(BuiltinType::MetaInfo);
 }
 
 inline bool Type::isHalfType() const {

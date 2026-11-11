@@ -5,6 +5,7 @@
 // UNSUPPORTED: ubsan,target={{(powerpc64|s390x|sparc|thumb).*}}
 // XFAIL: tsan,darwin
 // XFAIL: android && asan
+// UNSUPPORTED: rtsan
 
 // RUN: rm -rf %t_workdir
 // RUN: mkdir -p %t_workdir

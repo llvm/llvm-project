@@ -14,3 +14,6 @@ aeabi_fcmpgt
 aeabi_fcmple
 aeabi_fcmplt
 aeabi_frsub
+fnan2
+fnorm2
+funder

@@ -10,4 +10,4 @@
 
 #include "src/math/fmaf.h"
 
-LIST_FMA_TESTS(float, LIBC_NAMESPACE::fmaf)
+LIST_FMA_TESTS(Fmaf, float, LIBC_NAMESPACE::fmaf)

@@ -43,9 +43,9 @@ CreateUnsatisfiedConstraintRecord(const ASTContext &C,
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
     const ASTContext &C, const ConstraintSatisfaction &Satisfaction)
-    : NumRecords{Satisfaction.Details.size()},
-      IsSatisfied{Satisfaction.IsSatisfied}, ContainsErrors{
-                                                 Satisfaction.ContainsErrors} {
+    : NumRecords(Satisfaction.Details.size()),
+      IsSatisfied(Satisfaction.IsSatisfied),
+      ContainsErrors(Satisfaction.ContainsErrors) {
   for (unsigned I = 0; I < NumRecords; ++I)
     CreateUnsatisfiedConstraintRecord(C, Satisfaction.Details[I],
                                       getTrailingObjects() + I);
@@ -53,9 +53,9 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
     const ASTContext &C, const ASTConstraintSatisfaction &Satisfaction)
-    : NumRecords{Satisfaction.NumRecords},
-      IsSatisfied{Satisfaction.IsSatisfied},
-      ContainsErrors{Satisfaction.ContainsErrors} {
+    : NumRecords(Satisfaction.NumRecords),
+      IsSatisfied(Satisfaction.IsSatisfied),
+      ContainsErrors(Satisfaction.ContainsErrors) {
   for (unsigned I = 0; I < NumRecords; ++I)
     CreateUnsatisfiedConstraintRecord(C, *(Satisfaction.begin() + I),
                                       getTrailingObjects() + I);
@@ -93,8 +93,12 @@ ConceptReference *
 ConceptReference::Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
                          SourceLocation TemplateKWLoc,
                          DeclarationNameInfo ConceptNameInfo,
-                         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
+                         NamedDecl *FoundDecl, TemplateName NamedConcept,
                          const ASTTemplateArgumentListInfo *ArgsAsWritten) {
+
+  assert(NamedConcept.isConceptName() &&
+         "concept reference does not name a concept");
+
   return new (C) ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo,
                                   FoundDecl, NamedConcept, ArgsAsWritten);
 }
@@ -109,7 +113,7 @@ SourceLocation ConceptReference::getBeginLoc() const {
 void ConceptReference::print(llvm::raw_ostream &OS,
                              const PrintingPolicy &Policy) const {
   NestedNameSpec.getNestedNameSpecifier().print(OS, Policy);
-  ConceptName.printName(OS, Policy);
+  NamedConcept.print(OS, Policy, TemplateName::Qualified::None);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
     llvm::ListSeparator Sep(", ");

@@ -5,8 +5,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[INIT_S1:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
-// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[INIT_S2:.*]] = #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[INIT_S1:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private unnamed_addr @[[INIT_S2:.*]] = #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
 
 struct BitfieldStruct {
   unsigned int a:4;
@@ -235,7 +235,7 @@ void cxx_default_init_with_struct_field() {
 // CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>{{.*}}) -> (!s32i {llvm.noundef})
 // CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
+// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, align 4
 // LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
 // LLVM: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
 // LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4

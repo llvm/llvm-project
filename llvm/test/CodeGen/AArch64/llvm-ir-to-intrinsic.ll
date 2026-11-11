@@ -112,7 +112,7 @@ define <vscale x 16 x i8> @srem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpkhi z2.h, z1.b
 ; CHECK-NEXT:    sunpkhi z3.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sunpkhi z4.s, z2.h
 ; CHECK-NEXT:    sunpkhi z5.s, z3.h
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
@@ -128,7 +128,6 @@ define <vscale x 16 x i8> @srem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    sdivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z4.h
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z6.h
 ; CHECK-NEXT:    uzp1 z2.b, z3.b, z2.b
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
@@ -142,12 +141,11 @@ define <vscale x 8 x i16> @srem_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    sunpklo z4.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uzp1 z2.h, z3.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    ret
@@ -291,7 +289,7 @@ define <vscale x 16 x i8> @urem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.h, z1.b
 ; CHECK-NEXT:    uunpkhi z3.h, z0.b
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uunpkhi z4.s, z2.h
 ; CHECK-NEXT:    uunpkhi z5.s, z3.h
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
@@ -307,7 +305,6 @@ define <vscale x 16 x i8> @urem_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-NEXT:    udivr z6.s, p0/m, z6.s, z7.s
 ; CHECK-NEXT:    uzp1 z2.h, z2.h, z4.h
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uzp1 z3.h, z3.h, z6.h
 ; CHECK-NEXT:    uzp1 z2.b, z3.b, z2.b
 ; CHECK-NEXT:    mls z0.b, p0/m, z2.b, z1.b
@@ -321,12 +318,11 @@ define <vscale x 8 x i16> @urem_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.s, z1.h
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uunpklo z4.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uzp1 z2.h, z3.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    ret

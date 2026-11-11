@@ -50,7 +50,8 @@ public:
 FunctionPass *createMSP430ISelDag(MSP430TargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
 
-class MSP430BranchSelectPass : public PassInfoMixin<MSP430BranchSelectPass> {
+class MSP430BranchSelectPass
+    : public RequiredPassInfoMixin<MSP430BranchSelectPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

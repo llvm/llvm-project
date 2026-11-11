@@ -11,6 +11,7 @@
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;

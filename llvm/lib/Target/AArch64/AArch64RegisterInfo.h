@@ -60,7 +60,7 @@ public:
     // cold path instead of using a callee-saved register.
     return 5;
   }
-  unsigned getCSRFirstUseCost() const override {
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override {
     // The cost of 2 means push and pop for each CSR.
     return 2;
   }
@@ -106,8 +106,6 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
-  const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
@@ -140,7 +138,7 @@ public:
                                MachineFunction &MF) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 

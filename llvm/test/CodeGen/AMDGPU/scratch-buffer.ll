@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; When a frame index offset is more than 12-bits, make sure we don't store
 ; it in mubuf's offset field.
@@ -52,14 +52,16 @@ done:
 
 define amdgpu_kernel void @legal_offset_fi_offset(ptr addrspace(1) %out, i32 %cond, ptr addrspace(1) %offsets, i32 %if_offset, i32 %else_offset) {
 entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %offsets.tid = getelementptr inbounds i32, ptr addrspace(1) %offsets, i32 %tid
   %scratch0 = alloca [8192 x i32], addrspace(5)
   %scratch1 = alloca [8192 x i32], addrspace(5)
 
-  %offset0 = load i32, ptr addrspace(1) %offsets
+  %offset0 = load i32, ptr addrspace(1) %offsets.tid
   %scratchptr0 = getelementptr [8192 x i32], ptr addrspace(5) %scratch0, i32 0, i32 %offset0
   store i32 %offset0, ptr addrspace(5) %scratchptr0
 
-  %offsetptr1 = getelementptr i32, ptr addrspace(1) %offsets, i32 1
+  %offsetptr1 = getelementptr i32, ptr addrspace(1) %offsets.tid, i32 1
   %offset1 = load i32, ptr addrspace(1) %offsetptr1
   %scratchptr1 = getelementptr [8192 x i32], ptr addrspace(5) %scratch1, i32 0, i32 %offset1
   store i32 %offset1, ptr addrspace(5) %scratchptr1

@@ -252,9 +252,8 @@ define void @no_optimize_clobbering_store_to_src_offset(ptr noalias %dst) {
 ; CHECK-NEXT:    store i8 0, ptr [[DST_BUF]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TEMP1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TEMP2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP2]], ptr align 8 [[LOCAL_BUF]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST_BUF]], ptr align 8 [[LOCAL_BUF]], i64 16, i1 false)
 ; CHECK-NEXT:    store i8 0, ptr [[LOCAL_BUF]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST_BUF]], ptr align 8 [[TEMP2]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TEMP2]])
 ; CHECK-NEXT:    ret void
 ;
@@ -281,4 +280,75 @@ define void @no_optimize_clobbering_store_to_src_offset(ptr noalias %dst) {
   call void @llvm.lifetime.end.p0(ptr %temp2)
 
   ret void
+}
+
+; https://github.com/llvm/llvm-project/issues/216566
+; There could be a copy using an out of bounds offset in dead code. Don't
+; optimize such cases.
+define i32 @out_of_bounds_offset() {
+; CHECK-LABEL: define i32 @out_of_bounds_offset() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A2:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[A3:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    br i1 true, label [[IF_THEN1:%.*]], label [[IF_THEN2:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    store i8 0, ptr [[A2]], align 1
+; CHECK-NEXT:    ret i32 0
+; CHECK:       if.then2:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A3]], i64 123
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    store i8 [[V]], ptr [[A2]], align 1
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %a1 = alloca i8, align 1
+  %a2 = alloca i8, align 1
+  br i1 true, label %if.then1, label %if.then2
+
+if.then1:
+  store i8 0, ptr %a1
+  ret i32 0
+
+if.then2:
+  %gep = getelementptr i8, ptr %a2, i64 123
+  %v = load i8, ptr %gep
+  store i8 %v, ptr %a1
+  ret i32 0
+}
+
+@g = global [8 x i8] zeroinitializer, align 8
+
+; A variant of the above one, reading from a source region starting at offset zero.
+define i8 @out_of_bounds_offset_2(i64 %idx) {
+; CHECK-LABEL: define i8 @out_of_bounds_offset_2
+; CHECK-SAME: (i64 [[IDX:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [1 x i8], align 1
+; CHECK-NEXT:    [[B:%.*]] = alloca [2 x i8], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
+; CHECK-NEXT:    br i1 false, label [[IF_THEN2:%.*]], label [[IF_THEN1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[B]], ptr align 8 @g, i64 1, i1 false)
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[A]], i64 [[IDX]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[B]], ptr align 1 [[A]], i64 2, i1 false)
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %a = alloca [1 x i8], align 1
+  %b = alloca [2 x i8], align 1
+  store i8 0, ptr %a, align 1
+  br i1 false, label %if.then2, label %if.then1
+
+if.then1:
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %b, ptr align 8 @g, i64 1, i1 false)
+  %ptr = getelementptr i8, ptr %a, i64 %idx
+  %v = load i8, ptr %ptr, align 1
+  ret i8 %v
+
+if.then2:
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %b, ptr align 1 %a, i64 2, i1 false)
+  ret i8 0
 }

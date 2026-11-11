@@ -9,6 +9,8 @@ define void @tcgen05_mma_scale_d_invalid_flag_values(ptr addrspace(6) %dtmem, pt
   call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 0, i32 0)
   ; CHECK: immarg value 5 for arg 8 out of range [0,4)
   call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 5)
+  ; CHECK: immarg value 5 for arg 9 out of range [0,4)
+  call void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, i32 0, i32 1, i32 0, i32 5)
   ret void
 }
 
@@ -19,5 +21,7 @@ define void @tcgen05_mma_scale_d_disable_output_lane_invalid_flag_values(ptr add
   call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, <4 x i32> %disable_output_lanev4, i32 3, i32 0)
   ; CHECK: immarg value 5 for arg 8 out of range [0,4)
   call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, <4 x i32> %disable_output_lanev4, i32 0, i32 5)
+  ; CHECK: immarg value 5 for arg 9 out of range [0,4)
+  call void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i64 0, <4 x i32> %disable_output_lanev4, i32 0, i32 0, i32 5)
   ret void
 }

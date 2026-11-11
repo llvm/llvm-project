@@ -143,7 +143,8 @@ private:
 
   std::vector<DataRegionData> DataRegions;
 
-  DenseMap<const MCSection *, uint64_t> SectionAddress;
+  /// Offset of each section's data from the start of all section data.
+  DenseMap<const MCSection *, uint64_t> SectionDataOffset;
 
   // List of sections in layout order. Virtual sections are after non-virtual
   // sections.
@@ -165,6 +166,8 @@ private:
 
   VersionInfoType VersionInfo{};
   VersionInfoType TargetVariantVersionInfo{};
+
+  std::optional<std::string> TargetTriple;
 
   // The list of linker options for LC_LINKER_OPTION.
   std::vector<std::vector<std::string>> LinkerOptions;
@@ -201,9 +204,7 @@ public:
   }
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
-  uint64_t getSectionAddress(const MCSection *Sec) const {
-    return SectionAddress.lookup(Sec);
-  }
+  uint64_t getSectionAddress(const MCSection *Sec) const;
   uint64_t getSymbolAddress(const MCSymbol &S) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
@@ -246,6 +247,8 @@ public:
     TargetVariantVersionInfo.Update = Update;
     TargetVariantVersionInfo.SDKVersion = SDKVersion;
   }
+
+  void setTargetTriple(StringRef Triple) { TargetTriple = Triple; }
 
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;

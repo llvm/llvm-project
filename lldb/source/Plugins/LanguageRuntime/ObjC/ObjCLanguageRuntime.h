@@ -233,6 +233,8 @@ public:
 
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
+  bool IsTaggedPointerValue(ValueObject &in_value);
+
   typedef std::shared_ptr<EncodingToType> EncodingToTypeSP;
 
   virtual EncodingToTypeSP GetEncodingToType();
@@ -335,7 +337,7 @@ public:
 
   /// Check whether the name is "self" or "_cmd" and should show up in
   /// "frame variable".
-  bool IsAllowedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(llvm::StringRef name) override;
 
 protected:
   // Classes that inherit from ObjCLanguageRuntime can see and modify these

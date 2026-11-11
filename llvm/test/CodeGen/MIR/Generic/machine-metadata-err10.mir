@@ -1,0 +1,15 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that each machine metadata list item contains exactly one
+# definition.
+
+--- |
+  define i32 @t0() {
+    ret i32 0
+  }
+...
+---
+name: t0
+machineMetadataNodes:
+  - '!9 = !{} !10 = !{}'
+...
+# CHECK: [[@LINE-2]]:{{[0-9]+}}: expected end of metadata definition

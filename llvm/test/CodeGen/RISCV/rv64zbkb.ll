@@ -750,3 +750,25 @@ define i64 @and_mul_32bitsplat(i64 %x) {
   %b = mul i64 %a, u0x0080402010080400
   ret i64 %b
 }
+
+define i64 @srli_pack(i64 %x, i32 signext %lo) {
+; RV64I-LABEL: srli_pack:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: srli_pack:
+; RV64ZBKB:       # %bb.0: # %entry
+; RV64ZBKB-NEXT:    srli a0, a0, 32
+; RV64ZBKB-NEXT:    pack a0, a1, a0
+; RV64ZBKB-NEXT:    ret
+entry:
+  %and = and i64 %x, -4294967296
+  %conv = zext i32 %lo to i64
+  %or = or i64 %and, %conv
+  ret i64 %or
+}

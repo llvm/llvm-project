@@ -50,7 +50,7 @@ _main:                                  # @main
 // CHECK:     Name:                      .text
 // CHECK:     VirtualSize:               0
 // CHECK:     VirtualAddress:            0
-// CHECK:     RawDataSize:               {{[0-9]+}}
+// CHECK:     RawDataSize:               0x{{[0-9A-F]+}}
 // CHECK:     PointerToRawData:          0x{{[0-9A-F]+}}
 // CHECK:     PointerToRelocations:      0x{{[0-9A-F]+}}
 // CHECK:     PointerToLineNumbers:      0x0
@@ -81,7 +81,7 @@ _main:                                  # @main
 // CHECK:     Name:                      .data
 // CHECK:     VirtualSize:               0
 // CHECK:     VirtualAddress:            0
-// CHECK:     RawDataSize:               {{[0-9]+}}
+// CHECK:     RawDataSize:               0x{{[0-9A-F]+}}
 // CHECK:     PointerToRawData:          0x{{[0-9A-F]+}}
 // CHECK:     PointerToRelocations:      0x0
 // CHECK:     PointerToLineNumbers:      0x0

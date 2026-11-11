@@ -10,9 +10,9 @@ func.func private @invalid_storage_type() -> !quant.quantile<tensor<1xf32>:f32, 
 
 // -----
 
-// Quantile (expressed) type must be a float.
-// expected-error @+1 {{quantile type must be a float type}}
-func.func private @invalid_quantile_type() -> !quant.quantile<ui4:i8, {1.0, 0.0, -1.0}>
+// Quantile (expressed) type must be a float or integer type.
+// expected-error @+1 {{quantile type must be a float or integer type}}
+func.func private @invalid_quantile_type() -> !quant.quantile<ui4:tensor<1xf32>, {1.0, 0.0, -1.0}>
 
 // -----
 

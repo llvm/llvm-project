@@ -12,8 +12,6 @@
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::arm_sme;
@@ -45,6 +43,25 @@ LogicalResult verifyArmSMETileOpInterface(Operation *op) {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/ArmSME/IR/ArmSMEAttrDefs.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// TileLoadOp / TileStoreOp
+//===----------------------------------------------------------------------===//
+
+// The slice of memory loaded/stored by tile_load/tile_store is read/written
+// one contiguous row (tile slice) at a time, along the memref's most minor
+// dimension, so that dimension must have unit stride.
+LogicalResult TileLoadOp::verify() {
+  if (!getMemRefType().isLastDimUnitStride())
+    return emitOpError("most minor dimension of memref must have unit stride");
+  return success();
+}
+
+LogicalResult TileStoreOp::verify() {
+  if (!getMemRefType().isLastDimUnitStride())
+    return emitOpError("most minor dimension of memref must have unit stride");
+  return success();
+}
 
 void ArmSMEDialect::initialize() {
   addAttributes<

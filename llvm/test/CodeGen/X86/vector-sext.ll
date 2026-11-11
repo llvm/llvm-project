@@ -1827,10 +1827,10 @@ define <4 x i64> @load_sext_4i1_to_4i64(ptr%ptr) {
 ; SSE41-NEXT:    shrb $2, %cl
 ; SSE41-NEXT:    andb $1, %cl
 ; SSE41-NEXT:    movzbl %cl, %ecx
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,1,1]
 ; SSE41-NEXT:    pinsrb $8, %ecx, %xmm1
 ; SSE41-NEXT:    shrb $3, %al
 ; SSE41-NEXT:    movzbl %al, %eax
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,1,1]
 ; SSE41-NEXT:    pinsrb $12, %eax, %xmm1
 ; SSE41-NEXT:    pslld $31, %xmm0
 ; SSE41-NEXT:    psrad $31, %xmm0
@@ -1957,10 +1957,10 @@ define <4 x i64> @load_sext_4i1_to_4i64(ptr%ptr) {
 ; X86-SSE41-NEXT:    shrb $2, %cl
 ; X86-SSE41-NEXT:    andb $1, %cl
 ; X86-SSE41-NEXT:    movzbl %cl, %ecx
+; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,1,1]
 ; X86-SSE41-NEXT:    pinsrb $8, %ecx, %xmm1
 ; X86-SSE41-NEXT:    shrb $3, %al
 ; X86-SSE41-NEXT:    movzbl %al, %eax
-; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,1,1]
 ; X86-SSE41-NEXT:    pinsrb $12, %eax, %xmm1
 ; X86-SSE41-NEXT:    pslld $31, %xmm0
 ; X86-SSE41-NEXT:    psrad $31, %xmm0

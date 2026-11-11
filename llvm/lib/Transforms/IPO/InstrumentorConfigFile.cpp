@@ -69,6 +69,12 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
     case BaseConfigurationOption::BOOLEAN:
       J.attribute(BaseCO->Name, BaseCO->getBool());
       break;
+    case BaseConfigurationOption::STRING_LIST:
+      J.attributeArray(BaseCO->Name, [&] {
+        for (StringRef Value : BaseCO->getStringList())
+          J.value(Value);
+      });
+      break;
     }
     if (!BaseCO->Description.empty())
       J.attribute(std::string(BaseCO->Name) + ".description",
@@ -141,7 +147,6 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
     return false;
   }
   auto Buffer = std::move(BufferOrErr.get());
-  json::Path::Root NullRoot;
   auto Parsed = json::parse(Buffer->getBuffer());
   if (!Parsed) {
     Ctx.diagnose(DiagnosticInfoInstrumentation(
@@ -195,6 +200,35 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
                   DS_Warning));
             }
             break;
+          case BaseConfigurationOption::STRING_LIST: {
+            auto *Values = ObjIt.second.getAsArray();
+            if (!Values) {
+              Ctx.diagnose(DiagnosticInfoInstrumentation(
+                  Twine("configuration key '") + StringRef(ObjIt.first) +
+                      Twine("' expects an array of strings, value ignored"),
+                  DS_Warning));
+              break;
+            }
+
+            SmallVector<StringRef> Strings;
+            bool AllStrings = true;
+            for (const json::Value &Value : *Values) {
+              auto String = Value.getAsString();
+              if (!String) {
+                AllStrings = false;
+                break;
+              }
+              Strings.push_back(IConf.SS.save(*String));
+            }
+            if (AllStrings)
+              BO->setStringList(Strings);
+            else
+              Ctx.diagnose(DiagnosticInfoInstrumentation(
+                  Twine("configuration key '") + StringRef(ObjIt.first) +
+                      Twine("' expects an array of strings, value ignored"),
+                  DS_Warning));
+            break;
+          }
           }
         } else if (!StringRef(ObjIt.first).ends_with(".description")) {
           std::string Diag = "configuration key '" + ObjIt.first.str() +
@@ -247,7 +281,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
         } else {
           ValueMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
         }
-        if (!IOOpts.contains(Name)) {
+        if (!IOOpts.contains(Name) && !Name.ends_with(".description")) {
           std::string Diag = "unrecognized JSON property '" + Name.str() +
                              "' in configuration for '" + IO->getName().str() +
                              "'";

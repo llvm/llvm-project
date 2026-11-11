@@ -8,7 +8,7 @@ target triple = "riscv64"
 ; the data width.  This is correct, but sub-optimal as it causes a vsetvli
 ; toggle in the generated code for no reason.  We could have used a i32
 ; element type for the index here and matched the data width.
-define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
+define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) vscale_range(2, 1024) {
 ; VLENUNK-LABEL: @test(
 ; VLENUNK-NEXT:  entry:
 ; VLENUNK-NEXT:    br label [[VECTOR_PH:%.*]]

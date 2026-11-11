@@ -154,41 +154,59 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
         ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
         ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
-  // Setup the global symbol's address and size.
+  // Setup the global symbol's address and size. A symbol that exists but has
+  // no contents in the image (e.g. `.bss`) has a null address and size 0.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
-  ImageGlobal.setSize((*SymOrErr)->getSize());
+  ImageGlobal.setSize(*AddrOrErr ? (*SymOrErr)->getSize() : 0);
 
   return Plugin::success();
 }
 
-Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
-                                                  DeviceImageTy &Image,
-                                                  const GlobalTy &HostGlobal) {
+bool GenericGlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return (Flags & SymbolRef::SF_Global) && !(Flags & Ignored);
+}
 
-  GlobalTy ImageGlobal(HostGlobal.getName(), -1);
-  if (auto Err = getGlobalMetadataFromImage(Device, Image, ImageGlobal))
-    return Err;
+std::optional<StringRef>
+GenericGlobalHandlerTy::matchSymbol(const ELFSymbolRef &Symbol, StringRef Name,
+                                    SymbolKindTy Kind) {
+  uint8_t Type = Kind == SymbolKindTy::Kernel ? ELF::STT_FUNC : ELF::STT_OBJECT;
+  if (Symbol.getELFType() != Type)
+    return std::nullopt;
+  return Name;
+}
 
-  if (ImageGlobal.getSize() != HostGlobal.getSize())
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "transfer failed because global symbol '%s' has "
-                         "%u bytes in the ELF image but %u bytes on the host",
-                         HostGlobal.getName().data(), ImageGlobal.getSize(),
-                         HostGlobal.getSize());
+Error GenericGlobalHandlerTy::iterateSymbols(
+    DeviceImageTy &Image, SymbolKindTy Kind,
+    function_ref<bool(StringRef)> Callback) {
+  auto ELFObjOrErr = getELFObjectFile(Image);
+  if (!ELFObjOrErr)
+    return ELFObjOrErr.takeError();
 
-  ODBG(OLDT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
-                          << "' was found in the ELF image and "
-                          << HostGlobal.getSize() << " bytes will copied from "
-                          << ImageGlobal.getPtr() << " to "
-                          << HostGlobal.getPtr() << ".";
+  auto &ELFObj = cast<ELFObjectFileBase>(**ELFObjOrErr);
+  auto Symbols = ELFObj.symbols();
+  if (Symbols.empty())
+    Symbols = ELFObj.getDynamicSymbolIterators();
 
-  assert(Image.getStart() <= ImageGlobal.getPtr() &&
-         utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
-             utils::advancePtr(Image.getStart(), Image.getSize()) &&
-         "Attempting to read outside the image!");
+  for (ELFSymbolRef Symbol : Symbols) {
+    auto FlagsOrErr = Symbol.getFlags();
+    if (!FlagsOrErr)
+      return Plugin::error(ErrorCode::INVALID_BINARY, FlagsOrErr.takeError(),
+                           "error reading ELF symbol");
 
-  // Perform the copy from the image to the host memory.
-  std::memcpy(HostGlobal.getPtr(), ImageGlobal.getPtr(), HostGlobal.getSize());
+    if (!isExportedSymbol(*FlagsOrErr))
+      continue;
+
+    auto NameOrErr = Symbol.getName();
+    if (!NameOrErr)
+      return Plugin::error(ErrorCode::INVALID_BINARY, NameOrErr.takeError(),
+                           "error reading ELF symbol name");
+
+    if (auto Name = matchSymbol(Symbol, *NameOrErr, Kind))
+      if (!Callback(*Name))
+        break;
+  }
 
   return Plugin::success();
 }

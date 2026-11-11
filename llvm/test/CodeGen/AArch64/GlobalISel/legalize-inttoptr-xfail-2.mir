@@ -32,8 +32,8 @@ body:             |
   bb.1:
     liveins: $d0
 
-    %0:_(<4 x s16>) = COPY $d0
-    %1:_(p0) = G_INTTOPTR %0(<4 x s16>)
+    %0:_(<4 x i16>) = COPY $d0
+    %1:_(p0) = G_INTTOPTR %0(<4 x i16>)
     $x0 = COPY %1(p0)
     RET_ReallyLR implicit $x0
 

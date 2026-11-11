@@ -2,10 +2,10 @@
 // AVR Device Definitions
 //===---------------------------------------------------------------------===//
 
-// :TODO: Implement the skip errata, see `gcc/config/avr/avr-arch.h` for details
-// :TODO: We define all devices with SRAM to have all variants of LD/ST/LDD/STD.
-//        In reality, avr1 (no SRAM) has one variant each of `LD` and `ST`.
-//        avr2 (with SRAM) adds the rest of the variants.
+// TODO: Implement the skip errata, see `gcc/config/avr/avr-arch.h` for details
+// TODO: We define all devices with SRAM to have all variants of LD/ST/LDD/STD.
+//       In reality, avr1 (no SRAM) has one variant each of `LD` and `ST`.
+//       avr2 (with SRAM) adds the rest of the variants.
 
 // A feature set aggregates features, grouping them. We don't want to create a
 // new member in AVRSubtarget (to store a value) for each set because we do not

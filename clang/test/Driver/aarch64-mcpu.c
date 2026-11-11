@@ -94,6 +94,10 @@
 // C1-PREMIUM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-premium"
 // RUN: %clang --target=aarch64 -mcpu=c1-ultra -### -c %s 2>&1 | FileCheck -check-prefix=C1-ULTRA %s
 // C1-ULTRA: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-ultra"
+// RUN: %clang --target=aarch64 -mcpu=c2-pro -### -c %s 2>&1 | FileCheck -check-prefix=C2-PRO %s
+// C2-PRO: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c1-pro"
+// RUN: %clang --target=aarch64 -mcpu=c2-ultra -### -c %s 2>&1 | FileCheck -check-prefix=C2-ULTRA %s
+// C2-ULTRA: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "c2-ultra"
 
 // RUN: %clang --target=aarch64 -mcpu=cortex-r82  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXR82 %s
 // CORTEXR82: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-r82"

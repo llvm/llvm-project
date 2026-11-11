@@ -8,7 +8,7 @@ void *f0(void)
 }
 
 void f1(char *a, char *b) {
-  // CHECK: call {{.*}} @__clear_cache
+  // CHECK: call {{.*}} @llvm.clear_cache.p0
 	__clear_cache(a,b);
 }
 

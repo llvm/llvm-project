@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/bf16mulf128.h"
 
-LIST_MUL_TESTS(bfloat16, float128, LIBC_NAMESPACE::bf16mulf128)
+LIST_MUL_TESTS(Bf16mulf128, bfloat16, float128, LIBC_NAMESPACE::bf16mulf128)

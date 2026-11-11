@@ -27,6 +27,7 @@
 @.str.2 = private unnamed_addr constant [4 x i8] c"Out\00", align 1
 
 define void @main() local_unnamed_addr #0 {
+; CHECK-NOT: OpCapability VariablePointersStorageBuffer
 ; CHECK-LABEL: main
 ; CHECK:       %42 = OpFunction %2 None %3 ; -- Begin function main
 ; CHECK-NEXT:    %1 = OpLabel
