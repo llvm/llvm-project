@@ -458,7 +458,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitMUL(SDNode *N);
     SDValue visitMULFIX(SDNode *N);
     SDValue useDivRem(SDNode *N);
-    SDValue foldDivRemOfSelect(SDNode *N);
+    SDValue foldDivRemOfSelect(SDNode *N, const SDLoc &DL);
     SDValue visitSDIV(SDNode *N);
     SDValue visitSDIVLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitUDIV(SDNode *N);
@@ -5326,7 +5326,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 /// Split a div/rem by a select of constants, so each arm divides by a constant:
 ///   X div/rem (select C, C1, C2) --> select C, (X div/rem C1), (X div/rem C2)
 /// A constant divisor lowers to a shift or magic multiply, not the divider.
-SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N) {
+SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
   unsigned Opcode = N->getOpcode();
 
@@ -5358,7 +5358,6 @@ SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N) {
       !ISD::matchUnaryPredicate(False, IsSafeDivisor))
     return SDValue();
 
-  SDLoc DL(N);
   SDNodeFlags Flags = N->getFlags();
   SDValue F0 = DAG.getFreeze(N0);
   SDValue Arm1 = DAG.getNode(Opcode, DL, VT, F0, True, Flags);
@@ -5424,7 +5423,7 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
 
   // fold (div/rem X, (select C, C1, C2))
   //   --> select C, (div/rem X, C1), (div/rem X, C2)
-  if (SDValue Split = foldDivRemOfSelect(N))
+  if (SDValue Split = foldDivRemOfSelect(N, DL))
     return Split;
 
   // sdiv, srem -> sdivrem
@@ -5579,7 +5578,7 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
 
   // fold (div/rem X, (select C, C1, C2))
   //   --> select C, (div/rem X, C1), (div/rem X, C2)
-  if (SDValue Split = foldDivRemOfSelect(N))
+  if (SDValue Split = foldDivRemOfSelect(N, DL))
     return Split;
 
   // sdiv, srem -> sdivrem
@@ -5750,7 +5749,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
 
   // fold (div/rem X, (select C, C1, C2))
   //   --> select C, (div/rem X, C1), (div/rem X, C2)
-  if (SDValue Split = foldDivRemOfSelect(N))
+  if (SDValue Split = foldDivRemOfSelect(N, DL))
     return Split;
 
   // sdiv, srem -> sdivrem
