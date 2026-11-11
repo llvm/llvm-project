@@ -704,11 +704,9 @@ TEST(DependencyScanningWorkerFilesystem, LocalFSDirectoryIteration) {
   llvm::StringMap<llvm::sys::fs::file_type> Entries;
   for (llvm::vfs::directory_iterator It = DepFS.dir_begin("/dir", EC), End;
        !EC && It != End; It.increment(EC))
-    Entries[It->path()] = It->type();
+    Entries[llvm::sys::path::filename(It->path())] = It->type();
   ASSERT_FALSE(EC);
   EXPECT_EQ(Entries.size(), 2u);
-  EXPECT_EQ(Entries.lookup("/dir/both"),
-            llvm::sys::fs::file_type::directory_file);
-  EXPECT_EQ(Entries.lookup("/dir/glob.c"),
-            llvm::sys::fs::file_type::regular_file);
+  EXPECT_EQ(Entries.lookup("both"), llvm::sys::fs::file_type::directory_file);
+  EXPECT_EQ(Entries.lookup("glob.c"), llvm::sys::fs::file_type::regular_file);
 }
