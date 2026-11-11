@@ -2583,6 +2583,14 @@ static void licm(VPlan &Plan, const VPDominatorTree &VPDT) {
           }))
         continue;
 
+      if (!SinkBB)
+        SinkBB = cast_or_null<VPBasicBlock>(LoopRegion->getSingleSuccessor());
+
+      // Only sink recipes that execute on every iteration, i.e. whose block
+      // dominates the sink block.
+      if (!SinkBB || !VPDT.properlyDominates(VPBB, SinkBB))
+        continue;
+
       if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
                                   LoopRegion->getExitingBasicBlock(),
                                   /*Sinking=*/true))
@@ -2595,13 +2603,6 @@ static void licm(VPlan &Plan, const VPDominatorTree &VPDT) {
              "The only recipes that may write to memory are expected to be "
              "stores with invariant pointer-operand");
 
-      if (!SinkBB)
-        SinkBB = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
-
-      // TODO: This will need to be a check instead of a assert after
-      // conditional branches in vectorized loops are supported.
-      assert(VPDT.properlyDominates(VPBB, SinkBB) &&
-             "Defining block must dominate sink block");
       // TODO: Clone the recipe if users are on multiple exit paths, instead of
       // just moving.
       Def->moveBefore(SinkBB->getFirstNonPhi());

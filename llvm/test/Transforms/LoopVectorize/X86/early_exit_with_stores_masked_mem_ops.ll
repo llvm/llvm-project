@@ -268,5 +268,263 @@ exit:
   ret void
 }
 
+; Pseudo probes are skipped together with the store on AVX2. Building the VF 1
+; plan must not crash in licm.
+define void @load_store_i16_pseudoprobe(ptr noalias %a, ptr align 2 dereferenceable(2000) %ee.src) {
+; AVX2-LABEL: define void @load_store_i16_pseudoprobe(
+; AVX2-SAME: ptr noalias [[A:%.*]], ptr align 2 dereferenceable(2000) [[EE_SRC:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:  [[ENTRY:.*:]]
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
+; AVX2:       [[VECTOR_PH]]:
+; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; AVX2:       [[VECTOR_BODY]]:
+; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
+; AVX2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; AVX2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; AVX2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; AVX2-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 4
+; AVX2-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 5
+; AVX2-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 6
+; AVX2-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 7
+; AVX2-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 8
+; AVX2-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 9
+; AVX2-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 10
+; AVX2-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 11
+; AVX2-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 12
+; AVX2-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 13
+; AVX2-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 14
+; AVX2-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 15
+; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[INDEX]]
+; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[TMP15]], align 2
+; AVX2-NEXT:    [[TMP16:%.*]] = icmp sgt <16 x i16> [[WIDE_LOAD]], splat (i16 500)
+; AVX2-NEXT:    [[TMP17:%.*]] = freeze <16 x i1> [[TMP16]]
+; AVX2-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP17]])
+; AVX2-NEXT:    br i1 [[TMP18]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; AVX2:       [[VECTOR_BODY_SKIPPABLE]]:
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
+; AVX2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP0]]
+; AVX2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP1]]
+; AVX2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP2]]
+; AVX2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP3]]
+; AVX2-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP4]]
+; AVX2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP5]]
+; AVX2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP6]]
+; AVX2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP7]]
+; AVX2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP8]]
+; AVX2-NEXT:    [[TMP29:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP9]]
+; AVX2-NEXT:    [[TMP30:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP10]]
+; AVX2-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP11]]
+; AVX2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP12]]
+; AVX2-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP13]]
+; AVX2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP14]]
+; AVX2-NEXT:    store i16 0, ptr [[TMP19]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP20]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP21]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP22]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP23]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP24]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP25]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP26]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP27]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP28]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP29]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP30]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP31]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP32]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP33]], align 2
+; AVX2-NEXT:    store i16 0, ptr [[TMP34]], align 2
+; AVX2-NEXT:    br label %[[LOOP_LATCH1]]
+; AVX2:       [[LOOP_LATCH1]]:
+; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; AVX2-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
+; AVX2-NEXT:    [[TMP36:%.*]] = or i1 [[TMP18]], [[TMP35]]
+; AVX2-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; AVX2:       [[MIDDLE_BLOCK]]:
+; AVX2-NEXT:    [[TMP37:%.*]] = select i1 [[TMP18]], i64 0, i64 16
+; AVX2-NEXT:    [[TMP38:%.*]] = add i64 [[INDEX]], [[TMP37]]
+; AVX2-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[TMP38]], 1000
+; AVX2-NEXT:    br i1 [[TMP39]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; AVX2:       [[SCALAR_PH]]:
+; AVX2-NEXT:    br label %[[LOOP_HEADER:.*]]
+; AVX2:       [[LOOP_HEADER]]:
+; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP38]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX2-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[IV]]
+; AVX2-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
+; AVX2-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
+; AVX2-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; AVX2:       [[LOOP_LATCH]]:
+; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX2-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[IV]]
+; AVX2-NEXT:    store i16 0, ptr [[A_ADDR]], align 2
+; AVX2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; AVX2-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; AVX2-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; AVX2:       [[EXIT]]:
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: define void @load_store_i16_pseudoprobe(
+; AVX512-SAME: ptr noalias [[A:%.*]], ptr align 2 dereferenceable(2000) [[EE_SRC:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:  [[ENTRY:.*:]]
+; AVX512-NEXT:    br label %[[VECTOR_PH:.*]]
+; AVX512:       [[VECTOR_PH]]:
+; AVX512-NEXT:    br label %[[VECTOR_BODY:.*]]
+; AVX512:       [[VECTOR_BODY]]:
+; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[INDEX]]
+; AVX512-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <32 x i16> [[WIDE_LOAD]], splat (i16 500)
+; AVX512-NEXT:    [[TMP2:%.*]] = freeze <32 x i1> [[TMP1]]
+; AVX512-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v32i1(<32 x i1> [[TMP2]], i1 false)
+; AVX512-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 0, i64 [[TMP3]])
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[A]], i64 [[INDEX]]
+; AVX512-NEXT:    call void @llvm.masked.store.v32i16.p0(<32 x i16> zeroinitializer, ptr align 2 [[TMP4]], <32 x i1> [[UNCOUNTABLE_EXIT_MASK]])
+; AVX512-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> [[TMP2]])
+; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; AVX512-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
+; AVX512-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
+; AVX512-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; AVX512:       [[MIDDLE_BLOCK]]:
+; AVX512-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], [[TMP3]]
+; AVX512-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[TMP8]], 1000
+; AVX512-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; AVX512:       [[SCALAR_PH]]:
+; AVX512-NEXT:    br label %[[LOOP_HEADER:.*]]
+; AVX512:       [[LOOP_HEADER]]:
+; AVX512-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP8]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+; AVX512-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[IV]]
+; AVX512-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR]], align 2
+; AVX512-NEXT:    [[EE_COND:%.*]] = icmp sgt i16 [[EE_VAL]], 500
+; AVX512-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[LOOP_LATCH]]
+; AVX512:       [[LOOP_LATCH]]:
+; AVX512-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+; AVX512-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[IV]]
+; AVX512-NEXT:    store i16 0, ptr [[A_ADDR]], align 2
+; AVX512-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; AVX512-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
+; AVX512-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; AVX512:       [[EXIT]]:
+; AVX512-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
+  %ee.addr = getelementptr inbounds nuw i16, ptr %ee.src, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %loop.latch
+
+loop.latch:
+  call void @llvm.pseudoprobe(i64 123, i64 2, i32 0, i64 -1)
+  %a.addr = getelementptr inbounds nuw i16, ptr %a, i64 %iv
+  store i16 0, ptr %a.addr, align 2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 1000
+  br i1 %counted.cond, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
