@@ -280,10 +280,10 @@ std::string generateOverrideString(const CXXRecordDecl *CurrentDeclDef,
         A->printPretty(POS, PP);
         continue;
       }
-
-      // Keyword attributes are not copied: `override` is added explicitly below,
-      // `final` is intentionally not carried over, and an asm label has to follow
-      // the declarator, so it can't be placed in front like the other attributes.
+      // Keyword attributes are not copied: `override` is added explicitly
+      // below, `final` is intentionally not carried over, and an asm label has
+      // to follow the declarator, so it can't be placed in front like the other
+      // attributes.
       if (A->isInherited() || A->isImplicit() || A->isKeywordAttribute())
         continue;
 
