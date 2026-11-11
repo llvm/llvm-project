@@ -153,6 +153,13 @@ enum OpenMPSeverityClauseKind {
   OMPC_SEVERITY_unknown
 };
 
+/// OpenMP scope specifiers for 'memscope' clause.
+enum OpenMPMemscopeClauseKind {
+#define OPENMP_MEMSCOPE_KIND(Name) OMPC_MEMSCOPE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_MEMSCOPE_unknown
+};
+
 /// OpenMP device type for 'device_type' clause.
 enum OpenMPDeviceType {
 #define OPENMP_DEVICE_TYPE_KIND(Name) \

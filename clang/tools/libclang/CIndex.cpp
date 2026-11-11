@@ -2550,6 +2550,8 @@ void OMPClauseEnqueue::VisitOMPAtClause(const OMPAtClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSeverityClause(const OMPSeverityClause *) {}
 
+void OMPClauseEnqueue::VisitOMPMemscopeClause(const OMPMemscopeClause *) {}
+
 void OMPClauseEnqueue::VisitOMPMessageClause(const OMPMessageClause *) {}
 
 void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {

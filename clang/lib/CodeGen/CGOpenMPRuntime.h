@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SyncScope.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1143,8 +1144,11 @@ public:
   /// \param Vars List of variables to flush.
   /// \param AO Memory ordering of the flush, or NotAtomic for a flush with a
   /// list (a strong flush).
+  /// \param Scope Memory scope of the flush, as given by the 'memscope'
+  /// clause.
   virtual void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
-                         SourceLocation Loc, llvm::AtomicOrdering AO);
+                         SourceLocation Loc, llvm::AtomicOrdering AO,
+                         SyncScope Scope);
 
   /// Emit task region for the task directive. The task region is
   /// emitted in several steps:
@@ -2028,7 +2032,8 @@ public:
   /// Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
   void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
-                 SourceLocation Loc, llvm::AtomicOrdering AO) override;
+                 SourceLocation Loc, llvm::AtomicOrdering AO,
+                 SyncScope Scope) override;
 
   /// Emit task region for the task directive. The task region is
   /// emitted in several steps:

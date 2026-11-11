@@ -1200,6 +1200,12 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
+  /// Called on well-formed 'memscope' clause.
+  OMPClause *ActOnOpenMPMemscopeClause(OpenMPMemscopeClauseKind Kind,
+                                       SourceLocation KindLoc,
+                                       SourceLocation StartLoc,
+                                       SourceLocation LParenLoc,
+                                       SourceLocation EndLoc);
 
   /// Called on well-formed 'message' clause.
   /// passing string for message.

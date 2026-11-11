@@ -339,6 +339,7 @@ def OMPC_Match : Clause<[Spelling<"match">]> {
   let flangClass = "OmpMatchClause";
 }
 def OMPC_Memscope : Clause<[Spelling<"memscope">]> {
+  let clangClass = "OMPMemscopeClause";
 }
 def OMP_MEMORY_ORDER_SeqCst : EnumVal<"seq_cst", 1, 1> {}
 def OMP_MEMORY_ORDER_AcqRel : EnumVal<"acq_rel", 2, 1> {}
@@ -716,6 +717,7 @@ def OMP_Atomic : Directive<[Spelling<"atomic">]> {
     VersionedClause<OMPC_Compare, 51>,
     VersionedClause<OMPC_Fail, 51>,
     VersionedClause<OMPC_Hint, 50>,
+    VersionedClause<OMPC_Memscope, 60>,
     VersionedClause<OMPC_Read>,
     VersionedClause<OMPC_Relaxed, 50>,
     VersionedClause<OMPC_Release, 50>,
@@ -1000,6 +1002,7 @@ def OMP_Flush : Directive<[Spelling<"flush">]> {
     // TODO This should ne `none` instead. Comment carried over from
     // OMPKinds.def.
     VersionedClause<OMPC_Flush>,
+    VersionedClause<OMPC_Memscope, 60>,
     VersionedClause<OMPC_Release, 50>,
     VersionedClause<OMPC_SeqCst, 51>,
   ];

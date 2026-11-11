@@ -8954,6 +8954,12 @@ void OMPClauseWriter::VisitOMPSeverityClause(OMPSeverityClause *C) {
   Record.AddSourceLocation(C->getSeverityKindKwLoc());
 }
 
+void OMPClauseWriter::VisitOMPMemscopeClause(OMPMemscopeClause *C) {
+  Record.push_back(C->getMemscopeKind());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getMemscopeKindKwLoc());
+}
+
 void OMPClauseWriter::VisitOMPMessageClause(OMPMessageClause *C) {
   VisitOMPClauseWithPreInit(C);
   Record.AddStmt(C->getMessageString());

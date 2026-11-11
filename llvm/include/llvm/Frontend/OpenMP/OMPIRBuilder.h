@@ -4092,10 +4092,12 @@ private:
   /// \param Loc    The insert and source location description.
   /// \param AO     The required atomic ordering
   /// \param AK     The OpenMP atomic operation kind used.
+  /// \param Scope  The memory scope of the flush.
   ///
   /// \returns		wether a flush was emitted or not
   bool checkAndEmitFlushAfterAtomic(const LocationDescription &Loc,
-                                    AtomicOrdering AO, AtomicKind AK);
+                                    AtomicOrdering AO, AtomicKind AK,
+                                    AtomicScope Scope = AtomicScope::Device);
 
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
@@ -4304,12 +4306,14 @@ public:
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, bool IsWeak = false);
+      bool IsFailOnly, bool IsWeak = false,
+      AtomicScope Scope = AtomicScope::Device);
   LLVM_ABI InsertPointTy createAtomicCompare(
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false);
+      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false,
+      AtomicScope Scope = AtomicScope::Device);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///
