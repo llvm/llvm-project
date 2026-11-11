@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only -Xclang -verify %s \
-// RUN:   -Wno-deprecated-declarations
-// RUN: %clangxx -fsycl -fsyntax-only -Xclang -verify %s \
-// RUN:   -Wno-deprecated-declarations
+// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only -Xclang -verify %s -Wno-deprecated-declarations
+// RUN: %clangxx -fsycl -fsyntax-only -Xclang -verify %s -Wno-deprecated-declarations
 
 // expected-no-diagnostics
 

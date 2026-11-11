@@ -39,6 +39,15 @@ class multi_ptr;
 
 namespace detail {
 
+/// Maps access::decorated::yes to access::decorated::no and back.
+template <access::decorated Decorated> struct NegateDecorated;
+template <> struct NegateDecorated<access::decorated::yes> {
+  static constexpr access::decorated value = access::decorated::no;
+};
+template <> struct NegateDecorated<access::decorated::no> {
+  static constexpr access::decorated value = access::decorated::yes;
+};
+
 // Relational operators are the same for every multi_ptr specialization. The
 // macro takes the name of the decorated pointer type alias of the enclosing
 // class.
@@ -195,7 +204,6 @@ public:
         detail::staticAddressCast<OtherSpace>(MPtr)};
   }
 
-  // TODO: check if cast is enough or I should use getDecorated();
   /// Implicit conversion to a multi_ptr<void>.
   template <access::decorated IsDecorated, typename RelayT = value_type,
             std::enable_if_t<!std::is_const_v<RelayT>, bool> = true>
@@ -218,18 +226,12 @@ public:
     return multi_ptr<const value_type, Space, IsDecorated>{MPtr};
   }
 
-  /// Implicit conversion to the non-decorated version of multi_ptr.
-  template <bool Dependent = is_decorated,
-            std::enable_if_t<Dependent, bool> = true>
-  operator multi_ptr<value_type, Space, access::decorated::no>() const {
-    return multi_ptr<value_type, Space, access::decorated::no>{MPtr};
-  }
-
-  /// Implicit conversion to the decorated version of multi_ptr.
-  template <bool Dependent = is_decorated,
-            std::enable_if_t<!Dependent, bool> = true>
-  operator multi_ptr<value_type, Space, access::decorated::yes>() const {
-    return multi_ptr<value_type, Space, access::decorated::yes>{MPtr};
+  /// Implicit conversion to the non-decorated version of multi_ptr if this
+  /// one is decorated, and to the decorated version otherwise.
+  operator multi_ptr<value_type, Space,
+                     detail::NegateDecorated<DecorateAddress>::value>() const {
+    return multi_ptr<value_type, Space,
+                     detail::NegateDecorated<DecorateAddress>::value>{MPtr};
   }
 
   /// Prefetches a number of elements into the global memory cache.
@@ -240,7 +242,8 @@ public:
   template <
       access::address_space AS = Space,
       std::enable_if_t<AS == access::address_space::global_space, bool> = true>
-  void prefetch(std::size_t) const {
+  void prefetch(std::size_t numElements) const {
+    (void)numElements;
     // TODO: lower to a prefetch once a clang builtin usable from SYCL device
     // code is available (__spirv_ocl_prefetch).
   }
@@ -337,18 +340,12 @@ public:
         reinterpret_cast<DstT>(MPtr)};
   }
 
-  /// Implicit conversion to the non-decorated version of multi_ptr.
-  template <bool Dependent = is_decorated,
-            std::enable_if_t<Dependent, bool> = true>
-  operator multi_ptr<void, Space, access::decorated::no>() const {
-    return multi_ptr<void, Space, access::decorated::no>{MPtr};
-  }
-
-  /// Implicit conversion to the decorated version of multi_ptr.
-  template <bool Dependent = is_decorated,
-            std::enable_if_t<!Dependent, bool> = true>
-  operator multi_ptr<void, Space, access::decorated::yes>() const {
-    return multi_ptr<void, Space, access::decorated::yes>{MPtr};
+  /// Implicit conversion to the non-decorated version of multi_ptr if this
+  /// one is decorated, and to the decorated version otherwise.
+  operator multi_ptr<void, Space,
+                     detail::NegateDecorated<DecorateAddress>::value>() const {
+    return multi_ptr<void, Space,
+                     detail::NegateDecorated<DecorateAddress>::value>{MPtr};
   }
 
   /// Implicit conversion to a multi_ptr<const void>.
@@ -419,18 +416,12 @@ public:
         reinterpret_cast<DstT>(MPtr)};
   }
 
-  /// Implicit conversion to the non-decorated version of multi_ptr.
-  template <bool Dependent = is_decorated,
-            std::enable_if_t<Dependent, bool> = true>
-  operator multi_ptr<const void, Space, access::decorated::no>() const {
-    return multi_ptr<const void, Space, access::decorated::no>{MPtr};
-  }
-
-  /// Implicit conversion to the decorated version of multi_ptr.
-  template <bool Dependent = is_decorated,
-            std::enable_if_t<!Dependent, bool> = true>
-  operator multi_ptr<const void, Space, access::decorated::yes>() const {
-    return multi_ptr<const void, Space, access::decorated::yes>{MPtr};
+  /// Implicit conversion to the non-decorated version of multi_ptr if this
+  /// one is decorated, and to the decorated version otherwise.
+  operator multi_ptr<const void, Space,
+                     detail::NegateDecorated<DecorateAddress>::value>() const {
+    return multi_ptr<const void, Space,
+                     detail::NegateDecorated<DecorateAddress>::value>{MPtr};
   }
 
   _LIBSYCL_MULTI_PTR_REL_OPS(DecoratedPtrT)
@@ -453,13 +444,14 @@ public:
   using difference_type = std::ptrdiff_t;
 
   using pointer_t =
-      multi_ptr<ElementType, Space, access::decorated::yes>::pointer;
-  using const_pointer_t =
-      multi_ptr<const ElementType, Space, access::decorated::yes>::pointer;
+      typename multi_ptr<ElementType, Space, access::decorated::yes>::pointer;
+  using const_pointer_t = typename multi_ptr<const ElementType, Space,
+                                             access::decorated::yes>::pointer;
   using reference_t =
-      multi_ptr<ElementType, Space, access::decorated::yes>::reference;
+      typename multi_ptr<ElementType, Space, access::decorated::yes>::reference;
   using const_reference_t =
-      multi_ptr<const ElementType, Space, access::decorated::yes>::reference;
+      typename multi_ptr<const ElementType, Space,
+                         access::decorated::yes>::reference;
 
   static constexpr access::address_space address_space = Space;
 
@@ -516,8 +508,8 @@ public:
   operator ElementType *() const { return MPtr; }
 
   /// Implicit conversion to a multi_ptr of const data.
-  template <typename RelayElementType = ElementType,
-            std::enable_if_t<!std::is_const_v<RelayElementType>, bool> = true>
+  template <typename RelayT = ElementType,
+            std::enable_if_t<!std::is_const_v<RelayT>, bool> = true>
   operator multi_ptr<const ElementType, Space, access::decorated::legacy>()
       const {
     using DstT = detail::DecoratedType_t<const ElementType, Space> *;
@@ -526,8 +518,8 @@ public:
   }
 
   /// Implicit conversion to a multi_ptr<void>.
-  template <typename RelayElementType = ElementType,
-            std::enable_if_t<!std::is_const_v<RelayElementType>, bool> = true>
+  template <typename RelayT = ElementType,
+            std::enable_if_t<!std::is_const_v<RelayT>, bool> = true>
   operator multi_ptr<void, Space, access::decorated::legacy>() const {
     using DstT = detail::DecoratedType_t<void, Space> *;
     return multi_ptr<void, Space, access::decorated::legacy>{
@@ -535,8 +527,8 @@ public:
   }
 
   /// Implicit conversion to a multi_ptr<const void>.
-  template <typename RelayElementType = ElementType,
-            std::enable_if_t<std::is_const_v<RelayElementType>, bool> = true>
+  template <typename RelayT = ElementType,
+            std::enable_if_t<std::is_const_v<RelayT>, bool> = true>
   operator multi_ptr<const void, Space, access::decorated::legacy>() const {
     using DstT = detail::DecoratedType_t<const void, Space> *;
     return multi_ptr<const void, Space, access::decorated::legacy>{
@@ -547,8 +539,8 @@ public:
   template <
       access::address_space AS = Space,
       std::enable_if_t<AS == access::address_space::global_space, bool> = true>
-  void prefetch(std::size_t NumElements) const {
-    (void)NumElements;
+  void prefetch(std::size_t numElements) const {
+    (void)numElements;
   }
 
   friend multi_ptr &operator++(multi_ptr &Mp) {
@@ -601,9 +593,10 @@ public:
   using element_type = void;
   using difference_type = std::ptrdiff_t;
 
-  using pointer_t = multi_ptr<void, Space, access::decorated::yes>::pointer;
+  using pointer_t =
+      typename multi_ptr<void, Space, access::decorated::yes>::pointer;
   using const_pointer_t =
-      multi_ptr<const void, Space, access::decorated::yes>::pointer;
+      typename multi_ptr<const void, Space, access::decorated::yes>::pointer;
 
   static constexpr access::address_space address_space = Space;
 
@@ -682,9 +675,9 @@ public:
   using difference_type = std::ptrdiff_t;
 
   using pointer_t =
-      multi_ptr<const void, Space, access::decorated::yes>::pointer;
+      typename multi_ptr<const void, Space, access::decorated::yes>::pointer;
   using const_pointer_t =
-      multi_ptr<const void, Space, access::decorated::yes>::pointer;
+      typename multi_ptr<const void, Space, access::decorated::yes>::pointer;
 
   static constexpr access::address_space address_space = Space;
 

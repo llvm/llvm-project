@@ -138,6 +138,11 @@ which doesn't currently support Windows.
 
 - `range`, `id` - `__SYCL_DISABLE_ID_TO_INT_CONV__` and `__SYCL_ASSUME_ID_RANGE` optimizations are not implemented
 
+- `multi_ptr`:
+
+  - constructors from `accessor` and `local_accessor` and the corresponding deduction guides, to add once accessors are supported
+  - `prefetch` does nothing, to lower to a SPIR-V prefetch once clang provides a builtin for it
+
 - general opens:
 
   - define a way to report errors from object dtors

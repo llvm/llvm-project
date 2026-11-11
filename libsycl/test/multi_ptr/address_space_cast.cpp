@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // RUN: %clangxx -fsycl -fsyntax-only %s -Wno-deprecated-declarations
-// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only %s \
-// RUN:   -Wno-deprecated-declarations
+// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only %s -Wno-deprecated-declarations
 
 // Checks that a multi_ptr can be cast from a narrower address space to the
 // generic one and back, for every combination of address space and decoration,
@@ -40,7 +39,17 @@ void checkRoundTrip(DataT *Raw) {
   multi_ptr_t Back = static_cast<multi_ptr_t>(Generic);
 
   // The explicit conversion is only available from the generic address space.
-  static_assert(std::is_constructible_v<generic_ptr_t, generic_ptr_t>);
+  // On host every pointer is a plain pointer, so the narrower address spaces
+  // are only told apart in device code.
+#ifdef __SYCL_DEVICE_ONLY__
+  constexpr as::address_space OtherSpace =
+      Space == as::address_space::global_space
+          ? as::address_space::local_space
+          : as::address_space::global_space;
+  static_assert(
+      !std::is_constructible_v<sycl::multi_ptr<DataT, OtherSpace, Decorated>,
+                               multi_ptr_t>);
+#endif
 
   (void)Back;
 }

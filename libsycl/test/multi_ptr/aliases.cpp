@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %clangxx -fsycl -fsyntax-only -Xclang -verify %s \
-// RUN:   -Wno-deprecated-declarations \
-// RUN:   -Xclang -verify-ignore-unexpected=note,warning
-// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only -Xclang -verify %s \
-// RUN:   -Wno-deprecated-declarations \
-// RUN:   -Xclang -verify-ignore-unexpected=note,warning
+// RUN: %clangxx -fsycl -fsyntax-only -Xclang -verify %s -Wno-deprecated-declarations -Xclang -verify-ignore-unexpected=note,warning
+// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only -Xclang -verify %s -Wno-deprecated-declarations -Xclang -verify-ignore-unexpected=note,warning
 
 // expected-no-diagnostics
 

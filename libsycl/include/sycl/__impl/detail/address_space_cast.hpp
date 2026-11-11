@@ -42,8 +42,8 @@ inline constexpr bool isAddressSpaceCastPossible(access::address_space Src,
 }
 
 /// Casts Ptr to address space Space without a run-time check.
-// It is used whenever the spec allows that (e.g. if it's UB if runtime
-// pointers doesn't point to a proper allocation).
+// Used where the spec leaves the result undefined if Ptr does not point into
+// Space.
 template <access::address_space Space, typename ElementType>
 auto staticAddressCast(ElementType *Ptr) {
   using Pointee =
@@ -54,9 +54,8 @@ auto staticAddressCast(ElementType *Ptr) {
                 "the source and the destination address space of a static "
                 "address space cast must be compatible");
 
-  // Note: for extended address spaces (extensions) on SPIRV and all casts on
-  // HIP/CUDA reinterpret_cast can be not enough and can lead to warnings, use
-  // C-style cast instead in advance.
+  // reinterpret_cast does not cover every address space conversion on every
+  // target.
   return (DstT)Ptr;
 }
 

@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %clangxx -fsycl -fsycl-device-only -O2 -S -emit-llvm %s -o - \
-// RUN:   | FileCheck %s
+// RUN: %clangxx -fsycl -fsycl-device-only -O2 -S -emit-llvm %s -o - | FileCheck %s
 
 // Checks which of the two kinds of address space cast reaches the device code.
 //
@@ -46,6 +45,7 @@ using local_ptr_t =
 //
 // CHECK-LABEL: define {{.*}}castViaAddressSpaceCastPi
 // CHECK:         call {{.*}}@llvm.spv.generic.cast.to.ptr.explicit.p1
+// CHECK:         icmp eq ptr addrspace(1)
 // CHECK:       ret
 [[clang::sycl_external]] int castViaAddressSpaceCast(int *Raw) {
   auto Global = sycl::address_space_cast<as::address_space::global_space,
@@ -68,6 +68,7 @@ using local_ptr_t =
 
 // CHECK-LABEL: define {{.*}}castToLocalViaAddressSpaceCastPi
 // CHECK:         call {{.*}}@llvm.spv.generic.cast.to.ptr.explicit.p3
+// CHECK:         icmp eq ptr addrspace(3)
 // CHECK:       ret
 [[clang::sycl_external]] int castToLocalViaAddressSpaceCast(int *Raw) {
   auto Local = sycl::address_space_cast<as::address_space::local_space,

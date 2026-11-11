@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// RUN: %clangxx -fsycl -fsyntax-only -Xclang -verify %s \
-// RUN:   -Xclang -verify-ignore-unexpected=note,warning
-// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only -Xclang -verify %s \
-// RUN:   -Xclang -verify-ignore-unexpected=note,warning
+// RUN: %clangxx -fsycl -fsyntax-only -Xclang -verify %s -Xclang -verify-ignore-unexpected=note,warning
+// RUN: %clangxx -fsycl -fsycl-device-only -fsyntax-only -Xclang -verify %s -Xclang -verify-ignore-unexpected=note,warning
 
 // expected-no-diagnostics
 
@@ -147,3 +145,8 @@ static_assert(!HasPrefetch<sycl::multi_ptr<int, as::address_space::local_space,
 static_assert(
     !HasPrefetch<sycl::multi_ptr<int, as::address_space::private_space,
                                  as::decorated::no>>::value);
+// The same holds for the deprecated interface (SYCL 1.2.1 Table 4.55).
+static_assert(HasPrefetch<sycl::multi_ptr<int, as::address_space::global_space,
+                                          as::decorated::legacy>>::value);
+static_assert(!HasPrefetch<sycl::multi_ptr<int, as::address_space::local_space,
+                                           as::decorated::legacy>>::value);
