@@ -1267,15 +1267,16 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
           // Schedule for deletion at the end of pass run.
           CallsWithPtrAuthBundleRemoved.push_back(&CB);
         }
-      }
 
-      // This use is no longer unsafe.
-      if (!HasPublicTarget && VCallSite.NumUnsafeUses)
-        --*VCallSite.NumUnsafeUses;
+        // This use is no longer unsafe.
+        if (VCallSite.NumUnsafeUses)
+          --*VCallSite.NumUnsafeUses;
+
+        CSInfo.markDevirt();
+      }
     }
     if (CSInfo.isExported())
       IsExported = true;
-    CSInfo.markDevirt();
   };
   Apply(SlotInfo.CSInfo);
   for (auto &P : SlotInfo.ConstCSInfo)
