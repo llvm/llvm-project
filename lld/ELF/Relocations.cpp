@@ -151,7 +151,8 @@ static bool isRelExpr(RelExpr expr) {
                RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
-// True if a reference to a non-absolute symbol is independent of the load base.
+// True if a reference to a non-absolute symbol is independent of the load base
+// of the ELF file.
 static bool isLoadBaseIndependent(Ctx &ctx, RelExpr expr, RelType type) {
   return oneof<R_SIZE, RE_RISCV_LEB128>(expr) || isRelExpr(expr) ||
          ctx.target->usesOnlyLowPageBits(type);
