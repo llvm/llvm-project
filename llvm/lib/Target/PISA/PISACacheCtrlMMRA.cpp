@@ -26,9 +26,7 @@
 
 using namespace llvm;
 
-namespace {
 constexpr StringLiteral CacheCtrlMMRAPrefix = "pisa.cache.ctrl";
-} // namespace
 
 std::optional<unsigned> PISA::getCacheCtrlFromMMRA(const Instruction &I) {
   MMRAMetadata MMRA(I);
