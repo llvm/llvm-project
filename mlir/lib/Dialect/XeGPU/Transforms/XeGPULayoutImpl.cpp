@@ -90,9 +90,7 @@ static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
   val.setType(typeWithLayout);
 }
 
-/// Whether all the regions `region` branches to (`targets`) are already in
-/// `visitedRegions`, so that the consumers of what it passes on are visited
-/// first.
+/// Return whether every target recorded for `region` has been visited.
 static bool isReady(Region *region,
                     const DenseMap<Region *, SmallPtrSet<Region *, 2>> &targets,
                     const SetVector<Region *> &visitedRegions) {
@@ -105,10 +103,8 @@ static bool isReady(Region *region,
   return true;
 }
 
-/// Returns the regions of `op` in the order a backward walk visits them: a
-/// region after all the regions it branches to, and otherwise in reverse
-/// program order. A cycle of regions (e.g. scf.while's before and after) is
-/// broken at a region that exits to `op`.
+/// Order regions for walkBackward, preferring successors before predecessors
+/// and breaking ties by reverse region order.
 static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
   SmallVector<Region *> regions;
   for (Region &region : llvm::reverse(op->getRegions()))
@@ -117,8 +113,7 @@ static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
   if (!regionOp)
     return regions;
 
-  // For each region, the other regions it may branch to; and the regions that
-  // may exit to `op`.
+  // Track inter-region edges and exits to the parent op. Ignore self-edges.
   DenseMap<Region *, SmallPtrSet<Region *, 2>> targets;
   SmallPtrSet<Region *, 2> exits;
   for (Region *region : regions) {
@@ -137,8 +132,7 @@ static SmallVector<Region *> getBackwardRegionOrder(Operation *op) {
     auto unvisited = llvm::make_filter_range(regions, [&](Region *region) {
       return !visitedRegions.contains(region);
     });
-    // Prefer a region whose targets are all visited. In a cycle, break it at a
-    // region exiting to the op, or else at the first unvisited one.
+    // If no region is ready, break the cycle at an exit region when possible.
     auto findFirst = [&](auto pred) -> Region * {
       auto it = llvm::find_if(unvisited, pred);
       return it == unvisited.end() ? nullptr : *it;
@@ -161,14 +155,11 @@ static void walkRegionBackward(Region &region,
                                xegpu::BackwardLayoutVisitor &visitor) {
   if (region.empty())
     return;
-  // Blocks in reverse of reverse post-order, so that the blocks using a value
-  // are visited before the block defining it.
+  // CFG post-order visits successor blocks first, except across back edges.
   llvm::ReversePostOrderTraversal<Region *> rpot(&region);
   SmallVector<Block *> blocks(rpot.begin(), rpot.end());
   for (Block *block : llvm::reverse(blocks)) {
     for (Operation &op : llvm::reverse(*block)) {
-      // The regions of an op are walked before the op, against its control
-      // flow (see xegpu::walkBackward).
       for (Region *nested : getBackwardRegionOrder(&op))
         walkRegionBackward(*nested, visitor);
       auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(&op);
@@ -383,9 +374,7 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
 //       across region boundaries while preserving a single well-defined use for
 //       each definition at the region-op level.
 namespace {
-/// Recovers the temporary layouts from the anchor layouts, re-deriving each
-/// non-anchor op's result layout from its uses and its operand layouts from its
-/// result layout.
+/// Recover temporary layouts through the shared backward walk.
 struct LayoutRecovery final : public xegpu::BackwardLayoutVisitor {
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override {
     propagateRegionResultsToYieldOperands(terminator);
@@ -1734,11 +1723,8 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   return std::nullopt;
 }
 
-/// Default layout of a 2D block IO op that has no consumer layout to honor (a
-/// store_nd or prefetch_nd, which produce no value, or a load_nd whose value no
-/// consumer constrains), picked from the block parameters of `uArchInstruction`
-/// without transpose or transform. `numSg` is only used for Subgroup-kind
-/// layouts.
+/// Select a default 2D block IO layout without transpose or transform.
+/// `numSg` is needed only in Subgroup mode.
 static xegpu::DistributeLayoutAttr setupDefault2DBlockIOLayout(
     xegpu::LayoutKind layoutKind, ArrayRef<int64_t> dataShape, Type elemTy,
     int numSg,
@@ -1829,9 +1815,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                xegpu::DistributeLayoutAttr consumerLayout,
                                int numSg, const xegpu::uArch::uArch *uArch) {
 
-  // Without a consumer layout (e.g. the value is carried only through a loop
-  // back edge, or its consumer cannot take any layout), there is nothing to
-  // honor: take the block load's default layout.
+  // Loads without a requested layout use the default block IO layout.
   if (!consumerLayout) {
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
@@ -1957,9 +1941,8 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
   return nullptr;
 }
 
-/// Picks the default subgroup layout for a scatter-style IO op: the most
-/// balanced `numSg` factorization that divides `wgShape` with sg_data a
-/// multiple of `instData`.
+/// Select the most balanced `numSg` factorization of `wgShape` whose sg_data
+/// is a multiple of `instData`.
 static xegpu::DistributeLayoutAttr
 getDefaultScatterIOSubgroupLayout(mlir::MLIRContext *context,
                                   ArrayRef<int64_t> wgShape,
@@ -1971,10 +1954,8 @@ getDefaultScatterIOSubgroupLayout(mlir::MLIRContext *context,
   return buildSgLayout(context, wgShape, candidates.front(), /*dimK=*/-1);
 }
 
-/// Default layout of a scatter-style IO op (store_scatter, store_matrix, and
-/// load_gather / load_matrix without a consumer layout), from the per-lane
-/// `maxChunkSize` of its instruction. Lane layout comes from
-/// `computeScatterIOLaneLayoutAndData`; inst_data is lane_layout * lane_data.
+/// Select a default scatter IO layout with at most `maxChunkSize` elements
+/// per lane. Instruction data is lane_layout * lane_data.
 static xegpu::DistributeLayoutAttr setupDefaultScatterIOLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context, int maxChunkSize,
     ArrayRef<int64_t> srcShape, int subgroupSize, int numSg) {
@@ -2001,29 +1982,10 @@ static xegpu::DistributeLayoutAttr setupDefaultScatterIOLayout(
   return nullptr;
 }
 
-/// Sets up the anchor layout for load gather and load matrix operation.
-/// load matrix lowers to load gather and 1d block load. All of them share the
-/// same layout setup logic.
-///
-/// For Subgroup layout, uses the consumer layout directly.
-///
-/// For InstData layout, takes consumer's inst_data as-is; lane_layout and
-/// lane_data are taken from the consumer.
-///
-/// For Lane layout, lane_layout/lane_data are taken from the consumer.
-///
-/// A consumer layout that carries lane_layout and lane_data is required.
-/// `maxChunkSize` is not read yet: the consumer's lane_data already fixes the
-/// per-lane chunk.
-///
-/// Without a consumer layout (e.g. the value is carried only through a loop
-/// back edge, or its consumer cannot take any layout), there is nothing to
-/// honor: the default scatter IO layout is used, capped by `maxChunkSize`.
-/// `numSg` is only used then, for Subgroup-kind layouts.
-///
-/// TODO: derive lane_layout/lane_data here when the consumer layout has none,
-/// the same way. That path is missing today, so the assert below stands in for
-/// it.
+/// Select a layout for load_gather or load_matrix. Reuse requested subgroup
+/// layouts; otherwise keep the consumer's lane_layout, restrict lane_data to a
+/// bounded innermost chunk, and recompute inst_data when needed.
+/// Without a requested layout, use the default scatter IO layout.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,

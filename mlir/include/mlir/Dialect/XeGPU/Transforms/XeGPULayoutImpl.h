@@ -58,12 +58,11 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
 
-/// Callbacks of a backward layout walk; see walkBackward.
+/// Callbacks for walkBackward.
 class BackwardLayoutVisitor {
 public:
   virtual ~BackwardLayoutVisitor() = default;
-  /// A terminator forwarding values out of the regions of a region branch op
-  /// (e.g. scf.yield, scf.condition).
+  /// A terminator forwarding values between regions or to their parent op.
   virtual void
   visitTerminator(RegionBranchTerminatorOpInterface terminator) = 0;
   /// A region branch op (e.g. scf.for), visited after all of its regions.
@@ -74,17 +73,12 @@ public:
   virtual void visitFunction(FunctionOpInterface funcOp) {}
 };
 
-/// Walks the body of every function under `root` backward, visiting each op
-/// after its consumers: blocks in reverse of reverse post-order, ops back to
-/// front, and an op's regions before the op itself.
+/// Walk function bodies under `root` in CFG post-order, visiting ops within
+/// each block back to front and nested regions before their parent op.
 ///
-/// The regions of a region branch op are walked against its control flow: a
-/// region after all the regions it branches to. A cycle of regions is broken
-/// at a region that exits to the op: scf.while's before region (which exits)
-/// is walked before its after region. The only consumers visited after the op
-/// producing their value are those across a loop back edge: the uses of
-/// scf.for's iter_args (consuming the yielded values), and the uses in
-/// scf.while's after region (consuming what its before region passes on).
+/// Region successors are visited before predecessors where possible. To
+/// break cycles, prefer a region that exits to the parent op; this visits
+/// scf.while's before region before its after region. Regions are not revisited.
 void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
 
 /// Attach layout attributes to all vector-type operands of operations within
@@ -341,15 +335,15 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
 /// Sets up the anchor layout for a load gather operation.
 /// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
 /// the op's `contiguity` attribute (1 when it is absent).
-/// Without a `consumerLayout`, the load's own default scatter IO layout is
-/// used; `numSg` is only used then, for Subgroup-kind layouts.
+/// Use a default scatter IO layout when `consumerLayout` is absent.
+/// `numSg` is needed only for that default in Subgroup mode.
 DistributeLayoutAttr setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
     DistributeLayoutAttr consumerLayout, int numSg, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for load matrix operation.
-/// Without a `consumerLayout`, the load's own default scatter IO layout is
-/// used; `numSg` is only used then, for Subgroup-kind layouts.
+/// Use a default scatter IO layout when `consumerLayout` is absent.
+/// `numSg` is needed only for that default in Subgroup mode.
 DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
     DistributeLayoutAttr consumerLayout, int numSg, const uArch::uArch *uArch);
@@ -433,9 +427,8 @@ DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
 /// (downstream) consumer layout and validates it against uArch constraints;
 /// when valid, the consumer's `inst_data` / `sg_layout` are honored.
 /// Otherwise defaults derived from uArch block parameters are used.
-/// Without a `consumerLayout`, the block load's default layout is used.
-/// `numSg` is only used for Subgroup-kind layouts when the consumer does not
-/// already provide an sg_layout.
+/// Use the block load's default when `consumerLayout` is absent.
+/// `numSg` is needed only for that default in Subgroup mode.
 DistributeLayoutAttr
 setupLoadNdAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                         DistributeLayoutAttr consumerLayout, int numSg,

@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <string>
 
 namespace mlir {
 namespace xegpu {
@@ -60,40 +62,12 @@ namespace {
 // LayoutPropagation
 //===----------------------------------------------------------------------===//
 
-/// Assigns a distribution layout to the vector and tensor_desc values with a
-/// single backward scan of the IR, writing each decision directly into the IR
-/// (anchor layouts, temporary layouts and tensor_desc types).
+/// Propagates layout requirements in a single backward walk.
+/// Layouts requested by consumers are tracked separately from producer layouts
+/// written into the IR. Later visits overwrite earlier layout requests.
 ///
-/// Ops are visited backward by xegpu::walkBackward, shared with the layout
-/// recovery: in reverse program order, nested regions before their parent op.
-/// So an op is reached only after every consumer of its results, except a
-/// consumer reached through a loop back edge (scf.for's yield -> iter_arg) or,
-/// for scf.while, whose regions are walked against its control flow (before
-/// region first), through scf.condition -> after region.
-/// Each op therefore makes a one-time decision:
-///   - each result takes the layout demanded by its nearest consumer in
-///     program order. Consumers are visited from the farthest to the nearest,
-///     and each overwrites the layout recorded for the value, so the recorded
-///     layout is the nearest consumer's demand when the definition is reached;
-///   - the op's transfer function (`visit*Op`) turns the result layouts into
-///     the layouts it demands of its operands, fixing the anchor layout of an
-///     anchor op on the way.
-/// Region ops are handled at their boundaries:
-///   - a terminator operand can feed both a region argument (the next
-///     iteration or the next region) and a region result (on exit). It takes
-///     the region argument's layout when that is known, i.e. when the
-///     argument's region has already been walked (e.g. scf.while's "after"
-///     region yield, feeding the "before" region). Otherwise it falls back to
-///     the region result's layout (e.g. scf.for's yield, whose iter_arg is
-///     reached only through the back edge, or scf.condition, whose "after"
-///     region has not been walked yet);
-///   - a region op's init operand takes the layout of the region argument it
-///     feeds.
-///
-/// Values left without a layout (e.g. a cross-iteration reduction, which is
-/// constrained only through the back edge) are filled afterwards by the
-/// forward walk in `xegpu::propagateLayouts`; remaining producer/consumer
-/// mismatches are resolved by ResolveLayoutConflicts.
+/// A forward pass infers missing layouts where supported.
+/// ResolveLayoutConflicts reconciles producer and consumer layouts.
 class LayoutPropagation final : public xegpu::BackwardLayoutVisitor {
 public:
   LayoutPropagation(Operation *scopeRoot, xegpu::LayoutKind layoutKind)
@@ -102,35 +76,31 @@ public:
   /// Runs the backward scan over every function under `scopeRoot`.
   LogicalResult run();
 
-  /// Returns the layout decided for `val`, or null if none was decided.
-  xegpu::DistributeLayoutAttr getLayout(Value val) const {
-    return valueLayouts.lookup(val);
+  /// Returns the layout requested by consumers of `val`, or null if unknown.
+  xegpu::DistributeLayoutAttr getRequestedLayout(Value val) const {
+    return requestedLayouts.lookup(val);
   }
 
-  /// Prints the layouts decided for function arguments and op results.
+  /// Prints requested layouts for function arguments and op results.
   void print(llvm::raw_ostream &os);
 
 private:
-  // The op this propagation runs on.
   Operation *scopeRoot;
   xegpu::LayoutKind layoutKind;
 
-  // Layout of each value (op result or block argument): the demand of the
-  // nearest consumer visited so far, which is the decided layout once the
-  // value's definition has been reached.
-  DenseMap<Value, xegpu::DistributeLayoutAttr> valueLayouts;
-  // Set when an anchor op cannot be assigned a layout.
+  // Latest non-null layout requested by consumers of each value.
+  DenseMap<Value, xegpu::DistributeLayoutAttr> requestedLayouts;
+  // Collects failures from the void visitor callbacks.
   bool propagationFailed = false;
 
   //===--------------------------------------------------------------------===//
   // Backward scan
   //===--------------------------------------------------------------------===//
 
-  // Records the layout a consumer demands of `val`, overriding the demand of
-  // any consumer visited earlier (i.e. farther from the definition).
-  void recordDemand(Value val, xegpu::DistributeLayoutAttr layout) {
+  // A non-null requested layout replaces the one from any earlier visit.
+  void recordRequestedLayout(Value val, xegpu::DistributeLayoutAttr layout) {
     if (layout)
-      valueLayouts[val] = layout;
+      requestedLayouts[val] = layout;
   }
   void visitRegularOp(Operation *op) override;
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override;
@@ -138,14 +108,11 @@ private:
   void visitFunction(FunctionOpInterface funcOp) override;
 
   //===--------------------------------------------------------------------===//
-  // Transfer functions: given the layouts the consumers demand of an op's
-  // results, compute the layouts the op demands of its operands and the result
-  // layouts it produces.
+  // Transfer functions
   //===--------------------------------------------------------------------===//
 
-  // `operands` receives the layout the op demands of each operand. `results`
-  // holds the consumers' layout of each result on entry; a transfer function
-  // that requires a different result layout (e.g. a reduction) overwrites it.
+  // Transfer functions fill `operands` with requested layouts. `results` starts
+  // with layouts requested by consumers and may be overridden by the op.
   using LayoutsMutRef = MutableArrayRef<xegpu::DistributeLayoutAttr>;
 
   void visitOperation(Operation *op, LayoutsMutRef operands,
@@ -198,8 +165,7 @@ private:
   FailureOr<int64_t> getNumSgOrFail(Operation *op, int sgSize,
                                     xegpu::DistributeLayoutAttr consumerLayout);
 
-  // Reserved for the anchor ops that are the sources of the propagation
-  // (store/dpas), whose layout must be correct.
+  // Report a fatal propagation error.
   void markFailure(Operation *op, const llvm::Twine &message) {
     op->emitError(message);
     propagationFailed = true;
@@ -370,7 +336,8 @@ void LayoutPropagation::visitVectorMultiReductionOp(
     vector::MultiDimReductionOp reduction, LayoutsMutRef operands,
     LayoutsMutRef results) {
   Type resultTy = reduction.getDestType();
-  // The layout of a vector result must be present; a scalar result has none.
+  // Vector reductions need a layout requested by a consumer; scalar reductions
+  // choose their own result layout.
   xegpu::DistributeLayoutAttr consumerLayoutAttr;
   if (!resultTy.isIntOrFloat()) {
     consumerLayoutAttr = results[0];
@@ -391,9 +358,7 @@ void LayoutPropagation::visitVectorMultiReductionOp(
   if (failed(numSgOrErr))
     return;
 
-  // The result layout the operation requires. It may differ from the layout
-  // its consumers demand; the conflict is resolved later by converting the
-  // required result layout to the consumer layout.
+  // Select a valid reduction layout; resolve consumer mismatches later.
   auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
       layoutKind, sourceTy, consumerLayoutAttr, reductionDims,
       numSgOrErr.value_or(0), uArch);
@@ -1206,8 +1171,8 @@ static void setTensorDescLayout(Value value,
       tdescTy.getEncoding(), layout));
 }
 
-/// Update the function signature with the layouts of its tensor_desc
-/// arguments. Every vector and tensor_desc argument must have a layout.
+/// Require layouts for vector and tensor_desc arguments of standard
+/// FunctionType functions, and update tensor_desc argument types.
 static LogicalResult
 updateFunctionSignature(FunctionOpInterface funcOp,
                         xegpu::GetLayoutFnTy getLayoutOfValue) {
@@ -1238,39 +1203,34 @@ updateFunctionSignature(FunctionOpInterface funcOp,
 
 LogicalResult LayoutPropagation::run() {
   xegpu::walkBackward(scopeRoot, *this);
-  // An anchor op with no determinable layout cannot be lowered; stop before
-  // the forward fill fabricates degenerate layouts from unlabeled values.
+  // Stop before forward filling if any visitor reported a fatal error.
   return failure(propagationFailed);
 }
 
 void LayoutPropagation::visitFunction(FunctionOpInterface funcOp) {
-  // The arguments are decided once the whole body has been visited.
+  // All layout requests from the function body have now been collected.
   if (failed(updateFunctionSignature(
-          funcOp, [&](Value val) { return getLayout(val); })))
+          funcOp, [&](Value val) { return getRequestedLayout(val); })))
     markFailure(funcOp, "Failed to update operation with the layout.");
 }
 
 void LayoutPropagation::visitRegularOp(Operation *op) {
-  SmallVector<xegpu::DistributeLayoutAttr> resultLayouts = llvm::map_to_vector(
-      op->getResults(), [&](Value result) { return getLayout(result); });
+  SmallVector<xegpu::DistributeLayoutAttr> resultLayouts =
+      llvm::map_to_vector(op->getResults(), [&](Value result) {
+        return getRequestedLayout(result);
+      });
   SmallVector<xegpu::DistributeLayoutAttr> operandLayouts(op->getNumOperands());
   visitOperation(op, operandLayouts, resultLayouts);
 
-  // Recorded in reverse so that, if the op demands different layouts of the
-  // same value on several operands, the first operand wins.
+  // For repeated operands, prefer the first non-null requested layout.
   for (unsigned i : llvm::reverse(llvm::seq(op->getNumOperands())))
-    recordDemand(op->getOperand(i), operandLayouts[i]);
+    recordRequestedLayout(op->getOperand(i), operandLayouts[i]);
 
-  // Record the result layouts in the IR; an anchor op carries its own layout.
-  // A result takes its consumers' layout unless the transfer function replaced
-  // it with the layout the op itself requires (e.g. a reduction's slice
-  // layout). Vector results are recorded, and so is the scalar result of a
-  // reduction, whose layout its transfer function sets (a consumer may demand
-  // the same one, as the accumulator of another reduction):
-  // ResolveLayoutConflicts derives the reduction's operand layout from it and
-  // anchors the scalar with a convert_layout.
+  // Anchor visitors have already stored their selected layouts.
   if (isa<xegpu::AnchorLayoutInterface>(op))
     return;
+  // Scalar reductions also need a result layout: conflict resolution uses it
+  // to derive operand layouts and insert an anchor convert_layout.
   for (auto [result, layout] :
        llvm::zip_equal(op->getResults(), resultLayouts)) {
     if (!layout)
@@ -1290,52 +1250,42 @@ void LayoutPropagation::visitTerminator(
   regionOp.getSuccessorOperandInputMapping(mapping,
                                            RegionBranchPoint(terminator));
   for (const auto &[successorOperand, successorInputs] : mapping) {
-    // Propagate backward into the region: the terminator operand is demanded
-    // the layout of the value it feeds, so that its producer inside the region
-    // is laid out for it. (The opposite direction, giving the region result the
-    // layout of the operand feeding it, is done by visitRegionOp.) An operand
-    // may feed both a region argument (the next iteration or the next region)
-    // and a region result (on exit); the region argument wins when it has a
-    // layout, e.g. scf.while's "after" region yield feeding the "before"
-    // region, which is walked first. Otherwise the region result's layout,
-    // decided by its consumers after the region op, is used, e.g. for scf.for's
-    // yield, whose iter_arg is reached only through the back edge, or for
-    // scf.condition, whose "after" region has not been walked yet.
+    // Prefer a layout requested for a successor block argument over one
+    // requested for a parent result. For scf.condition, the after region has
+    // not been visited, so only the parent's requested result layout is known.
     xegpu::DistributeLayoutAttr layout;
     for (Value input : successorInputs)
-      if (isa<BlockArgument>(input) && (layout = getLayout(input)))
+      if (isa<BlockArgument>(input) && (layout = getRequestedLayout(input)))
         break;
     for (Value input : successorInputs)
       if (isa<OpResult>(input) && !layout)
-        layout = getLayout(input);
-    recordDemand(successorOperand->get(), layout);
+        layout = getRequestedLayout(input);
+    recordRequestedLayout(successorOperand->get(), layout);
 
-    // Restrict the input IR: a region argument tied to no init operand
-    // (scf.while's "after" arguments) must be fed by a pass-through of a region
-    // argument, as nothing else identifies the layout the region carries: a
-    // region argument reads its layout from its tied init operand.
+    // Layout lookup for scf.while's after arguments follows pass-through
+    // before arguments to their tied init operands.
     auto loop = dyn_cast<LoopLikeOpInterface>(regionOp.getOperation());
     for (auto arg : llvm::make_isa_range<BlockArgument>(successorInputs)) {
       if (isa<VectorType>(arg.getType()) &&
           !(loop && loop.getTiedLoopInit(arg)) &&
           !isa<BlockArgument>(successorOperand->get())) {
-        markFailure(terminator,
-                    "unsupported region structure: the successor argument it "
-                    "feeds is not tied to an init operand, so its value must "
-                    "be passed through from predecessor region argument.");
+        std::string message;
+        llvm::raw_string_ostream os(message);
+        os << "unsupported region structure: the successor argument ";
+        arg.printAsOperand(os, OpPrintingFlags());
+        os << " is not tied to an init operand.";
+        markFailure(terminator, message);
       }
     }
   }
 }
 
-/// Which values at a region boundary are filled from a terminator's operands.
+/// Selects the region boundary values to fill from terminator operands.
 enum class FillTarget { RegionResults, RegionResultsAndLoopInits };
 
-/// Gives each region result fed by `terminator`, and with
-/// FillTarget::RegionResultsAndLoopInits each tied loop init, the layout of the
-/// terminator operand feeding it, unless it already has one. Vector operands
-/// for which `getLayoutOfValue` returns null are skipped; returns false if
-/// there is any.
+/// Fill unassigned region result layouts from forwarded vector operands.
+/// Also fill tied loop init layouts when requested. Return false if any
+/// forwarded vector operand lacks a layout.
 static bool
 fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
                                  xegpu::GetLayoutFnTy getLayoutOfValue,
@@ -1358,10 +1308,6 @@ fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
       continue;
     }
     for (Value input : successorInputs) {
-      // A region result: %r gets the layout of %v in
-      //   %r = scf.if %c -> (vector<...>) { scf.yield %v } else { ... }
-      // An operand feeds at most one region result; its other successor
-      // inputs are region arguments.
       if (auto result = dyn_cast<OpResult>(input)) {
         if (!xegpu::getDistributeLayoutAttr(result))
           xegpu::setTemporaryLayout(result, layout);
@@ -1369,18 +1315,13 @@ fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
       }
       if (target == FillTarget::RegionResults)
         continue;
-      // A loop init, around the back edge: %init gets the layout of %n in
-      //   scf.for ... iter_args(%acc = %init) {
-      //     %n = arith.addf %acc, %x
-      //     scf.yield %n
-      //   }
-      // so %acc, which reads its layout from %init, gets it too. A splat
-      // constant %init without a layout takes it as well.
+      // Loop arguments read their layouts from the tied init operands.
       OpOperand *init =
           loop ? loop.getTiedLoopInit(cast<BlockArgument>(input)) : nullptr;
       if (!init || xegpu::getTemporaryLayout(*init))
         continue;
       xegpu::setTemporaryLayout(*init, layout);
+      // Also fill an unassigned non-anchor producer, such as a splat constant.
       auto initResult = dyn_cast<OpResult>(init->get());
       if (initResult &&
           !isa<xegpu::AnchorLayoutInterface>(initResult.getOwner()) &&
@@ -1392,29 +1333,16 @@ fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
 }
 
 void LayoutPropagation::visitRegionOp(RegionBranchOpInterface regionOp) {
-  // The init operands take the layout of the region argument they feed (and
-  // tensor_desc region arguments get it on their type). An init whose region
-  // argument has no layout yet (it is constrained only through the loop back
-  // edge) is filled by the forward pass from the yield operand instead
-  // (FillTarget::RegionResultsAndLoopInits).
+  // Propagate layouts requested for region arguments to init operands.
+  // The forward pass can fill remaining loop init layouts from yielded values.
   (void)xegpu::propagateRegionArgsToInits(
-      regionOp, [&](Value val) { return getLayout(val); });
+      regionOp, [&](Value val) { return getRequestedLayout(val); });
   for (OpOperand &operand : llvm::reverse(regionOp->getOpOperands()))
-    recordDemand(operand.get(), xegpu::getTemporaryLayout(operand));
+    recordRequestedLayout(operand.get(), xegpu::getTemporaryLayout(operand));
 
-  // Record the region result layouts (the opposite direction of the demand
-  // visitTerminator propagates): a result takes the layout of the terminator
-  // operand feeding it. Several regions may each have a terminator feeding the
-  // results (scf.if's then/else, scf.index_switch's cases); a multi-block
-  // region (e.g. scf.execute_region) may have several exits. scf.for and
-  // scf.while regions have a single block. All these terminators' operands
-  // have the result's layout: visitTerminator demands it of each of them, and
-  // if a producer requires its own layout instead (an anchor op, or e.g. a
-  // reduction), ResolveLayoutConflicts converts that operand to the result's
-  // layout. So the first terminator whose operand has a layout sets it. Only
-  // an operand defined inside the region op has a decided layout yet; a result
-  // left without a layout (e.g. that of a cross-iteration accumulation) is
-  // filled by the forward pass.
+  // Only use layouts from values defined inside this op, whose producers have
+  // been visited. Some may still lack an assigned layout. The forward pass
+  // attempts to fill any remaining region result layouts.
   auto getDecidedLayout = [&](Value val) -> xegpu::DistributeLayoutAttr {
     if (!regionOp->isAncestor(val.getParentBlock()->getParentOp()))
       return nullptr;
@@ -1431,7 +1359,7 @@ void LayoutPropagation::visitRegionOp(RegionBranchOpInterface regionOp) {
 
 void LayoutPropagation::print(llvm::raw_ostream &os) {
   auto printLayout = [&](Value val) {
-    if (xegpu::DistributeLayoutAttr layout = getLayout(val))
+    if (xegpu::DistributeLayoutAttr layout = getRequestedLayout(val))
       os << layout;
     else
       os << "Not assigned.";
@@ -1727,7 +1655,6 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
     // Layouts are needed only for vector and tensor descriptor types.
     if (!isa<VectorType, xegpu::TensorDescType>(resultType))
       continue;
-    // A result without a layout is inferred from the layouts of the operands.
     xegpu::DistributeLayoutAttr layout = getLayoutOfValue(result);
     if (!layout) {
       // Gather operand layouts, indexed by operand number.
@@ -1889,12 +1816,9 @@ struct XeGPUPropagateLayoutPass final
 
 } // namespace
 
-/// Forward pass, in program order, filling the layouts the backward scan left
-/// unassigned: values with no consumer demanding a layout, chiefly the
-/// loop-carried value of a cross-iteration accumulation, which is constrained
-/// only through the loop back edge. A result is inferred from the layouts of
-/// its operands; a region boundary takes the layout of the terminator operand
-/// feeding it.
+/// Fill missing layouts from operand layouts and forwarded region values.
+/// This can resolve loop-carried values left unconstrained by the backward
+/// scan, such as an accumulation whose loop result is unused.
 static LogicalResult
 forwardFillUnassignedLayouts(OpBuilder &builder, Operation *target,
                              xegpu::GetLayoutFnTy getLayoutOfValue) {
@@ -1915,9 +1839,7 @@ forwardFillUnassignedLayouts(OpBuilder &builder, Operation *target,
   if (walkResult.wasInterrupted())
     return failure();
 
-  // Report the values left without a layout once the pass is complete: a value
-  // may get its layout after its definition is visited (e.g. a loop init, at
-  // the yield around the back edge).
+  // Delay warnings until loop terminators have filled missing init layouts.
   target->walk([](Operation *op) {
     for (OpResult result : op->getResults())
       if (isa<VectorType, xegpu::TensorDescType>(result.getType()) &&
@@ -1939,14 +1861,14 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
     propagation.print(llvm::outs());
     return success();
   }
-  // A value's layout is read from the IR, falling back to the one the backward
-  // scan decided for it (e.g. a vector function argument).
+  // Prefer the producer layout in the IR. Fall back to the requested layout
+  // for values without one, such as vector function arguments.
   return forwardFillUnassignedLayouts(
       builder, target, [&](Value val) -> xegpu::DistributeLayoutAttr {
         if (xegpu::DistributeLayoutAttr layout =
                 xegpu::getDistributeLayoutAttr(val))
           return layout;
-        return propagation.getLayout(val);
+        return propagation.getRequestedLayout(val);
       });
 }
 

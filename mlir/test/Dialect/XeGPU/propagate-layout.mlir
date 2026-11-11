@@ -808,7 +808,7 @@ func.func @vector_reduction_scalar(%arg0: memref<1024xf16>, %arg1: memref<16xf16
 
 // -----
 // The scalar result of a reduction keeps the layout its reduction requires
-// even when it is the accumulator of another reduction, which demands the same
+// even when it is the accumulator of another reduction, which requests the same
 // layout of it.
 gpu.module @test {
 // CHECK-LABEL: func.func @chained_scalar_multi_reductions(
@@ -1252,7 +1252,7 @@ func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
 // -----
 // The loop carries the layout its in-loop consumer (the dpas accumulator)
 // requires; the loop result takes the layout of the yielded value, not the one
-// its consumer after the loop (the transpose) demands. The mismatch is left to
+// its consumer after the loop (the transpose) requests. The mismatch is left to
 // ResolveLayoutConflicts, which converts after the loop.
 gpu.module @test {
 // CHECK-LABEL: func.func @loop_result_layout_differs_from_consumer(
@@ -1281,7 +1281,7 @@ func.func @loop_result_layout_differs_from_consumer(%arg0: !xegpu.tensor_desc<8x
 
 // -----
 // A cross-iteration accumulation constrained only through the loop back edge:
-// no consumer demands a layout of %n, so the backward scan leaves the
+// no consumer requests a layout for %n, so the backward scan leaves the
 // loop-carried value without one. The forward pass infers %n from the load,
 // then carries it around the back edge to the init (and its splat constant)
 // and to the unused loop result.
