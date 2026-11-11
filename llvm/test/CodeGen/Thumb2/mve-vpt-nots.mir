@@ -50,7 +50,6 @@
 ---
 name:            vpnot
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
   - { reg: '$q1', virtual-reg: '' }
@@ -79,7 +78,6 @@ body:             |
 ---
 name:            vpnot_end
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
   - { reg: '$q1', virtual-reg: '' }
@@ -120,7 +118,6 @@ body:             |
 ---
 name:            vpnot_two
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
   - { reg: '$q1', virtual-reg: '' }
@@ -155,7 +152,6 @@ body:             |
 ---
 name:            vpnot_lots
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
   - { reg: '$q1', virtual-reg: '' }
@@ -196,7 +192,6 @@ body:             |
 ---
 name:            vpnot_first
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
   - { reg: '$q1', virtual-reg: '' }
@@ -227,7 +222,6 @@ body:             |
 ---
 name:            vpnot_many
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
   - { reg: '$q1', virtual-reg: '' }

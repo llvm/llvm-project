@@ -2,6 +2,9 @@ set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS MCCLOptions.td)
 llvm_tablegen(MCCLOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(MCCLOptionsTableGen)
+set(LLVM_TARGET_DEFINITIONS MCToolOptions.td)
+llvm_tablegen(MCToolOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(MCToolOptionsTableGen)
 
 add_llvm_component_library(LLVMMC
   ConstantPools.cpp
@@ -91,6 +94,7 @@ add_llvm_component_library(LLVMMC
 
   DEPENDS
   MCCLOptionsTableGen
+  MCToolOptionsTableGen
   intrinsics_gen
   llvm_vcsrevision_h
   )

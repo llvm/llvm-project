@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=SPIR
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl-is-host -emit-llvm %s -o - | FileCheck %s --check-prefix=ITANIUM
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -fsycl-is-host -emit-llvm %s -o - | FileCheck %s --check-prefix=MS
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spir64 -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=SPIR %}
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -fsycl-is-host -emit-llvm %s -o - | FileCheck %s --check-prefix=ITANIUM %}
+// TODO(cir): Add a ClangIR RUN line for the MS ABI once ClangIR implements
+// EH ABI lowering for the Microsoft ABI.
 
 // REQUIRES: x86-registered-target
 
