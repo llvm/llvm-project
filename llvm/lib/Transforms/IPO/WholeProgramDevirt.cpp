@@ -1115,7 +1115,8 @@ bool DevirtModule::tryFindVirtualCallTargets(
       const auto *Fn = dyn_cast<Function>(Target.Fn);
       if (!Fn)
         Fn = cast<Function>(cast<GlobalAlias>(Target.Fn)->getAliasee());
-      return Fn->getReturnType()->isVoidTy() && Fn->getInstructionCount() <= 1;
+      return !Fn->isDeclaration() && Fn->getReturnType()->isVoidTy() &&
+             Fn->getInstructionCount() <= 1;
     });
 
   // Give up if we couldn't find any targets.
