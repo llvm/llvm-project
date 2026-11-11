@@ -2619,7 +2619,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
   // typed.
-  DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
+  // An operand may be shared by recipes narrowed to different widths, so the
+  // truncates are keyed by operand and narrowed type.
+  DenseMap<std::pair<VPValue *, Type *>, VPWidenCastRecipe *> ProcessedTruncs;
   VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
@@ -2673,7 +2675,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, Inserted] = ProcessedTruncs.try_emplace(Op);
+        auto [ProcessedIter, Inserted] =
+            ProcessedTruncs.try_emplace({Op, NewResTy});
         if (Inserted) {
           VPBuilder Builder;
           if (isa<VPIRValue>(Op))
