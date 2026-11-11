@@ -282,6 +282,18 @@ def AMDGPUdiv_fixup_impl : SDNode<"AMDGPUISD::DIV_FIXUP", SDTFPTernaryOp>;
 // treated as an illegal operation.
 def AMDGPUfmad_ftz_impl : SDNode<"AMDGPUISD::FMAD_FTZ", SDTFPTernaryOp>;
 
+// f16 = src0 * src1 and f16 = src0 + src1 with f32 operands. The exact result
+// is rounded once to f16, with no intermediate rounding to f32, like
+// v_fma_mixlo_f16 does. This differs from (fpround (fmul ...)) and
+// (fpround (fadd ...)).
+def AMDGPUMixF16BinOp : SDTypeProfile<1, 2, [
+  SDTCisVT<0, f16>, SDTCisVT<1, f32>, SDTCisSameAs<1, 2>
+]>;
+def AMDGPUfmul_mix_f16 : SDNode<"AMDGPUISD::FMUL_MIX_F16", AMDGPUMixF16BinOp,
+                                [SDNPCommutative]>;
+def AMDGPUfadd_mix_f16 : SDNode<"AMDGPUISD::FADD_MIX_F16", AMDGPUMixF16BinOp,
+                                [SDNPCommutative]>;
+
 def AMDGPUregister_load : SDNode<"AMDGPUISD::REGISTER_LOAD",
                           SDTypeProfile<1, 2, [SDTCisPtrTy<1>, SDTCisInt<2>]>,
                           [SDNPHasChain, SDNPMayLoad]>;

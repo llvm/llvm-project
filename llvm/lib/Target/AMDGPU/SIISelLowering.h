@@ -599,6 +599,10 @@ public:
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
 
+  /// Returns true if AMDGPUISD::FADD_MIX_F16 / G_AMDGPU_FADD_MIX_F16 can be
+  /// selected in \p MF.
+  bool hasFAddMixF16(const MachineFunction &MF) const;
+
   /// Returns true if \p Op is provably canonical (no FCANONICALIZE needed).
   /// \p QueryVT is the scalar FP type being checked, threaded unchanged
   /// through recursion since canonicality is per vector element. FP operands

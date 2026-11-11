@@ -1550,6 +1550,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniV2S64}, {{UniInVgprV2S64}, {VgprV2S64, VgprV2S64, VgprV2S64}}})
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64, VgprV2S64, VgprV2S64}}});
 
+  addRulesForGOpcs({G_AMDGPU_FMUL_MIX_F16, G_AMDGPU_FADD_MIX_F16}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr32, Vgpr32}})
+      .Div(S16, {{Vgpr16}, {Vgpr32, Vgpr32}});
+
   addRulesForGOpcs({G_AMDGPU_FMED3}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16, Vgpr16}})
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16, Vgpr16}})

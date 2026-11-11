@@ -3805,13 +3805,10 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     bool PromoteToF32 =
         Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
     if (PromoteToF32) {
-      Register LogVal = MRI.createGenericVirtualRegister(F32);
-      auto PromoteSrc = B.buildFPExt(F32, X, Flags);
-      legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
-      B.buildFPTrunc(Dst, LogVal, Flags);
-    } else {
-      legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
+      // Log and multiply in f32 is always good enough for f16.
+      X = B.buildFPExt(F32, X, Flags).getReg(0);
     }
+    legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
 
     MI.eraseFromParent();
     return true;
@@ -3904,7 +3901,16 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
   const double Log2BaseInverted =
       IsLog10 ? numbers::ln2 / numbers::ln10 : numbers::ln2;
 
-  LLT Ty = B.getMRI()->getType(Dst);
+  // The result has type DstTy, which is either the same as Ty or f16 if Ty is
+  // f32.
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT Ty = MRI.getType(Src);
+  LLT DstTy = MRI.getType(Dst);
+  assert(DstTy == Ty || (DstTy == F16 && Ty == F32));
+  // Build the result of type Ty directly in Dst, or in a new register that is
+  // then rounded to Dst.
+  const bool RoundToDst = DstTy != Ty;
+  DstOp Res = RoundToDst ? DstOp(Ty) : DstOp(Dst);
 
   if (Ty == F32) {
     auto [ScaledInput, IsScaled] = getScaledLogInput(B, Src, Flags);
@@ -3918,13 +3924,16 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
           B.buildSelect(Ty, IsScaled, ScaledResultOffset, Zero, Flags);
       auto Log2Inv = B.buildFConstant(Ty, Log2BaseInverted);
 
+      MachineInstrBuilder Log;
       if (ST.hasFastFMAF32())
-        B.buildFMA(Dst, LogSrc, Log2Inv, ResultOffset, Flags);
+        Log = B.buildFMA(Res, LogSrc, Log2Inv, ResultOffset, Flags);
       else {
         auto Mul = B.buildFMul(Ty, LogSrc, Log2Inv, Flags);
-        B.buildFAdd(Dst, Mul, ResultOffset, Flags);
+        Log = B.buildFAdd(Res, Mul, ResultOffset, Flags);
       }
 
+      if (RoundToDst)
+        B.buildFPTrunc(Dst, Log, Flags);
       return true;
     }
   }
@@ -3934,7 +3943,19 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
                                      .addUse(Src)
                                      .setMIFlags(Flags);
   auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
-  B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
+
+  // The result is an approximation anyway, so it does not matter whether the
+  // product is rounded to f32 before it is rounded to f16. Round it only once
+  // if that is cheaper.
+  if (RoundToDst && ST.hasFmaMixInsts()) {
+    B.buildInstr(AMDGPU::G_AMDGPU_FMUL_MIX_F16, {Dst},
+                 {Log2Operand, Log2BaseInvertedOperand}, Flags);
+    return true;
+  }
+
+  auto Log = B.buildFMul(Res, Log2Operand, Log2BaseInvertedOperand, Flags);
+  if (RoundToDst)
+    B.buildFPTrunc(Dst, Log, Flags);
   return true;
 }
 
@@ -5768,10 +5789,20 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
   auto TmpInt = B.buildBitcast(I32, Tmp);
   auto MaskedInt = B.buildAnd(I32, TmpInt, B.buildConstant(I32, 0xff800000));
   auto Masked = B.buildBitcast(F32, MaskedInt);
-  Quot = B.buildFAdd(F32, Masked, Quot, Flags);
-  auto RDst = B.buildFPTrunc(F16, Quot, Flags);
+  // The final result is correctly rounded whether or not the addition is
+  // rounded to f32 before rounding to f16, so use a single rounding if that is
+  // cheaper.
+  Register RDst;
+  if (ST.getTargetLowering()->hasFAddMixF16(B.getMF())) {
+    RDst = B.buildInstr(AMDGPU::G_AMDGPU_FADD_MIX_F16, {F16}, {Masked, Quot},
+                        Flags)
+               .getReg(0);
+  } else {
+    Quot = B.buildFAdd(F32, Masked, Quot, Flags);
+    RDst = B.buildFPTrunc(F16, Quot, Flags).getReg(0);
+  }
   B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, Res)
-      .addUse(RDst.getReg(0))
+      .addUse(RDst)
       .addUse(RHS)
       .addUse(LHS)
       .setMIFlags(Flags);

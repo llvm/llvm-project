@@ -4764,6 +4764,22 @@ def G_AMDGPU_RCP_IFLAG : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Equivalents of AMDGPUISD::FMUL_MIX_F16 and AMDGPUISD::FADD_MIX_F16: f16 =
+// src0 * src1 and f16 = src0 + src1 with f32 operands, rounded once to f16.
+def G_AMDGPU_FMUL_MIX_F16 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, type1:$src1);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+def G_AMDGPU_FADD_MIX_F16 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, type1:$src1);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 class BufferLoadGenericInstruction : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$rsrc, type2:$vindex, type2:$voffset,

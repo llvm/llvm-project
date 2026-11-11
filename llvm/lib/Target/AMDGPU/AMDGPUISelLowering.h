@@ -81,7 +81,7 @@ protected:
   SDValue LowerFLOG2(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGCommon(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
-                          bool IsLog10, SDNodeFlags Flags) const;
+                          bool IsLog10, SDNodeFlags Flags, EVT DstVT) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerFEXPUnsafeImpl(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,

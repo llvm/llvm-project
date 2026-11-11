@@ -277,6 +277,8 @@ def : GINodeEquiv<G_AMDGPU_FFBL_B32, AMDGPUffbl_b32_impl>;
 def : GINodeEquiv<G_AMDGPU_FMIN_LEGACY, AMDGPUfmin_legacy>;
 def : GINodeEquiv<G_AMDGPU_FMAX_LEGACY, AMDGPUfmax_legacy>;
 def : GINodeEquiv<G_AMDGPU_RCP_IFLAG, AMDGPUrcp_iflag>;
+def : GINodeEquiv<G_AMDGPU_FMUL_MIX_F16, AMDGPUfmul_mix_f16>;
+def : GINodeEquiv<G_AMDGPU_FADD_MIX_F16, AMDGPUfadd_mix_f16>;
 
 def : GINodeEquiv<G_AMDGPU_CVT_F32_UBYTE0, AMDGPUcvt_f32_ubyte0>;
 def : GINodeEquiv<G_AMDGPU_CVT_F32_UBYTE1, AMDGPUcvt_f32_ubyte1>;

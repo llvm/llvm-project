@@ -2742,13 +2742,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
       X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
     }
 
-    SDValue Lowered = LowerFLOGUnsafe(X, DL, DAG, IsLog10, Flags);
-    if (PromoteToF32) {
-      return DAG.getNode(ISD::FP_ROUND, DL, VT, Lowered,
-                         DAG.getTargetConstant(0, DL, MVT::i32), Flags);
-    }
-
-    return Lowered;
+    return LowerFLOGUnsafe(X, DL, DAG, IsLog10, Flags, VT);
   }
 
   SDValue ScaledInput, IsScaled;
@@ -2829,11 +2823,20 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 }
 
 // Do f32 fast math expansion for flog2 or flog10. This is accurate enough for a
-// promote f16 operation.
+// promote f16 operation. The result has type DstVT, which is either the same as
+// the type of Src or f16 if Src is f32.
 SDValue AMDGPUTargetLowering::LowerFLOGUnsafe(SDValue Src, const SDLoc &SL,
                                               SelectionDAG &DAG, bool IsLog10,
-                                              SDNodeFlags Flags) const {
+                                              SDNodeFlags Flags,
+                                              EVT DstVT) const {
   EVT VT = Src.getValueType();
+  assert(DstVT == VT || (DstVT == MVT::f16 && VT == MVT::f32));
+  auto RoundToDst = [&](SDValue V) {
+    if (DstVT == VT)
+      return V;
+    return DAG.getNode(ISD::FP_ROUND, SL, DstVT, V,
+                       DAG.getTargetConstant(0, SL, MVT::i32), Flags);
+  };
   unsigned LogOp =
       VT == MVT::f32 ? (unsigned)AMDGPUISD::LOG : (unsigned)ISD::FLOG2;
 
@@ -2855,18 +2858,26 @@ SDValue AMDGPUTargetLowering::LowerFLOGUnsafe(SDValue Src, const SDLoc &SL,
       SDValue Log2Inv = DAG.getConstantFP(Log2BaseInverted, SL, VT);
 
       if (Subtarget->hasFastFMAF32())
-        return DAG.getNode(ISD::FMA, SL, VT, LogSrc, Log2Inv, ResultOffset,
-                           Flags);
+        return RoundToDst(DAG.getNode(ISD::FMA, SL, VT, LogSrc, Log2Inv,
+                                      ResultOffset, Flags));
       SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, LogSrc, Log2Inv, Flags);
-      return DAG.getNode(ISD::FADD, SL, VT, Mul, ResultOffset);
+      return RoundToDst(DAG.getNode(ISD::FADD, SL, VT, Mul, ResultOffset));
     }
   }
 
   SDValue Log2Operand = DAG.getNode(LogOp, SL, VT, Src, Flags);
   SDValue Log2BaseInvertedOperand = DAG.getConstantFP(Log2BaseInverted, SL, VT);
 
-  return DAG.getNode(ISD::FMUL, SL, VT, Log2Operand, Log2BaseInvertedOperand,
-                     Flags);
+  // The result is an approximation anyway, so it does not matter whether the
+  // product is rounded to f32 before it is rounded to f16. Round it only once
+  // if that is cheaper.
+  if (DstVT != VT && DAG.getSubtarget<GCNSubtarget>().hasFmaMixInsts()) {
+    return DAG.getNode(AMDGPUISD::FMUL_MIX_F16, SL, DstVT, Log2Operand,
+                       Log2BaseInvertedOperand, Flags);
+  }
+
+  return RoundToDst(DAG.getNode(ISD::FMUL, SL, VT, Log2Operand,
+                                Log2BaseInvertedOperand, Flags));
 }
 
 // This expansion gives a result slightly better than 1ulp.

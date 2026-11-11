@@ -14032,11 +14032,33 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   TmpCast = DAG.getNode(ISD::AND, SL, MVT::i32, TmpCast,
                         DAG.getConstant(0xff800000, SL, MVT::i32));
   Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
-  Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
-  SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
-                             DAG.getTargetConstant(0, SL, MVT::i32));
+  // The final result is correctly rounded whether or not the addition is
+  // rounded to f32 before rounding to f16, so use a single rounding if that is
+  // cheaper.
+  SDValue RDst;
+  if (hasFAddMixF16(DAG.getMachineFunction())) {
+    RDst = DAG.getNode(AMDGPUISD::FADD_MIX_F16, SL, MVT::f16, Tmp, Quot,
+                       Op->getFlags());
+  } else {
+    Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
+    RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
+                       DAG.getTargetConstant(0, SL, MVT::i32));
+  }
   return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
                      Op->getFlags());
+}
+
+bool SITargetLowering::hasFAddMixF16(const MachineFunction &MF) const {
+  if (Subtarget->hasFmaMixInsts())
+    return true;
+
+  // v_mad_mix{lo,hi}_f16 round the product to f32 before adding, but that is
+  // exact when one multiplicand is 1.0. They do not support denormals.
+  if (!Subtarget->hasMadMixInsts())
+    return false;
+  SIModeRegisterDefaults Mode = MF.getInfo<SIMachineFunctionInfo>()->getMode();
+  return Mode.FP32Denormals == DenormalMode::getPreserveSign() &&
+         Mode.FP64FP16Denormals == DenormalMode::getPreserveSign();
 }
 
 // Faster 2.5 ULP division that does not support denormals.
@@ -16380,6 +16402,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FLDEXP:
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::FMAD_FTZ:
+  case AMDGPUISD::FMUL_MIX_F16:
+  case AMDGPUISD::FADD_MIX_F16:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RSQ:
   case AMDGPUISD::RSQ_CLAMP:
@@ -16615,6 +16639,8 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   case AMDGPU::G_FLOG10:
   case AMDGPU::G_FPTRUNC:
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
+  case AMDGPU::G_AMDGPU_FMUL_MIX_F16:
+  case AMDGPU::G_AMDGPU_FADD_MIX_F16:
   case AMDGPU::G_AMDGPU_CVT_F32_UBYTE0:
   case AMDGPU::G_AMDGPU_CVT_F32_UBYTE1:
   case AMDGPU::G_AMDGPU_CVT_F32_UBYTE2:
