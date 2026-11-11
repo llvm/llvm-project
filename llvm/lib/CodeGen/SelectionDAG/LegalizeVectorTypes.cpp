@@ -3736,7 +3736,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
       Alignment);
 
   EVL = DAG.getNode(
-      ISD::UMIN, DL, EVL.getValueType(), EVL,
+      ISD::UMIN, DL, EVL.getValueType(), DAG.getFreeze(EVL),
       DAG.getElementCount(DL, EVL.getValueType(), VT.getVectorElementCount()));
 
   unsigned EltWidth = VT.getScalarSizeInBits() / 8;
@@ -3809,7 +3809,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
 
   SDValue EltByteSize =
       DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
-  SDValue EVL1Ptr = DAG.getZExtOrTrunc(EVL1, DL, PtrVT);
+  SDValue EVL1Ptr = DAG.getZExtOrTrunc(DAG.getFreeze(EVL1), DL, PtrVT);
   SDValue EVL1Bytes = DAG.getNode(ISD::MUL, DL, PtrVT, EVL1Ptr, EltByteSize);
   // Clip EVL1Bytes to make sure we stay within the stack object.
   SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
