@@ -53,6 +53,10 @@ class SPIRVPrepareFunctionsImpl {
   bool terminateBlocksAfterTrap(Module &M, Intrinsic::ID IID);
   Function *removeAggregateTypesFromSignature(Function *F);
   bool removeAggregateTypesFromCalls(Function *F);
+  void retypeMutatedCalls(Module &M);
+  // The new type of each call keyed in spv.mutated_callsite, applied once
+  // every aggregate signature is cloned.
+  StringMap<FunctionType *> PendingCallTypes;
 
 public:
   SPIRVPrepareFunctionsImpl(
@@ -727,10 +731,6 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
-  for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
-      CB->mutateFunctionType(NewF->getFunctionType());
-  }
   // NewF keeps F's address space, so their pointer types match and
   // RAUW is safe despite the differing signatures.
   assert(F->getType() == NewF->getType() &&
@@ -919,19 +919,33 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
           ASM->isAlignStack(), ASM->getDialect(), ASM->canThrow()));
     }
 
+    PendingCallTypes[Key] = NewFnTy;
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
         std::move(ChangedTypes), Key, Constraints);
   }
 
-  for (auto &&[CB, NewFTy] : Calls) {
-    if (NewFTy->getReturnType() != CB->getType())
-      TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
-          CB, CB->getType());
-    CB->mutateFunctionType(NewFTy);
-  }
-
   return true;
+}
+
+// Retypes the calls removeAggregateTypesFromCalls keyed, in the cloned bodies.
+void SPIRVPrepareFunctionsImpl::retypeMutatedCalls(Module &M) {
+  for (Function &F : M) {
+    for (Instruction &I : instructions(F)) {
+      auto *CB = dyn_cast<CallBase>(&I);
+      MDNode *MD = CB ? CB->getMetadata("spv.mutated_callsite") : nullptr;
+      if (!MD)
+        continue;
+      auto It =
+          PendingCallTypes.find(cast<MDString>(MD->getOperand(0))->getString());
+      if (It == PendingCallTypes.end())
+        continue;
+      if (It->second->getReturnType() != CB->getType())
+        TM.getSubtarget<SPIRVSubtarget>(F).getSPIRVGlobalRegistry()->addMutated(
+            CB, CB->getType());
+      CB->mutateFunctionType(It->second);
+    }
+  }
 }
 
 bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
@@ -984,14 +998,28 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     FuncsWorklist.push_back(&F);
   }
 
+  // Clone every signature first, then retype the calls: a retyped call leaves
+  // its aggregate users ill-typed, and cloning such a select or PHI asserts.
+  SmallVector<std::pair<Function *, FunctionType *>> NewFuncs;
   for (auto *F : FuncsWorklist) {
+    FunctionType *OldFTy = F->getFunctionType();
     Function *NewF = removeAggregateTypesFromSignature(F);
 
     if (NewF != F) {
       F->eraseFromParent();
+      NewFuncs.emplace_back(NewF, OldFTy);
       Changed = true;
     }
   }
+  // A direct call has its callee's old type until now: getCalledFunction()
+  // no longer matches it, so compare the callee operand and the old type.
+  for (auto [NewF, OldFTy] : NewFuncs)
+    for (User *U : NewF->users())
+      if (auto *CB = dyn_cast<CallBase>(U); CB &&
+                                            CB->getCalledOperand() == NewF &&
+                                            CB->getFunctionType() == OldFTy)
+        CB->mutateFunctionType(NewF->getFunctionType());
+  retypeMutatedCalls(M);
   return Changed;
 }
 
