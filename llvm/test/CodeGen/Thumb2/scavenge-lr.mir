@@ -107,7 +107,6 @@
 ---
 name:            f
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:

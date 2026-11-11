@@ -22650,8 +22650,8 @@ operation.
 ##### Semantics:
 
 The '`llvm.vp.sdiv`' intrinsic performs signed division ({ref}`sdiv <i_sdiv>`)
-of the first and second vector arguments on each enabled lane.  The result on
-disabled lanes is a {ref}`poison value <poisonvalues>`.
+of the first and second vector arguments on each enabled or poison lane. The
+result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22692,7 +22692,8 @@ operation.
 
 The '`llvm.vp.udiv`' intrinsic performs unsigned division
 ({ref}`udiv <i_udiv>`) of the first and second vector arguments on each enabled
-lane. The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22733,7 +22734,8 @@ operation.
 
 The '`llvm.vp.srem`' intrinsic computes the remainder of the signed division
 ({ref}`srem <i_srem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22774,7 +22776,8 @@ operation.
 
 The '`llvm.vp.urem`' intrinsic computes the remainder of the unsigned division
 ({ref}`urem <i_urem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 

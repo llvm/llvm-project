@@ -2455,6 +2455,20 @@ func.func @coordinate_ref_complex(%arg0: !fir.ref<complex<f128>>) {
 
 // -----
 
+// Complex type wrapped in `fir.ref`, with a part index that is not constant.
+// A struct index has to be constant, so the element type is indexed instead.
+func.func @coordinate_ref_complex_dynamic(%arg0: !fir.ref<complex<f128>>, %arg1: i32) {
+  %p = fir.coordinate_of %arg0, %arg1 : (!fir.ref<complex<f128>>, i32) -> !fir.ref<f32>
+  return
+}
+// CHECK-LABEL: llvm.func @coordinate_ref_complex_dynamic
+// CHECK-SAME:  %[[ARG0:.*]]: !llvm.ptr
+// CHECK-SAME:  %[[ARG1:.*]]: i32
+// CHECK:    %{{.*}} = llvm.getelementptr %[[ARG0]][%[[ARG1]]] : (!llvm.ptr, i32) -> !llvm.ptr, f128
+// CHECK-NEXT:    llvm.return
+
+// -----
+
 // Complex type wrapped in `fir.box`
 func.func @coordinate_box_complex(%arg0: !fir.box<complex<f128>>) {
   %arg1 = llvm.mlir.constant(0 : i32) : i32
