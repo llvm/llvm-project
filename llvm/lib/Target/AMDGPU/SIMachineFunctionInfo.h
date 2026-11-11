@@ -373,8 +373,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
     YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
-    YamlIO.mapOptional("hasExcessRegPressure", MFI.HasExcessRegPressure,
-                       false);
+    YamlIO.mapOptional("hasExcessRegPressure", MFI.HasExcessRegPressure, false);
   }
 };
 
