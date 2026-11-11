@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_STATX_H
 #define LLVM_LIBC_TYPES_STRUCT_STATX_H
 
+#ifdef __linux__
 #include <linux/stat.h>
+#endif
 
 #endif // LLVM_LIBC_TYPES_STRUCT_STATX_H
