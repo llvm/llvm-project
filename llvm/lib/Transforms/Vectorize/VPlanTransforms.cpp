@@ -3490,8 +3490,10 @@ static bool handleUncountableExitsWithSideEffects(
   VPValue *Zero = Plan.getZero(IVScalarTy);
   FirstActive =
       MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy, DebugLoc());
+  VPValue *PartStart = MaskBuilder.createOverflowingOp(
+      VPInstruction::CanonicalIVIncrementForPart, {Zero, &Plan.getVF()});
   VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
-                                           {Zero, FirstActive}, DebugLoc(),
+                                           {PartStart, FirstActive}, DebugLoc(),
                                            "uncountable.exit.mask");
 
   // Convert all other memory operations to use the mask.
