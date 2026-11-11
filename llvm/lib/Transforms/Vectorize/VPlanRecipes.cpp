@@ -2535,11 +2535,13 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
       VIC = VectorInstrContext::BinaryOp;
       break;
     }
-    if (isa<VPWidenIntrinsicRecipe>(Op) &&
-        isa_and_nonnull<MinMaxIntrinsic>(
-            cast<VPWidenIntrinsicRecipe>(Op)->getUnderlyingValue())) {
-      VIC = VectorInstrContext::BinaryOp;
-      break;
+    if (auto *WidenIntrinsic = dyn_cast<VPWidenIntrinsicRecipe>(Op)) {
+      if (is_contained({Intrinsic::umin, Intrinsic::umax, Intrinsic::smin,
+                        Intrinsic::smax},
+                       WidenIntrinsic->getVectorIntrinsicID())) {
+        VIC = VectorInstrContext::BinaryOp;
+        break;
+      }
     }
   }
 
@@ -3886,6 +3888,18 @@ SmallVector<VPSingleDefRecipe *> VPExpressionRecipe::decompose() {
   SmallVector<VPSingleDefRecipe *> DecomposedRecipes(ExpressionRecipes);
   ExpressionRecipes.clear();
   return DecomposedRecipes;
+}
+
+bool VPExpressionRecipe::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // The last operand of a folded operation is the vp.merge EVL.
+  if (ExpressionType == ExpressionTypes::FoldedOp && Op == getLastOperand()) {
+    assert(match(Op, m_EVL(m_VPValue())) &&
+           "Expected an explicit vector length recipe");
+    return true;
+  }
+
+  return false;
 }
 
 InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
