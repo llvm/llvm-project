@@ -39,7 +39,7 @@ def : RegBankInstrMapping<[
 ]>;
 
 def : RegBankInstrMapping<[G_PTR_ADD], [
-  RegBankMappingRule<[RegBankTypeMapping<FPRRegBank, ptype0>, RegBankTypeMapping<GPRRegBank, type1>],
+  RegBankMappingRule<[RegBankTypeMapping<FPRRegBank, ptype0>, RegBankTypeMapping<FPRRegBank, type1>],
     predicate=[{PType0.isVector()}]>,
   RegBankMappingRule<[RegBankTypeMapping<GPRRegBank, ptype0>, RegBankTypeMapping<GPRRegBank, type1>]>
 ]>;

@@ -52,7 +52,6 @@ static bool preferGPRForFPImm(const llvm::MachineInstr &MI,
 
 using namespace llvm;
 using namespace MIPatternMatch;
-static const unsigned CustomMappingID = 1;
 
 const RegisterBankInfo::ValueMapping *
 AArch64GenRegisterBankInfo::getCopyMapping(unsigned DstBankID,
