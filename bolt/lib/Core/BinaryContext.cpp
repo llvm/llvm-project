@@ -2185,10 +2185,8 @@ void BinaryContext::preprocessDebugInfo() {
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
-      std::optional<MD5::MD5Result> Checksum;
-      if (LineTable->Prologue.ContentTypes.HasMD5)
-        Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      const char *Name =
+      StringRef CUDir = CU->getCompilationDir();
+      StringRef CUName =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         std::optional<DWARFUnit *> DWOCU = getDWOCU(*DWOID);
@@ -2201,11 +2199,41 @@ void BinaryContext::preprocessDebugInfo() {
           NumMissingDWOs++;
           continue;
         }
-        Name = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
-                               nullptr);
+        CUName = dwarf::toString((*DWOCU)->getUnitDIE().find(dwarf::DW_AT_name),
+                                 nullptr);
       }
-      BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
-                                  std::nullopt);
+
+      // The file names list should always contain at least one entry with
+      // DWARF 5.
+      assert(!FileNames.empty() &&
+             "Missing root file entry in DWARF 5 line table");
+      std::optional<MD5::MD5Result> Checksum;
+      if (LineTable->Prologue.ContentTypes.HasMD5)
+        Checksum = FileNames[0].Checksum;
+      StringRef Dir = dwarf::toString(
+          LineTable->Prologue.IncludeDirectories[FileNames[0].DirIdx], nullptr);
+      StringRef Name = dwarf::toString(FileNames[0].Name, nullptr);
+
+      // If the first directory/file name entry is not the same as
+      // DW_AT_comp_dir/DW_AT_name (if the attribute exists), then the input
+      // file has invalid DWARF. Emit a warning in this case, and use the line
+      // table values for setting the root file.
+      if (!CUDir.empty() && Dir != CUDir) {
+        this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
+                     << ": the first directory entry in the line table (" << Dir
+                     << ") does not match the value of DW_AT_comp_dir ("
+                     << CUDir << ") for CU at offset 0x"
+                     << Twine::utohexstr(CUID) << "\n";
+      }
+      if (!CUName.empty() && Name != CUName) {
+        this->errs() << "BOLT-WARNING: invalid DWARF detected in " << Filename
+                     << ": the first file name entry in the line table ("
+                     << Name << ") does not match the value of DW_AT_name ("
+                     << CUName << ") for CU at offset 0x"
+                     << Twine::utohexstr(CUID) << "\n";
+      }
+
+      BinaryLineTable.setRootFile(Dir, Name, Checksum, std::nullopt);
     }
 
     BinaryLineTable.setDwarfVersion(DwarfVersion);
@@ -2235,8 +2263,8 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
-      cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
-                            DwarfVersion));
+      cantFail(getDwarfFile(Dir, FileName, I + Offset, Checksum, std::nullopt,
+                            CUID, DwarfVersion));
     }
   }
 
