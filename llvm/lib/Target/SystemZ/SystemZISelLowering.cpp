@@ -2312,8 +2312,6 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     }
   }
 
-  if (Subtarget.isTargetXPLINK64())
-    getOrCreateADAVirtualRegister(MF);
   return Chain;
 }
 
