@@ -9141,7 +9141,7 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   // Insert the sign bit
   V = MIRBuilder.buildOr(I32, Sign, V);
 
-  MIRBuilder.buildTrunc(Dst, V);
+  MIRBuilder.buildBitcast(Dst, MIRBuilder.buildTrunc(LLT::integer(16), V).getReg(0));
   MI.eraseFromParent();
   return Legalized;
 }
