@@ -1773,6 +1773,40 @@ func.func @extract_strided_broadcast5(%arg0: vector<2x1xf32>) -> vector<2x4xf32>
 
 // -----
 
+// ExtractStridedSliceOp only extracts a prefix of its source vector
+// (#num_offsets < #source_rank).
+// CHECK-LABEL: func @extract_strided_broadcast_prefix(
+//  CHECK-SAME: %[[ARG:.+]]: vector<4x1xf32>
+//       CHECK: %[[E:.+]] = vector.extract %[[ARG]][3] : vector<1xf32> from vector<4x1xf32>
+//  CHECK-NEXT: %[[B:.+]] = vector.broadcast %[[E]] : vector<1xf32> to vector<1x4xf32>
+//  CHECK-NEXT: return %[[B]] : vector<1x4xf32>
+func.func @extract_strided_broadcast_prefix(%arg0: vector<4x1xf32>) -> vector<1x4xf32> {
+  %0 = vector.broadcast %arg0 : vector<4x1xf32> to vector<4x4xf32>
+  %1 = vector.extract_strided_slice %0
+      offsets = [3], sizes = [1], strides = [1]
+      : vector<4x4xf32> to vector<1x4xf32>
+  return %1 : vector<1x4xf32>
+}
+
+// -----
+
+// ExtractStridedSliceOp only extracts a prefix of its source vector
+// (#num_offsets < #source_rank). In addition, BroadcastOp bumps the output rank.
+// CHECK-LABEL: func @extract_strided_broadcast_prefix_rank_increase(
+//  CHECK-SAME: %[[ARG:.+]]: vector<8x1x1xf32>
+//       CHECK: %[[E:.+]] = vector.extract_strided_slice %[[ARG]] offsets = [5, 0], sizes = [2, 1], strides = [1, 1] : vector<8x1x1xf32> to vector<2x1x1xf32>
+//  CHECK-NEXT: %[[B:.+]] = vector.broadcast %[[E]] : vector<2x1x1xf32> to vector<1x2x2x5xf32>
+//  CHECK-NEXT: return %[[B]] : vector<1x2x2x5xf32>
+func.func @extract_strided_broadcast_prefix_rank_increase(%arg0: vector<8x1x1xf32>) -> vector<1x2x2x5xf32> {
+  %0 = vector.broadcast %arg0 : vector<8x1x1xf32> to vector<4x8x7x5xf32>
+  %1 = vector.extract_strided_slice %0
+      offsets = [3, 5, 3], sizes = [1, 2, 2], strides = [1, 1, 1]
+      : vector<4x8x7x5xf32> to vector<1x2x2x5xf32>
+  return %1 : vector<1x2x2x5xf32>
+}
+
+// -----
+
 // CHECK-LABEL: consecutive_shape_cast
 //       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<4x4xf16>
 //  CHECK-NEXT:   return %[[C]] : vector<4x4xf16>

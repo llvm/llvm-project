@@ -6,6 +6,11 @@
 ; RUN: sed -e s/.dispatch:// %s | llc -mtriple=arm-pc-windows-msvc | FileCheck %s --check-prefixes=CHECK,USEDISPATCH
 ; Control Flow Guard is currently only available on Windows
 
+; If no checks were inserted then the GuardCF bit shouldn't be set in @feat.00.
+; TABLEONLY:    "@feat.00" = 0
+; USECHECK:     "@feat.00" = 2048
+; USEDISPATCH:  "@feat.00" = 2048
+
 declare void @target_func()
 
 define void @func_in_module_without_cfguard() #0 {
