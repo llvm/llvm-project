@@ -518,7 +518,7 @@
 ; ZOS-NEXT: declare i64 @"@@FRND@B"(float)
 ; ZOS-NEXT: declare float @"@@FSIN@B"(float)
 ; ZOS-NEXT: declare float @"@@FSNH@B"(float)
-; ZOS-NEXT: declare float @"@@FSQT@B"(float)
+; ZOS-NEXT: declare nofpclass(ninf nsub nnorm) float @"@@FSQT@B"(float) [[SQRT_ATTRS:#[0-9]+]]
 ; ZOS-NEXT: declare float @"@@FTAN@B"(float)
 ; ZOS-NEXT: declare float @"@@FTNH@B"(float)
 ; ZOS-NEXT: declare float @"@@FTRC@B"(float)
@@ -590,7 +590,7 @@
 ; ZOS-NEXT: declare double @"@@WLOG@B"(double)
 ; ZOS-NEXT: declare double @"@@WPOW@B"(double, double)
 ; ZOS-NEXT: declare double @"@@WSNH@B"(double)
-; ZOS-NEXT: declare double @"@@WSQT@B"(double)
+; ZOS-NEXT: declare nofpclass(ninf nsub nnorm) double @"@@WSQT@B"(double) [[SQRT_ATTRS]]
 ; ZOS-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; ZOS-NEXT: declare void @_Unwind_Resume(ptr)
 ; ZOS-NEXT: declare double @__adddf3(double, double)
@@ -1061,8 +1061,8 @@
 ; ZOS-NEXT: declare double @trunc(double)
 ; ZOS-NEXT: declare float @truncf(float)
 ; ZOS-NEXT: declare fp128 @truncl(fp128)
+; ZOS-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; ZOS-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; ZOS-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; ZOS-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; ZOS-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; ZOS-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

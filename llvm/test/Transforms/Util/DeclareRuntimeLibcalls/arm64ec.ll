@@ -505,8 +505,8 @@
 ; CHECK-NEXT: declare float @"#sinf"(float)
 ; CHECK-NEXT: declare double @"#sinh"(double)
 ; CHECK-NEXT: declare float @"#sinhf"(float)
-; CHECK-NEXT: declare double @"#sqrt"(double)
-; CHECK-NEXT: declare float @"#sqrtf"(float)
+; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) double @"#sqrt"(double) [[SQRT_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) float @"#sqrtf"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @"#tan"(double)
 ; CHECK-NEXT: declare float @"#tanf"(float)
 ; CHECK-NEXT: declare double @"#tanh"(double)
@@ -518,3 +518,4 @@
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
