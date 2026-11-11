@@ -356,14 +356,24 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
 
 static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
                                  FastMathFlags FMF, Instruction *BeforeInst) {
-  for (User *U : Divisor->users()) {
-    if (!match(U, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
-      continue;
-    BinaryOperator *BO = cast<BinaryOperator>(U);
-    if (BO->getParent() == BeforeInst->getParent() &&
-        BO->comesBefore(BeforeInst) && BO->getFastMathFlags() == FMF)
-      return BO;
-  }
+  auto Expr = Divisor->hasUseList() ? Divisor : Denom;
+  if (Expr->hasUseList())
+    for (User *U : Expr->users()) {
+      if (!match(U, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
+        continue;
+      BinaryOperator *BO = cast<BinaryOperator>(U);
+      if (BO->getParent() == BeforeInst->getParent() &&
+          BO->comesBefore(BeforeInst) && BO->getFastMathFlags() == FMF)
+        return BO;
+    }
+  else
+    for (Instruction *Prev = BeforeInst->getPrevNode(); Prev; Prev = Prev->getPrevNode()){
+      if (!match(Prev, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
+        continue;
+      BinaryOperator *BO = cast<BinaryOperator>(Prev);
+      if (BO->getFastMathFlags() == FMF)
+        return BO;
+    }
   return nullptr;
 }
 

@@ -692,3 +692,29 @@ define void @test21() {
   store float %t4, ptr @ff
   ret void
 }
+
+define void @test22() {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float [[A]], 2.000000e+01
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[B]], [[DIV]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[C]], [[DIV]]
+; CHECK-NEXT:    store float [[MUL]], ptr @fd, align 4
+; CHECK-NEXT:    store float [[MUL1]], ptr @fe, align 4
+; CHECK-NEXT:    ret void
+;
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
+  %t1 = fmul fast float %A, %B
+  %t2 = fdiv fast float %t1, 2.000000e+01
+  %t3 = fmul fast float %A, %C
+  %t4 = fdiv fast float %t3, 2.000000e+01
+  ; d = (a*b)/2.0;
+  store float %t2, ptr @fd
+  ; e = (a*c)/2.0
+  store float %t4, ptr @fe
+  ret void
+}
