@@ -409,6 +409,13 @@ template void xegpu::setTemporaryLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
+void xegpu::setTensorDescLayout(Value value, DistributeLayoutAttr layout) {
+  auto tdescTy = cast<xegpu::TensorDescType>(value.getType());
+  value.setType(xegpu::TensorDescType::get(
+      tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
+      tdescTy.getEncoding(), layout));
+}
+
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
                                         Value value, ArrayRef<int64_t> shape) {

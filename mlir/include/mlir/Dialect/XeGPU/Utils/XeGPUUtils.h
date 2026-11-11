@@ -224,6 +224,10 @@ template <typename T,
 void setTemporaryLayout(const T &operandOrResult,
                         const DistributeLayoutAttr layout);
 
+/// Sets `layout` on the type of the tensor_desc value `value`, replacing any
+/// layout the type already has.
+void setTensorDescLayout(Value value, DistributeLayoutAttr layout);
+
 /// Returns the innermost 2 entries of `vals` if it is at least 2D and all of
 /// its leading entries are unit; std::nullopt otherwise.
 std::optional<SmallVector<int64_t>>

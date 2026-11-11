@@ -78,18 +78,6 @@ void xegpu::dropInstDataOnInherentAttrs(Operation *op) {
   });
 }
 
-// Sets the layout on a TensorDesc value by updating its type to include
-// the given layout, if the type does not already have a layout attached.
-static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
-  auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(val.getType());
-  if (!tensorDescTy || tensorDescTy.getLayoutAttr())
-    return;
-  auto typeWithLayout = xegpu::TensorDescType::get(
-      tensorDescTy.getContext(), tensorDescTy.getShape(),
-      tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-  val.setType(typeWithLayout);
-}
-
 /// Return whether every target recorded for `region` has been visited.
 static bool isReady(Region *region,
                     const DenseMap<Region *, SmallPtrSet<Region *, 2>> &targets,
@@ -226,9 +214,10 @@ static void propagateResultsToRegularOperands(Operation *op) {
     return;
 
   // Recover layout for TensorDesc type results by updating the type to include
-  // the layout. For vector type
-  if (isa<xegpu::TensorDescType>(resultType))
-    setTensorDescLayout(result, resLayout);
+  // the layout.
+  if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(resultType);
+      tdescTy && !tdescTy.getLayoutAttr())
+    xegpu::setTensorDescLayout(result, resLayout);
 
   // Recover layout for vector type results, or for multi-reduction ops which
   // may reduce to a scalar that still needs a layout.
@@ -281,8 +270,10 @@ static void propagateRegionResultsToYieldOperands(
         if (layout) {
           // set layout for the region op, like scf.loop
           xegpu::setTemporaryLayout(regionResult, layout);
-          if (isa<xegpu::TensorDescType>(regionResult.getType()))
-            setTensorDescLayout(regionResult, layout);
+          if (auto tdescTy =
+                  dyn_cast<xegpu::TensorDescType>(regionResult.getType());
+              tdescTy && !tdescTy.getLayoutAttr())
+            xegpu::setTensorDescLayout(regionResult, layout);
         }
       } else {
         // For region successor, get layout from the target region's block
@@ -323,8 +314,9 @@ xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
         continue;
 
       // Recover layout for tensor_desc block args by updating the type.
-      if (isa<xegpu::TensorDescType>(regionArg.getType()))
-        setTensorDescLayout(regionArg, layout);
+      if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(regionArg.getType());
+          tdescTy && !tdescTy.getLayoutAttr())
+        xegpu::setTensorDescLayout(regionArg, layout);
 
       // Recover layout for region op operands, like scf.for's init operands.
       // Find all predecessor values that flow into this block argument.

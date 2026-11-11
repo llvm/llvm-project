@@ -1159,15 +1159,6 @@ void LayoutPropagation::visitStoreMatrixOp(xegpu::StoreMatrixOp storeMatrix,
 // LayoutPropagation: backward scan
 //===----------------------------------------------------------------------===//
 
-/// Set `layout` on the type of a tensor_desc value.
-static void setTensorDescLayout(Value value,
-                                xegpu::DistributeLayoutAttr layout) {
-  auto tdescTy = cast<xegpu::TensorDescType>(value.getType());
-  value.setType(xegpu::TensorDescType::get(
-      tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
-      tdescTy.getEncoding(), layout));
-}
-
 LogicalResult LayoutPropagation::run() {
   xegpu::walkBackward(scopeRoot, *this);
   // Stop before forward filling if any visitor reported a fatal error.
@@ -1196,7 +1187,7 @@ void LayoutPropagation::visitRegularOp(Operation *op) {
     if (!layout)
       continue;
     if (isa<xegpu::TensorDescType>(result.getType()))
-      setTensorDescLayout(result, layout);
+      xegpu::setTensorDescLayout(result, layout);
     else if (isa<VectorType>(result.getType()) ||
              isa<vector::MultiDimReductionOp, vector::ReductionOp>(op))
       xegpu::setTemporaryLayout(result, layout);
@@ -1568,11 +1559,8 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
     }
     // If the result is a tensor descriptor type, update the tensor desc type
     // with layout.
-    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
-      auto typeWithLayout = xegpu::TensorDescType::get(
-          tensorDescTy.getContext(), tensorDescTy.getShape(),
-          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-      result.setType(typeWithLayout);
+    if (isa<xegpu::TensorDescType>(resultType)) {
+      xegpu::setTensorDescLayout(result, layout);
       continue;
     }
     // If the result is a vector type, add a temporary layout attribute to the
@@ -1764,12 +1752,9 @@ static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
                         << " but got none.\n");
       return failure();
     }
-    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(argType)) {
-      auto newTdescTy = xegpu::TensorDescType::get(
-          tensorDescTy.getContext(), tensorDescTy.getShape(),
-          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-      arg.setType(newTdescTy);
-      newArgTypes.back() = newTdescTy;
+    if (isa<xegpu::TensorDescType>(argType)) {
+      xegpu::setTensorDescLayout(arg, layout);
+      newArgTypes.back() = arg.getType();
     }
   }
   // Update the function type with the new argument types.
