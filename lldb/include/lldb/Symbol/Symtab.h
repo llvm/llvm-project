@@ -161,10 +161,6 @@ public:
 
   void Finalize();
 
-  void AppendSymbolNamesToMap(const IndexCollection &indexes,
-                              bool add_demangled, bool add_mangled,
-                              NameToIndexMap &name_to_index_map) const;
-
   ObjectFile *GetObjectFile() const { return m_objfile; }
 
   /// Decode a serialized version of this object from data.

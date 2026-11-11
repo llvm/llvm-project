@@ -478,34 +478,6 @@ void Symtab::PreloadSymbols() {
   InitNameIndexes();
 }
 
-void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
-                                    bool add_demangled, bool add_mangled,
-                                    NameToIndexMap &name_to_index_map) const {
-  LLDB_SCOPED_TIMER();
-  if (add_demangled || add_mangled) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-    // Create the name index vector to be able to quickly search by name
-    const size_t num_indexes = indexes.size();
-    for (size_t i = 0; i < num_indexes; ++i) {
-      uint32_t value = indexes[i];
-      assert(i < m_symbols.size());
-      const Symbol *symbol = &m_symbols[value];
-
-      const Mangled &mangled = symbol->GetMangled();
-      if (add_demangled) {
-        if (ConstString name = mangled.GetDemangledName())
-          name_to_index_map.Append(name, value);
-      }
-
-      if (add_mangled) {
-        if (ConstString name = mangled.GetMangledName())
-          name_to_index_map.Append(name, value);
-      }
-    }
-  }
-}
-
 uint32_t Symtab::AppendSymbolIndexesWithType(SymbolType symbol_type,
                                              std::vector<uint32_t> &indexes,
                                              uint32_t start_idx,
