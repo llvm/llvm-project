@@ -11,7 +11,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

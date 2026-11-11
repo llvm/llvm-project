@@ -3,11 +3,12 @@
     "moduleResolution": "node",
     "module": "esnext",
     "outDir": "out",
-    "rootDir": ".",
+    "rootDir": "..",
     "sourceMap": true,
     "strict": true,
     "noEmit": true,
-    "target": "es2017"
+    "target": "es2017",
+    "paths": { "@protocol/*": ["../protocol/*"] }
   },
   "include": ["./"]
 }

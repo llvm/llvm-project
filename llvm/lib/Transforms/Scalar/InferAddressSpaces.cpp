@@ -1515,15 +1515,15 @@ void InferAddressSpacesImpl::performPointerReplacement(
 
   User *CurUser = U.getUser();
 
-  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
-    return;
-
   // Skip if the current user is the new value itself.
   if (CurUser == NewV)
     return;
 
   auto *CurUserI = dyn_cast<Instruction>(CurUser);
   if (!CurUserI || CurUserI->getFunction() != F)
+    return;
+
+  if (replaceIfSimplePointerUse(*TTI, CurUser, V, NewV))
     return;
 
   // Handle more complex cases like intrinsic that need to be remangled.
@@ -1648,8 +1648,6 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
-  ValueToValueMapTy VMap;
-  ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   // Replaces the uses of the old address expressions with the new ones.
   for (const WeakTrackingVH &WVH : Postorder) {
@@ -1678,7 +1676,13 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
           }
         }
         if (!WorkList.empty()) {
+          // Use a new map for each constant. The mapper caches every constant
+          // that it visits, so an entry from an earlier constant could stop
+          // this remap, e.g. when one instruction uses two rewritten constants.
+          ValueToValueMapTy VMap;
           VMap[C] = Replace;
+          ValueMapper VMapper(VMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           DenseSet<User *> Visited{WorkList.begin(), WorkList.end()};
           while (!WorkList.empty()) {
             User *U = WorkList.pop_back_val();
