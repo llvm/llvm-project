@@ -60,6 +60,13 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
                            AsyncInfoPtr->Queue != nullptr, (bool)Err))
     Err = Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
 
+  // The local async info is about to be destroyed; make sure no kernel trace
+  // entry keeps pointing to it. This is done after synchronizing so that a trap
+  // raised while waiting for the kernel can still be attributed to it.
+  if (KernelTraced && AsyncInfoPtr == &LocalAsyncInfo)
+    Device.KernelLaunchTraces.getExclusiveAccessor()->clearAsyncInfo(
+        &LocalAsyncInfo);
+
   // Invalidate the wrapper object.
   AsyncInfoPtr = nullptr;
 }
@@ -98,8 +105,12 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 
     auto KernelTraceInfoRecord =
         GenericDevice.KernelLaunchTraces.getExclusiveAccessor();
+    // For a synchronous launch this is the wrapper's stack-local async info;
+    // finalize() removes the reference before that object is destroyed as
+    // otherwise it could be accessed from the trap handlers.
     (*KernelTraceInfoRecord)
         .emplace(this, std::move(StackTrace), AsyncInfoWrapper);
+    AsyncInfoWrapper.setKernelTraced();
   }
 
   uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
