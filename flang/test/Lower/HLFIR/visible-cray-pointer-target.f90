@@ -12,7 +12,7 @@ end
 ! CHECK-LABEL: func.func @_QPvisible_association()
 ! CHECK-DAG: %[[ASSOCIATED_ALLOC:.*]] = fir.alloca f32 <{bindc_name = "associated", uniq_name = "_QFvisible_associationEassociated"}> {fir.target}
 ! CHECK-DAG: %[[ASSOCIATED:.*]]:2 = hlfir.declare %[[ASSOCIATED_ALLOC]] uniq_name("_QFvisible_associationEassociated") fortran_attrs<target>
-! CHECK-DAG: fir.alloca f32 <{bindc_name = "unrelated", uniq_name = "_QFvisible_associationEunrelated"}>
+! CHECK-DAG: fir.alloca f32 <{bindc_name = "unrelated", uniq_name = "_QFvisible_associationEunrelated"}>{{$}}
 
 subroutine nested_association(flag)
   logical :: flag
@@ -35,7 +35,7 @@ subroutine ordinary_loc()
 end
 
 ! CHECK-LABEL: func.func @_QPordinary_loc()
-! CHECK: fir.alloca f32 <{bindc_name = "object", uniq_name = "_QFordinary_locEobject"}>
+! CHECK: fir.alloca f32 <{bindc_name = "object", uniq_name = "_QFordinary_locEobject"}>{{$}}
 
 subroutine hidden_association(ptr, associated)
   real :: pointee, associated
@@ -45,8 +45,7 @@ subroutine hidden_association(ptr, associated)
 end
 
 ! CHECK-LABEL: func.func @_QPhidden_association(
-! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFhidden_associationEassociated")
-! CHECK-NOT: fortran_attrs = #fir.var_attrs<target>
+! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFhidden_associationEassociated") :
 
 subroutine loc_plus_offset()
   real :: pointee, associated(2), unrelated
@@ -94,6 +93,20 @@ end
 ! CHECK-DAG: hlfir.declare %{{.*}} storage(%{{.*}}[0]) uniq_name("_QFequivalence_partnerEassociated") fortran_attrs<target>
 ! CHECK-DAG: hlfir.declare %{{.*}} storage(%{{.*}}[0]) uniq_name("_QFequivalence_partnerEpartner") fortran_attrs<target>
 ! CHECK-DAG: hlfir.declare %{{.*}} uniq_name("_QFequivalence_partnerEunrelated") :
+
+subroutine several_equivalence_sets()
+  real :: pointee, associated(2), left, right
+  equivalence (associated(1), left), (associated(2), right)
+  integer(8) :: ptr
+  pointer(ptr, pointee)
+  ptr = loc(associated(2))
+  print *, left, right
+end
+
+! CHECK-LABEL: func.func @_QPseveral_equivalence_sets()
+! CHECK-DAG: hlfir.declare %{{.*}} storage(%{{.*}}[0]) uniq_name("_QFseveral_equivalence_setsEassociated") fortran_attrs<target>
+! CHECK-DAG: hlfir.declare %{{.*}} storage(%{{.*}}[0]) uniq_name("_QFseveral_equivalence_setsEleft") fortran_attrs<target>
+! CHECK-DAG: hlfir.declare %{{.*}} storage(%{{.*}}[4]) uniq_name("_QFseveral_equivalence_setsEright") fortran_attrs<target>
 
 subroutine common_block_partner()
   real :: pointee, associated, partner, unrelated
@@ -164,3 +177,60 @@ end
 ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFhost_associationEassociated") fortran_attrs<target, internal_assoc>
 ! CHECK-LABEL: func.func private @_QFhost_associationPassociate_in_internal_procedure(
 ! CHECK: hlfir.declare %{{.*}} uniq_name("_QFhost_associationEassociated") fortran_attrs<target, host_assoc>
+
+module cray_pointer_module
+  real :: module_pointee
+  integer(8) :: module_ptr
+  pointer(module_ptr, module_pointee)
+contains
+  subroutine associate_module_pointer()
+    real :: associated
+    module_ptr = loc(associated)
+  end subroutine
+
+  subroutine use_module_pointee_only()
+    real :: associated
+    call set_cray_ptr_address(loc(associated))
+    associated = module_pointee
+  end subroutine
+end module
+
+! CHECK-LABEL: func.func @_QMcray_pointer_modulePassociate_module_pointer()
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QMcray_pointer_moduleFassociate_module_pointerEassociated") fortran_attrs<target>
+! CHECK-LABEL: func.func @_QMcray_pointer_modulePuse_module_pointee_only()
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QMcray_pointer_moduleFuse_module_pointee_onlyEassociated") fortran_attrs<target>
+
+subroutine pointer_in_block()
+  real :: associated
+  block
+    real :: pointee
+    integer(8) :: ptr
+    pointer(ptr, pointee)
+    ptr = loc(associated)
+  end block
+end
+
+! CHECK-LABEL: func.func @_QPpointer_in_block()
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QFpointer_in_blockEassociated") fortran_attrs<target>
+
+module target_module
+  real :: global_target(10)
+end module
+
+subroutine internal_procedure_uses_host_pointee()
+  use target_module
+  real :: pointee(10)
+  integer(8) :: ptr
+  pointer(ptr, pointee)
+  ptr = loc(global_target)
+  call copy_from_pointee()
+contains
+  subroutine copy_from_pointee()
+    global_target(2:10) = pointee(1:9)
+  end subroutine
+end
+
+! CHECK-LABEL: func.func @_QPinternal_procedure_uses_host_pointee()
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QMtarget_moduleEglobal_target") fortran_attrs<target>
+! CHECK-LABEL: func.func private @_QFinternal_procedure_uses_host_pointeePcopy_from_pointee(
+! CHECK: hlfir.declare %{{.*}} uniq_name("_QMtarget_moduleEglobal_target") fortran_attrs<target>
