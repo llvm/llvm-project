@@ -19,7 +19,8 @@ define i32 @f(ptr %p, i32 %n) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = tail call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP4]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <vscale x 4 x i32> [[VP_OP_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[VP_OP_LOAD_FR:%.*]] = freeze <vscale x 4 x i32> [[VP_OP_LOAD]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <vscale x 4 x i32> [[VP_OP_LOAD_FR]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> [[TMP5]], <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i8> [[TMP1]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP6]] = freeze <vscale x 4 x i8> [[TMP10]]
 ; CHECK-NEXT:    [[DOTFR:%.*]] = trunc <vscale x 4 x i8> [[TMP6]] to <vscale x 4 x i1>
