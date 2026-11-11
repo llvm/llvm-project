@@ -5,6 +5,7 @@
 # CHECK: error: UNSIGNED relocation has invalid width of 2 bytes at offset 1 of __TEXT,__text in [[FILE]]
 
 !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

@@ -23,6 +23,62 @@ define float @div_full(float %a, float %b) {
   ret float %4
 }
 
+define float @rcp_full_intrinsic(float %b) {
+; CHECK-LABEL: rcp_full_intrinsic(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [rcp_full_intrinsic_param_0];
+; CHECK-NEXT:    rcp.approx.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %r = call float @llvm.nvvm.div.full(float 1.0, float %b)
+  ret float %r
+}
+
+define float @rcp_full_ftz_intrinsic(float %b) {
+; CHECK-LABEL: rcp_full_ftz_intrinsic(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [rcp_full_ftz_intrinsic_param_0];
+; CHECK-NEXT:    rcp.approx.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %r = call float @llvm.nvvm.div.full.ftz(float 1.0, float %b)
+  ret float %r
+}
+
+define float @div_full_nonunit_numerator(float %b) {
+; CHECK-LABEL: div_full_nonunit_numerator(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [div_full_nonunit_numerator_param_0];
+; CHECK-NEXT:    div.full.f32 %r2, 0f40000000, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %r = call float @llvm.nvvm.div.full(float 2.0, float %b)
+  ret float %r
+}
+
+define float @rcp_rn_intrinsic(float %b) {
+; CHECK-LABEL: rcp_rn_intrinsic(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [rcp_rn_intrinsic_param_0];
+; CHECK-NEXT:    div.rn.f32 %r2, 0f3F800000, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %r = call float @llvm.nvvm.div.rn.f(float 1.0, float %b)
+  ret float %r
+}
+
 define float @div_fast_rr(float %a, float %b) {
 ; CHECK-LABEL: div_fast_rr(
 ; CHECK:       {

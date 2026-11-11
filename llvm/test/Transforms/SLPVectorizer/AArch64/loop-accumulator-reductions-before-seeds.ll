@@ -464,48 +464,31 @@ define void @uniform_accumulators(ptr %r, ptr %x, ptr %y, i32 %n, ptr %out) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP30:%.*]], [[TMP31:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[TMP1]], [[TMP29:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP2]], [[TMP28:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP10:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP12:%.*]])
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP3]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store <2 x float> [[TMP4]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[ADD99:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP1]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[ADD103:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP2]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    store float [[ADD99]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[ARRAYIDX104:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 4
+; CHECK-NEXT:    store float [[ADD103]], ptr [[ARRAYIDX104]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP30]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP31]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP29]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP28]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP12]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP10]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i8> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[ARRAYIDX24]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x float>, ptr [[ARRAYIDX30]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x float>, ptr [[ARRAYIDX35]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = load <2 x float>, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> [[TMP14]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP16]], <2 x float> [[TMP17]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> [[TMP14]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP19]], <2 x float> [[TMP20]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> [[TMP15]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP24:%.*]] = select <2 x i1> [[TMP22]], <2 x float> [[TMP23]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> <i32 3, i32 3>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP13]], <2 x float> [[TMP15]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP27:%.*]] = select <2 x i1> [[TMP25]], <2 x float> [[TMP26]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP28]] = fadd fast <2 x float> [[TMP18]], [[TMP8]]
-; CHECK-NEXT:    [[TMP29]] = fadd fast <2 x float> [[TMP21]], [[TMP7]]
-; CHECK-NEXT:    [[TMP30]] = fadd fast <2 x float> [[TMP24]], [[TMP10]]
-; CHECK-NEXT:    [[TMP31]] = fadd fast <2 x float> [[TMP27]], [[TMP11]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX35]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[ARRAYIDX24]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP8]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP10]] = fadd fast <4 x float> [[TMP9]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP7]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP12]] = fadd fast <4 x float> [[TMP11]], [[TMP3]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]]
@@ -609,51 +592,30 @@ define void @uniform_accumulators_phis(ptr %r, ptr %x, ptr %y, i32 %n, ptr %o0, 
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <2 x float> [[TMP32:%.*]], [[TMP33:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x float> [[TMP1]], [[TMP31:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <2 x float> [[TMP2]], [[TMP30:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP9:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP12:%.*]])
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP3]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    [[ADD99:%.*]] = extractelement <2 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    [[ADD99:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP1]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[ADD102:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP2]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
 ; CHECK-NEXT:    store float [[ADD99]], ptr [[O0]], align 4
-; CHECK-NEXT:    [[ADD102:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
 ; CHECK-NEXT:    store float [[ADD102]], ptr [[O1]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP32]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP33]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP31]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP30]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP9]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x float> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP12]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or disjoint i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i8> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x float>, ptr [[ARRAYIDX24]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = load <2 x float>, ptr [[ARRAYIDX30]], align 4
-; CHECK-NEXT:    [[TMP16:%.*]] = load <2 x float>, ptr [[ARRAYIDX35]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x float>, ptr [[ARRAYIDX41]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> [[TMP16]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP20:%.*]] = select <2 x i1> [[TMP18]], <2 x float> [[TMP19]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x float> [[TMP14]], <2 x float> [[TMP16]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP23:%.*]] = select <2 x i1> [[TMP21]], <2 x float> [[TMP22]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> <i32 2, i32 2>
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <2 x float> [[TMP15]], <2 x float> [[TMP17]], <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = select <2 x i1> [[TMP24]], <2 x float> [[TMP25]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> poison, <2 x i32> <i32 3, i32 3>
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x float> [[TMP15]], <2 x float> [[TMP17]], <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP29:%.*]] = select <2 x i1> [[TMP27]], <2 x float> [[TMP28]], <2 x float> zeroinitializer
-; CHECK-NEXT:    [[TMP30]] = fadd fast <2 x float> [[TMP20]], [[TMP10]]
-; CHECK-NEXT:    [[TMP31]] = fadd fast <2 x float> [[TMP23]], [[TMP9]]
-; CHECK-NEXT:    [[TMP32]] = fadd fast <2 x float> [[TMP26]], [[TMP7]]
-; CHECK-NEXT:    [[TMP33]] = fadd fast <2 x float> [[TMP29]], [[TMP8]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX24]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP7]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP9]] = fadd fast <4 x float> [[TMP8]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, ptr [[ARRAYIDX35]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP6]], <4 x float> [[TMP10]], <4 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP12]] = fadd fast <4 x float> [[TMP11]], [[TMP4]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]]
@@ -889,54 +851,48 @@ define void @shared_mask_accumulators(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %m
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i16> [[TMP36:%.*]], [[TMP22:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i16> [[TMP1]], [[TMP37:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP2]], [[TMP38:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP22:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP36:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP37:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP38:%.*]])
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i16> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP3]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
-; CHECK-NEXT:    store <4 x i16> [[TMP4]], ptr [[O]], align 2
+; CHECK-NEXT:    [[ADD227:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[TMP1]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[ADD236:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[TMP2]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[ADD245:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[TMP3]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[ADD254:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[TMP4]], %[[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    store i16 [[ADD227]], ptr [[O]], align 2
+; CHECK-NEXT:    [[ARRAYIDX238:%.*]] = getelementptr inbounds nuw i8, ptr [[O]], i64 2
+; CHECK-NEXT:    store i16 [[ADD236]], ptr [[ARRAYIDX238]], align 2
+; CHECK-NEXT:    [[ARRAYIDX247:%.*]] = getelementptr inbounds nuw i8, ptr [[O]], i64 4
+; CHECK-NEXT:    store i16 [[ADD245]], ptr [[ARRAYIDX247]], align 2
+; CHECK-NEXT:    [[ARRAYIDX256:%.*]] = getelementptr inbounds nuw i8, ptr [[O]], i64 6
+; CHECK-NEXT:    store i16 [[ADD254]], ptr [[ARRAYIDX256]], align 2
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i16> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP38]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i16> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP37]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i16> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP36]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i16> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP22]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i16> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP37]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i16> [ zeroinitializer, %[[FOR_BODY_PREHEADER]] ], [ [[TMP38]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A0]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX55:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A1]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX111:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A2]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[ARRAYIDX167:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[A3]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x i16>, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i8>, ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x i16>, ptr [[ARRAYIDX55]], align 2
-; CHECK-NEXT:    [[TMP17:%.*]] = load <4 x i16>, ptr [[ARRAYIDX111]], align 2
-; CHECK-NEXT:    [[TMP20:%.*]] = load <4 x i16>, ptr [[ARRAYIDX167]], align 2
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> [[TMP14]], <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i16> [[TMP16]], <4 x i16> [[TMP17]], <4 x i32> <i32 0, i32 1, i32 4, i32 poison>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i16> [[TMP19]], <4 x i16> [[TMP20]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
-; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP15]], <4 x i16> zeroinitializer, <4 x i16> [[TMP18]]
-; CHECK-NEXT:    [[TMP35:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> [[TMP14]], <4 x i32> <i32 1, i32 5, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP40:%.*]] = shufflevector <4 x i16> [[TMP39]], <4 x i16> [[TMP17]], <4 x i32> <i32 0, i32 1, i32 5, i32 poison>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x i16> [[TMP40]], <4 x i16> [[TMP20]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
-; CHECK-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP35]], <4 x i16> zeroinitializer, <4 x i16> [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> [[TMP14]], <4 x i32> <i32 2, i32 6, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i16> [[TMP26]], <4 x i16> [[TMP17]], <4 x i32> <i32 0, i32 1, i32 6, i32 poison>
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <4 x i16> [[TMP27]], <4 x i16> [[TMP20]], <4 x i32> <i32 0, i32 1, i32 2, i32 6>
-; CHECK-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP25]], <4 x i16> zeroinitializer, <4 x i16> [[TMP28]]
-; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> [[TMP14]], <4 x i32> <i32 3, i32 7, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <4 x i16> [[TMP31]], <4 x i16> [[TMP17]], <4 x i32> <i32 0, i32 1, i32 7, i32 poison>
-; CHECK-NEXT:    [[TMP33:%.*]] = shufflevector <4 x i16> [[TMP32]], <4 x i16> [[TMP20]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP34:%.*]] = select <4 x i1> [[TMP30]], <4 x i16> zeroinitializer, <4 x i16> [[TMP33]]
+; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x i16>, ptr [[ARRAYIDX]], align 2
+; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP10]], <4 x i16> zeroinitializer, <4 x i16> [[TMP11]]
 ; CHECK-NEXT:    [[TMP22]] = add <4 x i16> [[TMP21]], [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x i16>, ptr [[ARRAYIDX55]], align 2
+; CHECK-NEXT:    [[TMP24:%.*]] = select <4 x i1> [[TMP10]], <4 x i16> zeroinitializer, <4 x i16> [[TMP14]]
 ; CHECK-NEXT:    [[TMP36]] = add <4 x i16> [[TMP24]], [[TMP6]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load <4 x i16>, ptr [[ARRAYIDX111]], align 2
+; CHECK-NEXT:    [[TMP29:%.*]] = select <4 x i1> [[TMP10]], <4 x i16> zeroinitializer, <4 x i16> [[TMP17]]
 ; CHECK-NEXT:    [[TMP37]] = add <4 x i16> [[TMP29]], [[TMP7]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load <4 x i16>, ptr [[ARRAYIDX167]], align 2
+; CHECK-NEXT:    [[TMP34:%.*]] = select <4 x i1> [[TMP10]], <4 x i16> zeroinitializer, <4 x i16> [[TMP20]]
 ; CHECK-NEXT:    [[TMP38]] = add <4 x i16> [[TMP34]], [[TMP8]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV_NEXT]], [[TMP0]]

@@ -276,9 +276,9 @@ void Symtab::InitNameIndexes() {
   // can reuse its demangler. Parsers are only created for the schemes that
   // occur, and a nullptr means that no language parses the scheme.
   std::array<std::unique_ptr<Language::MangledNameParser>,
-             Mangled::kNumManglingSchemes>
+             Mangled::g_num_mangling_schemes>
       parsers;
-  std::bitset<Mangled::kNumManglingSchemes> created_parsers;
+  std::bitset<Mangled::g_num_mangling_schemes> created_parsers;
   auto parse_function_name =
       [&](const Mangled &mangled) -> std::optional<Mangled::FunctionNameParts> {
     Mangled::ManglingScheme scheme =
@@ -1149,7 +1149,15 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
+  if (m_objfile->IsInMemory()) {
+    if (m_objfile->GetDisableMemorySymtabCaching())
+      return;
+    else
+      type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
+  }
+
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return; // Caching is not enabled.
 
@@ -1209,7 +1217,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 3;
+constexpr uint32_t CURRENT_CACHE_VERSION = 4;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the
@@ -1307,8 +1315,12 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     m_symbols.resize(num_symbols);
     SectionList *sections = m_objfile->GetModule()->GetSectionList();
     for (uint32_t i=0; i<num_symbols; ++i) {
-      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab))
+      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab)) {
+        // Don't leave partially decoded symbols behind for the caller to
+        // parse the symbol table on top of.
+        m_symbols.clear();
         return false;
+      }
     }
   }
 
@@ -1328,7 +1340,14 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
+  if (m_objfile->IsInMemory()) {
+    if (m_objfile->GetDisableMemorySymtabCaching())
+      return false;
+    else
+      type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
+  }
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return false;
 

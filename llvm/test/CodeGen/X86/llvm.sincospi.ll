@@ -11,15 +11,15 @@ define { half, half } @test_sincospi_f16(half %a) #0 {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    callq ___sincospif
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm1
+; CHECK-NEXT:    movd %eax, %xmm1
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
@@ -37,10 +37,10 @@ define half @test_sincospi_f16_only_use_sin(half %a) #0 {
 ; CHECK-NEXT:    movq %rsp, %rdi
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    callq ___sincospif
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %result = call { half, half } @llvm.sincospi.f16(half %a)
@@ -58,10 +58,10 @@ define half @test_sincospi_f16_only_use_cos(half %a) #0 {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    movq %rsp, %rsi
 ; CHECK-NEXT:    callq ___sincospif
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %result = call { half, half } @llvm.sincospi.f16(half %a)
@@ -87,25 +87,25 @@ define { <2 x half>, <2 x half> } @test_sincospi_v2f16(<2 x half> %a) #0 {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    callq ___sincospif
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq ___truncsfhf2
 ; CHECK-NEXT:    ## kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
 ; CHECK-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload

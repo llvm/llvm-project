@@ -361,14 +361,14 @@ declare void @val_use(i8 %ptr) readonly nounwind
 define void @ptr_uses(ptr %ptr) {
 ; TUNIT: Function Attrs: nosync nounwind memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@ptr_uses
-; TUNIT-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR13]] {
+; TUNIT-SAME: (ptr readonly [[PTR:%.*]]) #[[ATTR13]] {
 ; TUNIT-NEXT:    [[CALL_PTR:%.*]] = call ptr @maybe_returned_ptr(ptr nofree readonly [[PTR]]) #[[ATTR13]]
 ; TUNIT-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(ptr readonly [[CALL_PTR]]) #[[ATTR13]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@ptr_uses
-; CGSCC-SAME: (ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR14]] {
+; CGSCC-SAME: (ptr readonly [[PTR:%.*]]) #[[ATTR14]] {
 ; CGSCC-NEXT:    [[CALL_PTR:%.*]] = call ptr @maybe_returned_ptr(ptr nofree readonly [[PTR]]) #[[ATTR14]]
 ; CGSCC-NEXT:    [[CALL_VAL:%.*]] = call i8 @maybe_returned_val(ptr readonly [[CALL_PTR]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret void

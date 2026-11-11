@@ -59,7 +59,7 @@ public:
   }
 };
 
-namespace sps_ci {
+namespace sps::ci {
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_SimpleNativeMemoryMap_reserve,
@@ -96,5 +96,5 @@ Error addSimpleNativeMemoryMap(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_SimpleNativeMemoryMap_sps_interface);
 }
 
-} // namespace sps_ci
+} // namespace sps::ci
 } // namespace orc_rt

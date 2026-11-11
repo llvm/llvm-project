@@ -23,6 +23,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 #include <cstdint>
 
 namespace llvm {
@@ -109,6 +110,7 @@ LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
 enum class SemanticInterpretation {
   Invalid,
   NotAllocated,
+  NotPacked,
   Arbitrary,
   SV,
   SGV,
@@ -161,10 +163,15 @@ struct SemanticSignatureElement {
     return StartRow != UnallocatedRow && StartCol != UnallocatedCol;
   }
 
+  // Register column of the element's first component. Unallocated elements
+  // have no register, so their masks are relative to component 0.
+  uint8_t getStartColOrZero() const { return isAllocated() ? StartCol : 0; }
+
   uint8_t getDeclaredMask() const {
-    if (!isAllocated())
-      return 0;
-    return static_cast<uint8_t>(((1U << Cols) - 1U) << StartCol);
+    unsigned Column = getStartColOrZero();
+    assert(Cols >= 1 && Column + Cols <= 4 &&
+           "declared components must fit within one register row");
+    return static_cast<uint8_t>(((1U << Cols) - 1U) << Column);
   }
 
   uint8_t getAlwaysReadsMask() const { return UsageMask; }

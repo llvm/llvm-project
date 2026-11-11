@@ -21,6 +21,7 @@
   !13 = !DICompositeType(tag: DW_TAG_structure_type, name: "__block_literal_1", scope: !4, file: !4, line: 557, size: 392, elements: !2)
   !15 = !DILocation(line: 558, column: 7, scope: !7)
 name:            __foo_block_invoke
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     DBG_VALUE $rdi, $noreg, !11, !DIExpression(), debug-location !15

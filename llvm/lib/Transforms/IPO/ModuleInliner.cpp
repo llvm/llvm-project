@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ModuleInliner.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -35,7 +36,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -48,13 +48,6 @@ using namespace llvm;
 
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
-
-static cl::opt<bool> CtxProfPromoteAlwaysInline(
-    "ctx-prof-promote-alwaysinline", cl::init(false), cl::Hidden,
-    cl::desc("If using a contextual profile in this module, and an indirect "
-             "call target is marked as alwaysinline, perform indirect call "
-             "promotion for that target. If multiple targets for an indirect "
-             "call site fit this description, they are all promoted."));
 
 InlineAdvisor &ModuleInlinerPass::getAdvisor(const ModuleAnalysisManager &MAM,
                                              FunctionAnalysisManager &FAM,
@@ -93,6 +86,7 @@ static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
 
 PreservedAnalyses ModuleInlinerPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
+  const IPOOptions &Opts = getIPOOptions(M);
   LLVM_DEBUG(dbgs() << "---- Module Inliner is Running ---- \n");
 
   auto &IAA = MAM.getResult<InlineAdvisorAnalysis>(M);
@@ -156,7 +150,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
                      << setIsVerbose();
             });
           }
-        } else if (CtxProfPromoteAlwaysInline &&
+        } else if (Opts.ctx_prof_promote_alwaysinline &&
                    CtxProf.isInSpecializedModule() && CB->isIndirectCall()) {
           CtxProfAnalysis::collectIndirectCallPromotionList(*CB, CtxProf,
                                                             ICPCandidates);

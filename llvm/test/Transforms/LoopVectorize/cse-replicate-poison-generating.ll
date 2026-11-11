@@ -2,7 +2,6 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
 
 ; Replicated icmps differ only in samesign; the merged icmp must not keep it.
-; FIXME: currently miscompiled.
 define void @icmp_samesign(i32 %a, i32 %b, ptr noalias %dst.1, ptr noalias %dst.2, ptr noalias %dst.3, i64 %n) {
 ; CHECK-LABEL: define void @icmp_samesign(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]], ptr noalias [[DST_3:%.*]], i64 [[N:%.*]]) {
@@ -12,7 +11,7 @@ define void @icmp_samesign(i32 %a, i32 %b, ptr noalias %dst.1, ptr noalias %dst.
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp samesign ult i32 [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 1, i32 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -73,7 +72,6 @@ exit:
 
 ; Replicated calls differ only in a range return attribute; the merged call
 ; must not keep it.
-; FIXME: currently miscompiled.
 define void @call_range_attr(ptr noalias %src, ptr noalias %dst.1, ptr noalias %dst.2, i64 %n) {
 ; CHECK-LABEL: define void @call_range_attr(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]], i64 [[N:%.*]]) {
@@ -89,13 +87,13 @@ define void @call_range_attr(ptr noalias %src, ptr noalias %dst.1, ptr noalias %
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = call range(i32 0, 10) i32 @g(i32 [[TMP2]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @g(i32 [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 0, 10) i32 @g(i32 [[TMP4]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @g(i32 [[TMP4]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 2
-; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 10) i32 @g(i32 [[TMP6]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @g(i32 [[TMP6]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = call range(i32 0, 10) i32 @g(i32 [[TMP8]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @g(i32 [[TMP8]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP7]], i64 2
@@ -152,7 +150,6 @@ exit:
 
 ; Replicated calls differ only in !range metadata; the merged call must not
 ; keep it.
-; FIXME: currently miscompiled.
 define void @call_range_md(ptr noalias %src, ptr noalias %dst.1, ptr noalias %dst.2, i64 %n) {
 ; CHECK-LABEL: define void @call_range_md(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]], i64 [[N:%.*]]) {
@@ -168,13 +165,13 @@ define void @call_range_md(ptr noalias %src, ptr noalias %dst.1, ptr noalias %ds
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @g(i32 [[TMP2]]) #[[ATTR1]], !range [[RNG6:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @g(i32 [[TMP2]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @g(i32 [[TMP4]]) #[[ATTR1]], !range [[RNG6]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @g(i32 [[TMP4]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 2
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @g(i32 [[TMP6]]) #[[ATTR1]], !range [[RNG6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @g(i32 [[TMP6]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @g(i32 [[TMP8]]) #[[ATTR1]], !range [[RNG6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @g(i32 [[TMP8]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP7]], i64 2
@@ -196,7 +193,7 @@ define void @call_range_md(ptr noalias %src, ptr noalias %dst.1, ptr noalias %ds
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
-; CHECK-NEXT:    [[C_1:%.*]] = call i32 @g(i32 [[L]]) #[[ATTR1]], !range [[RNG6]]
+; CHECK-NEXT:    [[C_1:%.*]] = call i32 @g(i32 [[L]]) #[[ATTR1]], !range [[RNG6:![0-9]+]]
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds i32, ptr [[DST_1]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[C_1]], ptr [[GEP_DST_1]], align 4
 ; CHECK-NEXT:    [[C_2:%.*]] = call i32 @g(i32 [[L]]) #[[ATTR1]]
@@ -243,7 +240,7 @@ attributes #1 = { nounwind willreturn memory(none) }
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; CHECK: [[RNG6]] = !{i32 0, i32 10}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
+; CHECK: [[RNG6]] = !{i32 0, i32 10}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META1]]}
 ;.

@@ -292,15 +292,15 @@ TEST(LlvmLibcRegexTest, BracketExpressionsAndRanges) {
   LIBC_NAMESPACE::regfree(&preg);
 
   // Bracket error conditions.
-  const char *const ebrack_patterns[] = {"[",  "[^",    "[abc",
-                                         "[]", "a[[.x", "a[[.x."};
+  const char *const ebrack_patterns[] = {
+      "[", "[^", "[abc", "[]", "a[[.x", "a[[.x.", "a[[:digit:", "a[[:digit"};
   for (const char *pat : ebrack_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_EBRACK);
     LIBC_NAMESPACE::regfree(&preg);
   }
 
   const char *const erange_patterns[] = {"a[3-1]c", "a[1-3-5]c", "a[1-",
-                                         "a[a-[:digit:]]c"};
+                                         "a[a-[:digit:]]c", "a[[:alpha:]-z]c"};
   for (const char *pat : erange_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_ERANGE);
     LIBC_NAMESPACE::regfree(&preg);
@@ -310,6 +310,13 @@ TEST(LlvmLibcRegexTest, BracketExpressionsAndRanges) {
                                            "a[[=b,=]]"};
   for (const char *pat : ecollate_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_ECOLLATE);
+    LIBC_NAMESPACE::regfree(&preg);
+  }
+
+  const char *const ectype_patterns[] = {"a[[:notdef:]]b", "a[[:alph:]]b",
+                                         "a[[:]:]]b", "a[[:-:]]b"};
+  for (const char *pat : ectype_patterns) {
+    EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_ECTYPE);
     LIBC_NAMESPACE::regfree(&preg);
   }
 }
@@ -327,9 +334,8 @@ TEST(LlvmLibcRegexTest, UnimplementedSyntaxAndFlags) {
   LIBC_NAMESPACE::regfree(&preg);
 
   // Unimplemented ERE metacharacters and special escapes return REG_BADPAT.
-  const char *const bad_patterns[] = {"a+",    "a?",    "(a)",   "[[:alpha:]]",
-                                      "a{1}",  "a|b",   R"(\1)", R"(\b)",
-                                      R"(\w)", R"(\s)", R"(\d)"};
+  const char *const bad_patterns[] = {"a{1}", R"(\1)", R"(\b)", "[[:<:]]",
+                                      "[[:>:]]"};
   for (const char *pat : bad_patterns) {
     EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADPAT);
     LIBC_NAMESPACE::regfree(&preg);
@@ -341,6 +347,256 @@ TEST(LlvmLibcRegexTest, UnimplementedSyntaxAndFlags) {
   EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, "a", 0, nullptr,
                                     ~(REG_NOTBOL | REG_NOTEOL)),
             REG_BADPAT);
+}
+
+TEST(LlvmLibcRegexTest, PosixCharacterClassesAndShorthands) {
+  auto check = [](const char *pat, const char *str, int expected = 0) {
+    regex_t preg;
+    ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED | REG_NOSUB), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, str, 0, nullptr, 0), expected);
+    LIBC_NAMESPACE::regfree(&preg);
+  };
+
+  // Near-miss ASCII neighbours for [:digit:] and \d.
+  check("^x[[:digit:]]y$", "x0y");
+  check("^x[[:digit:]]y$", "x9y");
+  check("^x[[:digit:]]y$", "x/y", REG_NOMATCH);
+  check("^x[[:digit:]]y$", "x:y", REG_NOMATCH);
+  check("^x[[:digit:]]y$", "x12y", REG_NOMATCH);
+
+  check(R"(^x\dy$)", "x5y");
+  check(R"(^x\dy$)", "x/y", REG_NOMATCH);
+  check(R"(^x\dy$)", "x:y", REG_NOMATCH);
+
+  // Near-miss ASCII neighbours for [:xdigit:].
+  check("^x[[:xdigit:]]y$", "xfy");
+  check("^x[[:xdigit:]]y$", "xFy");
+  check("^x[[:xdigit:]]y$", "xgy", REG_NOMATCH);
+  check("^x[[:xdigit:]]y$", "xGy", REG_NOMATCH);
+
+  // [:blank:] matches only space and tab, not newline.
+  check("^x[[:blank:]]y$", "x y");
+  check("^x[[:blank:]]y$", "x\ty");
+  check("^x[[:blank:]]y$", "x\ny", REG_NOMATCH);
+
+  // \w and \W: underscore matches \w; hyphen does not.
+  check(R"(^x\wy$)", "x_y");
+  check(R"(^x\wy$)", "x-y", REG_NOMATCH);
+  check(R"(^x\Wy$)", "x-y");
+  check(R"(^x\Wy$)", "x_y", REG_NOMATCH);
+
+  // Hyphen endpoint combinations with character classes.
+  check("^[--0[:alpha:]]$", "-");
+  check("^[--0[:alpha:]]$", ".");
+  check("^[--0[:alpha:]]$", "a");
+  check("^[--0[:alpha:]]$", "1", REG_NOMATCH);
+
+  check("^[[:alpha:]!--]$", "z");
+  check("^[[:alpha:]!--]$", "!");
+  check("^[[:alpha:]!--]$", "-");
+  check("^[[:alpha:]!--]$", ".", REG_NOMATCH);
+
+  // Anchored repetitions with negative rejection checks.
+  check(R"(^\w*$)", "");
+  check(R"(^\w*$)", "valid_word1");
+  check(R"(^\w*$)", "ab!ba", REG_NOMATCH);
+
+  check(R"(^\d*$)", "");
+  check(R"(^\d*$)", "12345");
+  check(R"(^\d*$)", "12a45", REG_NOMATCH);
+
+  // Back-to-back adjacent character classes in a single bracket expression.
+  check("^[[:alpha:][:blank:]]$", "a");
+  check("^[[:alpha:][:blank:]]$", " ");
+  check("^[[:alpha:][:blank:]]$", "\t");
+  check("^[[:alpha:][:blank:]]$", "1", REG_NOMATCH);
+  check("^[[:alpha:][:blank:]]$", "_", REG_NOMATCH);
+
+  check("^[[:alpha:][:blank:]]*$", "Hello World");
+  check("^[[:alpha:][:blank:]]*$", "Hello\tWorld");
+  check("^[[:alpha:][:blank:]]*$", "Hello1World", REG_NOMATCH);
+  check("^[[:alpha:][:blank:]]*$", "Hello_World", REG_NOMATCH);
+
+  // Multiple classes combined with literals.
+  check("^[[:digit:][:lower:]_]*$", "3abc_7");
+  check("^[[:digit:][:lower:]_]*$", "3ABC_7", REG_NOMATCH);
+
+  // Negated multi-class bracket expressions.
+  check("^[^[:digit:][:space:]]*$", "abcABC_!");
+  check("^[^[:digit:][:space:]]*$", "abc 123", REG_NOMATCH);
+  check("^[^[:digit:][:space:]]*$", "abc1", REG_NOMATCH);
+}
+
+TEST(LlvmLibcRegexTest, AlternationAndGrouping) {
+  auto check = [](const char *pat, const char *str, int expected = 0) {
+    regex_t preg{};
+    ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED | REG_NOSUB), 0);
+    scope_exit free_guard([&preg] { LIBC_NAMESPACE::regfree(&preg); });
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, str, 0, nullptr, 0), expected);
+  };
+
+  auto check_err = [](const char *pat, int expected_err) {
+    regex_t preg{};
+    EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), expected_err);
+    LIBC_NAMESPACE::regfree(&preg);
+  };
+
+  // Basic alternation branches.
+  check("cat|dog|bird", "cat");
+  check("cat|dog|bird", "dog");
+  check("cat|dog|bird", "bird");
+  check("cat|dog|bird", "fish", REG_NOMATCH);
+
+  // Grouping, operator precedence, and POSIX 9.4.9 subexpression anchoring.
+  check("^ab|cd$", "abXYZ");
+  check("^ab|cd$", "XYZcd");
+  check("^ab|cd$", "XYZab", REG_NOMATCH);
+  check("^(ab|cd)$", "ab");
+  check("^(ab|cd)$", "cd");
+  check("^(ab|cd)$", "abXYZ", REG_NOMATCH);
+  check("^(ab|cd)$", "XYZcd", REG_NOMATCH);
+  check("^(ab|cd)$", "abcd", REG_NOMATCH);
+  check("(^ab)", "abcdef");
+  check("(^ab)", "cdefab", REG_NOMATCH);
+  check("(ef$)", "abcdef");
+  check("(ef$)", "cdefab", REG_NOMATCH);
+
+  // Near-miss negative checks.
+  check("^x(cat|dog)y$", "xcaty");
+  check("^x(cat|dog)y$", "xdogy");
+  check("^x(cat|dog)y$", "xcatdogy", REG_NOMATCH);
+  check("^x(cat|dog)y$", "xcay", REG_NOMATCH);
+  check("^x(cat|dog)y$", "xy", REG_NOMATCH);
+
+  // Nullable branch anchoring rule.
+  check("^(a|b*)$", "a");
+  check("^(a|b*)$", "bbb");
+  check("^(a|b*)$", "");
+  check("^(a|b*)$", "ac", REG_NOMATCH);
+  check("^(a|b*)$", "bc", REG_NOMATCH);
+
+  // Nested grouping and repetition under Kleene star.
+  check("^((a)|(b))*$", "ababba");
+  check("^((a)|(b))*$", "ababbc", REG_NOMATCH);
+  check("(wee|week)(knights|night)", "weeknights");
+
+  // Depth-0 unmatched closing parenthesis treated as a literal character.
+  check("a)", "a)");
+  check(")", ")");
+  check("a)b", "a)b");
+  check("a)b", "ab", REG_NOMATCH);
+  check("a|)", "a");
+  check("a|)", ")");
+  check("a|)", "b", REG_NOMATCH);
+
+  // Empty subexpression matches empty string.
+  check("()", "");
+  check("()", "abc");
+  check("a()b", "ab");
+
+  // Error condition rejections.
+  check_err("|", REG_BADPAT);
+  check_err("|a", REG_BADPAT);
+  check_err("a|", REG_BADPAT);
+  check_err("a||b", REG_BADPAT);
+  check_err("(|a)", REG_BADPAT);
+  check_err("(a|)", REG_BADPAT);
+  check_err("a(", REG_EPAREN);
+  check_err("(a", REG_EPAREN);
+  check_err("((a)", REG_EPAREN);
+
+  // Subexpression count (re_nsub).
+  auto check_nsub = [](const char *pat, size_t expected_nsub) {
+    regex_t preg{};
+    ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), 0);
+    scope_exit free_guard([&preg] { LIBC_NAMESPACE::regfree(&preg); });
+    EXPECT_EQ(preg.re_nsub, expected_nsub);
+  };
+  check_nsub("abc", 0);
+  check_nsub("a|b", 0);
+  check_nsub("a)b", 0);
+  check_nsub("a(b)c", 1);
+  check_nsub("()", 1);
+  check_nsub("(a|b)", 1);
+  check_nsub("(a)(b)", 2);
+  check_nsub("((a))", 2);
+  check_nsub("((a|b)|c)", 2);
+  check_nsub("(((a|b)|c))", 3);
+  check_nsub("(wee|week)(knights|night)", 2);
+
+  // 128 nested parentheses must succeed within MAX_GROUP_DEPTH.
+  char deep_128[300];
+  for (size_t i = 0; i < 128; ++i)
+    deep_128[i] = '(';
+  deep_128[128] = 'x';
+  for (size_t i = 129; i < 257; ++i)
+    deep_128[i] = ')';
+  deep_128[257] = '\0';
+  check(deep_128, "x");
+
+  // 129 nested parentheses must return REG_ESPACE.
+  char deep_129[300];
+  for (size_t i = 0; i < 129; ++i)
+    deep_129[i] = '(';
+  deep_129[129] = 'x';
+  for (size_t i = 130; i < 259; ++i)
+    deep_129[i] = ')';
+  deep_129[259] = '\0';
+  check_err(deep_129, REG_ESPACE);
+
+  // 150 nested unclosed parentheses must return REG_ESPACE without stack
+  // overflow.
+  char deep_150[200];
+  for (size_t i = 0; i < 150; ++i)
+    deep_150[i] = '(';
+  deep_150[150] = '\0';
+  check_err(deep_150, REG_ESPACE);
+}
+
+TEST(LlvmLibcRegexTest, PlusAndQuestionQuantifiers) {
+  auto check = [](const char *pat, const char *match1, const char *match2,
+                  const char *nomatch1, const char *nomatch2) {
+    regex_t preg{};
+    ASSERT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED | REG_NOSUB), 0);
+    scope_exit free_guard([&preg] { LIBC_NAMESPACE::regfree(&preg); });
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, match1, 0, nullptr, 0), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, match2, 0, nullptr, 0), 0);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, nomatch1, 0, nullptr, 0),
+              REG_NOMATCH);
+    EXPECT_EQ(LIBC_NAMESPACE::regexec(&preg, nomatch2, 0, nullptr, 0),
+              REG_NOMATCH);
+  };
+
+  // Framed '+' and '?' near-miss checks (distinguishing '+', '?', and '*').
+  check("xa+y", "xay", "xaaay", "xy", "xaby");
+  check("xa?y", "xy", "xay", "xaay", "xby");
+
+  // Non-nullable '+' enforcement and anchored nullable '?' rule.
+  check("a+", "a", "aaa", "", "bbb");
+  check("^a?$", "", "a", "aa", "b");
+
+  // Adjacent and mixed quantifiers.
+  check("^a+b+c+$", "abc", "aaabbbccc", "ab", "ac");
+  check("^a?b?c?$", "", "ac", "aabc", "d");
+  check("^a+b?c*$", "a", "aaabccc", "bc", "abbc");
+
+  // Grouping, alternation, bracket classes, and escaped '+' / '?'.
+  check("^(ab)+$", "ab", "ababab", "", "aba");
+  check("^(ab)?$", "", "ab", "abab", "a");
+  check("^(a|b)+$", "a", "abba", "", "abc");
+  check("^a()+b?$", "a", "ab", "", "abb");
+  check("^a()?b+$", "ab", "abbb", "a", "");
+  check(R"(^\d+-\w?$)", "123-a", "7-", "-a", "7-ab");
+  check(R"(a\+b\?c)", "a+b?c", "xx a+b?c yy", "abc", "aabbc");
+
+  // Invalid repetition errors (REG_BADRPT).
+  const char *const bad_rpt[] = {"^+",  "$+",  "^?",  "$?",   "a++", "a??",
+                                 "a*+", "a+?", "a?*", "(+a)", "(?a)"};
+  for (const char *pat : bad_rpt) {
+    regex_t preg{};
+    EXPECT_EQ(LIBC_NAMESPACE::regcomp(&preg, pat, REG_EXTENDED), REG_BADRPT);
+    LIBC_NAMESPACE::regfree(&preg);
+  }
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS)

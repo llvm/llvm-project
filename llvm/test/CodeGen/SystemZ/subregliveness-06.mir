@@ -139,8 +139,8 @@ body:             |
 
     %1:gr64bit = COPY killed $r3d
     %0:gr64bit = COPY killed $r2d
-    %2:grx32bit = COPY killed %1.subreg_l32
-    %3:grx32bit = COPY killed %0.subreg_l32
+    %2:grx32bit = COPY %1.subreg_l32
+    %3:grx32bit = COPY %0.subreg_l32
     %4:addr64bit = LA %stack.1.tmp2, 96, $noreg
     %5:gr32bit = LHIMux 0
     %6:addr64bit = LARL @g_314
@@ -157,17 +157,17 @@ body:             |
     %17:addr64bit = LARL @g_54
     %18:addr64bit = LARL @g_747
     %19:grx32bit = COPY %5
-    %20:gr32bit = COPY killed %2
-    %21:grx32bit = COPY killed %3
+    %20:gr32bit = COPY %2
+    %21:grx32bit = COPY %3
 
   bb.1.bb6:
-    %22:grx32bit = COPY killed %21
-    %23:gr32bit = COPY killed %20
-    %24:grx32bit = COPY killed %19
+    %22:grx32bit = COPY %21
+    %23:gr32bit = COPY %20
+    %24:grx32bit = COPY %19
     undef %25.subreg_l32:gr64bit = COPY %24
-    %26:addr64bit = LGBR killed %25
+    %26:addr64bit = LGBR %25
     %27:addr64bit = LA %26, 1, %6
-    dead %28:grx32bit = LBMux killed %26, 1, %6 :: (volatile load (s8) from %ir.tmp12)
+    dead %28:grx32bit = LBMux %26, 1, %6 :: (volatile load (s8) from %ir.tmp12)
     CHIMux %5, 0, implicit-def $cc
     BRC 14, 6, %bb.7, implicit killed $cc
     J %bb.2
@@ -179,26 +179,26 @@ body:             |
     STRL %7, @g_69 :: (store (s32) into @g_69)
     undef %31.subreg_l32:gr64bit = COPY %22
     %32:gr64bit = LLGC %8, 7, $noreg :: (dereferenceable load (s8) from @g_352 + 7)
-    %33:gr64bit = COPY killed %32
-    %33:gr64bit = RNSBG %33, killed %31, 0, 63, 0, implicit-def dead $cc
-    CGHI killed %33, 1, implicit-def $cc
+    %33:gr64bit = COPY %32
+    %33:gr64bit = RNSBG %33, %31, 0, 63, 0, implicit-def dead $cc
+    CGHI %33, 1, implicit-def $cc
     %34:gr64bit = COPY %9
     %34:gr64bit = LOCGHI %34, 1, 14, 6, implicit killed $cc
-    %35:addr64bit = LG killed %29, 0, $noreg :: (load (s64) from %ir.tmp15)
-    STG killed %34, killed %35, 0, $noreg :: (store (s64) into %ir.tmp22)
+    %35:addr64bit = LG %29, 0, $noreg :: (load (s64) from %ir.tmp15)
+    STG %34, %35, 0, $noreg :: (store (s64) into %ir.tmp22)
     %36:gr32bit = COPY %11
     %36:gr32bit = X %36, %10, 0, $noreg, implicit-def dead $cc :: (dereferenceable load (s32) from @g_334)
-    STRL killed %36, @g_334 :: (store (s32) into @g_334)
-    %37:gr32bit = LLCRMux killed %22
-    %38:gr32bit = COPY killed %37
+    STRL %36, @g_334 :: (store (s32) into @g_334)
+    %37:gr32bit = LLCRMux %22
+    %38:gr32bit = COPY %37
     %38:gr32bit = MHI %38, 26036
     %39:addr64bit = LG %4, 0, $noreg :: (dereferenceable load (s64) from %ir.tmp5)
 
   bb.3.bb28:
-    %40:gr32bit = COPY killed %38
-    %40:gr32bit = MSR %40, killed %23
-    %41:gr32bit = LLHRMux killed %40
-    STRL killed %41, @g_69 :: (store (s32) into @g_69)
+    %40:gr32bit = COPY %38
+    %40:gr32bit = MSR %40, %23
+    %41:gr32bit = LLHRMux %40
+    STRL %41, @g_69 :: (store (s32) into @g_69)
     MVI %12, 0, 0 :: (store (s8) into @g_226, align 2)
     J %bb.4
 
@@ -224,11 +224,11 @@ body:             |
     MVI %18, 0, 1 :: (store (s8) into @g_747, align 2)
     MVGHI undef %44:addr64bit, 0, 0 :: (store (s64) into `ptr undef`)
     %45:gr64bit = LG $noreg, 0, $noreg :: (load (s64) from %ir.tmp36)
-    %46:addr64bit = LG killed %39, 0, $noreg :: (load (s64) from %ir.tmp27)
-    STG killed %45, killed %46, 0, $noreg :: (store (s64) into %ir.tmp38)
+    %46:addr64bit = LG %39, 0, $noreg :: (load (s64) from %ir.tmp27)
+    STG %45, %46, 0, $noreg :: (store (s64) into %ir.tmp38)
     STHRL %5, @g_189 :: (store (s16) into @g_189)
     %47:grx32bit = LHIMux 0
-    %48:grx32bit = COPY killed %47
+    %48:grx32bit = COPY %47
     J %bb.8
 
   bb.7.bb39:
@@ -237,15 +237,15 @@ body:             |
   bb.8.bb40:
     successors: %bb.1(0x7fffffff), %bb.9(0x00000001)
 
-    %49:grx32bit = COPY killed %48
-    dead %50:grx32bit = LBMux killed %27, 0, $noreg :: (volatile load (s8) from %ir.tmp12)
-    %51:grx32bit = COPY killed %24
+    %49:grx32bit = COPY %48
+    dead %50:grx32bit = LBMux %27, 0, $noreg :: (volatile load (s8) from %ir.tmp12)
+    %51:grx32bit = COPY %24
     %51:grx32bit = AHIMux %51, 1, implicit-def dead $cc
     %52:grx32bit = LHIMux 0
     CHIMux %52, 0, implicit-def $cc
-    %19:grx32bit = COPY killed %51
-    %20:gr32bit = COPY killed %49
-    %21:grx32bit = COPY killed %52
+    %19:grx32bit = COPY %51
+    %20:gr32bit = COPY %49
+    %21:grx32bit = COPY %52
     BRC 14, 6, %bb.1, implicit killed $cc
     J %bb.9
 

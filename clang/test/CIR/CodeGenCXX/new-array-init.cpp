@@ -5,9 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
-// CIR: cir.global "private" constant cir_private dso_local @[[ABC4:.*]] = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
-// CIR: cir.global "private" constant cir_private dso_local @[[ABC15:.*]] = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 15>
-// CIR: cir.global "private" constant cir_private dso_local @[[HELLO:.*]] = #cir.const_array<"hello" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6>
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @[[ABC4:.*]] = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 4>
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @[[ABC15:.*]] = #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 15>
+// CIR: cir.global "private" constant cir_private dso_local unnamed_addr @[[HELLO:.*]] = #cir.const_array<"hello" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6>
 
 // LLVM: @[[ABC4:.*]] = {{.*}}constant [4 x i8] c"abc\00", align 1
 // LLVM: @[[ABC15:.*]] = {{.*}}constant [15 x i8] c"abc\00\00\00\00\00\00

@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s %}
 // RUN: %clang_cc1 -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s %}
 // RUN: %clang_cc1 -flto -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s -check-prefix=LTO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -flto -O2 -fno-inline -emit-llvm -o - -triple x86_64-apple-darwin10 %s | FileCheck %s -check-prefix=LTO %}
 
 // Ensure that we don't emit available_externally functions at -O0.
 // Also should not emit them at -O2, unless -flto is present in which case

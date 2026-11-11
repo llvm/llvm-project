@@ -22,4 +22,4 @@ loopexit:
   ret double %fadd0
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }

@@ -91,7 +91,6 @@ namespace llvm {
 
 using BBSideEffectsSet = DenseMap<const BasicBlock *, bool>;
 using SmallVecInsn = SmallVector<Instruction *, 4>;
-using SmallVecImplInsn = SmallVectorImpl<Instruction *>;
 
 // Each element of a hoisting list contains the basic block where to hoist and
 // a list of instructions to be hoisted.
@@ -226,7 +225,6 @@ public:
            AliasAnalysis *AA, MemorySSA *MSSA)
       : Opts(Opts), DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
-    MSSA->ensureOptimizedUses();
   }
 
   bool run(Function &F);
@@ -621,8 +619,6 @@ bool GVNHoist::hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
   const BasicBlock *NewBB = NewPt->getParent();
   const BasicBlock *OldBB = Def->getBlock();
   assert(DT->dominates(NewBB, OldBB) && "invalid path");
-  assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
-         "def does not dominate new hoisting point");
 
   // Walk all basic blocks reachable in depth-first iteration on the inverse
   // CFG from OldBB to NewBB. These blocks are all the blocks that may be
@@ -695,7 +691,7 @@ bool GVNHoist::safeToHoistLdSt(const Instruction *NewPt,
   const BasicBlock *UBB = U->getBlock();
 
   // Check for dependences on the Memory SSA.
-  MemoryAccess *D = U->getDefiningAccess();
+  MemoryAccess *D = MSSA->getWalker()->getClobberingMemoryAccess(U);
   BasicBlock *DBB = D->getBlock();
   if (DT->properlyDominates(NewBB, DBB))
     // Cannot move the load or store to NewBB above its definition in DBB.
@@ -966,8 +962,7 @@ unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
         MSSAUpdater->removeMemoryAccess(OldMA);
       }
 
-      combineMetadataForCSE(Repl, I, true);
-      Repl->andIRFlags(I);
+      patchReplacementInstruction(I, Repl, /*DoesKMove=*/true);
       I->replaceAllUsesWith(Repl);
       I->eraseFromParent();
     }
@@ -1187,8 +1182,7 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   GVNHoist G(Opts, &DT, &PDT, &AA, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();

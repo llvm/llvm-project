@@ -272,6 +272,15 @@ static bool BuiltinAddressof(Sema &S, CallExpr *TheCall) {
     return true;
 
   ExprResult Arg(TheCall->getArg(0));
+
+  // Unlike '&', nothing resolves the overload set later, so resolve it now.
+  // FIXME: Resolve the overload set from the target type, like '&' does.
+  if (Arg.get()->getType() == S.Context.OverloadTy) {
+    Arg = S.CheckPlaceholderExpr(Arg.get());
+    if (Arg.isInvalid())
+      return true;
+  }
+
   QualType ResultType = S.CheckAddressOfOperand(Arg, TheCall->getBeginLoc());
   if (ResultType.isNull())
     return true;
@@ -1007,7 +1016,7 @@ public:
 
     // Just a pointer in the form '0xddd'.
     case analyze_format_string::ConversionSpecifier::pArg:
-      // Linux kernel has its own extesion for `%p` specifier.
+      // Linux kernel has its own extension for `%p` specifier.
       // Kernel Document:
       // https://docs.kernel.org/core-api/printk-formats.html#pointer-types
       IsKernelCompatible = false;
@@ -15696,7 +15705,7 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
   CheckImplicitConversions(E, CheckLoc);
   if (!E->isInstantiationDependent())
     CheckUnsequencedOperations(E);
-  if (!IsConstexpr && !E->isValueDependent())
+  if (!IsConstexpr && !E->isValueDependent() && !isa<ConstantExpr>(E))
     CheckForIntOverflow(E);
 }
 

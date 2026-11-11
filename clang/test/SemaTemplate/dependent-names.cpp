@@ -364,6 +364,31 @@ namespace rdar12629723 {
   };
 }
 
+namespace GH91131 {
+  template <typename T>
+  struct B : T {};
+
+  template <typename T>
+  struct A : B<T> {};
+
+  // expected-note@+1 {{attempt to specialize declaration here}}
+  struct C {}; // first declaration (valid and complete)
+
+  // expected-error@+1 {{extraneous 'template<>' in declaration of struct 'C'}}
+  template <>
+  struct C {}; // second declaration (invalid)
+  // expected-error@-1 {{specialization of member 'GH91131::C' does not specialize an instantiated member}}
+
+  // crash before pull 92597:
+  // definition for C was retrieved via TagDecl::getDefinition (inherited by RecordDecl),
+  // which returned the first declaration because that declaraion is a complete definition;
+  // that definition wasn't invalid, so A<C> wasn't invalid as well;
+  // later assertion failed when layout for A<C> was built.
+  //
+  // was fixed in pull 92597: because it checks definition retrieved via CXXRecordDecl::getDefinition.
+  A<C> v;
+}
+
 namespace test_reserved_identifiers {
   template<typename A, typename B> void tempf(A a, B b) {
     a + b;  // expected-error{{call to function 'operator+' that is neither visible in the template definition nor found by argument-dependent lookup}}
