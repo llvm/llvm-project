@@ -5105,34 +5105,6 @@ function table. It is only supported when using the Microsoft C++ ABI.
   }];
 }
 
-def ExtendLifetimesDisableDocs : Documentation {
-  let Category = DocCatFunction;
-  let Heading = "#pragma clang extend_lifetimes disable, #pragma clang extend_lifetimes enable";
-  let Content = [{
-The ``#pragma clang extend_lifetimes disable`` directive suppresses lifetime
-extension enabled by ``-fextend-variable-liveness=all`` or ``-fextend-variable-liveness=this`` for
-subsequent function definitions. This can be useful when lifetime extension
-causes excessive overhead in particular functions.
-
-The ``#pragma clang extend_lifetimes enable`` directive restores the behavior
-selected by the command-line options for subsequent function definitions.
-
-.. code-block:: c++
-
-  #pragma clang extend_lifetimes disable
-  void foo(...) {} // Lifetime extension disabled.
-  void bar(...) {} // Lifetime extension remains disabled.
-  #pragma clang extend_lifetimes enable
-  void baz(...) {} // Lifetime extension follows the command-line options.
-
-A directive inside a function does not affect that function, but does affect
-subsequent function definitions.
-
-These directives have no effect if neither ``-fextend-variable-liveness=all`` nor
-``-fextend-variable-liveness=this`` is enabled.
-  }];
-}
-
 def OptnoneDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

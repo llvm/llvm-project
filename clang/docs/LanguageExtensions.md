@@ -5802,6 +5802,33 @@ commandline.
   - Enable frame pointers
 ```
 
+(langext-extend-lifetimes)=
+
+## Extensions for selectively disabling variable lifetime extension
+
+The `#pragma clang extend_lifetimes disable` directive suppresses lifetime
+extension enabled by `-fextend-variable-liveness=all` or
+`-fextend-variable-liveness=this` for subsequent function definitions, including
+lambda call operators. This can be useful when lifetime extension causes
+excessive overhead in particular functions.
+
+The `#pragma clang extend_lifetimes enable` directive restores the behavior
+selected by the command-line options for subsequent function definitions.
+
+```c++
+#pragma clang extend_lifetimes disable
+void foo(...) {} // Lifetime extension disabled.
+void bar(...) {} // Lifetime extension remains disabled.
+#pragma clang extend_lifetimes enable
+void baz(...) {} // Lifetime extension follows the command-line options.
+```
+
+A directive inside a function does not affect that function, but does affect
+subsequent function definitions, including lambdas defined after the directive.
+
+These directives have no effect if neither `-fextend-variable-liveness=all` nor
+`-fextend-variable-liveness=this` is enabled.
+
 (langext-loop-hint-optimizations)=
 
 ## Extensions for loop hint optimizations

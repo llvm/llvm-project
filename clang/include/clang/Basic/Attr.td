@@ -2400,7 +2400,7 @@ def NoCommon : InheritableAttr {
 def ExtendLifetimesDisable : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [ExtendLifetimesDisableDocs];
+  let Documentation = [InternalOnly];
 }
 
 def NoDebug : InheritableAttr {
