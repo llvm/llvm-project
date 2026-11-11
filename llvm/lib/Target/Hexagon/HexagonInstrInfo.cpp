@@ -950,6 +950,16 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Unimplemented vec to pred");
     return;
   }
+  if (Hexagon::HlxLRRegClass.contains(SrcReg, DestReg)) {
+    BuildMI(MBB, I, DL, get(Hexagon::LX_assign), DestReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+  if (Hexagon::HlxLLRRegClass.contains(SrcReg, DestReg)) {
+    BuildMI(MBB, I, DL, get(Hexagon::LX_assign_w), DestReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
 
 #ifndef NDEBUG
   // Show the invalid registers to ease debugging.
@@ -1165,22 +1175,22 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     }
-    case Hexagon::V6_lo: {
+    case Hexagon::V6_lo:
+    case Hexagon::LX_lo: {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       Register SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
       copyPhysReg(MBB, MI, DL, DstReg, SrcSubLo, MI.getOperand(1).isKill());
       MBB.erase(MI);
-      MRI.clearKillFlags(SrcSubLo);
       return true;
     }
-    case Hexagon::V6_hi: {
+    case Hexagon::V6_hi:
+    case Hexagon::LX_hi: {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       Register SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
       copyPhysReg(MBB, MI, DL, DstReg, SrcSubHi, MI.getOperand(1).isKill());
       MBB.erase(MI);
-      MRI.clearKillFlags(SrcSubHi);
       return true;
     }
     case Hexagon::PS_vloadrv_ai: {
@@ -1315,10 +1325,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(Src1SubLo)
           .addReg(Src2SubLo);
       MBB.erase(MI);
-      MRI.clearKillFlags(Src1SubHi);
-      MRI.clearKillFlags(Src1SubLo);
-      MRI.clearKillFlags(Src2SubHi);
-      MRI.clearKillFlags(Src2SubLo);
       return true;
     }
     case Hexagon::PS_vmulw_acc: {
@@ -1344,12 +1350,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
           .addReg(Src2SubLo)
           .addReg(Src3SubLo);
       MBB.erase(MI);
-      MRI.clearKillFlags(Src1SubHi);
-      MRI.clearKillFlags(Src1SubLo);
-      MRI.clearKillFlags(Src2SubHi);
-      MRI.clearKillFlags(Src2SubLo);
-      MRI.clearKillFlags(Src3SubHi);
-      MRI.clearKillFlags(Src3SubLo);
       return true;
     }
     case Hexagon::PS_pselect: {
@@ -2757,6 +2757,10 @@ bool HexagonInstrInfo::isHVXVec(const MachineInstr &MI) const {
   return HexagonII::TypeCVI_FIRST <= V && V <= HexagonII::TypeCVI_LAST;
 }
 
+bool HexagonInstrInfo::isHLXVec(const MachineInstr &MI) const {
+  return (MI.getDesc().TSFlags >> HexagonII::isHLXPos) & HexagonII::isHLXMask;
+}
+
 // Check if the Offset is a valid auto-inc imm by Load/Store Type.
 bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
   int Size = VT.getSizeInBits() / 8;
@@ -3235,6 +3239,14 @@ bool HexagonInstrInfo::mayBeNewStore(const MachineInstr &MI) const {
 
   const uint64_t F = MI.getDesc().TSFlags;
   return (F >> HexagonII::mayNVStorePos) & HexagonII::mayNVStoreMask;
+}
+
+bool HexagonInstrInfo::isTmpLoadPseudo(const MachineInstr &MI) const {
+  return MI.getOpcode() == Hexagon::LX_L16b_pseudo;
+}
+
+bool HexagonInstrInfo::isNewStorePseudo(const MachineInstr &MI) const {
+  return MI.getOpcode() == Hexagon::LX_S16b_pseudo;
 }
 
 bool HexagonInstrInfo::producesStall(const MachineInstr &ProdMI,
@@ -4547,6 +4559,8 @@ unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
   switch (S) {
     case HexagonII::HVXVectorAccess:
       return HRI.getSpillSize(Hexagon::HvxVRRegClass);
+    case HexagonII::HLXVectorAccess:
+      return HRI.getSpillSize(Hexagon::HlxLRRegClass);
     default:
       llvm_unreachable("Unexpected instruction");
   }

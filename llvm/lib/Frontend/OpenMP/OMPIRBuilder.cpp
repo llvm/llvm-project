@@ -10353,7 +10353,7 @@ Error OpenMPIRBuilder::emitOffloadingArraysAndArgs(
   return Error::success();
 }
 
-static void emitTargetCall(
+static Error emitTargetCall(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, Value *RTLocOverride,
     OpenMPIRBuilder::InsertPointTy AllocaIP,
     ArrayRef<BasicBlock *> DeallocBlocks, OpenMPIRBuilder::TargetDataInfo &Info,
@@ -10540,19 +10540,15 @@ static void emitTargetCall(
   // If we don't have an ID for the target region, it means an offload entry
   // wasn't created. In this case we just run the host fallback directly and
   // ignore any potential 'if' clauses.
-  if (!OutlinedFnID) {
-    cantFail(EmitTargetCallElse(AllocaIP, Builder.saveIP(), DeallocBlocks));
-    return;
-  }
+  if (!OutlinedFnID)
+    return EmitTargetCallElse(AllocaIP, Builder.saveIP(), DeallocBlocks);
 
   // If there's no 'if' clause, only generate the kernel launch code path.
-  if (!IfCond) {
-    cantFail(EmitTargetCallThen(AllocaIP, Builder.saveIP(), DeallocBlocks));
-    return;
-  }
+  if (!IfCond)
+    return EmitTargetCallThen(AllocaIP, Builder.saveIP(), DeallocBlocks);
 
-  cantFail(OMPBuilder.emitIfClause(IfCond, EmitTargetCallThen,
-                                   EmitTargetCallElse, AllocaIP));
+  return OMPBuilder.emitIfClause(IfCond, EmitTargetCallThen, EmitTargetCallElse,
+                                 AllocaIP);
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
@@ -10587,11 +10583,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // If we are not on the target device, then we need to generate code
   // to make a remote call (offload) to the previously outlined function
   // that represents the target region. Do that now.
-  if (!Config.isTargetDevice())
-    emitTargetCall(*this, Builder, RTLocOverride, AllocaIP, DeallocBlocks, Info,
-                   DefaultAttrs, RuntimeAttrs, IfCond, OutlinedFn, OutlinedFnID,
-                   Inputs, GenMapInfoCB, CustomMapperCB, Dependencies,
-                   HasNowait, DynCGroupMem, DynCGroupMemFallback);
+  if (!Config.isTargetDevice()) {
+    if (Error Err = emitTargetCall(
+            *this, Builder, RTLocOverride, AllocaIP, DeallocBlocks, Info,
+            DefaultAttrs, RuntimeAttrs, IfCond, OutlinedFn, OutlinedFnID,
+            Inputs, GenMapInfoCB, CustomMapperCB, Dependencies, HasNowait,
+            DynCGroupMem, DynCGroupMemFallback))
+      return Err;
+  }
   return Builder.saveIP();
 }
 
@@ -11526,14 +11525,20 @@ Error OpenMPIRBuilder::emitIfClause(Value *Cond, BodyGenCallbackTy ThenGen,
   Builder.CreateCondBr(Cond, ThenBlock, ElseBlock);
   // Emit the 'then' code.
   emitBlock(ThenBlock, CurFn);
-  if (Error Err = ThenGen(AllocaIP, Builder.saveIP(), DeallocBlocks))
+  if (Error Err = ThenGen(AllocaIP, Builder.saveIP(), DeallocBlocks)) {
+    // Let the function own the blocks not emitted yet so they are freed.
+    ElseBlock->insertInto(CurFn);
+    ContBlock->insertInto(CurFn);
     return Err;
+  }
   emitBranch(ContBlock);
   // Emit the 'else' code if present.
   // There is no need to emit line number for unconditional branch.
   emitBlock(ElseBlock, CurFn);
-  if (Error Err = ElseGen(AllocaIP, Builder.saveIP(), DeallocBlocks))
+  if (Error Err = ElseGen(AllocaIP, Builder.saveIP(), DeallocBlocks)) {
+    ContBlock->insertInto(CurFn);
     return Err;
+  }
   // There is no need to emit line number for unconditional branch.
   emitBranch(ContBlock);
   // Emit the continuation block for code after the if.

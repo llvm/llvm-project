@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+struct AMDGPUOptions;
 class AMDGPUTargetMachine;
 class AMDGPUTargetStreamer;
 class Argument;
@@ -65,6 +66,8 @@ protected:
 class LLVM_EXTERNAL_VISIBILITY MetadataStreamerMsgPackV4
     : public MetadataStreamer {
 protected:
+  const AMDGPUOptions &CLOpts;
+
   std::unique_ptr<DelayedMCExprs> DelayedExprs =
       std::make_unique<DelayedMCExprs>();
 
@@ -123,7 +126,8 @@ protected:
   }
 
 public:
-  MetadataStreamerMsgPackV4() = default;
+  explicit MetadataStreamerMsgPackV4(const AMDGPUOptions &CLOpts)
+      : CLOpts(CLOpts) {}
   ~MetadataStreamerMsgPackV4() override = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
@@ -145,7 +149,7 @@ protected:
                        msgpack::MapDocNode Kern) override;
 
 public:
-  MetadataStreamerMsgPackV5() = default;
+  using MetadataStreamerMsgPackV4::MetadataStreamerMsgPackV4;
   ~MetadataStreamerMsgPackV5() override = default;
 };
 
@@ -154,7 +158,7 @@ protected:
   void emitVersion() override;
 
 public:
-  MetadataStreamerMsgPackV6() = default;
+  using MetadataStreamerMsgPackV5::MetadataStreamerMsgPackV5;
   ~MetadataStreamerMsgPackV6() override = default;
 
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,

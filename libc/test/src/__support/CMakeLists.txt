@@ -186,7 +186,6 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-
 add_libc_test(
   str_to_integer_test
   SUITE
@@ -313,7 +312,7 @@ add_libc_test(
 )
 
 if(LIBC_TARGET_OS_IS_BAREMETAL AND
-  NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+    NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
   add_object_library(
     minimal_external_crt1_for_test
     SRCS

@@ -31,6 +31,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstddef>
 #include <optional>
@@ -1148,93 +1149,53 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 //  1. It's name, after stripping off predefined prefix and suffix, is
 //     `CoreName`; and
 //  2. `CoreName` or `CoreName[str/wcs]` is one of the `PredefinedNames`, which
-//     is a set of libc function names.
+//     maps libc function names to their families.
 //
 //  Note: For predefined prefix and suffix, see `matchName()`.
 //  The notation `CoreName[str/wcs]` means a new name obtained from replace
 //  string "wcs" with "str" in `CoreName`.
-static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
-  static const std::set<StringRef> PredefinedNames = {
-      // numeric conversion:
-      "atof",
-      "atoi",
-      "atol",
-      "atoll",
-      "strtol",
-      "strtoll",
-      "strtoul",
-      "strtoull",
-      "strtof",
-      "strtod",
-      "strtold",
-      "strtoimax",
-      "strtoumax",
-      // "strfromf",  "strfromd", "strfroml", // C23?
-      // string manipulation:
-      "strcpy",
-      "strncpy",
-      "strlcpy",
-      "strcat",
-      "strncat",
-      "strlcat",
-      "strxfrm",
-      "strdup",
-      "strndup",
-      // string examination:
-      "strlen",
-      "strnlen",
-      "strcmp",
-      "strncmp",
-      "stricmp",
-      "strcasecmp",
-      "strcoll",
-      "strchr",
-      "strrchr",
-      "strspn",
-      "strcspn",
-      "strpbrk",
-      "strstr",
-      "strtok",
-      // "mem-" functions
-      "memchr",
-      "wmemchr",
-      "memcmp",
-      "wmemcmp",
-      "memcpy",
-      "memccpy",
-      "mempcpy",
-      "wmemcpy",
-      "memmove",
-      "wmemmove",
-      "wmemset",
-      // IO:
-      "fread",
-      "fwrite",
-      "fgets",
-      "fgetws",
-      "gets",
-      "fputs",
-      "fputws",
-      "puts",
-      // others
-      "strerror_s",
-      "strerror_r",
-      "bcopy",
-      "bzero",
-      "bsearch",
-      "qsort",
-  };
+//
+// Returns the family of the matched function, or std::nullopt if it does not
+// match.
+static std::optional<UnsafeLibcFunctionFamily>
+getPredefinedUnsafeLibcFuncFamily(const FunctionDecl &Node) {
+  static const llvm::StringMap<UnsafeLibcFunctionFamily> PredefinedNames = [] {
+    using F = UnsafeLibcFunctionFamily;
+    llvm::StringMap<F> M;
+    auto Add = [&](F Family, std::initializer_list<StringRef> Names) {
+      for (StringRef N : Names)
+        M[N] = Family;
+    };
+    Add(F::NumericConversion,
+        {"atof", "atoi", "atol", "atoll", "strtol", "strtoll", "strtoul",
+         "strtoull", "strtof", "strtod", "strtold", "strtoimax", "strtoumax"});
+    // "strfromf",  "strfromd", "strfroml", // C23?
+    Add(F::StringManipulation,
+        {"strcpy", "strncpy", "strlcpy", "strcat", "strncat", "strlcat",
+         "strxfrm", "strdup", "strndup"});
+    Add(F::StringExamination,
+        {"strlen", "strnlen", "strcmp", "strncmp", "stricmp", "strcasecmp",
+         "strcoll", "strchr", "strrchr", "strspn", "strcspn", "strpbrk",
+         "strstr", "strtok"});
+    Add(F::Memory, {"memchr", "wmemchr", "memcmp", "wmemcmp", "memcpy",
+                    "memccpy", "mempcpy", "wmemcpy", "memmove", "wmemmove",
+                    "wmemset", "bcopy", "bzero"});
+    Add(F::IO, {"fread", "fwrite", "fgets", "fgetws", "gets", "fputs", "fputws",
+                "puts"});
+    Add(F::Other, {"strerror_s", "strerror_r", "bsearch", "qsort"});
+    return M;
+  }();
 
   auto *II = Node.getIdentifier();
 
   if (!II)
-    return false;
+    return std::nullopt;
 
   StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
   // Match predefined names:
-  if (PredefinedNames.count(Name))
-    return true;
+  if (auto It = PredefinedNames.find(Name); It != PredefinedNames.end())
+    return It->second;
 
   std::string NameWCS = Name.str();
   size_t WcsPos = NameWCS.find("wcs");
@@ -1245,11 +1206,26 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
     NameWCS[WcsPos++] = 'r';
     WcsPos = NameWCS.find("wcs", WcsPos);
   }
-  if (PredefinedNames.count(NameWCS))
-    return true;
+  if (auto It = PredefinedNames.find(NameWCS); It != PredefinedNames.end())
+    return It->second;
   // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
   // all should end with "scanf"):
-  return Name.ends_with("scanf");
+  if (Name.ends_with("scanf"))
+    return UnsafeLibcFunctionFamily::Scanf;
+  return std::nullopt;
+}
+
+static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
+  return getPredefinedUnsafeLibcFuncFamily(Node).has_value();
+}
+
+// Returns the family of a callee that isPredefinedUnsafeLibcFunc or
+// isUnsafeMemset matched. Only memset is not in PredefinedNames.
+static UnsafeLibcFunctionFamily
+getUnsafeLibcFunctionFamily(const FunctionDecl &Node) {
+  if (auto Family = getPredefinedUnsafeLibcFuncFamily(Node))
+    return *Family;
+  return UnsafeLibcFunctionFamily::Memory;
 }
 
 // Returns true if this is an unsafe call to `memset`.
@@ -2501,6 +2477,7 @@ public:
                  // considered unsafe as it is not compile-time check
     FORMAT_ATTR = 8, // flag: the callee has the format attribute
   } WarnedFunKind = OTHERS;
+  UnsafeLibcFunctionFamily Family = UnsafeLibcFunctionFamily::Other;
 
   UnsafeLibcFunctionCallGadget(const MatchResult &Result)
       : WarningGadget(Kind::UnsafeLibcFunctionCall),
@@ -2515,6 +2492,12 @@ public:
       UnsafeArg = Call->getArg(0);
     } else if (Result.getNodeAs<Decl>(UnsafeVaListTag))
       WarnedFunKind = VA_LIST;
+    // Only the predefined-name and memset matches leave `WarnedFunKind` at
+    // `OTHERS`. The printf matches always set a kind.
+    Family = WarnedFunKind != OTHERS
+                 ? UnsafeLibcFunctionFamily::Printf
+                 : libc_func_matchers::getUnsafeLibcFunctionFamily(
+                       *Call->getDirectCallee());
   }
 
   static bool matches(const Stmt *S, ASTContext &Ctx,
@@ -2526,10 +2509,11 @@ public:
     const auto *FD = CE->getDirectCallee();
     if (!FD)
       return false;
-    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
-      return false;
-
     if (!libc_func_matchers::isInLibcScope(*FD))
+      return false;
+    // The check looks up every libc-call warning, so it runs after the cheaper
+    // scope test.
+    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
       return false;
     // If the call has a sole null-terminated argument, e.g., strlen,
     //  printf, atoi, we consider it safe:
@@ -2582,7 +2566,7 @@ public:
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
-    Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Ctx, UnsafeArg);
+    Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Family, Ctx, UnsafeArg);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
@@ -2689,13 +2673,13 @@ public:
           Call,
           UnsafeLibcFunctionCallGadget::UnsafeKind::STRING |
               UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
-          Ctx, UnsafeArg);
+          UnsafeLibcFunctionFamily::Other, Ctx, UnsafeArg);
     else
       Handler.handleUnsafeLibcCall(
           Call,
           UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS |
               UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
-          Ctx);
+          UnsafeLibcFunctionFamily::Other, Ctx);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
@@ -5027,7 +5011,8 @@ bool clang::matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
   public:
     MockReporter() {}
     void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
-    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
+    void handleUnsafeLibcCall(const CallExpr *, unsigned,
+                              UnsafeLibcFunctionFamily, ASTContext &,
                               const Expr *UnsafeArg = nullptr) override {}
     void handleUnsafeOperationInContainer(const Stmt *, bool,
                                           ASTContext &) override {}

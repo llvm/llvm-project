@@ -193,7 +193,7 @@
 #  endif
 
 #  ifdef __cpp_lib_constexpr_atomic
-#    error "__cpp_lib_constexpr_atomic should not be defined before c++20"
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -821,7 +821,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -829,7 +829,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -1345,7 +1345,7 @@
 #  endif
 
 #  ifdef __cpp_lib_constexpr_atomic
-#    error "__cpp_lib_constexpr_atomic should not be defined before c++20"
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -2012,7 +2012,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -2020,7 +2020,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -2605,7 +2605,7 @@
 #  endif
 
 #  ifdef __cpp_lib_constexpr_atomic
-#    error "__cpp_lib_constexpr_atomic should not be defined before c++20"
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -3371,7 +3371,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -3379,7 +3379,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -4092,17 +4092,8 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should be defined in c++20"
-#    endif
-#    if __cpp_lib_constexpr_atomic != 202411L
-#      error "__cpp_lib_constexpr_atomic should have the value 202411L in c++20"
-#    endif
-#  else
-#    ifdef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_bitset
@@ -5006,7 +4997,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_input
-#    error "__cpp_lib_ranges_as_input should not be defined before c++23"
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_as_rvalue
@@ -5014,7 +5005,7 @@
 #  endif
 
 #  ifdef __cpp_lib_ranges_cache_latest
-#    error "__cpp_lib_ranges_cache_latest should not be defined before c++23"
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_chunk
@@ -5802,17 +5793,8 @@
 #    error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should be defined in c++23"
-#    endif
-#    if __cpp_lib_constexpr_atomic != 202411L
-#      error "__cpp_lib_constexpr_atomic should have the value 202411L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_constexpr_atomic
-#      error "__cpp_lib_constexpr_atomic should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_constexpr_atomic
+#    error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_bitset
@@ -6814,17 +6796,8 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_as_input
-#      error "__cpp_lib_ranges_as_input should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_as_input != 202502L
-#      error "__cpp_lib_ranges_as_input should have the value 202502L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_as_input
-#      error "__cpp_lib_ranges_as_input should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_ranges_as_input
+#    error "__cpp_lib_ranges_as_input should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_as_rvalue
@@ -6834,17 +6807,8 @@
 #    error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_cache_latest
-#      error "__cpp_lib_ranges_cache_latest should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_cache_latest != 202411L
-#      error "__cpp_lib_ranges_cache_latest should have the value 202411L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_cache_latest
-#      error "__cpp_lib_ranges_cache_latest should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifdef __cpp_lib_ranges_cache_latest
+#    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

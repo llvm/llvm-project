@@ -881,7 +881,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
 
   Conf.LibraryOptions = &LibraryOptions;
   Conf.CPU = options::mcpu;
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
+  Conf.Options = codegen::getTargetOptions(LibraryOptions, Triple());
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.

@@ -5,7 +5,10 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -exception-model=sjlj < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=SJLJ %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=arm-none-linux-gnueabi -exception-model=dwarf < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=DWARF %s
 
-; SJLJ: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
+; SJLJ: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; SJLJ-NEXT: @__stack_chk_guard = external global ptr
+; SJLJ-NEXT: declare arm_aapcscc i32 @_Unwind_SjLj_RaiseException(ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Register(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Resume(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc void @_Unwind_SjLj_Unregister(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc double @__adddf3(double, double)
@@ -128,6 +131,9 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzdi2(i64)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzsi2(i32)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzti2(i128)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32)
+; SJLJ-NEXT: declare arm_aapcscc i32 @__ctzti2(i128)
 ; SJLJ-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
 ; SJLJ-NEXT: declare arm_aapcscc double @__divdf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64)
@@ -268,9 +274,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; SJLJ-NEXT: declare arm_aapcscc void @__safestack_unsafe_stack_ptr(...)
-; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail()
-; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_guard(...)
+; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
@@ -407,8 +411,8 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @fmod(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @fmodf(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr)
+; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SJLJ-NEXT: declare arm_aapcscc double @ldexp(double, i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
 ; SJLJ-NEXT: declare arm_aapcscc i64 @llrint(double)
@@ -429,8 +433,8 @@
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr)
+; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SJLJ-NEXT: declare arm_aapcscc double @nan(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc float @nanf(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc double @nearbyint(double)
@@ -441,8 +445,8 @@
 ; SJLJ-NEXT: declare arm_aapcscc float @powf(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc double @remainder(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @remainderf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @remquo(double, double, ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @remquof(float, float, ptr)
+; SJLJ-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; SJLJ-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SJLJ-NEXT: declare arm_aapcscc double @rint(double)
 ; SJLJ-NEXT: declare arm_aapcscc float @rintf(float)
 ; SJLJ-NEXT: declare arm_aapcscc double @round(double)
@@ -454,8 +458,8 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @scalbn(double, i32)
 ; SJLJ-NEXT: declare arm_aapcscc float @scalbnf(float, i32)
 ; SJLJ-NEXT: declare arm_aapcscc double @sin(double)
-; SJLJ-NEXT: declare arm_aapcscc void @sincos(double, ptr, ptr)
-; SJLJ-NEXT: declare arm_aapcscc void @sincosf(float, ptr, ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; SJLJ-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; SJLJ-NEXT: declare arm_aapcscc float @sinf(float)
 ; SJLJ-NEXT: declare arm_aapcscc double @sinh(double)
 ; SJLJ-NEXT: declare arm_aapcscc float @sinhf(float)
@@ -470,12 +474,16 @@
 ; SJLJ-NEXT: declare arm_aapcscc double @trunc(double)
 ; SJLJ-NEXT: declare arm_aapcscc float @truncf(float)
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; DWARF: declare arm_aapcscc void @_Unwind_Resume(ptr)
+; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; DWARF-NEXT: @__stack_chk_guard = external global ptr
+; DWARF-NEXT: declare arm_aapcscc i32 @_Unwind_RaiseException(ptr)
+; DWARF-NEXT: declare arm_aapcscc void @_Unwind_Resume(ptr)
 ; DWARF-NEXT: declare arm_aapcscc double @__adddf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__addsf3(float, float)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__addtf3(fp128, fp128)
@@ -596,6 +604,9 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzdi2(i64)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzsi2(i32)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzti2(i128)
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzdi2(i64)
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzsi2(i32)
+; DWARF-NEXT: declare arm_aapcscc i32 @__ctzti2(i128)
 ; DWARF-NEXT: declare arm_aapcscc void @__cxa_end_cleanup()
 ; DWARF-NEXT: declare arm_aapcscc double @__divdf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc i64 @__divdi3(i64, i64)
@@ -736,9 +747,7 @@
 ; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
 ; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
-; DWARF-NEXT: declare arm_aapcscc void @__safestack_unsafe_stack_ptr(...)
-; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail()
-; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_guard(...)
+; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__subtf3(fp128, fp128)
@@ -875,8 +884,8 @@
 ; DWARF-NEXT: declare arm_aapcscc double @fmod(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @fmodf(float, float)
 ; DWARF-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr)
+; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; DWARF-NEXT: declare arm_aapcscc double @ldexp(double, i32)
 ; DWARF-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
 ; DWARF-NEXT: declare arm_aapcscc i64 @llrint(double)
@@ -897,8 +906,8 @@
 ; DWARF-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr)
+; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; DWARF-NEXT: declare arm_aapcscc double @nan(ptr)
 ; DWARF-NEXT: declare arm_aapcscc float @nanf(ptr)
 ; DWARF-NEXT: declare arm_aapcscc double @nearbyint(double)
@@ -909,8 +918,8 @@
 ; DWARF-NEXT: declare arm_aapcscc float @powf(float, float)
 ; DWARF-NEXT: declare arm_aapcscc double @remainder(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @remainderf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @remquo(double, double, ptr)
-; DWARF-NEXT: declare arm_aapcscc float @remquof(float, float, ptr)
+; DWARF-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; DWARF-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; DWARF-NEXT: declare arm_aapcscc double @rint(double)
 ; DWARF-NEXT: declare arm_aapcscc float @rintf(float)
 ; DWARF-NEXT: declare arm_aapcscc double @round(double)
@@ -922,8 +931,8 @@
 ; DWARF-NEXT: declare arm_aapcscc double @scalbn(double, i32)
 ; DWARF-NEXT: declare arm_aapcscc float @scalbnf(float, i32)
 ; DWARF-NEXT: declare arm_aapcscc double @sin(double)
-; DWARF-NEXT: declare arm_aapcscc void @sincos(double, ptr, ptr)
-; DWARF-NEXT: declare arm_aapcscc void @sincosf(float, ptr, ptr)
+; DWARF-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; DWARF-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; DWARF-NEXT: declare arm_aapcscc float @sinf(float)
 ; DWARF-NEXT: declare arm_aapcscc double @sinh(double)
 ; DWARF-NEXT: declare arm_aapcscc float @sinhf(float)
@@ -938,6 +947,7 @@
 ; DWARF-NEXT: declare arm_aapcscc double @trunc(double)
 ; DWARF-NEXT: declare arm_aapcscc float @truncf(float)
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
