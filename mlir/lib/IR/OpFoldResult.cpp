@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/OpFoldResult.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Operation.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
@@ -23,4 +25,74 @@ raw_ostream &mlir::operator<<(raw_ostream &os, OpFoldResult ofr) {
   else
     llvm::dyn_cast_if_present<Attribute>(ofr).print(os);
   return os;
+}
+
+/// Return true if every replacement is null.
+static bool replacesNone(ArrayRef<OpFoldResult> replacements) {
+  return llvm::none_of(replacements, llvm::identity{});
+}
+
+//===----------------------------------------------------------------------===//
+// OpFoldResults
+//===----------------------------------------------------------------------===//
+
+OpFoldResults::OpFoldResults(LogicalResult status) {
+  inPlace = status.succeeded();
+}
+
+//===----------------------------------------------------------------------===//
+// NormalizedOpFoldResults
+//===----------------------------------------------------------------------===//
+
+/// Assert that each value replacement has the type of its result.
+static void verifyReplacementTypes(Operation *op,
+                                   ArrayRef<OpFoldResult> replacements) {
+#ifndef NDEBUG
+  for (auto [index, replacement] : llvm::enumerate(replacements)) {
+    auto value = dyn_cast_if_present<Value>(replacement);
+    if (!value)
+      continue;
+    Type expectedType = op->getResult(index).getType();
+    if (value.getType() != expectedType) {
+      op->emitOpError() << "folder produced a value of incorrect type: "
+                        << value.getType() << ", expected: " << expectedType;
+      assert(false && "incorrect fold result type");
+    }
+  }
+#endif // NDEBUG
+}
+
+NormalizedOpFoldResults::NormalizedOpFoldResults(Operation *op,
+                                                 OpFoldResults &&results)
+    : OpFoldResultsBase(std::move(results)) {
+  assert(op && "expected a non-null operation");
+  if (!replacements.empty()) {
+    assert(replacements.size() == op->getNumResults() &&
+           "expected one replacement per operation result");
+    for (auto [replacement, result] :
+         llvm::zip_equal(replacements, op->getResults()))
+      if (dyn_cast_if_present<Value>(replacement) == result)
+        replacement = OpFoldResult();
+    if (replacesNone(replacements))
+      replacements.clear();
+  }
+  verifyReplacementTypes(op, replacements);
+}
+
+void NormalizedOpFoldResults::setModifiedInPlace(bool modified) {
+  inPlace = modified;
+}
+
+bool NormalizedOpFoldResults::modifiedInPlace() const { return inPlace; }
+
+bool NormalizedOpFoldResults::replacesAny() const {
+  return !replacements.empty();
+}
+
+bool NormalizedOpFoldResults::replacesAll() const {
+  return replacesAny() && llvm::all_of(replacements, llvm::identity{});
+}
+
+ArrayRef<OpFoldResult> NormalizedOpFoldResults::getReplacements() const {
+  return replacements;
 }
