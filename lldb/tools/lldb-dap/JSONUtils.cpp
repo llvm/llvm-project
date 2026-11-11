@@ -302,9 +302,15 @@ VariableDescription::VariableDescription(
     const bool has_summary = !display_summary.empty();
 
     // Respect the type summary options.
-    lldb::SBTypeSummary type_summary = val.GetTypeSummary();
-    const bool print_value =
-        !value.empty() && (summary.empty() || type_summary.DoesPrintValue(val));
+    const bool print_value = [&] {
+      if (value.empty())
+        return false;
+      if (summary.empty())
+        return true;
+
+      lldb::SBTypeSummary type_summary = val.GetTypeSummary();
+      return !type_summary.IsValid() || type_summary.DoesPrintValue(val);
+    }();
 
     if (print_value) {
       os_display_value << value;
