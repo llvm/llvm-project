@@ -900,6 +900,9 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   Register TargetReg = findFreeTemporary(LiveRegs, MRI, RISCV::X6);
   bool HasLoopRegs = false;
   if (TargetReg.isValid()) {
+    // Only check that a second register is free. inlineStackProbe picks it
+    // when it expands PROBED_STACKALLOC, from these live registers plus
+    // TargetReg, which the pseudo reads.
     LiveRegs.addReg(TargetReg);
     HasLoopRegs = findFreeTemporary(LiveRegs, MRI, RISCV::X7).isValid();
   }
@@ -2964,11 +2967,12 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       DebugLoc DL = MIBB.findDebugLoc(MBBI);
       Register TargetReg = MI->getOperand(0).getReg();
 
-      // TargetReg is live at MI, so it is never picked; the preference only
-      // keeps the two apart when no register is free. allocateStack emits
-      // PROBED_STACKALLOC only where two are free, so only the loop of a
-      // scalable allocation, which has no other way to be probed, can find
-      // none here.
+      // MI reads TargetReg, so it is never picked while another register is
+      // free. If none is, getProbeLoopRegister reports an error and returns
+      // the preferred register, which must not be TargetReg:
+      // emitStackProbeInline asserts that the two differ. That can only
+      // happen for a scalable allocation: allocateStack emits PROBED_STACKALLOC
+      // only where two registers are free.
       Register ScratchReg = getProbeLoopRegister(
           MIBB, MBBI, TargetReg == RISCV::X7 ? RISCV::X6 : RISCV::X7);
 
