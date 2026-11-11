@@ -1797,9 +1797,14 @@ int main(int Argc, char **Argv) {
               "--sycl-device-link requires SYCL device code, got '" +
               getOffloadKindName(Kind) + "'"));
       };
+      // Only SYCL device code can be wrapped into a SYCL object.
+      // Device code extracted from the inputs.
       for (const SmallVector<OffloadFile> &Files : *DeviceInputFiles)
         for (const OffloadFile &File : Files)
           CheckIsSYCL(File.getBinary()->getOffloadKind());
+      // Device images given with --override-image=<kind>=<file>. With this
+      // option nothing is extracted from the inputs, so the loop above checks
+      // nothing and these images must be checked here.
       for (StringRef Override : Args.getAllArgValues(OPT_override_image))
         CheckIsSYCL(getOffloadKind(Override.split('=').first));
     }
