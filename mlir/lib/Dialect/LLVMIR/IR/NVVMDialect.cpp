@@ -5165,6 +5165,21 @@ ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
+static void
+appendN1ScaleArg(Value scaleFactor, LLVM::ModuleTranslation &mt,
+                 llvm::IRBuilderBase &builder,
+                 llvm::SmallVectorImpl<llvm::Value *> &args,
+                 std::optional<uint16_t> defaultScale = std::nullopt) {
+  if (scaleFactor) {
+    args.push_back(
+        builder.CreateZExt(mt.lookupValue(scaleFactor),
+                           llvm::Type::getInt16Ty(builder.getContext())));
+    return;
+  }
+  if (defaultScale)
+    args.push_back(builder.getInt16(*defaultScale));
+}
+
 NVVM::IDArgPair
 ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
                                             LLVM::ModuleTranslation &mt,
@@ -5172,6 +5187,8 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getA()));
   args.push_back(mt.lookupValue(op.getB()));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args,
+                   /*defaultScale=*/0x7f);
   args.push_back(builder.getInt1(op.getPzo()));
 
   unsigned idx =
@@ -5184,12 +5201,6 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
       llvm::Intrinsic::nvvm_ff_to_e2m1x2_rz_relu_satfinite_scale_n1_ue8m0,
   };
 
-  llvm::Value *scaleFactor =
-      op.getScaleFactor()
-          ? builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                               llvm::Type::getInt16Ty(builder.getContext()))
-          : builder.getInt16(0x7f);
-  args.insert(args.end() - 1, scaleFactor);
   return {scaledIds[idx], std::move(args)};
 }
 
@@ -5224,11 +5235,8 @@ ConvertF32x2ToF6x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF6x2Op &op,
 
   llvm::SmallVector<llvm::Value *> args = {mt.lookupValue(op.getA()),
                                            mt.lookupValue(op.getB())};
-  args.push_back(
-      op.getScaleFactor()
-          ? builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                               llvm::Type::getInt16Ty(builder.getContext()))
-          : builder.getInt16(0x7f));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args,
+                   /*defaultScale=*/0x7f);
   args.push_back(builder.getInt1(op.getPzo()));
   return {intId, std::move(args)};
 }
@@ -5254,11 +5262,8 @@ ConvertF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF4x2Op &op,
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrc()));
-  args.push_back(
-      op.getScaleFactor()
-          ? builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                               llvm::Type::getInt16Ty(builder.getContext()))
-          : builder.getInt16(0x7f));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args,
+                   /*defaultScale=*/0x7f);
   args.push_back(builder.getInt1(op.getPzo()));
 
   return {scaledIds[idx], std::move(args)};
@@ -5285,11 +5290,8 @@ ConvertBF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF4x2Op &op,
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(op.getSrc()));
-  args.push_back(
-      op.getScaleFactor()
-          ? builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                               llvm::Type::getInt16Ty(builder.getContext()))
-          : builder.getInt16(0x7f));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args,
+                   /*defaultScale=*/0x7f);
   args.push_back(builder.getInt1(op.getPzo()));
 
   return {scaledIds[idx], std::move(args)};
@@ -5326,11 +5328,8 @@ ConvertF16x2ToF6x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF6x2Op &op,
             return llvm::Intrinsic::not_intrinsic;
           });
   llvm::SmallVector<llvm::Value *> args = {mt.lookupValue(op.getSrc())};
-  args.push_back(
-      op.getScaleFactor()
-          ? builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                               llvm::Type::getInt16Ty(builder.getContext()))
-          : builder.getInt16(0x7f));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args,
+                   /*defaultScale=*/0x7f);
   args.push_back(builder.getInt1(op.getPzo()));
   return {intId, std::move(args)};
 }
@@ -5366,11 +5365,8 @@ ConvertBF16x2ToF6x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF6x2Op &op,
             return llvm::Intrinsic::not_intrinsic;
           });
   llvm::SmallVector<llvm::Value *> args = {mt.lookupValue(op.getSrc())};
-  args.push_back(
-      op.getScaleFactor()
-          ? builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                               llvm::Type::getInt16Ty(builder.getContext()))
-          : builder.getInt16(0x7f));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args,
+                   /*defaultScale=*/0x7f);
   args.push_back(builder.getInt1(op.getPzo()));
   return {intId, std::move(args)};
 }
@@ -5393,6 +5389,8 @@ getUE5M3IntrinsicID(NVVM::FPRoundingMode rnd, bool hasSatFinite, bool hasScale,
   default:
     llvm_unreachable("Invalid rounding mode for UE5M3 conversion");
   }
+  // satfinite selects the next rounding-mode group: stride 3 unscaled
+  // (rn/rz/rp), stride 2 scaled (rn/rz; there is no scaled rp).
   if (hasScale)
     return scaledIds[hasSatFinite * 2 + rndIdx];
   return ids[hasSatFinite * 3 + rndIdx];
@@ -5481,10 +5479,7 @@ ConvertF32x2ToF8x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF8x2Op &op,
 
   llvm::SmallVector<llvm::Value *> args = {mt.lookupValue(op.getA()),
                                            mt.lookupValue(op.getB())};
-  if (hasScale)
-    args.push_back(
-        builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                           llvm::Type::getInt16Ty(builder.getContext())));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args);
   if (!isa<Float8E8M0FNUType, Float8E5M3FNUType>(op.getDstTy()))
     args.push_back(builder.getInt1(op.getPzo()));
   return {intId, std::move(args)};
@@ -5556,10 +5551,7 @@ ConvertF16x2ToF8x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF8x2Op &op,
           });
 
   llvm::SmallVector<llvm::Value *> args = {mt.lookupValue(op.getA())};
-  if (hasScale)
-    args.push_back(
-        builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                           llvm::Type::getInt16Ty(builder.getContext())));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args);
   if (!isa<Float8E5M3FNUType>(op.getDstTy()))
     args.push_back(builder.getInt1(op.getPzo()));
   return {intId, std::move(args)};
@@ -5643,10 +5635,7 @@ ConvertBF16x2ToF8x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF8x2Op &op,
           });
 
   llvm::SmallVector<llvm::Value *> args = {mt.lookupValue(op.getSrc())};
-  if (hasScale)
-    args.push_back(
-        builder.CreateZExt(mt.lookupValue(op.getScaleFactor()),
-                           llvm::Type::getInt16Ty(builder.getContext())));
+  appendN1ScaleArg(op.getScaleFactor(), mt, builder, args);
   if (!isa<Float8E8M0FNUType, Float8E5M3FNUType>(op.getDstTy()))
     args.push_back(builder.getInt1(op.getPzo()));
   return {intId, std::move(args)};
@@ -5744,8 +5733,10 @@ NVVM::IDArgPair ConvertF8x2ToBF16x2Op::getIntrinsicIDAndArgs(
     if (hasScale)
       args.push_back(mt.lookupValue(curOp.getScaleFactor()));
   } else if (!isa<Float8E8M0FNUType>(curOp.getSrcType())) {
-    args.push_back(hasScale ? mt.lookupValue(curOp.getScaleFactor())
-                            : builder.getInt16(0x7f7f));
+    args.push_back(
+        hasScale ? mt.lookupValue(curOp.getScaleFactor())
+                 : builder.getInt16(0x7f7f)); // default scale factor (value of
+                                              // 1 for both elements).
   }
 
   return {intId, std::move(args)};
