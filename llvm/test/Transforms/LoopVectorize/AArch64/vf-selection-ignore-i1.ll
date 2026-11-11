@@ -29,9 +29,9 @@ define i1 @contains_either(ptr readonly %values, i64 %count, ptr %key0, ptr %key
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[VALUES]], i64 [[INDEX4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x ptr>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <vscale x 2 x ptr>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <vscale x 2 x ptr>, ptr [[TMP25]], align 8
