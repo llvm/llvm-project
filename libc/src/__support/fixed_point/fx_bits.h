@@ -222,7 +222,12 @@ idiv(T x, T y) {
 
   // If an integer result of one of these functions overflows, the behavior is
   // undefined. Ref: ISO/IEC TR 18037:2008(E) p.g. 16
-  CompType result = x_comp / y_comp;
+  using WideType = cpp::conditional_t<
+      (sizeof(CompType) < sizeof(int64_t)),
+      cpp::conditional_t<cpp::is_signed_v<CompType>, int64_t, uint64_t>,
+      cpp::conditional_t<cpp::is_signed_v<CompType>, Int128, UInt128>>;
+  WideType result =
+      static_cast<WideType>(x_comp) / static_cast<WideType>(y_comp);
 
   return static_cast<XType>(result);
 }

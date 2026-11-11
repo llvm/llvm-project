@@ -31,6 +31,7 @@ class IdivFxTest : public LIBC_NAMESPACE::testing::Test {
   static constexpr T min = FXRep::MIN();
   static constexpr T one_half = FXRep::ONE_HALF();
   static constexpr T one_fourth = FXRep::ONE_FOURTH();
+  static constexpr T eps = FXRep::EPS();
 
 public:
   typedef XType (*IdivFxFunc)(T, T);
@@ -66,6 +67,11 @@ public:
         EXPECT_EQ(func(-2.25, 1.0), static_cast<XType>(-2));
         EXPECT_EQ(func(2.25, -3.0), static_cast<XType>(0));
       }
+    }
+
+    if constexpr (is_signed && (sizeof(XType) > sizeof(T))) {
+      EXPECT_EQ(func(min, -eps), static_cast<XType>(1)
+                                     << (FXRep::TOTAL_LEN - 1));
     }
   }
 
