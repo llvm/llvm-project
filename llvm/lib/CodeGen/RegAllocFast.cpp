@@ -2143,13 +2143,11 @@ static bool foldUntilFit(MutableArrayRef<AsmOperandReg> Regs,
   // folded for one class no longer count against the next. Check the class of
   // every register, not just of the foldable ones: folding a register can
   // also relieve a narrower class (e.g. the GR64_ABCD of a "Q" operand).
-  SmallVector<const TargetRegisterClass *, 4> Done;
+  SmallPtrSet<const TargetRegisterClass *, 4> Done;
   for (const AsmOperandReg &Candidate : Regs) {
     const TargetRegisterClass *RC = Candidate.RC;
-    if (is_contained(Done, RC))
+    if (!Done.insert(RC).second)
       continue;
-
-    Done.push_back(RC);
 
     ArrayRef<MCPhysReg> Order = RCI.getOrder(RC);
     unsigned DefsFree = countFreeRegs(Order, DefTaken, TRI);
@@ -2374,13 +2372,12 @@ Register RegAllocFastImpl::getFoldedInputCopySource(const MachineInstr &MI,
 
   // The copy must come before MI, with Src still holding the copied value at
   // MI.
-  for (MachineBasicBlock::const_iterator I(MI), B = MI.getParent()->begin();
-       I != B;) {
-    --I;
-    if (&*I == Copy)
+  for (const MachineInstr &Prev : reverse(make_range(
+           MI.getParent()->begin(), MachineBasicBlock::const_iterator(MI)))) {
+    if (&Prev == Copy)
       return Src;
 
-    if (I->modifiesRegister(Src, TRI))
+    if (Prev.modifiesRegister(Src, TRI))
       return Register();
   }
 
@@ -2488,10 +2485,7 @@ void RegAllocFastImpl::foldInlineAsmOperands(MachineBasicBlock &MBB) {
       // getFoldedInputCopySource()).
       if (Register Src = getFoldedInputCopySource(*AsmMI, Reg)) {
         MRI->getUniqueVRegDef(Reg)->eraseFromParent();
-        for (MachineOperand &MO : AsmMI->operands())
-          if (MO.isReg() && MO.getReg() == Reg)
-            MO.setReg(Src);
-
+        AsmMI->substituteRegister(Reg, Src, /*SubIdx=*/0, *TRI);
         Reg = Src;
       }
 
