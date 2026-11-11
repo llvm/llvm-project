@@ -682,6 +682,12 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+unsigned Module::getWCharSize() const {
+  if (auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("wchar_size")))
+    return cast<ConstantInt>(Val->getValue())->getZExtValue();
+  return getTargetTriple().getDefaultWCharSize();
+}
+
 LongDoubleFormat Module::getLongDoubleFormat() const {
   if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
     if (std::optional<LongDoubleFormat> Format =
@@ -720,6 +726,24 @@ ExceptionHandling Module::getExceptionModel() const {
   if (auto *Val = cast_or_null<MDString>(getModuleFlag("exception-model")))
     return *parseExceptionModel(Val->getString());
   return getTargetTriple().getDefaultExceptionHandling();
+}
+
+DebuggerKind Module::getDebuggerTuning() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("debugger-tuning"))) {
+    if (std::optional<DebuggerKind> Tuning =
+            parseDebuggerTuning(Val->getString()))
+      return *Tuning;
+  }
+
+  return getTargetTriple().getDefaultDebuggerTuning();
+}
+
+void Module::setDebuggerTuning(DebuggerKind Tuning) {
+  assert(Tuning != DebuggerKind::Default &&
+         "removing existing flag not handled");
+
+  addModuleFlag(ModFlagBehavior::Warning, "debugger-tuning",
+                MDString::get(getContext(), getDebuggerTuningName(Tuning)));
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {

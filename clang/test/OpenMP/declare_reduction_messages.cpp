@@ -167,3 +167,19 @@ struct S
 #pragma omp declare reduction (bar : S<1> : omp_out.foo(omp_in))
 
 #endif
+
+namespace GH223366 {
+struct HasType {
+  typedef int type;
+};
+
+template <typename T>
+void f() {
+#pragma omp declare reduction(red : typename T::type : omp_out += omp_in) // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+}
+
+void g() {
+  f<HasType>();
+  f<int>(); // expected-note {{in instantiation of function template specialization 'GH223366::f<int>' requested here}}
+}
+}

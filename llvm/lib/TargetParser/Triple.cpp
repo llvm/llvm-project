@@ -2266,6 +2266,8 @@ bool Triple::isLittleEndian() const {
 unsigned Triple::getDefaultWCharSize() const {
   if (getArch() == Triple::xcore)
     return 1;
+  if (isArch16Bit())
+    return 2;
   if (isOSWindowsOrUEFI() || isPS())
     return 2;
   if (isOSAIX() && isArch32Bit())
@@ -2611,6 +2613,16 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   default:
     return LongDoubleFormat::IEEEdouble;
   }
+}
+
+DebuggerKind Triple::getDefaultDebuggerTuning() const {
+  if (isOSDarwin())
+    return DebuggerKind::LLDB;
+  if (isPS())
+    return DebuggerKind::SCE;
+  if (isOSAIX())
+    return DebuggerKind::DBX;
+  return DebuggerKind::GDB;
 }
 
 // HLSL triple environment orders are relied on in the front end

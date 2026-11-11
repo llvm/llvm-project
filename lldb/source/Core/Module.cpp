@@ -71,6 +71,7 @@
 #include <cstring>
 #include <map>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -288,6 +289,7 @@ Module::~Module() {
 
 ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                         lldb::addr_t header_addr, Status &error,
+                                        bool disable_memory_symtab_caching,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
     error = Status::FromErrorString("object file already exists");
@@ -308,6 +310,8 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                               header_addr, data_sp);
         if (m_objfile_sp) {
           m_memory_module_addr = header_addr;
+          m_objfile_sp->SetDisableMemorySymtabCaching(
+              disable_memory_symtab_caching);
 
           // Once we get the object file, update our module with the object
           // file's architecture since it might differ in vendor/os if some
@@ -705,9 +709,24 @@ std::vector<Module::LookupInfo> Module::LookupInfo::MakeLookupInfos(
   for (LanguageType lang_type : lang_types) {
     Module::LookupInfo info(name, lookup_name_override, name_type_mask,
                             lang_type);
+    // The language of a lookup only matters for matching names that aren't
+    // full names, so a lookup of full names that only differs from an earlier
+    // one in its language would find the same functions again.
+    if (info.m_name_type_mask & eFunctionNameTypeFull &&
+        llvm::any_of(infos, [&info](const LookupInfo &other) {
+          return info.EqualsIgnoringLanguage(other);
+        }))
+      continue;
     infos.push_back(info);
   }
   return infos;
+}
+
+bool Module::LookupInfo::EqualsIgnoringLanguage(const LookupInfo &other) const {
+  return std::tie(m_name, m_lookup_name, m_name_type_mask,
+                  m_match_name_after_lookup) ==
+         std::tie(other.m_name, other.m_lookup_name, other.m_name_type_mask,
+                  other.m_match_name_after_lookup);
 }
 
 bool Module::LookupInfo::NameMatchesLookupInfo(
@@ -1510,7 +1529,7 @@ bool Module::FindSourceFile(const FileSpec &orig_spec, FileSpec &new_spec) {
 
 void Module::AddPrefixMapSearchDir(FileSpec dir) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  m_prefix_map_search_dirs.insert(ConstString(dir.GetPath()));
+  m_prefix_map_search_dirs.insert(dir.GetPath());
 }
 
 void Module::LoadPrefixMapsIfNeeded() {
@@ -1522,11 +1541,10 @@ void Module::LoadPrefixMapsIfNeeded() {
   llvm::vfs::FileSystem &vfs = *llvm::vfs::getRealFileSystem();
   // Track visited directories so two starting paths that share ancestors
   // don't redundantly walk the same directory.
-  llvm::DenseSet<ConstString> searched;
-  for (ConstString start_cs : m_prefix_map_search_dirs) {
-    for (FileSpec current(start_cs.GetStringRef());;) {
-      ConstString directory_cs(current.GetPath());
-      if (!searched.insert(directory_cs).second)
+  llvm::StringSet<> searched;
+  for (const auto &start : m_prefix_map_search_dirs) {
+    for (FileSpec current(start.getKey());;) {
+      if (!searched.insert(current.GetPath()).second)
         break;
       FileSpec map_file(current);
       map_file.AppendPathComponent("compilation-prefix-map.json");
@@ -1666,12 +1684,14 @@ std::string Module::GetCacheKey() {
   return key;
 }
 
-DataFileCache *Module::GetIndexCache(bool memory_module) {
+DataFileCache *Module::GetIndexCache(LLDBIndexType type) {
   bool lldb_index_enabled = false;
-  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
+  if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache() &&
+      (type == eLLDBIndexTypeSymtab || type == eLLDBIndexTypeDwarfIndex))
     lldb_index_enabled = true;
-  if (memory_module && ModuleList::GetGlobalModuleListProperties()
-                           .GetEnableLLDBIndexCacheMemoryModules())
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetEnableLLDBIndexCacheMemoryModules() &&
+      type == eLLDBIndexTypeMemoryModuleSymtab)
     lldb_index_enabled = true;
   if (!lldb_index_enabled)
     return nullptr;

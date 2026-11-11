@@ -1348,15 +1348,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
 
   if (BBKillable) {
+    // Clear the successor list of BB to match updates applying to DTU later.
+    // Run before replaceAllUsesWith() to not redundantly scan phi nodes in
+    // Succ for BB.
+    if (BB->hasTerminator())
+      BB->back().eraseFromParent();
+
     // Everything that jumped to BB now goes to Succ.
     BB->replaceAllUsesWith(Succ);
 
     if (!Succ->hasName())
       Succ->takeName(BB);
-
-    // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->hasTerminator())
-      BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
     assert(succ_empty(BB) && "The successor list of BB isn't empty before "
@@ -1709,6 +1711,9 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
   auto *DIExpr = DVR->getExpression();
   DIExpr = dropInitialDeref(DIExpr);
   Value *DV = SI->getValueOperand();
+
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
 
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
@@ -3164,6 +3169,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
     case LLVMContext::MD_invariant_group:
+    case LLVMContext::MD_mmra:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -3195,7 +3201,8 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   }
 }
 
-void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
+void llvm::patchReplacementInstruction(Instruction *I, Value *Repl,
+                                       bool DoesKMove) {
   auto *ReplInst = dyn_cast<Instruction>(Repl);
   if (!ReplInst)
     return;
@@ -3235,7 +3242,7 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   // In general, GVN unifies expressions over different control-flow
   // regions, and so we need a conservative combination of the noalias
   // scopes.
-  combineMetadataForCSE(ReplInst, I, false);
+  combineMetadataForCSE(ReplInst, I, DoesKMove);
 }
 
 template <typename ShouldReplaceFn>

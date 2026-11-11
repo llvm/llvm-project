@@ -328,8 +328,7 @@ def warn_attribute_no_decl : Warning<
   "attribute %0 ignored, because it is not attached to a declaration">,
   InGroup<IgnoredAttributes>;
 def err_late_attribute_param_in_template : Error<
-  "%0 attribute in a template cannot name "
-  "%select{pointee function parameter|later parameter}1 %2">;
+  "%0 attribute in a template cannot name pointee function parameter %1">;
 def err_ms_attributes_not_enabled : Error<
   "'__declspec' attributes are not enabled; use '-fdeclspec' or "
   "'-fms-extensions' to enable support for __declspec attributes">;
@@ -1449,6 +1448,10 @@ def err_omp_unknown_adjust_args_op
     : Error<
           "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
           "'need_device_addr',}0 or 'nothing'">;
+def err_omp_num_args_invalid_form
+    : Error<"'omp_num_args' %select{is only allowed as a bound of a parameter "
+            "range|may only be followed by '+' or '-' and a constant logical "
+            "offset}0">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

@@ -16,6 +16,7 @@ include "mlir/IR/EnumAttr.td"
 class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<XeGPU_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/XeGPU/IR/XeGPU.h"];
   let mnemonic = attrMnemonic;
 }
 

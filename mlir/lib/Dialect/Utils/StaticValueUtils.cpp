@@ -400,7 +400,7 @@ std::optional<APInt> constantTripCount(
   }
   LDBG() << "constantTripCount: " << (isSigned ? "isSigned" : "isUnsigned")
          << ", ub-lb: " << diff << "(" << diff.getBitWidth() << "b)";
-  if (diff.isNegative()) {
+  if (isSigned && diff.isNegative()) {
     LDBG() << "constantTripCount is 0 because ub-lb diff is negative";
     return APInt(bitwidth, 0);
   }

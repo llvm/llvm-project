@@ -820,13 +820,23 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     std::optional<llvm::StringRef> name;
     mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
     mlir::Operation *sourceOp = sourceVal.getDefiningOp();
+
+    // OpenMP privatization represents a new private allocation with a
+    // declare of a private block argument. Alias analysis correctly
+    // recognizes this as SourceKind::Allocate. Add an exception here to allow
+    // fir.declare as the sourceOp.
+    auto ompPrivatizationDeclare =
+        mlir::dyn_cast_or_null<fir::DeclareOp>(sourceOp);
     bool unknownAllocOp =
+        !ompPrivatizationDeclare &&
         !fir::isNewAllocationResult(mlir::dyn_cast<mlir::OpResult>(sourceVal))
              .value_or(false);
     if (!unknownAllocOp) {
       // Non-FIR allocation operations may carry the uniq_name preserved when
       // a FIR allocation was rewritten.
-      if (auto alloc = mlir::dyn_cast<fir::AllocaOp>(sourceOp))
+      if (ompPrivatizationDeclare)
+        name = ompPrivatizationDeclare.getUniqName();
+      else if (auto alloc = mlir::dyn_cast<fir::AllocaOp>(sourceOp))
         name = alloc.getUniqName();
       else if (auto alloc = mlir::dyn_cast<fir::AllocMemOp>(sourceOp))
         name = alloc.getUniqName();
@@ -844,8 +854,10 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     // are also tagged under dummyArgDataTree. Using allocatedDataTree here
     // makes the copy-stores and dummy-arg reads appear non-aliasing to DSE,
     // which then incorrectly eliminates the copy stores.
+    // An OpenMP privatized copy is distinct from the original VALUE dummy even
+    // if its declaration retains the VALUE attribute.
     bool isValueDummyCopy = false;
-    if (!unknownAllocOp) {
+    if (!unknownAllocOp && !ompPrivatizationDeclare) {
       if (fir::DeclareOp declareOp = getDeclareOp(sourceVal)) {
         auto varIf = mlir::cast<fir::FortranVariableOpInterface>(
             declareOp.getOperation());

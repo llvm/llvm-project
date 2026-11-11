@@ -30,7 +30,7 @@ body:             |
     liveins: $rdi
 
     %2:gr64 = COPY $rdi
-    %3:gr64 = COPY killed %2
+    %3:gr64 = COPY %2
     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %3 :: (store (s64))
     %0:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (dereferenceable load (s64))
     %6:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32))

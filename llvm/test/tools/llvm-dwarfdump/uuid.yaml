@@ -2,6 +2,7 @@
 # RUN: yaml2obj %s | llvm-dwarfdump --uuid - | FileCheck %s
 # CHECK: UUID: E5874E6F-946F-317B-B348-56FAEE59D8D1 (x86_64h) <stdin>
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007

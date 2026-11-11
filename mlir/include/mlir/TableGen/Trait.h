@@ -53,6 +53,9 @@ public:
   // Returns the Tablegen definition this operator was constructed from.
   const llvm::Record &getDef() const { return *def; }
 
+  // Returns the C++ headers declaring this trait.
+  std::vector<StringRef> getCppIncludes() const;
+
 protected:
   // The TableGen definition of this trait.
   const llvm::Record *def;

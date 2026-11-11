@@ -17,6 +17,7 @@
 # CHECK: (__DATA,__data) non-external _foo
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

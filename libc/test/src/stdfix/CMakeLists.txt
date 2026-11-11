@@ -156,6 +156,21 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_libc_test(
+    muli${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      MuliFxTest.h
+    SRCS
+      muli${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.muli${suffix}
+      libc.src.__support.fixed_point.fx_rep
+  )
+endforeach()
+
 add_libc_test(
   uhksqrtus_test
   SUITE

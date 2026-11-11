@@ -30,7 +30,7 @@ Error SyntheticTypeNameBuilder::assignName(
       nullptr)
     return Error::success();
 
-  SyntheticName.resize(0);
+  SyntheticName.truncate(0);
   RecursionDepth = 0;
   return addDIETypeName(InputUnitEntryPair, ChildIndex, true);
 }
@@ -114,9 +114,10 @@ Error SyntheticTypeNameBuilder::addSignature(UnitEntryPairTy InputUnitEntryPair,
 Error SyntheticTypeNameBuilder::addParamNames(
     CompileUnit &CU,
     SmallVector<const DWARFDebugInfoEntry *, 20> &FunctionParameters) {
+  size_t ParamsStart = SyntheticName.size();
   SyntheticName += '(';
   for (const DWARFDebugInfoEntry *FunctionParameter : FunctionParameters) {
-    if (SyntheticName.back() != '(')
+    if (SyntheticName.size() != ParamsStart + 1)
       SyntheticName += ", ";
     if (dwarf::toUnsigned(CU.find(FunctionParameter, dwarf::DW_AT_artificial),
                           0))
@@ -133,9 +134,10 @@ Error SyntheticTypeNameBuilder::addTemplateParamNames(
     CompileUnit &CU,
     SmallVector<const DWARFDebugInfoEntry *, 10> &TemplateParameters) {
   if (!TemplateParameters.empty()) {
+    size_t ParamsStart = SyntheticName.size();
     SyntheticName += '<';
     for (const DWARFDebugInfoEntry *Parameter : TemplateParameters) {
-      if (SyntheticName.back() != '<')
+      if (SyntheticName.size() != ParamsStart + 1)
         SyntheticName += ", ";
 
       if (Parameter->getTag() == dwarf::DW_TAG_template_value_parameter) {
@@ -205,7 +207,7 @@ Error SyntheticTypeNameBuilder::addParentName(
 
   if (TypeEntry *ImmediateParentName =
           UnitEntryPair->CU->getDieTypeEntry(UnitEntryPair->DieEntry)) {
-    SyntheticName += ImmediateParentName->getKey();
+    SyntheticName.appendRef(ImmediateParentName);
     SyntheticName += ".";
     return Error::success();
   }
@@ -228,7 +230,7 @@ Error SyntheticTypeNameBuilder::addParentName(
   // Assign name for each parent entry.
   size_t NameStart = SyntheticName.size();
   for (UnitEntryPairTy Parent : reverse(Parents)) {
-    SyntheticName.resize(NameStart);
+    SyntheticName.truncate(NameStart);
     if (Error Err = addDIETypeName(Parent, std::nullopt, true))
       return Err;
   }
@@ -426,11 +428,10 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
   // Check if DIE already has a name.
   if (!TypeEntryPtr) {
     size_t NameStart = SyntheticName.size();
-    // Prepend the parent scope so this name matches the key the type is
-    // stored under in the pool (the getKey() branch below). Otherwise the
-    // same type gets different names depending on whether it already has a
-    // pool entry, which races under parallel assignment and breaks
-    // deterministic deduplication.
+    // Prepend the parent scope so this key matches the entry the type is
+    // assigned once it has one. Otherwise the same type gets different keys
+    // depending on whether it already has a pool entry, which races under
+    // parallel assignment and breaks deterministic deduplication.
     if (Error Err = addParentName(*UnitEntryPair))
       return Err;
     addTypePrefix(*UnitEntryPair->CU, UnitEntryPair->DieEntry);
@@ -442,14 +443,14 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
         return Err;
     }
 
-    if (AssignNameToTypeDescriptor) {
-      // Add built name to the DIE.
-      TypeEntryPtr = TypePoolRef.insert(SyntheticName.substr(NameStart));
+    // Intern unassigned keys too, since references point at interned entries.
+    TypeEntryPtr = TypePoolRef.insert(SyntheticName.str().substr(NameStart));
+    if (AssignNameToTypeDescriptor)
       InputUnitEntryPair.CU->setDieTypeEntry(InputUnitEntryPair.DieEntry,
                                              TypeEntryPtr);
-    }
-  } else
-    SyntheticName += TypeEntryPtr->getKey();
+    SyntheticName.truncate(NameStart);
+  }
+  SyntheticName.appendRef(TypeEntryPtr);
 
   return Error::success();
 }
@@ -488,11 +489,11 @@ Error SyntheticTypeNameBuilder::addUnnamedTypeContents(
 
   // Replace the contents with a fixed-size digest, so the names of the types
   // referring to this one do not grow with its size or nesting depth.
-  StringRef Contents = StringRef(SyntheticName).substr(ContentsStart);
+  StringRef Contents = SyntheticName.str().substr(ContentsStart);
   XXH128_hash_t Hash = xxh3_128bits(arrayRefFromStringRef<uint8_t>(Contents));
   std::string Digest = "<" + utohexstr(Hash.high64, true, 16) +
                        utohexstr(Hash.low64, true, 16) + ">";
-  SyntheticName.resize(ContentsStart);
+  SyntheticName.truncate(ContentsStart);
   SyntheticName += Digest;
   ContentsDigests.try_emplace(InputUnitEntryPair.DieEntry, std::move(Digest));
   return Error::success();

@@ -73,9 +73,9 @@ removeIrrelevantProperties(PropertiesContainer<T> Base,
 using DeviceInfoProp = PropertiesContainer<ol_device_info_t>;
 using DeviceInfoProperties = PropertiesWithSizeContainer<ol_device_info_t>;
 
-inline const DeviceInfoProp PropBool{OL_DEVICE_INFO_SINGLE_FP_SUPPORT,
-                                     OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
-                                     OL_DEVICE_INFO_HALF_FP_SUPPORT};
+inline const DeviceInfoProp PropBool{
+    OL_DEVICE_INFO_SINGLE_FP_SUPPORT, OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
+    OL_DEVICE_INFO_HALF_FP_SUPPORT, OL_DEVICE_INFO_PREFERRED_LOCATION_HOST};
 inline const DeviceInfoProperties BoolProperties =
     createPropertiesWithSizeContainer(sizeof(bool), PropBool);
 
@@ -97,7 +97,8 @@ inline const DeviceInfoProp PropUint32{
     OL_DEVICE_INFO_NUM_LANES,
     OL_DEVICE_INFO_DRIVER_ID,
     OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE,
-    OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS};
+    OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS,
+    OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS};
 
 inline const DeviceInfoProperties Uint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), PropUint32);
@@ -111,7 +112,8 @@ inline const DeviceInfoProperties Uint64Properties =
 // Devices are allowed to report zero for these, so they can only be checked
 // for support.
 inline const DeviceInfoProp PropUint64MayBeZero{
-    OL_DEVICE_INFO_HARDWARE_PARALLELISM, OL_DEVICE_INFO_TIMESTAMP_FREQUENCY};
+    OL_DEVICE_INFO_HARDWARE_PARALLELISM, OL_DEVICE_INFO_TIMESTAMP_FREQUENCY,
+    OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE, OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE};
 inline const DeviceInfoProperties Uint64MayBeZeroProperties =
     createPropertiesWithSizeContainer(sizeof(uint64_t), PropUint64MayBeZero);
 
@@ -191,14 +193,14 @@ inline bool defaultCheckIsNonZero(char *Buffer) {
 template <typename T>
 inline std::string defaultPropertyTestPrinter(
     const ::testing::TestParamInfo<OffloadParam<SizedProperty<T>>> &info) {
-  auto Device = std::get<0>(info.param);
+  auto &Devices = std::get<0>(info.param);
   auto ParamData = std::get<1>(info.param);
 
   std::string TempStr;
   llvm::raw_string_ostream FinalName(TempStr);
 
   auto Prop = ParamData.Property;
-  FinalName << Device.Name << "__" << Prop;
+  FinalName << getDevicesName(Devices) << "__" << Prop;
 
   return SanitizeString(FinalName.str());
 }
@@ -219,8 +221,9 @@ struct olPropertyTest : OffloadDeviceTestWithParam<SizedProperty<T>> {
 };
 
 struct olGetHostDeviceInfoPropertyTest : olPropertyTest<ol_device_info_t> {
-  // Used when the fixture has been instantiated with getDevicesAndHost() in
-  // Fixtures.hpp instead of TestEnvironment::getDevices()
+  // Used when the fixture has been instantiated with
+  // allDevicesSeparatelyWithHost() in Fixtures.hpp instead of
+  // TestEnvironment::getDevices()
   bool isHost() { return Host == this->Device; }
 };
 

@@ -42,16 +42,35 @@ add_object_library(
 )
 
 add_header_library(
+  dir_scan_result
+  HDRS
+    dir_scan_result.h
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   dir_scan_impl
   HDRS
     dir_scan_impl.h
   DEPENDS
-    libc.src.__support.error_or
+    .dir_scan_result
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_dirent
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+    libc.src.__support.alloc_checker
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.src.stdlib.qsort_util
     libc.src.string.memory_utils.inline_memcpy
-    libc.hdr.errno_macros
-    libc.hdr.types.struct_dirent
 )
 
 add_object_library(
@@ -62,12 +81,12 @@ add_object_library(
     dir.h
   DEPENDS
     .dir_scan_impl
+    .dir_scan_result
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
     libc.src.__support.error_or
-    libc.src.__support.alloc_checker
     libc.hdr.errno_macros
     libc.hdr.types.struct_dirent
 )

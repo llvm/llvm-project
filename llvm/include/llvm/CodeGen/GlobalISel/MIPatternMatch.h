@@ -50,26 +50,12 @@ template <typename SubPatternT> struct OneUse_match {
   OneUse_match(const SubPatternT &SP) : SubPat(SP) {}
 
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
-    return MRI.hasOneUse(Reg) && SubPat.match(MRI, Reg);
-  }
-};
-
-template <typename SubPat>
-inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
-  return SP;
-}
-
-template <typename SubPatternT> struct OneNonDBGUse_match {
-  SubPatternT SubPat;
-  OneNonDBGUse_match(const SubPatternT &SP) : SubPat(SP) {}
-
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return MRI.hasOneNonDBGUse(Reg) && SubPat.match(MRI, Reg);
   }
 };
 
 template <typename SubPat>
-inline OneNonDBGUse_match<SubPat> m_OneNonDBGUse(const SubPat &SP) {
+inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
   return SP;
 }
 
@@ -577,8 +563,8 @@ inline GConstantBitsMatch m_GConstantOrFConstantBits(APInt &Bits) {
   return {Bits};
 }
 
-/// Match a load of type \p Class, binding its pointer operand (like IR's
-/// m_Load), and optionally the instruction and/or its MachineMemOperand.
+/// Match a load of type \p Class, matching its pointer operand and optionally
+/// binding the instruction and/or its MachineMemOperand.
 template <typename Class, typename PtrP> struct LoadOp_match {
   PtrP Ptr;
   Class **InstOut = nullptr;
@@ -590,9 +576,10 @@ template <typename Class, typename PtrP> struct LoadOp_match {
   LoadOp_match(Class *&Inst, const PtrP &Ptr, MMORef MMO)
       : Ptr(Ptr), InstOut(&Inst), MMOOut(&MMO.MMO) {}
 
-  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+  template <typename OpTy>
+  bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     MachineInstr *TmpMI;
-    if (!mi_match(Reg, MRI, m_MInstr(TmpMI)))
+    if (!mi_match(Op, MRI, m_MInstr(TmpMI)))
       return false;
     auto *Load = dyn_cast<Class>(TmpMI);
     if (!Load || !Ptr.match(MRI, Load->getPointerReg()))
@@ -626,6 +613,24 @@ inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr) {
 template <typename PtrP>
 inline LoadOp_match<GLoad, PtrP> m_GLoad(const PtrP &Ptr, MMORef MMO) {
   return LoadOp_match<GLoad, PtrP>(Ptr, MMO);
+}
+
+inline LoadOp_match<GSExtLoad, operand_type_match>
+m_GSExtLoad(GSExtLoad *&Inst) {
+  return {Inst, m_Reg()};
+}
+inline LoadOp_match<GZExtLoad, operand_type_match>
+m_GZExtLoad(GZExtLoad *&Inst) {
+  return {Inst, m_Reg()};
+}
+
+inline LoadOp_match<GSExtLoad, operand_type_match> m_GSExtLoad(GSExtLoad *&Inst,
+                                                               MMORef MMO) {
+  return {Inst, m_Reg(), MMO};
+}
+inline LoadOp_match<GZExtLoad, operand_type_match> m_GZExtLoad(GZExtLoad *&Inst,
+                                                               MMORef MMO) {
+  return {Inst, m_Reg(), MMO};
 }
 
 /// Instruction binders for ops with no operand-form matcher (constant-immediate

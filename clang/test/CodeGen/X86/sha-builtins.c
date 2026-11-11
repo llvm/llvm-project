@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +sha -emit-llvm -flax-vector-conversions=none -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +sha -emit-llvm -flax-vector-conversions=none -o - | FileCheck %s %}
 
 
 #include <immintrin.h>

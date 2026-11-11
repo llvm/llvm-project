@@ -2502,9 +2502,8 @@ HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
     MachineFunction &MF = DAG.getMachineFunction();
     auto &HST = MF.getSubtarget<HexagonSubtarget>();
-    // Generate the call only on v79 and beyond.
-    // FIXME: On v81, this may not be needed.
-    if (!HST.useHVXV79Ops())
+    // Generate the call only on v79 only.
+    if (!HST.useHVXV79OpsOnly())
       return Op;
 
     ArgListTy Args;
@@ -3907,13 +3906,14 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::UMUL_LOHI:               return LowerHvxMulLoHi(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
     case ISD::SETCC: {
-      ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      ISD::CondCode CC = Op.getOperandCondCode(2);
       if (CC == ISD::SETOEQ &&
           ty(Op.getOperand(0)).getScalarType().isFloatingPoint())
         return LowerHvxFpSetoeq(Op, DAG);
       return Op;
     }
     case ISD::INTRINSIC_VOID:          return Op;
+    case ISD::INTRINSIC_W_CHAIN:       return Op;
     case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
     case ISD::MLOAD:
     case ISD::MSTORE:                  return LowerHvxMaskedOp(Op, DAG);

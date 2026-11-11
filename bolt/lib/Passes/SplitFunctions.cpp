@@ -195,6 +195,7 @@ private:
   DenseMap<const BinaryBasicBlock *, size_t> GlobalIndices;
   DenseMap<const BinaryBasicBlock *, size_t> BBSizes;
   DenseMap<const BinaryBasicBlock *, size_t> BBOffsets;
+  DenseMap<const BinaryFunction *, const BinaryBasicBlock *> FrontBlocks;
 
   // Call graph.
   std::vector<SmallVector<const BinaryBasicBlock *, 0>> Callers;
@@ -210,6 +211,8 @@ private:
     for (BinaryFunction *BF : BC.getOutputBinaryFunctions()) {
       if (!shouldConsiderForCallGraph(*BF))
         continue;
+
+      FrontBlocks[BF] = &BF->front();
 
       // Calculate the size of each BB after hot-cold splitting.
       // This populates BinaryBasicBlock::OutputAddressRange which
@@ -339,10 +342,14 @@ private:
     const size_t ThisGI = GlobalIndices[ThisBB];
 
     for (const BinaryFunction *DstBF : BC.getOutputBinaryFunctions()) {
-      if (!shouldConsiderForCallGraph(*DstBF))
+      // DstBF->front() might race as another thread might be adding
+      // trampoline blocks to it, which potentially invalidates
+      // BF::BasicBlocks. Do the safe thing and load a previously
+      // recorded pointer for the front basic block of this function.
+      const BinaryBasicBlock *DstBB = FrontBlocks.lookup(DstBF);
+      if (!DstBB)
         continue;
 
-      const BinaryBasicBlock *DstBB = &(DstBF->front());
       if (DstBB->getKnownExecutionCount() == 0)
         continue;
 
