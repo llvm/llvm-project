@@ -980,6 +980,25 @@ constexpr T min(initializer_list<T> list) {
 
 } // namespace std
 
+namespace unused_defaulted_default_ctor {
+
+struct Ext { double w; };
+
+struct Size {
+  constexpr Size() = default;
+  [[clang::annotate("webkit.nodelete")]] Size(const Ext&);
+  double m_w { 0 };
+};
+
+struct Rect {
+  [[clang::annotate("webkit.nodelete")]] Rect(const Ext&);
+  Size m_size;
+};
+
+Rect::Rect(const Ext& e) : m_size(e) { }
+
+} // namespace unused_defaulted_default_ctor
+
 namespace std_initializer_list {
 
 // A braced list passed as std::initializer_list materialises a backing array

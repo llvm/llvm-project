@@ -1016,6 +1016,28 @@ public:
               (CtorDecl->isMoveConstructor() &&
                RD->hasTrivialMoveConstructor()))
             return true;
+          // A defaulted default constructor that nothing has used yet has no
+          // definition, so decide from the initializers it would run.
+          if (CtorDecl->isDefaultConstructor() && !CtorDecl->isDeleted() &&
+              !CtorDecl->doesThisDeclarationHaveABody() &&
+              RD->hasDefinition()) {
+            for (const FieldDecl *F : RD->fields()) {
+              if (const Expr *Init = F->getInClassInitializer()) {
+                if (!Visit(Init))
+                  return false;
+              } else if (!CanTriviallyConstruct(F->getType()))
+                return false;
+            }
+            for (const CXXBaseSpecifier &B : RD->bases()) {
+              if (!CanTriviallyConstruct(B.getType()))
+                return false;
+            }
+            for (const CXXBaseSpecifier &B : RD->vbases()) {
+              if (!CanTriviallyConstruct(B.getType()))
+                return false;
+            }
+            return true;
+          }
         }
         if (DtorDecl)
           return CanTriviallyRunImplicitDtor(DtorDecl);
