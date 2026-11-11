@@ -950,6 +950,16 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Unimplemented vec to pred");
     return;
   }
+  if (Hexagon::HlxLRRegClass.contains(SrcReg, DestReg)) {
+    BuildMI(MBB, I, DL, get(Hexagon::LX_assign), DestReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
+  if (Hexagon::HlxLLRRegClass.contains(SrcReg, DestReg)) {
+    BuildMI(MBB, I, DL, get(Hexagon::LX_assign_w), DestReg)
+        .addReg(SrcReg, KillFlag);
+    return;
+  }
 
 #ifndef NDEBUG
   // Show the invalid registers to ease debugging.
@@ -1165,7 +1175,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     }
-    case Hexagon::V6_lo: {
+    case Hexagon::V6_lo:
+    case Hexagon::LX_lo: {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       Register SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
@@ -1173,7 +1184,8 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MBB.erase(MI);
       return true;
     }
-    case Hexagon::V6_hi: {
+    case Hexagon::V6_hi:
+    case Hexagon::LX_hi: {
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
       Register SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
