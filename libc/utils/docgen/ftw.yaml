@@ -1,0 +1,39 @@
+macros:
+  FTW_F:
+    in-latest-posix: ''
+  FTW_D:
+    in-latest-posix: ''
+  FTW_DNR:
+    in-latest-posix: ''
+  FTW_DP:
+    in-latest-posix: ''
+  FTW_NS:
+    in-latest-posix: ''
+  FTW_SL:
+    in-latest-posix: ''
+  FTW_SLN:
+    in-latest-posix: ''
+  FTW_PHYS:
+    in-latest-posix: ''
+  FTW_MOUNT:
+    in-latest-posix: ''
+  FTW_DEPTH:
+    in-latest-posix: ''
+  FTW_CHDIR:
+    in-latest-posix: ''
+  FTW_ACTIONRETVAL:
+    c-definition: ''
+  FTW_CONTINUE:
+    c-definition: ''
+  FTW_STOP:
+    c-definition: ''
+  FTW_SKIP_SUBTREE:
+    c-definition: ''
+  FTW_SKIP_SIBLINGS:
+    c-definition: ''
+
+functions:
+  ftw:
+    removed-in-posix-2024: ''
+  nftw:
+    in-latest-posix: ''
