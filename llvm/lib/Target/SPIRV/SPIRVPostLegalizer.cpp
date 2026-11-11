@@ -17,7 +17,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -59,16 +58,6 @@ static SPIRVTypeInst deduceIntTypeFromResult(Register ResVReg,
     return GR->getOrCreateSPIRVVectorType(ScalarType, Ty.getNumElements(), MIB,
                                           false);
   return ScalarType;
-}
-
-static SPIRVTypeInst getOrCreateScalarTypeForLLT(LLT Ty, MachineIRBuilder &MIB,
-                                                 SPIRVGlobalRegistry *GR) {
-  if (!Ty.isFloat())
-    return GR->getOrCreateSPIRVIntegerType(Ty.getSizeInBits(), MIB);
-  Type *FloatTy = Type::getFloatingPointTy(
-      MIB.getMF().getFunction().getContext(), getFltSemanticForLLT(Ty));
-  return GR->getOrCreateSPIRVType(FloatTy, MIB,
-                                  SPIRV::AccessQualifier::ReadWrite, true);
 }
 
 static SPIRVTypeInst deduceTypeFromSingleOperand(MachineInstr *I,
@@ -517,12 +506,12 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
       const LLT &ResLLT = MRI.getType(ResVReg);
       SPIRVTypeInst ResType = nullptr;
       if (ResLLT.isVector()) {
-        SPIRVTypeInst CompType =
-            getOrCreateScalarTypeForLLT(ResLLT.getElementType(), MIB, GR);
+        SPIRVTypeInst CompType = GR->getOrCreateSPIRVIntegerType(
+            ResLLT.getElementType().getSizeInBits(), MIB);
         ResType = GR->getOrCreateSPIRVVectorType(
             CompType, ResLLT.getNumElements(), MIB, false);
       } else {
-        ResType = getOrCreateScalarTypeForLLT(ResLLT, MIB, GR);
+        ResType = GR->getOrCreateSPIRVIntegerType(ResLLT.getSizeInBits(), MIB);
       }
       setRegClassType(ResVReg, ResType, GR, &MRI, MF, true);
     }
