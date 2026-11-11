@@ -4514,6 +4514,16 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
   if (!lhsVecAttr || !rhsVecAttr)
     return {};
 
+  cir::FCmpOpKind kind = getKind();
+  if (kind == cir::FCmpOpKind::_true || kind == cir::FCmpOpKind::_false) {
+    mlir::Attribute elt =
+        cir::IntAttr::get(getType().getElementType(),
+                          (kind == cir::FCmpOpKind::_true) ? -1LL : 0LL);
+    SmallVector<mlir::Attribute, 16> elements(getType().getFixedSize(), elt);
+    return cir::ConstVectorAttr::get(
+        getType(), mlir::ArrayAttr::get(getContext(), elements));
+  }
+
   mlir::ArrayAttr lhsElts = lhsVecAttr.getElts();
   mlir::ArrayAttr rhsElts = rhsVecAttr.getElts();
   uint64_t vecSize = lhsElts.size();
@@ -4528,10 +4538,7 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
     bool lt = cr == llvm::APFloat::cmpLessThan;
     bool gt = cr == llvm::APFloat::cmpGreaterThan;
     bool cmpResult = false;
-    switch (getKind()) {
-    case cir::FCmpOpKind::_false:
-      cmpResult = false;
-      break;
+    switch (kind) {
     case cir::FCmpOpKind::oeq:
       cmpResult = eq;
       break;
@@ -4575,8 +4582,8 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
       cmpResult = unordered;
       break;
     case cir::FCmpOpKind::_true:
-      cmpResult = true;
-      break;
+    case cir::FCmpOpKind::_false:
+      llvm_unreachable("Op kind have been handled already");
     }
 
     // A true result is all bits set (-1 in two's complement), and a false
