@@ -1559,6 +1559,11 @@ getDeviceInput(const ArgList &Args) {
     if (!Filename && Arg->getOption().matches(OPT_library))
       return createStringError("unable to find library -l%s", Arg->getValue());
 
+    // The input was not found. With --sycl-device-link no host linker runs to
+    // report it, so report it here. Do not report words that may not be
+    // files: the value of an unknown option, e.g. 'now' in '-z now', or a
+    // link.exe option such as '/nologo'. Those are ignored, as in a normal
+    // link.
     if (!Filename || !sys::fs::exists(*Filename)) {
       if (ReportMissingInputs && !FollowsUnknownOption(Arg) &&
           !isCOFFLinkerOption(Input, HostTriple))
@@ -1567,6 +1572,7 @@ getDeviceInput(const ArgList &Args) {
             make_error_code(errc::no_such_file_or_directory));
       continue;
     }
+    // A directory has no device code.
     if (sys::fs::is_directory(*Filename))
       continue;
 
