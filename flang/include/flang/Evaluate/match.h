@@ -45,12 +45,6 @@ const evaluate::Expr<Type<C>> &deparen(const evaluate::Expr<Type<C>> &x) {
   }
 }
 
-template <common::TypeCategory C>
-const evaluate::Expr<SomeKind<C>> &deparen(
-    const evaluate::Expr<SomeKind<C>> &x) {
-  return x;
-}
-
 // Some expressions (e.g. TypelessExpression) don't allow parentheses, while
 // those that do have Expr<Type> as the argument to the parentheses. This means
 // that there is no consistent return type that works for all expressions.

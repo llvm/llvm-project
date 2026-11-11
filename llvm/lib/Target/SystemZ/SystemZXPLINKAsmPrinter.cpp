@@ -476,6 +476,10 @@ void SystemZXPLINKAsmPrinter::emitIDRLSection(Module &M) {
 }
 
 void SystemZXPLINKAsmPrinter::emitFunctionBodyEnd() {
+  // A stub (naked function) has no PPA1 and thus no end of function symbol.
+  if (MF->getFunction().hasFnAttribute(Attribute::Naked))
+    return;
+
   // Emit symbol for the end of function if the z/OS target streamer
   // is used. This is needed to calculate the size of the function.
   auto *ZOS = getTargetStreamer();
@@ -868,48 +872,63 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
 
 void SystemZXPLINKAsmPrinter::emitFunctionEntryLabel() {
   auto *ZOS = getTargetStreamer();
-  calculatePPA1();
 
-  // EntryPoint Marker
-  const MachineFrameInfo &MFFrame = MF->getFrameInfo();
-  bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
-  uint32_t DSASize = MFFrame.getStackSize();
-  bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
+  // A naked function is an XPLINK stub: it has a stub entry marker and no PPA1.
+  if (MF->getFunction().hasFnAttribute(Attribute::Naked)) {
+    // The entry marker of a normal function is 16 bytes. Pad the 8 byte stub
+    // marker, so that the entry point is at the same offset from the start of
+    // the function.
+    OutStreamer->AddComment("XPLINK Stub Entry Padding");
+    OutStreamer->emitZeros(8);
+    OutStreamer->AddComment("XPLINK Stub Entry Marker");
+    OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+    OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
+    OutStreamer->AddComment("Mark Type C'4'");
+    OutStreamer->emitInt8(0xF4); // Mark Type.
+  } else {
+    calculatePPA1();
 
-  // Set Flags.
-  uint8_t Flags = 0;
-  if (IsLeaf)
-    Flags |= 0x08;
-  if (IsUsingAlloca)
-    Flags |= 0x04;
+    // EntryPoint Marker
+    const MachineFrameInfo &MFFrame = MF->getFrameInfo();
+    bool IsUsingAlloca = MFFrame.hasVarSizedObjects();
+    uint32_t DSASize = MFFrame.getStackSize();
+    bool IsLeaf = DSASize == 0 && MFFrame.getCalleeSavedInfo().empty();
 
-  // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
-  uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
-  DSAAndFlags |= Flags;
+    // Set Flags.
+    uint8_t Flags = 0;
+    if (IsLeaf)
+      Flags |= 0x08;
+    if (IsUsingAlloca)
+      Flags |= 0x04;
 
-  // Emit entry point marker section.
-  OutStreamer->AddComment("XPLINK Routine Layout Entry");
-  OutStreamer->emitLabel(ZOS->DeferredPPA1.back().EPMarker);
-  OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
-  OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
-  OutStreamer->AddComment("Mark Type C'1'");
-  OutStreamer->emitInt8(0xF1); // Mark Type.
-  OutStreamer->AddComment("Offset to PPA1");
-  OutStreamer->emitAbsoluteSymbolDiff(ZOS->DeferredPPA1.back().PPA1,
-                                      ZOS->DeferredPPA1.back().EPMarker, 4);
-  if (OutStreamer->isVerboseAsm()) {
-    OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
-    OutStreamer->AddComment("Entry Flags");
-    if (Flags & 0x08)
-      OutStreamer->AddComment("  Bit 1: 1 = Leaf function");
-    else
-      OutStreamer->AddComment("  Bit 1: 0 = Non-leaf function");
-    if (Flags & 0x04)
-      OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
-    else
-      OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
+    // Combine into top 27 bits of DSASize and bottom 5 bits of Flags.
+    uint32_t DSAAndFlags = DSASize & 0xFFFFFFE0; // (x/32) << 5
+    DSAAndFlags |= Flags;
+
+    // Emit entry point marker section.
+    OutStreamer->AddComment("XPLINK Routine Layout Entry");
+    OutStreamer->emitLabel(ZOS->DeferredPPA1.back().EPMarker);
+    OutStreamer->AddComment("Eyecatcher 0x00C300C500C500");
+    OutStreamer->emitIntValueInHex(0x00C300C500C500, 7); // Eyecatcher.
+    OutStreamer->AddComment("Mark Type C'1'");
+    OutStreamer->emitInt8(0xF1); // Mark Type.
+    OutStreamer->AddComment("Offset to PPA1");
+    OutStreamer->emitAbsoluteSymbolDiff(ZOS->DeferredPPA1.back().PPA1,
+                                        ZOS->DeferredPPA1.back().EPMarker, 4);
+    if (OutStreamer->isVerboseAsm()) {
+      OutStreamer->AddComment("DSA Size 0x" + Twine::utohexstr(DSASize));
+      OutStreamer->AddComment("Entry Flags");
+      if (Flags & 0x08)
+        OutStreamer->AddComment("  Bit 1: 1 = Leaf function");
+      else
+        OutStreamer->AddComment("  Bit 1: 0 = Non-leaf function");
+      if (Flags & 0x04)
+        OutStreamer->AddComment("  Bit 2: 1 = Uses alloca");
+      else
+        OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
+    }
+    OutStreamer->emitInt32(DSAAndFlags);
   }
-  OutStreamer->emitInt32(DSAAndFlags);
 
   ZOS->emitADA(CurrentFnSym, getObjFileLowering().getADASection());
 
