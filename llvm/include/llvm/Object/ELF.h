@@ -29,7 +29,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -283,9 +282,7 @@ private:
   std::vector<Elf_Shdr> FakeSections;
   SmallString<0> FakeSectionStrings;
 
-  using DecompressedSectionMap =
-      DenseMap<const Elf_Shdr *, std::pair<std::unique_ptr<uint8_t[]>, size_t>>;
-  mutable std::shared_ptr<DecompressedSectionMap> DecompressedSections;
+  mutable DenseMap<const Elf_Shdr *, std::vector<uint8_t>> DecompressedSections;
 
   // When the number of program headers is >= PN_XNUM, the actual number is
   // contained in the sh_info field of the section header at index 0.

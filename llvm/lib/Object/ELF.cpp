@@ -863,11 +863,9 @@ Expected<ArrayRef<uint8_t>>
 ELFFile<ELFT>::getDecompressedSectionContents(const Elf_Shdr &Sec) const {
   if (!(Sec.sh_flags & llvm::ELF::SHF_COMPRESSED))
     return getSectionContents(Sec);
-  if (!DecompressedSections)
-    DecompressedSections = std::make_shared<DecompressedSectionMap>();
-  auto It = DecompressedSections->find(&Sec);
-  if (It != DecompressedSections->end())
-    return ArrayRef<uint8_t>(It->second.first.get(), It->second.second);
+  auto It = DecompressedSections.find(&Sec);
+  if (It != DecompressedSections.end())
+    return It->second;
 
   Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
   if (!ContentsOrErr)
@@ -876,14 +874,10 @@ ELFFile<ELFT>::getDecompressedSectionContents(const Elf_Shdr &Sec) const {
                                                 isLE(), ELFT::Is64Bits);
   if (!DecompressorOrErr)
     return DecompressorOrErr.takeError();
-  size_t DecompressedSize = DecompressorOrErr->getDecompressedSize();
-  auto Buf = std::make_unique<uint8_t[]>(DecompressedSize);
-  if (Error Err = DecompressorOrErr->decompress({Buf.get(), DecompressedSize}))
+  std::vector<uint8_t> Buf(DecompressorOrErr->getDecompressedSize());
+  if (Error Err = DecompressorOrErr->decompress(Buf))
     return std::move(Err);
-  uint8_t *Ptr = Buf.get();
-  (*DecompressedSections)[&Sec] =
-      std::make_pair(std::move(Buf), DecompressedSize);
-  return ArrayRef<uint8_t>(Ptr, DecompressedSize);
+  return DecompressedSections.try_emplace(&Sec, std::move(Buf)).first->second;
 }
 
 template <class ELFT>

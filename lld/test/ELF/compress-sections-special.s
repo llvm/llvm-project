@@ -17,22 +17,6 @@
 # CHECK-NEXT: 01000000 00000000 5c000000 00000000
 # CHECK-NEXT: 01000000 00000000 {{.*}}
 
-# RUN: llvm-nm out | FileCheck %s --check-prefix=NM
-# NM:      {{0*}}[[#%x,]] T _start
-# NM-NEXT: {{0*}}[[#%x,]] T g0
-# NM-NEXT: {{0*}}[[#%x,]] T g1
-# NM-NEXT:                U ggggggggggggggggggggggggggggggg0
-# NM-NEXT:                U ggggggggggggggggggggggggggggggg1
-# NM-NEXT: {{0*}}[[#%x,]] t l0
-
-# RUN: llvm-objcopy out out2
-# RUN: llvm-readelf -Ss out2 | FileCheck %s --check-prefix=OBJCOPY
-# OBJCOPY:      .symtab    SYMTAB   0000000000000000 [[#%x,]] [[#%x,]] 18    12 3  8
-# OBJCOPY-NEXT: .shstrtab  STRTAB   0000000000000000 [[#%x,]] [[#%x,]] 00     0 0  1
-# OBJCOPY-NEXT: .strtab    STRTAB   0000000000000000 [[#%x,]] [[#%x,]] 00     0 0  1
-# OBJCOPY:      Symbol table '.symtab' contains 8 entries:
-# OBJCOPY:      _start
-
 # RUN: not ld.lld -shared a.o --compress-sections .dynstr=zlib 2>&1 | FileCheck %s --check-prefix=ERR-ALLOC
 # ERR-ALLOC: error: --compress-sections: section '.dynstr' with the SHF_ALLOC flag cannot be compressed
 

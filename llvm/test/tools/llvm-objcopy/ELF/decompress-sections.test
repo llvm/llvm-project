@@ -63,3 +63,41 @@ Sections:
     Type:      SHT_PROGBITS
     Flags:     [ SHF_COMPRESSED ]
     Content:   010000000000000040000000000000000100000000000000789cd36280002d3269002f800151
+
+## Test that llvm-objcopy transparently decompresses SHF_COMPRESSED .symtab and .strtab.
+# RUN: yaml2obj --docnum=2 %s -o %t.sym
+# RUN: llvm-objcopy %t.sym %t.sym.out
+# RUN: llvm-readelf -Ss %t.sym.out | FileCheck %s --check-prefix=SYMTAB
+
+# SYMTAB:      Name      Type     Address          Off      Size   ES Flg Lk Inf Al
+# SYMTAB:      .text     PROGBITS 0000000000000000 [[#%x,]] 000000 00  AX  0   0  0
+# SYMTAB-NEXT: .symtab   SYMTAB   0000000000000000 [[#%x,]] 000048 18      3   2  8
+# SYMTAB-NEXT: .strtab   STRTAB   0000000000000000 [[#%x,]] 000016 00      0   0  1
+# SYMTAB-NEXT: .shstrtab STRTAB   0000000000000000 [[#%x,]] [[#%x,]] 00    0   0  1
+# SYMTAB:      Symbol table '.symtab' contains 3 entries:
+# SYMTAB-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+# SYMTAB-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# SYMTAB-NEXT:      1: 0000000000000010     4 FUNC    LOCAL  DEFAULT     1 local_sym
+# SYMTAB-NEXT:      2: 0000000000000020     8 FUNC    GLOBAL DEFAULT     1 global_sym
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Flags:   [ SHF_COMPRESSED ]
+    Link:    .strtab
+    EntSize: 0x18
+    Info:    2
+    Content: 010000000000000048000000000000000800000000000000789c6360c00e18819809480a40f92c509a1b888580e20a503e0794060008bc005f
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_COMPRESSED ]
+    Content: 010000000000000016000000000000000100000000000000789c63c8c94f4ecc892faecc6548cfc94f8232015a8007ed
