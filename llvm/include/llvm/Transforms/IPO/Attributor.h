@@ -1257,7 +1257,11 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
-  bool isOnlyUsedByAssume(const Instruction &I) const {
+  bool isOnlyUsedByAssume(const Instruction &I) {
+    const Function &F = *I.getFunction();
+    FunctionInfo &FI = getFunctionInfo(F);
+    if (!FI.AssumeOnlyValuesCollected)
+      collectAssumeOnlyValues(FI);
     return AssumeOnlyValues.contains(&I);
   }
 
@@ -1329,6 +1333,10 @@ private:
 
     /// Function has the `"kernel"` attribute
     bool IsKernel;
+
+    /// The values only used by `llvm.assume`s in the function have been added
+    /// to AssumeOnlyValues.
+    bool AssumeOnlyValuesCollected = false;
   };
 
   /// A map type from functions to informatio about it.
@@ -1350,6 +1358,10 @@ private:
   /// Vector of functions that might be callable indirectly, i.a., via a
   /// function pointer.
   SmallVector<Function *> IndirectlyCallableFunctions;
+
+  /// Add the values only used by `llvm.assume`s in the function of \p FI to
+  /// AssumeOnlyValues. This is done on demand, as few users need them.
+  LLVM_ABI void collectAssumeOnlyValues(FunctionInfo &FI);
 
   /// Initialize the function information cache \p FI for the function \p F.
   ///
