@@ -1409,10 +1409,10 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     LLT Ty = MRI.getType(ValReg);
     if (Ty.isFloat()) { // source is float type
       Register R1 =
-          MIRBuilder.buildBitcast(LLT::integer(Ty.getSizeInBits()), ValReg)
+          MIRBuilder.buildBitcast(Ty.changeToInteger(), ValReg)
               .getReg(0);
       Register R2 =
-          MIRBuilder.buildAnyExt(LLT::integer(LocTy.getSizeInBits()), R1)
+          MIRBuilder.buildAnyExt(LocTy.changeToInteger(), R1)
               .getReg(0);
       if (LocTy.isFloat()) { // both source and destination are float type
         return MIRBuilder.buildBitcast(LocTy, R2).getReg(0);
@@ -1422,7 +1422,7 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     if (LocTy.isFloat()) { // source is not float type, but destination
                            // is float type
       Register R1 =
-          MIRBuilder.buildAnyExt(LLT::integer(LocTy.getSizeInBits()), ValReg)
+          MIRBuilder.buildAnyExt(LocTy.changeToInteger(), ValReg)
               .getReg(0);
       return MIRBuilder.buildBitcast(LocTy, R1).getReg(0);
     }

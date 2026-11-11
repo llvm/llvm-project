@@ -2203,7 +2203,7 @@ Register LegalizerHelper::coerceToInteger(Register Val) {
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLT NewTy = LLT::integer(Ty.getSizeInBits());
+  LLT NewTy = Ty.changeToInteger();
 
   if (Ty.isFloat())
     return MIRBuilder.buildBitcast(NewTy, Val).getReg(0);
@@ -9699,7 +9699,7 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   LLT Ty = MRI.getType(Dst0Reg);
   if (Ty.isFloat()) {
     Register R0 =
-        MIRBuilder.buildTrunc(LLT::integer(Ty.getSizeInBits()), SrcReg)
+        MIRBuilder.buildTrunc(Ty.changeToInteger(), SrcReg)
             .getReg(0);
     MIRBuilder.buildBitcast(Dst0Reg, R0);
   } else {
@@ -9715,7 +9715,7 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
     LLT Ty = MRI.getType(DstNReg);
     if (Ty.isFloat()) {
       Register R0 =
-          MIRBuilder.buildTrunc(LLT::integer(Ty.getSizeInBits()), Shift)
+          MIRBuilder.buildTrunc(Ty.changeToInteger(), Shift)
               .getReg(0);
       MIRBuilder.buildBitcast(DstNReg, R0);
     } else {
