@@ -42,13 +42,9 @@ class TestWatchpointSetEnable(TestBase):
             bkpt_after.GetNumLocations(), 1, "Failed setting the after breakpoint."
         )
 
-        process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, bkpt_before
         )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, bkpt_before)
-        self.assertTrue(thread.IsValid(), "We didn't stop at the before breakpoint.")
 
         ret_val = lldb.SBCommandReturnObject()
         self.dbg.GetCommandInterpreter().HandleCommand(

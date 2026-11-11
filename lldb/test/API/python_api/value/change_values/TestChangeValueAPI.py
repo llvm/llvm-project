@@ -46,16 +46,9 @@ class ChangeValueAPITestCase(TestBase):
         end_breakpoint = target.BreakpointCreateByLocation("main.c", self.end_line)
         self.assertTrue(end_breakpoint, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Get Frame #0.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint
         )
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.IsValid(), "Got a valid frame.")

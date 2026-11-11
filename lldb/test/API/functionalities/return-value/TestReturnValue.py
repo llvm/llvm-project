@@ -225,17 +225,8 @@ class ReturnValueTestCase(TestBase):
 
         error = lldb.SBError()
 
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
-        main_bktp = self.target.BreakpointCreateByName("main", exe)
-        self.assertTrue(main_bktp, VALID_BREAKPOINT)
-
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
-        )
-        self.assertEqual(
-            len(lldbutil.get_threads_stopped_at_breakpoint(self.process, main_bktp)), 1
+        self.target, self.process, _, _ = lldbutil.run_to_name_breakpoint(
+            self, "main", bkpt_module=exe
         )
         # nested struct tests
         self.return_and_test_struct_value("return_nested_one_float_three_base")

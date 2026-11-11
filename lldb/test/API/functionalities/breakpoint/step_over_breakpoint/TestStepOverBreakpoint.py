@@ -46,14 +46,9 @@ class StepOverBreakpointsTestCase(TestBase):
         self.breakpoint4 = self.target.BreakpointCreateByLocation(src, self.line4)
 
         # Start debugging
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
+        _, self.process, self.thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, self.breakpoint1
         )
-        self.assertIsNotNone(self.process, PROCESS_IS_VALID)
-        self.thread = lldbutil.get_one_thread_stopped_at_breakpoint(
-            self.process, self.breakpoint1
-        )
-        self.assertIsNotNone(self.thread, "Didn't stop at breakpoint 1.")
 
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4

@@ -36,14 +36,7 @@ class TestCppNsImport(TestBase):
         )
 
         # Launch the process
-        args = None
-        env = None
-        process = target.LaunchSimple(args, env, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, break_0)
 
         # Get current fream of the thread at the breakpoint
         frame = thread.GetSelectedFrame()

@@ -1048,16 +1048,8 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(bp_bar.IsValid(), "Breakpoint at bar should be valid")
         self.assertTrue(bp_baz.IsValid(), "Breakpoint at baz should be valid")
 
-        # Launch the process.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), "Process should be valid")
-
         # We should hit the foo breakpoint first.
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped, "Process should be stopped at foo"
-        )
-        thread = process.GetSelectedThread()
-        self.assertIsNotNone(thread, "Should have a selected thread")
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, bp_foo)
 
         # Register the provider at foo breakpoint.
         error = lldb.SBError()

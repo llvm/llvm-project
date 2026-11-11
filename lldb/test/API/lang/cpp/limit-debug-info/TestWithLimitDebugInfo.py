@@ -1,4 +1,3 @@
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -18,19 +17,16 @@ class TestWithLimitDebugInfo(TestBase):
         self.assertTrue(target.IsValid(), VALID_TARGET)
 
         # Break on main function
-        lldbutil.run_break_set_by_file_and_line(
+        break1_id = lldbutil.run_break_set_by_file_and_line(
             self, "derived.h", line_number("derived.h", "// break1")
         )
         lldbutil.run_break_set_by_file_and_line(
             self, "derived.h", line_number("derived.h", "// break2")
         )
 
-        # Launch the process
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(break1_id)
+        )
 
         self.expect_expr("1", result_type="int", result_value="1")
         self.expect_expr("this", result_type="Foo *")

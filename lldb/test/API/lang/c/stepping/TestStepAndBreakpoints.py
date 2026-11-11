@@ -57,18 +57,9 @@ class TestCStepping(TestBase):
         self.assertTrue(break_in_c, VALID_BREAKPOINT)
         breakpoints_to_disable.append(break_in_c)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_1_in_main)
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        thread = threads[0]
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, break_1_in_main
+        )
 
         # Get the stop id and for fun make sure it increases:
         old_stop_id = process.GetStopID()

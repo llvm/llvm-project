@@ -55,14 +55,9 @@ class DynamicValueTestCase(TestBase):
         )
         self.assertTrue(second_call_bpt, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, first_call_bpt)
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, first_call_bpt
+        )
 
         frame = thread.GetFrameAtIndex(0)
 

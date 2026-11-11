@@ -50,12 +50,10 @@ class SymbolContextTwoFilesTestCase(TestBase):
         self.assertIsNotNone(breakpoint2)
         self.assertTrue(breakpoint2.IsValid())
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertIsNotNone(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint2)
-        self.assertEqual(len(threads), 1)
-        frame = threads[0].GetFrameAtIndex(0)
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint2
+        )
+        frame = thread.GetFrameAtIndex(0)
         value = frame.FindVariable("x")
         self.assertTrue(value.IsValid())
 

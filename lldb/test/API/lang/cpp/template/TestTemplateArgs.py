@@ -18,30 +18,12 @@ class TemplateArgsTestCase(TestBase):
     def prepareProcess(self):
         self.build()
 
-        # Create a target by the debugger.
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set breakpoints inside and outside methods that take pointers to the
-        # containing struct.
         line = line_number("main.cpp", "// Breakpoint 1")
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", line, num_expected_locations=1, loc_exact=True
+        _, _, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), line
         )
-
-        arguments = None
-        environment = None
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            arguments, environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+        self.assertEqual(thread.GetFrameAtIndex(0).GetLineEntry().GetLine(), line)
 
         # Get frame for current thread
         return thread.GetSelectedFrame()

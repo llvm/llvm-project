@@ -63,16 +63,9 @@ class ObjCDynamicValueTestCase(TestBase):
             VALID_BREAKPOINT,
         )
 
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, main_before_setProperty_bkpt
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, main_before_setProperty_bkpt
         )
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
 
         #
         #  At this point, myObserver has a Source pointer that is actually a KVO swizzled SourceDerived

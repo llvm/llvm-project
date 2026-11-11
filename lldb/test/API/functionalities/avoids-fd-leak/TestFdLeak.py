@@ -58,16 +58,8 @@ class AvoidsFdLeakTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        target = self.dbg.CreateTarget(exe)
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "Set breakpoint here", lldb.SBFileSpec("main.c", False)
-        )
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        process1 = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process1, PROCESS_IS_VALID)
-        self.assertEqual(
-            process1.GetState(), lldb.eStateStopped, "Process should have been stopped."
+        lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint here", lldb.SBFileSpec("main.c", False)
         )
 
         target2 = self.dbg.CreateTarget(exe)

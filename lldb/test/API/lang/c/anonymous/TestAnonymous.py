@@ -131,27 +131,12 @@ class AnonymousTestCase(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         # Set breakpoints inside and outside methods that take pointers to the
         # containing struct.
-        lldbutil.run_break_set_by_file_and_line(
-            self, self.source, line, num_expected_locations=1, loc_exact=True
+        _, _, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), line
         )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+        self.assertEqual(thread.GetFrameAtIndex(0).GetLineEntry().GetLine(), line)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-
-        # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)

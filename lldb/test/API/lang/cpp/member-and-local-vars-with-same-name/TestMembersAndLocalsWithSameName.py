@@ -18,13 +18,9 @@ class TestMembersAndLocalsWithSameName(TestBase):
         bp4 = self.target.BreakpointCreateBySourceRegex("Break 4", self.src_file_spec)
         self.assertTrue(bp4.IsValid() and bp4.GetNumLocations() >= 1, VALID_BREAKPOINT)
 
-        # Launch the process
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
+        _, self.process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, bp1
         )
-        self.assertTrue(self.process.IsValid(), PROCESS_IS_VALID)
-
-        self.assertEqual(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         self._test_globals()
 
@@ -98,13 +94,9 @@ class TestMembersAndLocalsWithSameName(TestBase):
         bp7 = self.target.BreakpointCreateBySourceRegex("Break 7", self.src_file_spec)
         self.assertTrue(bp7.IsValid() and bp7.GetNumLocations() >= 1, VALID_BREAKPOINT)
 
-        # Launch the process
-        self.process = self.target.LaunchSimple(
-            None, None, self.get_process_working_directory()
+        _, self.process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, bp1
         )
-        self.assertTrue(self.process.IsValid(), PROCESS_IS_VALID)
-
-        self.assertEqual(self.process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         self._test_globals()
 

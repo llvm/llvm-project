@@ -40,10 +40,7 @@ class Char1632TestCase(TestBase):
 
         # Now launch the process, and do not stop at entry point and stop at
         # breakpoint1
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        if not process:
-            self.fail("SBTarget.Launch() failed")
+        lldbutil.run_to_breakpoint_do_run(self, target, target.GetBreakpointAtIndex(0))
 
         if self.TraceOn():
             self.runCmd("frame variable")

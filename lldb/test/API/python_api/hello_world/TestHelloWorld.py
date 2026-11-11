@@ -51,21 +51,7 @@ class HelloWorldTestCase(TestBase):
         breakpoint.SetEnabled(True)
         self.assertTrue(breakpoint.IsEnabled(), "Breakpoint.SetEnabled(True) works")
 
-        # rdar://problem/8364687
-        # SBTarget.Launch() issue (or is there some race condition)?
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        # The following isn't needed anymore, rdar://8364687 is fixed.
-        #
-        # Apply some dances after LaunchProcess() in order to break at "main".
-        # It only works sometimes.
-        # self.breakAfterLaunch(process, "main")
-
-        process = target.GetProcess()
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread)
+        lldbutil.run_to_breakpoint_do_run(self, target, breakpoint)
 
         # The breakpoint should have a hit count of 1.
         self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)

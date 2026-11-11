@@ -27,9 +27,7 @@ class BreakpointHitCountTestCase(TestBase):
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )
@@ -67,16 +65,9 @@ class BreakpointHitCountTestCase(TestBase):
         location2 = breakpoint.GetLocationAtIndex(1)
         self.assertTrue(location2 and location2.IsEnabled(), VALID_BREAKPOINT_LOCATION)
 
-        # Launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # Verify 1st breakpoint location is hit.
-        from lldbsuite.test.lldbutil import get_stopped_thread
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint
         )
 
         frame0 = thread.GetFrameAtIndex(0)
@@ -93,7 +84,7 @@ class BreakpointHitCountTestCase(TestBase):
         process.Continue()
 
         # Verify 2nd breakpoint location is hit.
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )
@@ -113,7 +104,7 @@ class BreakpointHitCountTestCase(TestBase):
         process.Continue()
 
         # Verify 2nd breakpoint location is hit again.
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
             thread.IsValid(), "There should be a thread stopped due to breakpoint"
         )

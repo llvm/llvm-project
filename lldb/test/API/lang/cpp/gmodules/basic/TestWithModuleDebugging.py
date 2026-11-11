@@ -17,29 +17,9 @@ class TestWithGmodulesDebugInfo(TestBase):
         src_file_spec = lldb.SBFileSpec(src_file)
         self.assertTrue(src_file_spec.IsValid(), "breakpoint file")
 
-        # Get the path of the executable
-        exe_path = self.getBuildArtifact("a.out")
-
-        # Load the executable
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target.IsValid(), VALID_TARGET)
-
         # Break on interesting line
-        breakpoint = target.BreakpointCreateBySourceRegex("break here", src_file_spec)
-        self.assertTrue(
-            breakpoint.IsValid() and breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT
-        )
-
-        # Launch the process
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-
-        # Get the thread of the process
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", src_file_spec
         )
 
         # Get frame for current thread

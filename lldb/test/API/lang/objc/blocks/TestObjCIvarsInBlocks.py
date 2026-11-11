@@ -39,15 +39,11 @@ class TestObjCIvarsInBlocks(TestBase):
         )
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Created a process.")
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Stopped it too.")
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint
+        )
 
         self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
-
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
-        thread = thread_list[0]
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame, "frame 0 is valid")

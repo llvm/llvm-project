@@ -30,11 +30,7 @@ class GenericListDataFormatterTestCase(TestBase):
         self.assertTrue(breakpoint2 and breakpoint2.IsValid())
 
         # Run the program, it should stop at breakpoint 1.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
-        self.assertEqual(
-            len(lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)), 1
-        )
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint1)
 
         # verify our list is displayed correctly
         self.expect(

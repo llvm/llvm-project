@@ -60,24 +60,9 @@ class TestGetVariables(TestBase):
         self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
         self.assertGreaterEqual(breakpoint3.GetNumLocations(), 1, PROCESS_IS_VALID)
 
-        # Register our shared libraries for remote targets so they get
-        # automatically uploaded
-        arguments = None
-        environment = None
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            arguments, environment, self.get_process_working_directory()
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, breakpoint1
         )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
-        self.assertEqual(
-            len(threads), 1, "There should be a thread stopped at breakpoint 1"
-        )
-
-        thread = threads[0]
-        self.assertTrue(thread.IsValid(), "Thread must be valid")
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid(), "Frame must be valid")
 
