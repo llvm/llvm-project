@@ -14762,20 +14762,18 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   unsigned OrigIdx = Op.getConstantOperandVal(2);
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
-  bool IsPExtInsert =
-      Subtarget.hasStdExtP() &&
-      (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8));
-
-  // Fold insert of a 32-bit packed type into a zero-filled 64-bit packed vector
-  // at index 0 (a zero-extend) to avoid scalarizing it into a byte-wise repack.
-  if (IsPExtInsert) {
-    if ((VecVT != MVT::v4i16 && VecVT != MVT::v8i8) ||
-        SubVecVT.getSizeInBits() != 32 || OrigIdx != 0 ||
-        !ISD::isConstantSplatVectorAllZeros(Vec.getNode()))
+  // Lower a 32-bit insert into a 64-bit packed vector on RV32 to an
+  // extract_subvector of the other half and a concat_vectors.
+  if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
+      (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)) {
+    unsigned HalfElts = VecVT.getVectorNumElements() / 2;
+    if (SubVecVT.getSizeInBits() != 32 || (OrigIdx != 0 && OrigIdx != HalfElts))
       return SDValue();
-
-    SDValue Zero = DAG.getConstant(0, DL, SubVecVT);
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Zero);
+    SDValue Other =
+        DAG.getExtractSubvector(DL, SubVecVT, Vec, OrigIdx == 0 ? HalfElts : 0);
+    return OrigIdx == 0
+               ? DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, SubVec, Other)
+               : DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Other, SubVec);
   }
 
   if (OrigIdx == 0 && Vec.isUndef())

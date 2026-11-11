@@ -47,11 +47,7 @@ define <2 x i32> @insert_zero_v1i32(<1 x i32> %v) {
 define <8 x i8> @insert_lo_v4i8(<8 x i8> %v, <4 x i8> %s) {
 ; RV32-LABEL: insert_lo_v4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insert_lo_v4i8:
@@ -78,11 +74,7 @@ define <8 x i8> @insert_lo_v4i8(<8 x i8> %v, <4 x i8> %s) {
 define <8 x i8> @insert_hi_v4i8(<8 x i8> %v, <4 x i8> %s) {
 ; RV32-LABEL: insert_hi_v4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insert_hi_v4i8:
@@ -111,11 +103,7 @@ define <8 x i8> @insert_hi_v4i8(<8 x i8> %v, <4 x i8> %s) {
 define <4 x i16> @insert_lo_v2i16(<4 x i16> %v, <2 x i16> %s) {
 ; RV32-LABEL: insert_lo_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insert_lo_v2i16:
@@ -136,11 +124,7 @@ define <4 x i16> @insert_lo_v2i16(<4 x i16> %v, <2 x i16> %s) {
 define <4 x i16> @insert_hi_v2i16(<4 x i16> %v, <2 x i16> %s) {
 ; RV32-LABEL: insert_hi_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insert_hi_v2i16:
@@ -161,14 +145,7 @@ define <4 x i16> @insert_hi_v2i16(<4 x i16> %v, <2 x i16> %s) {
 define <8 x i8> @insert_hi_undef_v4i8(<4 x i8> %s) {
 ; RV32-LABEL: insert_hi_undef_v4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    lw a1, 8(sp)
-; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insert_hi_undef_v4i8:
@@ -182,12 +159,8 @@ define <8 x i8> @insert_hi_undef_v4i8(<4 x i8> %s) {
 define <4 x i16> @insert_hi_zero_v2i16(<2 x i16> %s) {
 ; RV32-LABEL: insert_hi_zero_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    mv a1, a0
 ; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insert_hi_zero_v2i16:
