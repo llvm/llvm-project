@@ -1,4 +1,4 @@
-REQUIRES: arm-registered-target, mips-registered-target
+REQUIRES: arm-registered-target, mips-registered-target, x86-registered-target
 
 RUN: rm -rf %t && mkdir -p %t
 
