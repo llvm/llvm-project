@@ -819,6 +819,10 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
     const CallBase &CB, ArrayRef<PromotionCandidate> Candidates) {
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;
+  // A vtable comparison doesn't check the signature of the called value, so
+  // compare the called value for a call with a ptrauth bundle.
+  if (CB.getOperandBundle(LLVMContext::OB_ptrauth))
+    return false;
   LLVM_DEBUG(dbgs() << "\nEvaluating vtable profitability for callsite #"
                     << NumOfPGOICallsites << CB << "\n");
   const size_t CandidateSize = Candidates.size();

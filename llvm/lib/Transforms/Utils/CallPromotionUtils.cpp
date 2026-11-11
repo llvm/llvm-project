@@ -387,9 +387,34 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
 
   // Create the compare. The called value and callee must have the same type to
   // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
-  auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
+  Value *CalledValue = CB.getCalledOperand();
+  if (CalledValue->getType() != Callee->getType())
+    Callee = Builder.CreateBitCast(Callee, CalledValue->getType());
+
+  Value *Cond;
+  auto PtrAuthBundle = CB.getOperandBundle(LLVMContext::OB_ptrauth);
+  if (!PtrAuthBundle) {
+    Cond = Builder.CreateICmpEQ(CalledValue, Callee);
+  } else if (auto *Disc = dyn_cast<ConstantInt>(PtrAuthBundle->Inputs[1])) {
+    // The call authenticates the called value, a signed pointer, so compare it
+    // with the callee signed with the same key and discriminator.
+    auto *Key = cast<ConstantInt>(PtrAuthBundle->Inputs[0]);
+    auto *Null = ConstantPointerNull::get(Builder.getPtrTy());
+    Constant *SignedCallee =
+        ConstantPtrAuth::get(cast<Constant>(Callee), Key, Disc,
+                             /*AddrDisc=*/Null, /*DeactivationSymbol=*/Null);
+    Cond = Builder.CreateICmpEQ(CalledValue, SignedCallee);
+  } else {
+    // The discriminator is only known at run time, for example because it is
+    // blended with the address the called value was loaded from. Authenticate
+    // the called value, and compare the result with the callee.
+    Value *Auth = Builder.CreateIntrinsic(
+        Intrinsic::ptrauth_auth,
+        {Builder.CreatePtrToInt(CalledValue, Builder.getInt64Ty()),
+         PtrAuthBundle->Inputs[0], PtrAuthBundle->Inputs[1]});
+    Cond = Builder.CreateICmpEQ(
+        Auth, Builder.CreatePtrToInt(Callee, Builder.getInt64Ty()));
+  }
 
   // The address comparison has made the callee's address significant.
   // Strip unnamed_addr so the symbol is recorded as address-significant
@@ -397,21 +422,25 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
   if (auto *GV = dyn_cast<GlobalValue>(Callee->stripPointerCasts()))
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
-  return versionCallSiteWithCond(CB, Cond, BranchWeights);
+  bool HasPtrAuthBundle = PtrAuthBundle.has_value();
+  CallBase &NewInst = versionCallSiteWithCond(CB, Cond, BranchWeights);
+  if (!HasPtrAuthBundle)
+    return NewInst;
+
+  // The condition has checked the signature, so the clone doesn't need to
+  // authenticate the called value again, and once it calls the callee directly
+  // it can't have a ptrauth bundle.
+  CallBase *NewCall = CallBase::removeOperandBundle(
+      &NewInst, LLVMContext::OB_ptrauth, NewInst.getIterator());
+  NewCall->copyMetadata(NewInst);
+  NewInst.replaceAllUsesWith(NewCall);
+  NewInst.eraseFromParent();
+  return *NewCall;
 }
 
 bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
-
-  // A call with a ptrauth bundle authenticates its callee, a signed pointer,
-  // before calling it. A direct call cannot have a ptrauth bundle, and the
-  // signed pointer does not compare equal to the address of Callee.
-  if (CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
-    if (FailureReason)
-      *FailureReason = "Call has a ptrauth bundle";
-    return false;
-  }
 
   auto &DL = Callee->getDataLayout();
 

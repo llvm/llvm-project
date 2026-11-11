@@ -107,6 +107,11 @@ LLVM_ABI bool tryPromoteCall(CallBase &CB);
 /// the given callee. The original call site is moved into the "else" block,
 /// and a clone of the call site is placed in the "then" block. The cloned
 /// instruction is returned.
+///
+/// If the call site has a ptrauth bundle, the called value is a signed
+/// pointer. With a constant discriminator, the condition compares it to the
+/// callee signed the same way; otherwise, it authenticates the called value
+/// and compares the result to the callee. The clone has no ptrauth bundle.
 LLVM_ABI CallBase &versionCallSite(CallBase &CB, Value *Callee,
                                    MDNode *BranchWeights);
 
