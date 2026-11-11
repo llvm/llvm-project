@@ -1,6 +1,6 @@
 ## Keep cold stubs after the hot path, relaxing compressed conditional branches
 ## as needed, and preserve the source's unwind state. Beyond the 4 KiB branch
-## range, keep the stub next to the source.
+## range, keep separate stubs next to their sources even for the same target.
 
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
@@ -20,6 +20,8 @@
 # CHECK-LABEL: <large>:
 # CHECK-NEXT: {{.*}}bnez a0,
 # CHECK-NEXT: {{.*}}auipc t1,
+# CHECK: bnez a1,
+# CHECK-NEXT: auipc t1,
 # CHECK: 0x[[#STUB]]: CFA=X2+16
 
   .text
@@ -62,6 +64,10 @@ large_cold:
   li t1, 0
   ret
 large_hot:
+  beqz a1, large_cold
+# FDATA: 1 large #large_hot# 1 large #large_cold# 0 0
+# FDATA: 1 large #large_hot# 1 large #large_tail# 0 100
+large_tail:
   li t1, 1
   .rept 2200
   addi a1, a1, 1
