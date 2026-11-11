@@ -199,12 +199,6 @@ mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
 }
 std::unique_ptr<Pass> mlir::createInlinerPass(
     llvm::StringMap<OpPassManager> opPipelines,
-    std::function<void(OpPassManager &)> defaultPipelineBuilder) {
-  return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),
-                                       std::move(opPipelines));
-}
-std::unique_ptr<Pass> mlir::createInlinerPass(
-    llvm::StringMap<OpPassManager> opPipelines,
     std::function<void(OpPassManager &)> defaultPipelineBuilder,
     Inliner::ProfitabilityCallbackTy profitabilityCb) {
   return std::make_unique<InlinerPass>(std::move(defaultPipelineBuilder),

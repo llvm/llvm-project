@@ -77,16 +77,12 @@ createInlinerPass(llvm::StringMap<OpPassManager> opPipelines);
 /// Creates an instance of the inliner pass, and use the provided pass managers
 /// when optimizing callable operations with names matching the key type.
 /// Callable operations with a name not within the provided map will use the
-/// provided default pipeline builder.
-std::unique_ptr<Pass>
-createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
-                  std::function<void(OpPassManager &)> defaultPipelineBuilder);
-/// Same as above, but a call is inlined only if `profitabilityCb` also returns
-/// true for it.
+/// provided default pipeline builder. If `profitabilityCb` is set, a call is
+/// inlined only if it also returns true for it.
 std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder,
-                  Inliner::ProfitabilityCallbackTy profitabilityCb);
+                  Inliner::ProfitabilityCallbackTy profitabilityCb = nullptr);
 
 /// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.
