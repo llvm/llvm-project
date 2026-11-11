@@ -30,6 +30,7 @@ class Builtin_Attr<string name, string attrMnemonic, list<Trait> traits = [],
     : AttrDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
   let attrName = "builtin." # attrMnemonic;
+  let cppIncludes = ["mlir/IR/BuiltinAttributes.h"];
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,7 +8,6 @@
 ---
 name:            slt_to_sle_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -44,7 +43,6 @@ body:             |
 ---
 name:            slt_to_sle_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -80,7 +78,6 @@ body:             |
 ---
 name:            sge_to_sgt_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -116,7 +113,6 @@ body:             |
 ---
 name:            sge_to_sgt_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -152,7 +148,6 @@ body:             |
 ---
 name:            ult_to_ule_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -188,7 +183,6 @@ body:             |
 ---
 name:            ult_to_ule_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -224,7 +218,6 @@ body:             |
 ---
 name:            uge_to_ugt_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -260,7 +253,6 @@ body:             |
 ---
 name:            uge_to_ugt_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -296,7 +288,6 @@ body:             |
 ---
 name:            sle_to_slt_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -333,7 +324,6 @@ body:             |
 ---
 name:            sle_to_slt_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -369,7 +359,6 @@ body:             |
 ---
 name:            sgt_to_sge_s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -405,7 +394,6 @@ body:             |
 ---
 name:            sgt_to_sge_s64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -441,7 +429,6 @@ body:             |
 ---
 name:            no_opt_int32_min
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -480,7 +467,6 @@ body:             |
 ---
 name:            no_opt_int64_min
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -519,7 +505,6 @@ body:             |
 ---
 name:            no_opt_int32_max
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -558,7 +543,6 @@ body:             |
 ---
 name:            no_opt_int64_max
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -598,7 +582,6 @@ body:             |
 ---
 name:            no_opt_zero
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -636,7 +619,6 @@ body:             |
 ---
 name:            cmp_and_select
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -676,7 +658,6 @@ body:             |
 ---
 name:             andsxri
 legalized: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0

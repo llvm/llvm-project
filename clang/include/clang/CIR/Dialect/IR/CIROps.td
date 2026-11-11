@@ -71,6 +71,18 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //     }
 //   }
 //
+// The LLVM operation is built with default properties. `llvmOpProps` lists
+// CIR attributes and properties whose values are forwarded to it. Each value
+// is converted by the `convertToLLVMProperty` overload for its C++ type and
+// stored into the LLVM property of the same name, or of the name given as a
+// string when the two differ:
+//
+//   let llvmOp = "AddOp";
+//   let llvmOpProps = (ins $overflow_flags);
+//
+//   let llvmOp = "CountLeadingZerosOp";
+//   let llvmOpProps = (ins "is_zero_poison":$poison_zero);
+//
 // If you want fully customized LLVM IR lowering logic, simply exclude the
 // `llvmOp` field from your CIR operation definition.
 //
@@ -85,6 +97,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // exception-behavior metadata argument.
 class LLVMLoweringInfo {
   string llvmOp = "";
+  dag llvmOpProps = (ins);
   string constrainedLLVMIntrinsic = "";
   bit constrainedLLVMIntrinsicHasRoundingMode = true;
 }
@@ -2837,8 +2850,8 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
   }];
 }
 
-class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
-                                    list<Trait> traits = []>
+class CIR_BinaryOpWithOverflowFlags<string mnemonic, string llvmOpName,
+                                    Type type, list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, type, traits>
 {
   let append traits = [Pure];
@@ -2850,6 +2863,9 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
   let assemblyFormat = [{
     ($overflow_flags^)? $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
+
+  let llvmOp = llvmOpName;
+  let llvmOpProps = (ins $overflow_flags);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2857,7 +2873,8 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
 //===----------------------------------------------------------------------===//
 
 def CIR_AddOp
-    : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyIntOrVecOrMatrixOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"add", "AddOp",
+                                    CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer addition";
   let description = [{
     The `cir.add` operation performs addition on integer operands. Both
@@ -2886,7 +2903,8 @@ def CIR_AddOp
 //===----------------------------------------------------------------------===//
 
 def CIR_SubOp
-    : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyIntOrVecOrMatrixOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"sub", "SubOp",
+                                    CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer subtraction";
   let description = [{
     The `cir.sub` operation performs subtraction on integer operands. Both
@@ -2915,7 +2933,8 @@ def CIR_SubOp
 //===----------------------------------------------------------------------===//
 
 def CIR_MulOp
-    : CIR_BinaryOpWithOverflowFlags<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
+    : CIR_BinaryOpWithOverflowFlags<"mul", "MulOp",
+                                    CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
@@ -3539,9 +3558,8 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
   // TODO: sym_visibility can possibly be represented by implementing the
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       DefaultValuedProp<
-                        EnumProp<CIR_VisibilityKind>,
-                        "cir::VisibilityKind::Default"
+                       DefaultValuedEnumProp<
+                        CIR_VisibilityKind, CIR_VisibilityDefault
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
@@ -3890,7 +3908,8 @@ def CIR_VTTAddrPointOp : CIR_Op<"vtt.address_point", [
     The second parameter `offset` provides a virtual step to adjust to
     the actual address point of the vtable.
 
-    The return type is always a `!cir.ptr<!cir.ptr<void>>`.
+    The return type is always a `!cir.ptr<!cir.ptr<void>>`. Either pointer
+    level may carry an address space.
 
     Example:
     ```
@@ -4453,9 +4472,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    DefaultValuedProp<
-      EnumProp<CIR_VisibilityKind>,
-      "cir::VisibilityKind::Default"
+    DefaultValuedEnumProp<
+      CIR_VisibilityKind, CIR_VisibilityDefault
     >:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
@@ -4805,7 +4823,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<mlir::SymbolRefAttr>("callee");
+      if (auto calling =
+              (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+        return calling;
+      return getOperand(0);
     }
 
     /// Set the callee for this operation.
@@ -6475,6 +6496,8 @@ def CIR_VecInsertOp : CIR_Op<"vec.insert", [
     $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
     qualified(type($vec))
   }];
+
+  let llvmOp = "InsertElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6506,6 +6529,8 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
   }];
 
   let hasFolder = 1;
+
+  let llvmOp = "ExtractElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6564,9 +6589,9 @@ def CIR_VecReduceXorOp
     : CIR_VecReduceOp<"xor", CIR_VectorOfIntOrBoolType,
                       "vector_reduce_xor">;
 
-// Floating-point reductions use custom lowering to translate CIR fast-math
-// flags to the corresponding LLVM dialect attribute.
-class CIR_VecReduceFPOp<string mnemonic>
+// Floating-point reductions carry fast-math flags, forwarded to the LLVM op
+// through `llvmOpProps`.
+class CIR_VecReduceFPOp<string mnemonic, string llvmOpName>
     : CIR_Op<"vec.reduce." # mnemonic, [
   Pure,
   TypesMatchWith<"type of 'result' matches element type of 'input'",
@@ -6584,12 +6609,15 @@ class CIR_VecReduceFPOp<string mnemonic>
     `(` $input `)` `:` functional-type(operands, results)
     prop-dict attr-dict
   }];
+
+  let llvmOp = llvmOpName;
+  let llvmOpProps = (ins $fastmath_flags);
 }
 
-def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax">;
-def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin">;
+def CIR_VecReduceFMaxOp : CIR_VecReduceFPOp<"fmax", "vector_reduce_fmax">;
+def CIR_VecReduceFMinOp : CIR_VecReduceFPOp<"fmin", "vector_reduce_fmin">;
 
-class CIR_VecReduceAccFPOp<string mnemonic>
+class CIR_VecReduceAccFPOp<string mnemonic, string llvmOpName>
     : CIR_Op<"vec.reduce." # mnemonic, [
   Pure,
   TypesMatchWith<"type of 'accumulator' matches element type of 'input'",
@@ -6611,10 +6639,13 @@ class CIR_VecReduceAccFPOp<string mnemonic>
     `(` $accumulator `,` $input `)` `:` functional-type(operands, results)
     prop-dict attr-dict
   }];
+
+  let llvmOp = llvmOpName;
+  let llvmOpProps = (ins $fastmath_flags);
 }
 
-def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd">;
-def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul">;
+def CIR_VecReduceFAddOp : CIR_VecReduceAccFPOp<"fadd", "vector_reduce_fadd">;
+def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul", "vector_reduce_fmul">;
 
 //===----------------------------------------------------------------------===//
 // VecCmpOp
@@ -7782,6 +7813,8 @@ class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
     $input (`poison_zero` $poison_zero^)?
     `:` type($result) attr-dict
   }];
+
+  let llvmOpProps = (ins "is_zero_poison":$poison_zero);
 }
 
 def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
@@ -7837,6 +7870,8 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
     %1 = cir.clz %0 poison_zero : !u32i
     ```
   }];
+
+  let llvmOp = "CountLeadingZerosOp";
 }
 
 def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
@@ -7862,6 +7897,8 @@ def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
     %1 = cir.ctz %0 poison_zero : !u32i
     ```
   }];
+
+  let llvmOp = "CountTrailingZerosOp";
 }
 
 def CIR_BitFfsOp : CIR_BitOpBase<"ffs", CIR_SIntOfWidths<[32, 64]>> {
@@ -7921,6 +7958,8 @@ def CIR_BitPopcountOp : CIR_BitOpBase<"popcount", CIR_AnyUIntType > {
     %1 = cir.popcount %0 : !u32i
     ```
   }];
+
+  let llvmOp = "CtPopOp";
 }
 
 def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
@@ -8161,6 +8200,9 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
   let assemblyFormat = [{
     $src `,` enum($flags) `:` functional-type($src, $result) attr-dict
   }];
+
+  let llvmOp = "IsFPClass";
+  let llvmOpProps = (ins "bit":$flags);
 }
 
 //===----------------------------------------------------------------------===//
@@ -8727,6 +8769,9 @@ def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
   let results = (outs CIR_AnySIntOrVecOfSIntType:$result);
 
   let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
+
+  let llvmOp = "AbsOp";
+  let llvmOpProps = (ins "is_int_min_poison":$min_is_poison);
 }
 
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
@@ -8923,6 +8968,44 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   }];
 
   let constrainedLLVMIntrinsic = "atan2";
+}
+
+def CIR_LdexpOp : CIR_Op<"ldexp",
+    !listconcat([AllTypesMatch<["src", "result"]>], CIR_FenvOpTraits)> {
+  let summary = "Multiplies a floating-point value by an integral power of two";
+  let description = [{
+    `cir.ldexp` computes `src * 2^exp`.
+
+    Lowers to `llvm.ldexp`, or to `llvm.experimental.constrained.ldexp` when
+    the `fenv` attribute is present.
+
+    Example:
+      %r = cir.ldexp %x, %e : !cir.float, !s32i
+  }];
+
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$src,
+    CIR_AnyIntOrVecOfIntType:$exp,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $src `,` $exp `:` qualified(type($src)) `,` qualified(type($exp))
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src, "mlir::Value":$exp), [{
+      build($_builder, $_state, src, exp, cir::FenvAttr{});
+    }]>
+  ];
+
+  let hasVerifier = 1;
+
+  let llvmOp = "LoadExpOp";
+  let constrainedLLVMIntrinsic = "ldexp";
 }
 
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
