@@ -1620,7 +1620,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (numVLAElements)
     numElements =
         builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
-                          cir::OverflowBehavior::NoUnsignedWrap);
+                          cir::OverflowFlags::NoUnsignedWrap);
 
   return numElements;
 }
@@ -1676,7 +1676,7 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
 
       numElements =
           builder.createMul(numElements.getLoc(), numElements, vlaSize,
-                            cir::OverflowBehavior::NoUnsignedWrap);
+                            cir::OverflowFlags::NoUnsignedWrap);
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 

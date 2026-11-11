@@ -384,8 +384,8 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-cpu"="neoverse-v1" }
-attributes #1 = { "target-cpu"="neoverse-v2" }
+attributes #0 = { "target-cpu"="neoverse-v1" vscale_range(1,16) }
+attributes #1 = { "target-cpu"="neoverse-v2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}

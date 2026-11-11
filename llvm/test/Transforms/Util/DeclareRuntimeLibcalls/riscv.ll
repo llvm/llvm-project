@@ -225,7 +225,7 @@
 ; RV32-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; RV32-NEXT: declare fp128 @__powl_finite(fp128, fp128)
 ; RV32-NEXT: declare i32 @__riscv_flush_icache(ptr, ptr, i32)
-; RV32-NEXT: declare void @__stack_chk_fail()
+; RV32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare double @__subdf3(double, double)
 ; RV32-NEXT: declare float @__subsf3(float, float)
 ; RV32-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -386,9 +386,9 @@
 ; RV32-NEXT: declare float @fmodf(float, float)
 ; RV32-NEXT: declare fp128 @fmodl(fp128, fp128)
 ; RV32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; RV32-NEXT: declare double @frexp(double, ptr)
-; RV32-NEXT: declare float @frexpf(float, ptr)
-; RV32-NEXT: declare fp128 @frexpl(fp128, ptr)
+; RV32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV32-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; RV32-NEXT: declare double @ldexp(double, i32)
 ; RV32-NEXT: declare float @ldexpf(float, i32)
 ; RV32-NEXT: declare fp128 @ldexpl(fp128, i32)
@@ -417,9 +417,9 @@
 ; RV32-NEXT: declare ptr @memcpy(ptr, ptr, i32)
 ; RV32-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; RV32-NEXT: declare ptr @memset(ptr, i32, i32)
-; RV32-NEXT: declare double @modf(double, ptr)
-; RV32-NEXT: declare float @modff(float, ptr)
-; RV32-NEXT: declare fp128 @modfl(fp128, ptr)
+; RV32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; RV32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV32-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; RV32-NEXT: declare double @nan(ptr)
 ; RV32-NEXT: declare float @nanf(ptr)
 ; RV32-NEXT: declare fp128 @nanl(ptr)
@@ -435,9 +435,9 @@
 ; RV32-NEXT: declare double @remainder(double, double)
 ; RV32-NEXT: declare float @remainderf(float, float)
 ; RV32-NEXT: declare fp128 @remainderl(fp128, fp128)
-; RV32-NEXT: declare double @remquo(double, double, ptr)
-; RV32-NEXT: declare float @remquof(float, float, ptr)
-; RV32-NEXT: declare fp128 @remquol(fp128, fp128, ptr)
+; RV32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV32-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; RV32-NEXT: declare double @rint(double)
 ; RV32-NEXT: declare float @rintf(float)
 ; RV32-NEXT: declare fp128 @rintl(fp128)
@@ -474,6 +474,7 @@
 ; RV32-NEXT: declare double @trunc(double)
 ; RV32-NEXT: declare float @truncf(float)
 ; RV32-NEXT: declare fp128 @truncl(fp128)
+; RV32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; RV32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -703,7 +704,7 @@
 ; RV64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; RV64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
 ; RV64-NEXT: declare signext i32 @__riscv_flush_icache(ptr, ptr, i64)
-; RV64-NEXT: declare void @__stack_chk_fail()
+; RV64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare double @__subdf3(double, double)
 ; RV64-NEXT: declare float @__subsf3(float, float)
 ; RV64-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -864,9 +865,9 @@
 ; RV64-NEXT: declare float @fmodf(float, float)
 ; RV64-NEXT: declare fp128 @fmodl(fp128, fp128)
 ; RV64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; RV64-NEXT: declare double @frexp(double, ptr)
-; RV64-NEXT: declare float @frexpf(float, ptr)
-; RV64-NEXT: declare fp128 @frexpl(fp128, ptr)
+; RV64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV64-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; RV64-NEXT: declare double @ldexp(double, i32 signext)
 ; RV64-NEXT: declare float @ldexpf(float, i32 signext)
 ; RV64-NEXT: declare fp128 @ldexpl(fp128, i32 signext)
@@ -895,9 +896,9 @@
 ; RV64-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; RV64-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; RV64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; RV64-NEXT: declare double @modf(double, ptr)
-; RV64-NEXT: declare float @modff(float, ptr)
-; RV64-NEXT: declare fp128 @modfl(fp128, ptr)
+; RV64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; RV64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV64-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; RV64-NEXT: declare double @nan(ptr)
 ; RV64-NEXT: declare float @nanf(ptr)
 ; RV64-NEXT: declare fp128 @nanl(ptr)
@@ -913,9 +914,9 @@
 ; RV64-NEXT: declare double @remainder(double, double)
 ; RV64-NEXT: declare float @remainderf(float, float)
 ; RV64-NEXT: declare fp128 @remainderl(fp128, fp128)
-; RV64-NEXT: declare double @remquo(double, double, ptr)
-; RV64-NEXT: declare float @remquof(float, float, ptr)
-; RV64-NEXT: declare fp128 @remquol(fp128, fp128, ptr)
+; RV64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; RV64-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; RV64-NEXT: declare double @rint(double)
 ; RV64-NEXT: declare float @rintf(float)
 ; RV64-NEXT: declare fp128 @rintl(fp128)
@@ -952,6 +953,7 @@
 ; RV64-NEXT: declare double @trunc(double)
 ; RV64-NEXT: declare float @truncf(float)
 ; RV64-NEXT: declare fp128 @truncl(fp128)
+; RV64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; RV64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

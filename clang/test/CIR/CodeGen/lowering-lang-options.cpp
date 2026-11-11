@@ -27,12 +27,15 @@ int x;
 // PLAIN-SAME: cuda_is_device = false
 // PLAIN-SAME: hip = false
 // PLAIN-SAME: hlsl = false
+// PLAIN-SAME: sycl_is_device = false
 // PLAIN-SAME: gpu_rdc = false
 // PLAIN-SAME: openmp = false
 // PLAIN-SAME: openmp_is_target_device = false
 // PLAIN-SAME: clang_abi_compat = {{[0-9]+}}
 // PLAIN-SAME: long_double_size = 0
-// PLAIN-SAME: enable_noundef_attrs = true>
+// PLAIN-SAME: enable_noundef_attrs = true
+// PLAIN-SAME: no_trapping_math = true
+// PLAIN-SAME: ssp_buffer_size = 8>
 
 // -fexceptions -fcxx-exceptions flips exceptions. (OpenMP is exercised in the
 // #cir.lowering_options round-trip test, since -fopenmp on a global here hits
@@ -43,7 +46,7 @@ int x;
 // EXC-SAME: openmp = false
 // EXC-SAME: openmp_is_target_device = false
 // EXC-SAME: clang_abi_compat = {{[0-9]+}}
-// EXC-SAME: enable_noundef_attrs = true>
+// EXC-SAME: enable_noundef_attrs = true,
 
 // LD: cir.lowering_options = #cir.lowering_options<
 // LD-SAME: long_double_size = 128
@@ -51,4 +54,4 @@ int x;
 // -no-enable-noundef-analysis clears enable_noundef_attrs.
 // NONOUNDEF: cir.lowering_options = #cir.lowering_options<
 // NONOUNDEF-SAME: exceptions = false
-// NONOUNDEF-SAME: enable_noundef_attrs = false>
+// NONOUNDEF-SAME: enable_noundef_attrs = false,

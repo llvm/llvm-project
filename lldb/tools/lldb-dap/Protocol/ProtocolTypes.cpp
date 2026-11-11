@@ -1223,6 +1223,8 @@ llvm::json::Value toJSON(const StackFrame &SF) {
   }
   if (SF.canRestart)
     result.insert({"canRestart", SF.canRestart});
+  if (SF.isOptimized)
+    result.insert({"$__lldb_isOptimized", SF.isOptimized});
   if (SF.instructionPointerReference != LLDB_INVALID_ADDRESS)
     result.insert({"instructionPointerReference",
                    EncodeMemoryReference(SF.instructionPointerReference)});
