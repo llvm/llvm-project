@@ -1471,14 +1471,14 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     default:
       if (MI->getOpcode() == TargetOpcode::G_ANYEXT &&
           (DstTy.isFloatOrFloatVector() || SrcTy.isFloatOrFloatVector())) {
-        report("G_TRUNC/G_ANYEXT doesn't accept scalar float type", MI);
+        report("G_TRUNC/G_ANYEXT doesn't accept float type", MI);
       }
       if (DstSize <= SrcSize)
         report("Generic extend has destination type no larger than source", MI);
       break;
     case TargetOpcode::G_TRUNC:
       if (DstTy.isFloatOrFloatVector() || SrcTy.isFloatOrFloatVector()) {
-        report("G_TRUNC/G_ANYEXT doesn't accept scalar float type", MI);
+        report("G_TRUNC/G_ANYEXT doesn't accept float type", MI);
       }
       [[fallthrough]];
     case TargetOpcode::G_TRUNC_SSAT_S:
