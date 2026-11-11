@@ -280,14 +280,18 @@ sink:
 define ptr @inttoptr_merge(i1 %cond, i64 %a, ptr %b) {
 ; CHECK-LABEL: @inttoptr_merge(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       BB0:
-; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[A:%.*]] to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A:%.*]] to b64
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       BB1:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[B:%.*]] to b64
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi ptr [ [[B:%.*]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    [[STOREMERGE1:%.*]] = phi b64 [ [[TMP1]], [[BB1]] ], [ [[TMP0]], [[BB0]] ]
+; CHECK-NEXT:    store b64 [[STOREMERGE1]], ptr [[ALLOCA]], align 8
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = load ptr, ptr [[ALLOCA]], align 8
 ; CHECK-NEXT:    ret ptr [[STOREMERGE]]
 ;
 entry:
@@ -359,13 +363,13 @@ define void @int_byte_merge(ptr %p, i1 %c, b16 %v, i16 %w) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b16 [[V:%.*]] to i16
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16 [[W:%.*]] to b16
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi b16 [ [[TMP0]], [[ELSE]] ], [ [[V:%.*]], [[THEN]] ]
+; CHECK-NEXT:    store b16 [[STOREMERGE]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -417,13 +421,13 @@ define void @byte_vec_int_merge(ptr %p, i1 %c, <2 x b8> %v, i16 %w) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x b8> [[V:%.*]] to i16
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16 [[W:%.*]] to <2 x b8>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i16 [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store i16 [[STOREMERGE]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <2 x b8> [ [[TMP0]], [[ELSE]] ], [ [[V:%.*]], [[THEN]] ]
+; CHECK-NEXT:    store <2 x b8> [[STOREMERGE]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -446,13 +450,13 @@ define void @vec_merge_finer_lanes(ptr %p, i1 %c, <4 x i32> %v, <2 x i64> %w) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[V:%.*]] to <2 x i64>
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[W:%.*]] to <4 x i32>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <2 x i64> [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store <2 x i64> [[STOREMERGE]], ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <4 x i32> [ [[TMP0]], [[ELSE]] ], [ [[V:%.*]], [[THEN]] ]
+; CHECK-NEXT:    store <4 x i32> [[STOREMERGE]], ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -475,13 +479,14 @@ define void @vec_merge_mismatched_lanes(ptr %p, i1 %c, <5 x i4> %v, <4 x i5> %w)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <5 x i4> [[V:%.*]] to <4 x i5>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <5 x i4> [[V:%.*]] to b20
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i5> [[W:%.*]] to b20
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <4 x i5> [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store <4 x i5> [[STOREMERGE]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi b20 [ [[TMP1]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store b20 [[STOREMERGE]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -504,13 +509,14 @@ define void @ptr_int_merge(ptr %p, i1 %c, ptr %v, i64 %w) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[V:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[V:%.*]] to b64
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[W:%.*]] to b64
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store i64 [[STOREMERGE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi b64 [ [[TMP1]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store b64 [[STOREMERGE]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -533,13 +539,14 @@ define void @int_ptr_merge(ptr %p, i1 %c, i64 %v, ptr %w) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[V:%.*]] to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V:%.*]] to b64
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[W:%.*]] to b64
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi ptr [ [[W:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store ptr [[STOREMERGE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi b64 [ [[TMP1]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
+; CHECK-NEXT:    store b64 [[STOREMERGE]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

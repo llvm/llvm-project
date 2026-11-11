@@ -1682,6 +1682,31 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   return nullptr;
 }
 
+/// Return true only if casting from one type to the other does not imply
+/// a provenance drop or poison to be spread across lanes.
+static bool isLosslessCast(Type *From, Type *To) {
+  if (From == To || To->isByteOrByteVectorTy())
+    return true;
+  if (From->isByteOrByteVectorTy() || From->isPtrOrPtrVectorTy() ||
+      To->isPtrOrPtrVectorTy())
+    return false;
+  // Casting from a smaller type to a larger one, would make poison spread.
+  return From->getScalarSizeInBits() % To->getScalarSizeInBits() == 0;
+}
+
+static Type *getMergedStoreType(Type *A, Type *B, const DataLayout &DL) {
+  if (isLosslessCast(B, A))
+    return A;
+  if (isLosslessCast(A, B))
+    return B;
+
+  // If no cast is lossless, fall back to a byte of the same size.
+  TypeSize Bits = DL.getTypeSizeInBits(A);
+  if (Bits.isScalable())
+    return A;
+  return ByteType::get(A->getContext(), Bits.getFixedValue());
+}
+
 /// Try to transform:
 ///   if () { *P = v1; } else { *P = v2 }
 /// or:
@@ -1787,12 +1812,14 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   DebugLoc MergedLoc =
       DebugLoc::getMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
   if (MergedVal != SI.getValueOperand()) {
-    PHINode *PN =
-        PHINode::Create(SI.getValueOperand()->getType(), 2, "storemerge");
-    PN->addIncoming(SI.getValueOperand(), SI.getParent());
+    Type *PhiTy = getMergedStoreType(SI.getValueOperand()->getType(),
+                                     MergedVal->getType(), DL);
+    PHINode *PN = PHINode::Create(PhiTy, 2, "storemerge");
+    Builder.SetInsertPoint(&SI);
+    PN->addIncoming(Builder.CreateBitOrPointerCast(SI.getValueOperand(), PhiTy),
+                    SI.getParent());
     Builder.SetInsertPoint(OtherStore);
-    PN->addIncoming(Builder.CreateBitOrPointerCast(MergedVal, PN->getType()),
-                    OtherBB);
+    PN->addIncoming(Builder.CreateBitOrPointerCast(MergedVal, PhiTy), OtherBB);
     MergedVal = InsertNewInstBefore(PN, DestBB->begin());
     PN->setDebugLoc(MergedLoc);
   }
