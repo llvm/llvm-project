@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #include "SPIRVOpUtils.h"
@@ -312,29 +313,31 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 /// matrix, or an aggregate recursively containing only such types. Without an
 /// enclosing `module` any pointer is accepted.
 static bool isConcreteType(Type type, spirv::ModuleOp module) {
-  if (auto pointerType = dyn_cast<spirv::PointerType>(type)) {
-    if (!module)
-      return true;
-    spirv::AddressingModel addressingModel = module.getAddressingModel();
-    if (addressingModel == spirv::AddressingModel::Logical)
-      return false;
-    return addressingModel != spirv::AddressingModel::PhysicalStorageBuffer64 ||
-           pointerType.getStorageClass() ==
-               spirv::StorageClass::PhysicalStorageBuffer;
-  }
-  if (isa<spirv::ScalarType>(type))
-    return !type.isInteger(1);
-  if (auto vectorType = dyn_cast<VectorType>(type))
-    return isConcreteType(vectorType.getElementType(), module);
-  if (auto matrixType = dyn_cast<spirv::MatrixType>(type))
-    return isConcreteType(matrixType.getColumnType(), module);
-  if (auto arrayType = dyn_cast<spirv::ArrayType>(type))
-    return isConcreteType(arrayType.getElementType(), module);
-  if (auto structType = dyn_cast<spirv::StructType>(type))
-    return llvm::all_of(structType.getElementTypes(), [&](Type elementType) {
-      return isConcreteType(elementType, module);
-    });
-  return false;
+  return TypeSwitch<Type, bool>(type)
+      .Case([&](spirv::PointerType pointerType) {
+        if (!module)
+          return true;
+        spirv::AddressingModel addressingModel = module.getAddressingModel();
+        if (addressingModel == spirv::AddressingModel::Logical)
+          return false;
+        return addressingModel !=
+                   spirv::AddressingModel::PhysicalStorageBuffer64 ||
+               pointerType.getStorageClass() ==
+                   spirv::StorageClass::PhysicalStorageBuffer;
+      })
+      .Case(
+          [](spirv::ScalarType scalarType) { return !scalarType.isInteger(1); })
+      .Case<VectorType, spirv::ArrayType, spirv::MatrixType>(
+          [&](auto compositeType) {
+            return isConcreteType(compositeType.getElementType(), module);
+          })
+      .Case([&](spirv::StructType structType) {
+        return llvm::all_of(structType.getElementTypes(),
+                            [&](Type elementType) {
+                              return isConcreteType(elementType, module);
+                            });
+      })
+      .Default(false);
 }
 
 LogicalResult KHRAbortOp::verify() {
