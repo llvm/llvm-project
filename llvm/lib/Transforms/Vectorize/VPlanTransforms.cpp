@@ -907,10 +907,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
 /// Check if \p VPV is an untruncated wide induction, either before or after the
 /// increment. If so return the header IV (before the increment), otherwise
-/// return null. If \p StartOffset is provided, the induction plus any constant
-/// is also matched, and \p StartOffset is set to that constant if it can be
-/// folded into the induction's constant start value. It is left unset for an
-/// increment without such an offset.
+/// return null. If \p StartOffset is provided, an increment by any integer
+/// constant is also matched, but only if the constant can be folded into the
+/// induction's constant start value. \p StartOffset is then set to the
+/// constant, and left unset for any other match.
 static VPWidenInductionRecipe *
 getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
                    std::optional<APInt> *StartOffset = nullptr) {
@@ -932,16 +932,23 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
   if (!WideIV)
     return nullptr;
 
-  auto IsWideIVInc = [&](APInt &Offset) {
+  // Returns true if VPV increments WideIV by its step. If Offset is non-null,
+  // an increment by any integer constant is also accepted, and *Offset is set
+  // to that constant.
+  auto IsWideIVInc = [&](std::optional<APInt> *Offset) {
     // (Start + C) + IV * Step stays affine for any constant C, including the
     // Step, so it can be added to the Start value.
     // It would not be profitable to look for a non-constant Start or C, as it
     // would necessitate introducing an extra add or sub instruction.
     const APInt *C;
-    if (match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C))))
-      Offset = *C;
-    else if (match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C))))
-      Offset = -*C;
+    if (Offset && match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C)))) {
+      *Offset = *C;
+      return true;
+    }
+    if (Offset && match(VPV, m_Sub(m_Specific(WideIV), m_APInt(C)))) {
+      *Offset = -*C;
+      return true;
+    }
 
     auto &ID = WideIV->getInductionDescriptor();
 
@@ -976,16 +983,21 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
     llvm_unreachable("should have been covered by switch above");
   };
 
-  APInt Offset;
-  bool Res = IsWideIVInc(Offset);
-  if (!StartOffset || !Offset)
-    return Res ? WideIV : nullptr;
+  std::optional<APInt> Offset;
+  // Not an increment.
+  if (!IsWideIVInc(StartOffset ? &Offset : nullptr))
+    return nullptr;
+  // An increment by IVStep.
+  if (!Offset)
+    return WideIV;
 
+  // An increment by a constant, which can only be folded into a constant start
+  // of the same width. A narrowed IV computes in a narrower type than its start
+  // value.
   const APInt *StartC;
-  // A narrowed IV computes in a narrower type than its start value.
   if (!match(WideIV->getStartValue(), m_APInt(StartC)) ||
-      StartC->getBitWidth() != Offset.getBitWidth())
-    return Res ? WideIV : nullptr;
+      StartC->getBitWidth() != Offset->getBitWidth())
+    return nullptr;
   *StartOffset = Offset;
   return WideIV;
 }
@@ -6396,7 +6408,8 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
       if (!WideIV)
         continue;
 
-      // An increment whose offset cannot be folded into the start value.
+      // An increment by a non-constant step cannot be folded into the start
+      // value.
       if (Op != WideIV && !StartOffset)
         continue;
 
