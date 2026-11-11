@@ -3368,6 +3368,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
   if (F.hasFnAttribute(Attribute::AlwaysInline) &&
       isInlineViable(F).isSuccess())
     InlineableFunctions.insert(&F);
+  FI.IsExactOrInlineable =
+      F.hasExactDefinition() || InlineableFunctions.contains(&F);
 }
 
 InformationCache::FunctionInfo::~FunctionInfo() {

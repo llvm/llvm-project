@@ -1301,6 +1301,17 @@ struct InformationCache {
   LLVM_ABI ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return true if \p F has an exact definition or is inlineable.
+  ///
+  /// This is computed once when the information of \p F is initialized. For
+  /// functions that are not initialized yet, only the definition is checked,
+  /// as InlineableFunctions is also only filled on initialization.
+  bool isExactOrInlineable(const Function &F) const {
+    if (const FunctionInfo *FI = FuncInfoMap.lookup(&F))
+      return FI->IsExactOrInlineable;
+    return F.hasExactDefinition();
+  }
+
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
@@ -1309,6 +1320,9 @@ struct InformationCache {
 private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
+
+    /// Whether the function has an exact definition or is inlineable.
+    bool IsExactOrInlineable = false;
 
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
@@ -1811,18 +1825,8 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    // Cache positive answers until the manifest stage. Negative answers can
-    // change as functions are initialized (see InlineableFunctions).
-    bool UseCache =
-        Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE;
-    if (UseCache && IPOAmendableFunctions.contains(&F))
-      return true;
-    bool IsIPOAmendable =
-        F.hasExactDefinition() || InfoCache.InlineableFunctions.contains(&F) ||
-        (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
-    if (UseCache && IsIPOAmendable)
-      IPOAmendableFunctions.insert(&F);
-    return IsIPOAmendable;
+    return InfoCache.isExactOrInlineable(F) ||
+           (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
   /// Return whether attributes can participate in fixed-point deduction.
@@ -2614,9 +2618,6 @@ private:
   SmallSetVector<BasicBlock *, 8> ToBeDeletedBlocks;
   SmallSetVector<WeakVH, 8> ToBeDeletedInsts;
   ///}
-
-  /// The functions known to be IPO amendable, see isFunctionIPOAmendable.
-  SmallPtrSet<const Function *, 16> IPOAmendableFunctions;
 
   /// Container with all the query AAs that requested an update via
   /// registerForUpdate.
