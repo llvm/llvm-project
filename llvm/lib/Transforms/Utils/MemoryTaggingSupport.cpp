@@ -123,6 +123,9 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     if (CI->canReturnTwice()) {
       Info.CallsReturnTwice = true;
     }
+    if (auto *II = dyn_cast<IntrinsicInst>(CI))
+      if (II->getIntrinsicID() == Intrinsic::stackrestore)
+        Info.StackRestores.push_back(II);
   }
   if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
     switch (getAllocaInterestingness(*AI)) {
@@ -169,13 +172,20 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
 AllocaInterestingness
 StackInfoBuilder::getAllocaInterestingness(const AllocaInst &AI) {
   std::optional<TypeSize> Size = AI.getAllocationSize(AI.getDataLayout());
-  if (Size &&
-      // FIXME: support vscale.
-      !Size->isScalable() &&
-      // FIXME: instrument dynamic allocas, too
-      AI.isStaticAlloca() &&
-      // alloca() may be called with 0 size, ignore it.
-      !Size->isZero() &&
+  // alloca() may be called with 0 size, ignore it.
+  if (Size && Size->isZero())
+    return AllocaInterestingness::kUninteresting;
+  if (AI.isStaticAlloca()) {
+    // FIXME: support vscale.
+    if (!Size || Size->isScalable())
+      return AllocaInterestingness::kUninteresting;
+  } else {
+    // The size of a dynamic alloca is usually only known at run time.
+    // FIXME: support vscale.
+    if (!InstrumentDynamicAllocas || AI.getAllocatedType()->isScalableTy())
+      return AllocaInterestingness::kUninteresting;
+  }
+  if (
       // We are only interested in allocas not promotable to registers.
       // Promotable allocas are common under -O0.
       !isAllocaPromotable(&AI) &&

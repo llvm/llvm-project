@@ -282,7 +282,7 @@ public:
   Instruction *insertBaseTaggedPointer(
       const Module &M,
       const MapVector<AllocaInst *, memtag::AllocaInfo> &Allocas,
-      const DominatorTree *DT);
+      const DominatorTree *DT, const LoopInfo *LI);
   bool runOnFunction(Function &F) override;
 
   StringRef getPassName() const override { return "AArch64 Stack Tagging"; }
@@ -294,6 +294,17 @@ private:
   const DataLayout *DL = nullptr;
   AAResults *AA = nullptr;
   const StackSafetyGlobalInfo *SSI = nullptr;
+
+  // Dynamic allocas are handled as in AddressSanitizer. This holds the address
+  // of the most recent one.
+  AllocaInst *DynamicAllocaLayout = nullptr;
+
+  void createDynamicAllocasInitStorage();
+  void handleDynamicAllocaCall(memtag::AllocaInfo &Info, Value *Base,
+                               unsigned Tag);
+  void untagDynamicAllocasBeforeInst(Instruction *InstBefore, Value *End,
+                                     bool UpdateLayout);
+  void untagDynamicAllocas(const memtag::StackInfo &SInfo);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -431,10 +442,145 @@ static Value *getSlotPtr(const AArch64Options &CLOpts, IRBuilder<> &IRB,
   return nullptr;
 }
 
+void AArch64StackTagging::createDynamicAllocasInitStorage() {
+  IRBuilder<> IRB(&*F->getEntryBlock().getFirstInsertionPt());
+  Type *IntptrTy = IRB.getIntPtrTy(*DL);
+  DynamicAllocaLayout =
+      IRB.CreateAlloca(IntptrTy, nullptr, "dynamic.alloca.layout");
+  // 0 means that no alloca has been made.
+  IRB.CreateStore(Constant::getNullValue(IntptrTy), DynamicAllocaLayout);
+  // Its address is the end of the memory untagged on return, which must be
+  // granule aligned.
+  DynamicAllocaLayout->setAlignment(kTagGranuleSize);
+}
+
+// Insert an aarch64.tagp intrinsic at IRB that tags AI with Tag relative to
+// Base, and rewrite AI's non-lifetime uses to the tagged pointer. The caller
+// sets IRB's insert point. Returns the tagp call.
+static Instruction *insertTaggedPointer(IRBuilder<> &IRB, AllocaInst *AI,
+                                        Value *Base, unsigned Tag) {
+  Instruction *TagPCall = IRB.CreateIntrinsicWithoutFolding(
+      Intrinsic::aarch64_tagp, {AI->getType()},
+      {Constant::getNullValue(AI->getType()), Base, IRB.getInt64(Tag)});
+  if (AI->hasName())
+    TagPCall->setName(AI->getName() + ".tag");
+  // Does not replace metadata, so we don't have to handle DbgVariableRecords.
+  AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
+    return !isa<LifetimeIntrinsic>(U.getUser());
+  });
+  TagPCall->setOperand(0, AI);
+  return TagPCall;
+}
+
+// Replace the dynamic alloca with one whose size is a multiple of the tag
+// granule, and tag the memory it returns.
+void AArch64StackTagging::handleDynamicAllocaCall(memtag::AllocaInfo &Info,
+                                                  Value *Base, unsigned Tag) {
+  AllocaInst *AI = Info.AI;
+  IRBuilder<> IRB(AI);
+  Type *IntptrTy = IRB.getIntPtrTy(*DL);
+  const uint64_t Granule = kTagGranuleSize.value();
+  Value *Size = IRB.CreateAllocationSize(IntptrTy, AI);
+  // Rounded up to a multiple of the granule.
+  Value *PaddedSize = IRB.CreateAnd(
+      IRB.CreateAdd(Size, ConstantInt::get(IntptrTy, Granule - 1)),
+      ConstantInt::get(IntptrTy, ~(Granule - 1)));
+
+  AllocaInst *NewAI =
+      IRB.CreateAlloca(IRB.getInt8Ty(), AI->getAddressSpace(), PaddedSize);
+  NewAI->setAlignment(std::max(AI->getAlign(), kTagGranuleSize));
+  NewAI->takeName(AI);
+  NewAI->copyMetadata(*AI);
+  AI->replaceAllUsesWith(NewAI);
+  AI->eraseFromParent();
+  Info.AI = NewAI;
+
+  // Replace alloca with tagp(alloca).
+  IRB.SetInsertPoint(NewAI->getNextNode());
+  Instruction *TagPCall = insertTaggedPointer(IRB, NewAI, Base, Tag);
+
+  // Store the last alloca's address to DynamicAllocaLayout. This points to the
+  // most recently executed dynamic alloca, which is used when untagging. It is
+  // granule aligned.
+  IRB.CreateStore(IRB.CreatePtrToInt(NewAI, IntptrTy), DynamicAllocaLayout);
+
+  // Tag the memory at each llvm.lifetime.start, or at the alloca if there is
+  // none, and untag it at each llvm.lifetime.end. NewAI, and so TagPCall, is
+  // granule aligned, and TagSize is a multiple of the granule.
+  Value *TagSize = IRB.CreateZExtOrTrunc(PaddedSize, IRB.getInt64Ty());
+  if (Info.LifetimeStart.empty())
+    IRB.CreateCall(SetTagFunc, {TagPCall, TagSize});
+  for (IntrinsicInst *Start : Info.LifetimeStart) {
+    IRB.SetInsertPoint(Start->getNextNode());
+    IRB.CreateCall(SetTagFunc, {TagPCall, TagSize});
+  }
+  for (IntrinsicInst *End : Info.LifetimeEnd) {
+    // NewAI has tag 0.
+    IRB.SetInsertPoint(End);
+    IRB.CreateCall(SetTagFunc, {NewAI, TagSize});
+  }
+}
+
+// Untag the memory from the most recent dynamic alloca up to End, a granule
+// aligned address, unless the range is empty or no alloca has been made.
+void AArch64StackTagging::untagDynamicAllocasBeforeInst(Instruction *InstBefore,
+                                                        Value *End,
+                                                        bool UpdateLayout) {
+  IRBuilder<> IRB(InstBefore);
+  Type *IntptrTy = IRB.getIntPtrTy(*DL);
+  // Only 0, the address of an alloca, or a restored SP is stored to
+  // DynamicAllocaLayout, so this is granule aligned, and the size a multiple of
+  // the granule.
+  Value *LastAlloca =
+      IRB.CreateLoad(IntptrTy, DynamicAllocaLayout, "last.alloca");
+  Value *Zero = Constant::getNullValue(IntptrTy);
+  Value *NonZero = IRB.CreateICmpNE(LastAlloca, Zero);
+  Value *InRange = IRB.CreateICmpULE(LastAlloca, End);
+  Value *Cond = IRB.CreateAnd(NonZero, InRange);
+  Value *Size = IRB.CreateSelect(Cond, IRB.CreateSub(End, LastAlloca), Zero,
+                                 "untag.size");
+  // Tag 0.
+  IRB.CreateCall(SetTagFunc, {IRB.CreateIntToPtr(LastAlloca, IRB.getPtrTy()),
+                              IRB.CreateZExtOrTrunc(Size, IRB.getInt64Ty())});
+  // A restore releases the memory up to End, so record End as the new top.
+  if (UpdateLayout)
+    IRB.CreateStore(IRB.CreateSelect(Cond, End, LastAlloca),
+                    DynamicAllocaLayout);
+}
+
+// Untag dynamic allocas.
+void AArch64StackTagging::untagDynamicAllocas(const memtag::StackInfo &SInfo) {
+  Type *IntptrTy = DL->getIntPtrType(F->getContext());
+  // On return, untag up to DynamicAllocaLayout, which is above every dynamic
+  // alloca and granule aligned.
+  for (Instruction *Ret : SInfo.RetVec) {
+    IRBuilder<> IRB(Ret);
+    untagDynamicAllocasBeforeInst(
+        Ret, IRB.CreatePtrToInt(DynamicAllocaLayout, IntptrTy, "untag.end"),
+        /*UpdateLayout=*/false);
+  }
+
+  // When we untag before @llvm.stackrestore, we need to adjust extracted SP to
+  // compute the address of the most recent alloca. We have a special
+  // @llvm.get.dynamic.area.offset intrinsic for this purpose. The SP comes from
+  // llvm.stacksave, SP is always 16-byte aligned on AArch64, and the offset is
+  // 0, so the result is granule aligned.
+  for (IntrinsicInst *StackRestoreInst : SInfo.StackRestores) {
+    IRBuilder<> IRB(StackRestoreInst);
+    Value *DynamicAreaOffset =
+        IRB.CreateIntrinsic(Intrinsic::get_dynamic_area_offset, {IntptrTy}, {});
+    Value *DynamicAreaPtr = IRB.CreateAdd(
+        IRB.CreatePtrToInt(StackRestoreInst->getOperand(0), IntptrTy),
+        DynamicAreaOffset, "untag.end");
+    untagDynamicAllocasBeforeInst(StackRestoreInst, DynamicAreaPtr,
+                                  /*UpdateLayout=*/true);
+  }
+}
+
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     const Module &M,
     const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
-    const DominatorTree *DT) {
+    const DominatorTree *DT, const LoopInfo *LI) {
   BasicBlock *PrologueBB = nullptr;
   // Try sinking IRG as deep as possible to avoid hurting shrink wrap.
   for (auto &I : AllocasToInstrument) {
@@ -447,8 +593,12 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     PrologueBB = DT->findNearestCommonDominator(PrologueBB, AI->getParent());
   }
   assert(PrologueBB);
+  // A dynamic alloca may be in a loop. Hoist IRG and the stack history record
+  // out of it, so that they run once per call.
+  while (const Loop *L = LI->getLoopFor(PrologueBB))
+    PrologueBB = DT->getNode(L->getHeader())->getIDom()->getBlock();
 
-  IRBuilder<> IRB(&PrologueBB->front());
+  IRBuilder<> IRB(&*PrologueBB->getFirstInsertionPt());
   Instruction *Base = IRB.CreateIntrinsicWithoutFolding(
       Intrinsic::aarch64_irg_sp, {},
       {Constant::getNullValue(IRB.getInt64Ty())});
@@ -504,10 +654,18 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     ORE = DeleteORE.get();
   }
 
-  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
+  memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE,
+                               CLOpts->stack_tagging_dynamic_allocas);
   for (Instruction &I : instructions(F))
     SIB.visit(*ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
+
+  // A returns_twice call (e.g. setjmp, vfork or getcontext) can return again
+  // after the dynamic allocas made since were released without being untagged.
+  // Leave untagging them to whatever released them (e.g. longjmp).
+  if (SInfo.CallsReturnTwice)
+    SInfo.AllocasToInstrument.remove_if(
+        [](const auto &I) { return !I.first->isStaticAlloca(); });
 
   if (SInfo.AllocasToInstrument.empty())
     return false;
@@ -544,31 +702,35 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   SetTagFunc = Intrinsic::getOrInsertDeclaration(F->getParent(),
                                                  Intrinsic::aarch64_settag);
 
-  Instruction *Base =
-      insertBaseTaggedPointer(*Fn.getParent(), SInfo.AllocasToInstrument, DT);
+  Instruction *Base = insertBaseTaggedPointer(
+      *Fn.getParent(), SInfo.AllocasToInstrument, DT, LI);
+
+  DynamicAllocaLayout = nullptr;
+  if (any_of(SInfo.AllocasToInstrument,
+             [](const auto &I) { return !I.first->isStaticAlloca(); })) {
+    createDynamicAllocasInitStorage();
+    // Untag dynamic allocas before the static ones are untagged at returns, so
+    // that those can still be merged into the epilogue.
+    untagDynamicAllocas(SInfo);
+  }
 
   unsigned int NextTag = 0;
   for (auto &I : SInfo.AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     assert(Info.AI && SIB.getAllocaInterestingness(*Info.AI) ==
                           llvm::memtag::AllocaInterestingness::kInteresting);
-    memtag::alignAndPadAlloca(Info, kTagGranuleSize);
-    AllocaInst *AI = Info.AI;
     unsigned int Tag = NextTag;
     NextTag = (NextTag + 1) % 16;
+    if (!Info.AI->isStaticAlloca()) {
+      handleDynamicAllocaCall(Info, Base, Tag);
+      memtag::annotateDebugRecords(Info, Tag);
+      continue;
+    }
+    memtag::alignAndPadAlloca(Info, kTagGranuleSize);
+    AllocaInst *AI = Info.AI;
     // Replace alloca with tagp(alloca).
     IRBuilder<> IRB(Info.AI->getNextNode());
-    Instruction *TagPCall = IRB.CreateIntrinsicWithoutFolding(
-        Intrinsic::aarch64_tagp, {Info.AI->getType()},
-        {Constant::getNullValue(Info.AI->getType()), Base,
-         ConstantInt::get(IRB.getInt64Ty(), Tag)});
-    if (Info.AI->hasName())
-      TagPCall->setName(Info.AI->getName() + ".tag");
-    // Does not replace metadata, so we don't have to handle DbgVariableRecords.
-    Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-      return !isa<LifetimeIntrinsic>(U.getUser());
-    });
-    TagPCall->setOperand(0, Info.AI);
+    Instruction *TagPCall = insertTaggedPointer(IRB, Info.AI, Base, Tag);
 
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
