@@ -239,15 +239,15 @@ v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERV
 //==============================================================================
 // out of range dfmt
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16 nfmt:1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16, nfmt:1 s0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: out of range dfmt
-// CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16 nfmt:1 s0
+// CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16, nfmt:1 s0
 // CHECK-NEXT:{{^}}                                                 ^
 
 //==============================================================================
 // out of range nfmt
 
-tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:-1 s0
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:-1 s0
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: out of range nfmt
-// CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1 nfmt:-1 s0
-// CHECK-NEXT:{{^}}                                                        ^
+// CHECK-NEXT:{{^}}tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:1, nfmt:-1 s0
+// CHECK-NEXT:{{^}}                                                         ^
