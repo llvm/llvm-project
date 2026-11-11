@@ -5886,7 +5886,7 @@ SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
 
 // This may be called multiple times, and nothing prevents creating multiple
 // objects at the same offset. See if we already defined this object.
-static int getOrCreateFixedStackObject(MachineFrameInfo &MFI, uint64_t Size,
+static int getOrCreateFixedStackObject(MachineFrameInfo &MFI, int64_t Size,
                                        int64_t Offset) {
   for (int I = MFI.getObjectIndexBegin(); I < 0; ++I) {
     if (MFI.getObjectOffset(I) == Offset) {
