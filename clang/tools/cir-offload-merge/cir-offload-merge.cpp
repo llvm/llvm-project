@@ -41,35 +41,24 @@ static llvm::cl::opt<bool> Combine("combine",
                                    llvm::cl::cat(CIROffloadMergeCategory));
 
 static llvm::cl::list<std::string>
-    InputFileNames("input",
-                   llvm::cl::desc("Input CIR file. Can be specified multiple "
-                                  "times."),
+    InputFileNames(llvm::cl::Positional, llvm::cl::desc("<input files>"),
                    llvm::cl::cat(CIROffloadMergeCategory));
 
-static llvm::cl::list<std::string>
-    OutputFileNames("output", llvm::cl::desc("Output CIR file."),
-                    llvm::cl::cat(CIROffloadMergeCategory));
+static llvm::cl::opt<std::string>
+    OutputFileName("o", llvm::cl::desc("Output CIR file"),
+                   llvm::cl::value_desc("filename"), llvm::cl::init("-"),
+                   llvm::cl::cat(CIROffloadMergeCategory));
 
 static int reportError(const llvm::Twine &message) {
   llvm::errs() << "error: " << message << '\n';
   return 1;
 }
 
-static int validateCombineCommandLine() {
-  if (InputFileNames.empty())
-    return reportError("missing required -input");
-  if (OutputFileNames.empty())
-    return reportError("missing required -output");
-  if (OutputFileNames.size() != 1)
-    return reportError("combine mode expects exactly one output");
-  return 0;
-}
-
 // The host/device role of a module comes from the LangOptions that CIRGen
 // records in cir.lowering_options.
 static mlir::FailureOr<cir::OffloadKind>
-getOffloadKind(mlir::ModuleOp module, llvm::StringRef fileName) {
-  auto loweringOpts = module->getAttrOfType<cir::LoweringOptionsAttr>(
+getOffloadKind(mlir::ModuleOp moduleOp, llvm::StringRef fileName) {
+  auto loweringOpts = moduleOp->getAttrOfType<cir::LoweringOptionsAttr>(
       cir::CIRDialect::getLoweringOptionsAttrName());
   if (!loweringOpts) {
     reportError("'" + fileName + "' has no '" +
@@ -84,11 +73,12 @@ getOffloadKind(mlir::ModuleOp module, llvm::StringRef fileName) {
                                         : cir::OffloadKind::Host;
 }
 
-static void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
+static void setOffloadAttrs(mlir::ModuleOp moduleOp, llvm::StringRef name,
                             cir::OffloadKind offloadKind) {
-  module.setSymName(name);
-  module->setAttr(cir::CIRDialect::getOffloadKindAttrName(),
-                  cir::OffloadKindAttr::get(module.getContext(), offloadKind));
+  moduleOp.setSymName(name);
+  moduleOp->setAttr(
+      cir::CIRDialect::getOffloadKindAttrName(),
+      cir::OffloadKindAttr::get(moduleOp.getContext(), offloadKind));
 }
 
 static mlir::OwningOpRef<mlir::ModuleOp>
@@ -97,16 +87,16 @@ combineInputs(mlir::MLIRContext &context) {
   llvm::SmallVector<mlir::OwningOpRef<mlir::ModuleOp>> deviceModules;
 
   for (const std::string &fileName : InputFileNames) {
-    mlir::OwningOpRef<mlir::ModuleOp> module =
+    mlir::OwningOpRef<mlir::ModuleOp> moduleOp =
         mlir::parseSourceFile<mlir::ModuleOp>(fileName,
                                               mlir::ParserConfig(&context));
-    if (!module) {
+    if (!moduleOp) {
       reportError("failed to parse input file");
       return {};
     }
 
     mlir::FailureOr<cir::OffloadKind> offloadKind =
-        getOffloadKind(*module, fileName);
+        getOffloadKind(*moduleOp, fileName);
     if (mlir::failed(offloadKind))
       return {};
 
@@ -115,15 +105,15 @@ combineInputs(mlir::MLIRContext &context) {
         reportError("expected exactly one host module");
         return {};
       }
-      setOffloadAttrs(*module, "host", cir::OffloadKind::Host);
-      hostModule = std::move(module);
+      setOffloadAttrs(*moduleOp, "host", cir::OffloadKind::Host);
+      hostModule = std::move(moduleOp);
       continue;
     }
 
     std::string deviceName =
         ("device_" + llvm::Twine(deviceModules.size())).str();
-    setOffloadAttrs(*module, deviceName, cir::OffloadKind::Device);
-    deviceModules.push_back(std::move(module));
+    setOffloadAttrs(*moduleOp, deviceName, cir::OffloadKind::Device);
+    deviceModules.push_back(std::move(moduleOp));
   }
 
   if (!hostModule) {
@@ -147,10 +137,10 @@ combineInputs(mlir::MLIRContext &context) {
   return container;
 }
 
-static int writeModuleToOutput(mlir::ModuleOp module,
+static int writeModuleToOutput(mlir::ModuleOp moduleOp,
                                llvm::StringRef outputFileName) {
   // Type aliases are only printed for an operation without a parent.
-  assert(!module->getParentOp() && "expected a top-level module");
+  assert(!moduleOp->getParentOp() && "expected a top-level module");
   std::string errorMessage;
   std::unique_ptr<llvm::ToolOutputFile> outputFile =
       mlir::openOutputFile(outputFileName, &errorMessage);
@@ -158,7 +148,7 @@ static int writeModuleToOutput(mlir::ModuleOp module,
     return reportError(errorMessage);
 
   // TODO: Support bytecode output.
-  module->print(outputFile->os());
+  moduleOp->print(outputFile->os());
   outputFile->os() << '\n';
   outputFile->keep();
   return 0;
@@ -179,8 +169,8 @@ int main(int argc, char **argv) {
   mlir::MLIRContext context(registry);
   context.loadDialect<cir::CIRDialect>();
 
-  if (int errorCode = validateCombineCommandLine())
-    return errorCode;
+  if (InputFileNames.empty())
+    return reportError("no input files");
 
   mlir::OwningOpRef<mlir::ModuleOp> container = combineInputs(context);
   if (!container)
@@ -188,5 +178,5 @@ int main(int argc, char **argv) {
   if (mlir::failed(mlir::verify(*container)))
     return reportError("failed to verify combined module");
 
-  return writeModuleToOutput(*container, OutputFileNames.front());
+  return writeModuleToOutput(*container, OutputFileName);
 }
