@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <list>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -151,6 +152,8 @@ private:
 
   // NT_FILE entries found from the NOTE segment
   std::vector<NT_FILE_Entry> m_nt_file_entries;
+  // The unit of NT_FILE_Entry::file_ofs.
+  uint64_t m_nt_file_page_size = 0;
 
   // Map from file path to UUID for quick lookup
   std::unordered_map<std::string, lldb_private::UUID> m_uuids;
@@ -180,7 +183,15 @@ private:
   bool GetMainExecutableModuleSpec(lldb_private::ModuleSpec &exe_spec);
 
   // Returns the value of certain type of note of a given start address
-  lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
+  lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address,
+                                            llvm::StringRef path);
+
+  // Returns the address at which file_offset of the file at path is mapped,
+  // using the NT_FILE mappings at or above elf_header_addr.
+  std::optional<lldb::addr_t>
+  FindNTFileAddressForFileOffset(lldb::addr_t elf_header_addr,
+                                 llvm::StringRef path,
+                                 lldb::addr_t file_offset);
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t
