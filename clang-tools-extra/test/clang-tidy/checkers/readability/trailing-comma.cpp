@@ -190,6 +190,22 @@ enum NullDirectiveAfter {
 #
 };
 
+// A multi-line block comment before '}' is skipped.
+enum MultiLineCommentAfterComma {
+  MLC_A, /* comment that
+            spans multiple lines */
+};
+
+enum MultiLineCommentNoComma {
+  MLC_B /* comment that
+           spans multiple lines */
+};
+// CHECK-MESSAGES: :[[@LINE-3]]:8: warning: enum should have a trailing comma
+// CHECK-FIXES: enum MultiLineCommentNoComma {
+// CHECK-FIXES-NEXT:   MLC_B, /* comment that
+// CHECK-FIXES-NEXT:            spans multiple lines */
+// CHECK-FIXES-NEXT: };
+
 // Macros are ignored
 #define ENUM(n, a, b) enum n { a, b }
 #define INIT {1, 2}
