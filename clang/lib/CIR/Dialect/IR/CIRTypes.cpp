@@ -1125,9 +1125,8 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
     // #cir.bitint_spec data-layout entry, in bits. The char width is 8
     // bits, so the alignment is at least one byte.
     uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
-    uint64_t alignBits =
-        std::min(static_cast<uint64_t>(llvm::PowerOf2Ceil(width)),
-                 maxAlignBits);
+    uint64_t alignBits = std::min(
+        static_cast<uint64_t>(llvm::PowerOf2Ceil(width)), maxAlignBits);
     return std::max(alignBits / 8, static_cast<uint64_t>(1));
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
@@ -1139,10 +1138,10 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return std::max(alignBits / 8, static_cast<uint64_t>(1));
 }
 
-bool IntType::areCompatible(
-    mlir::DataLayoutEntryListRef oldLayout,
-    mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
-    const mlir::DataLayoutIdentifiedEntryMap &) const {
+bool IntType::areCompatible(mlir::DataLayoutEntryListRef oldLayout,
+                            mlir::DataLayoutEntryListRef newLayout,
+                            mlir::DataLayoutSpecInterface,
+                            const mlir::DataLayoutIdentifiedEntryMap &) const {
   // A nested spec may only repeat the same _BitInt max alignment.
   uint64_t oldMax = getBitIntMaxAlignBits(oldLayout);
   for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
@@ -1155,9 +1154,8 @@ bool IntType::areCompatible(
   return true;
 }
 
-llvm::LogicalResult
-IntType::verifyEntries(mlir::DataLayoutEntryListRef entries,
-                       mlir::Location loc) const {
+llvm::LogicalResult IntType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                                           mlir::Location loc) const {
   cir::IntType keyTy = getBitIntMaxAlignKey(getContext());
   for (mlir::DataLayoutEntryInterface entry : entries) {
     if (!entry.isTypeEntry())
@@ -1168,9 +1166,8 @@ IntType::verifyEntries(mlir::DataLayoutEntryListRef entries,
              << "expected _BitInt data layout entry to be keyed on " << keyTy
              << ", got " << key;
     if (!mlir::isa<cir::BitIntSpecAttr>(entry.getValue()))
-      return mlir::emitError(loc)
-             << "expected layout attribute for " << key
-             << " to be a #cir.bitint_spec attribute";
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.bitint_spec attribute";
   }
   return mlir::success();
 }
