@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -mattr=+sve \
 ; RUN:   -tail-folding-policy=dont-fold-tail -S %s -o - | FileCheck %s
 
-define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @mloadstore_f32
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x float>, ptr
@@ -36,7 +36,7 @@ exit:
   ret void
 }
 
-define void @mloadstore_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @mloadstore_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @mloadstore_i32
 ; CHECK: vector.body:
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x i32>, ptr

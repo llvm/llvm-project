@@ -3526,7 +3526,9 @@ LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C) {
 }
 
 LLVMBuilderRef LLVMCreateBuilder(void) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return LLVMCreateBuilderInContext(getGlobalContextForCAPI());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMBuilderRef LLVMCreateBuilderForModule(LLVMModuleRef M) {

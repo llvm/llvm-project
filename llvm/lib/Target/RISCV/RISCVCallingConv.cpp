@@ -12,11 +12,32 @@
 
 #include "RISCVCallingConv.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVStateAttributes.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
+
+void llvm::checkRISCVStateCall(const Function &Caller, StringRef CalleeName) {
+  if (!RISCVState::hasAttribute(Caller))
+    return;
+
+  std::string Message = (Caller.getName() + ": cannot emit call to '" +
+                         CalleeName + "' from a RISC-V attributed function.")
+                            .str();
+  Caller.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+void llvm::checkRISCVStateCall(const Function &Caller,
+                               const GlobalValue *Callee) {
+  const auto *CalleeFn = dyn_cast_or_null<Function>(Callee);
+  if (CalleeFn && RISCVState::hasAttribute(*CalleeFn))
+    return;
+
+  if (Callee)
+    checkRISCVStateCall(Caller, Callee->getName());
+}
 
 // This does not have the regular `CCAssignFn` signature, it has an extra
 // `bool IsRet` parameter.
@@ -303,8 +324,6 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                 const RISCVSubtarget &Subtarget) {
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
-  RISCVABI::ABI ABI = Subtarget.getTargetABI();
-  bool EABI = RISCVABI::isRVE(ABI);
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
 
@@ -314,11 +333,12 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                      VA1.getLocVT(), CCValAssign::Full));
   } else {
     // Both halves must be passed on the stack, with proper alignment.
-    // TODO: To be compatible with GCC's behaviors, we force them to have 4-byte
-    // alignment. This behavior may be changed when RV32E/ILP32E is ratified.
-    Align StackAlign(XLenInBytes);
-    if (!EABI || XLen != 32)
-      StackAlign = std::max(StackAlign, ArgFlags1.getNonZeroOrigAlign());
+    // TODO: To be compatible with GCC's behaviors, we clamp the alignment by
+    // the ABI stack alignment. This behavior may be changed when RV32E/ILP32E
+    // is ratified.
+    Align StackAlign =
+        std::min(RISCVABI::getStackAlignment(Subtarget.getTargetABI()),
+                 std::max(Align(XLenInBytes), ArgFlags1.getNonZeroOrigAlign()));
     State.addLoc(
         CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
                             State.AllocateStack(XLenInBytes, StackAlign),
@@ -521,13 +541,14 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   // legalisation or not. The argument will not be passed by registers if the
   // original type is larger than 2*XLEN, so the register alignment rule does
   // not apply.
-  // TODO: To be compatible with GCC's behaviors, we don't align registers
-  // currently if we are using ILP32E calling convention. This behavior may be
-  // changed when RV32E/ILP32E is ratified.
+  // TODO: To be compatible with GCC's behaviors, we clamp the alignment by the
+  // ABI stack alignment, so registers are never aligned for ILP32E/LP64E. This
+  // behavior may be changed when RV32E/ILP32E is ratified.
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
-  if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
-      DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
-      ABI != RISCVABI::ABI::ILP32E) {
+  Align ArgAlign = std::min(ArgFlags.getNonZeroOrigAlign(),
+                            RISCVABI::getStackAlignment(ABI));
+  if (ArgFlags.isVarArg() && ArgAlign == TwoXLenInBytes &&
+      DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
     if (RegIdx != std::size(ArgGPRs) && RegIdx % 2 == 1)

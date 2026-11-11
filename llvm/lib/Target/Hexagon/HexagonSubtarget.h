@@ -57,6 +57,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueStores = false;
   bool UseSmallData = false;
   bool UseZRegOps = false;
+  bool UseHLXOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
   bool UseHVXFloatingPoint = false;
@@ -98,7 +99,7 @@ public:
   };
 
 private:
-  enum HexagonProcFamilyEnum { Others, TinyCore };
+  enum HexagonProcFamilyEnum { Others, TinyCore, HLX2048B };
 
   std::string CPUString;
   HexagonProcFamilyEnum HexagonProcFamily = Others;
@@ -272,6 +273,10 @@ public:
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
   bool useZRegOps() const { return UseZRegOps; }
+  bool useHLXOps() const { return UseHLXOps; }
+  bool useHLX2048BOps() const {
+    return UseHLXOps && HexagonProcFamily == HLX2048B;
+  }
   bool useCabac() const { return UseCabac; }
 
   bool isTinyCore() const { return HexagonProcFamily == TinyCore; }
@@ -395,6 +400,23 @@ public:
   bool isHVXElementType(MVT Ty, bool IncludeBool = false) const;
   bool isHVXVectorType(EVT VecTy, bool IncludeBool = false) const;
   bool isTypeForHVX(Type *VecTy, bool IncludeBool = false) const;
+
+  unsigned getHLXVectorLength() const {
+    assert(useHLXOps());
+    if (useHLX2048BOps())
+      return 2048;
+    llvm_unreachable("Invalid HLX vector length settings");
+  }
+
+  ArrayRef<MVT> getHLXElementTypes() const {
+    static MVT Types[] = {MVT::i8, MVT::i16, MVT::i32};
+
+    return ArrayRef(Types);
+  }
+
+  bool isHLXElementType(MVT Ty) const;
+  bool isHLXVectorType(EVT VecTy) const;
+  bool isTypeForHLX(Type *VecTy) const;
 
   Align getTypeAlignment(MVT Ty) const {
     if (isHVXVectorType(Ty, true))

@@ -11,7 +11,6 @@ name: LateScavengingSlot
 # CHECK-NEXT: $[[SCRATCH]] = ADDVL_XXI $fp, -1
 # CHECK-NEXT: STRXui $x0, killed $[[SCRATCH]], 0
 # CHECK: bb.1:
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:
