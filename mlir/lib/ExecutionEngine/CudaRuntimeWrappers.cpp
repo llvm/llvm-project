@@ -28,7 +28,6 @@
 #endif // MLIR_ENABLE_CUDA_CUSPARSE
 
 #ifdef _WIN32
-#include <malloc.h>
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
 #else
 #define MLIR_CUDA_WRAPPERS_EXPORT __attribute__((visibility("default")))
@@ -294,23 +293,16 @@ mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
                           int64_t elementSizeBytes) {
-  // Only densely packed tensors are currently supported.
-#ifdef _WIN32
-  int64_t *denseStrides = (int64_t *)_alloca(rank * sizeof(int64_t));
-#else
-  int64_t *denseStrides = (int64_t *)alloca(rank * sizeof(int64_t));
-#endif // _WIN32
   int64_t *sizes = descriptor->sizes;
-  for (int64_t i = rank - 1, runningStride = 1; i >= 0; i--) {
-    denseStrides[i] = runningStride;
-    runningStride *= sizes[i];
-  }
-  uint64_t sizeBytes = sizes[0] * denseStrides[0] * elementSizeBytes;
   int64_t *strides = &sizes[rank];
   (void)strides;
-  for (unsigned i = 0; i < rank; ++i)
-    assert(strides[i] == denseStrides[i] &&
-           "Mismatch in computed dense strides");
+  int64_t runningStride = 1;
+  // Only densely packed tensors are currently supported.
+  for (int64_t i = rank - 1; i >= 0; --i) {
+    assert(strides[i] == runningStride && "Mismatch in computed dense strides");
+    runningStride *= sizes[i];
+  }
+  uint64_t sizeBytes = runningStride * elementSizeBytes;
 
   auto *ptr = descriptor->data + descriptor->offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);
