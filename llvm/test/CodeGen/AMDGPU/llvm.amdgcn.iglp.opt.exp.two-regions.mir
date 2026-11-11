@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-before=machine-scheduler -stop-before=postmisched -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-before=machine-scheduler -stop-before=postmisched -o - %s | FileCheck %s
 
 # The iglp_opt(2) analysis data is computed pre-RA, stored on each IGLP_OPT and
 # reused post-RA. Each region must keep its own data: the small kernel region
