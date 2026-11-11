@@ -1301,8 +1301,12 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
-  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from))
+  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from)) {
     user_id = metadata->GetUserID();
+    if (TypeSystemClang *to_ts =
+        TypeSystemClang::GetASTContext(&to->getASTContext()))
+      to_ts->SetMetadata(to, *metadata);
+  }
 
   if (log) {
     if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {
