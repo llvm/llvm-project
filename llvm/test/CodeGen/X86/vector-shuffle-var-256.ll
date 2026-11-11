@@ -8,7 +8,7 @@
 
 ; 256-bit vectors with 32/64-bit elements.
 
-define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) {
+define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -43,7 +43,7 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) {
   ret <8 x i32> %res
 }
 
-define <8 x float> @shuffle_v8f32(<8 x float> %v, <8 x i32> %mask) {
+define <8 x float> @shuffle_v8f32(<8 x float> %v, <8 x i32> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v8f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -78,7 +78,7 @@ define <8 x float> @shuffle_v8f32(<8 x float> %v, <8 x i32> %mask) {
   ret <8 x float> %res
 }
 
-define <4 x i64> @shuffle_v4i64(<4 x i64> %v, <4 x i64> %mask) {
+define <4 x i64> @shuffle_v4i64(<4 x i64> %v, <4 x i64> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -140,7 +140,7 @@ define <4 x i64> @shuffle_v4i64(<4 x i64> %v, <4 x i64> %mask) {
   ret <4 x i64> %res
 }
 
-define <4 x double> @shuffle_v4f64(<4 x double> %v, <4 x i64> %mask) {
+define <4 x double> @shuffle_v4f64(<4 x double> %v, <4 x i64> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v4f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -204,7 +204,7 @@ define <4 x double> @shuffle_v4f64(<4 x double> %v, <4 x i64> %mask) {
 
 ; 256-bit vectors with 8/16-bit elements.
 
-define <16 x i16> @shuffle_v16i16(<16 x i16> %v, <16 x i16> %mask) {
+define <16 x i16> @shuffle_v16i16(<16 x i16> %v, <16 x i16> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v16i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [514,514,514,514,514,514,514,514]
@@ -277,7 +277,7 @@ define <16 x i16> @shuffle_v16i16(<16 x i16> %v, <16 x i16> %mask) {
   ret <16 x i16> %res
 }
 
-define <32 x i8> @shuffle_v32i8(<32 x i8> %v, <32 x i8> %mask) {
+define <32 x i8> @shuffle_v32i8(<32 x i8> %v, <32 x i8> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v32i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
@@ -343,7 +343,7 @@ define <32 x i8> @shuffle_v32i8(<32 x i8> %v, <32 x i8> %mask) {
 
 ; Half and bfloat vectors.
 
-define <16 x half> @shuffle_v16f16(<16 x half> %v, <16 x i16> %mask) {
+define <16 x half> @shuffle_v16f16(<16 x half> %v, <16 x i16> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v16f16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [514,514,514,514,514,514,514,514]
@@ -416,18 +416,14 @@ define <16 x half> @shuffle_v16f16(<16 x half> %v, <16 x i16> %mask) {
   ret <16 x half> %res
 }
 
-define <16 x bfloat> @shuffle_v16bf16(<16 x bfloat> %v, <16 x i16> %mask) {
+define <16 x bfloat> @shuffle_v16bf16(<16 x bfloat> %v, <16 x i16> %mask) nounwind {
 ; AVX1-LABEL: shuffle_v16bf16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    pushq %rbp
-; AVX1-NEXT:    .cfi_def_cfa_offset 16
-; AVX1-NEXT:    .cfi_offset %rbp, -16
 ; AVX1-NEXT:    movq %rsp, %rbp
-; AVX1-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX1-NEXT:    pushq %rbx
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $32, %rsp
-; AVX1-NEXT:    .cfi_offset %rbx, -24
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpextrw $0, %xmm2, %r10d
 ; AVX1-NEXT:    vpextrw $1, %xmm2, %r9d
@@ -518,20 +514,15 @@ define <16 x bfloat> @shuffle_v16bf16(<16 x bfloat> %v, <16 x i16> %mask) {
 ; AVX1-NEXT:    leaq -8(%rbp), %rsp
 ; AVX1-NEXT:    popq %rbx
 ; AVX1-NEXT:    popq %rbp
-; AVX1-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX1-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v16bf16:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    pushq %rbp
-; XOP-NEXT:    .cfi_def_cfa_offset 16
-; XOP-NEXT:    .cfi_offset %rbp, -16
 ; XOP-NEXT:    movq %rsp, %rbp
-; XOP-NEXT:    .cfi_def_cfa_register %rbp
 ; XOP-NEXT:    pushq %rbx
 ; XOP-NEXT:    andq $-32, %rsp
 ; XOP-NEXT:    subq $32, %rsp
-; XOP-NEXT:    .cfi_offset %rbx, -24
 ; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; XOP-NEXT:    vpextrw $0, %xmm2, %r10d
 ; XOP-NEXT:    vpextrw $1, %xmm2, %r9d
@@ -619,20 +610,15 @@ define <16 x bfloat> @shuffle_v16bf16(<16 x bfloat> %v, <16 x i16> %mask) {
 ; XOP-NEXT:    leaq -8(%rbp), %rsp
 ; XOP-NEXT:    popq %rbx
 ; XOP-NEXT:    popq %rbp
-; XOP-NEXT:    .cfi_def_cfa %rsp, 8
 ; XOP-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v16bf16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $32, %rsp
-; AVX2-NEXT:    .cfi_offset %rbx, -24
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpextrw $0, %xmm2, %r10d
 ; AVX2-NEXT:    vpextrw $1, %xmm2, %r9d
@@ -723,20 +709,15 @@ define <16 x bfloat> @shuffle_v16bf16(<16 x bfloat> %v, <16 x i16> %mask) {
 ; AVX2-NEXT:    leaq -8(%rbp), %rsp
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v16bf16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    pushq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_offset 16
-; AVX512F-NEXT:    .cfi_offset %rbp, -16
 ; AVX512F-NEXT:    movq %rsp, %rbp
-; AVX512F-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    andq $-32, %rsp
 ; AVX512F-NEXT:    subq $32, %rsp
-; AVX512F-NEXT:    .cfi_offset %rbx, -24
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vpextrw $0, %xmm2, %r10d
 ; AVX512F-NEXT:    vpextrw $1, %xmm2, %r9d
@@ -827,7 +808,6 @@ define <16 x bfloat> @shuffle_v16bf16(<16 x bfloat> %v, <16 x i16> %mask) {
 ; AVX512F-NEXT:    leaq -8(%rbp), %rsp
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %rbp
-; AVX512F-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v16bf16:

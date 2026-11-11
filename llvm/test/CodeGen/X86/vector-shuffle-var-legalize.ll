@@ -7,7 +7,7 @@
 ; Type legalization of VECTOR_SHUFFLE_VAR.
 
 ; The only in-range index is 0, so the result is the source.
-define <1 x i32> @scalarize_v1i32(<1 x i32> %v, <1 x i32> %mask) {
+define <1 x i32> @scalarize_v1i32(<1 x i32> %v, <1 x i32> %mask) nounwind {
 ; CHECK-LABEL: scalarize_v1i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
@@ -17,7 +17,7 @@ define <1 x i32> @scalarize_v1i32(<1 x i32> %v, <1 x i32> %mask) {
 }
 
 ; The result is widened to v4i32 and the mask with it.
-define <3 x i32> @widen_v3i32(<3 x i32> %v, <3 x i32> %mask) {
+define <3 x i32> @widen_v3i32(<3 x i32> %v, <3 x i32> %mask) nounwind {
 ; SSE2-LABEL: widen_v3i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
@@ -63,7 +63,7 @@ define <3 x i32> @widen_v3i32(<3 x i32> %v, <3 x i32> %mask) {
 }
 
 ; The result is widened to v4i32, but the widened v4i8 mask isn't legal.
-define <2 x i32> @widen_v2i32_v2i8(<2 x i32> %v, <2 x i8> %mask) {
+define <2 x i32> @widen_v2i32_v2i8(<2 x i32> %v, <2 x i8> %mask) nounwind {
 ; SSE-LABEL: widen_v2i32_v2i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %xmm1, %eax
@@ -99,11 +99,10 @@ define <2 x i32> @widen_v2i32_v2i8(<2 x i32> %v, <2 x i8> %mask) {
 
 ; Without AVX, the result is split, so the whole shuffle is expanded and then
 ; split.
-define <8 x i32> @split_v8i32(<8 x i32> %v, <8 x i32> %mask) {
+define <8 x i32> @split_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; SSE-LABEL: split_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $136, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 144
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
 ; SSE-NEXT:    movd %xmm4, %eax
 ; SSE-NEXT:    movd %xmm3, %ecx
@@ -157,7 +156,6 @@ define <8 x i32> @split_v8i32(<8 x i32> %v, <8 x i32> %mask) {
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE-NEXT:    addq $136, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: split_v8i32:
@@ -169,11 +167,10 @@ define <8 x i32> @split_v8i32(<8 x i32> %v, <8 x i32> %mask) {
 }
 
 ; Split with a mask element type that differs from the result's.
-define <8 x i32> @split_v8i32_v8i8(<8 x i32> %v, <8 x i8> %mask) {
+define <8 x i32> @split_v8i32_v8i8(<8 x i32> %v, <8 x i8> %mask) nounwind {
 ; SSE-LABEL: split_v8i32_v8i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $152, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 160
 ; SSE-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm1, (%rsp)
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -222,7 +219,6 @@ define <8 x i32> @split_v8i32_v8i8(<8 x i32> %v, <8 x i8> %mask) {
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE-NEXT:    addq $152, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: split_v8i32_v8i8:
@@ -235,11 +231,10 @@ define <8 x i32> @split_v8i32_v8i8(<8 x i32> %v, <8 x i8> %mask) {
 }
 
 ; An i2 index can only reach the low half.
-define <8 x i32> @split_v8i32_v8i2(<8 x i32> %v, <8 x i2> %mask) {
+define <8 x i32> @split_v8i32_v8i2(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSE-LABEL: split_v8i32_v8i2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $136, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 144
 ; SSE-NEXT:    pextrw $4, %xmm2, %eax
 ; SSE-NEXT:    pextrw $5, %xmm2, %ecx
 ; SSE-NEXT:    pextrw $6, %xmm2, %edx
@@ -287,7 +282,6 @@ define <8 x i32> @split_v8i32_v8i2(<8 x i32> %v, <8 x i2> %mask) {
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE-NEXT:    addq $136, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: split_v8i32_v8i2:
@@ -308,11 +302,10 @@ define <8 x i32> @split_v8i32_v8i2(<8 x i32> %v, <8 x i2> %mask) {
 }
 
 ; Same with an i1 index.
-define <8 x i32> @split_v8i32_v8i1(<8 x i32> %v, <8 x i1> %mask) {
+define <8 x i32> @split_v8i32_v8i1(<8 x i32> %v, <8 x i1> %mask) nounwind {
 ; SSE-LABEL: split_v8i32_v8i1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $136, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 144
 ; SSE-NEXT:    pextrw $4, %xmm2, %eax
 ; SSE-NEXT:    pextrw $5, %xmm2, %ecx
 ; SSE-NEXT:    pextrw $6, %xmm2, %edx
@@ -360,7 +353,6 @@ define <8 x i32> @split_v8i32_v8i1(<8 x i32> %v, <8 x i1> %mask) {
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE-NEXT:    addq $136, %rsp
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: split_v8i32_v8i1:
@@ -384,11 +376,10 @@ define <8 x i32> @split_v8i32_v8i1(<8 x i32> %v, <8 x i1> %mask) {
 }
 
 ; Floating-point elements.
-define <4 x double> @split_v4f64(<4 x double> %v, <4 x i64> %mask) {
+define <4 x double> @split_v4f64(<4 x double> %v, <4 x i64> %mask) nounwind {
 ; SSE-LABEL: split_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
 ; SSE-NEXT:    movd %xmm4, %eax
 ; SSE-NEXT:    andl $3, %eax
@@ -412,7 +403,6 @@ define <4 x double> @split_v4f64(<4 x double> %v, <4 x i64> %mask) {
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE-NEXT:    popq %rax
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: split_v4f64:
@@ -436,11 +426,10 @@ define <4 x double> @split_v4f64(<4 x double> %v, <4 x i64> %mask) {
 }
 
 ; Split in four without AVX, and in two with AVX2.
-define <16 x i32> @split_v16i32(<16 x i32> %v, <16 x i32> %mask) {
+define <16 x i32> @split_v16i32(<16 x i32> %v, <16 x i32> %mask) nounwind {
 ; SSE-LABEL: split_v16i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $952, %rsp # imm = 0x3B8
-; SSE-NEXT:    .cfi_def_cfa_offset 960
 ; SSE-NEXT:    movdqa %xmm7, %xmm8
 ; SSE-NEXT:    movdqa %xmm6, %xmm7
 ; SSE-NEXT:    movdqa %xmm5, %xmm6
@@ -587,16 +576,12 @@ define <16 x i32> @split_v16i32(<16 x i32> %v, <16 x i32> %mask) {
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm8[0],xmm3[1],xmm8[1]
 ; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm14[0]
 ; SSE-NEXT:    addq $952, %rsp # imm = 0x3B8
-; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: split_v16i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    .cfi_def_cfa_offset 16
-; AVX2-NEXT:    .cfi_offset %rbp, -16
 ; AVX2-NEXT:    movq %rsp, %rbp
-; AVX2-NEXT:    .cfi_def_cfa_register %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $1024, %rsp # imm = 0x400
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
@@ -685,7 +670,6 @@ define <16 x i32> @split_v16i32(<16 x i32> %v, <16 x i32> %mask) {
 ; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm1
 ; AVX2-NEXT:    movq %rbp, %rsp
 ; AVX2-NEXT:    popq %rbp
-; AVX2-NEXT:    .cfi_def_cfa %rsp, 8
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: split_v16i32:
@@ -697,7 +681,7 @@ define <16 x i32> @split_v16i32(<16 x i32> %v, <16 x i32> %mask) {
 }
 
 ; The result is legal but the mask would be split.
-define <4 x i32> @mask_split_v4i32_v4i64(<4 x i32> %v, <4 x i64> %mask) {
+define <4 x i32> @mask_split_v4i32_v4i64(<4 x i32> %v, <4 x i64> %mask) nounwind {
 ; SSE-LABEL: mask_split_v4i32_v4i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
@@ -738,7 +722,7 @@ define <4 x i32> @mask_split_v4i32_v4i64(<4 x i32> %v, <4 x i64> %mask) {
   ret <4 x i32> %res
 }
 
-define <16 x i8> @mask_split_v16i8_v16i16(<16 x i8> %v, <16 x i16> %mask) {
+define <16 x i8> @mask_split_v16i8_v16i16(<16 x i8> %v, <16 x i16> %mask) nounwind {
 ; SSE-LABEL: mask_split_v16i8_v16i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pextrw $7, %xmm2, %eax
