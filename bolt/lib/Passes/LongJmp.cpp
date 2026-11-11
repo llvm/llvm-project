@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <limits>
 
 #define DEBUG_TYPE "longjmp"
 
@@ -1059,6 +1060,9 @@ public:
   void run();
 
 private:
+  template <typename T>
+  static constexpr T MaxValue = std::numeric_limits<T>::max();
+
   static constexpr uint64_t ShortThunkSize = 4;
   static constexpr uint64_t LongThunkSize = 12;
 
@@ -1087,8 +1091,8 @@ private:
     /// The indices of the first and last functions contributing fragments to
     /// this cluster. Used as insertion points for adding thunks to the output
     /// function list.
-    size_t FirstFunctionIndex = -1;
-    size_t LastFunctionIndex = -1;
+    size_t FirstFunctionIndex = MaxValue<size_t>;
+    size_t LastFunctionIndex = MaxValue<size_t>;
 
     /// Thunks located after this cluster.
     BinaryFunctionListType ForwardThunkList;
@@ -1417,7 +1421,9 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         auto TargetIt = SymLayout.find(TargetSymbol);
         const bool Found = TargetIt != SymLayout.end();
         // Unmapped targets use maximum offset and are treated as out of range.
-        const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
+        const Position Target =
+            Found ? TargetIt->second
+                  : Position{MaxValue<unsigned>, MaxValue<uint64_t>};
 
         // References within the same cluster do not need relaxation.
         if (Source.Cluster == Target.Cluster)
@@ -1539,7 +1545,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
 
-    unsigned BestHop = -1u;
+    unsigned BestHop = MaxValue<unsigned>;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
       if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
@@ -1547,7 +1553,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
       BestHop = Hop;
     }
 
-    if (BestHop == -1u)
+    if (BestHop == MaxValue<unsigned>)
       return nullptr;
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
@@ -1623,7 +1629,7 @@ void ClusteredRelaxation::relaxCalls() {
 
     BinaryFunction *Thunk = createLongThunk(TargetSymbol, IsForward);
     // Defer out-of-layout fixups until the output function list is installed.
-    if (BC.usesBTI() && Call.TargetCluster == -1u)
+    if (BC.usesBTI() && Call.TargetCluster == MaxValue<unsigned>)
       PendingBTIFixups.emplace_back(Thunk, TargetSymbol);
 
     Thunk->setCodeSectionName(FC.getThunkSectionName(IsForward));
@@ -1647,7 +1653,8 @@ void ClusteredRelaxation::relaxCalls() {
   NumLongThunkCalls += OutOfLayoutCalls.size();
   // Process known targets from farthest to nearest for maximizing thunk reuse.
   // BTI binaries use direct branch chains for in-layout targets.
-  const unsigned MaxThunks = BC.usesBTI() ? -1u : opts::MaxThunkChainLength;
+  const unsigned MaxThunks =
+      BC.usesBTI() ? MaxValue<unsigned> : opts::MaxThunkChainLength;
   for (auto &Calls : llvm::reverse(CallsByDistance)) {
     for (OutOfRangeRef &Call : Calls) {
       // Attempt a branch thunk chain if length is below threshold.
@@ -1671,7 +1678,7 @@ void ClusteredRelaxation::relaxCalls() {
 void ClusteredRelaxation::relaxUnconditionalBranches() {
   for (const OutOfRangeRef &Branch : Branches) {
     const MCSymbol *Target =
-        getOrCreateBranchThunkChain(Branch, /*MaxThunks=*/-1u);
+        getOrCreateBranchThunkChain(Branch, MaxValue<unsigned>);
     assert(Target && "expected branch thunk chain");
     // Skip already in-range branches that do not need relaxation.
     if (Target == Branch.TargetSymbol)
