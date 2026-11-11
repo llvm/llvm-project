@@ -33,17 +33,18 @@ All interactions with the LLVM community are required to comply with the
 {doc}`AI policy <AIToolPolicy>`. You must not post any description you don't
 understand, and any AI assistance must be noted.
 
-Fuzzer and AI-generated testcases should include a brief description of the
-framework used to generate them. If you're planning to file more than three
-bug reports using a particular framework, please make a thread on
-[LLVM Discourse](https://discourse.llvm.org/) to plan out how to file those
-reports.
+Fuzzer and AI-generated testcases should:
 
-Issues found by fuzzing or by similar automated bug-finding tools should, at
-least, say so in the issue title, e.g., by including `fuzzer-found`. A statement
-buried in a long description is easy to miss, and a clear indication in the
-title helps maintainers triage these issues. Mentioning it also in the
-description and/or with labels is welcome.
+- Include a brief description of the framework used to generate them.
+- Say so, at least, in the issue title, e.g., by including `fuzzer-found`.
+  Mentioning it also in the description and/or with labels is welcome.
+
+A statement buried in a long description is easy to miss, and a clear indication
+in the title helps maintainers triage these issues.
+
+If you're planning to file more than three bug reports using a particular
+framework, please make a thread on [LLVM Discourse](https://discourse.llvm.org/)
+to plan out how to file those reports.
 
 (crashes the compiler)=
 
