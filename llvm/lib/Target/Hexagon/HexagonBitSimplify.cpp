@@ -926,7 +926,7 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
     case Hexagon::HlxLLRRegClassID:
       VerifySR(RC, RR.Sub);
       return &Hexagon::HlxLRRegClass;
-  }
+    }
   return nullptr;
 }
 
