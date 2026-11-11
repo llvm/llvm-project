@@ -1130,25 +1130,30 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->removeFnAttr("zero-call-used-regs");
 
   // Add vscale_range attribute if appropriate.
-  llvm::StringMap<bool> FeatureMap;
-  auto IsArmStreaming = TargetInfo::ArmStreamingKind::NotStreaming;
-  if (FD) {
-    getContext().getFunctionFeatureMap(FeatureMap, FD);
-    if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
-      if (T->getAArch64SMEAttributes() &
-          FunctionType::SME_PStateSMCompatibleMask)
-        IsArmStreaming = TargetInfo::ArmStreamingKind::StreamingCompatible;
+  llvm::Attribute VScaleRangeAttr;
+  if (CGM.getTriple().isAArch64()) {
+    llvm::StringMap<bool> FeatureMap;
+    auto IsArmStreaming = TargetInfo::ArmStreamingKind::NotStreaming;
+    if (FD) {
+      getContext().getFunctionFeatureMap(FeatureMap, FD);
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          IsArmStreaming = TargetInfo::ArmStreamingKind::StreamingCompatible;
 
-    if (IsArmStreamingFunction(FD, true))
-      IsArmStreaming = TargetInfo::ArmStreamingKind::Streaming;
+      if (IsArmStreamingFunction(FD, true))
+        IsArmStreaming = TargetInfo::ArmStreamingKind::Streaming;
+    }
+    auto VScaleRange = getContext().getTargetInfo().getVScaleRange(
+        getLangOpts(), IsArmStreaming, FD ? &FeatureMap : nullptr);
+    if (VScaleRange)
+      VScaleRangeAttr = llvm::Attribute::getWithVScaleRangeArgs(
+          getLLVMContext(), VScaleRange->first, VScaleRange->second);
+  } else {
+    VScaleRangeAttr = CGM.getDefaultVScaleRange();
   }
-  std::optional<std::pair<unsigned, unsigned>> VScaleRange =
-      getContext().getTargetInfo().getVScaleRange(getLangOpts(), IsArmStreaming,
-                                                  &FeatureMap);
-  if (VScaleRange) {
-    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
-        getLLVMContext(), VScaleRange->first, VScaleRange->second));
-  }
+  if (VScaleRangeAttr.isValid())
+    CurFn->addFnAttr(VScaleRangeAttr);
 
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
