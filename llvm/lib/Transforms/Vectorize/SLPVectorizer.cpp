@@ -4652,13 +4652,15 @@ private:
           // instruction. It may happen, if the chain of same copyable elements
           // appears in the tree. With the self-operand modeling (op(V, V)) the
           // user node may have the value on an operand column without copyable
-          // data, so its copyable data releases the instruction's schedule
-          // data directly and must stay a counted user.
+          // data in some lane, so its copyable data releases the instruction's
+          // schedule data directly and must stay a counted user.
           if (In == I) {
             unsigned NumCols = 0;
             for (unsigned OpIdx : seq<unsigned>(EI.UserTE->getNumOperands()))
-              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I &&
-                         !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
+              for (auto [OpV, V] :
+                   zip(EI.UserTE->getOperand(OpIdx), EI.UserTE->Scalars))
+                NumCols += OpV == I && V == I &&
+                           !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
             if (NumCols == 0) {
               EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
               if (ScheduleCopyableData *UserCD =
@@ -5020,9 +5022,6 @@ private:
                       Bundle->getTreeEntry()->isExpandedOperand(In, OpIdx),
                       /*CopyableDepsOnly=*/CopyableDepsOnly);
                 }
-              // If parent node is schedulable, it will be handled correctly.
-              if (Bundle->getTreeEntry()->isCopyableElement(In))
-                break;
             }
           }
           // A copyable element absorbed into its user modeling (e.g. a
