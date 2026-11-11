@@ -2555,6 +2555,7 @@ ThreadModel Triple::getDefaultThreadModel() const { return ThreadModel::POSIX; }
 
 LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   switch (getArch()) {
+  case loongarch32:
   case loongarch64:
   case riscv32:
   case riscv64:

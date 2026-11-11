@@ -1825,6 +1825,9 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("riscv64be-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
+      Triple("loongarch32-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(
+      LongDoubleFormat::IEEEquad,
       Triple("loongarch64-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("ve-unknown-linux-gnu").getDefaultLongDoubleFormat());
