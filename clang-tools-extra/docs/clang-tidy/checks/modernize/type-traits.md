@@ -34,8 +34,6 @@ std::remove_cvref_t<int>
 
 ## Options
 
-(modernize-type-traits-ignore-macros)=
-
 ````{option} IgnoreMacros
 If `true` don't diagnose traits defined in macros.
 

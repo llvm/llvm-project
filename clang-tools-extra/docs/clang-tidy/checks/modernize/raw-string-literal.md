@@ -47,15 +47,11 @@ vertical tab in source code is not visually obvious.
 
 ## Options
 
-(modernize-raw-string-literal-delimiter-stem)=
-
 ```{option} DelimiterStem
 Custom delimiter to escape characters in raw string literals. It is used in
 the following construction: `R"stem_delimiter(contents)stem_delimiter"`.
 Default is `lit`.
 ```
-
-(modernize-raw-string-literal-replace-shorter-literals)=
 
 ```{option} ReplaceShorterLiterals
 Controls replacing shorter non-raw string literals with longer raw string

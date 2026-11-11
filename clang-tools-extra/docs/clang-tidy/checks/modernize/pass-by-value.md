@@ -143,20 +143,14 @@ For more information about the pass-by-value idiom, read: [Want Speed? Pass by V
 
 ## Options
 
-(modernize-pass-by-value-include-style)=
-
 ```{option} IncludeStyle
 A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.
 ```
-
-(modernize-pass-by-value-values-only)=
 
 ```{option} ValuesOnly
 When `true`, the check only warns about copied parameters that are already
 passed by value. Default is `false`.
 ```
-
-(modernize-pass-by-value-ignore-macros)=
 
 ```{option} IgnoreMacros
 When `true`, the check will not give warnings inside macros. Default is

@@ -34,8 +34,6 @@ initializers for classes.
 
 ## Options
 
-(modernize-use-default-member-init-use-assignment)=
-
 ````{option} UseAssignment
 If this option is set to `true`, the check will initialize
 members with an assignment. For example:
@@ -51,15 +49,11 @@ struct A {
 Default is `false`.
 ````
 
-(modernize-use-default-member-init-ignore-macros)=
-
 ```{option} IgnoreMacros
 If this option is set to `true`, the check will not warn
 about members declared inside macros.
 Default is `true`.
 ```
-
-(modernize-use-default-member-init-ignore-non-visible-references)=
 
 ```{option} IgnoreNonVisibleReferences
 If this option is set to `true`, the check will not warn

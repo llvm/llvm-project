@@ -37,12 +37,10 @@ private:
 
 - Notice that the migration example above leaves the `private` access
   specification untouched. You might want to run the check
-  {doc}`modernize-use-equals-delete <../modernize/use-equals-delete>`
+  {doc}`modernize-use-equals-delete <use-equals-delete>`
   to get warnings for deleted functions in private sections.
 
 ## Options
-
-(modernize-replace-disallow-copy-and-assign-macro-macro-name)=
 
 ```{option} MacroName
 A string specifying the macro name whose expansion will be replaced.

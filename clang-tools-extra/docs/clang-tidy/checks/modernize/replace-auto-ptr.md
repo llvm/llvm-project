@@ -3,7 +3,7 @@
 
 # modernize-replace-auto-ptr
 
-This check replaces the uses of the deprecated class `std::auto_ptr` by
+Replaces the uses of the deprecated class `std::auto_ptr` by
 `std::unique_ptr` (introduced in C++11). The transfer of ownership, done
 by the copy-constructor and the assignment operator, is changed to match
 `std::unique_ptr` usage by using explicit calls to `std::move()`.
@@ -70,8 +70,6 @@ void f() {
 ```
 
 ## Options
-
-(modernize-replace-auto-ptr-include-style)=
 
 ```{option} IncludeStyle
 A string specifying which include-style is used, `llvm` or `google`. Default is `llvm`.

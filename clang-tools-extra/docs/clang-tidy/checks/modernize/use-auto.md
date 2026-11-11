@@ -171,14 +171,12 @@ function returns that type, or a pointer or reference to it.
 
 ## Options
 
-(modernize-use-auto-min-type-name-length)=
-
 ````{option} MinTypeNameLength
 If the option is set to non-zero, the check will ignore type
 names having a length less than the option value. The option affects
 expressions only, not iterators.
 Spaces between multi-lexeme type names (`long int`) are considered as one.
-If the [`RemoveStars`](#modernize-use-auto-remove-stars) option (see below) is set to `true`, then `*s`
+If the {option}`RemoveStars` option (see below) is set to `true`, then `*s`
 in the type are also counted as a part of the type name.
 
 ```c++
@@ -210,8 +208,6 @@ long int d = static_cast<long int>(foo());       // ---> auto d = ...
 ```
 Default is `5`.
 ````
-
-(modernize-use-auto-remove-stars)=
 
 ````{option} RemoveStars
 If the option is set to `true`, the check will remove

@@ -44,14 +44,10 @@ C++ language modes.
 
 ## Options
 
-(modernize-use-designated-initializers-ignore-macros)=
-
 ```{option} IgnoreMacros
 The value `false` specifies that components of initializer lists expanded from
 macros are not checked. Default is `true`.
 ```
-
-(modernize-use-designated-initializers-ignore-single-element-aggregates)=
 
 ```{option} IgnoreSingleElementAggregates
 The value `false` specifies that even initializers for aggregate types with
@@ -62,21 +58,15 @@ designated initializers.
 Default is `true`.
 ```
 
-(modernize-use-designated-initializers-restrict-to-pod-types)=
-
 ```{option} RestrictToPODTypes
 The value `true` specifies that only Plain Old Data (POD) types shall be
 checked. This makes the check applicable to even older C++ standards. Default is `false`.
 ```
 
-(modernize-use-designated-initializers-strict-c-standard-compliance)=
-
 ```{option} StrictCStandardCompliance
 When set to `false`, the check will not restrict itself to C99 and above.
 Default is `true`.
 ```
-
-(modernize-use-designated-initializers-strict-cpp-standard-compliance)=
 
 ```{option} StrictCppStandardCompliance
 When set to `false`, the check will not restrict itself to C++20 and above.
