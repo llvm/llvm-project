@@ -15,7 +15,7 @@ using namespace llvm;
 using namespace lld;
 
 StringRef lld::utils::getRootSymbol(StringRef name) {
-  if (name.find('.') == StringRef::npos)
+  if (name.contains('.'))
     return name;
 
   name.consume_back(".Tgm");
