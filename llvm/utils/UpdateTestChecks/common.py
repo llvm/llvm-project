@@ -2895,6 +2895,7 @@ def add_checks_at_end(
     output_lines, prefix_list, func_order, comment_string, check_generator
 ):
     added = set()
+    prefix_exclusions = set()
     generated_prefixes = set()
     for prefix in prefix_list:
         prefixes = prefix[0]
@@ -2904,6 +2905,8 @@ def add_checks_at_end(
                 # The func order can contain the same functions multiple times.
                 # If we see one again we are done.
                 if (func, prefix) in added:
+                    continue
+                if (func, prefix) in prefix_exclusions:
                     continue
                 if added:
                     output_lines.append(comment_string)
@@ -2927,4 +2930,9 @@ def add_checks_at_end(
                 ):
                     added.add((func, generated_prefix))
                     generated_prefixes.add(generated_prefix)
+                    # Every RUN using this prefix now checks the function. Exclude its other
+                    # prefixes to avoid checking the function again in those RUNs.
+                    for run in prefix_list:
+                        if generated_prefix in run[0]:
+                            prefix_exclusions.update((func, p) for p in run[0])
     return generated_prefixes
