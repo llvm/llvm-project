@@ -28,6 +28,11 @@ void transform::ApplyArmSVELowerContractionToBFMMLAPatternsOp::populatePatterns(
   arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
 }
 
+void transform::ApplyArmSVELowerContractionToIndexedFMLAPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  arm_sve::populateLowerContractionToSVEIndexedFMLAPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//

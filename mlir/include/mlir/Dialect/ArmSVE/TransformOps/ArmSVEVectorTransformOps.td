@@ -33,4 +33,25 @@ def ApplyArmSVELowerContractionToBFMMLAPatternsOp
 
   let assemblyFormat = "attr-dict";
 }
+
+def ApplyArmSVELowerContractionToIndexedFMLAPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.arm_sve.vector_contract_to_indexed_fmla",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply patterns to lower `vector.contract` to SVE's indexed FMLAs, where
+    `vector.contract` is a matrix multiplication with types matching the
+    following: 
+
+    ```
+      vector.contract #matmul_trait %lhs, %rhs, %acc
+        vector<1x4xf32>, vector<4x[8]xf32> into vector<1x[8]xf32>
+    ```
+
+    (`#matmul_trait` contains indexing maps and iterator specification specific
+    to matrix multiplication).
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // ARMSVE_VECTOR_TRANSFORM_OPS
