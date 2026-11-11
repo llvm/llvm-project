@@ -94,7 +94,7 @@ LIBC_INLINE double atan2(double y, double x) {
                                             0x1.2d97c7f3321d2p+1};
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]
-  constexpr DoubleDouble CONST_ADJ[2][2][2] = {
+  static constexpr DoubleDouble CONST_ADJ[2][2][2] = {
       {{ZERO, MPI_OVER_2}, {MZERO, MPI_OVER_2}},
       {{MPI, PI_OVER_2}, {MPI, PI_OVER_2}}};
 
@@ -131,7 +131,7 @@ LIBC_INLINE double atan2(double y, double x) {
     //   0: zero
     //   1: finite, non-zero
     //   2: infinity
-    constexpr DoubleDouble EXCEPTS[3][3][2] = {
+    static constexpr DoubleDouble EXCEPTS[3][3][2] = {
         {{ZERO, PI}, {ZERO, PI}, {ZERO, PI}},
         {{PI_OVER_2, PI_OVER_2}, {ZERO, ZERO}, {ZERO, PI}},
         {{PI_OVER_2, PI_OVER_2},

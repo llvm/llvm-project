@@ -62,7 +62,7 @@ LIBC_INLINE double lg_ln(double x) {
                                 0x1.999611761d772p-3, -0x1.54f3e581b61bfp-3,
                                 0x1.1e642b4cb5143p-3, -0x1.9115a5af1e1edp-4};
   // IL[i] = log(1 + i/16) for i = 0..15
-  constexpr double IL[16] = {
+  static constexpr double IL[16] = {
       0x1.59caeec280116p-57, 0x1.f0a30c01162aap-5, 0x1.e27076e2af2ebp-4,
       0x1.5ff3070a793d6p-3,  0x1.c8ff7c79a9a2p-3,  0x1.1675cababa60fp-2,
       0x1.4618bc21c5ec2p-2,  0x1.739d7f6bbd007p-2, 0x1.9f323ecbf984dp-2,
@@ -70,7 +70,7 @@ LIBC_INLINE double lg_ln(double x) {
       0x1.1e85f5e7040d1p-1,  0x1.307d7334f10bep-1, 0x1.41d8fe84672afp-1,
       0x1.52a2d265bc5abp-1};
   // IX[i] = 1 / (1 + i/16) for i = 0..15
-  constexpr double IX[16] = {
+  static constexpr double IX[16] = {
       0x000000000000001p+0, 0x1.e1e1e1e1e1e1ep-1, 0x1.c71c71c71c71cp-1,
       0x1.af286bca1af28p-1, 0x1.999999999999ap-1, 0x1.8618618618618p-1,
       0x1.745d1745d1746p-1, 0x1.642c8590b2164p-1, 0x1.5555555555555p-1,

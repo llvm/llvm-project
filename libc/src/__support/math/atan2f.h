@@ -251,7 +251,7 @@ LIBC_INLINE float atan2f(float y, float x) {
   constexpr double THREE_PI_OVER_4 = 0x1.2d97c7f3321d2p+1;
   // Adjustment for constant term:
   //   CONST_ADJ[x_sign][y_sign][recip]
-  constexpr fputil::DoubleDouble CONST_ADJ[2][2][2] = {
+  static constexpr fputil::DoubleDouble CONST_ADJ[2][2][2] = {
       {{{0.0, 0.0}, {-PI_LO / 2, -PI_OVER_2}},
        {{-0.0, -0.0}, {-PI_LO / 2, -PI_OVER_2}}},
       {{{-PI_LO, -PI}, {PI_LO / 2, PI_OVER_2}},
@@ -288,7 +288,7 @@ LIBC_INLINE float atan2f(float y, float x) {
     //   0: zero
     //   1: finite, non-zero
     //   2: infinity
-    constexpr double EXCEPTS[3][3][2] = {
+    static constexpr double EXCEPTS[3][3][2] = {
         {{0.0, PI}, {0.0, PI}, {0.0, PI}},
         {{PI_OVER_2, PI_OVER_2}, {0.0, 0.0}, {0.0, PI}},
         {{PI_OVER_2, PI_OVER_2},
