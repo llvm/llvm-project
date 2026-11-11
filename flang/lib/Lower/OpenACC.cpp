@@ -141,6 +141,10 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                   bool unwrapBoxAddr = false, mlir::Value isPresent = {},
                   mlir::acc::DataClauseModifier modifiers =
                       mlir::acc::DataClauseModifier::none) {
+  if (mlir::isa<fir::BoxCharType>(baseAddr.getType()))
+    TODO(loc, "OpenACC mapping of scalar CHARACTER variable with "
+              "runtime-determined length or host association");
+
   mlir::Value varPtrPtr;
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
@@ -1558,25 +1562,25 @@ mlir::Type getTypeFromIvTypeSize(fir::FirOpBuilder &builder,
   return builder.getIntegerType(ivTypeSize * 8);
 }
 
-// Lower one DO control (lower, upper, or step).
-//
-// An implicit acc.loop is a DO inside a compute construct with no `!$acc loop`.
-// A non-integer control is a Fortran extension; convert it to the induction
-// variable's integer type, matching non-OpenACC lowering. An integer control,
-// of any kind, is already a legal acc.loop operand and is left unchanged.
-// An explicit `!$acc loop` keeps every control expression's own type.
-// OpenACC requires those bounds to be integer.
+// Lower one DO control (lower, upper, or step). The loop parameters have the
+// induction variable's kind (F2023 11.1.7.4.1), so convert a control whose
+// type differs. A non-integer control is a Fortran extension used by an
+// implicit acc.loop. An explicit !$acc loop with a non-integer bound is
+// rejected in semantics and must not reach here.
 static mlir::Value genACCLoopControlValue(
     Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
     mlir::Location loc, Fortran::lower::StatementContext &stmtCtx,
     const Fortran::lower::SomeExpr &expr,
     const Fortran::semantics::Symbol &ivSym, bool hasDirective) {
+  mlir::Type ivTy = getTypeFromIvTypeSize(builder, ivSym);
   mlir::Value value = fir::getBase(converter.genExprValue(expr, stmtCtx));
-  if (hasDirective || mlir::isa<mlir::IntegerType>(value.getType()) ||
-      value.getType().isIndex())
+  if (value.getType() == ivTy)
     return value;
-  return builder.createConvert(loc, getTypeFromIvTypeSize(builder, ivSym),
-                               value);
+  if (!mlir::isa<mlir::IntegerType>(value.getType()) &&
+      !value.getType().isIndex())
+    assert(!hasDirective &&
+           "non-integer OpenACC loop bound should have been rejected");
+  return builder.createConvert(loc, ivTy, value);
 }
 
 static void privatizeIv(
@@ -2036,9 +2040,9 @@ static void processDoLoopBounds(
         steps.push_back(genACCLoopControlValue(
             converter, builder, currentLocation, stmtCtx,
             *Fortran::semantics::GetExpr(*expr), ivSym, hasDirective));
-      else // If `step` is not present, assume it is `1`.
+      else // Absent step is 1 of the induction variable's kind.
         steps.push_back(builder.createIntegerConstant(
-            currentLocation, upperbounds.back().getType(), 1));
+            currentLocation, getTypeFromIvTypeSize(builder, ivSym), 1));
 
       privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                   privateOperands, ivPrivate, isDoConcurrent);
@@ -2084,9 +2088,9 @@ static void processDoLoopBounds(
             steps.push_back(genACCLoopControlValue(
                 converter, builder, loc, stmtCtx,
                 *Fortran::semantics::GetExpr(step), ivSym, hasDirective));
-          else // If `step` is not present, assume it is `1`.
+          else // Absent step is 1 of the induction variable's kind.
             steps.push_back(builder.createIntegerConstant(
-                currentLocation, upperbounds.back().getType(), 1));
+                currentLocation, getTypeFromIvTypeSize(builder, ivSym), 1));
           privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
                       privateOperands, ivPrivate);
 
@@ -2154,29 +2158,17 @@ void AccDataMap::remapDataOperandSymbols(
     // Note: this will instantiate all common block members even if they are not
     // used inside the region. If hlfir.declare DCE is not made possible, this
     // could be improved to reduce IR noise.
-    if (const auto *commonBlock = symbol->template detailsIf<
-                                  Fortran::semantics::CommonBlockDetails>()) {
+    if (symbol->template has<Fortran::semantics::CommonBlockDetails>()) {
       // Common block members keep their host binding; only whole objects get
       // an alternate device binding.
       if (deviceBindingsOnly)
         continue;
-      const Fortran::semantics::Scope &commonScope = symbol->owner();
-      if (commonScope.equivalenceSets().empty()) {
-        for (auto member : commonBlock->objects())
-          remapCommonBlockMember(converter, loc, *member, value, *symbol,
-                                 seenSymbols);
-      } else {
-        // Objects equivalenced with common block members still belong to the
-        // common block storage even if they are not part of the common block
-        // declaration. The easiest and most robust way to find all symbols
-        // belonging to the common block is to loop through the scope symbols
-        // and check if they belong to the common.
-        for (const auto &scopeSymbol : commonScope)
-          if (Fortran::semantics::FindCommonBlockContaining(
-                  *scopeSymbol.second) == &symbol.get())
-            remapCommonBlockMember(converter, loc, *scopeSymbol.second, value,
-                                   *symbol, seenSymbols);
-      }
+      // Objects EQUIVALENCEd with common block members belong to the block's
+      // storage too, even though no COMMON statement names them.
+      for (const Fortran::semantics::Symbol *member :
+           Fortran::lower::getCommonBlockStorageMembers(*symbol))
+        remapCommonBlockMember(converter, loc, *member, value, *symbol,
+                               seenSymbols);
       continue;
     }
     std::optional<fir::FortranVariableOpInterface> hostDef =
@@ -2204,9 +2196,21 @@ void AccDataMap::remapDataOperandSymbols(
     mlir::Value hostInput = hostDeclare.getMemref();
     mlir::Type hostType = hostInput.getType();
     mlir::Type computeType = value.getType();
+    auto hostBoxType = llvm::dyn_cast<fir::BaseBoxType>(hostType);
+    auto computeBoxType = llvm::dyn_cast<fir::BaseBoxType>(computeType);
     if (hostType == computeType) {
       mapper.map(hostInput, value);
-    } else if (llvm::isa<fir::BaseBoxType>(computeType)) {
+    } else if (hostBoxType && computeBoxType &&
+               hostBoxType.getBoxTypeWithNewAttr(
+                   fir::BaseBoxType::Attribute::None) ==
+                   computeBoxType.getBoxTypeWithNewAttr(
+                       fir::BaseBoxType::Attribute::None)) {
+      // The host declare input may describe an allocatable or pointer while
+      // the declared variable does not (e.g. a SELECT TYPE associate name with
+      // an allocatable or pointer selector). hlfir.declare drops that from its
+      // results, so the data operation result can be declared directly.
+      mapper.map(hostInput, value);
+    } else if (computeBoxType) {
       assert(!llvm::isa<fir::BaseBoxType>(hostType) &&
              "box type mismatch between compute region variable and "
              "hlfir.declare input unexpected");

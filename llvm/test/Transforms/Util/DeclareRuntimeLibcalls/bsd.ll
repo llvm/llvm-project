@@ -6,7 +6,10 @@
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-unknown-freebsd < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=FREEBSD %s
 ; RUN: opt -S -passes=declare-runtime-libcalls -mtriple=x86_64-unknown-openbsd < %s | sed '/^$/d;/^; Function Attrs:/d' | FileCheck -check-prefix=OPENBSD %s
 
-; LINUX: declare void @_Unwind_Resume(ptr)
+; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; LINUX-NEXT: @__stack_chk_guard = external global ptr
+; LINUX-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; LINUX-NEXT: declare void @_Unwind_Resume(ptr)
 ; LINUX-NEXT: declare double @__adddf3(double, double)
 ; LINUX-NEXT: declare float @__addsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -77,6 +80,9 @@
 ; LINUX-NEXT: declare i32 @__clzdi2(i64)
 ; LINUX-NEXT: declare i32 @__clzsi2(i32)
 ; LINUX-NEXT: declare i32 @__clzti2(i128)
+; LINUX-NEXT: declare i32 @__ctzdi2(i64)
+; LINUX-NEXT: declare i32 @__ctzsi2(i32)
+; LINUX-NEXT: declare i32 @__ctzti2(i128)
 ; LINUX-NEXT: declare void @__cxa_end_cleanup()
 ; LINUX-NEXT: declare double @__divdf3(double, double)
 ; LINUX-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -245,9 +251,7 @@
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; LINUX-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; LINUX-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; LINUX-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; LINUX-NEXT: declare void @__stack_chk_fail()
-; LINUX-NEXT: declare void @__stack_chk_guard(...)
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -433,10 +437,10 @@
 ; LINUX-NEXT: declare fp128 @fmodf128(fp128, fp128)
 ; LINUX-NEXT: declare x86_fp80 @fmodl(x86_fp80, x86_fp80)
 ; LINUX-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @frexp(double, ptr)
-; LINUX-NEXT: declare float @frexpf(float, ptr)
-; LINUX-NEXT: declare fp128 @frexpf128(fp128, ptr)
-; LINUX-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr)
+; LINUX-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare fp128 @frexpf128(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare double @ldexp(double, i32)
 ; LINUX-NEXT: declare float @ldexpf(float, i32)
 ; LINUX-NEXT: declare fp128 @ldexpf128(fp128, i32)
@@ -473,10 +477,10 @@
 ; LINUX-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; LINUX-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; LINUX-NEXT: declare ptr @memset(ptr, i32, i64)
-; LINUX-NEXT: declare double @modf(double, ptr)
-; LINUX-NEXT: declare float @modff(float, ptr)
-; LINUX-NEXT: declare fp128 @modff128(fp128, ptr)
-; LINUX-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr)
+; LINUX-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; LINUX-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare fp128 @modff128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
+; LINUX-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10))
 ; LINUX-NEXT: declare double @nan(ptr)
 ; LINUX-NEXT: declare float @nanf(ptr)
 ; LINUX-NEXT: declare x86_fp80 @nanl(ptr)
@@ -494,9 +498,9 @@
 ; LINUX-NEXT: declare double @remainder(double, double)
 ; LINUX-NEXT: declare float @remainderf(float, float)
 ; LINUX-NEXT: declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
-; LINUX-NEXT: declare double @remquo(double, double, ptr)
-; LINUX-NEXT: declare float @remquof(float, float, ptr)
-; LINUX-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
+; LINUX-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare double @rint(double)
 ; LINUX-NEXT: declare float @rintf(float)
 ; LINUX-NEXT: declare fp128 @rintf128(fp128)
@@ -516,10 +520,10 @@
 ; LINUX-NEXT: declare float @scalbnf(float, i32)
 ; LINUX-NEXT: declare x86_fp80 @scalbnl(x86_fp80, i32)
 ; LINUX-NEXT: declare double @sin(double)
-; LINUX-NEXT: declare void @sincos(double, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf(float, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf128(fp128, ptr, ptr)
-; LINUX-NEXT: declare void @sincosl(x86_fp80, ptr, ptr)
+; LINUX-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; LINUX-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare void @sincosf128(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
+; LINUX-NEXT: declare void @sincosl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10), ptr noalias nonnull writeonly align 16 dereferenceable(10))
 ; LINUX-NEXT: declare float @sinf(float)
 ; LINUX-NEXT: declare fp128 @sinf128(fp128)
 ; LINUX-NEXT: declare double @sinh(double)
@@ -528,7 +532,7 @@
 ; LINUX-NEXT: declare x86_fp80 @sinhl(x86_fp80)
 ; LINUX-NEXT: declare x86_fp80 @sinl(x86_fp80)
 ; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; LINUX-NEXT: declare fp128 @sqrtf128(fp128)
 ; LINUX-NEXT: declare x86_fp80 @sqrtl(x86_fp80)
 ; LINUX-NEXT: declare double @tan(double)
@@ -546,12 +550,16 @@
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncf128(fp128)
 ; LINUX-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; FREEBSD: declare void @_Unwind_Resume(ptr)
+; FREEBSD: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; FREEBSD-NEXT: @__stack_chk_guard = external global ptr
+; FREEBSD-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; FREEBSD-NEXT: declare void @_Unwind_Resume(ptr)
 ; FREEBSD-NEXT: declare double @__adddf3(double, double)
 ; FREEBSD-NEXT: declare float @__addsf3(float, float)
 ; FREEBSD-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -622,6 +630,9 @@
 ; FREEBSD-NEXT: declare i32 @__clzdi2(i64)
 ; FREEBSD-NEXT: declare i32 @__clzsi2(i32)
 ; FREEBSD-NEXT: declare i32 @__clzti2(i128)
+; FREEBSD-NEXT: declare i32 @__ctzdi2(i64)
+; FREEBSD-NEXT: declare i32 @__ctzsi2(i32)
+; FREEBSD-NEXT: declare i32 @__ctzti2(i128)
 ; FREEBSD-NEXT: declare void @__cxa_end_cleanup()
 ; FREEBSD-NEXT: declare double @__divdf3(double, double)
 ; FREEBSD-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -783,9 +794,7 @@
 ; FREEBSD-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; FREEBSD-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; FREEBSD-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; FREEBSD-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; FREEBSD-NEXT: declare void @__stack_chk_fail()
-; FREEBSD-NEXT: declare void @__stack_chk_guard(...)
+; FREEBSD-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; FREEBSD-NEXT: declare double @__subdf3(double, double)
 ; FREEBSD-NEXT: declare float @__subsf3(float, float)
 ; FREEBSD-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -950,9 +959,9 @@
 ; FREEBSD-NEXT: declare float @fmodf(float, float)
 ; FREEBSD-NEXT: declare x86_fp80 @fmodl(x86_fp80, x86_fp80)
 ; FREEBSD-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; FREEBSD-NEXT: declare double @frexp(double, ptr)
-; FREEBSD-NEXT: declare float @frexpf(float, ptr)
-; FREEBSD-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr)
+; FREEBSD-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; FREEBSD-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; FREEBSD-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; FREEBSD-NEXT: declare double @ldexp(double, i32)
 ; FREEBSD-NEXT: declare float @ldexpf(float, i32)
 ; FREEBSD-NEXT: declare x86_fp80 @ldexpl(x86_fp80, i32)
@@ -981,9 +990,9 @@
 ; FREEBSD-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; FREEBSD-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; FREEBSD-NEXT: declare ptr @memset(ptr, i32, i64)
-; FREEBSD-NEXT: declare double @modf(double, ptr)
-; FREEBSD-NEXT: declare float @modff(float, ptr)
-; FREEBSD-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr)
+; FREEBSD-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; FREEBSD-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; FREEBSD-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10))
 ; FREEBSD-NEXT: declare double @nan(ptr)
 ; FREEBSD-NEXT: declare float @nanf(ptr)
 ; FREEBSD-NEXT: declare x86_fp80 @nanl(ptr)
@@ -999,9 +1008,9 @@
 ; FREEBSD-NEXT: declare double @remainder(double, double)
 ; FREEBSD-NEXT: declare float @remainderf(float, float)
 ; FREEBSD-NEXT: declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
-; FREEBSD-NEXT: declare double @remquo(double, double, ptr)
-; FREEBSD-NEXT: declare float @remquof(float, float, ptr)
-; FREEBSD-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
+; FREEBSD-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; FREEBSD-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; FREEBSD-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; FREEBSD-NEXT: declare double @rint(double)
 ; FREEBSD-NEXT: declare float @rintf(float)
 ; FREEBSD-NEXT: declare x86_fp80 @rintl(x86_fp80)
@@ -1024,7 +1033,7 @@
 ; FREEBSD-NEXT: declare x86_fp80 @sinhl(x86_fp80)
 ; FREEBSD-NEXT: declare x86_fp80 @sinl(x86_fp80)
 ; FREEBSD-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; FREEBSD-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; FREEBSD-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; FREEBSD-NEXT: declare x86_fp80 @sqrtl(x86_fp80)
 ; FREEBSD-NEXT: declare double @tan(double)
 ; FREEBSD-NEXT: declare float @tanf(float)
@@ -1038,12 +1047,16 @@
 ; FREEBSD-NEXT: declare double @trunc(double)
 ; FREEBSD-NEXT: declare float @truncf(float)
 ; FREEBSD-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; FREEBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; FREEBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
-; OPENBSD: declare void @_Unwind_Resume(ptr)
+; OPENBSD: @__guard_local = external global ptr
+; OPENBSD-NEXT: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
+; OPENBSD-NEXT: declare i32 @_Unwind_RaiseException(ptr)
+; OPENBSD-NEXT: declare void @_Unwind_Resume(ptr)
 ; OPENBSD-NEXT: declare double @__adddf3(double, double)
 ; OPENBSD-NEXT: declare float @__addsf3(float, float)
 ; OPENBSD-NEXT: declare fp128 @__addtf3(fp128, fp128)
@@ -1114,6 +1127,9 @@
 ; OPENBSD-NEXT: declare i32 @__clzdi2(i64)
 ; OPENBSD-NEXT: declare i32 @__clzsi2(i32)
 ; OPENBSD-NEXT: declare i32 @__clzti2(i128)
+; OPENBSD-NEXT: declare i32 @__ctzdi2(i64)
+; OPENBSD-NEXT: declare i32 @__ctzsi2(i32)
+; OPENBSD-NEXT: declare i32 @__ctzti2(i128)
 ; OPENBSD-NEXT: declare void @__cxa_end_cleanup()
 ; OPENBSD-NEXT: declare double @__divdf3(double, double)
 ; OPENBSD-NEXT: declare signext i16 @__divhi3(i16 signext, i16 signext)
@@ -1209,7 +1225,6 @@
 ; OPENBSD-NEXT: declare i64 @__gtdf2(double, double)
 ; OPENBSD-NEXT: declare i64 @__gtsf2(float, float)
 ; OPENBSD-NEXT: declare i64 @__gttf2(fp128, fp128)
-; OPENBSD-NEXT: declare void @__guard_local(...)
 ; OPENBSD-NEXT: declare i64 @__ledf2(double, double)
 ; OPENBSD-NEXT: declare i64 @__lesf2(float, float)
 ; OPENBSD-NEXT: declare i64 @__letf2(fp128, fp128)
@@ -1276,8 +1291,7 @@
 ; OPENBSD-NEXT: declare fp128 @__powitf2(fp128, i32)
 ; OPENBSD-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32)
 ; OPENBSD-NEXT: declare x86_fp80 @__powl_finite(x86_fp80, x86_fp80)
-; OPENBSD-NEXT: declare void @__safestack_unsafe_stack_ptr(...)
-; OPENBSD-NEXT: declare void @__stack_smash_handler(...)
+; OPENBSD-NEXT: declare void @__stack_smash_handler(ptr, i32) [[NORETURN_ATTRS:#[0-9]+]]
 ; OPENBSD-NEXT: declare double @__subdf3(double, double)
 ; OPENBSD-NEXT: declare float @__subsf3(float, float)
 ; OPENBSD-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -1442,9 +1456,9 @@
 ; OPENBSD-NEXT: declare float @fmodf(float, float)
 ; OPENBSD-NEXT: declare x86_fp80 @fmodl(x86_fp80, x86_fp80)
 ; OPENBSD-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; OPENBSD-NEXT: declare double @frexp(double, ptr)
-; OPENBSD-NEXT: declare float @frexpf(float, ptr)
-; OPENBSD-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr)
+; OPENBSD-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; OPENBSD-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; OPENBSD-NEXT: declare x86_fp80 @frexpl(x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; OPENBSD-NEXT: declare double @ldexp(double, i32)
 ; OPENBSD-NEXT: declare float @ldexpf(float, i32)
 ; OPENBSD-NEXT: declare x86_fp80 @ldexpl(x86_fp80, i32)
@@ -1473,9 +1487,9 @@
 ; OPENBSD-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; OPENBSD-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; OPENBSD-NEXT: declare ptr @memset(ptr, i32, i64)
-; OPENBSD-NEXT: declare double @modf(double, ptr)
-; OPENBSD-NEXT: declare float @modff(float, ptr)
-; OPENBSD-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr)
+; OPENBSD-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; OPENBSD-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; OPENBSD-NEXT: declare x86_fp80 @modfl(x86_fp80, ptr noalias nonnull writeonly align 16 dereferenceable(10))
 ; OPENBSD-NEXT: declare double @nan(ptr)
 ; OPENBSD-NEXT: declare float @nanf(ptr)
 ; OPENBSD-NEXT: declare x86_fp80 @nanl(ptr)
@@ -1491,9 +1505,9 @@
 ; OPENBSD-NEXT: declare double @remainder(double, double)
 ; OPENBSD-NEXT: declare float @remainderf(float, float)
 ; OPENBSD-NEXT: declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
-; OPENBSD-NEXT: declare double @remquo(double, double, ptr)
-; OPENBSD-NEXT: declare float @remquof(float, float, ptr)
-; OPENBSD-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
+; OPENBSD-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; OPENBSD-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; OPENBSD-NEXT: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; OPENBSD-NEXT: declare double @rint(double)
 ; OPENBSD-NEXT: declare float @rintf(float)
 ; OPENBSD-NEXT: declare x86_fp80 @rintl(x86_fp80)
@@ -1516,7 +1530,7 @@
 ; OPENBSD-NEXT: declare x86_fp80 @sinhl(x86_fp80)
 ; OPENBSD-NEXT: declare x86_fp80 @sinl(x86_fp80)
 ; OPENBSD-NEXT: declare nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
-; OPENBSD-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
+; OPENBSD-NEXT: declare nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS]]
 ; OPENBSD-NEXT: declare x86_fp80 @sqrtl(x86_fp80)
 ; OPENBSD-NEXT: declare double @tan(double)
 ; OPENBSD-NEXT: declare float @tanf(float)
@@ -1530,6 +1544,7 @@
 ; OPENBSD-NEXT: declare double @trunc(double)
 ; OPENBSD-NEXT: declare float @truncf(float)
 ; OPENBSD-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; OPENBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; OPENBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

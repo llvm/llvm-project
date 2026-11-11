@@ -106,6 +106,7 @@ add_header_library(
     .normal_float
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -128,7 +129,6 @@ add_header_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.sign
 )
-
 
 add_header_library(
   sqrt

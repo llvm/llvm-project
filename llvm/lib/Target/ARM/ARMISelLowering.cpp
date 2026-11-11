@@ -1133,18 +1133,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                        Subtarget->hasAnyDataBarrier() ? Custom : Expand);
 
     // Set them all for libcall, which will force libcalls.
-    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
+    setOperationAction(
+        {ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD,
+         ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
+         ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
+         ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+        {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
     // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
     // Unordered/Monotonic case.
     if (!InsertFencesForAtomic) {
@@ -22232,6 +22226,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     VecTy = FixedVectorType::get(DL.getIntPtrType(EltTy), VecTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
 
   // The base address of the load.
   Value *BaseAddr = LI->getPointerOperand();
@@ -22380,6 +22375,7 @@ bool ARMTargetLowering::lowerInterleavedStore(Instruction *Store,
   Value *Op0 = SVI->getOperand(0);
   Value *Op1 = SVI->getOperand(1);
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   // StN intrinsics don't support pointer vectors as arguments. Convert pointer
   // vectors to integer vectors.

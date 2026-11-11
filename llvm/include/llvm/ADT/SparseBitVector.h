@@ -16,6 +16,7 @@
 #define LLVM_ADT_SPARSEBITVECTOR_H
 
 #include "llvm/ADT/bit.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -253,7 +254,7 @@ public:
 };
 
 template <unsigned ElementSize = 128>
-class SparseBitVector {
+class LLVM_ATTRIBUTE_WARN_UNUSED SparseBitVector {
   using ElementList = std::list<SparseBitVectorElement<ElementSize>>;
   using ElementListIter = typename ElementList::iterator;
   using ElementListConstIter = typename ElementList::const_iterator;

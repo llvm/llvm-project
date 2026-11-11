@@ -142,7 +142,7 @@ def executeBuiltinEcho(cmd, cmd_shenv):
             # to prevent them from being written out of order.
             out.flush()
             # Octal escapes permit values over 0xFF. Drop the high bit.
-            out.buffer.write((int(arg[start:end], base) & 0o377).to_bytes(1))
+            out.buffer.write((int(arg[start:end], base) & 0o377).to_bytes(1, "big"))
             out.buffer.flush()
             pos = end
         out.write(arg[pos:])

@@ -105,6 +105,8 @@ def IsOSCygMing : LibcallPredicate<[{TT.isOSCygMing()}]>;
 def IsOSWindowsOrUEFI : LibcallPredicate<[{TT.isOSWindowsOrUEFI()}]>;
 
 def IsMIPS : LibcallPredicate<[{TT.isMIPS()}]>;
+def IsMIPS32 : LibcallPredicate<[{TT.isMIPS32()}]>;
+def IsMipsR6 : LibcallPredicate<[{TT.getSubArch() == Triple::MipsSubArch_r6}]>;
 def IsLoongArch : LibcallPredicate<[{TT.isLoongArch()}]>;
 def IsVE : LibcallPredicate<[{TT.isVE()}]>;
 def IsBPF : LibcallPredicate<[{TT.isBPF()}]>;
@@ -247,6 +249,8 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
   def UREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def MULO_#IntTy.Suffix
@@ -257,14 +261,24 @@ foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
                  TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def SDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
                  TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def UDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64] in {
@@ -279,6 +293,9 @@ class DivRemPairImpl<RuntimeLibcall P, string Name = NAME>
   defvar IntTy = P.ReturnType;
   let ReturnType = !cast<FuncArgType>(!cast<string>(IntTy) # "Pair");
   let ArgumentTypes = [IntTy, IntTy];
+  let Memory = NoMemory;
+  let ParamAttrs = [];
+  let ParamPointeeTypes = [];
 }
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
@@ -288,6 +305,7 @@ foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
 foreach IntTy = [TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def CTLZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
+  def CTTZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
   def CTPOP_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
 }
 
@@ -296,6 +314,17 @@ def F64 : TypeSuffix<"F64", Dbl>;
 def F80 : TypeSuffix<"F80", X86FP80>;
 def F128 : TypeSuffix<"F128", FP128>;
 def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
+
+foreach FPTy = [F32, F64] in {
+  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ErrnoMemWriteOnly;
+    let RetAttrs = [NoFPClassAttr<"fcNegInf | fcNegSubnormal | fcNegNormal">];
+  }
+}
+
+foreach FPTy = [F80, F128, PPCF128] in
+  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -315,7 +344,6 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, FPTy.Type]>;
   def POWI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
 
-  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def FAST_SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
 
   def CBRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
@@ -341,8 +369,15 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
-  def REMQUO_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]>;
+  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
+  }
+  def REMQUO_#FPTy.Suffix
+      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, Int];
+  }
   def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
@@ -376,9 +411,18 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
   def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
   def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
-  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
-  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, Int];
+  }
+  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
+  }
+  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type];
+  }
   def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
   def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
   def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -448,8 +492,6 @@ def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
-
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
@@ -671,9 +713,30 @@ def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
-def MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
-def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def FREE : RuntimeLibcall<Void, [Ptr]>;
+def MallocFamily : AllocFamilyAttr<"malloc">;
+
+def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
+                 AllocSizeAttr<0>, MallocFamily];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AllocKindAttr<"AllocFnKind::Alloc">, AllocSizeAttr<0, "1">,
+                 MallocFamily];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef], [NoUndef]];
+}
+
+def FREE : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Free">,
+                 MallocFamily];
+  let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
+}
+
 def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
 def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
 
@@ -689,9 +752,12 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 
 // Exception handling
 def UNWIND_RESUME : RuntimeLibcall<Void, [Ptr]>;
+def UNWIND_RAISE_EXCEPTION : RuntimeLibcall<Int, [Ptr]>;
 def UNWIND_REGISTER : RuntimeLibcall<Void, [Ptr]>;
 def UNWIND_UNREGISTER : RuntimeLibcall<Void, [Ptr]>;
-def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []>;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall<Ptr, []> {
+  let FnAttrs = [NoUnwind];
+}
 def CXA_END_CLEANUP : RuntimeLibcall<Void, []>;
 
 // Note: there are two sets of atomics libcalls; see
@@ -808,16 +874,21 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 }
 
 // Stack Protector Fail
-def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []>;
-def STACK_SMASH_HANDLER : RuntimeLibcall;
+def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []> {
+  let FnAttrs = [NoReturn, NoUnwind, NoFree];
+}
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]> {
+  let FnAttrs = [NoReturn, NoUnwind, NoFree];
+}
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;
 
 // Really a global variable, not a function
-def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
+def SAFESTACK_UNSAFE_STACK_PTR
+    : RuntimeLibcallVariable<AllocaPtr, /*threadLocal=*/true>;
 
-def STACK_PROBE : RuntimeLibcall;
+def STACK_PROBE : RuntimeLibcall<Void, []>;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall<Void, [Ptr]>;
 
 // Deoptimization
@@ -835,10 +906,13 @@ def CLEAR_CACHE : RuntimeLibcall<Void, [Ptr, Ptr]>;
 def RISCV_FLUSH_ICACHE : RuntimeLibcall<Int, [Ptr, Ptr, ULong]>;
 
 // Mips16 calls
-def MIPS16_RET_DC : RuntimeLibcall;
-def MIPS16_RET_DF : RuntimeLibcall;
-def MIPS16_RET_SC : RuntimeLibcall;
-def MIPS16_RET_SF : RuntimeLibcall;
+def ComplexF32 : StructFuncArgType<[Flt, Flt]>;
+def ComplexF64 : StructFuncArgType<[Dbl, Dbl]>;
+
+def MIPS16_RET_DC : RuntimeLibcall<Void, [ComplexF64]>;
+def MIPS16_RET_DF : RuntimeLibcall<Void, [Dbl]>;
+def MIPS16_RET_SC : RuntimeLibcall<Void, [ComplexF32]>;
+def MIPS16_RET_SF : RuntimeLibcall<Void, [Flt]>;
 
 // Produce libcall impls for all float types. If provided, `rtbasename` should
 // contain a `<typesuffix>` that will be replaced with the `f`/`l`/`fX` suffix.
@@ -863,14 +937,15 @@ def SC_MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 
 // AArch64 SME ABI calls
-def SMEABI_SME_STATE : RuntimeLibcall;
-def SMEABI_TPIDR2_SAVE : RuntimeLibcall;
-def SMEABI_ZA_DISABLE : RuntimeLibcall;
-def SMEABI_TPIDR2_RESTORE : RuntimeLibcall;
-def SMEABI_GET_CURRENT_VG : RuntimeLibcall;
-def SMEABI_SME_STATE_SIZE : RuntimeLibcall;
-def SMEABI_SME_SAVE : RuntimeLibcall;
-def SMEABI_SME_RESTORE : RuntimeLibcall;
+def SMEState : StructFuncArgType<[UInt64, UInt64]>;
+def SMEABI_SME_STATE : RuntimeLibcall<SMEState, []>;
+def SMEABI_TPIDR2_SAVE : RuntimeLibcall<Void, []>;
+def SMEABI_ZA_DISABLE : RuntimeLibcall<Void, []>;
+def SMEABI_TPIDR2_RESTORE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_GET_CURRENT_VG : RuntimeLibcall<UInt64, []>;
+def SMEABI_SME_STATE_SIZE : RuntimeLibcall<UInt64, []>;
+def SMEABI_SME_SAVE : RuntimeLibcall<Void, [Ptr]>;
+def SMEABI_SME_RESTORE : RuntimeLibcall<Void, [Ptr]>;
 
 // ARM EABI calls
 def AEABI_MEMCPY4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>; // Align 4
@@ -888,11 +963,12 @@ def AEABI_UWRITE4 : RuntimeLibcall<Int, [Int, Ptr]>;
 def AEABI_UWRITE8 : RuntimeLibcall<LLong, [LLong, Ptr]>;
 
 // Hexagon calls
-def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
-def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall;
+def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES
+    : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, UInt]>;
 
 // XCore calls
-def MEMCPY_ALIGN_4 : RuntimeLibcall;
+def MEMCPY_ALIGN_4 : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
 
 // Objective-C calls
 def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;
@@ -948,7 +1024,6 @@ def DUNDER_ISOC99_SSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def DUNDER_STRDUP : RuntimeLibcall<Ptr, [Ptr]>;
 def DUNDER_STRNDUP : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
 def DUNDER_STRTOK_R : RuntimeLibcall<Ptr, [Ptr, Ptr, Ptr]>;
-def ENUM_VARIANT : RuntimeLibcall;
 def EXECL : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def EXECLE : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def EXECLP : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
@@ -1229,7 +1304,7 @@ def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
 // in some way from callable functions.
 // --------------------------------------------------------------------
 
-def STACK_CHECK_GUARD : RuntimeLibcall;
+def STACK_CHECK_GUARD : RuntimeLibcallVariable<Ptr>;
 
 //--------------------------------------------------------------------
 // Define the implementation libcalls making up runtime libraries.
@@ -1289,6 +1364,10 @@ def __negdi2 : RuntimeLibcallImpl<NEG_I64>;
 def __clzsi2 : RuntimeLibcallImpl<CTLZ_I32>;
 def __clzdi2 : RuntimeLibcallImpl<CTLZ_I64>;
 def __clzti2 : RuntimeLibcallImpl<CTLZ_I128>;
+
+def __ctzsi2 : RuntimeLibcallImpl<CTTZ_I32>;
+def __ctzdi2 : RuntimeLibcallImpl<CTTZ_I64>;
+def __ctzti2 : RuntimeLibcallImpl<CTTZ_I128>;
 
 def __popcountsi2 : RuntimeLibcallImpl<CTPOP_I32>;
 def __popcountdi2 : RuntimeLibcallImpl<CTPOP_I64>;
@@ -2008,11 +2087,14 @@ def __bzero : RuntimeLibcallImpl<BZERO>;
 // Exception handling
 defset list<RuntimeLibcallImpl> DefaultExceptionHandlingLibcalls = {
   def _Unwind_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_RaiseException : RuntimeLibcallImpl<UNWIND_RAISE_EXCEPTION>;
   def __cxa_end_cleanup : RuntimeLibcallImpl<CXA_END_CLEANUP>;
 }
 
 defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_SjLj_RaiseException
+      : RuntimeLibcallImpl<UNWIND_RAISE_EXCEPTION>;
   def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
@@ -2122,7 +2204,7 @@ def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
 defvar ExceptionModelCalls = (add
   LibcallImpls<(add __cxa_end_cleanup),
                ExceptionModelIsNotNone>,
-  LibcallImpls<(add _Unwind_Resume),
+  LibcallImpls<(add _Unwind_Resume, _Unwind_RaiseException),
                ExceptionModelHasUnwindResume>,
   LibcallImpls<(add SjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
@@ -2479,7 +2561,7 @@ defset list<RuntimeLibcallImpl> WinArm64ECSjLjExceptionHandlingLibcalls = {
 defvar ExceptionModelCallsArm64EC = (add
   LibcallImpls<(add arm64ec___cxa_end_cleanup),
                ExceptionModelIsNotNone>,
-  LibcallImpls<(add arm64ec__Unwind_Resume),
+  LibcallImpls<(add arm64ec__Unwind_Resume, arm64ec__Unwind_RaiseException),
                ExceptionModelHasUnwindResume>,
   LibcallImpls<(add WinArm64ECSjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
@@ -3153,40 +3235,49 @@ def LanaiSystemLibrary
 //===----------------------------------------------------------------------===//
 
 // Hard float libcalls
-def __mips16_adddf3 : RuntimeLibcallImpl<ADD_F64>;
-def __mips16_addsf3 : RuntimeLibcallImpl<ADD_F32>;
-def __mips16_divdf3 : RuntimeLibcallImpl<DIV_F64>;
-def __mips16_divsf3 : RuntimeLibcallImpl<DIV_F32>;
-def __mips16_eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
-def __mips16_eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
-def __mips16_extendsfdf2 : RuntimeLibcallImpl<FPEXT_F32_F64>;
-def __mips16_fix_truncdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
-def __mips16_fix_truncsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
-def __mips16_floatsidf : RuntimeLibcallImpl<SINTTOFP_I32_F64>;
-def __mips16_floatsisf : RuntimeLibcallImpl<SINTTOFP_I32_F32>;
-def __mips16_floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
-def __mips16_floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
-def __mips16_gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
-def __mips16_gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
-def __mips16_gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
-def __mips16_gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
-def __mips16_ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
-def __mips16_lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
-def __mips16_ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
-def __mips16_ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
-def __mips16_muldf3 : RuntimeLibcallImpl<MUL_F64>;
-def __mips16_mulsf3 : RuntimeLibcallImpl<MUL_F32>;
-def __mips16_nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
-def __mips16_nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
-def __mips16_ret_dc : RuntimeLibcallImpl<MIPS16_RET_DC>;
-def __mips16_ret_df : RuntimeLibcallImpl<MIPS16_RET_DF>;
-def __mips16_ret_sc : RuntimeLibcallImpl<MIPS16_RET_SC>;
-def __mips16_ret_sf : RuntimeLibcallImpl<MIPS16_RET_SF>;
-def __mips16_subdf3 : RuntimeLibcallImpl<SUB_F64>;
-def __mips16_subsf3 : RuntimeLibcallImpl<SUB_F32>;
-def __mips16_truncdfsf2 : RuntimeLibcallImpl<FPROUND_F64_F32>;
-def __mips16_unorddf2 : RuntimeLibcallImpl<UO_F64>;
-def __mips16_unordsf2 : RuntimeLibcallImpl<UO_F32>;
+defset list<RuntimeLibcallImpl> Mips16HardFloatLibcalls = {
+  def __mips16_adddf3 : RuntimeLibcallImpl<ADD_F64>;
+  def __mips16_addsf3 : RuntimeLibcallImpl<ADD_F32>;
+  def __mips16_divdf3 : RuntimeLibcallImpl<DIV_F64>;
+  def __mips16_divsf3 : RuntimeLibcallImpl<DIV_F32>;
+  def __mips16_eqdf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F64>;
+  def __mips16_eqsf2 : RuntimeLibcallImpl<FCMP3_PRED_OEQ_F32>;
+  def __mips16_extendsfdf2 : RuntimeLibcallImpl<FPEXT_F32_F64>;
+  def __mips16_fix_truncdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
+  def __mips16_fix_truncsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
+  def __mips16_floatsidf : RuntimeLibcallImpl<SINTTOFP_I32_F64>;
+  def __mips16_floatsisf : RuntimeLibcallImpl<SINTTOFP_I32_F32>;
+  def __mips16_floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
+  def __mips16_floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
+  def __mips16_gedf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F64>;
+  def __mips16_gesf2 : RuntimeLibcallImpl<FCMP3_PRED_OGE_F32>;
+  def __mips16_gtdf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F64>;
+  def __mips16_gtsf2 : RuntimeLibcallImpl<FCMP3_PRED_OGT_F32>;
+  def __mips16_ledf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F64>;
+  def __mips16_lesf2 : RuntimeLibcallImpl<FCMP3_PRED_OLE_F32>;
+  def __mips16_ltdf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F64>;
+  def __mips16_ltsf2 : RuntimeLibcallImpl<FCMP3_PRED_OLT_F32>;
+  def __mips16_muldf3 : RuntimeLibcallImpl<MUL_F64>;
+  def __mips16_mulsf3 : RuntimeLibcallImpl<MUL_F32>;
+  def __mips16_nedf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F64>;
+  def __mips16_nesf2 : RuntimeLibcallImpl<FCMP3_PRED_UNE_F32>;
+  def __mips16_ret_dc : RuntimeLibcallImpl<MIPS16_RET_DC>;
+  def __mips16_ret_df : RuntimeLibcallImpl<MIPS16_RET_DF>;
+  def __mips16_ret_sc : RuntimeLibcallImpl<MIPS16_RET_SC>;
+  def __mips16_ret_sf : RuntimeLibcallImpl<MIPS16_RET_SF>;
+  def __mips16_subdf3 : RuntimeLibcallImpl<SUB_F64>;
+  def __mips16_subsf3 : RuntimeLibcallImpl<SUB_F32>;
+  def __mips16_truncdfsf2 : RuntimeLibcallImpl<FPROUND_F64_F32>;
+  def __mips16_unorddf2 : RuntimeLibcallImpl<UO_F64>;
+  def __mips16_unordsf2 : RuntimeLibcallImpl<UO_F32>;
+}
+
+// libgcc's mips16.S provides these for O32, and not for R6.
+def isMips16HardFloat
+    : RuntimeLibcallAvailability<(all_of IsMIPS32, (not IsMipsR6))>;
+
+def Mips16CompilerRt : LibcallLibrary<"compiler-rt",
+  (add Mips16HardFloatLibcalls), isMips16HardFloat>;
 
 //===----------------------------------------------------------------------===//
 // MSP430 Runtime Libcalls
@@ -4610,9 +4701,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def Sleef_hypotfx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def Sleef_ilogbdx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV2F64>;
-  def Sleef_ilogbfx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV4F32>;
   def Sleef_ldexpdx_rvvm2 : RuntimeLibcallImpl<LDEXP_NXV2F64>;
-  def Sleef_ldexpfx_rvvm2 : RuntimeLibcallImpl<LDEXP_NXV4F32>;
   def Sleef_lgammadx_u10rvvm2 : RuntimeLibcallImpl<LGAMMA_NXV2F64>;
   def Sleef_lgammafx_u10rvvm2 : RuntimeLibcallImpl<LGAMMA_NXV4F32>;
   def Sleef_log10dx_u10rvvm2 : RuntimeLibcallImpl<LOG10_NXV2F64>;

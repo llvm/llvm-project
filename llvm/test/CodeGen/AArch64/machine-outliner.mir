@@ -43,7 +43,6 @@
 # CHECK-NEXT: STRHHroW $w12, $x9, $w30, 1, 1
 # CHECK-NEXT: $lr = ORRXri $xzr, 1
 name:            main
-tracksRegLiveness: true
 body:             |
   bb.0:
   liveins: $lr
@@ -109,7 +108,6 @@ body:             |
 # CHECK-NEXT: $w8 = ORRWri $wzr, 0
 # CHECK-NOT: $w11 = KILL renamable $w11, implicit killed $w11
 name:            bar
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8
@@ -159,7 +157,6 @@ body:             |
 ...
 ---
 name:            baz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $lr, $w8

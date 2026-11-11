@@ -1,4 +1,4 @@
-; RUN: sed -E 's/ (nuw|nsw|exact|disjoint|nneg|samesign|inbounds|nusw|nnan)( |$)/\2/g' %s > %t.ll
+; RUN: %python <%s -c 'import re,sys; sys.stdout.write(re.sub(r" (nuw|nsw|exact|disjoint|nneg|samesign|inbounds|nusw|nnan)( |$)", r"\2", sys.stdin.read(), flags=re.M))' > %t.ll
 ; RUN: llvm-diff %s %s
 ; RUN: not llvm-diff %s %t.ll 2>&1 | FileCheck %s --implicit-check-not=no_flags
 

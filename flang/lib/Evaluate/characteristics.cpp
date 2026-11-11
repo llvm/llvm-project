@@ -162,6 +162,28 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 }
 
 std::optional<TypeAndShape> TypeAndShape::Characterize(
+    const Designator<Type<TypeCategory::Character>> &x, FoldingContext &context,
+    bool invariantOnly) {
+  const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
+  if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable
+    if (auto result{Characterize(*symbol, context, invariantOnly)}) {
+      return result;
+    }
+  }
+  if (auto type{x.GetType()}) {
+    TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
+    if (auto length{x.LEN()}) {
+      result.set_LEN(std::move(*length));
+    }
+    if (symbol) { // component
+      result.AcquireAttrs(*symbol);
+    }
+    return std::move(result.Rewrite(context));
+  }
+  return std::nullopt;
+}
+
+std::optional<TypeAndShape> TypeAndShape::Characterize(
     const ActualArgument &arg, FoldingContext &context, bool invariantOnly) {
   if (const auto *expr{arg.GetArgExpr()}) {
     return Characterize(*expr, context, invariantOnly);

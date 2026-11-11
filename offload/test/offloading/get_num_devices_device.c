@@ -3,8 +3,7 @@
 
 // RUN: %libomptarget-compile-run-and-check-generic
 
-// UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
+// REQUIRES: gpu
 
 #include <omp.h>
 #include <stdio.h>
