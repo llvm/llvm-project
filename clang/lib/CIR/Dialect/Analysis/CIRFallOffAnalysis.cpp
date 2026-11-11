@@ -216,11 +216,6 @@ static Exits getCondExits(mlir::Value cond) {
   return *value ? Exits::CondTrue : Exits::CondFalse;
 }
 
-static bool isNoReturnCall(mlir::Operation *op) {
-  return mlir::isa<CallOp>(op) &&
-         op->hasAttr(CIRDialect::getNoReturnAttrName());
-}
-
 /// `__builtin_assume(0)` is noreturn for the CFG check.
 static bool isAssumeFalse(mlir::Operation *op) {
   auto assume = mlir::dyn_cast<AssumeOp>(op);
@@ -244,6 +239,8 @@ static mlir::Operation *getOnlyRegionOp(mlir::Region &region) {
 
 /// The code written in a coroutine's body, without the implicit `try` (and the
 /// `if` around it) CIRGen adds with exceptions: leaving those is not fall-off.
+// TODO: Drop this once CIRGen emits that handling in the coroutine's planned
+// `unwind` region, leaving only the user's code in `body`.
 static mlir::Region &getCoroutineUserBody(CoroutineOp coro) {
   mlir::Operation *op = getOnlyRegionOp(coro.getBody());
   if (auto ifOp = mlir::dyn_cast_if_present<IfOp>(op);
@@ -400,7 +397,8 @@ Exits FallOffAnalyzer::visitRegion(mlir::Region &region, bool entered) {
       if (!live)
         continue;
 
-      if (isNoReturnCall(&op) || isAssumeFalse(&op)) {
+      auto call = mlir::dyn_cast<CallOp>(op);
+      if ((call && call.isNoReturn()) || isAssumeFalse(&op)) {
         abnormalEdge = true;
         live = false;
       } else if (mlir::isa<ThrowOp>(op)) {
@@ -431,16 +429,13 @@ void FallOffAnalyzer::visitTerminator(
     exits |= getCondExits(condOp.getCondition());
   } else if (mlir::isa<CoReturnOp>(op)) {
     exits |= Exits::ExplicitReturn;
-  } else if (auto retOp = mlir::dyn_cast<ReturnOp>(op)) {
-    exits |=
-        retOp.getImplicit() ? Exits::ImplicitReturn : Exits::ExplicitReturn;
-  } else if (mlir::isa<TrapOp, UnreachableOp>(op)) {
+  } else if (auto synthesized =
+                 mlir::dyn_cast<SynthesizedTerminatorOpInterface>(op)) {
     // User traps and __builtin_unreachable are noreturn, like in the CFG.
-    auto trapOp = mlir::dyn_cast<TrapOp>(op);
-    bool isImplicit = trapOp ? trapOp.getImplicit()
-                             : mlir::cast<UnreachableOp>(op).getImplicit();
-    if (isImplicit)
+    if (synthesized.isImplicit())
       exits |= Exits::ImplicitReturn;
+    else if (mlir::isa<ReturnOp>(op))
+      exits |= Exits::ExplicitReturn;
     else
       abnormalEdge = true;
   } else if (mlir::isa<BreakOp>(op)) {
@@ -602,16 +597,6 @@ llvm::StringRef cir::stringifyFallOffKind(FallOffKind kind) {
 
 static bool mayComplete(FuncOp func, mlir::Operation *op);
 
-static bool isImplicitTerminator(mlir::Operation *op) {
-  if (auto ret = mlir::dyn_cast<ReturnOp>(op))
-    return ret.getImplicit();
-  if (auto trap = mlir::dyn_cast<TrapOp>(op))
-    return trap.getImplicit();
-  if (auto unreachable = mlir::dyn_cast<UnreachableOp>(op))
-    return unreachable.getImplicit();
-  return false;
-}
-
 /// Conservatively, whether control may get past `last` in `block` (the whole
 /// block when null). Only the closest region-holding op before it matters.
 static bool mayReachPast(FuncOp func, mlir::Block &block,
@@ -669,7 +654,9 @@ bool cir::mayFallOff(FuncOp func) {
     if (!block.mightHaveTerminator())
       return mayReachPast(func, block, &block.back());
     mlir::Operation *terminator = &block.back();
-    return isImplicitTerminator(terminator) &&
+    auto synthesized =
+        mlir::dyn_cast<SynthesizedTerminatorOpInterface>(terminator);
+    return synthesized && synthesized.isImplicit() &&
            mayReachPast(func, block, terminator->getPrevNode());
   });
 }
