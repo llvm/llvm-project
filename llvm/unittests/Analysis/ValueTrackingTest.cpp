@@ -4064,8 +4064,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRangeIncludingKnownBitsAddConstant) {
   ConstantRange Range =
     computeConstantRangeIncludingKnownBits(Exponent, /*ForSigned=*/true, SQ);
 
-  EXPECT_EQ(APInt::getSignedMinValue(32), Range.getLower());
-  EXPECT_EQ(APInt::getSignedMaxValue(32), Range.getUpper());
+  EXPECT_EQ(APInt(32, -1, /*isSigned=*/true), Range.getLower());
+  EXPECT_EQ(APInt(32, 3), Range.getUpper());
 }
 
 struct FindAllocaForValueTestParams {

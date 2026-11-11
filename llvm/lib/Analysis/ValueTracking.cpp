@@ -7891,12 +7891,28 @@ ConstantRange
 llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
                                              bool ForSigned,
                                              const SimplifyQuery &SQ) {
-  ConstantRange CR1 =
-      ConstantRange::fromKnownBits(V.getKnownBits(SQ), ForSigned);
-  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
-  return CR1.intersectWith(CR2, RangeType);
+
+  auto GetRange = [&](const WithCache<const Value *> &Val) {
+    ConstantRange FromBits =
+        ConstantRange::fromKnownBits(Val.getKnownBits(SQ), ForSigned);
+    return FromBits.intersectWith(computeConstantRange(Val, ForSigned, SQ),
+                                  RangeType);
+  };
+
+  ConstantRange Range = GetRange(V);
+
+  const auto *Add = dyn_cast<BinaryOperator>(V.getValue());
+  if (!Add || Add->getOpcode() != Instruction::Add)
+    return Range;
+
+  const APInt *C;
+  if (!match(Add->getOperand(1), m_APInt(C)))
+    return Range;
+
+  ConstantRange Base = GetRange(Add->getOperand(0));
+  return Range.intersectWith(Base.add(ConstantRange(*C)), RangeType);
 }
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
