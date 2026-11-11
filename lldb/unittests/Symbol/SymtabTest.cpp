@@ -18,6 +18,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/DataEncoder.h"
@@ -37,6 +38,15 @@ class SymtabTest : public testing::Test {
       subsystem;
 };
 
+namespace {
+/// Exposes whether SymbolFileSymtab has built its symbol indexes.
+class SymbolFileSymtabTester : public SymbolFileSymtab {
+public:
+  using SymbolFileSymtab::SymbolFileSymtab;
+  bool SymbolIndexesInitialized() const { return m_symbol_indexes_initialized; }
+};
+} // namespace
+
 static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   const uint8_t addr_size = 8;
   DataEncoder file(byte_order, addr_size);
@@ -51,6 +61,8 @@ static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   ASSERT_EQ(object.GetNumSymbols(), decoded_object.GetNumSymbols());
   for (size_t i = 0; i < object.GetNumSymbols(); ++i)
     EXPECT_EQ(*object.SymbolAtIndex(i), *decoded_object.SymbolAtIndex(i));
+  EXPECT_EQ(object.HasDebugMap(), decoded_object.HasDebugMap());
+  EXPECT_EQ(object.HasSourceFiles(), decoded_object.HasSourceFiles());
 }
 
 static void EncodeDecode(const Symtab &object) {
@@ -315,13 +327,127 @@ LinkEditData:
   // Test encoding and decoding an empty symbol table.
   Symtab symtab(objfile);
   symtab.PreloadSymbols();
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_FALSE(symtab.HasSourceFiles());
   EncodeDecode(symtab);
 
   // Now encode and decode an actual symbol table from our yaml.
   Symtab *module_symtab = module_sp->GetSymtab();
   ASSERT_NE(module_symtab, nullptr);
   module_symtab->PreloadSymbols();
+  // The yaml contains N_SO and N_OSO debug map symbols.
+  EXPECT_TRUE(module_symtab->HasDebugMap());
+  EXPECT_TRUE(module_symtab->HasSourceFiles());
   EncodeDecode(*module_symtab);
+}
+
+TEST_F(SymtabTest, TestHasDebugMapAndSourceFiles) {
+  auto make_symbol = [](uint32_t id, SymbolType type, uint32_t flags) {
+    return Symbol(id, "symbol", type, /*external=*/false, /*is_debug=*/true,
+                  /*is_trampoline=*/false, /*is_artificial=*/false,
+                  /*section_sp=*/SectionSP(), /*value=*/0, /*size=*/0,
+                  /*size_is_valid=*/false,
+                  /*contains_linker_annotations=*/false, flags);
+  };
+  const uint32_t debug_map_flags = Symtab::kDebugMapOSOSymbolFlagsValue;
+
+  Symtab symtab(/*objfile=*/nullptr);
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_FALSE(symtab.HasSourceFiles());
+
+  symtab.AddSymbol(make_symbol(0, eSymbolTypeCode, 0));
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_FALSE(symtab.HasSourceFiles());
+
+  symtab.AddSymbol(make_symbol(1, eSymbolTypeSourceFile, 0x640000));
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  // An object file symbol without the debug map flags isn't a debug map.
+  symtab.AddSymbol(make_symbol(2, eSymbolTypeObjectFile, 0x660000));
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  // Neither are other symbol types with the debug map flags.
+  symtab.AddSymbol(make_symbol(3, eSymbolTypeCode, debug_map_flags));
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  symtab.AddSymbol(make_symbol(4, eSymbolTypeObjectFile, debug_map_flags));
+  EXPECT_TRUE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  // Resizing the symbol table recalculates the values.
+  symtab.Resize(2);
+  EXPECT_FALSE(symtab.HasDebugMap());
+  EXPECT_TRUE(symtab.HasSourceFiles());
+
+  symtab.Resize(1);
+  EXPECT_FALSE(symtab.HasSourceFiles());
+  EXPECT_FALSE(symtab.HasDebugMap());
+
+  // A source file symbol that follows a debug map symbol is still found.
+  Symtab symtab2(/*objfile=*/nullptr);
+  symtab2.AddSymbol(make_symbol(0, eSymbolTypeObjectFile, debug_map_flags));
+  symtab2.AddSymbol(make_symbol(1, eSymbolTypeSourceFile, 0x640000));
+  EXPECT_TRUE(symtab2.HasDebugMap());
+  EXPECT_TRUE(symtab2.HasSourceFiles());
+}
+
+TEST_F(SymtabTest, TestSymbolFileSymtabSourceFiles) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400180
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+Symbols:
+  - Name:            main.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  Symtab *module_symtab = module_sp->GetSymtab();
+  ASSERT_NE(module_symtab, nullptr);
+  EXPECT_FALSE(module_symtab->HasDebugMap());
+  EXPECT_TRUE(module_symtab->HasSourceFiles());
+
+  // SymbolFileSymtab calculates its abilities without building its symbol
+  // indexes, make sure the compile units are still found once they are built.
+  SymbolFile *symbol_file = module_sp->GetSymbolFile();
+  ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetPluginName(),
+            SymbolFileSymtab::GetPluginNameStatic());
+  EXPECT_EQ(
+      symbol_file->GetAbilities(),
+      static_cast<uint32_t>(SymbolFile::Symbols | SymbolFile::CompileUnits));
+  ASSERT_EQ(symbol_file->GetNumCompileUnits(), 1u);
+  CompUnitSP cu_sp = symbol_file->GetCompileUnitAtIndex(0);
+  ASSERT_NE(cu_sp, nullptr);
+  EXPECT_EQ(cu_sp->GetPrimaryFile().GetFilename(), "main.c");
+
+  SymbolFileSymtabTester tester(module_sp->GetObjectFile()->shared_from_this());
+  EXPECT_FALSE(tester.SymbolIndexesInitialized());
+  EXPECT_EQ(tester.GetNumCompileUnits(), 1u);
+  EXPECT_TRUE(tester.SymbolIndexesInitialized());
 }
 
 TEST_F(SymtabTest, TestDecodeCStringMaps) {
@@ -790,6 +916,13 @@ Symbols:
             SymbolFileSymtab::GetPluginNameStatic());
   EXPECT_EQ(symbol_file->GetAbilities(),
             static_cast<uint32_t>(SymbolFile::Symbols));
+
+  // There are no source file symbols, so there are no compile units, and
+  // finding that out doesn't require building the symbol indexes.
+  EXPECT_EQ(symbol_file->GetNumCompileUnits(), 0u);
+  SymbolFileSymtabTester tester(module_sp->GetObjectFile()->shared_from_this());
+  EXPECT_EQ(tester.GetNumCompileUnits(), 0u);
+  EXPECT_FALSE(tester.SymbolIndexesInitialized());
 }
 
 TEST_F(SymtabTest, TestSymbolTableCreatedOnDemand) {

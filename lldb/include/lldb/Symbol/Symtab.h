@@ -15,6 +15,7 @@
 #include "lldb/lldb-private.h"
 #include <map>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -40,6 +41,36 @@ public:
   Symbol *Resize(size_t count);
   uint32_t AddSymbol(const Symbol &symbol);
   size_t GetNumSymbols() const;
+
+  /// The flags value of an N_OSO symbol that refers to an object file in a
+  /// Mach-O debug map.
+  ///
+  /// When a Mach-O symbol is encoded, the n_type field is encoded in bits
+  /// 23:16, and the n_desc field is encoded in bits 15:0. N_OSO entries that
+  /// are part of the DWARF + debug map are object file symbols whose flags
+  /// have bits 23:16 == 0x66 (N_OSO) and bits 15:0 == 0x0001 (specifies this
+  /// is a debug map object file).
+  static constexpr uint32_t kDebugMapOSOSymbolFlagsValue = 0x660001u;
+
+  /// Check if this symbol table contains a debug map symbol.
+  ///
+  /// This, and HasSourceFiles(), allow clients to find out if it is worth
+  /// searching the symbol table for specific symbols without needing to
+  /// iterate over all of the symbols themselves. The values are calculated
+  /// the first time either is requested, and are recalculated after symbols
+  /// are added with AddSymbol() or Resize(). 
+  ///
+  /// \return
+  ///   True if any symbol is an eSymbolTypeObjectFile symbol whose flags are
+  ///   kDebugMapOSOSymbolFlagsValue, false otherwise.
+  bool HasDebugMap() const;
+
+  /// Check if this symbol table contains any source file symbols.
+  ///
+  /// \return
+  ///   True if any symbol is an eSymbolTypeSourceFile symbol, false otherwise.
+  bool HasSourceFiles() const;
+
   void SectionFileAddressesChanged();
   void
   Dump(Stream *s, Target *target, SortOrder sort_type,
@@ -269,6 +300,7 @@ protected:
       FileRangeToIndexMap;
   void InitNameIndexes();
   void InitAddressIndexes();
+  void CalculateHasDebugMapAndSourceFiles() const;
 
   /// Provide thread safety for this symbol table.
   mutable std::recursive_mutex m_mutex;
@@ -284,6 +316,12 @@ protected:
   bool m_name_indexes_computed = false;
   bool m_loaded_from_cache = false;
   bool m_saved_to_cache = false;
+  /// Cached results for HasDebugMap() and HasSourceFiles(). These are unset
+  /// until they are requested, and are reset any time symbols are added.
+  /// \{
+  mutable std::optional<bool> m_has_debug_map;
+  mutable std::optional<bool> m_has_source_files;
+  /// \}
 
 private:
   UniqueCStringMap<uint32_t> &

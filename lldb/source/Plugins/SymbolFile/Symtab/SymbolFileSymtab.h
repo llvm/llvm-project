@@ -93,11 +93,13 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
+  /// Build the symbol indexes from the object file's symbol table the first
+  /// time they are needed, instead of in CalculateAbilities().
+  void InitializeSymbolIndexes();
+
   lldb_private::Symtab::IndexCollection m_source_indexes;
-  lldb_private::Symtab::IndexCollection m_func_indexes;
   lldb_private::Symtab::IndexCollection m_code_indexes;
-  lldb_private::Symtab::IndexCollection m_data_indexes;
-  lldb_private::Symtab::NameToIndexMap m_objc_class_name_to_index;
+  bool m_symbol_indexes_initialized = false;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H

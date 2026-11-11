@@ -56,6 +56,8 @@ Symbol *Symtab::Resize(size_t count) {
   // Clients should grab the mutex from this symbol table and lock it manually
   // when calling this function to avoid performance issues.
   m_symbols.resize(count);
+  m_has_debug_map.reset();
+  m_has_source_files.reset();
   return m_symbols.empty() ? nullptr : &m_symbols[0];
 }
 
@@ -69,12 +71,49 @@ uint32_t Symtab::AddSymbol(const Symbol &symbol) {
   m_symbols.push_back(symbol);
   m_file_addr_to_index_computed = false;
   m_name_indexes_computed = false;
+  m_has_debug_map.reset();
+  m_has_source_files.reset();
   return symbol_idx;
 }
 
 size_t Symtab::GetNumSymbols() const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   return m_symbols.size();
+}
+
+void Symtab::CalculateHasDebugMapAndSourceFiles() const {
+  // Stop once both have been found. Each N_OSO debug map symbol directly
+  // follows its N_SO source file symbol, so for binaries with a debug map this
+  // happens at the first N_OSO symbol.
+  bool has_debug_map = false;
+  bool has_source_files = false;
+  for (const Symbol &symbol : m_symbols) {
+    const SymbolType type = symbol.GetType();
+    if (type == eSymbolTypeSourceFile) {
+      has_source_files = true;
+    } else if (type == eSymbolTypeObjectFile &&
+               symbol.GetFlags() == kDebugMapOSOSymbolFlagsValue) {
+      has_debug_map = true;
+      if (has_source_files)
+        break;
+    }
+  }
+  m_has_debug_map = has_debug_map;
+  m_has_source_files = has_source_files;
+}
+
+bool Symtab::HasDebugMap() const {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_has_debug_map)
+    CalculateHasDebugMapAndSourceFiles();
+  return *m_has_debug_map;
+}
+
+bool Symtab::HasSourceFiles() const {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  if (!m_has_source_files)
+    CalculateHasDebugMapAndSourceFiles();
+  return *m_has_source_files;
 }
 
 void Symtab::SectionFileAddressesChanged() {
