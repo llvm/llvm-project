@@ -3162,9 +3162,7 @@ define i1 @icmp_add_constant_with_constant_ult_to_slt_neg2(i8 range(i8 -4, 120) 
 ; Negative test: C2 is negative
 define i1 @icmp_add_constant_with_constant_ult_to_slt_neg3(i32 range(i32 -4, 10) %x) {
 ; CHECK-LABEL: @icmp_add_constant_with_constant_ult_to_slt_neg3(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], -6
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add = add nsw i32 %x, 4
   %cmp = icmp ult i32 %add, -6

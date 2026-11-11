@@ -43,13 +43,9 @@ define i32 @varint_i32(i32 %serial_type) {
 ; WIDE-NEXT:    [[V0:%.*]] = zext i32 [[SERIAL_TYPE]] to i64
 ; WIDE-NEXT:    br label %[[LOOP:.*]]
 ; WIDE:       [[LOOP]]:
-; WIDE-NEXT:    [[V_SHR:%.*]] = lshr i64 [[V0]], 7
-; WIDE-NEXT:    [[CMP:%.*]] = icmp ne i64 [[V_SHR]], 0
-; WIDE-NEXT:    br i1 [[CMP]], label %[[LOOP_1:.*]], label %[[EXIT:.*]]
-; WIDE:       [[LOOP_1]]:
-; WIDE-NEXT:    [[V_SHR_1:%.*]] = lshr i64 [[V_SHR]], 7
+; WIDE-NEXT:    [[V_SHR_1:%.*]] = lshr i64 [[V0]], 7
 ; WIDE-NEXT:    [[CMP_1:%.*]] = icmp ne i64 [[V_SHR_1]], 0
-; WIDE-NEXT:    br i1 [[CMP_1]], label %[[LOOP_2:.*]], label %[[EXIT]]
+; WIDE-NEXT:    br i1 [[CMP_1]], label %[[LOOP_2:.*]], label %[[EXIT:.*]]
 ; WIDE:       [[LOOP_2]]:
 ; WIDE-NEXT:    [[V_SHR_2:%.*]] = lshr i64 [[V_SHR_1]], 7
 ; WIDE-NEXT:    [[CMP_2:%.*]] = icmp ne i64 [[V_SHR_2]], 0
@@ -63,9 +59,11 @@ define i32 @varint_i32(i32 %serial_type) {
 ; WIDE-NEXT:    [[CMP_4:%.*]] = icmp ne i64 [[V_SHR_4]], 0
 ; WIDE-NEXT:    br i1 [[CMP_4]], label %[[LOOP_5:.*]], label %[[EXIT]]
 ; WIDE:       [[LOOP_5]]:
+; WIDE-NEXT:    br i1 false, label %[[LOOP_6:.*]], label %[[EXIT]]
+; WIDE:       [[LOOP_6]]:
 ; WIDE-NEXT:    br label %[[EXIT]]
 ; WIDE:       [[EXIT]]:
-; WIDE-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ 1, %[[LOOP]] ], [ 2, %[[LOOP_1]] ], [ 3, %[[LOOP_2]] ], [ 4, %[[LOOP_3]] ], [ 5, %[[LOOP_4]] ], [ 6, %[[LOOP_5]] ]
+; WIDE-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ 1, %[[LOOP]] ], [ 2, %[[LOOP_2]] ], [ 3, %[[LOOP_3]] ], [ 4, %[[LOOP_4]] ], [ 5, %[[LOOP_5]] ], [ 6, %[[LOOP_6]] ]
 ; WIDE-NEXT:    ret i32 [[I_LCSSA]]
 ;
 entry:
@@ -102,9 +100,7 @@ define i32 @varint_i16(i16 %serial_type) {
 ; COMMON-NEXT:    [[CMP_1:%.*]] = icmp ne i64 [[V_SHR_1]], 0
 ; COMMON-NEXT:    br i1 [[CMP_1]], label %[[LOOP_2:.*]], label %[[EXIT]]
 ; COMMON:       [[LOOP_2]]:
-; COMMON-NEXT:    [[V_SHR_2:%.*]] = lshr i64 [[V_SHR_1]], 7
-; COMMON-NEXT:    [[CMP_2:%.*]] = icmp ne i64 [[V_SHR_2]], 0
-; COMMON-NEXT:    br i1 [[CMP_2]], label %[[LOOP_3:.*]], label %[[EXIT]]
+; COMMON-NEXT:    br i1 false, label %[[LOOP_3:.*]], label %[[EXIT]]
 ; COMMON:       [[LOOP_3]]:
 ; COMMON-NEXT:    br label %[[EXIT]]
 ; COMMON:       [[EXIT]]:

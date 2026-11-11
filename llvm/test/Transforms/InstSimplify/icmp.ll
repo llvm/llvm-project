@@ -414,3 +414,26 @@ define i1 @non_eq_xor_fail(i8 %x, i8 %yy, i8 %w) {
   %r = icmp eq i8 %lhs, %rhs
   ret i1 %r
 }
+
+define i1 @add_const_chain_range(i8 range(i8 0, 50) %x) {
+; CHECK-LABEL: @add_const_chain_range(
+; CHECK-NEXT:    ret i1 true
+;
+  %a = add nsw i8 %x, -10
+  %b = add nsw i8 %a, -10
+  %c = icmp slt i8 %b, 30
+  ret i1 %c
+}
+
+define i1 @add_const_chain_range_neg(i8 range(i8 0, 50) %x) {
+; CHECK-LABEL: @add_const_chain_range_neg(
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X:%.*]], -10
+; CHECK-NEXT:    [[B:%.*]] = add nsw i8 [[A]], -10
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[B]], 29
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = add nsw i8 %x, -10
+  %b = add nsw i8 %a, -10
+  %c = icmp slt i8 %b, 29
+  ret i1 %c
+}

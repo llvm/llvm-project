@@ -4048,7 +4048,7 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
   }
 }
 
-TEST_F(ValueTrackingTest, ComputeConstantRangeIncludingKnownBitsAddConstant) {
+TEST_F(ValueTrackingTest, ComputeConstantRangeAddConstant) {
   auto M = parseModule(R"(
     define i32 @test(i32 %code) {
       %mag = and i32 %code, 7
@@ -4061,11 +4061,10 @@ TEST_F(ValueTrackingTest, ComputeConstantRangeIncludingKnownBitsAddConstant) {
   Function *F = M->getFunction("test");
   Instruction *Exponent = &findInstructionByName(F, "exponent");
   SimplifyQuery SQ(M->getDataLayout());
-  ConstantRange Range =
-    computeConstantRangeIncludingKnownBits(Exponent, /*ForSigned=*/true, SQ);
+  ConstantRange Range = computeConstantRange(Exponent, /*ForSigned=*/true, SQ);
 
-  EXPECT_EQ(APInt::getSignedMinValue(32), Range.getLower());
-  EXPECT_EQ(APInt::getSignedMaxValue(32), Range.getUpper());
+  EXPECT_EQ(APInt(32, -1, /*isSigned=*/true), Range.getLower());
+  EXPECT_EQ(APInt(32, 3), Range.getUpper());
 }
 
 struct FindAllocaForValueTestParams {
