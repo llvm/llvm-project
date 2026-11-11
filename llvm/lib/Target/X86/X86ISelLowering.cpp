@@ -51229,9 +51229,10 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
 
 // x / y for f32 vectors whose lanes are integers of magnitude <= 256, through
 // a reciprocal estimate instead of a divide. rcpps is only architected to
-// |rel err| <= 1.5 * 2^-12 (rcp14ps to 2^-14), so scale x by 1 + 2^-11 to
-// keep the product at or above an exact quotient. The overshoot stays far
-// below 1/256, so truncating still gives the exact integer quotient.
+// |rel err| <= 1.5 * 2^-12 (rcp14ps to 2^-14), so scale the estimate by
+// 1 + 2^-11 to keep the product at or above an exact quotient. The overshoot
+// stays far below 1/256, so truncating still gives the exact integer quotient.
+// Scaling the estimate rather than x keeps it loop invariant for a uniform y.
 static SDValue getFPReciprocalQuotient(SDValue X, SDValue Y, SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget,
                                        const SDLoc &DL) {
@@ -51257,12 +51258,17 @@ static SDValue getFPReciprocalQuotient(SDValue X, SDValue Y, SelectionDAG &DAG,
   unsigned RcpOpc =
       (ChunkElts == 16 || Subtarget.hasVLX()) ? X86ISD::RCP14 : X86ISD::FRCP;
   SDValue Scale = DAG.getConstantFP(1.0 + 0x1p-11, DL, ChunkVT);
+  // Only non-strictfp code gets here. Without the flag, a folded broadcast load
+  // of Scale makes isel assume the multiply may raise, and MachineLICM then
+  // won't hoist it for a loop invariant y.
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(true);
   SmallVector<SDValue, 4> Quots;
   for (unsigned I = 0; I != WideElts; I += ChunkElts) {
     SDValue XC = DAG.getExtractSubvector(DL, ChunkVT, X, I);
     SDValue YC = DAG.getExtractSubvector(DL, ChunkVT, Y, SplatY ? 0 : I);
     SDValue Rcp = DAG.getNode(RcpOpc, DL, ChunkVT, YC);
-    XC = DAG.getNode(ISD::FMUL, DL, ChunkVT, XC, Scale);
+    Rcp = DAG.getNode(ISD::FMUL, DL, ChunkVT, Rcp, Scale, Flags);
     Quots.push_back(DAG.getNode(ISD::FMUL, DL, ChunkVT, XC, Rcp));
   }
   SDValue Quot = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Quots);
