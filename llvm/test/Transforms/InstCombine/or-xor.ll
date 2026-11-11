@@ -1056,7 +1056,7 @@ define i8 @or_nand_xor_common_op_commute3_use3(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
-; (a ^ 4) & (a ^ ~4) -> -1
+; (a ^ 4) | (a ^ ~4) -> -1
 define i32 @PR75692_1(i32 %x) {
 ; CHECK-LABEL: @PR75692_1(
 ; CHECK-NEXT:    ret i32 -1
@@ -1067,7 +1067,7 @@ define i32 @PR75692_1(i32 %x) {
   ret i32 %t4
 }
 
-; (a ^ 4) & (a ^ 3) is not -1
+; (a ^ 4) | (a ^ -4) is not always -1
 define i32 @PR75692_2(i32 %x) {
 ; CHECK-LABEL: @PR75692_2(
 ; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
@@ -1081,7 +1081,7 @@ define i32 @PR75692_2(i32 %x) {
   ret i32 %t4
 }
 
-; (a ^ 4) & (b ^ ~4) is not -1, since a != b is possible
+; (a ^ 4) | (b ^ ~4) is not always -1, since a != b is possible
 define i32 @PR75692_3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR75692_3(
 ; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4

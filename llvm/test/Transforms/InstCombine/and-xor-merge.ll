@@ -52,7 +52,7 @@ define i32 @PR75692_1(i32 %x) {
   ret i32 %t4
 }
 
-; (a ^ 4) & (a ^ 3) is not zero
+; (a ^ 4) & (a ^ -4) is not always zero
 define i32 @PR75692_2(i32 %x) {
 ; CHECK-LABEL: @PR75692_2(
 ; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
@@ -66,7 +66,7 @@ define i32 @PR75692_2(i32 %x) {
   ret i32 %t4
 }
 
-; (a ^ 4) & (b ^ ~4) is not zero, since a != b is possible
+; (a ^ 4) & (b ^ ~4) is not always zero, since a != b is possible
 define i32 @PR75692_3(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR75692_3(
 ; CHECK-NEXT:    [[T2:%.*]] = xor i32 [[X:%.*]], 4
