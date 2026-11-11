@@ -4809,8 +4809,12 @@ findCapturingScope(ArrayRef<FunctionScopeInfo *> Scopes,
 bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
   if (VLASizeExprOwners.empty() || T.isNull())
     return true;
-  // Deduced types (auto, __auto_type) do not propagate the variably modified
-  // bit, so look at the canonical type.
+  // Default arguments and default member initializers are evaluated where
+  // they are used, and unevaluated operands are not evaluated at all.
+  if (isUnevaluatedContext() || isCheckingDefaultArgumentOrInitializer())
+    return true;
+  // FIXME: DeducedType drops the variably modified bit of the deduced type
+  // (auto, __auto_type), so look at the canonical type.
   QualType CanonT = T.getCanonicalType();
   if (!CanonT->isVariablyModifiedType())
     return true;
@@ -4861,11 +4865,6 @@ bool Sema::CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc) {
         CSI->addVLATypeCapture(Size->getExprLoc(), VAT, Context.getSizeType());
   });
   if (!BadSize)
-    return true;
-
-  // Default arguments and default member initializers are evaluated where
-  // they are used, and unevaluated operands are not evaluated at all.
-  if (isUnevaluatedContext() || isCheckingDefaultArgumentOrInitializer())
     return true;
 
   // A typedef naming such a type has already been diagnosed.
@@ -4956,15 +4955,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
                                        ExprKind))
     return true;
 
-  // The operand of sizeof is parsed in an unevaluated context, but a variably
-  // modified operand is evaluated if the sizeof itself is.
-  std::optional<EnterExpressionEvaluationContext> Evaluated;
-  if ((ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
-      isUnevaluatedContext())
-    Evaluated.emplace(*this, parentEvaluationContext().Context);
-  if (!CheckVariablyModifiedTypeUse(ExprType, OpLoc))
-    return true;
-
   return false;
 }
 
@@ -4993,6 +4983,17 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   // It's possible that the transformation above failed.
   if (!TInfo)
     return ExprError();
+
+  if (!TInfo->getType()->isDependentType()) {
+    // The operand of sizeof is parsed in an unevaluated context, but a
+    // variably modified operand is evaluated if the sizeof itself is.
+    std::optional<EnterExpressionEvaluationContext> Evaluated;
+    if ((ExprKind == UETT_SizeOf || ExprKind == UETT_CountOf) &&
+        isUnevaluatedContext())
+      Evaluated.emplace(*this, parentEvaluationContext().Context);
+    if (!CheckVariablyModifiedTypeUse(TInfo->getType(), OpLoc))
+      return ExprError();
+  }
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
