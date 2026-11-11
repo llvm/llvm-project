@@ -1,0 +1,372 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -start-before=machine-scheduler -stop-before=postmisched -verify-misched -o - %s | FileCheck %s
+
+# The iglp_opt(2) analysis data is computed pre-RA, stored on each IGLP_OPT and
+# reused post-RA. Each region must keep its own data: the small kernel region
+# must not get the data of the large kernel region, which is analyzed after it.
+
+# CHECK-LABEL: name: small_then_large
+# CHECK: IGLP_OPT 2, 32, 33, 1, 2, 4, 3, 0, 1{{$}}
+# CHECK: IGLP_OPT 2, 64, 93, 0, 4, 4, 6, 1, 0{{$}}
+
+--- |
+  define amdgpu_kernel void @small_then_large() #0 { ret void }
+  attributes #0 = { "amdgpu-flat-work-group-size"="256,256" }
+...
+---
+name:            small_then_large
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2, $sgpr3, $sgpr4
+
+    %1037:vgpr_32 = IMPLICIT_DEF
+    %1038:sreg_32 = IMPLICIT_DEF
+    %1039:sgpr_512 = IMPLICIT_DEF
+    %1040:vreg_128_align2 = IMPLICIT_DEF
+    %36:vreg_512_align2 = IMPLICIT_DEF
+    %37:vreg_512_align2 = IMPLICIT_DEF
+    IGLP_OPT 2
+    %118:vgpr_32 = V_EXP_F32_e32 undef %1037, implicit $mode, implicit $exec
+    %121:vgpr_32 = V_EXP_F32_e32 undef %118, implicit $mode, implicit $exec
+    %124:vgpr_32 = V_EXP_F32_e32 undef %121, implicit $mode, implicit $exec
+    %127:vgpr_32 = V_EXP_F32_e32 %124, implicit $mode, implicit $exec
+    %130:vgpr_32 = V_EXP_F32_e32 %127, implicit $mode, implicit $exec
+    %133:vgpr_32 = V_EXP_F32_e32 %130, implicit $mode, implicit $exec
+    %136:vgpr_32 = V_EXP_F32_e32 %133, implicit $mode, implicit $exec
+    %139:vgpr_32 = V_EXP_F32_e32 %136, implicit $mode, implicit $exec
+    %142:vgpr_32 = V_EXP_F32_e32 %139, implicit $mode, implicit $exec
+    %145:vgpr_32 = V_EXP_F32_e32 %142, implicit $mode, implicit $exec
+    %148:vgpr_32 = V_EXP_F32_e32 %145, implicit $mode, implicit $exec
+    %151:vgpr_32 = V_EXP_F32_e32 %148, implicit $mode, implicit $exec
+    %154:vgpr_32 = V_EXP_F32_e32 %151, implicit $mode, implicit $exec
+    %157:vgpr_32 = V_EXP_F32_e32 %154, implicit $mode, implicit $exec
+    %160:vgpr_32 = V_EXP_F32_e32 %157, implicit $mode, implicit $exec
+    %163:vgpr_32 = V_EXP_F32_e32 %160, implicit $mode, implicit $exec
+    %166:vgpr_32 = V_EXP_F32_e32 %163, implicit $mode, implicit $exec
+    %169:vgpr_32 = V_EXP_F32_e32 %166, implicit $mode, implicit $exec
+    %172:vgpr_32 = V_EXP_F32_e32 %169, implicit $mode, implicit $exec
+    %175:vgpr_32 = V_EXP_F32_e32 %172, implicit $mode, implicit $exec
+    %178:vgpr_32 = V_EXP_F32_e32 %175, implicit $mode, implicit $exec
+    %181:vgpr_32 = V_EXP_F32_e32 %178, implicit $mode, implicit $exec
+    %184:vgpr_32 = V_EXP_F32_e32 %181, implicit $mode, implicit $exec
+    %187:vgpr_32 = V_EXP_F32_e32 %184, implicit $mode, implicit $exec
+    %190:vgpr_32 = V_EXP_F32_e32 %187, implicit $mode, implicit $exec
+    %193:vgpr_32 = V_EXP_F32_e32 %190, implicit $mode, implicit $exec
+    %196:vgpr_32 = V_EXP_F32_e32 %193, implicit $mode, implicit $exec
+    %199:vgpr_32 = V_EXP_F32_e32 %196, implicit $mode, implicit $exec
+    %202:vgpr_32 = V_EXP_F32_e32 %199, implicit $mode, implicit $exec
+    %205:vgpr_32 = V_EXP_F32_e32 %202, implicit $mode, implicit $exec
+    %208:vgpr_32 = V_EXP_F32_e32 %205, implicit $mode, implicit $exec
+    %211:vgpr_32 = V_EXP_F32_e32 %208, implicit $mode, implicit $exec
+    %212:vgpr_32 = V_ADD_F32_e32 0, %118, implicit $mode, implicit $exec
+    undef %36.sub0_sub1:vreg_512_align2 = IMPLICIT_DEF
+    undef %37.sub0_sub1:vreg_512_align2 = IMPLICIT_DEF
+    %262:vgpr_32 = V_CVT_F16_F32_e32 %121, implicit $mode, implicit $exec
+    undef %289.sub1:vreg_64_align2 = V_PACK_B32_F16_e64 0, undef %262, 0, undef %262, 0, 0, implicit $mode, implicit $exec
+    %289.sub0:vreg_64_align2 = V_PACK_B32_F16_e64 0, %212, 0, %262, 0, 0, implicit $mode, implicit $exec
+    %36:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %1040.sub0_sub1, %289, undef %36, 0, 0, 0, implicit $mode, implicit $exec
+    %37:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %1040.sub0_sub1, %289, undef %37, 0, 0, 0, implicit $mode, implicit $exec
+    %36:vreg_512_align2 = IMPLICIT_DEF
+    %37:vreg_512_align2 = IMPLICIT_DEF
+    %293:vgpr_32 = V_CVT_F16_F32_e32 %211, implicit $mode, implicit $exec
+    undef %312.sub1:vreg_64_align2 = V_PACK_B32_F16_e64 0, undef %293, 0, %293, 0, 0, implicit $mode, implicit $exec
+    %36:vreg_512_align2 = IMPLICIT_DEF
+    %37:vreg_512_align2 = IMPLICIT_DEF
+    %36:vreg_512_align2 = IMPLICIT_DEF
+    %37:vreg_512_align2 = IMPLICIT_DEF
+    %37:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %1040.sub2_sub3, %312, undef %37, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_SCC1 %bb.2, implicit undef $scc
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2, $sgpr3, $sgpr4
+
+    %348:vgpr_32 = IMPLICIT_DEF
+    %350:vgpr_32 = IMPLICIT_DEF
+    %356:vreg_512_align2 = IMPLICIT_DEF
+    %357:vreg_512_align2 = IMPLICIT_DEF
+    %358:vreg_512_align2 = IMPLICIT_DEF
+    %359:vreg_512_align2 = IMPLICIT_DEF
+    %371:vgpr_32 = IMPLICIT_DEF
+    IGLP_OPT 2
+    %386:vreg_128_align2 = IMPLICIT_DEF
+    %387:vreg_512_align2 = IMPLICIT_DEF
+    %389:vreg_512_align2 = IMPLICIT_DEF
+    %391:vreg_512_align2 = IMPLICIT_DEF
+    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %386.sub2_sub3, %1040.sub2_sub3, %391, 0, 0, 0, implicit $mode, implicit $exec
+    %392:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 1536, 0, implicit $exec
+    early-clobber %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %392.sub0_sub1, undef %1040.sub0_sub1, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %392.sub2_sub3, undef %1040.sub2_sub3, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %394:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 0, 0, implicit $exec
+    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, %1040.sub0_sub1, undef %391, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %394.sub0_sub1, undef %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %394.sub2_sub3, undef %1040.sub2_sub3, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %394.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %403:vreg_128_align2 = IMPLICIT_DEF
+    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %403.sub0_sub1, undef %1040.sub0_sub1, %391, 0, 0, 0, implicit $mode, implicit $exec
+    %404:vreg_128_align2 = IMPLICIT_DEF
+    %393:vreg_512_align2 = IMPLICIT_DEF
+    %393:vreg_512_align2 = IMPLICIT_DEF
+    %387:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, undef %387, 0, 0, 0, implicit $mode, implicit $exec
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, undef %391, 0, 0, 0, implicit $mode, implicit $exec
+    %393:vreg_512_align2 = IMPLICIT_DEF
+    %387:vreg_512_align2 = IMPLICIT_DEF
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %404.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = IMPLICIT_DEF
+    %393:vreg_512_align2 = IMPLICIT_DEF
+    %424:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 0, 0, implicit $exec
+    %387:vreg_512_align2 = IMPLICIT_DEF
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %424.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = IMPLICIT_DEF
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %424.sub0_sub1, undef %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %387:vreg_512_align2 = IMPLICIT_DEF
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %424.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = IMPLICIT_DEF
+    %431:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 1536, 0, implicit $exec
+    %393:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %431.sub0_sub1, undef %1040.sub0_sub1, undef %393, 0, 0, 0, implicit $mode, implicit $exec
+    %387:vreg_512_align2 = IMPLICIT_DEF
+    %433:vreg_128_align2 = IMPLICIT_DEF
+    %389:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %1040.sub0_sub1, %389, 0, 0, 0, implicit $mode, implicit $exec
+    %391:vreg_512_align2 = IMPLICIT_DEF
+    %393:vreg_512_align2 = IMPLICIT_DEF
+    %542:vgpr_32 = V_EXP_F32_e32 undef %371, implicit $mode, implicit $exec
+    %545:vgpr_32 = V_EXP_F32_e32 undef %542, implicit $mode, implicit $exec
+    %548:vgpr_32 = V_EXP_F32_e32 undef %545, implicit $mode, implicit $exec
+    %551:vgpr_32 = V_EXP_F32_e32 undef %548, implicit $mode, implicit $exec
+    %554:vgpr_32 = V_EXP_F32_e32 undef %551, implicit $mode, implicit $exec
+    %557:vgpr_32 = V_EXP_F32_e32 undef %554, implicit $mode, implicit $exec
+    %560:vgpr_32 = V_EXP_F32_e32 undef %557, implicit $mode, implicit $exec
+    %563:vgpr_32 = V_EXP_F32_e32 undef %560, implicit $mode, implicit $exec
+    %566:vgpr_32 = V_EXP_F32_e32 undef %563, implicit $mode, implicit $exec
+    %569:vgpr_32 = V_EXP_F32_e32 undef %566, implicit $mode, implicit $exec
+    %572:vgpr_32 = V_EXP_F32_e32 undef %569, implicit $mode, implicit $exec
+    %575:vgpr_32 = V_EXP_F32_e32 undef %572, implicit $mode, implicit $exec
+    %578:vgpr_32 = V_EXP_F32_e32 undef %575, implicit $mode, implicit $exec
+    %581:vgpr_32 = V_EXP_F32_e32 undef %578, implicit $mode, implicit $exec
+    %584:vgpr_32 = V_EXP_F32_e32 undef %581, implicit $mode, implicit $exec
+    %587:vgpr_32 = V_EXP_F32_e32 undef %584, implicit $mode, implicit $exec
+    %590:vgpr_32 = V_EXP_F32_e32 undef %587, implicit $mode, implicit $exec
+    %593:vgpr_32 = V_EXP_F32_e32 undef %590, implicit $mode, implicit $exec
+    %596:vgpr_32 = V_EXP_F32_e32 undef %593, implicit $mode, implicit $exec
+    %599:vgpr_32 = V_EXP_F32_e32 undef %596, implicit $mode, implicit $exec
+    %602:vgpr_32 = V_EXP_F32_e32 undef %599, implicit $mode, implicit $exec
+    %605:vgpr_32 = V_EXP_F32_e32 undef %602, implicit $mode, implicit $exec
+    %608:vgpr_32 = V_EXP_F32_e32 undef %605, implicit $mode, implicit $exec
+    %611:vgpr_32 = V_EXP_F32_e32 undef %608, implicit $mode, implicit $exec
+    %614:vgpr_32 = V_EXP_F32_e32 undef %611, implicit $mode, implicit $exec
+    %617:vgpr_32 = V_EXP_F32_e32 undef %614, implicit $mode, implicit $exec
+    %620:vgpr_32 = V_EXP_F32_e32 undef %617, implicit $mode, implicit $exec
+    %623:vgpr_32 = V_EXP_F32_e32 undef %620, implicit $mode, implicit $exec
+    %626:vgpr_32 = V_EXP_F32_e32 undef %623, implicit $mode, implicit $exec
+    %629:vgpr_32 = V_EXP_F32_e32 %626, implicit $mode, implicit $exec
+    %632:vgpr_32 = V_EXP_F32_e32 undef %629, implicit $mode, implicit $exec
+    %633:vgpr_32 = contract nofpexcept V_FMA_F32_e64 0, undef %1039.sub4, 0, %389.sub15, 1, undef %371, 0, 0, implicit $mode, implicit $exec
+    %635:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %633, implicit $mode, implicit $exec
+    %638:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %635, implicit $mode, implicit $exec
+    %641:vgpr_32 = V_EXP_F32_e32 undef %638, implicit $mode, implicit $exec
+    %644:vgpr_32 = V_EXP_F32_e32 undef %641, implicit $mode, implicit $exec
+    %647:vgpr_32 = afn nofpexcept V_EXP_F32_e32 undef %644, implicit $mode, implicit $exec
+    %648:vgpr_32 = contract nofpexcept V_FMA_F32_e64 0, undef %1039.sub4, 0, %391.sub4, 1, undef %371, 0, 0, implicit $mode, implicit $exec
+    %650:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %648, implicit $mode, implicit $exec
+    %653:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %650, implicit $mode, implicit $exec
+    %656:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %653, implicit $mode, implicit $exec
+    %659:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %656, implicit $mode, implicit $exec
+    %662:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %659, implicit $mode, implicit $exec
+    %665:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %662, implicit $mode, implicit $exec
+    %668:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %665, implicit $mode, implicit $exec
+    %671:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %668, implicit $mode, implicit $exec
+    %674:vgpr_32 = V_EXP_F32_e32 undef %671, implicit $mode, implicit $exec
+    %677:vgpr_32 = V_EXP_F32_e32 %674, implicit $mode, implicit $exec
+    %680:vgpr_32 = V_EXP_F32_e32 %677, implicit $mode, implicit $exec
+    %683:vgpr_32 = V_EXP_F32_e32 undef %680, implicit $mode, implicit $exec
+    %686:vgpr_32 = V_EXP_F32_e32 undef %683, implicit $mode, implicit $exec
+    %689:vgpr_32 = V_EXP_F32_e32 undef %686, implicit $mode, implicit $exec
+    %692:vgpr_32 = V_EXP_F32_e32 undef %689, implicit $mode, implicit $exec
+    %695:vgpr_32 = V_EXP_F32_e32 undef %692, implicit $mode, implicit $exec
+    %698:vgpr_32 = V_EXP_F32_e32 undef %695, implicit $mode, implicit $exec
+    %701:vgpr_32 = V_EXP_F32_e32 undef %698, implicit $mode, implicit $exec
+    %704:vgpr_32 = V_EXP_F32_e32 undef %701, implicit $mode, implicit $exec
+    %707:vgpr_32 = V_EXP_F32_e32 undef %704, implicit $mode, implicit $exec
+    %710:vgpr_32 = V_EXP_F32_e32 undef %707, implicit $mode, implicit $exec
+    %713:vgpr_32 = V_EXP_F32_e32 undef %710, implicit $mode, implicit $exec
+    %716:vgpr_32 = V_EXP_F32_e32 undef %713, implicit $mode, implicit $exec
+    %719:vgpr_32 = V_EXP_F32_e32 undef %716, implicit $mode, implicit $exec
+    %722:vgpr_32 = V_EXP_F32_e32 undef %719, implicit $mode, implicit $exec
+    %725:vgpr_32 = afn nofpexcept V_EXP_F32_e32 undef %722, implicit $mode, implicit $exec
+    %728:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %725, implicit $mode, implicit $exec
+    %731:vgpr_32 = afn nofpexcept V_EXP_F32_e32 %728, implicit $mode, implicit $exec
+    %350:vgpr_32 = IMPLICIT_DEF
+    %799:vgpr_32 = IMPLICIT_DEF
+    %350:vgpr_32 = IMPLICIT_DEF
+    %356.sub0_sub1:vreg_512_align2 = IMPLICIT_DEF
+    %357.sub0_sub1:vreg_512_align2 = IMPLICIT_DEF
+    %358.sub0_sub1:vreg_512_align2 = IMPLICIT_DEF
+    %359.sub0_sub1:vreg_512_align2 = IMPLICIT_DEF
+    %813:vgpr_32 = V_CVT_F16_F32_e32 %542, implicit $mode, implicit $exec
+    %814:vgpr_32 = V_CVT_F16_F32_e32 %545, implicit $mode, implicit $exec
+    %815:vgpr_32 = V_CVT_F16_F32_e32 %548, implicit $mode, implicit $exec
+    %816:vgpr_32 = V_CVT_F16_F32_e32 undef %554, implicit $mode, implicit $exec
+    %817:vgpr_32 = V_CVT_F16_F32_e32 undef %557, implicit $mode, implicit $exec
+    %818:vgpr_32 = V_CVT_F16_F32_e32 undef %560, implicit $mode, implicit $exec
+    %819:vgpr_32 = V_CVT_F16_F32_e32 %566, implicit $mode, implicit $exec
+    %820:vgpr_32 = V_CVT_F16_F32_e32 %569, implicit $mode, implicit $exec
+    %821:vgpr_32 = V_CVT_F16_F32_e32 %572, implicit $mode, implicit $exec
+    %822:vgpr_32 = V_CVT_F16_F32_e32 undef %578, implicit $mode, implicit $exec
+    %823:vgpr_32 = IMPLICIT_DEF
+    %824:vgpr_32 = V_CVT_F16_F32_e32 %584, implicit $mode, implicit $exec
+    %825:vgpr_32 = V_CVT_F16_F32_e32 %590, implicit $mode, implicit $exec
+    %826:vgpr_32 = V_CVT_F16_F32_e32 undef %593, implicit $mode, implicit $exec
+    %827:vgpr_32 = V_CVT_F16_F32_e32 undef %596, implicit $mode, implicit $exec
+    %828:vgpr_32 = V_CVT_F16_F32_e32 undef %602, implicit $mode, implicit $exec
+    %829:vgpr_32 = V_CVT_F16_F32_e32 undef %605, implicit $mode, implicit $exec
+    %830:vgpr_32 = IMPLICIT_DEF
+    %831:vgpr_32 = IMPLICIT_DEF
+    %832:vgpr_32 = V_CVT_F16_F32_e32 undef %617, implicit $mode, implicit $exec
+    %833:vgpr_32 = IMPLICIT_DEF
+    %834:vgpr_32 = IMPLICIT_DEF
+    %835:vgpr_32 = IMPLICIT_DEF
+    %836:vgpr_32 = V_CVT_F16_F32_e32 %632, implicit $mode, implicit $exec
+    %837:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %638, implicit $mode, implicit $exec
+    %838:vgpr_32 = V_CVT_F16_F32_e32 %641, implicit $mode, implicit $exec
+    %839:vgpr_32 = V_CVT_F16_F32_e32 %644, implicit $mode, implicit $exec
+    %840:vgpr_32 = IMPLICIT_DEF
+    %841:vgpr_32 = IMPLICIT_DEF
+    %842:vgpr_32 = IMPLICIT_DEF
+    %843:vgpr_32 = IMPLICIT_DEF
+    %844:vgpr_32 = IMPLICIT_DEF
+    %845:vgpr_32 = IMPLICIT_DEF
+    %846:vgpr_32 = IMPLICIT_DEF
+    %847:vgpr_32 = IMPLICIT_DEF
+    %848:vgpr_32 = IMPLICIT_DEF
+    %899:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 1152, 0, implicit $exec
+    %900:vreg_128_align2 = DS_READ_B128_gfx9 undef %293, 1728, 0, implicit $exec
+    %901:vreg_128_align2 = DS_READ_B128_gfx9 undef %348, 0, 0, implicit $exec
+    %902:vreg_128_align2 = IMPLICIT_DEF
+    %903:vreg_128_align2 = IMPLICIT_DEF
+    %904:vreg_128_align2 = DS_READ_B128_gfx9 undef %348, 1728, 0, implicit $exec
+    undef %905.sub0:vreg_64_align2 = IMPLICIT_DEF
+    undef %906.sub0:vreg_64_align2 = IMPLICIT_DEF
+    %905.sub1:vreg_64_align2 = IMPLICIT_DEF
+    %906.sub1:vreg_64_align2 = IMPLICIT_DEF
+    undef %907.sub0:vreg_64_align2 = IMPLICIT_DEF
+    undef %908.sub0:vreg_64_align2 = IMPLICIT_DEF
+    %907.sub1:vreg_64_align2 = IMPLICIT_DEF
+    %908.sub1:vreg_64_align2 = IMPLICIT_DEF
+    DS_WRITE_B64_gfx9 undef %799, %905, 0, 0, implicit $exec
+    DS_WRITE_B64_gfx9 undef %799, %906, 0, 0, implicit $exec
+    DS_WRITE_B64_gfx9 %799, %907, 0, 0, implicit $exec
+    DS_WRITE_B64_gfx9 undef %799, %908, 0, 0, implicit $exec
+    %909:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %551, implicit $mode, implicit $exec
+    %910:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %563, implicit $mode, implicit $exec
+    %911:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %575, implicit $mode, implicit $exec
+    %912:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %587, implicit $mode, implicit $exec
+    %913:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %599, implicit $mode, implicit $exec
+    %914:vgpr_32 = V_CVT_F16_F32_e32 %611, implicit $mode, implicit $exec
+    %915:vgpr_32 = V_CVT_F16_F32_e32 %623, implicit $mode, implicit $exec
+    %916:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %635, implicit $mode, implicit $exec
+    %917:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %647, implicit $mode, implicit $exec
+    %918:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %659, implicit $mode, implicit $exec
+    %919:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %671, implicit $mode, implicit $exec
+    %920:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %683, implicit $mode, implicit $exec
+    undef %921.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %815, 0, %909, 0, 0, implicit $mode, implicit $exec
+    %921.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %813, 0, %814, 0, 0, implicit $mode, implicit $exec
+    undef %922.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %818, 0, undef %910, 0, 0, implicit $mode, implicit $exec
+    undef %922.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %816, 0, %817, 0, 0, implicit $mode, implicit $exec
+    undef %923.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %821, 0, %911, 0, 0, implicit $mode, implicit $exec
+    %923.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %819, 0, %820, 0, 0, implicit $mode, implicit $exec
+    undef %924.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %824, 0, undef %912, 0, 0, implicit $mode, implicit $exec
+    %924.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %822, 0, %823, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %433.sub0_sub1, %921, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub2_sub3, undef %922, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %921, %357, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %921, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %921, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %923, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub2_sub3, %924, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %923, %357, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %923, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %923, %359, 0, 0, 0, implicit $mode, implicit $exec
+    undef %925.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %827, 0, %913, 0, 0, implicit $mode, implicit $exec
+    %925.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %825, 0, %826, 0, 0, implicit $mode, implicit $exec
+    undef %926.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %830, 0, undef %914, 0, 0, implicit $mode, implicit $exec
+    undef %926.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %828, 0, %829, 0, 0, implicit $mode, implicit $exec
+    undef %927.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %833, 0, undef %915, 0, 0, implicit $mode, implicit $exec
+    undef %927.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %831, 0, %832, 0, 0, implicit $mode, implicit $exec
+    undef %928.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %836, 0, undef %916, 0, 0, implicit $mode, implicit $exec
+    undef %928.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %834, 0, %835, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %925, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %925, %357, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %925, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %925, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub2_sub3, undef %926, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %927, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %927, %357, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %927, undef %358, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %433.sub2_sub3, undef %928, undef %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %927, %359, 0, 0, 0, implicit $mode, implicit $exec
+    undef %929.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %839, 0, %917, 0, 0, implicit $mode, implicit $exec
+    %929.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %837, 0, %838, 0, 0, implicit $mode, implicit $exec
+    undef %930.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %842, 0, undef %918, 0, 0, implicit $mode, implicit $exec
+    undef %930.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %840, 0, %841, 0, 0, implicit $mode, implicit $exec
+    undef %931.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %845, 0, %919, 0, 0, implicit $mode, implicit $exec
+    %931.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %843, 0, %844, 0, 0, implicit $mode, implicit $exec
+    undef %932.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %848, 0, undef %920, 0, 0, implicit $mode, implicit $exec
+    undef %932.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %846, 0, %847, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, %929, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %433.sub0_sub1, undef %929, %357, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %899.sub0_sub1, undef %929, undef %358, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %899.sub2_sub3, %930, undef %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %900.sub0_sub1, undef %929, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %900.sub2_sub3, undef %930, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %901.sub0_sub1, undef %931, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %901.sub2_sub3, undef %932, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %902.sub0_sub1, %931, %357, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %902.sub2_sub3, undef %932, undef %357, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %903.sub0_sub1, undef %931, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %903.sub2_sub3, undef %932, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %904.sub0_sub1, undef %931, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %904.sub2_sub3, undef %932, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %933:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %731, implicit $mode, implicit $exec
+    %934:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %725, implicit $mode, implicit $exec
+    %935:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %719, implicit $mode, implicit $exec
+    %936:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %713, implicit $mode, implicit $exec
+    %937:vgpr_32 = V_CVT_F16_F32_e32 %707, implicit $mode, implicit $exec
+    %938:vgpr_32 = V_CVT_F16_F32_e32 %701, implicit $mode, implicit $exec
+    %939:vgpr_32 = V_CVT_F16_F32_e32 %695, implicit $mode, implicit $exec
+    %940:vgpr_32 = V_CVT_F16_F32_e32 %689, implicit $mode, implicit $exec
+    %941:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %728, implicit $mode, implicit $exec
+    %942:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %722, implicit $mode, implicit $exec
+    %943:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %716, implicit $mode, implicit $exec
+    %944:vgpr_32 = V_CVT_F16_F32_e32 %710, implicit $mode, implicit $exec
+    %945:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %704, implicit $mode, implicit $exec
+    %946:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %698, implicit $mode, implicit $exec
+    %947:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %692, implicit $mode, implicit $exec
+    %948:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %686, implicit $mode, implicit $exec
+    undef %949.sub1:vreg_64_align2 = IMPLICIT_DEF
+    undef %952.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, undef %941, 0, %933, 0, 0, implicit $mode, implicit $exec
+    %953:vreg_128_align2 = DS_READ_B128_gfx9 %293, 0, 0, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %953.sub0_sub1, undef %949, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = IMPLICIT_DEF
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %953.sub0_sub1, undef %949, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %953.sub2_sub3, undef %949, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = IMPLICIT_DEF
+    %957:vreg_128_align2 = DS_READ_B128_gfx9 %348, 0, 0, implicit $exec
+    %356:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %957.sub0_sub1, undef %949, %356, 0, 0, 0, implicit $mode, implicit $exec
+    %357:vreg_512_align2 = IMPLICIT_DEF
+    %358:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %957.sub0_sub1, undef %949, %358, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %957.sub0_sub1, undef %949, undef %359, 0, 0, 0, implicit $mode, implicit $exec
+    %359:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 undef %957.sub2_sub3, %952, %359, 0, 0, 0, implicit $mode, implicit $exec
+    %366:vgpr_32 = V_ADD_U32_e32 undef %1038, %350, implicit $exec
+    %371:vgpr_32 = V_ADD_U32_e32 undef %1038, %371, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
