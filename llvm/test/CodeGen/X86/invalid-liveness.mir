@@ -13,6 +13,7 @@
 # CHECK: Use of %0 does not have a corresponding definition on every path
 # CHECK: ERROR: Use not jointly dominated by defs.
 name: func
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gr32 }
 body: |

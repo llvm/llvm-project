@@ -57,8 +57,6 @@ STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
 namespace llvm {
-extern cl::opt<unsigned> MaxNumVTableAnnotations;
-
 extern cl::opt<bool> EnableVTableProfileUse;
 } // namespace llvm
 
@@ -507,9 +505,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     CalleeIndexMap[Candidates[I].TargetFunction] = I;
 
   uint64_t TotalVTableCount = 0;
-  auto VTableValueDataArray =
-      getValueProfDataFromInst(*VirtualCallInfo.VPtr, IPVK_VTableTarget,
-                               MaxNumVTableAnnotations, TotalVTableCount);
+  auto VTableValueDataArray = getValueProfDataFromInst(
+      *VirtualCallInfo.VPtr, IPVK_VTableTarget,
+      getMaxNumVTableAnnotations(VPtr->getContext()), TotalVTableCount);
   if (VTableValueDataArray.empty())
     return VPtr;
 

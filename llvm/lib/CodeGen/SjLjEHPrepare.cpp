@@ -28,7 +28,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
@@ -42,7 +41,7 @@ class SjLjEHPrepareImpl {
   IntegerType *DataTy = nullptr;
   Type *doubleUnderDataTy = nullptr;
   Type *doubleUnderJBufTy = nullptr;
-  Type *FunctionContextTy = nullptr;
+  StructType *FunctionContextTy = nullptr;
   FunctionCallee RegisterFn;
   FunctionCallee UnregisterFn;
   Function *BuiltinSetupDispatchFn = nullptr;
@@ -53,13 +52,11 @@ class SjLjEHPrepareImpl {
   Function *CallSiteFn = nullptr;
   Function *FuncCtxFn = nullptr;
   AllocaInst *FuncCtx = nullptr;
-  const TargetMachine *TM = nullptr;
 
   // The module's "exception-model" flag.
   ExceptionHandling ExceptionModel = ExceptionHandling::Default;
 
 public:
-  explicit SjLjEHPrepareImpl(const TargetMachine *TM = nullptr) : TM(TM) {}
   bool doInitialization(Module &M);
   bool runOnFunction(Function &F);
 
@@ -77,8 +74,7 @@ class SjLjEHPrepare : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  explicit SjLjEHPrepare(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), Impl(TM) {}
+  SjLjEHPrepare() : FunctionPass(ID) {}
   bool doInitialization(Module &M) override { return Impl.doInitialization(M); }
   bool runOnFunction(Function &F) override { return Impl.runOnFunction(F); };
 
@@ -91,7 +87,7 @@ public:
 
 PreservedAnalyses SjLjEHPreparePass::run(Function &F,
                                          FunctionAnalysisManager &FAM) {
-  SjLjEHPrepareImpl Impl(TM);
+  SjLjEHPrepareImpl Impl;
   Impl.doInitialization(*F.getParent());
   bool Changed = Impl.runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
@@ -102,8 +98,23 @@ INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions",
                 false, false)
 
 // Public Interface To the SjLjEHPrepare pass.
-FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
-  return new SjLjEHPrepare(TM);
+FunctionPass *llvm::createSjLjEHPreparePass() { return new SjLjEHPrepare(); }
+
+StructType *llvm::getSjLjFunctionContextType(const Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  unsigned DataBits = M.getTargetTriple().getArchPointerBitWidth();
+  if (DataBits == 0)
+    DataBits = M.getDataLayout().getPointerSizeInBits();
+  Type *DataTy = Type::getIntNTy(Ctx, DataBits);
+  // builtin_setjmp uses a five word jbuf
+  Type *VoidPtrTy = PointerType::getUnqual(Ctx);
+  return StructType::get(VoidPtrTy,                   // __prev
+                         Type::getInt32Ty(Ctx),       // call_site
+                         ArrayType::get(DataTy, 4),   // __data
+                         VoidPtrTy,                   // __personality
+                         VoidPtrTy,                   // __lsda
+                         ArrayType::get(VoidPtrTy, 5) // __jbuf
+  );
 }
 
 // doInitialization - Set up decalarations and types needed to process
@@ -111,21 +122,10 @@ FunctionPass *llvm::createSjLjEHPreparePass(const TargetMachine *TM) {
 bool SjLjEHPrepareImpl::doInitialization(Module &M) {
   ExceptionModel = M.getExceptionModel();
 
-  // Build the function context structure.
-  // builtin_setjmp uses a five word jbuf
-  Type *VoidPtrTy = PointerType::getUnqual(M.getContext());
-  unsigned DataBits =
-      TM ? TM->getSjLjDataSize() : TargetMachine::DefaultSjLjDataSize;
-  DataTy = Type::getIntNTy(M.getContext(), DataBits);
-  doubleUnderDataTy = ArrayType::get(DataTy, 4);
-  doubleUnderJBufTy = ArrayType::get(VoidPtrTy, 5);
-  FunctionContextTy = StructType::get(VoidPtrTy,         // __prev
-                                      DataTy,            // call_site
-                                      doubleUnderDataTy, // __data
-                                      VoidPtrTy,         // __personality
-                                      VoidPtrTy,         // __lsda
-                                      doubleUnderJBufTy  // __jbuf
-  );
+  FunctionContextTy = getSjLjFunctionContextType(M);
+  doubleUnderDataTy = FunctionContextTy->getElementType(2);
+  doubleUnderJBufTy = FunctionContextTy->getElementType(5);
+  DataTy = cast<IntegerType>(doubleUnderDataTy->getArrayElementType());
 
   return false;
 }
@@ -144,7 +144,7 @@ void SjLjEHPrepareImpl::insertCallSiteStore(Instruction *I, int Number) {
       Builder.CreateGEP(FunctionContextTy, FuncCtx, Idxs, "call_site");
 
   // Insert a store of the call-site number
-  ConstantInt *CallSiteNoC = ConstantInt::getSigned(DataTy, Number);
+  ConstantInt *CallSiteNoC = Builder.getInt32(Number);
   Builder.CreateStore(CallSiteNoC, CallSite, true /*volatile*/);
 }
 

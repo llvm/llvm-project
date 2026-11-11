@@ -119,7 +119,6 @@
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Common Subexpression Elimination
@@ -134,10 +133,6 @@
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       PowerPC MI Peephole Optimization
 ; CHECK-NEXT:       Remove dead machine instructions
-; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
-; CHECK-NEXT:       Slot index numbering
-; CHECK-NEXT:       Live Interval Analysis
 ; CHECK-NEXT:       PowerPC TLS Dynamic Call Fixup
 ; CHECK-NEXT:       PowerPC TOC Register Dependencies
 ; CHECK-NEXT:       Detect Dead Lanes
@@ -176,7 +171,6 @@
 ; CHECK-NEXT:       PostRA Machine Sink
 ; CHECK-NEXT:       Machine Cycle Info Analysis
 ; CHECK-NEXT:       Machine Block Frequency Analysis
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter

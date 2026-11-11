@@ -2,7 +2,7 @@
 // name a parameter declared later in the same prototype. Without it, that
 // forward reference is an error.
 //
-// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=both,late -Wthread-safety -std=c++20 %s
+// RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=both -Wthread-safety -std=c++20 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=both,early -Wthread-safety -std=c++20 %s
 
 #define RELEASE(...)  __attribute__((release_capability(__VA_ARGS__)))
@@ -68,9 +68,9 @@ struct Outer {
   static Mutex m;
 };
 
-// Template instantiation cannot yet map a pointee's parameters, or a parameter
-// declared after the one an attribute is on. A name binds the same way in a
-// template as elsewhere, but an attribute naming one of those is rejected.
+// Template instantiation cannot yet map a pointee's parameters. A name binds
+// the same way in a template as elsewhere, but an attribute naming one is
+// rejected.
 template <typename T>
 struct InTemplate {
   void (*cb)(T *h) REQUIRES(h->lock); // both-error{{'requires_capability' attribute in a template cannot name pointee function parameter 'h'}}
@@ -78,22 +78,21 @@ struct InTemplate {
   void (*shadow)(T *own) REQUIRES(own->lock); // both-error{{reference to 'own' is ambiguous}} \
                                               // both-note{{candidate found by name lookup is 'own'}}
   T *own; // both-note{{candidate found by name lookup is 'InTemplate::own'}}
-  void method(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}} \
-                                              // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+  void method(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
               Mutex *mu);
 };
 InTemplate<Holder> in_template;
 
 template <typename T>
-void put_later_template(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}} \
-                                                        // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+void put_later_template(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
                         Mutex *mu);
+void use_put_later_template(Mutex *mu) { put_later_template<int>(nullptr, mu); }
 
-auto generic_lambda = [](auto x, void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}} \
-                                                                   // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+auto generic_lambda = [](auto x, void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
                          Mutex *mu) {};
+void use_generic_lambda(Mutex *mu) { generic_lambda(0, nullptr, mu); }
 
-// An earlier parameter is instantiated first, so it can be named.
+// An earlier parameter could always be named.
 template <typename T>
 void put_earlier_template(Mutex *mu, void (*release)(T) RELEASE(mu)) {}
 void use_put_earlier_template(Mutex *mu) { put_earlier_template<int>(mu, nullptr); }
@@ -102,19 +101,18 @@ void use_put_earlier_template(Mutex *mu) { put_earlier_template<int>(mu, nullptr
 // prototype, not on how macros spell it.
 #define SWAP(a, b) b, a
 template <typename T>
-void swapped_later(SWAP(Mutex *mu, // early-error{{use of undeclared identifier 'mu'}} \
-                                   // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+void swapped_later(SWAP(Mutex *mu, // early-error{{use of undeclared identifier 'mu'}}
                         void (*release)(T) RELEASE(mu)));
+void use_swapped_later(Mutex *mu) { swapped_later<int>(nullptr, mu); }
 template <typename T>
 void swapped_earlier(SWAP(void (*release)(T) RELEASE(mu), Mutex *mu)) {}
 void use_swapped_earlier(Mutex *mu) { swapped_earlier<int>(mu, nullptr); }
 
-// Nor on how deeply its prototype is nested: a later parameter of a nested
-// prototype is rejected, and an earlier parameter of an enclosing one works.
+// Nor on how deeply its prototype is nested.
 template <typename T>
-void nested_later(void (*cb)(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}} \
-                                                             // late-error{{'release_capability' attribute in a template cannot name later parameter 'mu'}}
+void nested_later(void (*cb)(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
                              Mutex *mu));
+void use_nested_later(void (*cb)(void (*)(int), Mutex *)) { nested_later<int>(cb); }
 template <typename T>
 void nested_earlier(Mutex *mu, void (*cb)(void (*release)(T) RELEASE(mu))) {}
 void use_nested_earlier(Mutex *mu) { nested_earlier<int>(mu, nullptr); }

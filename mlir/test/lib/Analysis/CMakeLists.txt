@@ -53,9 +53,3 @@ mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRMemRefDialect
   MLIRPass
   )
-
-target_include_directories(MLIRTestAnalysis
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
-  )

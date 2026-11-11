@@ -31,12 +31,14 @@ static_library("LLVMAVRCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
   ]
   include_dirs = [ "." ]
   sources = [
     "AVRAsmPrinter.cpp",
+    "AVRCodeGenPassBuilder.cpp",
     "AVRExpandPseudoInsts.cpp",
     "AVRFrameLowering.cpp",
     "AVRISelDAGToDAG.cpp",

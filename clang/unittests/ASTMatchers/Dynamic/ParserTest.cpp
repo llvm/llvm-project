@@ -545,9 +545,9 @@ TEST(ParserTest, CompletionRegistry) {
   Comps = Parser::completeExpression(Code, 6);
   ASSERT_EQ(1u, Comps.size());
   EXPECT_EQ("Of(", Comps[0].TypedText);
-  EXPECT_EQ("Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...> "
-            "mapAnyOf(NestedNameSpecifierLoc|QualType|TypeLoc|"
-            "NestedNameSpecifier|Decl|Stmt|Type...)",
+  EXPECT_EQ("Matcher<NestedNameSpecifier|NestedNameSpecifierLoc|QualType|...> "
+            "mapAnyOf(NestedNameSpecifier|NestedNameSpecifierLoc|QualType|"
+            "TypeLoc|Decl|Stmt|Type...)",
             Comps[0].MatcherDecl);
 
   Code = "mapAnyOf(ifStmt).";

@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/YAMLParser.h"
@@ -60,7 +61,8 @@ namespace tooling {
 enum class JSONCommandLineSyntax { Windows, Gnu, AutoDetect };
 class JSONCompilationDatabase : public CompilationDatabase {
 public:
-  /// Loads a JSON compilation database from the specified file.
+  /// Loads a JSON compilation database from the specified file. A relative
+  /// "directory" is resolved against the directory containing the file.
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be
   /// loaded from the given file.
@@ -68,12 +70,13 @@ public:
   loadFromFile(StringRef FilePath, std::string &ErrorMessage,
                JSONCommandLineSyntax Syntax);
 
-  /// Loads a JSON compilation database from a data buffer.
+  /// Loads a JSON compilation database from a data buffer. If BaseDirectory
+  /// is non-empty, a relative "directory" is resolved against it.
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be loaded.
   static std::unique_ptr<JSONCompilationDatabase>
-  loadFromBuffer(StringRef DatabaseString, std::string &ErrorMessage,
-                 JSONCommandLineSyntax Syntax);
+  loadFromBuffer(StringRef BaseDirectory, StringRef DatabaseString,
+                 std::string &ErrorMessage, JSONCommandLineSyntax Syntax);
 
   /// Returns all compile commands in which the specified file was
   /// compiled.
@@ -103,19 +106,19 @@ private:
   ///
   /// Returns whether parsing succeeded. Sets ErrorMessage if parsing
   /// failed.
-  bool parse(std::string &ErrorMessage);
+  bool parse(StringRef BaseDirectory, std::string &ErrorMessage);
 
-  // Tuple (directory, filename, commandline, output) where 'commandline'
-  // points to the corresponding scalar nodes in the YAML stream.
+  // Tuple (directory, filename, commandline, output) where 'directory' is
+  // owned by Directories and the others point to the corresponding scalar
+  // nodes in the YAML stream.
   // If the command line contains a single argument, it is a shell-escaped
   // command line.
   // Otherwise, each entry in the command line vector is a literal
   // argument to the compiler.
   // The output field may be a nullptr.
-  using CompileCommandRef =
-      std::tuple<llvm::yaml::ScalarNode *, llvm::yaml::ScalarNode *,
-                 std::vector<llvm::yaml::ScalarNode *>,
-                 llvm::yaml::ScalarNode *>;
+  using CompileCommandRef = std::tuple<StringRef, llvm::yaml::ScalarNode *,
+                                       std::vector<llvm::yaml::ScalarNode *>,
+                                       llvm::yaml::ScalarNode *>;
 
   /// Converts the given array of CompileCommandRefs to CompileCommands.
   void getCommands(ArrayRef<CompileCommandRef> CommandsRef,
@@ -130,6 +133,7 @@ private:
 
   FileMatchTrie MatchTrie;
 
+  llvm::StringSet<> Directories;
   std::unique_ptr<llvm::MemoryBuffer> Database;
   JSONCommandLineSyntax Syntax;
   llvm::SourceMgr SM;

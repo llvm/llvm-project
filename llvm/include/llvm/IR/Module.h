@@ -1062,7 +1062,14 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+
   /// @}
+  /// @name Utility functions for querying the size of wchar_t
+  /// @{
+
+  /// Returns the size of the wchar_t type from the "wchar_size" module flag,
+  /// or the triple default when the flag is absent.
+  unsigned getWCharSize() const;
 
   /// @}
   /// @name Utility functions for querying the long double format
@@ -1103,6 +1110,19 @@ public:
   /// or the target's default exception model (from the target triple) when the
   /// flag is absent. Never returns ExceptionHandling::Default.
   ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the debugger tuning
+  /// @{
+
+  /// Returns the debugger tuning recorded by the "debugger-tuning" module flag,
+  /// or the target's default debugger tuning (from the target triple) when the
+  /// flag is absent. Never returns DebuggerKind::Default.
+  DebuggerKind getDebuggerTuning() const;
+
+  /// Set the debugger tuning.
+  void setDebuggerTuning(DebuggerKind Tuning);
   /// @}
 
   /// @}

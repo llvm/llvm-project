@@ -707,6 +707,40 @@ bool ClauseProcessor::processNogroup(
   return markClauseOccurrence<omp::clause::Nogroup>(result.nogroup);
 }
 
+bool ClauseProcessor::processNocontext(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NocontextClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Nocontext>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value nocontextVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.nocontext = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), nocontextVal);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNovariants(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NovariantsClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Novariants>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value novariantsVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.novariants = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), novariantsVal);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }
@@ -2109,7 +2143,9 @@ bool ClauseProcessor::processReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
     const {
-  return findRepeatableClause<omp::clause::Reduction>(
+  llvm::SmallVector<mlir::Attribute> modifiers;
+  bool hasExplicitModifier = false;
+  bool found = findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> reductionVars;
         llvm::SmallVector<bool> reduceVarByRef;
@@ -2120,11 +2156,7 @@ bool ClauseProcessor::processReduction(
             getObjectsSyms(reductionObjects);
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
-        if (mod.has_value()) {
-          result.reductionMod = mlir::omp::ReductionModifierAttr::get(
-              converter.getFirOpBuilder().getContext(),
-              translateReductionModifier(mod.value()));
-        }
+        hasExplicitModifier |= mod.has_value();
 
         ReductionProcessor rp;
         if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
@@ -2133,6 +2165,11 @@ bool ClauseProcessor::processReduction(
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
                 reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
+        auto modifier = mlir::omp::ReductionModifierAttr::get(
+            converter.getFirOpBuilder().getContext(),
+            translateReductionModifier(
+                mod.value_or(ReductionModifier::Default)));
+        modifiers.append(reductionVars.size(), modifier);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
@@ -2140,6 +2177,9 @@ bool ClauseProcessor::processReduction(
                    std::back_inserter(result.reductionSyms));
         llvm::copy(reductionObjects, std::back_inserter(outReductionObjects));
       });
+  if (hasExplicitModifier)
+    result.reductionMods = std::move(modifiers);
+  return found;
 }
 
 bool ClauseProcessor::processTaskReduction(

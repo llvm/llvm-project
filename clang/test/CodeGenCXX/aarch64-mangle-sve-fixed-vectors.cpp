@@ -1,18 +1,23 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +sve -mvscale-min=1 -mvscale-max=1 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-128
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu %s -emit-llvm -o -  -target-feature +sve -mvscale-min=1 -mvscale-max=1  | FileCheck %s --check-prefix=CHECK-128 %}
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +sve -mvscale-min=2 -mvscale-max=2 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-256
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu %s -emit-llvm -o -  -target-feature +sve -mvscale-min=2 -mvscale-max=2  | FileCheck %s --check-prefix=CHECK-256 %}
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +sve -mvscale-min=4 -mvscale-max=4 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-512
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu %s -emit-llvm -o -  -target-feature +sve -mvscale-min=4 -mvscale-max=4  | FileCheck %s --check-prefix=CHECK-512 %}
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +sve -mvscale-min=8 -mvscale-max=8 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-1024
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu %s -emit-llvm -o -  -target-feature +sve -mvscale-min=8 -mvscale-max=8  | FileCheck %s --check-prefix=CHECK-1024 %}
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +sve -mvscale-min=16 -mvscale-max=16 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-2048
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple aarch64-none-linux-gnu %s -emit-llvm -o -  -target-feature +sve -mvscale-min=16 -mvscale-max=16  | FileCheck %s --check-prefix=CHECK-2048 %}
 
 #define N __ARM_FEATURE_SVE_BITS
 

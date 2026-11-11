@@ -30,7 +30,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalWeakRef() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
@@ -39,11 +38,9 @@ struct MissingFeatures {
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
   static bool emitNVVMMetadata() { return false; }
-  static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool hiddenVisibility() { return false; }
-  static bool protectedVisibility() { return false; }
   static bool defaultVisibility() { return false; }
 
   // Load/store attributes
@@ -273,6 +270,7 @@ struct MissingFeatures {
   static bool openMP() { return false; }
   static bool openMPLastprivateConditional() { return false; }
   static bool openMPNontemporalDecl() { return false; }
+  static bool openMPRequiresUnifiedSharedMemory() { return false; }
   static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
@@ -304,7 +302,6 @@ struct MissingFeatures {
   static bool vlas() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
-  static bool weakRefReference() { return false; }
   static bool writebacks() { return false; }
   static bool msvcCXXPersonality() { return false; }
   static bool functionUsesSEHTry() { return false; }

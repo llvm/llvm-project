@@ -39,7 +39,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
@@ -72,12 +71,10 @@ enum class IR2VecKind { Symbolic, FlowAware };
 
 namespace ir2vec {
 
-LLVM_ABI extern llvm::cl::OptionCategory IR2VecCategory;
-LLVM_ABI extern cl::opt<float> OpcWeight;
-LLVM_ABI extern cl::opt<float> TypeWeight;
-LLVM_ABI extern cl::opt<float> ArgWeight;
-LLVM_ABI extern cl::opt<IR2VecKind> IR2VecEmbeddingKind;
-LLVM_ABI extern cl::opt<std::string> VocabFile;
+/// Return -ir2vec-vocab-path.
+LLVM_ABI StringRef getVocabFile(const LLVMContext &C);
+/// Return -ir2vec-kind.
+LLVM_ABI IR2VecKind getEmbeddingKind(const LLVMContext &C);
 
 /// Embedding is a datatype that wraps std::vector<double>. It provides
 /// additional functionality for arithmetic and comparison operations.
@@ -552,14 +549,8 @@ protected:
   /// Dimension of the vector representation; captured from the input vocabulary
   const unsigned Dimension;
 
-  /// Weights for different entities (like opcode, arguments, types)
-  /// in the IR instructions to generate the vector representation.
-  const float OpcWeight, TypeWeight, ArgWeight;
-
   Embedder(const Function &F, const Vocabulary &Vocab)
-      : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()),
-        OpcWeight(ir2vec::OpcWeight), TypeWeight(ir2vec::TypeWeight),
-        ArgWeight(ir2vec::ArgWeight) {}
+      : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()) {}
 
   /// Function to compute embeddings.
   LLVM_ABI Embedding computeEmbeddings() const;

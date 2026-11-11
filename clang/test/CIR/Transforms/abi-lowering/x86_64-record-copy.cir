@@ -53,25 +53,25 @@ module attributes {
 
   // Each callee is rewritten with its call sites in declaration order, so
   // these call sites are rewritten before any definition below.
-  cir.func private @take_x87(!rec_UX87)
-  cir.func private @make_x87() -> !rec_UX87
-  cir.func private @take_h(!rec_H)
-  cir.func private @make_h() -> !rec_H
-  cir.func private @take_s(!rec_S)
-  cir.func private @make_s() -> !rec_S
-  cir.func private @take_sf(!rec_SF)
-  cir.func private @make_sf() -> !rec_SF
-  cir.func private @take_s12(!rec_S12)
-  cir.func private @take_s16(!rec_S16)
-  cir.func private @take_u3(!rec_U3)
-  cir.func private @take_x87mem(!rec_UX87Mem)
-  cir.func private @make_x87mem() -> !rec_UX87Mem
-  cir.func private @take_hmem(!rec_HMem)
-  cir.func private @make_hmem() -> !rec_HMem
-  cir.func private @take_smem(!rec_SMem)
-  cir.func private @make_smem() -> !rec_SMem
-  cir.func private @make_tp() -> !rec_TP
-  cir.func private @make_tpmem() -> !rec_TPMem
+  cir.func private @take_x87(!rec_UX87) requires_call_conv_lowering
+  cir.func private @make_x87() -> !rec_UX87 requires_call_conv_lowering
+  cir.func private @take_h(!rec_H) requires_call_conv_lowering
+  cir.func private @make_h() -> !rec_H requires_call_conv_lowering
+  cir.func private @take_s(!rec_S) requires_call_conv_lowering
+  cir.func private @make_s() -> !rec_S requires_call_conv_lowering
+  cir.func private @take_sf(!rec_SF) requires_call_conv_lowering
+  cir.func private @make_sf() -> !rec_SF requires_call_conv_lowering
+  cir.func private @take_s12(!rec_S12) requires_call_conv_lowering
+  cir.func private @take_s16(!rec_S16) requires_call_conv_lowering
+  cir.func private @take_u3(!rec_U3) requires_call_conv_lowering
+  cir.func private @take_x87mem(!rec_UX87Mem) requires_call_conv_lowering
+  cir.func private @make_x87mem() -> !rec_UX87Mem requires_call_conv_lowering
+  cir.func private @take_hmem(!rec_HMem) requires_call_conv_lowering
+  cir.func private @make_hmem() -> !rec_HMem requires_call_conv_lowering
+  cir.func private @take_smem(!rec_SMem) requires_call_conv_lowering
+  cir.func private @make_smem() -> !rec_SMem requires_call_conv_lowering
+  cir.func private @make_tp() -> !rec_TP requires_call_conv_lowering
+  cir.func private @make_tpmem() -> !rec_TPMem requires_call_conv_lowering
 
   // CHECK: cir.func private @take_x87(!u64i, !u64i)
   // CHECK: cir.func private @make_x87() -> ![[PAIR]]
@@ -94,7 +94,7 @@ module attributes {
   // CHECK: cir.func private @make_tpmem(!cir.ptr<!rec_TPMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_TPMem, llvm.writable})
 
   // A spilled parameter is copied out of its coercion slot.
-  cir.func @param_spill_x87(%arg0: !rec_UX87) {
+  cir.func @param_spill_x87(%arg0: !rec_UX87) requires_call_conv_lowering {
     %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
     cir.store %arg0, %0 : !rec_UX87, !cir.ptr<!rec_UX87>
     cir.return
@@ -111,7 +111,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[SPILL]] align(16) : !cir.ptr<!rec_UX87>
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_spill_h(%arg0: !rec_H) {
+  cir.func @param_spill_h(%arg0: !rec_H) requires_call_conv_lowering {
     %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
     cir.store %arg0, %0 : !rec_H, !cir.ptr<!rec_H>
     cir.return
@@ -125,7 +125,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[SPILL]] align(4) : !cir.ptr<!rec_H>
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_spill_s(%arg0: !rec_S) {
+  cir.func @param_spill_s(%arg0: !rec_S) requires_call_conv_lowering {
     %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
     cir.store %arg0, %0 : !rec_S, !cir.ptr<!rec_S>
     cir.return
@@ -139,7 +139,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[SPILL]] align(4) : !cir.ptr<!rec_S>
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_spill_sf(%arg0: !rec_SF) {
+  cir.func @param_spill_sf(%arg0: !rec_SF) requires_call_conv_lowering {
     %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
     cir.store %arg0, %0 : !rec_SF, !cir.ptr<!rec_SF>
     cir.return
@@ -157,7 +157,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // An unused parameter still fills its slot and nothing reads it.
-  cir.func @param_unused_x87(%arg0: !rec_UX87) {
+  cir.func @param_unused_x87(%arg0: !rec_UX87) requires_call_conv_lowering {
     cir.return
   }
 
@@ -170,7 +170,7 @@ module attributes {
   // CHECK-NEXT:    cir.cast bitcast %[[SLOT]] : !cir.ptr<![[PAIR]]> -> !cir.ptr<!rec_UX87>
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_unused_h(%arg0: !rec_H) {
+  cir.func @param_unused_h(%arg0: !rec_H) requires_call_conv_lowering {
     cir.return
   }
 
@@ -180,7 +180,7 @@ module attributes {
   // CHECK-NEXT:    cir.cast bitcast %[[SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!rec_H>
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_unused_s(%arg0: !rec_S) {
+  cir.func @param_unused_s(%arg0: !rec_S) requires_call_conv_lowering {
     cir.return
   }
 
@@ -192,7 +192,7 @@ module attributes {
 
   // The call is rewritten first and stores the parameter into an argument
   // slot.  The parameter's rewrite turns that store into a copy.
-  cir.func @param_forward_x87(%arg0: !rec_UX87) {
+  cir.func @param_forward_x87(%arg0: !rec_UX87) requires_call_conv_lowering {
     cir.call @take_x87(%arg0) : (!rec_UX87) -> ()
     cir.return
   }
@@ -209,7 +209,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_forward_h(%arg0: !rec_H) {
+  cir.func @param_forward_h(%arg0: !rec_H) requires_call_conv_lowering {
     cir.call @take_h(%arg0) : (!rec_H) -> ()
     cir.return
   }
@@ -223,7 +223,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_forward_sf(%arg0: !rec_SF) {
+  cir.func @param_forward_sf(%arg0: !rec_SF) requires_call_conv_lowering {
     cir.call @take_sf(%arg0) : (!rec_SF) -> ()
     cir.return
   }
@@ -241,7 +241,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // A returned parameter is read in place out of its own coercion slot.
-  cir.func @param_return_x87(%arg0: !rec_UX87) -> !rec_UX87 {
+  cir.func @param_return_x87(%arg0: !rec_UX87) -> !rec_UX87 requires_call_conv_lowering {
     cir.return %arg0 : !rec_UX87
   }
 
@@ -252,7 +252,7 @@ module attributes {
   // CHECK-NEXT:    %[[RET:.*]] = cir.load align(16) %[[RVIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
   // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
 
-  cir.func @param_return_h(%arg0: !rec_H) -> !rec_H {
+  cir.func @param_return_h(%arg0: !rec_H) -> !rec_H requires_call_conv_lowering {
     cir.return %arg0 : !rec_H
   }
 
@@ -264,7 +264,7 @@ module attributes {
   // CHECK-NEXT:    %[[RET:.*]] = cir.load align(8) %[[RVIEW]] : !cir.ptr<!u64i>, !u64i
   // CHECK-NEXT:    cir.return %[[RET]] : !u64i
 
-  cir.func @param_return_sf(%arg0: !rec_SF) -> !rec_SF {
+  cir.func @param_return_sf(%arg0: !rec_SF) -> !rec_SF requires_call_conv_lowering {
     cir.return %arg0 : !rec_SF
   }
 
@@ -275,7 +275,7 @@ module attributes {
   // CHECK-NEXT:    %[[RET:.*]] = cir.load align(8) %[[RVIEW]] : !cir.ptr<![[SFPAIR]]>, ![[SFPAIR]]
   // CHECK-NEXT:    cir.return %[[RET]] : ![[SFPAIR]]
 
-  cir.func @ret_local_x87() -> !rec_UX87 {
+  cir.func @ret_local_x87() -> !rec_UX87 requires_call_conv_lowering {
     %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
     %1 = cir.load %0 : !cir.ptr<!rec_UX87>, !rec_UX87
     cir.return %1 : !rec_UX87
@@ -288,7 +288,7 @@ module attributes {
   // CHECK-NEXT:    %[[RET:.*]] = cir.load align(16) %[[RVIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
   // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
 
-  cir.func @ret_local_h() -> !rec_H {
+  cir.func @ret_local_h() -> !rec_H requires_call_conv_lowering {
     %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
     %1 = cir.load %0 : !cir.ptr<!rec_H>, !rec_H
     cir.return %1 : !rec_H
@@ -301,7 +301,7 @@ module attributes {
   // CHECK-NEXT:    cir.return %[[RET]] : !u64i
 
   // An argument loaded from an alloca is read in place.
-  cir.func @call_inplace_x87() {
+  cir.func @call_inplace_x87() requires_call_conv_lowering {
     %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
     %1 = cir.load %0 : !cir.ptr<!rec_UX87>, !rec_UX87
     cir.call @take_x87(%1) : (!rec_UX87) -> ()
@@ -318,7 +318,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @call_inplace_h() {
+  cir.func @call_inplace_h() requires_call_conv_lowering {
     %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
     %1 = cir.load %0 : !cir.ptr<!rec_H>, !rec_H
     cir.call @take_h(%1) : (!rec_H) -> ()
@@ -332,7 +332,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_h(%[[V]]) : (!u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @call_inplace_s() {
+  cir.func @call_inplace_s() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
     %1 = cir.load %0 : !cir.ptr<!rec_S>, !rec_S
     cir.call @take_s(%1) : (!rec_S) -> ()
@@ -346,7 +346,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_s(%[[V]]) : (!u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @call_inplace_sf() {
+  cir.func @call_inplace_sf() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
     %1 = cir.load %0 : !cir.ptr<!rec_SF>, !rec_SF
     cir.call @take_sf(%1) : (!rec_SF) -> ()
@@ -364,7 +364,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // Each field is read at the alignment the alloca guarantees at its offset.
-  cir.func @call_inplace_s16() {
+  cir.func @call_inplace_s16() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S16>
     %1 = cir.load %0 : !cir.ptr<!rec_S16>, !rec_S16
     cir.call @take_s16(%1) : (!rec_S16) -> ()
@@ -382,7 +382,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // Storage that is not an alloca is copied into a slot first.
-  cir.func @call_copied_x87(%arg0: !cir.ptr<!rec_UX87>) {
+  cir.func @call_copied_x87(%arg0: !cir.ptr<!rec_UX87>) requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_UX87>, !rec_UX87
     cir.call @take_x87(%0) : (!rec_UX87) -> ()
     cir.return
@@ -399,7 +399,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @call_copied_h(%arg0: !cir.ptr<!rec_H>) {
+  cir.func @call_copied_h(%arg0: !cir.ptr<!rec_H>) requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_H>, !rec_H
     cir.call @take_h(%0) : (!rec_H) -> ()
     cir.return
@@ -415,7 +415,7 @@ module attributes {
 
   // The coerced type is larger than the record, so the alloca is copied
   // into a slot that holds both.
-  cir.func @call_small_u3() {
+  cir.func @call_small_u3() requires_call_conv_lowering {
     %0 = cir.alloca "u" align(1) : !cir.ptr<!rec_U3>
     %1 = cir.load %0 : !cir.ptr<!rec_U3>, !rec_U3
     cir.call @take_u3(%1) : (!rec_U3) -> ()
@@ -431,7 +431,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_u3(%[[V]]) : (!cir.int<u, 24>) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @call_small_s12() {
+  cir.func @call_small_s12() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S12>
     %1 = cir.load %0 : !cir.ptr<!rec_S12>, !rec_S12
     cir.call @take_s12(%1) : (!rec_S12) -> ()
@@ -451,7 +451,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // A stored call result is copied out of its return slot.
-  cir.func @result_store_x87() {
+  cir.func @result_store_x87() requires_call_conv_lowering {
     %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
     %1 = cir.call @make_x87() : () -> !rec_UX87
     cir.store %1, %0 : !rec_UX87, !cir.ptr<!rec_UX87>
@@ -467,7 +467,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[U]] align(16) : !cir.ptr<!rec_UX87>
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_store_h() {
+  cir.func @result_store_h() requires_call_conv_lowering {
     %0 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
     %1 = cir.call @make_h() : () -> !rec_H
     cir.store %1, %0 : !rec_H, !cir.ptr<!rec_H>
@@ -483,7 +483,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[H]] align(4) : !cir.ptr<!rec_H>
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_store_s() {
+  cir.func @result_store_s() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
     %1 = cir.call @make_s() : () -> !rec_S
     cir.store %1, %0 : !rec_S, !cir.ptr<!rec_S>
@@ -499,7 +499,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %[[S]] align(4) : !cir.ptr<!rec_S>
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_store_sf() {
+  cir.func @result_store_sf() requires_call_conv_lowering {
     %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_SF>
     %1 = cir.call @make_sf() : () -> !rec_SF
     cir.store %1, %0 : !rec_SF, !cir.ptr<!rec_SF>
@@ -516,7 +516,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // A store into an array element is a copy into that element.
-  cir.func @result_stride_x87(%arg0: !cir.ptr<!rec_UX87>) {
+  cir.func @result_stride_x87(%arg0: !cir.ptr<!rec_UX87>) requires_call_conv_lowering {
     %0 = cir.const #cir.int<3> : !s64i
     %1 = cir.ptr_stride %arg0, %0 : (!cir.ptr<!rec_UX87>, !s64i) -> !cir.ptr<!rec_UX87>
     %2 = cir.call @make_x87() : () -> !rec_UX87
@@ -534,7 +534,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %[[ELT]] align(16) : !cir.ptr<!rec_UX87>
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_stride_h(%arg0: !cir.ptr<!rec_H>) {
+  cir.func @result_stride_h(%arg0: !cir.ptr<!rec_H>) requires_call_conv_lowering {
     %0 = cir.const #cir.int<3> : !s64i
     %1 = cir.ptr_stride %arg0, %0 : (!cir.ptr<!rec_H>, !s64i) -> !cir.ptr<!rec_H>
     %2 = cir.call @make_h() : () -> !rec_H
@@ -554,7 +554,7 @@ module attributes {
 
   // The consumer is rewritten first and stores the result into an argument
   // slot.  The producer's rewrite turns that store into a copy.
-  cir.func @result_feed_x87() {
+  cir.func @result_feed_x87() requires_call_conv_lowering {
     %0 = cir.call @make_x87() : () -> !rec_UX87
     cir.call @take_x87(%0) : (!rec_UX87) -> ()
     cir.return
@@ -575,7 +575,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_feed_h() {
+  cir.func @result_feed_h() requires_call_conv_lowering {
     %0 = cir.call @make_h() : () -> !rec_H
     cir.call @take_h(%0) : (!rec_H) -> ()
     cir.return
@@ -594,7 +594,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // The producer is rewritten first, so the return reads its slot in place.
-  cir.func @result_return_x87() -> !rec_UX87 {
+  cir.func @result_return_x87() -> !rec_UX87 requires_call_conv_lowering {
     %0 = cir.call @make_x87() : () -> !rec_UX87
     cir.return %0 : !rec_UX87
   }
@@ -609,7 +609,7 @@ module attributes {
   // CHECK-NEXT:    %[[RET:.*]] = cir.load align(16) %[[RVIEW]] : !cir.ptr<![[PAIR]]>, ![[PAIR]]
   // CHECK-NEXT:    cir.return %[[RET]] : ![[PAIR]]
 
-  cir.func @result_return_h() -> !rec_H {
+  cir.func @result_return_h() -> !rec_H requires_call_conv_lowering {
     %0 = cir.call @make_h() : () -> !rec_H
     cir.return %0 : !rec_H
   }
@@ -624,7 +624,7 @@ module attributes {
   // CHECK-NEXT:    cir.return %[[RET]] : !u64i
 
   // A volatile store becomes a volatile copy.
-  cir.func @result_volatile_x87(%arg0: !cir.ptr<!rec_UX87>) {
+  cir.func @result_volatile_x87(%arg0: !cir.ptr<!rec_UX87>) requires_call_conv_lowering {
     %0 = cir.call @make_x87() : () -> !rec_UX87
     cir.store volatile align(16) %0, %arg0 : !rec_UX87, !cir.ptr<!rec_UX87>
     cir.return
@@ -638,7 +638,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(16) to %arg0 align(16) volatile : !cir.ptr<!rec_UX87>
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_volatile_h(%arg0: !cir.ptr<!rec_H>) {
+  cir.func @result_volatile_h(%arg0: !cir.ptr<!rec_H>) requires_call_conv_lowering {
     %0 = cir.call @make_h() : () -> !rec_H
     cir.store volatile %0, %arg0 : !rec_H, !cir.ptr<!rec_H>
     cir.return
@@ -654,7 +654,7 @@ module attributes {
 
   // A result whose destination is loaded after the call is copied out of a
   // return slot of its own.
-  cir.func @sret_nodom_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>) {
+  cir.func @sret_nodom_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>) requires_call_conv_lowering {
     %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
     %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Mem>>, !cir.ptr<!rec_UX87Mem>
     cir.store %0, %1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
@@ -668,7 +668,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[SRET]] align(16) to %[[DEST]] align(16) : !cir.ptr<!rec_UX87Mem>
   // CHECK-NEXT:    cir.return
 
-  cir.func @sret_nodom_hmem(%arg0: !cir.ptr<!cir.ptr<!rec_HMem>>) {
+  cir.func @sret_nodom_hmem(%arg0: !cir.ptr<!cir.ptr<!rec_HMem>>) requires_call_conv_lowering {
     %0 = cir.call @make_hmem() : () -> !rec_HMem
     %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_HMem>>, !cir.ptr<!rec_HMem>
     cir.store %0, %1 : !rec_HMem, !cir.ptr<!rec_HMem>
@@ -682,7 +682,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) : !cir.ptr<!rec_HMem>
   // CHECK-NEXT:    cir.return
 
-  cir.func @sret_nodom_smem(%arg0: !cir.ptr<!cir.ptr<!rec_SMem>>) {
+  cir.func @sret_nodom_smem(%arg0: !cir.ptr<!cir.ptr<!rec_SMem>>) requires_call_conv_lowering {
     %0 = cir.call @make_smem() : () -> !rec_SMem
     %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_SMem>>, !cir.ptr<!rec_SMem>
     cir.store %0, %1 : !rec_SMem, !cir.ptr<!rec_SMem>
@@ -697,7 +697,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // A local is a complete object, so the copy into it takes the whole record.
-  cir.func @tp_store_local() {
+  cir.func @tp_store_local() requires_call_conv_lowering {
     %0 = cir.alloca "t" align(4) : !cir.ptr<!rec_TP>
     %1 = cir.call @make_tp() : () -> !rec_TP
     cir.store %1, %0 : !rec_TP, !cir.ptr<!rec_TP>
@@ -715,7 +715,7 @@ module attributes {
 
   // Any other destination may be a subobject whose tail padding holds
   // another object, so the copy stops at the data size.
-  cir.func @tp_store_ptr(%arg0: !cir.ptr<!rec_TP>) {
+  cir.func @tp_store_ptr(%arg0: !cir.ptr<!rec_TP>) requires_call_conv_lowering {
     %0 = cir.call @make_tp() : () -> !rec_TP
     cir.store %0, %arg0 : !rec_TP, !cir.ptr<!rec_TP>
     cir.return
@@ -729,7 +729,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %arg0 align(4) skip_tail_padding : !cir.ptr<!rec_TP>
   // CHECK-NEXT:    cir.return
 
-  cir.func @sret_nodom_tpmem(%arg0: !cir.ptr<!cir.ptr<!rec_TPMem>>) {
+  cir.func @sret_nodom_tpmem(%arg0: !cir.ptr<!cir.ptr<!rec_TPMem>>) requires_call_conv_lowering {
     %0 = cir.call @make_tpmem() : () -> !rec_TPMem
     %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_TPMem>>, !cir.ptr<!rec_TPMem>
     cir.store %0, %1 : !rec_TPMem, !cir.ptr<!rec_TPMem>
@@ -745,7 +745,7 @@ module attributes {
 
   // A record with a layout gap but no pad member has no tail padding, so the
   // copy through a pointer takes the whole record.
-  cir.func @sf_store_ptr(%arg0: !cir.ptr<!rec_SF>) {
+  cir.func @sf_store_ptr(%arg0: !cir.ptr<!rec_SF>) requires_call_conv_lowering {
     %0 = cir.call @make_sf() : () -> !rec_SF
     cir.store %0, %arg0 : !rec_SF, !cir.ptr<!rec_SF>
     cir.return
@@ -759,7 +759,7 @@ module attributes {
   // CHECK-NEXT:    cir.copy %[[VIEW]] align(8) to %arg0 align(8) : !cir.ptr<!rec_SF>
   // CHECK-NEXT:    cir.return
 
-  cir.func @tp_param_store_ptr(%arg0: !rec_TP, %arg1: !cir.ptr<!rec_TP>) {
+  cir.func @tp_param_store_ptr(%arg0: !rec_TP, %arg1: !cir.ptr<!rec_TP>) requires_call_conv_lowering {
     cir.store %arg0, %arg1 : !rec_TP, !cir.ptr<!rec_TP>
     cir.return
   }
@@ -773,7 +773,7 @@ module attributes {
 
   // The copy that replaces a byval parameter's only store keeps the store's
   // alignment.
-  cir.func @byval_tpmem_ptr(%arg0: !rec_TPMem, %arg1: !cir.ptr<!rec_TPMem>) {
+  cir.func @byval_tpmem_ptr(%arg0: !rec_TPMem, %arg1: !cir.ptr<!rec_TPMem>) requires_call_conv_lowering {
     cir.store align(1) %arg0, %arg1 : !rec_TPMem, !cir.ptr<!rec_TPMem>
     cir.return
   }
@@ -784,7 +784,7 @@ module attributes {
 
   // A byval parameter stored twice has no single spill, so each store is a
   // copy from the incoming pointer.
-  cir.func @byval_twice_x87mem(%arg0: !rec_UX87Mem, %arg1: !cir.ptr<!rec_UX87Mem>) {
+  cir.func @byval_twice_x87mem(%arg0: !rec_UX87Mem, %arg1: !cir.ptr<!rec_UX87Mem>) requires_call_conv_lowering {
     %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
     cir.store %arg0, %0 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
     cir.store %arg0, %arg1 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
@@ -798,7 +798,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // A byval parameter handed straight on is copied into the callee's slot.
-  cir.func @byval_forward_hmem(%arg0: !rec_HMem) {
+  cir.func @byval_forward_hmem(%arg0: !rec_HMem) requires_call_conv_lowering {
     cir.call @take_hmem(%arg0) : (!rec_HMem) -> ()
     cir.return
   }
@@ -811,7 +811,7 @@ module attributes {
 
   // The consumer is rewritten first and stores the sret result into its
   // byval slot.  The producer's rewrite turns that store into a copy.
-  cir.func @byval_result_x87mem() {
+  cir.func @byval_result_x87mem() requires_call_conv_lowering {
     %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
     cir.call @take_x87mem(%0) : (!rec_UX87Mem) -> ()
     cir.return
@@ -825,7 +825,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_x87mem(%[[BYVAL]]) : (!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef}) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @byval_result_hmem() {
+  cir.func @byval_result_hmem() requires_call_conv_lowering {
     %0 = cir.call @make_hmem() : () -> !rec_HMem
     cir.call @take_hmem(%0) : (!rec_HMem) -> ()
     cir.return
@@ -843,7 +843,7 @@ module attributes {
   // temp, and the fetched value is copied into the local.  The second fetch
   // feeds a call rewritten before it, whose argument slot store becomes a
   // copy.
-  cir.func @vaarg_x87(%arg0: !s32i, ...) {
+  cir.func @vaarg_x87(%arg0: !s32i, ...) requires_call_conv_lowering {
     %0 = cir.alloca "ap" align(16) : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %1 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87>
     %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -876,7 +876,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @vaarg_h(%arg0: !s32i, ...) {
+  cir.func @vaarg_h(%arg0: !s32i, ...) requires_call_conv_lowering {
     %0 = cir.alloca "ap" align(16) : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %1 = cir.alloca "h" align(4) : !cir.ptr<!rec_H>
     %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -894,7 +894,7 @@ module attributes {
 
   // A memory-class fetch reads the overflow area.  The second one feeds a
   // byval slot, filled by a copy.
-  cir.func @vaarg_x87mem(%arg0: !s32i, ...) {
+  cir.func @vaarg_x87mem(%arg0: !s32i, ...) requires_call_conv_lowering {
     %0 = cir.alloca "ap" align(16) : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
     %1 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
     %2 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -919,7 +919,7 @@ module attributes {
 
   // The producer is rewritten before the consumer, so the consumer reads the
   // producer's slot in place.
-  cir.func @param_forward_late_x87(%arg0: !rec_UX87) {
+  cir.func @param_forward_late_x87(%arg0: !rec_UX87) requires_call_conv_lowering {
     cir.call @take_late_x87(%arg0) : (!rec_UX87) -> ()
     cir.return
   }
@@ -934,7 +934,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_late_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @param_forward_late_h(%arg0: !rec_H) {
+  cir.func @param_forward_late_h(%arg0: !rec_H) requires_call_conv_lowering {
     cir.call @take_late_h(%arg0) : (!rec_H) -> ()
     cir.return
   }
@@ -948,7 +948,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_late_h(%[[V]]) : (!u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_feed_late_x87() {
+  cir.func @result_feed_late_x87() requires_call_conv_lowering {
     %0 = cir.call @make_x87() : () -> !rec_UX87
     cir.call @take_late_x87(%0) : (!rec_UX87) -> ()
     cir.return
@@ -967,7 +967,7 @@ module attributes {
   // CHECK-NEXT:    cir.call @take_late_x87(%[[LO]], %[[HI]]) : (!u64i, !u64i) -> ()
   // CHECK-NEXT:    cir.return
 
-  cir.func @result_feed_late_h() {
+  cir.func @result_feed_late_h() requires_call_conv_lowering {
     %0 = cir.call @make_h() : () -> !rec_H
     cir.call @take_late_h(%0) : (!rec_H) -> ()
     cir.return
@@ -984,7 +984,7 @@ module attributes {
   // CHECK-NEXT:    cir.return
 
   // The sret slot is handed on as the byval argument.
-  cir.func @byval_result_late_x87mem() {
+  cir.func @byval_result_late_x87mem() requires_call_conv_lowering {
     %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
     cir.call @take_late_x87mem(%0) : (!rec_UX87Mem) -> ()
     cir.return
@@ -999,21 +999,21 @@ module attributes {
   // The definition is rewritten before the producer, so the return stores
   // the result into a slot and the producer's rewrite turns that store into
   // a copy.
-  cir.func @result_return_late_x87() -> !rec_UX87 {
+  cir.func @result_return_late_x87() -> !rec_UX87 requires_call_conv_lowering {
     %0 = cir.call @make_late_x87() : () -> !rec_UX87
     cir.return %0 : !rec_UX87
   }
 
-  cir.func @result_return_late_h() -> !rec_H {
+  cir.func @result_return_late_h() -> !rec_H requires_call_conv_lowering {
     %0 = cir.call @make_late_h() : () -> !rec_H
     cir.return %0 : !rec_H
   }
 
-  cir.func private @take_late_x87(!rec_UX87)
-  cir.func private @take_late_h(!rec_H)
-  cir.func private @take_late_x87mem(!rec_UX87Mem)
-  cir.func private @make_late_x87() -> !rec_UX87
-  cir.func private @make_late_h() -> !rec_H
+  cir.func private @take_late_x87(!rec_UX87) requires_call_conv_lowering
+  cir.func private @take_late_h(!rec_H) requires_call_conv_lowering
+  cir.func private @take_late_x87mem(!rec_UX87Mem) requires_call_conv_lowering
+  cir.func private @make_late_x87() -> !rec_UX87 requires_call_conv_lowering
+  cir.func private @make_late_h() -> !rec_H requires_call_conv_lowering
 
   // CHECK-LABEL: cir.func @result_return_late_x87()
   // CHECK-SAME:    -> ![[PAIR]]
@@ -1046,7 +1046,7 @@ module attributes {
 
   // A constant carries no bytes beyond its own value, so it is still stored
   // into the argument slot by value.
-  cir.func @const_feed_x87() {
+  cir.func @const_feed_x87() requires_call_conv_lowering {
     %0 = cir.const #cir.zero : !rec_UX87
     cir.call @take_x87(%0) : (!rec_UX87) -> ()
     cir.return
@@ -1060,7 +1060,7 @@ module attributes {
   // CHECK:         cir.call @take_x87(%{{.*}}, %{{.*}}) : (!u64i, !u64i) -> ()
   // MOVE:          cir.store %{{.*}}, %{{.*}} : !rec_UX87, !cir.ptr<!rec_UX87>
 
-  cir.func @const_feed_h() {
+  cir.func @const_feed_h() requires_call_conv_lowering {
     %0 = cir.const #cir.zero : !rec_H
     cir.call @take_h(%0) : (!rec_H) -> ()
     cir.return
@@ -1076,7 +1076,7 @@ module attributes {
   // MOVE-LABEL:    cir.func @const_feed_h()
   // MOVE:          cir.store %{{.*}}, %{{.*}} : !rec_H, !cir.ptr<!rec_H>
 
-  cir.func @const_feed_hmem() {
+  cir.func @const_feed_hmem() requires_call_conv_lowering {
     %0 = cir.const #cir.zero : !rec_HMem
     cir.call @take_hmem(%0) : (!rec_HMem) -> ()
     cir.return
@@ -1091,7 +1091,7 @@ module attributes {
   // MOVE:          cir.store %{{.*}}, %{{.*}} : !rec_HMem, !cir.ptr<!rec_HMem>
 
   // A member read reads the record back out of the result slot.
-  cir.func @result_extract_s() -> !s32i {
+  cir.func @result_extract_s() -> !s32i requires_call_conv_lowering {
     %0 = cir.call @make_s() : () -> !rec_S
     %1 = cir.extract_member %0[1] : !rec_S -> !s32i
     cir.return %1 : !s32i
@@ -1333,7 +1333,7 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func @atomic_store_param_h(%arg0: !rec_H, %arg1: !cir.ptr<!rec_H>) {
+  cir.func @atomic_store_param_h(%arg0: !rec_H, %arg1: !cir.ptr<!rec_H>) requires_call_conv_lowering {
     // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
     cir.store atomic(seq_cst) %arg0, %arg1 : !rec_H, !cir.ptr<!rec_H>
     cir.return
@@ -1351,7 +1351,7 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func @atomic_store_flat_param_x87(%arg0: !rec_UX87, %arg1: !cir.ptr<!rec_UX87>) {
+  cir.func @atomic_store_flat_param_x87(%arg0: !rec_UX87, %arg1: !cir.ptr<!rec_UX87>) requires_call_conv_lowering {
     // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
     cir.store atomic(seq_cst) %arg0, %arg1 : !rec_UX87, !cir.ptr<!rec_UX87>
     cir.return
@@ -1369,7 +1369,7 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func @atomic_store_byval_param(%arg0: !rec_UX87Mem, %arg1: !cir.ptr<!rec_UX87Mem>) {
+  cir.func @atomic_store_byval_param(%arg0: !rec_UX87Mem, %arg1: !cir.ptr<!rec_UX87Mem>) requires_call_conv_lowering {
     %0 = cir.alloca "u" align(16) : !cir.ptr<!rec_UX87Mem>
     cir.store %arg0, %0 : !rec_UX87Mem, !cir.ptr<!rec_UX87Mem>
     // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
@@ -1389,8 +1389,8 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func private @make_x87() -> !rec_UX87
-  cir.func @atomic_store_result_x87(%arg0: !cir.ptr<!rec_UX87>) {
+  cir.func private @make_x87() -> !rec_UX87 requires_call_conv_lowering
+  cir.func @atomic_store_result_x87(%arg0: !cir.ptr<!rec_UX87>) requires_call_conv_lowering {
     %0 = cir.call @make_x87() : () -> !rec_UX87
     // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
     cir.store atomic(seq_cst) %0, %arg0 : !rec_UX87, !cir.ptr<!rec_UX87>
@@ -1409,8 +1409,8 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func private @make_x87mem() -> !rec_UX87Mem
-  cir.func @atomic_store_sret_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>) {
+  cir.func private @make_x87mem() -> !rec_UX87Mem requires_call_conv_lowering
+  cir.func @atomic_store_sret_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>) requires_call_conv_lowering {
     %0 = cir.call @make_x87mem() : () -> !rec_UX87Mem
     %1 = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Mem>>, !cir.ptr<!rec_UX87Mem>
     // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
@@ -1435,7 +1435,7 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func @atomic_store_vaarg_h(%arg0: !cir.ptr<!rec___va_list_tag>, %arg1: !cir.ptr<!rec_H>) {
+  cir.func @atomic_store_vaarg_h(%arg0: !cir.ptr<!rec___va_list_tag>, %arg1: !cir.ptr<!rec_H>) requires_call_conv_lowering {
     %0 = cir.va_arg %arg0 : (!cir.ptr<!rec___va_list_tag>) -> !rec_H
     // expected-error @below {{atomic store of a record argument or result not yet implemented in CallConvLowering}}
     cir.store atomic(seq_cst) %0, %arg1 : !rec_H, !cir.ptr<!rec_H>
@@ -1456,11 +1456,11 @@ module attributes {
     #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
-  cir.func private @make_h() -> !rec_H
+  cir.func private @make_h() -> !rec_H requires_call_conv_lowering
 
   // A call result consumed by anything but a store, call, return or member
   // read would be loaded from its slot as a value.
-  cir.func @result_yield_h(%arg0: !cir.bool, %arg1: !cir.ptr<!rec_H>) {
+  cir.func @result_yield_h(%arg0: !cir.bool, %arg1: !cir.ptr<!rec_H>) requires_call_conv_lowering {
     %0 = cir.call @make_h() : () -> !rec_H
     %1 = cir.ternary(%arg0, true {
       // expected-error @below {{use of a record argument or result other than by a store, call, return or member read not yet implemented in CallConvLowering}}

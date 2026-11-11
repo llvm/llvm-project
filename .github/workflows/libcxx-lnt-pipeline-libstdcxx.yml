@@ -63,7 +63,8 @@ jobs:
     if: ${{ inputs.submit-lnt }}
     uses: $/.github/workflows/lnt-submit.yml
     with:
-      artifact-name: lnt-report
-      test-suite: libstdcxx
+      artifacts: lnt-report
+      project: libcxx
+      test-suite: libstdcxx_microbenchmarks
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

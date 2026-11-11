@@ -58,10 +58,10 @@ private:
   LLVM_PREFERRED_TYPE(LookupType_t)
   unsigned LookupType : 2;
 
-  /// Whether we've performed an exhaustive search for module maps
-  /// within the subdirectories of this directory.
+  /// Whether we've performed an exhaustive search and loaded all of the module
+  /// maps within the subdirectories of this directory.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned SearchedAllModuleMaps : 1;
+  unsigned LoadedAllModuleMaps : 1;
 
 public:
   /// This ctor *does not take ownership* of 'Dir'.
@@ -69,12 +69,12 @@ public:
                   bool isFramework)
       : u(Dir), DirCharacteristic(DT),
         LookupType(isFramework ? LT_Framework : LT_NormalDir),
-        SearchedAllModuleMaps(false) {}
+        LoadedAllModuleMaps(false) {}
 
   /// This ctor *does not take ownership* of 'Map'.
   DirectoryLookup(const HeaderMap *Map, SrcMgr::CharacteristicKind DT)
       : u(Map), DirCharacteristic(DT), LookupType(LT_HeaderMap),
-        SearchedAllModuleMaps(false) {}
+        LoadedAllModuleMaps(false) {}
 
   /// getLookupType - Return the kind of directory lookup that this is: either a
   /// normal directory, a framework path, or a HeaderMap.
@@ -120,15 +120,13 @@ public:
   /// isHeaderMap - Return true if this is a header map, not a normal directory.
   bool isHeaderMap() const { return getLookupType() == LT_HeaderMap; }
 
-  /// Determine whether we have already searched this entire
-  /// directory for module maps.
-  bool haveSearchedAllModuleMaps() const { return SearchedAllModuleMaps; }
+  /// Determine whether we have already searched and loaded all of the module
+  /// maps within this entire directory.
+  bool haveLoadedAllModuleMaps() const { return LoadedAllModuleMaps; }
 
-  /// Specify whether we have already searched all of the subdirectories
-  /// for module maps.
-  void setSearchedAllModuleMaps(bool SAMM) {
-    SearchedAllModuleMaps = SAMM;
-  }
+  /// Specify whether we have already loaded all of the module maps within the
+  /// subdirectories of this directory.
+  void setLoadedAllModuleMaps(bool LAMM) { LoadedAllModuleMaps = LAMM; }
 
   /// DirCharacteristic - The type of directory this is, one of the DirType enum
   /// values.
