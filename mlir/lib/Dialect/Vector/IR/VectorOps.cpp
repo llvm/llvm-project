@@ -6637,11 +6637,16 @@ public:
   using Base::Base;
   LogicalResult matchAndRewrite(GatherOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!isa<MemRefType>(op.getBase().getType()))
+    auto memRefTy = dyn_cast<MemRefType>(op.getBase().getType());
+    if (!memRefTy)
       return rewriter.notifyMatchFailure(op, "base must be of memref type");
 
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
+
+    if (!isValidLoadStoreMemRefLayout(op.getVectorType(), memRefTy))
+      return rewriter.notifyMatchFailure(
+          op, "most minor memref dim must have unit stride");
 
     rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
                                               op.getOffsets(), op.getMask(),
@@ -6736,11 +6741,16 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Fold only for memrefs: the replacement uses maskedstore, which does not
     // support tensor bases. Tensor cases intentionally bail out.
-    if (!isa<MemRefType>(op.getBase().getType()))
+    auto memRefTy = dyn_cast<MemRefType>(op.getBase().getType());
+    if (!memRefTy)
       return failure();
 
     if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
+
+    if (!isValidLoadStoreMemRefLayout(op.getVectorType(), memRefTy))
+      return rewriter.notifyMatchFailure(
+          op, "most minor memref dim must have unit stride");
 
     rewriter.replaceOpWithNewOp<MaskedStoreOp>(
         op, op.getBase(), op.getOffsets(), op.getMask(), op.getValueToStore());
