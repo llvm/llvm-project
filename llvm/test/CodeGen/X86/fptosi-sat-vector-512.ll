@@ -2030,6 +2030,29 @@ define <8 x i16> @test_signed_v8i16_v8f64(<8 x double> %f) nounwind {
   ret <8 x i16> %x
 }
 
+define <8 x i24> @test_signed_v8i24_v8f64(<8 x double> %f) nounwind {
+; AVX512F-LABEL: test_signed_v8i24_v8f64:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmaxpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
+; AVX512F-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
+; AVX512F-NEXT:    vcvttpd2dq %zmm1, %ymm1
+; AVX512F-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    retq
+;
+; AVX512-LABEL: test_signed_v8i24_v8f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmaxpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
+; AVX512-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
+; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    knotb %k0, %k1
+; AVX512-NEXT:    vcvttpd2dq %zmm1, %ymm0 {%k1} {z}
+; AVX512-NEXT:    retq
+  %x = call <8 x i24> @llvm.fptosi.sat.v8i24.v8f64(<8 x double> %f)
+  ret <8 x i24> %x
+}
+
 define <8 x i32> @test_signed_v8i32_v8f64(<8 x double> %f) nounwind {
 ; CHECK-LABEL: test_signed_v8i32_v8f64:
 ; CHECK:       # %bb.0:

@@ -22726,7 +22726,7 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   EVT SelCCVT =
       TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
   if (CCVT != SelCCVT)
-    IsNaN = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsNaN);
+    IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
 
   // On SSE2/AVX/AVX2 where mask is an all-ones bitmask vector, use ANDN
   // (AND(Result, ~IsNaN)) to zero out NaN without needing a zero constant
