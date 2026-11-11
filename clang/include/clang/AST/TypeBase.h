@@ -4993,8 +4993,8 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasArmTypeAttributes : 1;
 
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned HasRISCVTypeAttributes : 1;
+    LLVM_PREFERRED_TYPE(unsigned)
+    unsigned RISCVAttributes : 3;
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned EffectsHaveConditions : 1;
@@ -5002,7 +5002,7 @@ public:
 
     FunctionTypeExtraBitfields()
         : NumExceptionType(0), HasExtraAttributeInfo(false),
-          HasArmTypeAttributes(false), HasRISCVTypeAttributes(false),
+          HasArmTypeAttributes(false), RISCVAttributes(0),
           EffectsHaveConditions(false), NumFunctionEffects(0) {}
   };
 
@@ -5112,13 +5112,6 @@ public:
     unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
-  };
-
-  struct alignas(void *) FunctionTypeRISCVAttributes {
-    LLVM_PREFERRED_TYPE(RISCVTypeAttributes)
-    unsigned RISCVAttributes : 3;
-
-    FunctionTypeRISCVAttributes() : RISCVAttributes(RISCVNormalFunction) {}
   };
 
 protected:
@@ -5599,7 +5592,6 @@ class FunctionProtoType final
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeExtraAttributeInfo,
           FunctionType::FunctionTypeArmAttributes,
-          FunctionType::FunctionTypeRISCVAttributes,
           FunctionType::ExceptionType, Expr *, FunctionDecl *,
           FunctionType::ExtParameterInfo, Qualifiers, FunctionEffect,
           EffectConditionExpr> {
@@ -5778,11 +5770,6 @@ private:
     return hasArmTypeAttributes();
   }
 
-  unsigned
-  numTrailingObjects(OverloadToken<FunctionTypeRISCVAttributes>) const {
-    return hasRISCVTypeAttributes();
-  }
-
   unsigned numTrailingObjects(OverloadToken<FunctionTypeExtraBitfields>) const {
     return hasExtraBitfields();
   }
@@ -5894,12 +5881,6 @@ private:
     return FunctionTypeBits.HasExtraBitfields &&
            getTrailingObjects<FunctionTypeExtraBitfields>()
                ->HasArmTypeAttributes;
-  }
-
-  bool hasRISCVTypeAttributes() const {
-    return FunctionTypeBits.HasExtraBitfields &&
-           getTrailingObjects<FunctionTypeExtraBitfields>()
-               ->HasRISCVTypeAttributes;
   }
 
   bool hasExtQualifiers() const {
@@ -6135,9 +6116,9 @@ public:
   }
 
   unsigned getRISCVAttributes() const {
-    if (!hasRISCVTypeAttributes())
+    if (!hasExtraBitfields())
       return RISCVNormalFunction;
-    return getTrailingObjects<FunctionTypeRISCVAttributes>()->RISCVAttributes;
+    return getTrailingObjects<FunctionTypeExtraBitfields>()->RISCVAttributes;
   }
 
   ExtParameterInfo getExtParameterInfo(unsigned I) const {

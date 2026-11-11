@@ -3960,15 +3960,6 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     ExtraBits.HasArmTypeAttributes = true;
   }
 
-  if (epi.requiresFunctionProtoTypeRISCVAttributes()) {
-    auto &RISCVTypeAttrs = *getTrailingObjects<FunctionTypeRISCVAttributes>();
-    RISCVTypeAttrs = FunctionTypeRISCVAttributes();
-
-    // Also set the bit in FunctionTypeExtraBitfields
-    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
-    ExtraBits.HasRISCVTypeAttributes = true;
-  }
-
   // Fill in the trailing argument array.
   auto *argSlot = getTrailingObjects<QualType>();
   for (unsigned i = 0; i != getNumParams(); ++i) {
@@ -3987,10 +3978,10 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
   // Propagate the RISC-V state attributes.
   if (epi.RISCVAttributes != RISCVNormalFunction) {
-    auto &RISCVTypeAttrs = *getTrailingObjects<FunctionTypeRISCVAttributes>();
     assert(epi.RISCVAttributes <= RISCVAttributeMask &&
            "Not enough bits to encode RISC-V attributes");
-    RISCVTypeAttrs.RISCVAttributes = epi.RISCVAttributes;
+    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
+    ExtraBits.RISCVAttributes = epi.RISCVAttributes;
   }
 
   // Fill in the exception type array if present.
