@@ -54,6 +54,7 @@
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -3509,15 +3510,16 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
-  auto GetTargetFeaturesAttr = [&](std::vector<std::string> Features) {
-    llvm::erase_if(Features, [&](const std::string &F) {
-      return getTarget().isReadOnlyFeature(F.substr(1));
-    });
-    if (Features.empty())
+  auto GetTargetFeaturesAttr = [&](llvm::ArrayRef<std::string> Features) {
+    llvm::SmallVector<StringRef, 16> CanonicalFeatures;
+    for (StringRef Feature : Features)
+      if (!getTarget().isReadOnlyFeature(Feature.drop_front()))
+        CanonicalFeatures.push_back(Feature);
+    if (CanonicalFeatures.empty())
       return llvm::Attribute();
-    llvm::sort(Features);
+    llvm::sort(CanonicalFeatures);
     return llvm::Attribute::get(getLLVMContext(), "target-features",
-                                llvm::join(Features, ","));
+                                llvm::join(CanonicalFeatures, ","));
   };
   if (TD || TV || SD || TC) {
     llvm::StringMap<bool> FeatureMap;
@@ -3597,7 +3599,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     AddedAttr = true;
   }
   if (!Features.empty() && SetTargetFeatures) {
-    llvm::Attribute FeatureAttr = GetTargetFeaturesAttr(std::move(Features));
+    llvm::Attribute FeatureAttr = GetTargetFeaturesAttr(Features);
     if (FeatureAttr.isValid()) {
       Attrs.addAttribute(FeatureAttr);
       AddedAttr = true;
