@@ -185,7 +185,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NINS:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
 ; ALL-CONVERT-NEXT:  [[NSPLAT:%.+]] = shufflevector <8 x i32> [[NINS]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT]]
-; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = and <8 x i1> [[EVLM]], %m
+; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = select <8 x i1> [[EVLM]], <8 x i1> %m, <8 x i1> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[FRZM:%.+]] = freeze <8 x i1> [[NEWM]]
 ; ALL-CONVERT-NEXT:  [[SELONE:%.+]] = select <8 x i1> [[FRZM]], <8 x i32> %i1, <8 x i32> splat (i32 1)
 ; ALL-CONVERT-NEXT:  %{{.+}} = sdiv <8 x i32> %i0, [[SELONE]]
@@ -208,7 +208,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NINS2:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
 ; ALL-CONVERT-NEXT:  [[NSPLAT2:%.+]] = shufflevector <8 x i32> [[NINS2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM2:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT2]]
-; ALL-CONVERT-NEXT:  [[NEWM2:%.+]] = and <8 x i1> [[EVLM2]], %m
+; ALL-CONVERT-NEXT:  [[NEWM2:%.+]] = select <8 x i1> [[EVLM2]], <8 x i1> %m, <8 x i1> zeroinitializer
 ; ALL-CONVERT-NEXT:  %{{.+}} = select <8 x i1> [[NEWM2]], <8 x i32> %i0, <8 x i32> %i1
 ; ALL-CONVERT:       %{{.+}} = select <8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1
 ; ALL-CONVERT-NEXT:  ret void
@@ -218,22 +218,22 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT:       %{{.*}} = sub <vscale x 4 x i32> %i0, %i1
 ; ALL-CONVERT:       %{{.*}} = mul <vscale x 4 x i32> %i0, %i1
 ; ALL-CONVERT:       [[EVLM:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; ALL-CONVERT:       [[NEWM:%.+]] = and <vscale x 4 x i1> [[EVLM]], %m
+; ALL-CONVERT:       [[NEWM:%.+]] = select <vscale x 4 x i1> [[EVLM]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; ALL-CONVERT:       [[FRZM:%.+]] = freeze <vscale x 4 x i1> [[NEWM]]
 ; ALL-CONVERT:       [[SELONE:%.+]] = select <vscale x 4 x i1> [[FRZM]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
 ; ALL-CONVERT:       %{{.*}} = sdiv <vscale x 4 x i32> %i0, [[SELONE]]
 ; ALL-CONVERT:       [[EVLM2:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; ALL-CONVERT:       [[NEWM2:%.+]] = and <vscale x 4 x i1> [[EVLM2]], %m
+; ALL-CONVERT:       [[NEWM2:%.+]] = select <vscale x 4 x i1> [[EVLM2]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; ALL-CONVERT:       [[FRZM2:%.+]] = freeze <vscale x 4 x i1> [[NEWM2]]
 ; ALL-CONVERT:       [[SELONE2:%.+]] = select <vscale x 4 x i1> [[FRZM2]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
 ; ALL-CONVERT:       %{{.*}} = srem <vscale x 4 x i32> %i0, [[SELONE2]]
 ; ALL-CONVERT:       [[EVLM3:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; ALL-CONVERT:       [[NEWM3:%.+]] = and <vscale x 4 x i1> [[EVLM3]], %m
+; ALL-CONVERT:       [[NEWM3:%.+]] = select <vscale x 4 x i1> [[EVLM3]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; ALL-CONVERT:       [[FRZM3:%.+]] = freeze <vscale x 4 x i1> [[NEWM3]]
 ; ALL-CONVERT:       [[SELONE3:%.+]] = select <vscale x 4 x i1> [[FRZM3]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
 ; ALL-CONVERT:       %{{.*}} = udiv <vscale x 4 x i32> %i0, [[SELONE3]]
 ; ALL-CONVERT:       [[EVLM4:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; ALL-CONVERT:       [[NEWM4:%.+]] = and <vscale x 4 x i1> [[EVLM4]], %m
+; ALL-CONVERT:       [[NEWM4:%.+]] = select <vscale x 4 x i1> [[EVLM4]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; ALL-CONVERT:       [[FRZM4:%.+]] = freeze <vscale x 4 x i1> [[NEWM4]]
 ; ALL-CONVERT:       [[SELONE4:%.+]] = select <vscale x 4 x i1> [[FRZM4]], <vscale x 4 x i32> %i1, <vscale x 4 x i32> splat (i32 1)
 ; ALL-CONVERT:       %{{.*}} = urem <vscale x 4 x i32> %i0, [[SELONE4]]
@@ -248,7 +248,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT:       %{{.*}} = lshr <vscale x 4 x i32> %i0, %i1
 ; ALL-CONVERT:       %{{.*}} = shl <vscale x 4 x i32> %i0, %i1
 ; ALL-CONVERT:       [[EVLM5:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; ALL-CONVERT:       [[NEWM5:%.+]] = and <vscale x 4 x i1> [[EVLM5]], %m
+; ALL-CONVERT:       [[NEWM5:%.+]] = select <vscale x 4 x i1> [[EVLM5]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; ALL-CONVERT:       %{{.*}} = select <vscale x 4 x i1> [[NEWM5]], <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1
 ; ALL-CONVERT:       %{{.*}} = select <vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1
 ; ALL-CONVERT-NEXT:  ret void
@@ -258,7 +258,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; ALL-CONVERT-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
-; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = and <4 x i1> [[EVLM]], %m
+; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = select <4 x i1> [[EVLM]], <4 x i1> %m, <4 x i1> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[ADD:%.+]] = select <4 x i1> [[NEWM]], <4 x i32> %vi, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ADD]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = add i32 [[RED]], %start
@@ -293,7 +293,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; ALL-CONVERT-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
-; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = and <4 x i1> [[EVLM]], %m
+; ALL-CONVERT-NEXT:  [[NEWM:%.+]] = select <4 x i1> [[EVLM]], <4 x i1> %m, <4 x i1> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[FMIN:%.+]] = select <4 x i1> [[NEWM]], <4 x float> %vf, <4 x float> splat (float +qnan)
 ; ALL-CONVERT-NEXT:  [[RED:%.+]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[FMIN]])
 ; ALL-CONVERT-NEXT:  %{{.+}} = call float @llvm.minnum.f32(float [[RED]], float %f)
@@ -454,7 +454,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NEXT:   [[NSPLATINS:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
 ; DISCARD_LEGAL-NEXT:   [[NSPLAT:%.+]] = shufflevector <8 x i32> [[NSPLATINS]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISCARD_LEGAL-NEXT:   [[EVLMASK:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT]]
-; DISCARD_LEGAL-NEXT:   [[NEWMASK:%.+]] = and <8 x i1> [[EVLMASK]], %m
+; DISCARD_LEGAL-NEXT:   [[NEWMASK:%.+]] = select <8 x i1> [[EVLMASK]], <8 x i1> %m, <8 x i1> zeroinitializer
 ; DISCARD_LEGAL-NEXT:   %r3 = call <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> [[NEWMASK]], i32 8)
 ; DISCARD_LEGAL-NOT:    %r4 = call <8 x i32> @llvm.vp.srem.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; DISCARD_LEGAL-NOT:    %r5 = call <8 x i32> @llvm.vp.udiv.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
@@ -472,7 +472,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NEXT:   [[NSPLATINS2:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
 ; DISCARD_LEGAL-NEXT:   [[NSPLAT2:%.+]] = shufflevector <8 x i32> [[NSPLATINS2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; DISCARD_LEGAL-NEXT:   [[EVLMASK2:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT2]]
-; DISCARD_LEGAL-NEXT:   [[NEWMASK2:%.+]] = and <8 x i1> [[EVLMASK2]], %m
+; DISCARD_LEGAL-NEXT:   [[NEWMASK2:%.+]] = select <8 x i1> [[EVLMASK2]], <8 x i1> %m, <8 x i1> zeroinitializer
 ; DISCARD_LEGAL-NEXT:   %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> [[NEWMASK2]], <8 x i32> %i0, <8 x i32> %i1, i32 8)
 ; DISCARD_LEGAL-NEXT:   %r12 = select <8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1
 ; DISCARD_LEGAL-NEXT:   ret void
@@ -486,7 +486,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NEXT: %r1 = sub <vscale x 4 x i32> %i0, %i1
 ; DISCARD_LEGAL-NEXT: %r2 = mul <vscale x 4 x i32> %i0, %i1
 ; DISCARD_LEGAL-NEXT: [[EVLM:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; DISCARD_LEGAL-NEXT: [[NEWM:%.+]] = and <vscale x 4 x i1> [[EVLM]], %m
+; DISCARD_LEGAL-NEXT: [[NEWM:%.+]] = select <vscale x 4 x i1> [[EVLM]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; DISCARD_LEGAL-NEXT: %vscale = call i32 @llvm.vscale.i32()
 ; DISCARD_LEGAL-NEXT: %scalable_size = mul nuw i32 %vscale, 4
 ; DISCARD_LEGAL-NEXT: %r3 = call <vscale x 4 x i32> @llvm.vp.sdiv.nxv4i32(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i1> [[NEWM]], i32 %scalable_size)
@@ -499,7 +499,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NEXT:  [[NSPLATINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; DISCARD_LEGAL-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NSPLATINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; DISCARD_LEGAL-NEXT:  [[EVLMASK:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
-; DISCARD_LEGAL-NEXT:  [[NEWMASK:%.+]] = and <4 x i1> [[EVLMASK]], %m
+; DISCARD_LEGAL-NEXT:  [[NEWMASK:%.+]] = select <4 x i1> [[EVLMASK]], <4 x i1> %m, <4 x i1> zeroinitializer
 ; DISCARD_LEGAL-NEXT:  %r0 = call i32 @llvm.vp.reduce.add.v4i32(i32 %start, <4 x i32> %vi, <4 x i1> [[NEWMASK]], i32 4)
 ; DISCARD_LEGAL-NOT:  %r1 = call i32 @llvm.vp.reduce.mul.v4i32(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 4)
 ; DISCARD_LEGAL-NOT:  %r2 = call i32 @llvm.vp.reduce.and.v4i32(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 4)
@@ -515,7 +515,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; DISCARD_LEGAL-NEXT:  [[NSPLATINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; DISCARD_LEGAL-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NSPLATINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; DISCARD_LEGAL-NEXT:  [[EVLMASK:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
-; DISCARD_LEGAL-NEXT:  [[NEWMASK:%.+]] = and <4 x i1> [[EVLMASK]], %m
+; DISCARD_LEGAL-NEXT:  [[NEWMASK:%.+]] = select <4 x i1> [[EVLMASK]], <4 x i1> %m, <4 x i1> zeroinitializer
 ; DISCARD_LEGAL-NEXT:  %r0 = call float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> [[NEWMASK]], i32 4)
 ; DISCARD_LEGAL-NOT:  %r1 = call nnan float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; DISCARD_LEGAL-NOT:  %r2 = call nnan ninf float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
@@ -552,7 +552,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL:       [[NINS:%.+]] = insertelement <8 x i32> poison, i32 %n, i64 0
 ; CONVERT_LEGAL-NEXT:  [[NSPLAT:%.+]] = shufflevector <8 x i32> [[NINS]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; CONVERT_LEGAL-NEXT:  [[EVLM:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT]]
-; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = and <8 x i1> [[EVLM]], %m
+; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = select <8 x i1> [[EVLM]], <8 x i1> %m, <8 x i1> zeroinitializer
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i32> @llvm.vp.sub.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i32> @llvm.vp.mul.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32> %i0, <8 x i32> %i1, <8 x i1> %m, i32 8)
@@ -573,7 +573,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL: define void @test_vp_int_vscale(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i32> %i2, <vscale x 4 x i32> %f3, <vscale x 4 x i1> %m, i32 %n) {
 ; CONVERT_LEGAL-NEXT:   %r0 = add <vscale x 4 x i32> %i0, %i1
 ; CONVERT_LEGAL:        [[EVLM:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
-; CONVERT_LEGAL-NEXT:   [[NEWM:%.+]] = and <vscale x 4 x i1> [[EVLM]], %m
+; CONVERT_LEGAL-NEXT:   [[NEWM:%.+]] = select <vscale x 4 x i1> [[EVLM]], <vscale x 4 x i1> %m, <vscale x 4 x i1> zeroinitializer
 ; CONVERT_LEGAL-NEXT:   %vscale = call i32 @llvm.vscale.i32()
 ; CONVERT_LEGAL-NEXT:   %scalable_size = mul nuw i32 %vscale, 4
 ; CONVERT_LEGAL-NOT:    %{{.*}} = call <vscale x 4 x i32> @llvm.vp.{{.*}}, i32 %n)
@@ -585,7 +585,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL-NEXT:  [[NINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; CONVERT_LEGAL-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CONVERT_LEGAL-NEXT:  [[EVLM:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
-; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = and <4 x i1> [[EVLM]], %m
+; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = select <4 x i1> [[EVLM]], <4 x i1> %m, <4 x i1> zeroinitializer
 ; CONVERT_LEGAL-NEXT:  %{{.+}} = call i32 @llvm.vp.reduce.add.v4i32(i32 %start, <4 x i32> %vi, <4 x i1> [[NEWM]], i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call i32 @llvm.vp.reduce.mul.v4i32(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call i32 @llvm.vp.reduce.and.v4i32(i32 %start, <4 x i32> %vi, <4 x i1> %m, i32 4)
@@ -601,7 +601,7 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; CONVERT_LEGAL-NEXT:  [[NINS:%.+]] = insertelement <4 x i32> poison, i32 %n, i64 0
 ; CONVERT_LEGAL-NEXT:  [[NSPLAT:%.+]] = shufflevector <4 x i32> [[NINS]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CONVERT_LEGAL-NEXT:  [[EVLM:%.+]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[NSPLAT]]
-; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = and <4 x i1> [[EVLM]], %m
+; CONVERT_LEGAL-NEXT:  [[NEWM:%.+]] = select <4 x i1> [[EVLM]], <4 x i1> %m, <4 x i1> zeroinitializer
 ; CONVERT_LEGAL-NEXT:  %{{.+}} = call float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> [[NEWM]], i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
 ; CONVERT_LEGAL-NOT:   %{{.+}} = call nnan ninf float @llvm.vp.reduce.fmin.v4f32(float %f, <4 x float> %vf, <4 x i1> %m, i32 4)
