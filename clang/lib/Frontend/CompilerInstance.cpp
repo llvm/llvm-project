@@ -1135,7 +1135,7 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
-void CompilerInstance::parseLLVMArgs() {
+bool CompilerInstance::parseLLVMArgs() {
   if (!getFrontendOpts().LLVMArgs.empty()) {
     unsigned NumArgs = getFrontendOpts().LLVMArgs.size();
     auto Args = std::make_unique<const char *[]>(NumArgs + 2);
@@ -1148,9 +1148,12 @@ void CompilerInstance::parseLLVMArgs() {
     if (!llvm::cl::parseCommandLineOptions(
             LibraryOptions, ArrayRef(Args.get(), NumArgs + 1),
             /*Overview=*/"", /*Errs=*/&llvm::errs(),
-            /*VFS=*/&getVirtualFileSystem()))
+            /*VFS=*/&getVirtualFileSystem())) {
       getDiagnostics().Report(diag::err_fe_invalid_forwarded_option) << 0;
+      return false;
+    }
   }
+  return true;
 }
 
 /// Determine the appropriate source input kind based on language

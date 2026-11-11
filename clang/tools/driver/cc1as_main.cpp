@@ -741,8 +741,10 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     if (!cl::parseCommandLineOptions(LibraryOptions,
                                      ArrayRef(Args.get(), NumArgs + 1),
                                      /*Overview=*/"", /*Errs=*/&llvm::errs(),
-                                     /*VFS=*/VFS.get()))
+                                     /*VFS=*/VFS.get())) {
       Diags.Report(diag::err_fe_invalid_forwarded_option) << 0;
+      return 1;
+    }
   }
 
   // Execute the invocation, unless there were parsing errors.

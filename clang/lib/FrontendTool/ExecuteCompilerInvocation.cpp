@@ -262,7 +262,8 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   Clang->LoadRequestedPlugins();
 
-  Clang->parseLLVMArgs();
+  if (!Clang->parseLLVMArgs())
+    return false;
 
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!
@@ -312,9 +313,11 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     // process that embeds clang. Keep its output where it already went.
     if (!llvm::cl::ParseCommandLineOptions(
             NumArgs + 1, Args.get(), /*Overview=*/"", /*Errs=*/&llvm::errs(),
-            /*VFS=*/&Clang->getVirtualFileSystem()))
+            /*VFS=*/&Clang->getVirtualFileSystem())) {
       Clang->getDiagnostics().Report(diag::err_fe_invalid_forwarded_option)
           << 1;
+      return false;
+    }
   }
 #endif
 

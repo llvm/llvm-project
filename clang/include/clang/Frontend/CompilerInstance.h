@@ -272,7 +272,8 @@ public:
   /// Parse and apply LLVM command line arguments from FrontendOptions.
   /// This processes the LLVMArgs option that comes from -mllvm flags.
   /// This should be called after plugins are loaded and before ExecuteAction.
-  void parseLLVMArgs();
+  /// Returns false, after reporting a diagnostic, if an argument is invalid.
+  bool parseLLVMArgs();
 
   const llvm::cl::LibraryOptionsContext &getLibraryOptions() const {
     return LibraryOptions;
