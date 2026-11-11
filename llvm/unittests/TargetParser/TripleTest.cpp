@@ -1747,6 +1747,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
             Triple("i686-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("x86_64-unknown-uefi").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("i686-unknown-uefi").getDefaultLongDoubleFormat());
   // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("i686-unknown-linux-android").getDefaultLongDoubleFormat());
@@ -1773,6 +1775,8 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   // ... except on Windows and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+            Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
   EXPECT_EQ(
