@@ -12550,7 +12550,8 @@ non-byte-sized scalar or vector value, the value is first `bitcast` to a
 scalar byte type and inserted at bit 0 into a byte type with the next
 larger byte size using `bitinsert`, and the resulting byte-sized value is
 stored. The padding bits are poison if every non-padding bit in the byte
-containing padding bits is poison; otherwise, they are zero.
+containing padding bits is poison; otherwise, they are zero. As such, a
+non-byte-sized store behaves like a `zext` followed by a byte-sized store.
 
 If `<value>` is of aggregate type, padding is filled with
 {ref}`undef <undefvalues>`.
