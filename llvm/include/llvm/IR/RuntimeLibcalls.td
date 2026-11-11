@@ -254,7 +254,12 @@ defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def MULO_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = CommonFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, Int];
+  }
 }
 
 foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
@@ -262,7 +267,7 @@ foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
                  TypeSuffix<"I128", Int128>] in {
   def SDIVREM_#IntTy.Suffix
       : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
-    let FnAttrs = MathFnAttrs;
+    let FnAttrs = CommonFnAttrs;
     let Memory = ArgMemWriteOnly;
     let ParamAttrs = [[], [], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
@@ -274,7 +279,7 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
                  TypeSuffix<"I128", UInt128>] in {
   def UDIVREM_#IntTy.Suffix
       : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
-    let FnAttrs = MathFnAttrs;
+    let FnAttrs = CommonFnAttrs;
     let Memory = ArgMemWriteOnly;
     let ParamAttrs = [[], [], OutPtrAttrs];
     let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
@@ -317,7 +322,7 @@ def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
 
 foreach FPTy = [F32, F64] in {
   def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]> {
-    let FnAttrs = MathFnAttrs;
+    let FnAttrs = CommonFnAttrs;
     let Memory = ErrnoMemWriteOnly;
     let RetAttrs = [NoFPClassAttr<"fcNegInf | fcNegSubnormal | fcNegNormal">];
   }
@@ -706,39 +711,61 @@ foreach FPTy = [F32, F64, F128, PPCF128] in {
 }
 
 // Memory
-def MEMCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
+defvar ReadPtrAttrs = [ReadOnly, CapturesNone];
+
+class MemCmpLibcall : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [ReadPtrAttrs, ReadPtrAttrs];
+}
+
+def MEMCMP : MemCmpLibcall;
 def MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMCPY_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
-def MallocFamily : AllocFamilyAttr<"malloc">;
-
-def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+class MallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
                  AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
-                 AllocSizeAttr<0>, MallocFamily];
+                 AllocSizeAttr<0>, AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrErrnoMem;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef]];
 }
 
-def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+class CallocLibcall<string family> : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
   let FnAttrs = [NoFree, NoUnwind, WillReturn,
-                 AllocKindAttr<"AllocFnKind::Alloc">, AllocSizeAttr<0, "1">,
-                 MallocFamily];
+                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Zeroed">,
+                 AllocSizeAttr<0, "1">, AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrErrnoMem;
   let RetAttrs = [NoAlias, NoUndef];
   let ParamAttrs = [[NoUndef], [NoUndef]];
 }
 
-def FREE : RuntimeLibcall<Void, [Ptr]> {
+class FreeLibcall<string family> : RuntimeLibcall<Void, [Ptr]> {
   let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Free">,
-                 MallocFamily];
+                 AllocFamilyAttr<family>];
+  let Memory = InaccessibleOrArgMem;
   let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
 }
 
-def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
-def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
+def MALLOC : MallocLibcall<"malloc">;
+def CALLOC : CallocLibcall<"malloc">;
+def FREE : FreeLibcall<"malloc">;
+
+def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemWriteOnly;
+  let ParamAttrs = [[WriteOnly, CapturesNone]];
+}
+
+def STRLEN : RuntimeLibcall<SizeT, [Ptr]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemReadOnly;
+  let ParamAttrs = [ReadPtrAttrs];
+}
 
 // Element-wise unordered-atomic memory of different sizes
 foreach MemSize = [1, 2, 4, 8, 16] in {
@@ -1007,8 +1034,13 @@ def ATOF : RuntimeLibcall<Dbl, [Ptr]>;
 def ATOI : RuntimeLibcall<Int, [Ptr]>;
 def ATOL : RuntimeLibcall<Long, [Ptr]>;
 def ATOLL : RuntimeLibcall<LLong, [Ptr]>;
-def BCMP : RuntimeLibcall<Int, [Ptr, Ptr, SizeT]>;
-def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]>;
+def BCMP : MemCmpLibcall;
+def BCOPY : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [ReadPtrAttrs, [WriteOnly, CapturesNone]];
+}
+
 def CHMOD : RuntimeLibcall<Int, [Ptr, IntX]>;
 def CHOWN : RuntimeLibcall<Int, [Ptr, IntX, IntX]>;
 def CLEARERR : RuntimeLibcall<Void, [Ptr]>;
@@ -1238,9 +1270,9 @@ def UNSETENV : RuntimeLibcall<Int, [Ptr]>;
 def UTIME : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def UTIMES : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def VALLOC : RuntimeLibcall<Ptr, [SizeT]>;
-def VEC_CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def VEC_FREE : RuntimeLibcall<Void, [Ptr]>;
-def VEC_MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
+def VEC_CALLOC : CallocLibcall<"vec_malloc">;
+def VEC_FREE : FreeLibcall<"vec_malloc">;
+def VEC_MALLOC : MallocLibcall<"vec_malloc">;
 def VEC_REALLOC : RuntimeLibcall<Ptr, [Ptr, SizeT]>;
 def VFPRINTF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def VFSCANF : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;

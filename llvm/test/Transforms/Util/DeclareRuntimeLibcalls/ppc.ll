@@ -9,14 +9,14 @@
 ; AIX32: @__ssp_canary_word = external global ptr
 ; AIX32-NEXT: declare i32 @_Unwind_RaiseException(ptr)
 ; AIX32-NEXT: declare void @_Unwind_Resume(ptr)
-; AIX32-NEXT: declare void @___bzero(ptr, i32)
+; AIX32-NEXT: declare void @___bzero(ptr writeonly captures(none), i32) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memccpy(ptr, ptr, i32, i32)
-; AIX32-NEXT: declare i32 @___memcmp(ptr, ptr, i32)
+; AIX32-NEXT: declare i32 @___memcmp(ptr readonly captures(none), ptr readonly captures(none), i32) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @___memmove(ptr, ptr, i32)
 ; AIX32-NEXT: declare ptr @___memset(ptr, i32, i32)
 ; AIX32-NEXT: declare i32 @___strcmp(ptr, ptr)
 ; AIX32-NEXT: declare ptr @___strcpy(ptr, ptr)
-; AIX32-NEXT: declare i32 @___strlen(ptr)
+; AIX32-NEXT: declare i32 @___strlen(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX32-NEXT: declare ptr @___strstr(ptr, ptr)
 ; AIX32-NEXT: declare double @__adddf3(double, double)
 ; AIX32-NEXT: declare fp128 @__addkf3(fp128, fp128)
@@ -242,7 +242,7 @@
 ; AIX32-NEXT: declare i64 @__muldi3(i64, i64)
 ; AIX32-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
 ; AIX32-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; AIX32-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; AIX32-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; AIX32-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; AIX32-NEXT: declare float @__mulsf3(float, float)
 ; AIX32-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -553,27 +553,32 @@
 ; AIX32-NEXT: declare float @truncf(float)
 ; AIX32-NEXT: declare fp128 @truncf128(fp128)
 ; AIX32-NEXT: declare double @truncl(double)
-; AIX32-NEXT: declare ptr @vec_calloc(i32, i32)
-; AIX32-NEXT: declare void @vec_free(ptr)
-; AIX32-NEXT: declare ptr @vec_malloc(i32)
+; AIX32-NEXT: declare noalias noundef ptr @vec_calloc(i32 noundef, i32 noundef) [[VEC_CALLOC_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
+; AIX32-NEXT: declare noalias noundef ptr @vec_malloc(i32 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX32-NEXT: declare ptr @vec_realloc(ptr, i32)
+; AIX32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; AIX32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; AIX32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; AIX32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; AIX32-NEXT: attributes [[VEC_CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
+; AIX32-NEXT: attributes [[VEC_FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; AIX32-NEXT: attributes [[VEC_MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
 
 ; AIX64: @__ssp_canary_word = external global ptr
 ; AIX64-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
 ; AIX64-NEXT: declare void @_Unwind_Resume(ptr)
-; AIX64-NEXT: declare void @___bzero64(ptr, i64)
+; AIX64-NEXT: declare void @___bzero64(ptr writeonly captures(none), i64) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memccpy64(ptr, ptr, i32 signext, i64)
-; AIX64-NEXT: declare signext i32 @___memcmp64(ptr, ptr, i64)
+; AIX64-NEXT: declare signext i32 @___memcmp64(ptr readonly captures(none), ptr readonly captures(none), i64) [[ARGMEM_READ_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @___memmove64(ptr, ptr, i64)
 ; AIX64-NEXT: declare ptr @___memset64(ptr, i32 signext, i64)
 ; AIX64-NEXT: declare signext i32 @___strcmp64(ptr, ptr)
 ; AIX64-NEXT: declare ptr @___strcpy64(ptr, ptr)
-; AIX64-NEXT: declare i64 @___strlen64(ptr)
+; AIX64-NEXT: declare i64 @___strlen64(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
 ; AIX64-NEXT: declare ptr @___strstr64(ptr, ptr)
 ; AIX64-NEXT: declare double @__adddf3(double, double)
 ; AIX64-NEXT: declare fp128 @__addkf3(fp128, fp128)
@@ -802,7 +807,7 @@
 ; AIX64-NEXT: declare i64 @__muldi3(i64, i64)
 ; AIX64-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
 ; AIX64-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; AIX64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
+; AIX64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
 ; AIX64-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; AIX64-NEXT: declare float @__mulsf3(float, float)
 ; AIX64-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
@@ -1114,15 +1119,20 @@
 ; AIX64-NEXT: declare float @truncf(float)
 ; AIX64-NEXT: declare fp128 @truncf128(fp128)
 ; AIX64-NEXT: declare double @truncl(double)
-; AIX64-NEXT: declare ptr @vec_calloc(i64, i64)
-; AIX64-NEXT: declare void @vec_free(ptr)
-; AIX64-NEXT: declare ptr @vec_malloc(i64)
+; AIX64-NEXT: declare noalias noundef ptr @vec_calloc(i64 noundef, i64 noundef) [[VEC_CALLOC_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare void @vec_free(ptr allocptr noundef captures(none)) [[VEC_FREE_ATTRS:#[0-9]+]]
+; AIX64-NEXT: declare noalias noundef ptr @vec_malloc(i64 noundef) [[VEC_MALLOC_ATTRS:#[0-9]+]]
 ; AIX64-NEXT: declare ptr @vec_realloc(ptr, i64)
+; AIX64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; AIX64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ; AIX64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; AIX64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; AIX64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; AIX64-NEXT: attributes [[VEC_CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
+; AIX64-NEXT: attributes [[VEC_FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; AIX64-NEXT: attributes [[VEC_MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="vec_malloc" }
 
 ; LINUX: @__stack_chk_guard = external global ptr
 ; LINUX-NEXT: declare signext i32 @_Unwind_RaiseException(ptr)
@@ -1354,7 +1364,7 @@
 ; LINUX-NEXT: declare i64 @__muldi3(i64, i64)
 ; LINUX-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
 ; LINUX-NEXT: declare fp128 @__mulkf3(fp128, fp128)
-; LINUX-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
+; LINUX-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; LINUX-NEXT: declare float @__mulsf3(float, float)
 ; LINUX-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
@@ -1670,8 +1680,9 @@
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncf128(fp128)
 ; LINUX-NEXT: declare ppc_fp128 @truncl(ppc_fp128)
+; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

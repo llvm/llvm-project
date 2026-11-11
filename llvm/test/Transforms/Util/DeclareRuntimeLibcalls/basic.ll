@@ -17,6 +17,8 @@ define float @sinf(float %x) {
 ; CHECK: declare ptr @__memmove_chk(ptr, ptr, i64, i64)
 ; CHECK: declare ptr @__memset_chk(ptr, i32, i64, i64)
 
+; CHECK: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
+
 ; CHECK: declare i128 @__umodti3(i128, i128)
 
 ; CHECK: declare float @acosf(float)
@@ -65,6 +67,7 @@ define float @sinf(float %x) {
 
 ; CHECK: declare x86_fp80 @truncl(x86_fp80)
 
-; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; CHECK: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; CHECK: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; CHECK: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }

@@ -205,7 +205,7 @@
 ; RV32-NEXT: declare double @__muldf3(double, double)
 ; RV32-NEXT: declare i64 @__muldi3(i64, i64)
 ; RV32-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; RV32-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; RV32-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; RV32-NEXT: declare float @__mulsf3(float, float)
 ; RV32-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -474,10 +474,11 @@
 ; RV32-NEXT: declare double @trunc(double)
 ; RV32-NEXT: declare float @truncf(float)
 ; RV32-NEXT: declare fp128 @truncl(fp128)
+; RV32-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; RV32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; RV32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; RV32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; RV32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; RV32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; RV32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; RV32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; RV64: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -683,7 +684,7 @@
 ; RV64-NEXT: declare double @__muldf3(double, double)
 ; RV64-NEXT: declare i64 @__muldi3(i64, i64)
 ; RV64-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; RV64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr)
+; RV64-NEXT: declare signext i32 @__mulosi4(i32 signext, i32 signext, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; RV64-NEXT: declare float @__mulsf3(float, float)
 ; RV64-NEXT: declare signext i32 @__mulsi3(i32 signext, i32 signext)
@@ -953,8 +954,9 @@
 ; RV64-NEXT: declare double @trunc(double)
 ; RV64-NEXT: declare float @truncf(float)
 ; RV64-NEXT: declare fp128 @truncl(fp128)
+; RV64-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; RV64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; RV64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; RV64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; RV64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; RV64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; RV64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; RV64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

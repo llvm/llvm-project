@@ -228,7 +228,7 @@
 ; LINUX-NEXT: declare i128 @__modti3(i128, i128)
 ; LINUX-NEXT: declare double @__muldf3(double, double)
 ; LINUX-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; LINUX-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; LINUX-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; LINUX-NEXT: declare float @__mulsf3(float, float)
 ; LINUX-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -550,10 +550,11 @@
 ; LINUX-NEXT: declare float @truncf(float)
 ; LINUX-NEXT: declare fp128 @truncf128(fp128)
 ; LINUX-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; FREEBSD: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
@@ -772,7 +773,7 @@
 ; FREEBSD-NEXT: declare i128 @__modti3(i128, i128)
 ; FREEBSD-NEXT: declare double @__muldf3(double, double)
 ; FREEBSD-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; FREEBSD-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; FREEBSD-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; FREEBSD-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; FREEBSD-NEXT: declare float @__mulsf3(float, float)
 ; FREEBSD-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -1047,10 +1048,11 @@
 ; FREEBSD-NEXT: declare double @trunc(double)
 ; FREEBSD-NEXT: declare float @truncf(float)
 ; FREEBSD-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; FREEBSD-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; FREEBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; FREEBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; FREEBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; FREEBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; FREEBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; FREEBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; FREEBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; FREEBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; OPENBSD: @__guard_local = external global ptr
@@ -1269,7 +1271,7 @@
 ; OPENBSD-NEXT: declare i128 @__modti3(i128, i128)
 ; OPENBSD-NEXT: declare double @__muldf3(double, double)
 ; OPENBSD-NEXT: declare signext i16 @__mulhi3(i16 signext, i16 signext)
-; OPENBSD-NEXT: declare i32 @__mulosi4(i32, i32, ptr)
+; OPENBSD-NEXT: declare i32 @__mulosi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS:#[0-9]+]]
 ; OPENBSD-NEXT: declare signext i8 @__mulqi3(i8 signext, i8 signext)
 ; OPENBSD-NEXT: declare float @__mulsf3(float, float)
 ; OPENBSD-NEXT: declare i32 @__mulsi3(i32, i32)
@@ -1544,8 +1546,9 @@
 ; OPENBSD-NEXT: declare double @trunc(double)
 ; OPENBSD-NEXT: declare float @truncf(float)
 ; OPENBSD-NEXT: declare x86_fp80 @truncl(x86_fp80)
+; OPENBSD-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; OPENBSD-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
-; OPENBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
-; OPENBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
-; OPENBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; OPENBSD-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
+; OPENBSD-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; OPENBSD-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; OPENBSD-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
