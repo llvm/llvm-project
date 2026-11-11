@@ -779,6 +779,10 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
 }
 
 void ObjectFilePECOFF::ParseSymtab(Symtab &symtab) {
+  // A memory instance is created from the headers alone, which usually is not
+  // enough to create the COFF binary that the symbols are read from.
+  if (!CreateBinary())
+    return;
   SectionList *sect_list = GetSectionList();
   rva_symbol_list_t sorted_exports = AppendFromExportTable(sect_list, symtab);
   AppendFromCOFFSymbolTable(sect_list, symtab, sorted_exports);
@@ -1037,7 +1041,8 @@ size_t ObjectFilePECOFF::GetSectionDataSize(Section *section) {
   // FileAlignment and the actual section size is in VirtualSize
   // (getByteSize()). See the comment on
   // llvm::object::COFFObjectFile::getSectionSize().
-  if (m_binary->getPE32Header() || m_binary->getPE32PlusHeader())
+  if (m_coff_header_opt.magic == OPT_HEADER_MAGIC_PE32 ||
+      m_coff_header_opt.magic == OPT_HEADER_MAGIC_PE32_PLUS)
     return std::min(section->GetByteSize(), section->GetFileSize());
   return section->GetFileSize();
 }
@@ -1107,6 +1112,8 @@ UUID ObjectFilePECOFF::GetUUID() {
 }
 
 std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
+  if (!CreateBinary())
+    return std::nullopt;
   std::string gnu_debuglink_file;
   uint32_t gnu_debuglink_crc;
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
@@ -1115,6 +1122,8 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
 }
 
 std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
+  if (!CreateBinary())
+    return std::nullopt;
   llvm::StringRef pdb_file;
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
   if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
