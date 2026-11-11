@@ -484,13 +484,9 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     const std::vector<CallGraphNode *> &SCC = *I;
     assert(!SCC.empty() && "SCC with no functions?");
 
-    if (any_of(SCC, [](CallGraphNode *Node) {
-          Function *F = Node->getFunction();
-          return !F || !F->isDefinitionExact();
-        })) {
-      // Some function in the SCC calls externally or is not exact - can't say
-      // anything useful. Remove any existing function records (may have been
-      // created when scanning globals).
+    if (any_of(SCC, [](CallGraphNode *Node) { return !Node->getFunction(); })) {
+      // Calls externally - can't say anything useful. Remove any existing
+      // function records (may have been created when scanning globals).
       for (auto *Node : SCC)
         FunctionInfos.erase(Node->getFunction());
       continue;
@@ -502,13 +498,20 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     Handles.front().I = Handles.begin();
     bool KnowNothing = false;
 
+    // Only the attributes of declarations, functions without an exact
+    // definition (which may be replaced at link time), and optnone functions
+    // can be relied on, not their bodies.
+    auto UseAttributesOnly = [](const Function &F) {
+      return F.isDeclaration() || !F.isDefinitionExact() || F.hasOptNone();
+    };
+
     // Intrinsics, like any other synchronizing function, can make effects
     // of other threads visible. Without nosync we know nothing really.
     // Similarly, if `nocallback` is missing the function, or intrinsic,
     // can call into the module arbitrarily. If both are set the function
     // has an effect but will not interact with accesses of internal
-    // globals inside the module. We are conservative here for optnone
-    // functions, might not be necessary.
+    // globals inside the module. We are conservative here for definitions
+    // (optnone or non-exact), might not be necessary.
     auto MaySyncOrCallIntoModule = [](const Function &F) {
       return !F.isDeclaration() || !F.hasNoSync() ||
              !F.hasFnAttribute(Attribute::NoCallback);
@@ -523,7 +526,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
         break;
       }
 
-      if (F->isDeclaration() || F->hasOptNone()) {
+      if (UseAttributesOnly(*F)) {
         // Try to get mod/ref behaviour from function attributes.
         if (F->doesNotAccessMemory()) {
           // Can't do better than that!
@@ -576,10 +579,10 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       if (isModAndRefSet(FI.getModRefInfo()))
         break; // The mod/ref lattice saturates here.
 
-      // Don't prove any properties based on the implementation of an optnone
-      // function. Function attributes were already used as a best approximation
-      // above.
-      if (Node->getFunction()->hasOptNone())
+      // Don't prove any properties based on the body of a function whose body
+      // can't be relied on. Function attributes were already used as a best
+      // approximation above.
+      if (UseAttributesOnly(*Node->getFunction()))
         continue;
 
       for (Instruction &I : instructions(Node->getFunction())) {
