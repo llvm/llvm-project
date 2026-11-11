@@ -171,7 +171,6 @@ body:             |
 # uniform even with a uniform index
 ---
 name:            vgpr_as_memory_loads
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
