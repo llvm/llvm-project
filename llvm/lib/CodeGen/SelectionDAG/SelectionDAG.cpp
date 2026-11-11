@@ -219,17 +219,15 @@ bool ISD::isConstantSplatVectorAllOnes(SDValue V, bool BuildVectorOnly) {
 }
 
 bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
-  // If we are bitcasting a 0 to a fixed length vector, we also want to
-  // recognize this.
-  bool IsVectorBitcast = V.getOpcode() == ISD::BITCAST &&
-                         V.getValueType().isFixedLengthVector();
+  if (!V.getValueType().isVector())
+    return false;
+
   // Look through a bit convert.
   while (V.getOpcode() == ISD::BITCAST)
     V = V.getOperand(0);
 
   SDValue V(const_cast<SDNode *>(N), 0);
-  if (!BuildVectorOnly && IsVectorBitcast &&
-      (isNullConstant(V) || isNullFPConstant(V))) {
+  if (!BuildVectorOnly && (isNullConstant(V) || isNullFPConstant(V))) {
     return true;
   }
 
