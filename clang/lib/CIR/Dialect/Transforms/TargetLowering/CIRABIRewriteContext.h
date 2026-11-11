@@ -81,11 +81,12 @@ public:
 
   /// Bring each non-byval indirect parameter of \p funcOp into the shape the
   /// rest of the rewrite assumes: the parameter's only use, if it has one, is
-  /// a single store into an alloca of the matching pointer type that no other
-  /// non-byval indirect parameter spills to, and that alloca states the
-  /// alignment the ABI promises rather than the one CIRGen picked for a local
-  /// copy.  A use of the parameter as a call argument is routed through a load
-  /// of that slot, so that it names the storage an argument has to name.
+  /// a single store into an alloca of the incoming pointer's type, directly or
+  /// through an address_space cast of it.  No other non-byval indirect
+  /// parameter spills to that alloca, and it states the alignment the ABI
+  /// promises rather than the one CIRGen picked for a local copy.  A use of
+  /// the parameter as a call argument is routed through a load of that slot,
+  /// so that it names the storage an argument has to name.
   ///
   /// Call for every function before any definition or call site is rewritten.
   /// findParamSpill asserts this shape while the enclosing definition is

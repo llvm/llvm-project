@@ -34,19 +34,19 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Prefix(
-    ConstString p)
-    : m_prefix(p) {}
+    std::string p)
+    : m_prefix(std::move(p)) {}
 
 bool NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Match(
-    ConstString class_name) {
-  return class_name.GetStringRef().starts_with(m_prefix.GetStringRef());
+    llvm::StringRef class_name) {
+  return class_name.starts_with(m_prefix);
 }
 
-NSDictionary_Additionals::AdditionalFormatterMatching::Full::Full(ConstString n)
-    : m_name(n) {}
+NSDictionary_Additionals::AdditionalFormatterMatching::Full::Full(std::string n)
+    : m_name(std::move(n)) {}
 
 bool NSDictionary_Additionals::AdditionalFormatterMatching::Full::Match(
-    ConstString class_name) {
+    llvm::StringRef class_name) {
   return (class_name == m_name);
 }
 
@@ -414,8 +414,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
 
   uint64_t value = 0;
 
-  ConstString class_name(descriptor->GetClassName());
-  llvm::StringRef class_name_ref(class_name.GetStringRef());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
   static constexpr llvm::StringLiteral g_DictionaryI("__NSDictionaryI");
   static constexpr llvm::StringLiteral g_DictionaryM("__NSDictionaryM");
@@ -434,11 +433,10 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   static constexpr llvm::StringLiteral g_ConstantDictionary(
       "NSConstantDictionary");
 
-  if (class_name_ref.empty())
+  if (class_name.empty())
     return false;
 
-  if (class_name_ref == g_DictionaryI ||
-      class_name_ref == g_DictionaryMImmutable) {
+  if (class_name == g_DictionaryI || class_name == g_DictionaryMImmutable) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
@@ -446,15 +444,14 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
       return false;
 
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
-  } else if (class_name_ref == g_ConstantDictionary) {
+  } else if (class_name == g_ConstantDictionary) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(
         valobj_addr + 2 * ptr_size, ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name_ref == g_DictionaryM ||
-             class_name_ref == g_DictionaryMLegacy ||
-             class_name_ref == g_DictionaryMFrozen) {
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy ||
+             class_name == g_DictionaryMFrozen) {
     AppleObjCRuntime *apple_runtime =
         llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
@@ -468,13 +465,12 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     }
     if (error.Fail())
       return false;
-  } else if (class_name_ref == g_Dictionary1) {
+  } else if (class_name == g_Dictionary1) {
     value = 1;
-  } else if (class_name_ref == g_Dictionary0) {
+  } else if (class_name == g_Dictionary0) {
     value = 0;
-  } else if (class_name_ref == g_DictionaryCF ||
-             class_name_ref == g_DictionaryNSCF ||
-             class_name_ref == g_DictionaryCFRef) {
+  } else if (class_name == g_DictionaryCF || class_name == g_DictionaryNSCF ||
+             class_name == g_DictionaryCFRef) {
     ExecutionContext exe_ctx(process_sp);
     CFBasicHash cfbh;
     if (!cfbh.Update(valobj_addr, exe_ctx))
@@ -527,8 +523,7 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   if (!descriptor || !descriptor->IsValid())
     return nullptr;
 
-  ConstString class_name(descriptor->GetClassName());
-  llvm::StringRef class_name_ref(class_name.GetStringRef());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
   static constexpr llvm::StringLiteral g_DictionaryI("__NSDictionaryI");
   static constexpr llvm::StringLiteral g_DictionaryM("__NSDictionaryM");
@@ -544,15 +539,14 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   static constexpr llvm::StringLiteral g_ConstantDictionary(
       "NSConstantDictionary");
 
-  if (class_name_ref.empty())
+  if (class_name.empty())
     return nullptr;
 
-  if (class_name_ref == g_DictionaryI) {
+  if (class_name == g_DictionaryI) {
     return (new NSDictionaryISyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_ConstantDictionary) {
+  } else if (class_name == g_ConstantDictionary) {
     return (new NSConstantDictionarySyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_DictionaryM ||
-             class_name_ref == g_DictionaryMFrozen) {
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMFrozen) {
     if (runtime->GetFoundationVersion() >= 1437) {
       return (new Foundation1437::NSDictionaryMSyntheticFrontEnd(valobj_sp));
     } else if (runtime->GetFoundationVersion() >= 1428) {
@@ -560,13 +554,12 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
     } else {
       return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
     }
-  } else if (class_name_ref == g_DictionaryMLegacy) {
+  } else if (class_name == g_DictionaryMLegacy) {
     return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_Dictionary1) {
+  } else if (class_name == g_Dictionary1) {
     return (new NSDictionary1SyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_DictionaryCF ||
-             class_name_ref == g_DictionaryNSCF ||
-             class_name_ref == g_DictionaryCFRef) {
+  } else if (class_name == g_DictionaryCF || class_name == g_DictionaryNSCF ||
+             class_name == g_DictionaryCFRef) {
     return (new NSCFDictionarySyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSDictionary_Additionals::GetAdditionalSynthetics());

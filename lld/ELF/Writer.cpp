@@ -441,7 +441,7 @@ bool elf::includeInSymtab(Ctx &ctx, const Symbol &b) {
     assert(sec->isLive());
 
     if (auto *s = dyn_cast<MergeInputSection>(sec))
-      return s->getSectionPiece(d->value).live;
+      return d->isSection() || s->getSectionPiece(d->value).live;
     return true;
   }
   return b.hasFlag(USED) || !ctx.arg.gcSections;
