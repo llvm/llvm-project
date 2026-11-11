@@ -1,6 +1,7 @@
 add_clang_library(MLIRCIRAnalysis
   CIRAliasAnalysis.cpp
   CIRBasicAliasAnalysis.cpp
+  CIRConstantFolding.cpp
   CIRFallOffAnalysis.cpp
 
   DEPENDS
@@ -10,5 +11,6 @@ add_clang_library(MLIRCIRAnalysis
   MLIRCIR
   MLIRIR
   MLIRAnalysisBase
+  MLIRControlFlowInterfaces
   MLIRSideEffectInterfaces
 )

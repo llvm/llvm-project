@@ -18,9 +18,8 @@
 #include "clang/CIR/Dialect/Analysis/CIRFallOffAnalysis.h"
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Threading.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "clang/CIR/Dialect/Analysis/CIRConstantFolding.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
@@ -138,79 +137,10 @@ private:
 
 } // namespace
 
-/// Fold `value` to a constant through side-effect-free operations.
-static mlir::Attribute foldToConstant(mlir::Value value, unsigned depth = 0) {
-  mlir::Attribute attr;
-  if (mlir::matchPattern(value, mlir::m_Constant(&attr)))
-    return attr;
-
-  constexpr unsigned maxDepth = 8;
-  if (depth >= maxDepth)
-    return {};
-
-  // C conditions such as `while (1)` or `x || 1` convert between int and
-  // bool, which the cast folder leaves alone.
-  if (auto cast = value.getDefiningOp<CastOp>()) {
-    if (cast.getKind() == CastKind::int_to_bool) {
-      if (auto intAttr = mlir::dyn_cast_if_present<IntAttr>(
-              foldToConstant(cast.getSrc(), depth + 1)))
-        return BoolAttr::get(value.getContext(), !intAttr.getValue().isZero());
-      return {};
-    }
-    if (cast.getKind() == CastKind::bool_to_int) {
-      if (auto boolAttr = mlir::dyn_cast_if_present<BoolAttr>(
-              foldToConstant(cast.getSrc(), depth + 1)))
-        return IntAttr::get(cast.getType(), boolAttr.getValue() ? 1 : 0);
-      return {};
-    }
-  }
-
-  // `x || 1` and `x && 0` become a cir.ternary whose arms yield the same
-  // constant, which the CFG check folds too.
-  if (auto ternary = value.getDefiningOp<TernaryOp>()) {
-    auto foldArm = [&](mlir::Region &arm) -> mlir::Attribute {
-      if (!arm.hasOneBlock() || !arm.front().mightHaveTerminator())
-        return {};
-      auto yield = mlir::dyn_cast<YieldOp>(arm.front().getTerminator());
-      if (!yield || yield.getNumOperands() != 1)
-        return {};
-      return foldToConstant(yield.getOperand(0), depth + 1);
-    };
-    mlir::Attribute trueValue = foldArm(ternary.getTrueRegion());
-    mlir::Attribute falseValue = foldArm(ternary.getFalseRegion());
-    if (auto cond = mlir::dyn_cast_if_present<BoolAttr>(
-            foldToConstant(ternary.getCond(), depth + 1)))
-      return cond.getValue() ? trueValue : falseValue;
-    return trueValue == falseValue ? trueValue : mlir::Attribute();
-  }
-
-  mlir::Operation *def = value.getDefiningOp();
-  if (!def || def->getNumResults() != 1 || def->getNumRegions() != 0 ||
-      !mlir::isMemoryEffectFree(def))
-    return {};
-  llvm::SmallVector<mlir::Attribute> operands;
-  for (mlir::Value operand : def->getOperands()) {
-    operands.push_back(foldToConstant(operand, depth + 1));
-    if (!operands.back())
-      return {};
-  }
-  llvm::SmallVector<mlir::OpFoldResult> results;
-  if (mlir::failed(def->fold(operands, results)) || results.size() != 1)
-    return {};
-  return mlir::dyn_cast_if_present<mlir::Attribute>(results.front());
-}
-
-static std::optional<bool> getConstantBool(mlir::Value value) {
-  mlir::Attribute attr = foldToConstant(value);
-  if (auto boolAttr = mlir::dyn_cast_if_present<BoolAttr>(attr))
-    return boolAttr.getValue();
-  return std::nullopt;
-}
-
 /// The outcomes `cond` may have, as `CondTrue` and `CondFalse`: both, unless it
 /// folds to a constant.
 static Exits getCondExits(mlir::Value cond) {
-  std::optional<bool> value = getConstantBool(cond);
+  std::optional<bool> value = tryFoldConstantBool(cond);
   if (!value)
     return Exits::CondTrue | Exits::CondFalse;
   return *value ? Exits::CondTrue : Exits::CondFalse;
@@ -219,7 +149,7 @@ static Exits getCondExits(mlir::Value cond) {
 /// `__builtin_assume(0)` is noreturn for the CFG check.
 static bool isAssumeFalse(mlir::Operation *op) {
   auto assume = mlir::dyn_cast<AssumeOp>(op);
-  return assume && getConstantBool(assume.getPredicate()) == false;
+  return assume && tryFoldConstantBool(assume.getPredicate()) == false;
 }
 
 /// The only operation with regions in a single-block \p region, if any.
