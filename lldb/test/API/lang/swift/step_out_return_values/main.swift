@@ -27,6 +27,9 @@ struct HasClass {
   var k = K()
 }
 
+enum NoPayload { case a, b, c }
+enum RawValue: Int { case x = 10, y = 20 }
+
 struct Counter {
   var x = 5
   mutating func increment() -> Int {
@@ -55,6 +58,13 @@ func f_has_class() -> HasClass { return HasClass() }
 func f_closure() -> () -> Int { return { 12 } }
 func f_throws() throws -> Int { return 14 }
 func f_throwing() throws -> Int { throw E() }
+func f_no_payload() -> NoPayload { return .c }
+func f_raw_value() -> RawValue { return .y }
+func f_optional_int() -> Int? { return 5 }
+func f_optional_nil() -> Int? { return nil }
+func f_optional_class() -> K? { return K() }
+func f_optional_string() -> String? { return "optional" }
+func f_tuple() -> (Int, Int) { return (8, 9) }
 
 func main() {
   let v_int = f_int()
@@ -77,6 +87,13 @@ func main() {
   } catch let v_throwing {
     _ = v_throwing
   }
+  let v_no_payload = f_no_payload()
+  let v_raw_value = f_raw_value()
+  let v_optional_int = f_optional_int()
+  let v_optional_nil = f_optional_nil()
+  let v_optional_class = f_optional_class()
+  let v_optional_string = f_optional_string()
+  let v_tuple = f_tuple()
   let k = K()
   let v_answer = k.answer()
   let v_staticAnswer = K.staticAnswer()
@@ -85,8 +102,9 @@ func main() {
   let v_increment = counter.increment()
   _ = (v_int, v_int8, v_uint32, v_bool, v_float, v_double, v_class, v_string,
        v_long_string, v_two_int8, v_two_int, v_bool_int32,
-       v_has_class, v_closure, v_throws, v_answer, v_staticAnswer, v_computed,
-       v_increment)
+       v_has_class, v_closure, v_throws, v_no_payload, v_raw_value,
+       v_optional_int, v_optional_nil, v_optional_class, v_optional_string,
+       v_tuple, v_answer, v_staticAnswer, v_computed, v_increment)
 }
 
 main()

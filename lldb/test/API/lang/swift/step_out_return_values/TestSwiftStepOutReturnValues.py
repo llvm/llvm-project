@@ -77,12 +77,22 @@ class TestCase(lldbtest.TestBase):
             "f_has_class",
             "f_closure",
             "f_throws",
+            "f_no_payload",
+            "f_raw_value",
+            "f_tuple",
             "answer",
             "increment",
             "staticAnswer",
             "computed",
         ]
-        if not self.isEmbeddedSwift():
+        if self.isEmbeddedSwift():
+            functions += [
+                "f_optional_int",
+                "f_optional_nil",
+                "f_optional_class",
+                "f_optional_string",
+            ]
+        else:
             # rdar://192368824
             functions.append("f_throwing")
         self.assertEqual(self.return_value_problems(functions), [])
