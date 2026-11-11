@@ -157,8 +157,8 @@ inline uint16_t Checksum(cpp::span<char> dst) {
   uint16_t sum1 = 0;
   uint16_t sum2 = 0;
   for (char c : dst) {
-    sum1 = (sum1 + static_cast<uint16_t>(c)) % 255U;
-    sum2 = (sum2 + sum1) % 255U;
+    sum1 = static_cast<uint16_t>((sum1 + static_cast<uint16_t>(c)) % 255U);
+    sum2 = static_cast<uint16_t>((sum2 + sum1) % 255U);
   }
   return static_cast<uint16_t>((sum2 << 8) | sum1);
 }

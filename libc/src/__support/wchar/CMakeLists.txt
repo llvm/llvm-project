@@ -105,6 +105,7 @@ add_header_library(
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    libc.src.__support.macros.properties.types
     .string_converter
     .character_converter
     .mbstate

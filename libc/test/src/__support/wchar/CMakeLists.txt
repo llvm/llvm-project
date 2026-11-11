@@ -52,6 +52,7 @@ add_libc_test(
     libc.src.__support.wchar.character_converter
     libc.src.__support.wchar.mbstate
     libc.src.__support.error_or
+    libc.src.__support.macros.properties.types
     libc.src.__support.wchar.wcsnrtombs
     libc.hdr.errno_macros
     libc.hdr.types.char32_t

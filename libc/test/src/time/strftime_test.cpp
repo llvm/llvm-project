@@ -72,7 +72,7 @@ public:
 
 TEST(LlvmLibcStrftimeTest, ConstantConversions) {
   // this tests %n, %t, and %%, which read nothing.
-  struct tm time;
+  struct tm time{};
   char buffer[100];
   size_t written = 0;
 

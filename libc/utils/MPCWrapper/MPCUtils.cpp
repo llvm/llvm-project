@@ -31,6 +31,7 @@ static inline cpp::string str(RoundingMode mode) {
   case RoundingMode::Nearest:
     return "MPFR_RNDN";
   }
+  __builtin_unreachable();
 }
 
 class MPCNumber {

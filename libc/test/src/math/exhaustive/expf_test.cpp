@@ -76,6 +76,8 @@ TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, NegativeRange) {
 }
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
+namespace {
+
 // Statically rounded implementation: tested against double_eval across all
 // roundings.
 using LlvmLibcExpfStaticRoundingExhaustiveTest =
@@ -90,3 +92,5 @@ TEST_F(LlvmLibcExpfStaticRoundingExhaustiveTest, PositiveRange) {
 TEST_F(LlvmLibcExpfStaticRoundingExhaustiveTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP);
 }
+
+} // namespace

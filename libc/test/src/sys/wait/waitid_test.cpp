@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/bit.h"
 #include "src/sys/wait/waitid.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -33,7 +34,8 @@ TEST_F(LlvmLibcWaitidTest, InvalidFlags) {
 TEST_F(LlvmLibcWaitidTest, InvalidIdType) {
   siginfo_t info;
   ASSERT_THAT(
-      LIBC_NAMESPACE::waitid(static_cast<idtype_t>(-1), 0, &info, WEXITED),
+      LIBC_NAMESPACE::waitid(LIBC_NAMESPACE::cpp::bit_cast<idtype_t>(-1), 0,
+                             &info, WEXITED),
       Fails(EINVAL));
 }
 

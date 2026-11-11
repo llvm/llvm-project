@@ -73,8 +73,9 @@ TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
     ASSERT_EQ(write_test_file(test_file, test_case.contents), 0);
     cpp::optional<size_t> parsed = sysinfo::parse_nproc_from(test_file);
     EXPECT_EQ(static_cast<bool>(parsed), static_cast<bool>(test_case.expected));
-    if (parsed)
+    if (parsed) {
       EXPECT_EQ(*parsed, *test_case.expected);
+    }
     EXPECT_GT(sysinfo::parse_nproc_with_fallback_from(test_file), size_t(0));
   }
 

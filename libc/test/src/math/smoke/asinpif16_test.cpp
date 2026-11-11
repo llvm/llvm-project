@@ -7,18 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/asinpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 
 using LlvmLibcAsinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
+  using LIBC_NAMESPACE::fputil::cast;
   // zero
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asinpif16(zero));
 
   // +/-1
-  EXPECT_FP_EQ(0.5f16, LIBC_NAMESPACE::asinpif16(1.0));
-  EXPECT_FP_EQ(-0.5f16, LIBC_NAMESPACE::asinpif16(-1.0));
+  EXPECT_FP_EQ(0.5f16, LIBC_NAMESPACE::asinpif16(cast<float16>(1.0)));
+  EXPECT_FP_EQ(-0.5f16, LIBC_NAMESPACE::asinpif16(cast<float16>(-1.0)));
 
   // NaN inputs
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::asinpif16(aNaN));

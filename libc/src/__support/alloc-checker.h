@@ -34,6 +34,11 @@ public:
   LIBC_INLINE static void *alloc(size_t s, AllocChecker &ac) {
     void *mem = ::malloc(s);
     ac = (mem != nullptr);
+#ifdef LIBC_COMPILER_IS_GCC
+    // Prevent GCC's -Wmismatched-new-delete from tracking the inlined malloc
+    // call back from our custom operator delete overloads.
+    __asm__("" : "+r"(mem));
+#endif
     return mem;
   }
 
@@ -49,6 +54,9 @@ public:
     void *mem = ::aligned_alloc(static_cast<size_t>(align), s);
 #endif
     ac = (mem != nullptr);
+#ifdef LIBC_COMPILER_IS_GCC
+    __asm__("" : "+r"(mem));
+#endif
     return mem;
   }
 };

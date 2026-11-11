@@ -593,7 +593,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 // Emulated float128 tests
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
-  int exponent;
+  int exponent = 0;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
 
   EXPECT_FP_EQ(Float128(0.0),

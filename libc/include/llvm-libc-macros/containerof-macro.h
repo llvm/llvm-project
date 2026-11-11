@@ -14,7 +14,7 @@
 #define __containerof(ptr, type, member)                                       \
   ({                                                                           \
     const __typeof(((type *)0)->member) *__ptr = (ptr);                        \
-    (type *)(void *)((const char *)__ptr - offsetof(type, member));            \
+    (type *)(__UINTPTR_TYPE__)((const char *)__ptr - offsetof(type, member));  \
   })
 
 #endif // LLVM_LIBC_MACROS_CONTAINEROF_MACRO_H

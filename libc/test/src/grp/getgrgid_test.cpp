@@ -118,11 +118,12 @@ TEST_F(LlvmLibcGetgrgidTest, LongRecordGrowsBuffer) {
     if (i > 0)
       content[offset++] = ',';
     content[offset++] = 'u';
+    content[offset++] = LIBC_NAMESPACE::internal::int_to_b36_char(
+        static_cast<int>((i / 100) % 10));
+    content[offset++] = LIBC_NAMESPACE::internal::int_to_b36_char(
+        static_cast<int>((i / 10) % 10));
     content[offset++] =
-        LIBC_NAMESPACE::internal::int_to_b36_char((i / 100) % 10);
-    content[offset++] =
-        LIBC_NAMESPACE::internal::int_to_b36_char((i / 10) % 10);
-    content[offset++] = LIBC_NAMESPACE::internal::int_to_b36_char(i % 10);
+        LIBC_NAMESPACE::internal::int_to_b36_char(static_cast<int>(i % 10));
   }
   content[offset++] = '\n';
   content[offset] = '\0';

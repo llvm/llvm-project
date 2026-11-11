@@ -23,7 +23,14 @@
 // Define char8_t in C++ for internal usage if it is not provided by compiler
 // or system uchar.h header.
 #ifndef __cpp_char8_t
+#if defined(__GNUC__) && !defined(__clang__) && defined(__cplusplus)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++20-compat"
+#endif
 using char8_t = unsigned char;
+#if defined(__GNUC__) && !defined(__clang__) && defined(__cplusplus)
+#pragma GCC diagnostic pop
+#endif
 #endif // !__cpp_char8_t
 
 #endif // LIBC_FULL_BUILD
