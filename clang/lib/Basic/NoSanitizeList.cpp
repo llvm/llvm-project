@@ -16,6 +16,7 @@
 #include "clang/Basic/SanitizerSpecialCaseList.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceManager.h"
+#include <algorithm>
 
 using namespace clang;
 
@@ -28,13 +29,20 @@ NoSanitizeList::NoSanitizeList(const std::vector<std::string> &NoSanitizePaths,
 NoSanitizeList::~NoSanitizeList() = default;
 
 bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
-                                    StringRef Name, StringRef Category) const {
+                                    StringRef Name, StringRef Category,
+                                    StringRef AltName) const {
   std::pair<unsigned, unsigned> NoSan =
       SSCL->inSectionBlame(Mask, Prefix, Name, Category);
+  if (!AltName.empty())
+    NoSan =
+        std::max(NoSan, SSCL->inSectionBlame(Mask, Prefix, AltName, Category));
   if (NoSan == llvm::SpecialCaseList::NotFound)
     return false;
   std::pair<unsigned, unsigned> San =
       SSCL->inSectionBlame(Mask, Prefix, Name, "sanitize");
+  if (!AltName.empty())
+    San =
+        std::max(San, SSCL->inSectionBlame(Mask, Prefix, AltName, "sanitize"));
   // The statement evaluates to true under the following conditions:
   // 1. The string "prefix:*=sanitize" is absent.
   // 2. If "prefix:*=sanitize" is present, its (File Index, Line Number) is less
@@ -43,8 +51,9 @@ bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
 }
 
 bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
-                                    StringRef Category) const {
-  return containsPrefix(Mask, "global", GlobalName, Category);
+                                    StringRef Category,
+                                    StringRef AltGlobalName) const {
+  return containsPrefix(Mask, "global", GlobalName, Category, AltGlobalName);
 }
 
 bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
@@ -53,8 +62,9 @@ bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
 }
 
 bool NoSanitizeList::containsFunction(SanitizerMask Mask,
-                                      StringRef FunctionName) const {
-  return containsPrefix(Mask, "fun", FunctionName, {});
+                                      StringRef FunctionName,
+                                      StringRef AltFunctionName) const {
+  return containsPrefix(Mask, "fun", FunctionName, {}, AltFunctionName);
 }
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,

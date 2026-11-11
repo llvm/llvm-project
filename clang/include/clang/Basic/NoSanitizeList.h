@@ -30,17 +30,20 @@ class NoSanitizeList {
   std::unique_ptr<SanitizerSpecialCaseList> SSCL;
   SourceManager &SM;
   bool containsPrefix(SanitizerMask Mask, StringRef Prefix, StringRef Name,
-                      StringRef Category) const;
+                      StringRef Category,
+                      StringRef AltName = StringRef()) const;
 
 public:
   NoSanitizeList(const std::vector<std::string> &NoSanitizeListPaths,
                  SourceManager &SM);
   ~NoSanitizeList();
   bool containsGlobal(SanitizerMask Mask, StringRef GlobalName,
-                      StringRef Category = StringRef()) const;
+                      StringRef Category = StringRef(),
+                      StringRef AltGlobalName = StringRef()) const;
   bool containsType(SanitizerMask Mask, StringRef MangledTypeName,
                     StringRef Category = StringRef()) const;
-  bool containsFunction(SanitizerMask Mask, StringRef FunctionName) const;
+  bool containsFunction(SanitizerMask Mask, StringRef FunctionName,
+                        StringRef AltFunctionName = StringRef()) const;
   bool containsFile(SanitizerMask Mask, StringRef FileName,
                     StringRef Category = StringRef()) const;
   bool containsMainFile(SanitizerMask Mask, StringRef FileName,

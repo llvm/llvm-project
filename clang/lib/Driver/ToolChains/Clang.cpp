@@ -6710,6 +6710,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
+  Args.addOptInFlag(CmdArgs, options::OPT_fhash_mangled_names,
+                    options::OPT_fno_hash_mangled_names);
 
   if (getLastProfileSampleUseArg(Args) &&
       Args.hasFlag(options::OPT_fsample_profile_use_profi,

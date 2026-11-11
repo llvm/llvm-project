@@ -373,6 +373,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### New Compiler Flags
 
+- Added `-fhash-mangled-names` (and `-fno-hash-mangled-names`, the default) on
+  ELF targets to shorten long Itanium C++ mangled symbol names by emitting a
+  scope-only Itanium mangling followed by a `.h.<uint64>` clone-style suffix
+  computed from the 64-bit BLAKE3 hash of the full mangled name whenever that
+  is strictly shorter. Because `.h.<digits>` conforms to the standard
+  supported grammar after a complete `_Z` encoding, existing demanglers
+  should be able to demangle those new hashed symbols without any issue.
+
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,
   such as an umbrella directory or the directory of an umbrella header, after it

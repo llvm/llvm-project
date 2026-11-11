@@ -2835,6 +2835,32 @@ $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 ```
 :::
 
+(fhash_mangled_names)=
+(fhash-mangled-names)=
+
+:::{option} -f[no-]hash-mangled-names
+
+Shorten long Itanium C++ mangled symbol names on ELF targets by replacing
+template arguments, function parameter/return types, method qualifiers, and ABI
+tags with a `.h.<uint64>` suffix derived from the 64-bit BLAKE3 hash of the full
+mangled name whenever the hashed form is strictly shorter than the original
+mangled name. Because `.h.<digits>` conforms to the standard grammar
+after a valid scope-only `_Z` encoding, existing C++ demanglers and symbolizers
+should be able to demangle these without any issue.
+
+Declarations in top-level standard/runtime namespaces (`std`, `__gnu_cxx`,
+`__gnu_debug`, `__cxxabiv1`), global allocation/deallocation operators,
+typeinfo name strings (`_ZTS`), CUDA/HIP/OpenCL device symbols and kernel entry
+points, and non-ELF targets keep standard unhashed Itanium manglings.
+Sanitizer ignorelists (`-fsanitize-ignorelist`), XRay attribute lists
+(`-fxray-attr-list`), and profile lists (`-fprofile-list`) match both the
+hashed symbol name and the canonical unhashed mangled name.
+
+Note that `-fhash-mangled-names` changes emitted C++ symbol names; translation
+units that share hashed C++ symbols across object or library boundaries must be
+compiled consistently with the same setting. Off by default.
+:::
+
 :::{option} -f[no-]keep-inline-functions
 
 Force inline functions to be emitted into the object file, even when they

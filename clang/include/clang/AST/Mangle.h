@@ -66,6 +66,7 @@ private:
   /// For aux target. If true, uses mangling number for aux target from
   /// ASTContext.
   bool IsAux = false;
+  bool SuppressHashMangledNames = false;
 
   llvm::DenseMap<const BlockDecl *, unsigned> GlobalBlockIds;
   llvm::DenseMap<const BlockDecl *, unsigned> LocalBlockIds;
@@ -76,6 +77,12 @@ public:
   ManglerKind getKind() const { return Kind; }
 
   bool isAux() const { return IsAux; }
+
+  bool isHashMangledNamesSuppressed() const { return SuppressHashMangledNames; }
+
+  void setSuppressHashMangledNames(bool Suppress) {
+    SuppressHashMangledNames = Suppress;
+  }
 
   explicit MangleContext(ASTContext &Context, DiagnosticsEngine &Diags,
                          ManglerKind Kind, bool IsAux = false)

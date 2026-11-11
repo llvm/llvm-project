@@ -2777,6 +2777,27 @@ std::string CodeGenModule::getMangledNameIgnoringAsmLabel(GlobalDecl GD,
   return MangledName;
 }
 
+StringRef CodeGenModule::getUnhashedMangledName(StringRef Name) const {
+  if (!LangOpts.HashMangledNames || !Name.contains(".h."))
+    return StringRef();
+  if (auto It = UnhashedManglings.find(Name); It != UnhashedManglings.end())
+    return It->second;
+  GlobalDecl GD;
+  if (!lookupRepresentativeDecl(Name, GD) || !GD.getDecl())
+    return StringRef();
+  const auto *ND = dyn_cast<NamedDecl>(GD.getDecl());
+  if (!ND)
+    return StringRef();
+  auto &MutableThis = *const_cast<CodeGenModule *>(this);
+  MangleContext &MC = MutableThis.getCXXABI().getMangleContext();
+  bool PrevSuppress = MC.isHashMangledNamesSuppressed();
+  MC.setSuppressHashMangledNames(true);
+  std::string Unhashed = getMangledNameImpl(MutableThis, GD, ND);
+  MC.setSuppressHashMangledNames(PrevSuppress);
+  auto [Inserted, _] = UnhashedManglings.try_emplace(Name, std::move(Unhashed));
+  return Inserted->second;
+}
+
 StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
                                              const BlockDecl *BD) {
   MangleContext &MangleCtx = getCXXABI().getMangleContext();
@@ -4476,8 +4497,10 @@ void CodeGenModule::AddGlobalAnnotations(const ValueDecl *D,
 bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
                                        SourceLocation Loc) const {
   const auto &NoSanitizeL = getContext().getNoSanitizeList();
-  // NoSanitize by function name.
-  if (NoSanitizeL.containsFunction(Kind, Fn->getName()))
+  // NoSanitize by function name (also matching unhashed canonical mangled names
+  // under -fhash-mangled-names).
+  if (NoSanitizeL.containsFunction(Kind, Fn->getName(),
+                                   getUnhashedMangledName(Fn->getName())))
     return true;
   // NoSanitize by location. Check "mainfile" prefix.
   auto &SM = Context.getSourceManager();
@@ -4498,7 +4521,8 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
                                        SourceLocation Loc, QualType Ty,
                                        StringRef Category) const {
   const auto &NoSanitizeL = getContext().getNoSanitizeList();
-  if (NoSanitizeL.containsGlobal(Kind, GV->getName(), Category))
+  if (NoSanitizeL.containsGlobal(Kind, GV->getName(), Category,
+                                 getUnhashedMangledName(GV->getName())))
     return true;
   auto &SM = Context.getSourceManager();
   if (NoSanitizeL.containsMainFile(
@@ -4532,8 +4556,13 @@ bool CodeGenModule::imbueXRayAttrs(llvm::Function *Fn, SourceLocation Loc,
   auto Attr = ImbueAttr::NONE;
   if (Loc.isValid())
     Attr = XRayFilter.shouldImbueLocation(Loc, Category);
-  if (Attr == ImbueAttr::NONE)
-    Attr = XRayFilter.shouldImbueFunction(Fn->getName());
+  if (Attr == ImbueAttr::NONE) {
+    StringRef Unhashed = getUnhashedMangledName(Fn->getName());
+    if (!Unhashed.empty())
+      Attr = XRayFilter.shouldImbueFunction(Unhashed);
+    if (Attr == ImbueAttr::NONE)
+      Attr = XRayFilter.shouldImbueFunction(Fn->getName());
+  }
   switch (Attr) {
   case ImbueAttr::NONE:
     return false;
@@ -4559,7 +4588,12 @@ CodeGenModule::isFunctionBlockedByProfileList(llvm::Function *Fn,
   if (ProfileList.isEmpty())
     return ProfileList::Allow;
   llvm::driver::ProfileInstrKind Kind = getCodeGenOpts().getProfileInstr();
-  // First, check the function name.
+  // First, check the function name (preferring the unhashed canonical mangled
+  // name under -fhash-mangled-names so allow/forbid precedence matches).
+  StringRef Unhashed = getUnhashedMangledName(Fn->getName());
+  if (!Unhashed.empty())
+    if (auto V = ProfileList.isFunctionExcluded(Unhashed, Kind))
+      return *V;
   if (auto V = ProfileList.isFunctionExcluded(Fn->getName(), Kind))
     return *V;
   // Next, check the source location.
@@ -9015,6 +9049,7 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   assert(NewBuilder->Manglings.empty() &&
          "Newly created module should not have manglings");
   NewBuilder->Manglings = std::move(Manglings);
+  NewBuilder->UnhashedManglings = std::move(UnhashedManglings);
 
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
