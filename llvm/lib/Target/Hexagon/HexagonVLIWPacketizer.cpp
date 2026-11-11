@@ -130,6 +130,7 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
   addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.

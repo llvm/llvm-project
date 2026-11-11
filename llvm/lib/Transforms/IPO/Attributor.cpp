@@ -3715,16 +3715,20 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                              UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAInvariantLoadPointer>(
           IRPosition::value(*LI->getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*LI->getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      }
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
       getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
                            UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*SI.getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI.getPointerOperand()));
+      }
     }
     return true;
   };

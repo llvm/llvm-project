@@ -28,7 +28,6 @@
 name:            Unconditional_branch
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: Unconditional_branch
   ; MIPS32: bb.0.entry:
@@ -60,7 +59,6 @@ body:             |
 name:            Conditional_branch
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   ; MIPS32-LABEL: name: Conditional_branch
   ; MIPS32: bb.0 (%ir-block.0):

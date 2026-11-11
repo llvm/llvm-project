@@ -211,6 +211,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Removed `LiveVariables` analysis
 
+* `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
+  ptradd-compatible representation, using a sequence of `getelementptr i8` and
+  `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`
+  method can be used to temporarily disable this behavior. This method exists
+  only to allow incremental migration of LLVM IR tests, and will be removed in
+  the near future.
+
 ### Changes to building LLVM
 
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
@@ -497,6 +504,9 @@ Makes programs 10x faster by doing Special New Thing.
 * The new `LLVMParseCommandLineOptionsWithError()` function provides an
   alternative to `LLVMParseCommandLineOptions()` that also captures any error
   during parsing.
+
+* Added `LLVMPrintMetadataToString()` to obtain a `LLVMMetadataRef`'s string
+  representation without having to convert it to a `LLVMValueRef` first.
 
 ### Changes to the CodeGen infrastructure
 

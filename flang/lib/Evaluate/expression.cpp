@@ -39,10 +39,7 @@ Expr<Type<TypeCategory::Character>>::LEN() const {
             }
           },
           [](const Parentheses<Result> &x) { return x.left().LEN(); },
-          [](const Convert<Result> &x) {
-            return common::visit(
-                [&](const auto &kx) { return kx.LEN(); }, x.left().u);
-          },
+          [](const Convert<Result> &x) { return x.left().LEN(); },
           [](const Concat &c) -> T {
             if (auto llen{c.left().LEN()}) {
               if (auto rlen{c.right().LEN()}) {
@@ -137,7 +134,7 @@ template <typename A> int ExpressionBase<A>::Corank() const {
       derived().u);
 }
 
-DynamicType Parentheses<SomeDerived>::GetType() const {
+DynamicType Parentheses<Type<TypeCategory::Derived>>::GetType() const {
   return left().GetType().value();
 }
 
@@ -207,7 +204,7 @@ bool ArrayConstructor<Type<TypeCategory::Character>>::operator==(
       static_cast<const Base &>(*this) == static_cast<const Base &>(that);
 }
 
-bool ArrayConstructor<SomeDerived>::operator==(
+bool ArrayConstructor<Type<TypeCategory::Derived>>::operator==(
     const ArrayConstructor &that) const {
   return result_ == that.result_ &&
       static_cast<const Base &>(*this) == static_cast<const Base &>(that);
@@ -256,16 +253,8 @@ bool Expr<Type<TypeCategory::Unsigned>>::operator==(
   return kind() == that.kind() && u == that.u;
 }
 
-template <TypeCategory CAT>
-bool Expr<SomeKind<CAT>>::operator==(const Expr<SomeKind<CAT>> &that) const {
-  return kind() == that.kind() && u == that.u;
-}
-
-bool Expr<SomeDerived>::operator==(const Expr<SomeDerived> &that) const {
-  return kind() == that.kind() && u == that.u;
-}
-
-bool Expr<SomeCharacter>::operator==(const Expr<SomeCharacter> &that) const {
+bool Expr<Type<TypeCategory::Derived>>::operator==(
+    const Expr<Type<TypeCategory::Derived>> &that) const {
   return kind() == that.kind() && u == that.u;
 }
 
@@ -292,8 +281,9 @@ std::optional<Expr<SomeType>> StructureConstructor::CreateParentComponent(
             *componentSymbol, common::Clone(childIter.second.value()));
         ++parentIter;
       }
-      Constant<SomeDerived> constResult{std::move(structureConstructor)};
-      Expr<SomeDerived> result{std::move(constResult)};
+      Constant<Type<TypeCategory::Derived>> constResult{
+          std::move(structureConstructor)};
+      Expr<Type<TypeCategory::Derived>> result{std::move(constResult)};
       return std::optional<Expr<SomeType>>{result};
     }
   }
@@ -331,10 +321,11 @@ std::optional<Expr<SomeType>> StructureConstructor::Find(
   // component is always the first one
   if (!values_.empty()) {
     const Expr<SomeType> *parentExpr{&values_.begin()->second.value()};
-    if (const Expr<SomeDerived> *derivedExpr{
-            std::get_if<Expr<SomeDerived>>(&parentExpr->u)}) {
-      if (const Constant<SomeDerived> *constExpr{
-              std::get_if<Constant<SomeDerived>>(&derivedExpr->u)}) {
+    if (const Expr<Type<TypeCategory::Derived>> *derivedExpr{
+            std::get_if<Expr<Type<TypeCategory::Derived>>>(&parentExpr->u)}) {
+      if (const Constant<Type<TypeCategory::Derived>> *constExpr{
+              std::get_if<Constant<Type<TypeCategory::Derived>>>(
+                  &derivedExpr->u)}) {
         if (std::optional<StructureConstructor> parentComponentValue{
                 constExpr->GetScalarValue()}) {
           // Try to find the component in the parent structure constructor
@@ -362,13 +353,11 @@ void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
   delete p;
 }
 
-std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
-  return common::visit([](const auto &kx) { return kx.LEN(); }, u);
-}
-
-Parentheses<SomeDerived>::Parentheses(const Expr<SomeDerived> &x)
+Parentheses<Type<TypeCategory::Derived>>::Parentheses(
+    const Expr<Type<TypeCategory::Derived>> &x)
     : Base{x.kind(), x} {}
-Parentheses<SomeDerived>::Parentheses(Expr<SomeDerived> &&x)
+Parentheses<Type<TypeCategory::Derived>>::Parentheses(
+    Expr<Type<TypeCategory::Derived>> &&x)
     : Base{x.kind(), std::move(x)} {}
 
 ComplexComponent::ComplexComponent(bool isImaginary, const Expr<Operand> &x)
