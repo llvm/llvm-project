@@ -39,6 +39,12 @@ bug reports using a particular framework, please make a thread on
 [LLVM Discourse](https://discourse.llvm.org/) to plan out how to file those
 reports.
 
+Issues found by fuzzing or by similar automated bug-finding tools should, at
+least, say so in the issue title, e.g., by including `fuzzer-found`. A statement
+buried in a long description is easy to miss, and a clear indication in the
+title helps maintainers triage these issues. Mentioning it also in the
+description and/or with labels is welcome.
+
 (crashes the compiler)=
 
 ## Crashing Bugs
