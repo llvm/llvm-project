@@ -29,6 +29,8 @@ void __apply(size_t chunk_count, void* context, void (*func)(void* context, size
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
 #elif _LIBCPP_HAS_THREADS
   // Otherwise, if threading is enabled on the platform, use the task scheduler built on top of std::thread.
+  // Scheduler is stored in __no_destroy<> instead of using _LIBCPP_NO_DESTROY to guarantee it's never destroyed
+  // regardless of a compiler; not destroying is not an optimization, it's a matter of correctness here.
   static constinit std::once_flag once;
   static constinit std::__no_destroy<Scheduler> sched{std::__uninitialized_tag{}};
   std::call_once(once, []() { sched.__emplace(); });
