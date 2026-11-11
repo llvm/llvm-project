@@ -5719,28 +5719,32 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   llvm::FunctionType *IRFuncTy = getTypes().GetFunctionType(CallInfo);
 
   const Decl *TargetDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
-    // We can only guarantee that a function is called from the correct
-    // context/function based on the appropriate target attributes,
-    // so only check in the case where we have both always_inline and target
-    // since otherwise we could be making a conditional call after a check for
-    // the proper cpu features (and it won't cause code generation issues due to
-    // function based code generation).
-    if ((TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-         (TargetDecl->hasAttr<TargetAttr>() ||
-          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
-        (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
-         (CurFuncDecl->hasAttr<TargetAttr>() ||
-          TargetDecl->hasAttr<TargetAttr>())))
-      checkTargetFeatures(Loc, FD);
-  }
-
-  // Some architectures (such as x86-64) have the ABI changed based on
-  // attribute-target/features. Give them a chance to diagnose.
   const FunctionDecl *CallerDecl = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   const FunctionDecl *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  CGM.getTargetCodeGenInfo().checkFunctionCallABI(CGM, Loc, CallerDecl,
-                                                  CalleeDecl, CallArgs, RetTy);
+  // We can only guarantee that a function is called from the correct
+  // context/function based on the appropriate target attributes,
+  // so only check in the case where we have both always_inline and target
+  // since otherwise we could be making a conditional call after a check for
+  // the proper cpu features (and it won't cause code generation issues due to
+  // function based code generation).
+  bool CheckFeatures =
+      CalleeDecl && ((TargetDecl->hasAttr<AlwaysInlineAttr>() &&
+                      (TargetDecl->hasAttr<TargetAttr>() ||
+                       (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
+                     (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
+                      (CurFuncDecl->hasAttr<TargetAttr>() ||
+                       TargetDecl->hasAttr<TargetAttr>())));
+  bool DeferTargetChecks =
+      CGM.shouldDeferCallTargetChecks(CallerDecl, CalleeDecl);
+  if (!DeferTargetChecks) {
+    if (CheckFeatures)
+      checkTargetFeatures(Loc, CalleeDecl);
+
+    // Some architectures (such as x86-64) have the ABI changed based on
+    // attribute-target/features. Give them a chance to diagnose.
+    CGM.getTargetCodeGenInfo().checkFunctionCallABI(
+        CGM, Loc, CallerDecl, CalleeDecl, CallArgs, RetTy);
+  }
 
   // 1. Set up the arguments.
 
@@ -6431,6 +6435,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                               BundleList);
     EmitBlock(Cont);
   }
+  if (DeferTargetChecks)
+    CGM.deferCallTargetChecks(Loc, CallerDecl, CalleeDecl, CI, CallArgs, RetTy,
+                              CheckFeatures);
   if (CI->getCalledFunction() && CI->getCalledFunction()->hasName() &&
       CI->getCalledFunction()->getName().starts_with("_Z4sqrt")) {
     SetSqrtFPAccuracy(CI);

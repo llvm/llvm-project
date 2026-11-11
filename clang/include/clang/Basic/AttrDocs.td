@@ -3426,6 +3426,28 @@ the front end.
 Note that this attribute does not apply transitively to nested functions such
 as blocks or C++ lambdas.
 
+A function that is marked `always_inline` and has no `target` attribute is
+compiled with the target features that all of its callers have in common, so
+that it can be inlined into each of them. It can therefore call `always_inline`
+functions that require more features than were enabled on the command line,
+such as target intrinsics, as long as every function that calls it enables
+them:
+
+```c++
+__attribute__((always_inline))
+static __m256 twice(__m256 x) { return _mm256_add_ps(x, x); }
+
+__attribute__((target("avx")))
+__m256 twice_avx(__m256 x) { return twice(x); } // OK, twice is AVX code here.
+```
+
+This only holds for functions that cannot run in any other way: the definition
+must not be callable from other translation units (as is the case for `static`
+and `inline` functions and for implicit template instantiations), its only uses
+must be direct calls from other functions of the translation unit, and these
+must all be compiled for the same CPU. Any other `always_inline` function is
+compiled with the features that were passed on the command line.
+
 Additionally, this attribute supports function multiversioning for ELF based
 x86/x86-64 targets, which can be used to create multiple implementations of the
 same function that will be resolved at runtime based on the priority of their
