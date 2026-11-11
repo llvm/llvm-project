@@ -1,4 +1,5 @@
 // RUN: mlir-opt --split-input-file --remove-dead-values --mlir-print-op-generic %s | FileCheck %s --check-prefix=GEN
+// RUN: mlir-opt --split-input-file --remove-dead-values %s | mlir-opt --mlir-print-op-generic | FileCheck %s --check-prefix=GEN
 
 // -----
 // Private callee: both args become dead after internal DCE; RDV drops callee
