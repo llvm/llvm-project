@@ -90,6 +90,16 @@ static cl::opt<unsigned>
                         "is made to avoid excessive compile time. Ignored when "
                         "store-sequencing is enabled."));
 
+static cl::opt<bool> HugeRegionBarrierOnlyAtStores(
+    "dag-maps-huge-region-store-barrier", cl::Hidden, cl::init(true),
+    cl::desc("Only promote a store to the huge-region barrier chain, so that "
+             "runs of loads are not artificially ordered against each other."));
+
+static cl::opt<unsigned> HugeRegionHardLimit(
+    "dag-maps-huge-region-hard-limit", cl::Hidden, cl::init(3000),
+    cl::desc("Number of processed memops at which any memop, even a load, is "
+             "promoted to the huge-region barrier chain."));
+
 static cl::opt<bool> EnableStoreSequencing(
     "enable-store-sequencing", cl::Hidden, cl::init(false),
     cl::desc("Enable the store-sequencing DAG construction algorithm. This can "
@@ -740,6 +750,9 @@ private:
 
   unsigned MemOpsProcessed = 0;
 
+  /// Number of stores added to the memop maps since they were last cleared.
+  unsigned StoresInMaps = 0;
+
   /// Tracks the total occupancy of all memop frontiers, including sequencing
   /// stores.
   unsigned MemopsInFlight = 0;
@@ -884,6 +897,7 @@ void ScheduleDAGDependencyBuilder::addBarrierMemoryDeps() {
   AnalyzableFrontiers.clear();
 
   MemopsInFlight = 0;
+  StoresInMaps = 0;
 }
 
 void ScheduleDAGDependencyBuilder::updateSequencingStore(
@@ -1101,8 +1115,18 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
     if (BarrierChain && BarrierChain != SU)
       BarrierChain->addPredBarrier(SU);
 
-    // Reduce maps if they grow huge.
+    // Reduce maps if they grow huge. Prefer promoting a store to the barrier
+    // to prevent artificial load->load ordering of large load-heavy blocks.
+    bool ReduceMaps = false;
     if (!EnableStoreSequencing && MemOpsProcessed >= HugeRegion) {
+      if (!HugeRegionBarrierOnlyAtStores || MI.mayStore() ||
+          MemOpsProcessed >= HugeRegionHardLimit)
+        ReduceMaps = true;
+      else
+        ReduceMaps = uint64_t(StoresInMaps) * MemOpsProcessed >=
+                     uint64_t(HugeRegion) * HugeRegion / 2;
+    }
+    if (ReduceMaps) {
       LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
 
       BarrierChain = SU;
@@ -1123,6 +1147,9 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       addBarrierMemoryDeps();
       continue;
     }
+
+    if (MI.mayStore())
+      ++StoresInMaps;
 
     // Find the underlying objects for MI. The Objs vector is either
     // empty, or filled with the Values of memory locations which this
