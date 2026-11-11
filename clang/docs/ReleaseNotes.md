@@ -168,6 +168,8 @@ features cannot lower the translation-unit ABI level;
   This affects the ABI of `std::strong_ordering` in some versions of the
   Microsoft STL. (#GH237188)
 
+- On MSP430, `wint_t` is now `unsigned int`, matching msp430-gcc.
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
