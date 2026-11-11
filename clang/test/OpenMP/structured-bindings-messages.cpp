@@ -147,6 +147,38 @@ void test_pair_map() {
   }
 }
 
+// GH116258
+void test_pair_task() {
+  auto [a, b] = std::make_pair(1, 2);
+  // expected-note@-1 4{{'a' declared here}}
+  // expected-note@-2{{'b' declared here}}
+#pragma omp task
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+  [[omp::directive(task)]]
+  {
+    use(b);
+    // expected-error@-1{{capturing tuple-like structured binding 'b' is not yet supported in OpenMP}}
+  }
+#pragma omp taskloop
+  for (int i = 0; i < 2; ++i) {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+#pragma omp task firstprivate(a)
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+#pragma omp parallel firstprivate(a)
+  {
+    use(a);
+    // expected-error@-1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+  }
+}
+
 void test_tuple() {
   std::tuple<int, int, int> t = {1, 2, 3};
   auto [x, y, z] = t;

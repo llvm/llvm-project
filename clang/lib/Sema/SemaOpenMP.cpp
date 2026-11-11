@@ -2476,8 +2476,11 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   D = getCanonicalDecl(D);
 
   if (auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (!BD->getHoldingVar())
-      D = cast<VarDecl>(BD->getDecomposedDecl());
+    // Tuple-like bindings are not capturable; the non-VarDecl paths below
+    // expect a data member with a private copy.
+    if (BD->getHoldingVar())
+      return nullptr;
+    D = cast<VarDecl>(BD->getDecomposedDecl());
   }
   auto *VD = dyn_cast<VarDecl>(D);
   // Do not capture constexpr variables.
