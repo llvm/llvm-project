@@ -9,6 +9,7 @@
 
 ---
 name: ham
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: ham
   ; CHECK: bb.0:

@@ -15,6 +15,7 @@
 ...
 ---
 name:            foo
+tracksRegLiveness: false
 body: |
   ; CHECK: bb.0.body:
   bb.0.body:

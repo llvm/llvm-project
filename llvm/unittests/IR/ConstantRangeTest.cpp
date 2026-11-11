@@ -958,7 +958,7 @@ TEST_F(ConstantRangeTest, AddWithNoWrap) {
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;
         APInt Res1 = N1.uadd_ov(N2, IsOverflow1);
-        APInt Res2 = N1.sadd_ov(N2, IsOverflow2);
+        [[maybe_unused]] APInt Res2 = N1.sadd_ov(N2, IsOverflow2);
         if (IsOverflow1 || IsOverflow2)
           return std::nullopt;
         assert(Res1 == Res2 && "Addition results differ?");
@@ -1030,7 +1030,7 @@ TEST_F(ConstantRangeTest, SubWithNoWrap) {
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;
         APInt Res1 = N1.usub_ov(N2, IsOverflow1);
-        APInt Res2 = N1.ssub_ov(N2, IsOverflow2);
+        [[maybe_unused]] APInt Res2 = N1.ssub_ov(N2, IsOverflow2);
         if (IsOverflow1 || IsOverflow2)
           return std::nullopt;
         assert(Res1 == Res2 && "Subtraction results differ?");
@@ -1197,7 +1197,7 @@ TEST_F(ConstantRangeTest, MultiplyWithNoWrap) {
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;
         APInt Res1 = N1.umul_ov(N2, IsOverflow1);
-        APInt Res2 = N1.smul_ov(N2, IsOverflow2);
+        [[maybe_unused]] APInt Res2 = N1.smul_ov(N2, IsOverflow2);
         if (IsOverflow1 || IsOverflow2)
           return std::nullopt;
         assert(Res1 == Res2 && "Multiplication results differ?");
@@ -1613,7 +1613,7 @@ TEST_F(ConstantRangeTest, ShlWithNoWrap) {
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         bool IsOverflow1, IsOverflow2;
         APInt Res1 = N1.ushl_ov(N2, IsOverflow1);
-        APInt Res2 = N1.sshl_ov(N2, IsOverflow2);
+        [[maybe_unused]] APInt Res2 = N1.sshl_ov(N2, IsOverflow2);
         if (IsOverflow1 || IsOverflow2)
           return std::nullopt;
         assert(Res1 == Res2 && "Left shift results differ?");

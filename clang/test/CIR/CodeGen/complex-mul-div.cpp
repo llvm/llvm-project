@@ -472,7 +472,7 @@ void foo3() {
 // LLVM-IMPROVED:  %[[ADD_BR_MUL_DIV_BIBR_BI:.*]] = fadd float %[[B_REAL]], %[[MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AI_DIV_BIBR:.*]] = fmul float %[[A_IMAG]], %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[ADD_AR_MUL_AI_DIV_BIBR:.*]] = fadd float %[[A_REAL]], %[[MUL_AI_DIV_BIBR]]
-// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %16
+// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AR_DIV_BIBR:.*]] = fmul float %[[A_REAL]], %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[SUB_AI_MUL_AR_DIV_BIBR:.*]] = fsub float %[[A_IMAG]], %[[MUL_AR_DIV_BIBR]]
 // LLVM-IMPROVED:  %[[RESULT_IMAG:.*]] = fdiv float %[[SUB_AI_MUL_AR_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]
@@ -973,7 +973,7 @@ void foo6() {
 // LLVM-IMPROVED:  %[[ADD_BR_MUL_DIV_BIBR_BI:.*]] = fadd float %[[B_REAL]], %[[MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AI_DIV_BIBR:.*]] = fmul float 0.000000e+00, %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[ADD_AR_MUL_AI_DIV_BIBR:.*]] = fadd float %[[TMP_A]], %[[MUL_AI_DIV_BIBR]]
-// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %16
+// LLVM-IMPROVED:  %[[RESULT_REAL:.*]] = fdiv float %[[ADD_AR_MUL_AI_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]
 // LLVM-IMPROVED:  %[[MUL_AR_DIV_BIBR:.*]] = fmul float %[[TMP_A]], %[[DIV_BI_BR]]
 // LLVM-IMPROVED:  %[[SUB_AI_MUL_AR_DIV_BIBR:.*]] = fsub float 0.000000e+00, %[[MUL_AR_DIV_BIBR]]
 // LLVM-IMPROVED:  %[[RESULT_IMAG:.*]] = fdiv float %[[SUB_AI_MUL_AR_DIV_BIBR]], %[[ADD_BR_MUL_DIV_BIBR_BI]]

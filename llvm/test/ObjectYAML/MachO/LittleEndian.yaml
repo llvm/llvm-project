@@ -121,6 +121,7 @@ LinkEditData:
     - ''
 ...
 
+#CHECK: IsLittleEndian: true
 #CHECK: FileHeader:      
 #CHECK: magic:           0xFEEDFACF
 #CHECK:   cputype:         0x1000007

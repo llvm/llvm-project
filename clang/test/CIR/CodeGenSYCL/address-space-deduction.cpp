@@ -120,8 +120,6 @@
 // LLVM-NEXT: store i32 44, ptr addrspace(4) %[[TMP15]], align 4
 // LLVM-NEXT: br label %[[TMP14]]
 // LLVM: [[TMP14]]:
-// LLVM-NEXT: br label %[[TMP16:.*]]
-// LLVM: [[TMP16]]:
 // LLVM-NEXT: ret void
 
 // OGCG-LABEL: define {{.*}}spir_func void @_Z4testv(

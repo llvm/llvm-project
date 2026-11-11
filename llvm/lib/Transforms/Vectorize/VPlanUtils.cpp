@@ -12,9 +12,7 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -435,7 +433,7 @@ unsigned vputils::getOpcode(const VPValue *V) {
             VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
             VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe,
-            VPExpandSCEVRecipe>([](auto *I) {
+            VPDerivedIVRecipe, VPExpandSCEVRecipe>([](auto *I) {
         // For recipes that do not directly map to LLVM IR instructions,
         // assign opcodes after the last VPInstruction opcode (which is also
         // after the last IR Instruction opcode), based on the VPRecipeID.
@@ -511,8 +509,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
-  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
-          VPV))
+  if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
+          VPConditionalInductionPHIRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isVectorToScalar();
@@ -521,7 +519,9 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+static bool isUniformAcrossVFsAndUFsImpl(
+    const VPValue *V,
+    function_ref<void(VPUser::const_operand_range)> AddToWorklist) {
   // Live-ins, symbolic and canonical-IV region values are uniform.
   if (auto *RV = dyn_cast<VPRegionValue>(V))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -537,42 +537,66 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()) ||
         match(R, m_ExtractVectorForPart(m_VPValue(), m_VPValue())))
       return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    AddToWorklist(R->operands());
+    return true;
   }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case([](const VPDerivedIVRecipe *R) { return true; })
-      .Case([](const VPReplicateRecipe *R) {
+      .Case([](const VPDerivedIVRecipe *) { return true; })
+      .Case([&](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
         // uniform. Each alloca creates a distinct allocation, so allocas are
         // never uniform.
-        return R->isSingleScalar() && R->getOpcode() != Instruction::Alloca &&
-               (!R->mayHaveSideEffects() ||
-                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+        if (!R->isSingleScalar() || R->getOpcode() == Instruction::Alloca ||
+            (R->mayHaveSideEffects() &&
+             !isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())))
+          return false;
+        AddToWorklist(R->operands());
+        return true;
       })
-      .Case([](const VPWidenRecipe *R) {
-        return preservesUniformity(R->getOpcode()) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+      .Case([&](const VPWidenRecipe *R) {
+        if (!preservesUniformity(R->getOpcode()))
+          return false;
+        AddToWorklist(R->operands());
+        return true;
       })
       .Case([](const VPPhi *) {
         // Bail out on VPPhi, as we can end up in infinite cycles.
         return false;
       })
-      .Case([](const VPInstruction *VPI) {
-        return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-                preservesUniformity(VPI->getOpcode())) &&
-               all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
+      .Case([&](const VPInstruction *VPI) {
+        if (!VPI->isSingleScalar() && !VPI->isVectorToScalar() &&
+            !preservesUniformity(VPI->getOpcode()))
+          return false;
+        AddToWorklist(VPI->operands());
+        return true;
       })
-      .Case([](const VPWidenCastRecipe *R) {
+      .Case([&](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
-        return isUniformAcrossVFsAndUFs(R->getOperand(0));
+        AddToWorklist(R->operands());
+        return true;
       })
-      .Default([](const VPRecipeBase *) { // A value is considered non-uniform
-                                          // unless proven otherwise.
+      .Default([](const VPRecipeBase *) {
+        // A value is considered non-uniform unless proven otherwise.
         return false;
       });
+}
+
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(V);
+
+  auto AddToWorklist = [&Worklist](VPUser::const_operand_range Operands) {
+    Worklist.insert_range(Operands);
+  };
+
+  // All dependency checks are conjunctive, so each value needs checking once.
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    if (!isUniformAcrossVFsAndUFsImpl(Worklist[I], AddToWorklist))
+      return false;
+  }
+  return true;
 }
 
 bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
@@ -949,13 +973,77 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   return nullptr;
 }
 
+bool VPSCEVExpander::canExpandInIR(const SCEV *S) {
+  return HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+         SE.isGuaranteedNotToCauseUB(S);
+}
+
+/// Returns the sums of the operands of \p S invariant in \p L and of the
+/// remaining operands, if there are at least 2 invariant and 1 variant
+/// operands.
+static std::pair<const SCEV *, const SCEV *>
+splitInvariantSum(const SCEVAddExpr *S, const Loop *L, ScalarEvolution &SE) {
+  if (!L)
+    return {nullptr, nullptr};
+  SmallVector<SCEVUse> InvOps, VarOps;
+  for (SCEVUse Op : S->operands())
+    (SE.isLoopInvariant(Op, L) ? InvOps : VarOps).push_back(Op);
+  if (InvOps.size() < 2 || VarOps.empty())
+    return {nullptr, nullptr};
+  return {SE.getAddExpr(InvOps), SE.getAddExpr(VarOps)};
+}
+
 VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
-  VPValue *Base = expand(SE.getPointerBase(S));
-  VPValue *Offset = expand(SE.removePointerBase(S));
+  const SCEV *Base = SE.getPointerBase(S);
+  const SCEV *Offset = SE.removePointerBase(S);
+  // If the pointer is invariant in HoistOutOf, use the sum of all invariant
+  // operands as base, so it is hoisted whole.
+  if (auto *AddE = dyn_cast<SCEVAddExpr>(S)) {
+    auto [InvS, VarS] = splitInvariantSum(AddE, HoistOutOf, SE);
+    if (InvS && InvS->getType()->isPointerTy() && canExpandInIR(InvS))
+      std::tie(Base, Offset) = std::tie(InvS, VarS);
+  }
   GEPNoWrapFlags GEPFlags = S->hasNoUnsignedWrap()
                                 ? GEPNoWrapFlags::noUnsignedWrap()
                                 : GEPNoWrapFlags::none();
-  return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
+  VPValue *BaseV = expand(Base);
+  VPValue *OffsetV = expand(Offset);
+  return Builder.createNoWrapPtrAdd(BaseV, OffsetV, GEPFlags, DL);
+}
+
+VPValue *VPSCEVExpander::expandAddOps(ArrayRef<const SCEV *> Operands,
+                                      VPIRFlags::WrapFlagsTy WrapFlags) {
+  // Non-constant-negative add operands are expanded negated and subtracted
+  // from the running result below, instead of being negated and added.
+  auto UseSubtract = [](const SCEV *Op) { return Op->isNonConstantNegative(); };
+  // Move the subtracted operands last, matching SCEVExpander's LoopCompare, so
+  // that they don't start the running result.
+  SmallVector<const SCEV *, 2> SCEVOps(Operands);
+  stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
+    return !UseSubtract(L) && UseSubtract(R);
+  });
+  SmallVector<VPValue *, 2> Ops;
+  for (const SCEV *Op : SCEVOps) {
+    // The first operand starts the result, so it is never subtracted.
+    bool Negate = !Ops.empty() && UseSubtract(Op);
+    Ops.push_back(expand(Negate ? SE.getNegativeSCEV(Op) : Op));
+  }
+  VPValue *Result = Ops.front();
+  for (auto [Op, OpV] : drop_begin(zip_equal(SCEVOps, Ops))) {
+    if (UseSubtract(Op)) {
+      // Result + (-Op) == Result - Op, which saves the multiply for the
+      // negation. NSW only transfers if negating Op cannot overflow, see
+      // ScalarEvolution::getMinusSCEV.
+      bool HasNSW =
+          WrapFlags.HasNSW && !SE.getSignedRangeMin(Op).isMinSignedValue();
+      Result = Builder.createOverflowingOp(Instruction::Sub, {Result, OpV},
+                                           {/*HasNUW=*/false, HasNSW}, DL);
+      continue;
+    }
+    Result = Builder.createOverflowingOp(Instruction::Add, {Result, OpV},
+                                         WrapFlags, DL);
+  }
+  return Result;
 }
 
 #ifndef NDEBUG
@@ -987,8 +1075,7 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
 
-  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
-      SE.isGuaranteedNotToCauseUB(S))
+  if (canExpandInIR(S))
     return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
                                                   /*ExpandInIR=*/true);
 
@@ -1009,40 +1096,13 @@ VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
     if (S->getType()->isPointerTy())
       return expandAsPtrAdd(AddE);
 
-    // Non-constant-negative add operands are expanded negated and subtracted
-    // from the running result below, instead of being negated and added.
-    auto UseSubtract = [](const SCEV *Op) {
-      return Op->isNonConstantNegative();
-    };
-    // Iterate in reverse so that constants are emitted last, and move the
-    // subtracted operands last, matching SCEVExpander's LoopCompare, so that
-    // they don't start the running result.
+    // Iterate in reverse so that constants are emitted last.
     SmallVector<const SCEV *, 2> SCEVOps(reverse(AddE->operands()));
-    stable_sort(SCEVOps, [&](const SCEV *L, const SCEV *R) {
-      return !UseSubtract(L) && UseSubtract(R);
-    });
-    SmallVector<VPValue *, 2> Ops;
-    for (const SCEV *Op : SCEVOps) {
-      // The first operand starts the result, so it is never subtracted.
-      bool Negate = !Ops.empty() && UseSubtract(Op);
-      Ops.push_back(expand(Negate ? SE.getNegativeSCEV(Op) : Op));
-    }
-    VPValue *Result = Ops.front();
-    for (auto [Op, OpV] : drop_begin(zip_equal(SCEVOps, Ops))) {
-      if (UseSubtract(Op)) {
-        // Result + (-Op) == Result - Op, which saves the multiply for the
-        // negation. NSW only transfers if negating Op cannot overflow, see
-        // ScalarEvolution::getMinusSCEV.
-        bool HasNSW =
-            WrapFlags.HasNSW && !SE.getSignedRangeMin(Op).isMinSignedValue();
-        Result = Builder.createOverflowingOp(Instruction::Sub, {Result, OpV},
-                                             {/*HasNUW=*/false, HasNSW}, DL);
-        continue;
-      }
-      Result = Builder.createOverflowingOp(Instruction::Add, {Result, OpV},
-                                           WrapFlags, DL);
-    }
-    return Result;
+    // Sum the invariant operands separately, so the sum can be hoisted.
+    auto [InvS, VarS] = splitInvariantSum(AddE, HoistOutOf, SE);
+    if (InvS && canExpandInIR(InvS))
+      SCEVOps = {InvS, VarS};
+    return expandAddOps(SCEVOps, WrapFlags);
   }
   case scMulExpr: {
     auto *MulE = cast<SCEVMulExpr>(S);
@@ -1460,7 +1520,14 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
         // Optimizing WideALM can only happen after the Plan is unrolled.
         if (!Plan.isUnrolled())
           return nullptr;
+
         Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+
+        // TODO: We can't fold if any users expect require a wide value.
+        if (Multiplier != 1 &&
+            !all_of(R.users(), match_fn(m_ExtractVectorForPart())))
+          return nullptr;
+
         Ops.pop_back();
       }
 
