@@ -102,9 +102,7 @@ LLVM_ABI bool isConstantSplatVectorAllOnes(const SDNode *N,
 /// BUILD_VECTOR and SPLAT_VECTOR are considered to also have all zeros if
 /// they contain at least one 0 element and an arbitrary number of undef
 /// elements.
-/// Look through nested bitcasts.
-/// If BuildVectorOnly = true, only consider BUILD_VECTOR nodes, but still look
-/// through nested bitcasts.
+/// Looks through nested bitcasts.
 LLVM_ABI bool isConstantSplatVectorAllZeros(const SDNode *N,
                                             bool BuildVectorOnly = false);
 
