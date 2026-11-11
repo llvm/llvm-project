@@ -1597,6 +1597,17 @@ func.func @broadcast_broadcast_fold(%input: tensor<2xf32>,
 
 // -----
 
+// CHECK-LABEL: func.func @transpose_rank0(
+// CHECK-SAME: %[[INPUT:.*]]: tensor<i64>,
+// CHECK-NEXT: return %[[INPUT]] : tensor<i64>
+func.func @transpose_rank0(%input: tensor<i64>, %init: tensor<i64>) -> tensor<i64> {
+  %transpose = linalg.transpose ins(%input : tensor<i64>)
+                               outs(%init : tensor<i64>) permutation = []
+  return %transpose : tensor<i64>
+}
+
+// -----
+
 func.func @transpose_1d(%input: tensor<16xf32>,
                         %init: tensor<16xf32>) -> tensor<16xf32> {
   %transpose = linalg.transpose

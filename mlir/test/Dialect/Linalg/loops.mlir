@@ -967,6 +967,25 @@ func.func @lower_to_loops_with_rank_reducing_subviews(
 
 // -----
 
+// CHECK-LABEL: func.func @transpose_rank0(
+// CHECK-SAME: %[[INPUT:.*]]: memref<i64>, %[[INIT:.*]]: memref<i64>
+// CHECK-NEXT: %[[VALUE:.*]] = memref.load %[[INPUT]][] : memref<i64>
+// CHECK-NEXT: memref.store %[[VALUE]], %[[INIT]][] : memref<i64>
+// CHECK-NEXT: return
+
+// CHECKPARALLEL-LABEL: func.func @transpose_rank0(
+// CHECKPARALLEL-SAME: %[[INPUT:.*]]: memref<i64>, %[[INIT:.*]]: memref<i64>
+// CHECKPARALLEL-NEXT: %[[VALUE:.*]] = memref.load %[[INPUT]][] : memref<i64>
+// CHECKPARALLEL-NEXT: memref.store %[[VALUE]], %[[INIT]][] : memref<i64>
+// CHECKPARALLEL-NEXT: return
+func.func @transpose_rank0(%input: memref<i64>, %init: memref<i64>) {
+  linalg.transpose ins(%input : memref<i64>)
+                   outs(%init : memref<i64>) permutation = []
+  return
+}
+
+// -----
+
 func.func @transpose(%input: memref<?xf32>,
                      %init: memref<?xf32>) {
   linalg.transpose ins(%input:memref<?xf32>)

@@ -580,6 +580,30 @@ func.func @transpose_memref(%input: memref<16x32x64xf32>,
 
 // -----
 
+// CHECK-LABEL: func @transpose_rank0_tensor(
+// CHECK-SAME: %[[INPUT:.*]]: tensor<i64>, %[[INIT:.*]]: tensor<i64>
+// CHECK: %[[RESULT:.*]] = linalg.transpose ins(%[[INPUT]] : tensor<i64>) outs(%[[INIT]] : tensor<i64>) permutation = []
+// CHECK-NEXT: return %[[RESULT]] : tensor<i64>
+func.func @transpose_rank0_tensor(%input: tensor<i64>, %init: tensor<i64>) -> tensor<i64> {
+  %transpose = linalg.transpose ins(%input : tensor<i64>)
+                               outs(%init : tensor<i64>) permutation = []
+  return %transpose : tensor<i64>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose_rank0_memref(
+// CHECK-SAME: %[[INPUT:.*]]: memref<i64>, %[[INIT:.*]]: memref<i64>
+// CHECK: linalg.transpose ins(%[[INPUT]] : memref<i64>) outs(%[[INIT]] : memref<i64>) permutation = []
+// CHECK-NEXT: return
+func.func @transpose_rank0_memref(%input: memref<i64>, %init: memref<i64>) {
+  linalg.transpose ins(%input : memref<i64>)
+                   outs(%init : memref<i64>) permutation = []
+  return
+}
+
+// -----
+
 func.func @broadcast_static_sizes(%input: tensor<8x32xf32>,
                             %init: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
   %bcast = linalg.broadcast

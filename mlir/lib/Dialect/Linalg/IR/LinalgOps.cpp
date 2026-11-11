@@ -2318,6 +2318,10 @@ SmallVector<utils::IteratorType> TransposeOp::getIteratorTypesArray() {
 ArrayAttr TransposeOp::getIndexingMaps() {
   Builder builder(getContext());
   int64_t rank = getInit().getType().getRank();
+  if (rank == 0) {
+    AffineMap identity = builder.getMultiDimIdentityMap(0);
+    return builder.getAffineMapArrayAttr({identity, identity});
+  }
   return builder.getAffineMapArrayAttr(
       {inversePermutation(AffineMap::getPermutationMap(
            llvm::to_vector_of<unsigned>(getPermutation()), getContext())),
