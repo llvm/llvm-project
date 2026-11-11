@@ -1488,9 +1488,10 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
 }
 
 bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
-                                     const SectionRef Section, unsigned Index,
+                                     const SectionRef Section, uint64_t Offset,
                                      ArrayRef<uint8_t> Contents) {
-  uint64_t Offset = PDataEntrySize * Index;
+  // The index of the entry, relative to the start of the section.
+  unsigned Index = Offset / PDataEntrySize;
   const ulittle32_t *Data =
     reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
 
@@ -1507,17 +1508,33 @@ bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
 
 void Decoder::dumpProcedureData(const COFFObjectFile &COFF,
                                 const SectionRef Section) {
+  const coff_section *COFFSection = COFF.getCOFFSection(Section);
   ArrayRef<uint8_t> Contents;
-  if (COFF.getSectionContents(COFF.getCOFFSection(Section), Contents))
+  if (COFF.getSectionContents(COFFSection, Contents))
     return;
 
-  if (Contents.size() % PDataEntrySize) {
+  // In a linked image, the exception directory describes the extent of the
+  // function table. The section may also contain other data (e.g. if other
+  // sections were merged into it), so only decode the entries covered by the
+  // directory.
+  uint64_t Begin = 0, End = Contents.size();
+  const data_directory *DD = COFF.getDataDirectory(COFF::EXCEPTION_TABLE);
+  if (DD && DD->Size) {
+    uint32_t SectionRVA = COFFSection->VirtualAddress;
+    if (DD->RelativeVirtualAddress >= SectionRVA &&
+        DD->RelativeVirtualAddress - SectionRVA < Contents.size()) {
+      Begin = DD->RelativeVirtualAddress - SectionRVA;
+      End = std::min<uint64_t>(End, Begin + DD->Size);
+    }
+  }
+
+  if ((End - Begin) % PDataEntrySize) {
     errs() << ".pdata content is not " << PDataEntrySize << "-byte aligned\n";
     return;
   }
 
-  for (unsigned EI = 0, EE = Contents.size() / PDataEntrySize; EI < EE; ++EI)
-    if (!dumpProcedureDataEntry(COFF, Section, EI, Contents))
+  for (uint64_t Offset = Begin; Offset < End; Offset += PDataEntrySize)
+    if (!dumpProcedureDataEntry(COFF, Section, Offset, Contents))
       break;
 }
 
