@@ -2579,11 +2579,11 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_new",
-        ":__support_cpp_type_traits",
         ":__support_macros_config",
         ":__support_macros_properties_os",
         ":func_aligned_alloc",
         ":func_malloc",
+        ":types_size_t",
     ],
 )
 
