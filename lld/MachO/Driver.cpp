@@ -790,7 +790,7 @@ static bool compileBitcodeFiles() {
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
-      if (!file->lazy && file->compatArch)
+      if (!file->lazy)
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
@@ -2290,6 +2290,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
+  config->preload = args.hasArg(OPT_preload);
 
   if (const Arg *arg =
           args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))

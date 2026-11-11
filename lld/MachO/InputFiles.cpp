@@ -69,7 +69,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/TargetParser/Triple.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
@@ -185,8 +184,15 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
-// ld64's names for arm64e ABI markers other than userland version 0.
-static StringRef getArm64eVariantName(uint32_t cpuSubtype) {
+// The name ld64 gives an input's architecture. The CPU subtype of an arm64e
+// input also holds its pointer authentication ABI version, and ld64 names each
+// version as a separate architecture.
+static StringRef getArchName(uint32_t cpuType, uint32_t cpuSubtype) {
+  if (cpuType != CPU_TYPE_ARM64 ||
+      (cpuSubtype & ~CPU_SUBTYPE_MASK) != CPU_SUBTYPE_ARM64E)
+    return getArchitectureName(getArchitectureFromCpuType(cpuType, cpuSubtype));
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
+    return "arm64e";
   if (cpuSubtype == CPU_SUBTYPE_ARM64E)
     return "arm64e.old";
   if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false))
@@ -198,78 +204,47 @@ static StringRef getArm64eVariantName(uint32_t cpuSubtype) {
   return "unknown";
 }
 
-// Like ld64, ignore an input for another architecture with a warning, or report
-// an error with -arch_errors_fatal.
-static bool compatWithTargetArch(const InputFile *file, uint32_t cpuType,
-                                 uint32_t cpuSubtype) {
-  uint32_t targetCpuType;
-  std::tie(targetCpuType, std::ignore) =
-      getCPUTypeFromArchitecture(config->arch());
-
-  auto reportMismatch = [&](StringRef arch) {
-    auto msg = config->errorForArchMismatch
-                   ? static_cast<void (*)(const Twine &)>(error)
-                   : warn;
-    msg(toString(file) + " has architecture " + arch +
-        " which is incompatible with target architecture " +
-        getArchitectureName(config->arch()));
+static bool isCompatibleObject(uint32_t cpuType, uint32_t cpuSubtype) {
+  if (cpuType != getCPUTypeFromArchitecture(config->arch()).first)
     return false;
-  };
-  auto reportArchMismatch = [&] {
-    return reportMismatch(
-        getArchitectureName(getArchitectureFromCpuType(cpuType, cpuSubtype)));
-  };
-
-  if (cpuType != targetCpuType)
-    return reportArchMismatch();
-
-  uint32_t subtype = cpuSubtype & ~CPU_SUBTYPE_MASK;
-  bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
-  if (isa<DylibFile>(file)) {
-    // ld64 is laxer with dylibs. arm64 links take any arm64e dylib, and arm64e
-    // links also take dylibs marked userland ABI version 1, as macOS
-    // executables are, and arm64e.x1 dylibs marked version 0.
-    if (config->arch() != AK_arm64e)
-      return true;
-    bool takesDylib =
-        cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false) ||
-        cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false) ||
-        cpuSubtype == (CPU_SUBTYPE_ARM64E_X1 |
-                       CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK);
-    if (takesDylib)
-      return true;
-    return isArm64e ? reportMismatch(getArm64eVariantName(cpuSubtype))
-                    : reportArchMismatch();
-  }
+  if (!is_contained({AK_arm64, AK_arm64e}, config->arch()))
+    return true;
 
   // arm64 and arm64e are ABI incompatible. arm64e.x1 has the arm64e ABI but
   // needs a newer CPU, so neither takes it.
-  if (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
-      (subtype == CPU_SUBTYPE_ARM64E_X1 ||
-       isArm64e != (config->arch() == AK_arm64e)))
-    return reportArchMismatch();
+  uint32_t subtype = cpuSubtype & ~CPU_SUBTYPE_MASK;
+  if (subtype == CPU_SUBTYPE_ARM64E_X1)
+    return false;
+  if (config->arch() == AK_arm64)
+    return subtype != CPU_SUBTYPE_ARM64E;
+  if (subtype != CPU_SUBTYPE_ARM64E)
+    return false;
 
-  // Like ld64, dynamic links only take objects with userland ABI version 0,
-  // even though macOS executables are marked version 1. Static links also take
-  // unversioned and kernel objects. Bitcode has no ABI marker.
-  if (isArm64e && !isa<BitcodeFile>(file)) {
-    bool takesObject =
-        cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false) ||
-        (config->staticLink &&
+  // Like ld64, take only objects with userland pointer authentication ABI
+  // version 0, even on macOS, whose executables are marked version 1. Static
+  // and preload links also take unversioned and kernel objects.
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
+    return true;
+  return (config->staticLink || config->preload) &&
          (cpuSubtype == CPU_SUBTYPE_ARM64E ||
-          cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true)));
-    if (!takesObject)
-      return reportMismatch(getArm64eVariantName(cpuSubtype));
-  }
-
-  return true;
+          cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true));
 }
 
-// Mach-O inputs also have their platform checked.
 template <class Header>
 static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
-  return compatWithTargetArch(file, hdr->cputype, hdr->cpusubtype) &&
-         checkCompatibility(file);
+  if (!isCompatibleObject(hdr->cputype, hdr->cpusubtype)) {
+    auto msg = config->errorForArchMismatch
+                   ? static_cast<void (*)(const Twine &)>(error)
+                   : warn;
+
+    msg(toString(file) + " has architecture " +
+        getArchName(hdr->cputype, hdr->cpusubtype) +
+        " which is incompatible with target architecture " +
+        getArchitectureName(config->arch()));
+    return false;
+  }
+
+  return checkCompatibility(file);
 }
 
 // This cache mostly exists to store system libraries (and .tbds) as they're
@@ -1951,13 +1926,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
 
   if (config->printEachFile)
     message(toString(this));
-
-  // Leave ignored dylibs out of inputFiles so that they get no load command.
-  if (!compatWithTargetArch(this, hdr))
-    return;
   inputFiles.insert(this);
 
   deadStrippable = hdr->flags & MH_DEAD_STRIPPABLE_DYLIB;
+
+  if (!checkCompatibility(this))
+    return;
 
   checkAppExtensionSafety(hdr->flags & MH_APP_EXTENSION_SAFE);
 
@@ -2585,17 +2559,6 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                                                sys::path::filename(path) + ")" +
                                                utostr(offsetInArchive)));
   obj = check(lto::InputFile::create(mbref));
-
-  // Like ld64, ignore bitcode for another architecture.
-  Triple triple(obj->getTargetTriple());
-  std::optional<uint32_t> cpuType =
-      expectedToOptional(MachO::getCPUType(triple));
-  std::optional<uint32_t> cpuSubtype =
-      expectedToOptional(MachO::getCPUSubType(triple));
-  if (cpuType && cpuSubtype &&
-      !(this->compatArch = compatWithTargetArch(this, *cpuType, *cpuSubtype)))
-    return;
-
   if (lazy)
     parseLazy();
   else
@@ -2603,10 +2566,6 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
 }
 
 void BitcodeFile::parse() {
-  // -ObjC can still extract a lazy file that was ignored.
-  if (!compatArch)
-    return;
-
   // Convert LTO Symbols to LLD Symbols in order to perform resolution. The
   // "winning" symbol will then be marked as Prevailing at LTO compilation
   // time.
