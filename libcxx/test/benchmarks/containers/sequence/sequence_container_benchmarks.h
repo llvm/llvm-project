@@ -633,6 +633,46 @@ void sequence_container_benchmarks(std::string container) {
             DoNotOptimize(c);
           }
         });
+
+      for (auto gen : generators)
+        bench("reverse-iterator-loop" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
+          const auto size = st.range(0);
+          std::vector<ValueType> in;
+          std::generate_n(std::back_inserter(in), size, gen);
+          DoNotOptimizeData(in);
+
+          Container c(in.begin(), in.end());
+
+          // Necessary to prevent the compiler from knowing that `c` and `c.end()` don't alias purely based on how
+          // `c.end()` came to be.
+          DoNotOptimize(c);
+
+          for (auto _ : st) {
+            for (auto it = c.rbegin(); it != c.rend(); ++it)
+              *it = std::make_unsigned_t<ValueType>(*it) + 1; // Do something cheap and always defined
+            DoNotOptimize(c);
+          }
+        });
+
+      for (auto gen : generators)
+        bench("back-loop" + tostr(gen), [gen](auto& st) TEST_ALIGN_BENCHMARK {
+          const auto size = st.range(0);
+          std::vector<ValueType> in;
+          std::generate_n(std::back_inserter(in), size, gen);
+          DoNotOptimizeData(in);
+
+          Container c(in.begin(), in.end());
+
+          // Necessary to prevent the compiler from knowing that `c` and `c.back()` don't alias purely based on how
+          // `c.back()` came to be.
+          DoNotOptimize(c);
+
+          for (auto _ : st) {
+            for (ValueType x : in)
+              c.back() = std::make_unsigned_t<ValueType>(c.back()) + x; // Do something cheap and always defined
+            DoNotOptimize(c);
+          }
+        });
     }
   }
 }
