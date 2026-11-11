@@ -3339,10 +3339,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Return false if an AA should not be updated for \p IRP.
   static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFnInterfaceKind())
+      return true;
     Function *AssociatedFn = IRP.getAssociatedFunction();
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    assert((!IsFnInterface || AssociatedFn) &&
-           "Function interface without a function?");
+    assert(AssociatedFn && "Function interface without a function?");
 
     // TODO: Not all attributes require an exact definition. Find a way to
     //       enable deduction for some but not all attributes in case the
@@ -3351,7 +3351,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
     // TODO: We could always determine abstract attributes and if sufficient
     //       information was found we could duplicate the functions that do not
     //       have an exact definition.
-    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+    return A.isFunctionIPOAmendable(*AssociatedFn);
   }
 
   /// Initialize the state with the information in the Attributor \p A.
