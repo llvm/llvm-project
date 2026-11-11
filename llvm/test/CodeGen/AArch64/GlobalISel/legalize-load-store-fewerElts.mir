@@ -3,7 +3,6 @@
 ---
 name:            load_v4s32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -24,7 +23,6 @@ body:             |
 ---
 name:            load_v2s64
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1

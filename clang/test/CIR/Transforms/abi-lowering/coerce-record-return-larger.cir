@@ -23,7 +23,7 @@ module attributes {
 } {
 
   cir.func @returns_vec3() -> !rec_Vec3
-      attributes { test_classify = #coerce_vec3_return_to_twoi64 } {
+      requires_call_conv_lowering attributes { test_classify = #coerce_vec3_return_to_twoi64 } {
     %0 = cir.const #cir.zero : !rec_Vec3
     cir.return %0 : !rec_Vec3
   }
@@ -41,7 +41,7 @@ module attributes {
   // CHECK:        cir.return %[[COERCED]] : !rec_TwoI64
 
   cir.func @caller() -> !s32i
-      attributes { test_classify = #caller_ret_i32 } {
+      requires_call_conv_lowering attributes { test_classify = #caller_ret_i32 } {
     %0 = cir.call @returns_vec3() : () -> !rec_Vec3
     %1 = cir.alloca "r" align(4) : !cir.ptr<!rec_Vec3>
     cir.store %0, %1 : !rec_Vec3, !cir.ptr<!rec_Vec3>

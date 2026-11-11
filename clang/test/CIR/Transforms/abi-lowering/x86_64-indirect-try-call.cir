@@ -14,7 +14,7 @@ module attributes {
 
   // Scalars already carry their wire form, so the call stands as written.
   cir.func @pass_through(%arg0: !cir.ptr<!cir.func<(!s32i) -> !s32i>>,
-                         %arg1: !s32i) {
+                         %arg1: !s32i) requires_call_conv_lowering {
     %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
   ^bb1:
@@ -39,7 +39,7 @@ module attributes {
   // and a void return is its own wire form, so this call stands as written
   // too.
   cir.func @variadic_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>,
-                          %arg1: !cir.ptr<!s8i>) {
+                          %arg1: !cir.ptr<!s8i>) requires_call_conv_lowering {
     cir.try_call %arg0(%arg1) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>) -> ()
   ^bb1:

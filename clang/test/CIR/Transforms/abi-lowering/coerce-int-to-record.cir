@@ -22,7 +22,7 @@ module attributes {
 } {
 
   cir.func @returns_pair() -> !rec_Pair
-      attributes { test_classify = #coerce_pair_return_to_i64 } {
+      requires_call_conv_lowering attributes { test_classify = #coerce_pair_return_to_i64 } {
     %0 = cir.const #cir.zero : !rec_Pair
     cir.return %0 : !rec_Pair
   }
@@ -37,7 +37,7 @@ module attributes {
   // CHECK:        cir.return %[[COERCED]] : !s64i
 
   cir.func @caller() -> !s32i
-      attributes { test_classify = #caller_ret_i32 } {
+      requires_call_conv_lowering attributes { test_classify = #caller_ret_i32 } {
     %0 = cir.call @returns_pair() : () -> !rec_Pair
     %1 = cir.alloca "r" align(4) : !cir.ptr<!rec_Pair>
     cir.store %0, %1 : !rec_Pair, !cir.ptr<!rec_Pair>

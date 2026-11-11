@@ -1450,6 +1450,28 @@ LogicalResult checkErrorIfSlice(Operation *op) {
     }
   }
 
+  // ERROR_IF(any(start + size > shape1))
+  if (hasStartValues && hasSizeValues) {
+    if (const auto inputType =
+            dyn_cast<RankedTensorType>(sliceOp.getInput1().getType())) {
+      for (const auto &[index, vals] : llvm::enumerate(llvm::zip_equal(
+               startValues, sizeValues, inputType.getShape()))) {
+        const auto &[start, size, inputDim] = vals;
+        if (ShapedType::isDynamic(inputDim))
+          continue;
+        // Earlier checks already ensured that start and slice are non-negative.
+        // Avoid overflowing start + size.
+        if (start > inputDim || size > inputDim - start)
+          return op->emitOpError(
+                     "start + size must be less than or equal to input "
+                     "dimension size, got start=")
+                 << start << ", size=" << size
+                 << " vs input dim size=" << inputDim << " at dimension "
+                 << index;
+      }
+    }
+  }
+
   // ERROR_IF(is_block_scale<in_out_t>() && start[rank(shape1) - 1] %
   // get_innermost_block_size<in_out_t>() != 0)
   if (hasStartValues && !startValues.empty()) {

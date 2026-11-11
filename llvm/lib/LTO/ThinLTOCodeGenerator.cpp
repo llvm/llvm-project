@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
+#include "llvm/Passes/RunCodeGen.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -58,6 +60,7 @@
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionImport.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/SampleProfile.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 
@@ -83,7 +86,6 @@ extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
 extern cl::opt<std::string> RemarksFormat;
 extern cl::opt<bool> LTORunCSIRInstr;
 extern cl::opt<std::string> LTOCSIRProfile;
-extern cl::opt<std::string> SampleProfileFile;
 }
 
 // Default to using all available threads in the system, but using only one
@@ -248,9 +250,12 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
     PGOOpt = PGOOptions(LTOCSIRProfile, "", "",
                         /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default);
-  } else if (!SampleProfileFile.empty()) {
+  } else if (StringRef SampleProfileFile =
+                 SampleProfileLoaderPass::getSampleProfileFile(
+                     TheModule.getContext());
+             !SampleProfileFile.empty()) {
     PGOOpt =
-        PGOOptions(SampleProfileFile, "", "",
+        PGOOptions(SampleProfileFile.str(), "", "",
                    /*MemoryProfile=*/"", PGOOptions::SampleUse,
                    PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default);
   }
@@ -262,7 +267,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(TheModule.getContext(), DebugPassManager);
   SI.registerCallbacks(PIC, &MAM);
-  PipelineTuningOptions PTO(&TheModule.getContext().getLibraryOptions());
+  PipelineTuningOptions PTO;
   PTO.LoopVectorization = true;
   PTO.SLPVectorization = true;
   PassBuilder PB(TheModule.getContext(), &TM, PTO, PGOOpt, &PIC);
@@ -351,15 +356,9 @@ static std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
   // CodeGen
   {
     raw_svector_ostream OS(OutputBuffer);
-    legacy::PassManager PM;
-
-    // Setup the codegen now.
-    if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
-                               /* DisableVerify */ true))
-      report_fatal_error("Failed to setup codegen");
-
-    // Run codegen now. resulting binary is in OutputBuffer.
-    PM.run(TheModule);
+    if (runCodeGenPipeline(TM, TheModule, OS, nullptr,
+                           CodeGenFileType::ObjectFile))
+      report_fatal_error("Failed to run codegen");
   }
   return std::make_unique<SmallVectorMemoryBuffer>(
       std::move(OutputBuffer), /*RequiresNullTerminator=*/false);

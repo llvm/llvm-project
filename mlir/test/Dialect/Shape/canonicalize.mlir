@@ -388,6 +388,18 @@ func.func @out_of_bounds() -> index {
   %1 = shape.get_extent %0, %c3 : tensor<3xindex>, index -> index
   return %1 : index
 }
+// -----
+
+// Should not fold.
+// CHECK-LABEL: func @out_of_bounds_negative
+func.func @out_of_bounds_negative() -> index {
+  // CHECK: shape.const_shape
+  // CHECK: shape.get_extent
+  %0 = shape.const_shape [0, 1, 2] : tensor<3xindex>
+  %c-3 = arith.constant -3 : index
+  %1 = shape.get_extent %0, %c-3 : tensor<3xindex>, index -> index
+  return %1 : index
+}
 
 // -----
 

@@ -67,9 +67,9 @@
 // CHECK-NEXT:    %[[T36:.+]]  = vector.scalable.insert %[[PACK_RES_00]], %[[T0]][0] : vector<[4]xf32> into vector<[8]xf32>
 // CHECK-NEXT:    %[[T37:.+]]  = vector.scalable.insert %[[PACK_RES_01]], %[[T36]][4] : vector<[4]xf32> into vector<[8]xf32>
 // CHECK-NEXT:    %[[T38:.+]]  = vector.bitcast %[[T37]] : vector<[8]xf32> to vector<[4]xi64>
-// CHECK-NEXT:    %res1, %res2 = vector.deinterleave %[[T38]] : vector<[4]xi64> -> vector<[2]xi64>
-// CHECK-NEXT:    %[[UNPACK_RES_00:.+]] = vector.bitcast %res1 : vector<[2]xi64> to vector<[4]xf32>
-// CHECK-NEXT:    %[[UNPACK_RES_01:.+]] = vector.bitcast %res2 : vector<[2]xi64> to vector<[4]xf32>
+// CHECK-NEXT:    %resultEven, %resultOdd = vector.deinterleave %[[T38]] : vector<[4]xi64> -> vector<[2]xi64>
+// CHECK-NEXT:    %[[UNPACK_RES_00:.+]] = vector.bitcast %resultEven : vector<[2]xi64> to vector<[4]xf32>
+// CHECK-NEXT:    %[[UNPACK_RES_01:.+]] = vector.bitcast %resultOdd : vector<[2]xi64> to vector<[4]xf32>
 // CHECK-NEXT:    %[[TMP_OUT_0:.+]] = vector.insert %[[UNPACK_RES_00]], %[[UB]] [0] : vector<[4]xf32> into vector<4x[4]xf32>
 // CHECK-NEXT:    %[[TMP_OUT_1:.+]] = vector.insert %[[UNPACK_RES_01]], %[[TMP_OUT_0]] [1] : vector<[4]xf32> into vector<4x[4]xf32>
 
@@ -77,9 +77,9 @@
 // CHECK-NEXT:    %[[T43:.+]]  = vector.scalable.insert %[[PACK_RES_10]], %[[T0]][0] : vector<[4]xf32> into vector<[8]xf32>
 // CHECK-NEXT:    %[[T44:.+]]  = vector.scalable.insert %[[PACK_RES_11]], %[[T43]][4] : vector<[4]xf32> into vector<[8]xf32>
 // CHECK-NEXT:    %[[T45:.+]]  = vector.bitcast %[[T44]] : vector<[8]xf32> to vector<[4]xi64>
-// CHECK-NEXT:    %res1_0, %res2_1 = vector.deinterleave %[[T45]] : vector<[4]xi64> -> vector<[2]xi64>
-// CHECK-NEXT:    %[[UNPACK_RES_10:.+]] = vector.bitcast %res1_0 : vector<[2]xi64> to vector<[4]xf32>
-// CHECK-NEXT:    %[[UNPACK_RES_11:.+]] = vector.bitcast %res2_1 : vector<[2]xi64> to vector<[4]xf32>
+// CHECK-NEXT:    %resultEven_0, %resultOdd_1 = vector.deinterleave %[[T45]] : vector<[4]xi64> -> vector<[2]xi64>
+// CHECK-NEXT:    %[[UNPACK_RES_10:.+]] = vector.bitcast %resultEven_0 : vector<[2]xi64> to vector<[4]xf32>
+// CHECK-NEXT:    %[[UNPACK_RES_11:.+]] = vector.bitcast %resultOdd_1 : vector<[2]xi64> to vector<[4]xf32>
 // CHECK-NEXT:    %[[TMP_OUT_2:.+]] = vector.insert %[[UNPACK_RES_10]], %[[TMP_OUT_1]] [2] : vector<[4]xf32> into vector<4x[4]xf32>
 // CHECK-NEXT:    %[[OUT:.+]] = vector.insert %[[UNPACK_RES_11]], %[[TMP_OUT_2]] [3] : vector<[4]xf32> into vector<4x[4]xf32>
 // CHECK-NEXT:    return %[[OUT]] : vector<4x[4]xf32>

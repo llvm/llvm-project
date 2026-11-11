@@ -781,9 +781,9 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
 
     switch (S->getStmtClass()) {
     default:
-      os << "No cases match in the switch statement. "
-        "Control jumps to line "
-        << End.asLocation().getExpansionLineNumber();
+      os << "No cases match in the switch statement; "
+            "control jumps to line "
+         << End.asLocation().getExpansionLineNumber();
       break;
     case Stmt::DefaultStmtClass:
       os << "Control jumps to the 'default' case at line "

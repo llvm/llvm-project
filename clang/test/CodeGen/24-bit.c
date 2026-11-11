@@ -1,4 +1,5 @@
 // RUN:  %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -emit-llvm -O0 -o - %s | FileCheck %s %}
 
 static union ibtt2
 {

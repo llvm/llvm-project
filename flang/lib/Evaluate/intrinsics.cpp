@@ -1094,9 +1094,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_int",
         {{"a", AnyFloating}, {"round", IeeeRoundType}, DefaultingKIND},
         KINDInt},
-    {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
-    {"__builtin_ieee_is_negative", {{"a", AnyFloating}}, DefaultLogical},
-    {"__builtin_ieee_is_normal", {{"a", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_nan", {{"x", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_negative", {{"x", AnyFloating}}, DefaultLogical},
+    {"__builtin_ieee_is_normal", {{"x", AnyFloating}}, DefaultLogical},
     {"__builtin_ieee_next_after", {{"x", SameReal}, {"y", AnyReal}}, SameReal},
     {"__builtin_ieee_next_down", {{"x", SameReal}}, SameReal},
     {"__builtin_ieee_next_up", {{"x", SameReal}}, SameReal},
@@ -2578,7 +2578,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(sameArg);
       if (std::optional<DynamicType> aType{sameArg->GetType()}) {
         if (result.categorySet.test(aType->category())) {
-          if (const auto *sameChar{UnwrapExpr<Expr<SomeCharacter>>(*sameArg)}) {
+          if (const auto *sameChar{
+                  UnwrapExpr<Expr<Type<TypeCategory::Character>>>(*sameArg)}) {
             if (auto len{ToInt64(Fold(context, sameChar->LEN()))}) {
               resultType = DynamicType{aType->kind(), *len};
             } else {
@@ -3764,7 +3765,7 @@ IntrinsicProcTable::Implementation::HandleEnumerationHuge(
   const semantics::Symbol &ordSym{*ordIter->second};
   StructureConstructor ctor{derived};
   ctor.Add(ordSym,
-      Expr<SomeType>{Expr<SomeInteger>{
+      Expr<SomeType>{Expr<Type<TypeCategory::Integer>>{
           MakeConstantExpr<Type<TypeCategory::Integer>>(4, count)}});
   // Build FunctionResult and DummyArguments
   DynamicType enumType{derived};
@@ -3775,8 +3776,8 @@ IntrinsicProcTable::Implementation::HandleEnumerationHuge(
   attrs.set(characteristics::Procedure::Attr::Pure);
   // Replace arguments with the constant result
   arguments.clear();
-  arguments.emplace_back(
-      AsGenericExpr(Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}}));
+  arguments.emplace_back(AsGenericExpr(Expr<Type<TypeCategory::Derived>>{
+      Constant<Type<TypeCategory::Derived>>{std::move(ctor)}}));
   return SpecificCall{
       SpecificIntrinsic{"huge"s,
           characteristics::Procedure{characteristics::FunctionResult{enumType},
@@ -3939,24 +3940,20 @@ static bool CheckForNonPositiveValues(FoldingContext &context,
   bool ok{true};
   if (arg.Rank() > 0) {
     if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
-      if (const auto *intExpr{std::get_if<Expr<SomeInteger>>(&expr->u)}) {
-        Fortran::common::visit(
-            [&](const auto &kindExpr) {
-              using IntType = typename std::decay_t<decltype(kindExpr)>::Result;
-              if (const auto *constArray{
-                      UnwrapConstantValue<IntType>(kindExpr)}) {
-                for (std::size_t j{0}; j < constArray->size(); ++j) {
-                  auto arrayExpr{constArray->values().at(j)};
-                  if (arrayExpr.IsNegative() || arrayExpr.IsZero()) {
-                    ok = false;
-                    context.messages().Say(arg.sourceLocation(),
-                        "'%s=' argument for intrinsic '%s' must contain all positive values"_err_en_US,
-                        argName, procName);
-                  }
-                }
-              }
-            },
-            intExpr->u);
+      if (const auto *intExpr{
+              std::get_if<Expr<Type<TypeCategory::Integer>>>(&expr->u)}) {
+        if (const auto *constArray{
+                UnwrapConstantValue<Type<TypeCategory::Integer>>(*intExpr)}) {
+          for (std::size_t j{0}; j < constArray->size(); ++j) {
+            auto arrayExpr{constArray->values().at(j)};
+            if (arrayExpr.IsNegative() || arrayExpr.IsZero()) {
+              ok = false;
+              context.messages().Say(arg.sourceLocation(),
+                  "'%s=' argument for intrinsic '%s' must contain all positive values"_err_en_US,
+                  argName, procName);
+            }
+          }
+        }
       }
     }
   } else {

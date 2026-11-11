@@ -2,22 +2,27 @@
 // RUN:  -target-feature +f -target-feature +d \
 // RUN:  -target-feature +zve64d -mvscale-min=1 -mvscale-max=1 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64-none-linux-gnu %s -emit-llvm -o -  -target-feature +f -target-feature +d  -target-feature +zve64d -mvscale-min=1 -mvscale-max=1  | FileCheck %s --check-prefix=CHECK-64 %}
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d \
 // RUN:  -target-feature +zve64d -mvscale-min=2 -mvscale-max=2 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-128
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64-none-linux-gnu %s -emit-llvm -o -  -target-feature +f -target-feature +d  -target-feature +zve64d -mvscale-min=2 -mvscale-max=2  | FileCheck %s --check-prefix=CHECK-128 %}
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d \
 // RUN:  -target-feature +zve64d -mvscale-min=4 -mvscale-max=4 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-256
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64-none-linux-gnu %s -emit-llvm -o -  -target-feature +f -target-feature +d  -target-feature +zve64d -mvscale-min=4 -mvscale-max=4  | FileCheck %s --check-prefix=CHECK-256 %}
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d \
 // RUN:  -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-512
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64-none-linux-gnu %s -emit-llvm -o -  -target-feature +f -target-feature +d  -target-feature +zve64d -mvscale-min=8 -mvscale-max=8  | FileCheck %s --check-prefix=CHECK-512 %}
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:  -target-feature +f -target-feature +d \
 // RUN:  -target-feature +zve64d -mvscale-min=16 -mvscale-max=16 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-1024
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple riscv64-none-linux-gnu %s -emit-llvm -o -  -target-feature +f -target-feature +d  -target-feature +zve64d -mvscale-min=16 -mvscale-max=16  | FileCheck %s --check-prefix=CHECK-1024 %}
 
 typedef __rvv_int8mf8_t vint8mf8_t;
 typedef __rvv_uint8mf8_t vuint8mf8_t;

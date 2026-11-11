@@ -414,16 +414,12 @@ bool RISCVLoadStoreOptImpl::tryConvertToXqcilsmLdStPair(
   if (!isMemOpAligned(*First, Align(4)) || !isMemOpAligned(*Second, Align(4)))
     return false;
 
-  auto &FirstOp0 = First->getOperand(0);
-  auto &SecondOp0 = Second->getOperand(0);
+  const auto &FirstOp0 = First->getOperand(0);
+  const auto &SecondOp0 = Second->getOperand(0);
 
   int64_t Off1 = FirstOp2.getImm();
   int64_t Off2 = SecondOp2.getImm();
-
-  if (Off2 < Off1) {
-    std::swap(FirstOp0, SecondOp0);
-    std::swap(Off1, Off2);
-  }
+  assert(Off1 < Off2 && "Expected instructions to be ordered by offset");
 
   if (!isShiftedUInt<5, 2>(Off1) || (Off2 - Off1 != 4))
     return false;

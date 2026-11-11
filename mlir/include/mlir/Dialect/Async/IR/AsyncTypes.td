@@ -22,6 +22,7 @@ include "mlir/Dialect/Async/IR/AsyncDialect.td"
 
 class Async_Type<string name, string typeMnemonic> : TypeDef<AsyncDialect,
                                                              name> {
+  let cppIncludes = ["mlir/Dialect/Async/IR/AsyncTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

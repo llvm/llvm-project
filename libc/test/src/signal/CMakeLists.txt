@@ -70,6 +70,25 @@ add_libc_test(
 )
 
 add_libc_test(
+  sigpending_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigpending_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.sigset_t
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigismember
+    libc.src.signal.signal
+    libc.src.signal.sigpending
+    libc.src.signal.sigprocmask
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   sigsuspend_test
   SUITE
     libc-signal-tests
@@ -86,6 +105,71 @@ add_libc_test(
     libc.src.signal.sigemptyset
     libc.src.signal.sigprocmask
     libc.src.signal.sigsuspend
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  sigtimedwait_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigtimedwait_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_sigaction
+    libc.hdr.types.struct_timespec
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigtimedwait
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  sigwait_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigwait_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_time_macros
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_itimerval
+    libc.src.signal.raise
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigwait
+    libc.src.sys.time.setitimer
+)
+
+add_libc_test(
+  sigwaitinfo_test
+  SUITE
+    libc-signal-tests
+  SRCS
+    sigwaitinfo_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_sigaction
+    libc.src.signal.raise
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigprocmask
+    libc.src.signal.sigwaitinfo
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
