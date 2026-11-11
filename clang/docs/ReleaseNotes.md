@@ -165,7 +165,7 @@ features cannot lower the translation-unit ABI level;
 
 - On 32-bit Arm Windows, the C++ throw information (`ThrowInfo`,
   `CatchableTypeArray` and `CatchableType`) is now image-relative, as the MSVC
-  runtime expects. Throwing an exception used to crash in the runtime.
+  runtime expects.
 
 - On Windows targets using Microsoft C++ ABI, fixed returning a class with
   a deleted template constructor which should be returned in a register.
