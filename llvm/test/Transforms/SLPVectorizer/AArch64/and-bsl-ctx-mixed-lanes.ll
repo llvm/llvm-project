@@ -10,17 +10,20 @@ define void @bsl_lane0(ptr %x, i64 %y, i64 %m0, i64 %m1, i64 %w1, ptr %out) {
 ; CHECK-LABEL: define void @bsl_lane0(
 ; CHECK-SAME: ptr [[X:%.*]], i64 [[Y:%.*]], i64 [[M0:%.*]], i64 [[M1:%.*]], i64 [[W1:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[M0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[W1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[X]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[M1]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i64> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[Y]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i64> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[X]], align 8
+; CHECK-NEXT:    [[PX1:%.*]] = getelementptr inbounds i64, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[PX1]], align 8
+; CHECK-NEXT:    [[N0:%.*]] = xor i64 [[M0]], -1
+; CHECK-NEXT:    [[N1:%.*]] = xor i64 [[W1]], -1
+; CHECK-NEXT:    [[A0:%.*]] = and i64 [[X0]], [[M0]]
+; CHECK-NEXT:    [[A1:%.*]] = and i64 [[X1]], [[M1]]
+; CHECK-NEXT:    [[B0:%.*]] = and i64 [[Y]], [[N0]]
+; CHECK-NEXT:    [[B1:%.*]] = and i64 [[Y]], [[N1]]
+; CHECK-NEXT:    [[O0:%.*]] = or i64 [[A0]], [[B0]]
+; CHECK-NEXT:    [[O1:%.*]] = or i64 [[A1]], [[B1]]
+; CHECK-NEXT:    store i64 [[O0]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[PO1:%.*]] = getelementptr inbounds i64, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store i64 [[O1]], ptr [[PO1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

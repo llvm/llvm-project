@@ -9,18 +9,32 @@
 define double @mixed_lanes(ptr noalias %e, ptr %a, ptr %b) {
 ; CHECK-LABEL: define double @mixed_lanes(
 ; CHECK-SAME: ptr noalias [[E:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc contract <4 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <4 x double> [[TMP3]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[AP1]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[BP1]], align 8
+; CHECK-NEXT:    [[AP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[BP2:%.*]] = getelementptr inbounds double, ptr [[B]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[AP2]], align 8
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[BP2]], align 8
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[BP3:%.*]] = getelementptr inbounds double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load double, ptr [[AP3]], align 8
+; CHECK-NEXT:    [[B3:%.*]] = load double, ptr [[BP3]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul reassoc contract double [[A0]], [[B0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul reassoc contract double [[A1]], [[B1]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul reassoc contract double [[A2]], [[B2]]
+; CHECK-NEXT:    [[M3:%.*]] = fmul reassoc contract double [[A3]], [[B3]]
 ; CHECK-NEXT:    store double [[M1]], ptr [[E]], align 8
 ; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds double, ptr [[E]], i64 1
-; CHECK-NEXT:    [[M2:%.*]] = extractelement <4 x double> [[TMP3]], i64 2
 ; CHECK-NEXT:    store double [[M2]], ptr [[E2]], align 8
 ; CHECK-NEXT:    [[E3:%.*]] = getelementptr inbounds double, ptr [[E]], i64 2
-; CHECK-NEXT:    [[M3:%.*]] = extractelement <4 x double> [[TMP3]], i64 3
 ; CHECK-NEXT:    store double [[M3]], ptr [[E3]], align 8
-; CHECK-NEXT:    [[S3:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[S1:%.*]] = fadd reassoc contract double [[M0]], [[M1]]
+; CHECK-NEXT:    [[S2:%.*]] = fadd reassoc contract double [[S1]], [[M2]]
+; CHECK-NEXT:    [[S3:%.*]] = fadd reassoc contract double [[S2]], [[M3]]
 ; CHECK-NEXT:    ret double [[S3]]
 ;
   %a0 = load double, ptr %a
