@@ -5216,14 +5216,12 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeExtraAttributeInfo,
-      FunctionType::FunctionTypeArmAttributes,
-      FunctionType::FunctionTypeRISCVAttributes, FunctionType::ExceptionType,
+      FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
       Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers,
       FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeExtraAttributeInfo(),
-      EPI.requiresFunctionProtoTypeArmAttributes(),
-      EPI.requiresFunctionProtoTypeRISCVAttributes(), ESH.NumExceptionType,
+      EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0, EPI.FunctionEffects.size(),

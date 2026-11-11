@@ -22,10 +22,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "OffloadAPI.h"
 #include "OffloadError.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
-#include "omptarget.h"
 
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -43,12 +43,12 @@ public:
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
   virtual Expected<void *> allocate(size_t Size, void *HstPtr,
-                                    TargetAllocTy Kind = TARGET_ALLOC_DEFAULT,
+                                    ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE,
                                     size_t Alignment = 0) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
   virtual Error free(void *TgtPtr,
-                     TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+                     ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE) = 0;
 };
 
 /// Class of memory manager. A manager pools the memory of a single allocator,
@@ -145,7 +145,7 @@ class MemoryManagerTy {
   /// The reference to a device allocator
   DeviceAllocatorTy &DeviceAllocator;
   /// The kind of device for which the memory manager is allocated
-  TargetAllocTy DeviceKind;
+  ol_alloc_type_t DeviceKind;
 
   /// The threshold to manage memory using memory manager. If the request size
   /// is larger than \p SizeThreshold, the allocation will not be managed by the
@@ -238,7 +238,7 @@ public:
   /// Constructor. If \p Threshold is non-zero, then the default threshold will
   /// be overwritten by \p Threshold.
   MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0,
-                  TargetAllocTy DeviceKind = TARGET_ALLOC_DEVICE)
+                  ol_alloc_type_t DeviceKind = OL_ALLOC_TYPE_DEVICE)
       : FreeLists(NumBuckets), FreeListLocks(NumBuckets),
         DeviceAllocator(DeviceAllocator), DeviceKind(DeviceKind) {
     if (Threshold)
