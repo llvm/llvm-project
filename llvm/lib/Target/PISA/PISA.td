@@ -28,19 +28,19 @@ include "PISAInstrInfo.td"
 include "PISACombine.td"
 
 defm : RemapAllTargetPseudoPointerOperands<Reg64b>;
+
 def PISAInstrInfo : InstrInfo;
 
 class Proc<string Name, list<SubtargetFeature> Features>
- : Processor<Name, NoItineraries, Features>;
+    : Processor<Name, NoItineraries, Features>;
 
-// valid -mcpu values
-def : Proc<"100",   [Feature100]>;
+// Valid -mcpu values.
+def : Proc<"100", [Feature100]>;
 
 def PISAInstPrinter : AsmWriter {
-  string AsmWriterClassName  = "InstPrinter";
+  string AsmWriterClassName = "InstPrinter";
   bit isMCAsmWriter = 1;
 }
-
 
 def PISA : Target {
   let InstructionSet = PISAInstrInfo;
