@@ -3,12 +3,14 @@
 
 ---
 name:            nneg_zext
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
 
     ; RV64-LABEL: name: nneg_zext
-    ; RV64: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; RV64-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
     ; RV64-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
@@ -21,11 +23,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_shl
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_shl
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -37,11 +41,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_lshr
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_lshr
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -53,11 +59,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_ashr
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_ashr
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -69,11 +77,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_sdiv
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_sdiv
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -85,11 +95,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_udiv
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_udiv
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -101,11 +113,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_srem
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_srem
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -117,11 +131,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_urem
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_urem
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
@@ -133,11 +149,13 @@ body:             |
 
 ---
 name:            binop_left_to_zero_mul
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x10
     ; RV64-LABEL: name: binop_left_to_zero_mul
-    ; RV64: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV64: liveins: $x10
+    ; RV64-NEXT: {{  $}}
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; RV64-NEXT: $x10 = COPY [[C]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = G_CONSTANT i64 0
