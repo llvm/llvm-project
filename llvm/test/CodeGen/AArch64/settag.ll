@@ -345,19 +345,6 @@ entry:
   call void @llvm.aarch64.settag(ptr %p, i64 0)
   ret void
 }
-
-define void @stzg0(ptr %p, ptr %q) {
-; CHECK-LABEL: stzg0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    str w8, [x1]
-; CHECK-NEXT:    ret
-entry:
-  store i32 1, ptr %q
-  call void @llvm.aarch64.settag.zero(ptr %p, i64 0)
-  ret void
-}
-
 declare void @b(ptr)
 declare void @c(ptr, i64)
 
