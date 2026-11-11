@@ -1,7 +1,7 @@
 // NOTE: Do not autogenerate. -verify checks target-specific diagnostics.
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.50-- -verify -S -o - %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1250-strict -verify -S -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.50s-amd-amdhsa -verify -S -o - %s
 
 typedef unsigned int uint;
 typedef unsigned short int ushort;

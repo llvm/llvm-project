@@ -5573,7 +5573,7 @@ bool AMDGPUAsmParser::validateMonitorSleep(const MCInst &Inst,
     return false;
   }
   if (getSTI().hasFeature(AMDGPU::FeatureMonitorSleep7BitDuration) &&
-      (Sleep < INT16_MIN || Sleep > UINT16_MAX || (Sleep & 0x7f80))) {
+      (Sleep < INT16_MIN || Sleep > UINT16_MAX || (Sleep & 0x7fff) > 127)) {
     Error(getOperandLoc(Operands, ImmIdx),
           "sleep duration must be in range [0, 127] on this target");
     return false;

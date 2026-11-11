@@ -268,18 +268,17 @@ bool AMDGPULowerIntrinsicsImpl::visitMonitorSleep(IntrinsicInst &I) {
   assert(I.getIntrinsicID() == Intrinsic::amdgcn_s_monitor_sleep);
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
-  unsigned Sleep = cast<ConstantInt>(I.getArgOperand(0))->getZExtValue();
-  unsigned NewSleep;
-  if (ST.hasNoSleepForever() && (Sleep & 0x8000)) {
-    NewSleep = 127;
-  } else if (ST.hasMonitorSleep7BitDuration() && (Sleep & 0x7f80)) {
-    NewSleep = (Sleep & 0x8000) | 127;
-  } else {
+  if (!ST.hasNoSleepForever())
     return false;
-  }
+
+  int Sleep = cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
+  if (!(Sleep & 0x8000))
+    return false;
 
   IRBuilder<> B(&I);
-  I.setArgOperand(0, B.getInt16(NewSleep));
+  Value *NewSleep = B.getInt16(127); // Maximum
+  I.setArgOperand(0, NewSleep);
+
   return true;
 }
 

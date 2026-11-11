@@ -181,18 +181,6 @@ bool AMDGPUTargetInfo::initFeatureMap(
     return false;
   }
 
-  // The target parser does not expose these backend features to Sema.
-  if (getTriple().isAMDGCN()) {
-    llvm::AMDGPU::GPUKind Kind =
-        CPU.empty() ? getGPUKindFromSubArch(getTriple().getSubArch())
-                    : parseArchAMDGCN(CPU);
-    if (Kind == GK_GFX1250 || Kind == GK_GFX1250_STRICT)
-      Features.insert({"no-sleep-forever", true});
-    if (Kind == GK_GFX1250 || Kind == GK_GFX1250_STRICT || Kind == GK_GFX1251 ||
-        Kind == GK_GFX12_5_GENERIC)
-      Features.insert({"monitor-sleep-7-bit-duration", true});
-  }
-
   return true;
 }
 

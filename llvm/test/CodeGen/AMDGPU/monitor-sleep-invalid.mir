@@ -1,0 +1,77 @@
+# NOTE: Do not autogenerate. Check the target's MachineVerifier diagnostics.
+# RUN: split-file %s %t
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=none -verify-machineinstrs -filetype=null %t/valid-duration.mir
+# RUN: llc -mtriple=amdgpu12.51 -run-pass=none -verify-machineinstrs -filetype=null %t/valid-duration.mir
+# RUN: llc -mtriple=amdgpu12.51 -run-pass=none -verify-machineinstrs -filetype=null %t/valid-forever.mir
+# RUN: llc -mtriple=amdgpu13 -run-pass=none -verify-machineinstrs -filetype=null %t/gfx13.mir
+# RUN: not --crash llc -mtriple=amdgpu12.51 -run-pass=none -verify-machineinstrs -filetype=null %t/duration.mir 2>&1 | FileCheck %s --check-prefix=DURATION
+# RUN: not --crash llc -mtriple=amdgpu12.50 -run-pass=none -verify-machineinstrs -filetype=null %t/forever.mir 2>&1 | FileCheck %s --check-prefix=FOREVER
+
+# DURATION: Bad machine code: sleep duration must be in range [0, 127] on this target
+# DURATION: S_MONITOR_SLEEP 200
+# DURATION: Bad machine code: sleep duration must be in range [0, 127] on this target
+# DURATION: S_MONITOR_SLEEP 65536
+# DURATION: Bad machine code: sleep duration must be in range [0, 127] on this target
+# DURATION: S_MONITOR_SLEEP_gfx12 200
+# DURATION: Bad machine code: sleep duration must be in range [0, 127] on this target
+# DURATION: S_MONITOR_SLEEP_gfx12 65536
+# FOREVER: Bad machine code: sleep forever is unsupported on this target
+# FOREVER: S_MONITOR_SLEEP 32768
+# FOREVER: Bad machine code: sleep forever is unsupported on this target
+# FOREVER: S_MONITOR_SLEEP_gfx12 32768
+
+#--- duration.mir
+---
+name: sleep_200
+body: |
+  bb.0:
+    S_MONITOR_SLEEP 200
+    S_MONITOR_SLEEP 65536
+    S_MONITOR_SLEEP_gfx12 200
+    S_MONITOR_SLEEP_gfx12 65536
+    S_ENDPGM 0
+...
+
+#--- forever.mir
+---
+name: sleep_forever
+body: |
+  bb.0:
+    S_MONITOR_SLEEP 32768
+    S_MONITOR_SLEEP_gfx12 32768
+    S_ENDPGM 0
+...
+
+#--- valid-duration.mir
+---
+name: valid_duration
+body: |
+  bb.0:
+    S_MONITOR_SLEEP 0
+    S_MONITOR_SLEEP 127
+    S_MONITOR_SLEEP_gfx12 0
+    S_MONITOR_SLEEP_gfx12 127
+    S_ENDPGM 0
+...
+
+#--- valid-forever.mir
+---
+name: valid_forever
+body: |
+  bb.0:
+    S_MONITOR_SLEEP_gfx12 32768
+    S_MONITOR_SLEEP_gfx12 32895
+    S_MONITOR_SLEEP_gfx12 -32768
+    S_MONITOR_SLEEP_gfx12 -32641
+    S_ENDPGM 0
+...
+
+#--- gfx13.mir
+---
+name: wider_duration
+body: |
+  bb.0:
+    S_MONITOR_SLEEP 4660
+    S_MONITOR_SLEEP_gfx13 4660
+    S_ENDPGM 0
+...
