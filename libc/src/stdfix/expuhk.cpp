@@ -91,7 +91,7 @@ LLVM_LIBC_FUNCTION(unsigned short accum, expuhk, (unsigned short accum x)) {
   //   exp( indices/8 - floor(indices / 8) )
   unsigned short accum exp_hi = EXP_HI[indices >> 3];
   unsigned short accum exp_mid = EXP_MID[indices & 0x7];
-  // exp(x) ~ exp(hi) * exp(mid) * (1 + lo);
+  // exp(x) ~ exp(hi) * exp(mid) * (1 + lo)
   return exp_hi * (exp_mid * one_plus_lo);
 }
 
