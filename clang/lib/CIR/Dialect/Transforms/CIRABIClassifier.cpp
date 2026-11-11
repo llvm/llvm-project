@@ -665,14 +665,10 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
-  if (info.isIndirect()) {
-    // The rewriter has no address space for the Indirect pointer yet.
-    if (info.getIndirectAddrSpace() != 0)
-      return mlir::failure();
+  if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal(),
-                                          /*addrSpace=*/0);
-  }
+                                          info.getIndirectAddrSpace());
   if (info.isIndirectAliased())
     return ArgClassification::getIndirectAliased(info.getIndirectAlign(),
                                                  info.getIndirectAddrSpace());

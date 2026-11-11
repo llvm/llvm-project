@@ -468,6 +468,23 @@ add_libc_test(
 )
 
 add_libc_test(
+  posix_close_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    posix_close_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.unistd_macros
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.unistd.posix_close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   rmdir_test
   SUITE
     libc-unistd-tests

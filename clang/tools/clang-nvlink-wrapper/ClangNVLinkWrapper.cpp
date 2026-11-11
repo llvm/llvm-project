@@ -48,6 +48,9 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 
+#include <list>
+#include <mutex>
+
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::object;
@@ -94,8 +97,11 @@ static void printVersion(raw_ostream &OS) {
 /// The value of `argv[0]` when run.
 static const char *Executable;
 
+/// Mutex lock to protect writes to shared TempFiles in parallel.
+static std::mutex TempFilesMutex;
+
 /// Temporary files to be cleaned up.
-static SmallVector<SmallString<128>> TempFiles;
+static std::list<SmallString<128>> TempFiles;
 
 /// Codegen flags for LTO backend.
 static codegen::RegisterCodeGenFlags CodeGenFlags;
@@ -171,6 +177,7 @@ bool hasFatBinary(const ArgList &Args, MemoryBufferRef Buffer) {
 
 Expected<StringRef> createTempFile(const ArgList &Args, const Twine &Prefix,
                                    StringRef Extension) {
+  std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
   if (Args.hasArg(OPT_save_temps)) {
     (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
@@ -342,8 +349,7 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
     return createStringError(
         "must pass in an explicit nvptx64 gpu architecture to 'ptxas'");
 
-  auto TempFileOrErr = createTempFile(
-      Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "cubin");
+  auto TempFileOrErr = createTempFile(Args, sys::path::stem(File), "cubin");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -692,8 +698,10 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
       if (Args.hasArg(OPT_lto_emit_asm))
         TempFile = Args.getLastArgValue(OPT_o, "a.out");
       else {
+        StringRef Stem = sys::path::stem(Args.getLastArgValue(OPT_o, "a.out"));
         auto TempFileOrErr = createTempFile(
-            Args, sys::path::stem(Args.getLastArgValue(OPT_o, "a.out")), "s");
+            Args, Stem + (Task == 0 ? Twine("") : Twine('.') + Twine(Task)),
+            "s");
         if (!TempFileOrErr)
           reportError(TempFileOrErr.takeError());
         TempFile = Args.MakeArgString(*TempFileOrErr);
@@ -711,6 +719,8 @@ getInput(const cl::LibraryOptionsContext &LibraryOptions, const ArgList &Args) {
       return Files;
 
     for (StringRef LTOFile : LTOFiles) {
+      if (LTOFile.empty())
+        continue;
       auto FileOrErr = runPTXAs(LTOFile, Args);
       if (!FileOrErr)
         return FileOrErr.takeError();

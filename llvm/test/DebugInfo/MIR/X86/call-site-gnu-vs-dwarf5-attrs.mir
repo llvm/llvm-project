@@ -1,49 +1,53 @@
 ## Test the call site encoding in DWARF5 vs GNU extensions.
 
+# RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s > %t.gdb.mir
+# RUN: sed 's/TUNE_PLACEHOLDER/lldb/' %s > %t.lldb.mir
+# RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s > %t.sce.mir
+
 ## === DWARF4, tune for gdb ===
-# RUN: llc -emit-call-site-info -dwarf-version 4 -debugger-tune=gdb -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN: llc -emit-call-site-info -dwarf-version 4 -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %t.gdb.mir  \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU -implicit-check-not=DW_AT_call
 
 # === DWARF5, tune for gdb ===
-# RUN: llc -dwarf-version 5 -debugger-tune=gdb -emit-call-site-info -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN: llc -dwarf-version 5 -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %t.gdb.mir  \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
 
 ## === DWARF4, tune for lldb ===
-# RUN: llc -dwarf-version 4 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN: llc -dwarf-version 4 -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %t.lldb.mir   \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
 
 ## === DWARF5, tune for lldb ===
-# RUN: llc -dwarf-version 5 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN: llc -dwarf-version 5 -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %t.lldb.mir   \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5 -implicit-check-not=DW_AT_call
 
 ## === DWARF4, tune for sce ===
-# RUN: llc -emit-call-site-info -dwarf-version 4 -filetype=obj -debugger-tune=sce \
+# RUN: llc -emit-call-site-info -dwarf-version 4 -filetype=obj \
 # RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
-# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
+# RUN:     -start-after=machineverifier -o - %t.sce.mir | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-GNU
 
 ## === DWARF5, tune for sce ===
-# RUN: llc -emit-call-site-info -dwarf-version 5 -filetype=obj -debugger-tune=sce \
+# RUN: llc -emit-call-site-info -dwarf-version 5 -filetype=obj \
 # RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
-# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
+# RUN:     -start-after=machineverifier -o - %t.sce.mir | llvm-dwarfdump - | FileCheck %s -check-prefixes=CHECK-DWARF5
 
 ## === DWARF3, tune for gdb ===
-# RUN: llc -emit-call-site-info -dwarf-version 3 -debugger-tune=gdb -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s  \
+# RUN: llc -emit-call-site-info -dwarf-version 3 -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %t.gdb.mir  \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
 
 ## === DWARF3, tune for lldb ===
-# RUN: llc -dwarf-version 3 -debugger-tune=lldb -emit-call-site-info -filetype=obj \
-# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %s   \
+# RUN: llc -dwarf-version 3 -emit-call-site-info -filetype=obj \
+# RUN:     -mtriple=x86_64-unknown-unknown -start-after=machineverifier -o - %t.lldb.mir   \
 # RUN:     | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_GNU_call
 
 ## === DWARF3, tune for sce ===
-# RUN: llc -emit-call-site-info -dwarf-version 3 -filetype=obj -debugger-tune=sce \
+# RUN: llc -emit-call-site-info -dwarf-version 3 -filetype=obj \
 # RUN:     -debug-entry-values -mtriple=x86_64-unknown-unknown \
-# RUN:     -start-after=machineverifier -o - %s | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
+# RUN:     -start-after=machineverifier -o - %t.sce.mir | llvm-dwarfdump - | FileCheck %s -implicit-check-not=DW_AT_call
 
 ## This is based on the following reproducer:
 ##
@@ -131,7 +135,7 @@
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   !llvm.dbg.cu = !{!0}
-  !llvm.module.flags = !{!14, !15, !16}
+  !llvm.module.flags = !{!14, !15, !16, !100}
   !llvm.ident = !{!17}
   
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 11.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
@@ -151,6 +155,7 @@
   !14 = !{i32 7, !"Dwarf Version", i32 4}
   !15 = !{i32 2, !"Debug Info Version", i32 3}
   !16 = !{i32 1, !"wchar_size", i32 4}
+  !100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
   !17 = !{!"clang version 11.0.0"}
   !18 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 5, type: !19, scopeLine: 5, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !22)
   !19 = !DISubroutineType(types: !20)
