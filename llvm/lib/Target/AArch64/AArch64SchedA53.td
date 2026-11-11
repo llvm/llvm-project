@@ -324,11 +324,6 @@ def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
 //---
 // Floating Point MAC, DIV, SQRT
 //---
-// Q-form crypto (AES/SHA/PMULL) needs no special case: taking both datapath
-// lanes for one cycle is exactly the throughput of the 128-bit-wide crypto
-// unit, and it leaves fused AES pairs (FeatureFuseAES) free to issue
-// back-to-back.
-
 def : InstRW<[A53WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
 def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S)L.*")>;
 def : InstRW<[A53WriteFMAC],
