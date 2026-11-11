@@ -39,6 +39,7 @@ public:
   struct Options {
     bool IsOutOfProcess = false;
     std::string ExecutorPath;
+    std::string ExecutorConnect;
     std::string RuntimePath;
     unsigned SlabAllocateSize = 0;
     bool UseSharedMemory = false;

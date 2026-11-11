@@ -299,6 +299,7 @@ int main(int argc, const char **argv) {
   ExecutorOpts.IsOutOfProcess =
       !OOPExecutor.empty() || !OOPExecutorConnect.empty();
   ExecutorOpts.ExecutorPath = OOPExecutor;
+  ExecutorOpts.ExecutorConnect = OOPExecutorConnect;
   ExecutorOpts.RuntimePath = OrcRuntimePath;
   ExecutorOpts.SlabAllocateSize = *SizeOrErr;
   ExecutorOpts.UseSharedMemory = UseSharedMemory;
