@@ -2530,7 +2530,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_file_file",
     srcs = [
-        "include/llvm-libc-types/off_t.h",
         "src/__support/File/file.cpp",
     ],
     hdrs = [
@@ -2558,6 +2557,7 @@ libc_support_library(
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
         ":hdr_wchar_macros",
+        ":llvm_libc_types_off_t",
         ":string_memory_utils",
         ":types_char32_t",
         ":types_char8_t",
@@ -4277,22 +4277,18 @@ libc_support_library(
     ],
 )
 
-sqrt_common_hdrs = [
-    "src/__support/FPUtil/sqrt.h",
-    "src/__support/FPUtil/generic/sqrt.h",
-    "src/__support/FPUtil/generic/sqrt_80_bit_long_double.h",
-]
-
-sqrt_hdrs = selects.with_or({
-    "//conditions:default": sqrt_common_hdrs,
-    PLATFORM_CPU_X86_64: sqrt_common_hdrs + ["src/__support/FPUtil/x86_64/sqrt.h"],
-    PLATFORM_CPU_ARM64: sqrt_common_hdrs + ["src/__support/FPUtil/aarch64/sqrt.h"],
-    PLATFORM_CPU_RISCV64: sqrt_common_hdrs + ["src/__support/FPUtil/riscv/sqrt.h"],
-})
-
 libc_support_library(
     name = "__support_fputil_sqrt",
-    hdrs = sqrt_hdrs,
+    hdrs = [
+        "src/__support/FPUtil/generic/sqrt.h",
+        "src/__support/FPUtil/generic/sqrt_80_bit_long_double.h",
+        "src/__support/FPUtil/sqrt.h",
+    ] + selects.with_or({
+        "//conditions:default": [],
+        PLATFORM_CPU_X86_64: ["src/__support/FPUtil/x86_64/sqrt.h"],
+        PLATFORM_CPU_ARM64: ["src/__support/FPUtil/aarch64/sqrt.h"],
+        PLATFORM_CPU_RISCV64: ["src/__support/FPUtil/riscv/sqrt.h"],
+    }),
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
@@ -4356,14 +4352,12 @@ libc_support_library(
     ],
 )
 
-fma_common_hdrs = [
-    "src/__support/FPUtil/FMA.h",
-    "src/__support/FPUtil/generic/FMA.h",
-]
-
 libc_support_library(
     name = "__support_fputil_fma",
-    hdrs = fma_common_hdrs,
+    hdrs = [
+        "src/__support/FPUtil/FMA.h",
+        "src/__support/FPUtil/generic/FMA.h",
+    ],
     deps = [
         ":__support_big_int",
         ":__support_cpp_bit",
@@ -4410,22 +4404,18 @@ libc_support_library(
     ],
 )
 
-nearest_integer_common_hdrs = [
-    "src/__support/FPUtil/nearest_integer.h",
-]
-
-nearest_integer_platform_hdrs = [
-    "src/__support/FPUtil/x86_64/nearest_integer.h",
-    "src/__support/FPUtil/aarch64/nearest_integer.h",
-]
-
 libc_support_library(
     name = "__support_fputil_nearest_integer",
-    hdrs = nearest_integer_common_hdrs,
+    hdrs = [
+        "src/__support/FPUtil/nearest_integer.h",
+    ],
     # These are conditionally included and will #error out if the platform
     # doesn't support rounding instructions, so they can't be compiled on their
     # own.
-    textual_hdrs = nearest_integer_platform_hdrs,
+    textual_hdrs = [
+        "src/__support/FPUtil/x86_64/nearest_integer.h",
+        "src/__support/FPUtil/aarch64/nearest_integer.h",
+    ],
     deps = [
         ":__support_common",
         ":__support_cpp_type_traits",
@@ -5989,10 +5979,15 @@ libc_header_library(
     ],
 )
 
+filegroup(
+    name = "__support_math_headers_for_apfloat",
+    srcs = glob(["src/__support/math/**/*.h"]),
+)
+
 # This target is only used by APFloat.cpp in the Support library.
 cc_library(
     name = "shared_math_headers_for_apfloat",
-    srcs = glob(["src/__support/math/**/*.h"]),
+    srcs = [":__support_math_headers_for_apfloat"],
     hdrs = [
         "shared/libc_common.h",
         "shared/math.h",
