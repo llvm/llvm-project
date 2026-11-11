@@ -26,6 +26,7 @@ include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 // The base class for Tosa dialect types.
 class Tosa_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<Tosa_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/Tosa/IR/TosaOps.h"];
   let mnemonic = typeMnemonic;
 }
 

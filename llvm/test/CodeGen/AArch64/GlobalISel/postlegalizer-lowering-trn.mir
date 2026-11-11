@@ -10,7 +10,6 @@
 name:            trn1_v8s8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -33,7 +32,6 @@ body:             |
 name:            trn2_v8s8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -56,7 +54,6 @@ body:             |
 name:            trn1_v16s8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -79,7 +76,6 @@ body:             |
 name:            trn2_v16s8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -102,7 +98,6 @@ body:             |
 name:            trn1_v4s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -125,7 +120,6 @@ body:             |
 name:            trn2_v4s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -148,7 +142,6 @@ body:             |
 name:            redundant_with_zip1
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -172,7 +165,6 @@ body:             |
 name:            redundant_with_zip2
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -196,7 +188,6 @@ body:             |
 name:            trn1_undef
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -220,7 +211,6 @@ body:             |
 name:            trn2_undef
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1

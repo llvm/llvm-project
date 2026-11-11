@@ -362,7 +362,7 @@ define void @uniform_replicate_used_in_replicate_region(i64 %x, ptr noalias %src
 ; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[PREDPHI17:%.*]] = select i1 [[TMP60]], <4 x i32> [[TMP58]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP62:%.*]] = getelementptr i32, ptr [[TMP61]], i64 4
+; CHECK-NEXT:    [[TMP62:%.*]] = getelementptr i8, ptr [[TMP61]], i64 16
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP61]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI17]], ptr [[TMP62]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

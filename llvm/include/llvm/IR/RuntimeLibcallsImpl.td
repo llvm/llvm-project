@@ -158,7 +158,33 @@ class MemoryEffects<ModRefInfo mr = ModRef> {
 }
 
 def UnknownMemory : MemoryEffects;
+def NoMemory : MemoryEffects<NoModRef>;
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
+def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
+
+class ValueAttr<list<AttrProperty> props, string expr>
+    : Attr<"", IntersectPreserve, props> {
+  string Expr = expr;
+}
+
+class AllocKindAttr<string kind>
+    : ValueAttr<[FnAttr], "Attribute::getWithAllocKind(C, " # kind # ")">;
+
+class AllocSizeAttr<int elemSizeArg, string numElemsArg = "std::nullopt">
+    : ValueAttr<[FnAttr], "Attribute::getWithAllocSizeArgs(C, " # elemSizeArg #
+                          ", " # numElemsArg # ")">;
+
+class AllocFamilyAttr<string family>
+    : ValueAttr<[FnAttr],
+                "Attribute::get(C, \"alloc-family\", \"" # family # "\")">;
+
+class NoFPClassAttr<string mask>
+    : ValueAttr<[ParamAttr, RetAttr],
+                "Attribute::getWithNoFPClass(C, " # mask # ")">;
+
+def CapturesNone
+    : ValueAttr<[ParamAttr],
+                "Attribute::getWithCaptureInfo(C, CaptureInfo::none())">;
 
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
@@ -175,9 +201,10 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   FuncArgType ReturnType = RetType;
   list<FuncArgType> ArgumentTypes = ArgTypes;
 
-  list<EnumAttr> FnAttrs = [];
+  list<Attr> FnAttrs = [];
   MemoryEffects Memory = UnknownMemory;
-  list<list<EnumAttr>> ParamAttrs = [];
+  list<Attr> RetAttrs = [];
+  list<list<Attr>> ParamAttrs = [];
   list<FuncArgType> ParamPointeeTypes = [];
 }
 
@@ -191,21 +218,22 @@ class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
   RuntimeLibcall Unmasked = unmasked;
   let FnAttrs = unmasked.FnAttrs;
   let Memory = unmasked.Memory;
+  let RetAttrs = unmasked.RetAttrs;
   let ParamAttrs = unmasked.ParamAttrs;
   let ParamPointeeTypes = unmasked.ParamPointeeTypes;
 }
 
 // TODO: NoCallback probably unsafe in general
-defvar VectorMathFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+defvar MathFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
 
 multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
                              list<FuncArgType> ArgTypes = [],
                              MemoryEffects memory = UnknownMemory,
-                             list<list<EnumAttr>> paramAttrs = [],
+                             list<list<Attr>> paramAttrs = [],
                              list<FuncArgType> paramPointeeTypes = []> {
   defvar VT = !cast<VectorFuncArgType>(suffix);
   def _#suffix : RuntimeLibcall<RetType, ArgTypes> {
-    let FnAttrs = VectorMathFnAttrs;
+    let FnAttrs = MathFnAttrs;
     let Memory = memory;
     let ParamAttrs = paramAttrs;
     let ParamPointeeTypes = paramPointeeTypes;
@@ -224,9 +252,10 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   string LibCallFuncName = Name;
   FuncArgType ReturnType = P.ReturnType;
   list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
-  list<EnumAttr> FnAttrs = P.FnAttrs;
+  list<Attr> FnAttrs = P.FnAttrs;
   MemoryEffects Memory = P.Memory;
-  list<list<EnumAttr>> ParamAttrs = P.ParamAttrs;
+  list<Attr> RetAttrs = P.RetAttrs;
+  list<list<Attr>> ParamAttrs = P.ParamAttrs;
   list<FuncArgType> ParamPointeeTypes = P.ParamPointeeTypes;
   bit AlignPointeesToElementType = true;
 }
@@ -246,6 +275,8 @@ class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
                        ProvidesF128.ReturnType);
   let ArgumentTypes = !foreach(Ty, ProvidesF128.ArgumentTypes,
                                !if(!eq(Ty, FP128), LDbl, Ty));
+  let ParamPointeeTypes = !foreach(Ty, ProvidesF128.ParamPointeeTypes,
+                                   !if(!eq(Ty, FP128), LDbl, Ty));
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used

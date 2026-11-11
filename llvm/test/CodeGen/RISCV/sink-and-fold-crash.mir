@@ -3,7 +3,6 @@
 
 ---
 name:            main
-tracksRegLiveness: true
 registers:
   - { id: 0, class: fpr32 }
   - { id: 1, class: fpr32 }

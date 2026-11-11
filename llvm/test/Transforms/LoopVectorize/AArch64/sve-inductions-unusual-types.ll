@@ -33,7 +33,7 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 2 x i7> [[VEC_IND]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <vscale x 2 x i7> [[STEP_ADD]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP7]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP8]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP9]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -94,7 +94,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <vscale x 2 x i3> [[VEC_IND]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 2 x i3> [[STEP_ADD]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP9]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP9]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP8]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]

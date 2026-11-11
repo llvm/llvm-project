@@ -4069,6 +4069,19 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return InstructionCost::getInvalid();
   }
 
+  // A non-power-of-2 i1 vector that fits in a single register has no bitmask
+  // lowering, so its lanes are extracted and combined one by one.
+  if (auto *SrcVTy = dyn_cast<FixedVectorType>(Src);
+      ISD == ISD::BITCAST && SrcVTy && Dst->isIntegerTy() &&
+      Src->isIntOrIntVectorTy(1) && !isPowerOf2_32(SrcVTy->getNumElements()) &&
+      getTypeLegalizationCost(SrcVTy).first == 1) {
+    unsigned NumElts = SrcVTy->getNumElements();
+    return getScalarizationOverhead(SrcVTy, APInt::getAllOnes(NumElts),
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind) +
+           NumElts - 1;
+  }
+
   // If the cast is observable, and it is used by a widening instruction (e.g.,
   // uaddl, saddw, etc.), it may be free.
   if (I && !I->users().empty()) {
