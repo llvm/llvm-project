@@ -237,7 +237,6 @@ public:
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
-  void setReg(MCRegister PhysReg) { Reg.RegNum = PhysReg; }
   bool isGPR() const {
     return Kind == KindTy::Register &&
            getLoongArchMCRegisterClass(LoongArch::GPRRegClassID)
@@ -655,11 +654,6 @@ public:
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "LoongArchGenAsmMatcher.inc"
-
-static MCRegister convertFPR32ToFPR64(MCRegister Reg) {
-  assert(Reg >= LoongArch::F0 && Reg <= LoongArch::F31 && "Invalid register");
-  return Reg - LoongArch::F0 + LoongArch::F0_64;
-}
 
 // Attempts to match Name as a register (either using the default name or
 // alternative ABI names), setting RegNo to the matching register. Upon
@@ -1755,14 +1749,6 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_InvalidOperand;
 
   MCRegister Reg = Op.getReg();
-  // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
-  // register from FPR32 to FPR64 if necessary.
-  if (getLoongArchMCRegisterClass(LoongArch::FPR32RegClassID).contains(Reg) &&
-      Kind == MCK_FPR64) {
-    Op.setReg(convertFPR32ToFPR64(Reg));
-    return Match_Success;
-  }
-
   if (Kind == MCK_GPRNoR0R1 && (Reg == LoongArch::R0 || Reg == LoongArch::R1))
     return Match_RequiresOpnd2NotR0R1;
 
