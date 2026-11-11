@@ -5681,7 +5681,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   IRBuilder<> Builder(PSE.getSE()->getModule());
-  Builder.enableGEPCanonicalization();
   VPTransformState State(&TTI, BestVF, LI, DT, Legal->getAssumptionCache(),
                          Builder, &BestVPlan, OrigLoop->getParentLoop());
 
