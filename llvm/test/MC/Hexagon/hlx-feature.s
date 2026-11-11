@@ -10,6 +10,11 @@
 // RUN:   | llvm-objdump -d --no-print-imm-hex --mcpu=hexagonv85 --mattr=+hlx - \
 // RUN:   | FileCheck %s --implicit-check-not=error
 
+/// Check the -mhlx option in llvm-mc.
+// RUN: llvm-mc --mcpu=hexagonv85 -triple=hexagon -mhlx -filetype=obj %s 2>&1 \
+// RUN:   | llvm-objdump -d --no-print-imm-hex --mcpu=hexagonv85 --mattr=+hlx - \
+// RUN:   | FileCheck %s --implicit-check-not=error
+
 // CHECK: L0.uh = max(L0.uh,L0.uh)
 
 /// Check that llvm-objdump does not disassemble HLX by default.
