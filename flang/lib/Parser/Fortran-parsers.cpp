@@ -403,7 +403,10 @@ TYPE_CONTEXT_PARSER("derived type definition"_en_US,
         many(unambiguousStatement(Parser<TypeParamDefStmt>{})),
         many(statement(Parser<PrivateOrSequence>{})),
         many(inContext("component"_en_US,
-            unambiguousStatement(Parser<ComponentDefStmt>{}))),
+            // A compiler directive consumes the end of its own line.
+            unterminatedStatement(
+                construct<ComponentDefStmt>(indirect(compilerDirective))) ||
+                unambiguousStatement(Parser<ComponentDefStmt>{}))),
         maybe(Parser<TypeBoundProcedurePart>{}),
         statement(Parser<EndTypeStmt>{})))
 
@@ -453,8 +456,7 @@ TYPE_PARSER(construct<TypeParamDecl>(name, maybe("=" >> scalarIntConstantExpr)))
 TYPE_PARSER(recovery(
     withMessage("expected component definition"_err_en_US,
         first(construct<ComponentDefStmt>(Parser<DataComponentDefStmt>{}),
-            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}),
-            construct<ComponentDefStmt>(indirect(compilerDirective)))),
+            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}))),
     construct<ComponentDefStmt>(inStmtErrorRecovery)))
 
 // R737 data-component-def-stmt ->
