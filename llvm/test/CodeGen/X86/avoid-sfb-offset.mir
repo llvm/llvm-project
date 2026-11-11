@@ -42,7 +42,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr32, preferred-register: '' }
   - { id: 1, class: gr32, preferred-register: '' }

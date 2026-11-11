@@ -9581,13 +9581,21 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
       ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
       MVT MemVT = VA.getValVT();
+      MVT LoadVT = VA.getLocVT();
 
       switch (VA.getLocInfo()) {
       default:
         break;
       case CCValAssign::Trunc:
+        MemVT = VA.getLocVT();
+        break;
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
+        if (Ins[i].isOrigArg() && Ins[i].ArgVT.isVector() &&
+            Ins[i].ArgVT.getSizeInBits() < VA.getValVT().getSizeInBits()) {
+          MemVT = VA.getValVT();
+          LoadVT = MemVT;
+        }
         break;
       case CCValAssign::Indirect:
         assert(
@@ -9606,8 +9614,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
 
-      ArgValue = DAG.getExtLoad(ExtType, DL, VA.getLocVT(), Chain, FIN, PtrInfo,
-                                MemVT);
+      ArgValue =
+          DAG.getExtLoad(ExtType, DL, LoadVT, Chain, FIN, PtrInfo, MemVT);
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -20098,6 +20106,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
+  Builder.disableGEPCanonicalization();
   Value *Pred = nullptr;
   if (UseScalable)
     Pred =
@@ -20178,6 +20187,7 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
                                                  UseScalable, StTy, PtrTy);
 
   IRBuilder<> Builder(SI);
+  Builder.disableGEPCanonicalization();
 
   Value *BaseAddr = SI->getPointerOperand();
   Value *Pred = nullptr;
@@ -34195,14 +34205,12 @@ void AArch64TargetLowering::insertSSPDeclarations(
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
