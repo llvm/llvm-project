@@ -84,6 +84,18 @@ let Predicates = [FeatureNoVectorEnhancements1] in
 def LGDR : UnaryRRE<"lgdr", 0xB3CD, bitconvert, GR64, FP64>;
 def LDGR : UnaryRRE<"ldgr", 0xB3C1, bitconvert, FP64, GR64>;
 
+// Moves between GR128 and FP128 register pairs.
+let Predicates = [FeatureNoVector] in {
+  def : Pat<(f128 (bitconvert (v2i64 GR128:$src))),
+            (REG_SEQUENCE FP128Bit,
+              (LDGR (EXTRACT_SUBREG GR128:$src, subreg_h64)), subreg_h64,
+              (LDGR (EXTRACT_SUBREG GR128:$src, subreg_l64)), subreg_l64)>;
+  def : Pat<(v2i64 (bitconvert (f128 FP128:$src))),
+            (REG_SEQUENCE GR128Bit,
+              (LGDR (EXTRACT_SUBREG FP128:$src, subreg_h64)), subreg_h64,
+              (LGDR (EXTRACT_SUBREG FP128:$src, subreg_l64)), subreg_l64)>;
+}
+
 // fcopysign with an FP16 result.
 let isCodeGenOnly = 1 in {
   def CPSDRhh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP16>;

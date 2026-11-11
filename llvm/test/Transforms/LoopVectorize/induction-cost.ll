@@ -579,25 +579,29 @@ exit:
 define void @fp_induction_predicated(ptr noalias %dst, ptr noalias %cond, i64 %n) {
 ; VF2-LABEL: 'fp_induction_predicated'
 ; VF2:  Cost of 1 for VF 2: profitable to scalarize store float %fp.iv, ptr %gep, align 4
-; VF2:  Precomputed costs for VF 2: 3
+; VF2:  Precomputed costs for VF 2: 1
 ; VF2:  Cost of 2 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF2:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF2:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
+; VF2:  Cost of 2 for VF 2: BRANCH-ON-MASK ir<%c.0> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; VF2:  Cost of 0.5 for VF 2: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1.000000e+00>, vp<[[VP0]]>
+; VF2:  Cost of 1 for VF 2: unconditional branches from pred.store.if
 ; VF2:  Cost of 1 for VF 2: canonical IV increment
 ; VF2:  Cost of 1 for VF 2: vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP2:%[0-9]+]]> * ir<1.000000e+00>
-; VF2:  Cost for VF 2: 12.5 (Estimated cost per lane: 6)
+; VF2:  Cost for VF 2: 13.5 (Estimated cost per lane: 6.5)
 ;
 ; VF4-LABEL: 'fp_induction_predicated'
 ; VF4:  Cost of 2 for VF 4: profitable to scalarize store float %fp.iv, ptr %gep, align 4
-; VF4:  Precomputed costs for VF 4: 6
+; VF4:  Precomputed costs for VF 4: 2
 ; VF4:  Cost of 2 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; VF4:  Cost of 0 for VF 4: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; VF4:  Cost of 1 for VF 4: vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4]]> * ir<1.000000e+00>
+; VF4:  Cost of 4 for VF 4: BRANCH-ON-MASK ir<%c.0> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; VF4:  Cost of 1.5 for VF 4: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1.000000e+00>, vp<[[VP0]]>
+; VF4:  Cost of 2 for VF 4: unconditional branches from pred.store.if
 ; VF4:  Cost of 1 for VF 4: canonical IV increment
 ; VF4:  Cost of 1 for VF 4: vp<[[VP3:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP2:%[0-9]+]]> * ir<1.000000e+00>
-; VF4:  Cost for VF 4: 16.5 (Estimated cost per lane: 4)
+; VF4:  Cost for VF 4: 18.5 (Estimated cost per lane: 4.5)
 ;
 entry:
   br label %loop

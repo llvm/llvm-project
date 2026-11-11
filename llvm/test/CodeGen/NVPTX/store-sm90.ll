@@ -1709,17 +1709,14 @@ define void @unordered_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 define void @unordered_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("") unordered, align 16
     ret void
@@ -1728,17 +1725,14 @@ define void @unordered_i128_generic_sys(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cta.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("block") unordered, align 16
     ret void
@@ -1747,17 +1741,14 @@ define void @unordered_i128_generic_cta(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cluster.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("cluster") unordered, align 16
     ret void
@@ -1766,17 +1757,14 @@ define void @unordered_i128_generic_cluster(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.gpu.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("device") unordered, align 16
     ret void
@@ -1785,17 +1773,14 @@ define void @unordered_i128_generic_gpu(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("") unordered, align 16
     ret void
@@ -1804,17 +1789,14 @@ define void @unordered_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("block") unordered, align 16
     ret void
@@ -1823,17 +1805,14 @@ define void @unordered_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("cluster") unordered, align 16
     ret void
@@ -1842,17 +1821,14 @@ define void @unordered_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 define void @unordered_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: unordered_i128_generic_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_generic_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("device") unordered, align 16
     ret void
@@ -2805,17 +2781,14 @@ define void @unordered_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr)
 define void @unordered_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("") unordered, align 16
     ret void
@@ -2824,17 +2797,14 @@ define void @unordered_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 define void @unordered_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cta.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 16
     ret void
@@ -2843,17 +2813,14 @@ define void @unordered_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 define void @unordered_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cluster.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 16
     ret void
@@ -2862,17 +2829,14 @@ define void @unordered_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 define void @unordered_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.gpu.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 16
     ret void
@@ -2881,17 +2845,14 @@ define void @unordered_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 define void @unordered_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("") unordered, align 16
     ret void
@@ -2900,17 +2861,14 @@ define void @unordered_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %add
 define void @unordered_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("block") unordered, align 16
     ret void
@@ -2919,17 +2877,14 @@ define void @unordered_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %add
 define void @unordered_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("cluster") unordered, align 16
     ret void
@@ -2938,17 +2893,14 @@ define void @unordered_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) 
 define void @unordered_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: unordered_i128_global_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_global_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("device") unordered, align 16
     ret void
@@ -3901,17 +3853,14 @@ define void @unordered_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr)
 define void @unordered_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("") unordered, align 16
     ret void
@@ -3920,17 +3869,14 @@ define void @unordered_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 define void @unordered_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cta.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 16
     ret void
@@ -3939,17 +3885,14 @@ define void @unordered_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 define void @unordered_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cluster.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 16
     ret void
@@ -3958,17 +3901,14 @@ define void @unordered_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 define void @unordered_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.gpu.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 16
     ret void
@@ -3977,17 +3917,14 @@ define void @unordered_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 define void @unordered_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("") unordered, align 16
     ret void
@@ -3996,17 +3933,14 @@ define void @unordered_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %add
 define void @unordered_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("block") unordered, align 16
     ret void
@@ -4015,17 +3949,14 @@ define void @unordered_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %add
 define void @unordered_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("cluster") unordered, align 16
     ret void
@@ -4034,17 +3965,14 @@ define void @unordered_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) 
 define void @unordered_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: unordered_i128_shared_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [unordered_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [unordered_i128_shared_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("device") unordered, align 16
     ret void
@@ -6757,17 +6685,14 @@ define void @monotonic_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 define void @monotonic_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("") monotonic, align 16
     ret void
@@ -6776,17 +6701,14 @@ define void @monotonic_i128_generic_sys(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cta.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("block") monotonic, align 16
     ret void
@@ -6795,17 +6717,14 @@ define void @monotonic_i128_generic_cta(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cluster.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("cluster") monotonic, align 16
     ret void
@@ -6814,17 +6733,14 @@ define void @monotonic_i128_generic_cluster(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.gpu.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("device") monotonic, align 16
     ret void
@@ -6833,17 +6749,14 @@ define void @monotonic_i128_generic_gpu(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("") monotonic, align 16
     ret void
@@ -6852,17 +6765,14 @@ define void @monotonic_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("block") monotonic, align 16
     ret void
@@ -6871,17 +6781,14 @@ define void @monotonic_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("cluster") monotonic, align 16
     ret void
@@ -6890,17 +6797,14 @@ define void @monotonic_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 define void @monotonic_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: monotonic_i128_generic_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_generic_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("device") monotonic, align 16
     ret void
@@ -7853,17 +7757,14 @@ define void @monotonic_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr)
 define void @monotonic_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 16
     ret void
@@ -7872,17 +7773,14 @@ define void @monotonic_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 define void @monotonic_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cta.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 16
     ret void
@@ -7891,17 +7789,14 @@ define void @monotonic_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 define void @monotonic_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cluster.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 16
     ret void
@@ -7910,17 +7805,14 @@ define void @monotonic_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 define void @monotonic_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.gpu.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 16
     ret void
@@ -7929,17 +7821,14 @@ define void @monotonic_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 define void @monotonic_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("") monotonic, align 16
     ret void
@@ -7948,17 +7837,14 @@ define void @monotonic_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %add
 define void @monotonic_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("block") monotonic, align 16
     ret void
@@ -7967,17 +7853,14 @@ define void @monotonic_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %add
 define void @monotonic_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("cluster") monotonic, align 16
     ret void
@@ -7986,17 +7869,14 @@ define void @monotonic_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) 
 define void @monotonic_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: monotonic_i128_global_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_global_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("device") monotonic, align 16
     ret void
@@ -8949,17 +8829,14 @@ define void @monotonic_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr)
 define void @monotonic_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 16
     ret void
@@ -8968,17 +8845,14 @@ define void @monotonic_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 define void @monotonic_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cta.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 16
     ret void
@@ -8987,17 +8861,14 @@ define void @monotonic_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 define void @monotonic_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.cluster.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 16
     ret void
@@ -9006,17 +8877,14 @@ define void @monotonic_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 define void @monotonic_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.relaxed.gpu.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 16
     ret void
@@ -9025,17 +8893,14 @@ define void @monotonic_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 define void @monotonic_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("") monotonic, align 16
     ret void
@@ -9044,17 +8909,14 @@ define void @monotonic_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %add
 define void @monotonic_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("block") monotonic, align 16
     ret void
@@ -9063,17 +8925,14 @@ define void @monotonic_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %add
 define void @monotonic_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("cluster") monotonic, align 16
     ret void
@@ -9082,17 +8941,14 @@ define void @monotonic_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) 
 define void @monotonic_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: monotonic_i128_shared_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [monotonic_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [monotonic_i128_shared_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("device") monotonic, align 16
     ret void
@@ -11805,17 +11661,14 @@ define void @release_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 define void @release_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("") release, align 16
     ret void
@@ -11824,17 +11677,14 @@ define void @release_i128_generic_sys(i128 %val, ptr %addr) {
 define void @release_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.cta.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("block") release, align 16
     ret void
@@ -11843,17 +11693,14 @@ define void @release_i128_generic_cta(i128 %val, ptr %addr) {
 define void @release_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.cluster.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("cluster") release, align 16
     ret void
@@ -11862,17 +11709,14 @@ define void @release_i128_generic_cluster(i128 %val, ptr %addr) {
 define void @release_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.gpu.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("device") release, align 16
     ret void
@@ -11881,17 +11725,14 @@ define void @release_i128_generic_gpu(i128 %val, ptr %addr) {
 define void @release_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("") release, align 16
     ret void
@@ -11900,17 +11741,14 @@ define void @release_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 define void @release_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("block") release, align 16
     ret void
@@ -11919,17 +11757,14 @@ define void @release_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 define void @release_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("cluster") release, align 16
     ret void
@@ -11938,17 +11773,14 @@ define void @release_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 define void @release_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: release_i128_generic_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_generic_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_generic_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("device") release, align 16
     ret void
@@ -12901,17 +12733,14 @@ define void @release_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr) {
 define void @release_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("") release, align 16
     ret void
@@ -12920,17 +12749,14 @@ define void @release_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 define void @release_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.cta.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("block") release, align 16
     ret void
@@ -12939,17 +12765,14 @@ define void @release_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 define void @release_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.cluster.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 16
     ret void
@@ -12958,17 +12781,14 @@ define void @release_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 define void @release_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.gpu.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("device") release, align 16
     ret void
@@ -12977,17 +12797,14 @@ define void @release_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 define void @release_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("") release, align 16
     ret void
@@ -12996,17 +12813,14 @@ define void @release_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr)
 define void @release_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("block") release, align 16
     ret void
@@ -13015,17 +12829,14 @@ define void @release_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr)
 define void @release_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("cluster") release, align 16
     ret void
@@ -13034,17 +12845,14 @@ define void @release_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %a
 define void @release_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: release_i128_global_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_global_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_global_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("device") release, align 16
     ret void
@@ -13997,17 +13805,14 @@ define void @release_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr) {
 define void @release_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_sys_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("") release, align 16
     ret void
@@ -14016,17 +13821,14 @@ define void @release_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 define void @release_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cta_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.cta.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("block") release, align 16
     ret void
@@ -14035,17 +13837,14 @@ define void @release_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 define void @release_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cluster_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.cluster.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 16
     ret void
@@ -14054,17 +13853,14 @@ define void @release_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 define void @release_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_gpu_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.gpu.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("device") release, align 16
     ret void
@@ -14073,17 +13869,14 @@ define void @release_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 define void @release_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_sys_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("") release, align 16
     ret void
@@ -14092,17 +13885,14 @@ define void @release_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr)
 define void @release_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cta_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("block") release, align 16
     ret void
@@ -14111,17 +13901,14 @@ define void @release_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr)
 define void @release_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_cluster_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("cluster") release, align 16
     ret void
@@ -14130,17 +13917,14 @@ define void @release_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %a
 define void @release_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: release_i128_shared_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [release_i128_shared_gpu_volatile_param_0];
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [release_i128_shared_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.release.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    st.release.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("device") release, align 16
     ret void
@@ -16885,18 +16669,15 @@ define void @seq_cst_i64_generic_gpu_volatile(i64 %val, ptr %addr) {
 define void @seq_cst_i128_generic_sys(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.sys.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("") seq_cst, align 16
     ret void
@@ -16905,18 +16686,15 @@ define void @seq_cst_i128_generic_sys(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_cta(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.cta.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("block") seq_cst, align 16
     ret void
@@ -16925,18 +16703,15 @@ define void @seq_cst_i128_generic_cta(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_cluster(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.cluster.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("cluster") seq_cst, align 16
     ret void
@@ -16945,18 +16720,15 @@ define void @seq_cst_i128_generic_cluster(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_gpu(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.gpu.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr %addr syncscope("device") seq_cst, align 16
     ret void
@@ -16965,18 +16737,15 @@ define void @seq_cst_i128_generic_gpu(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("") seq_cst, align 16
     ret void
@@ -16985,18 +16754,15 @@ define void @seq_cst_i128_generic_sys_volatile(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("block") seq_cst, align 16
     ret void
@@ -17005,18 +16771,15 @@ define void @seq_cst_i128_generic_cta_volatile(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("cluster") seq_cst, align 16
     ret void
@@ -17025,18 +16788,15 @@ define void @seq_cst_i128_generic_cluster_volatile(i128 %val, ptr %addr) {
 define void @seq_cst_i128_generic_gpu_volatile(i128 %val, ptr %addr) {
 ; CHECK-LABEL: seq_cst_i128_generic_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_generic_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_generic_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr %addr syncscope("device") seq_cst, align 16
     ret void
@@ -18053,18 +17813,15 @@ define void @seq_cst_i64_global_gpu_volatile(i64 %val, ptr addrspace(1) %addr) {
 define void @seq_cst_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 16
     ret void
@@ -18073,18 +17830,15 @@ define void @seq_cst_i128_global_sys(i128 %val, ptr addrspace(1) %addr) {
 define void @seq_cst_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.cta.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 16
     ret void
@@ -18093,18 +17847,15 @@ define void @seq_cst_i128_global_cta(i128 %val, ptr addrspace(1) %addr) {
 define void @seq_cst_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.cluster.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 16
     ret void
@@ -18113,18 +17864,15 @@ define void @seq_cst_i128_global_cluster(i128 %val, ptr addrspace(1) %addr) {
 define void @seq_cst_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.gpu.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 16
     ret void
@@ -18133,18 +17881,15 @@ define void @seq_cst_i128_global_gpu(i128 %val, ptr addrspace(1) %addr) {
 define void @seq_cst_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("") seq_cst, align 16
     ret void
@@ -18153,18 +17898,15 @@ define void @seq_cst_i128_global_sys_volatile(i128 %val, ptr addrspace(1) %addr)
 define void @seq_cst_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("block") seq_cst, align 16
     ret void
@@ -18173,18 +17915,15 @@ define void @seq_cst_i128_global_cta_volatile(i128 %val, ptr addrspace(1) %addr)
 define void @seq_cst_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("cluster") seq_cst, align 16
     ret void
@@ -18193,18 +17932,15 @@ define void @seq_cst_i128_global_cluster_volatile(i128 %val, ptr addrspace(1) %a
 define void @seq_cst_i128_global_gpu_volatile(i128 %val, ptr addrspace(1) %addr) {
 ; CHECK-LABEL: seq_cst_i128_global_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_global_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_global_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.global.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.mmio.relaxed.sys.global.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(1) %addr syncscope("device") seq_cst, align 16
     ret void
@@ -19221,18 +18957,15 @@ define void @seq_cst_i64_shared_gpu_volatile(i64 %val, ptr addrspace(3) %addr) {
 define void @seq_cst_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_sys(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_sys_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_sys_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.sys.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 16
     ret void
@@ -19241,18 +18974,15 @@ define void @seq_cst_i128_shared_sys(i128 %val, ptr addrspace(3) %addr) {
 define void @seq_cst_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_cta(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cta_param_0];
 ; CHECK-NEXT:    fence.sc.cta;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cta_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.cta.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 16
     ret void
@@ -19261,18 +18991,15 @@ define void @seq_cst_i128_shared_cta(i128 %val, ptr addrspace(3) %addr) {
 define void @seq_cst_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_cluster(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cluster_param_0];
 ; CHECK-NEXT:    fence.sc.cluster;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cluster_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.cluster.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 16
     ret void
@@ -19281,18 +19008,15 @@ define void @seq_cst_i128_shared_cluster(i128 %val, ptr addrspace(3) %addr) {
 define void @seq_cst_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_gpu(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_gpu_param_0];
 ; CHECK-NEXT:    fence.sc.gpu;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_gpu_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.relaxed.gpu.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic i128 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 16
     ret void
@@ -19301,18 +19025,15 @@ define void @seq_cst_i128_shared_gpu(i128 %val, ptr addrspace(3) %addr) {
 define void @seq_cst_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_sys_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_sys_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_sys_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.sys.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("") seq_cst, align 16
     ret void
@@ -19321,18 +19042,15 @@ define void @seq_cst_i128_shared_sys_volatile(i128 %val, ptr addrspace(3) %addr)
 define void @seq_cst_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_cta_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cta_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cta_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cta.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("block") seq_cst, align 16
     ret void
@@ -19341,18 +19059,15 @@ define void @seq_cst_i128_shared_cta_volatile(i128 %val, ptr addrspace(3) %addr)
 define void @seq_cst_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_cluster_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_cluster_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_cluster_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.cluster.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("cluster") seq_cst, align 16
     ret void
@@ -19361,18 +19076,15 @@ define void @seq_cst_i128_shared_cluster_volatile(i128 %val, ptr addrspace(3) %a
 define void @seq_cst_i128_shared_gpu_volatile(i128 %val, ptr addrspace(3) %addr) {
 ; CHECK-LABEL: seq_cst_i128_shared_gpu_volatile(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-NEXT:    .reg .b128 %rq<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.v2.b64 {%rd1, %rd2}, [seq_cst_i128_shared_gpu_volatile_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [seq_cst_i128_shared_gpu_volatile_param_1];
-; CHECK-NEXT:    {
-; CHECK-NEXT:    .reg .b128 amt, dst;
-; CHECK-NEXT:    mov.b128 amt, {%rd1, %rd2};
-; CHECK-NEXT:    atom.relaxed.gpu.shared.exch.b128 dst, [%rd3], amt;
-; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
-; CHECK-NEXT:    }
+; CHECK-NEXT:    mov.b128 %rq1, {%rd1, %rd2};
+; CHECK-NEXT:    st.volatile.shared.b128 [%rd3], %rq1;
 ; CHECK-NEXT:    ret;
     store atomic volatile i128 %val, ptr addrspace(3) %addr syncscope("device") seq_cst, align 16
     ret void

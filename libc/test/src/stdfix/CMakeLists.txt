@@ -2,7 +2,7 @@ if(NOT LIBC_COMPILER_HAS_FIXED_POINT)
   return()
 endif()
 
-add_custom_target(libc-stdfix-tests)
+add_libc_testsuite(libc-stdfix-tests)
 
 foreach(suffix IN ITEMS hr r lr hk k lk)
   add_libc_test(
@@ -153,6 +153,21 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
       libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
+  add_libc_test(
+    muli${suffix}_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      MuliFxTest.h
+    SRCS
+      muli${suffix}_test.cpp
+    DEPENDS
+      libc.src.stdfix.muli${suffix}
+      libc.src.__support.fixed_point.fx_rep
   )
 endforeach()
 

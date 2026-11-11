@@ -124,7 +124,8 @@ TYPE_CONTEXT_PARSER("internal subprogram"_en_US,
     (construct<InternalSubprogram>(indirect(functionSubprogram)) ||
         construct<InternalSubprogram>(indirect(subroutineSubprogram))) /
             forceEndOfStmt ||
-        construct<InternalSubprogram>(indirect(compilerDirective)))
+        construct<InternalSubprogram>(indirect(compilerDirective)) ||
+        construct<InternalSubprogram>(misplacedOpenACCDeclareRecovery))
 
 // R511 internal-subprogram-part -> contains-stmt [internal-subprogram]...
 TYPE_CONTEXT_PARSER("internal subprogram part"_en_US,
@@ -734,8 +735,11 @@ TYPE_PARSER(
         "nonstandard usage: ',' in place of '::'"_port_en_US,
         construct<TypeDeclarationStmt>(declarationTypeSpec,
             defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
-            withMessage("expected entity declarations"_err_en_US,
-                "," >> nonemptyList(entityDecl)))))
+            // Fail silently unless a ',' takes the place of '::', so the
+            // standard "expected '::'" is not joined by a spurious message.
+            lookAhead(","_tok) >>
+                withMessage("expected entity declarations"_err_en_US,
+                    "," >> nonemptyList(entityDecl)))))
 
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |

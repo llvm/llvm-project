@@ -340,10 +340,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     return false;
 
   const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
-  // For the moment, restrict ourselves to the case where the access size is a
-  // multiple of the requested alignment and the base is aligned.
+  // For the moment, restrict ourselves to the case where the access size and
+  // step are multiples of the requested alignment and the base is aligned.
   // TODO: generalize if a case found which warrants
-  if (EltSize.urem(Alignment.value()) != 0)
+  if (EltSize.urem(Alignment.value()) != 0 ||
+      Step->getAPInt().urem(Alignment.value()) != 0)
     return false;
 
   // TODO: Handle overlapping accesses.
@@ -442,6 +443,7 @@ static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
   const Function &F = *CtxI.getFunction();
   // Speculative load may create a race that did not exist in the source.
   return F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
          // Speculative load may load data from dirty regions.
          F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeHWAddress);
@@ -1047,8 +1049,9 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         // Truncate if type size exceeds index space.
         APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
                           /*isSigned=*/false,
-                          /*implcitTrunc=*/true);
-        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+                          /*implicitTrunc=*/true);
+        Expr.Offset +=
+            ConstOffset->getValue().sextOrTrunc(BitWidth) * IndexedSize;
         continue;
       }
 

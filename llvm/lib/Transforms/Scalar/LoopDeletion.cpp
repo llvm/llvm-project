@@ -185,11 +185,7 @@ getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
 static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
                                          LoopInfo &LI) {
   // Disabled by option.
-  if (!L->getHeader()
-           ->getContext()
-           .getLibraryOptions()
-           .get<ScalarOptions>()
-           .loop_deletion_enable_symbolic_execution)
+  if (!getScalarOptions(*L).loop_deletion_enable_symbolic_execution)
     return false;
 
   BasicBlock *Predecessor = L->getLoopPredecessor();

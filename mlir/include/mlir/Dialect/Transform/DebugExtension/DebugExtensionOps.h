@@ -9,13 +9,10 @@
 #ifndef MLIR_DIALECT_TRANSFORM_DEBUGEXTENSION_DEBUGEXTENSIONOPS_H
 #define MLIR_DIALECT_TRANSFORM_DEBUGEXTENSION_DEBUGEXTENSIONOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h.inc"

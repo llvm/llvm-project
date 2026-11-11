@@ -28,7 +28,7 @@ LLVM_LIBC_FUNCTION(int, putc, (int c, ::FILE *stream)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  return 0;
+  return static_cast<int>(uc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

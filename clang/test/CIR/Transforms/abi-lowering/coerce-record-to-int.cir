@@ -22,7 +22,7 @@ module attributes {
 } {
 
   cir.func @takes_pair(%arg0: !rec_Pair)
-      attributes { test_classify = #coerce_pair_to_i64 } {
+      requires_call_conv_lowering attributes { test_classify = #coerce_pair_to_i64 } {
     %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
     cir.store %arg0, %0 : !rec_Pair, !cir.ptr<!rec_Pair>
     cir.return
@@ -37,7 +37,7 @@ module attributes {
   // CHECK:        cir.copy %[[CAST]] align(8) to %[[P]] align(4) : !cir.ptr<!rec_Pair>
 
   cir.func @caller()
-      attributes { test_classify = #caller_no_args } {
+      requires_call_conv_lowering attributes { test_classify = #caller_no_args } {
     %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
     %1 = cir.load %0 : !cir.ptr<!rec_Pair>, !rec_Pair
     cir.call @takes_pair(%1) : (!rec_Pair) -> ()

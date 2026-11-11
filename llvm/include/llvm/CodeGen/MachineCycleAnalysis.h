@@ -46,6 +46,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   void releaseMemory() override;
   void print(raw_ostream &OS, const Module *M = nullptr) const override;
+  void verifyAnalysis() const override;
 };
 
 // TODO: add this function to the GenericCycleInfo template after implementing
@@ -70,6 +71,12 @@ class MachineCycleInfoPrinterPass
 
 public:
   explicit MachineCycleInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
+struct MachineCycleInfoVerifierPass
+    : public RequiredPassInfoMixin<MachineCycleInfoVerifierPass> {
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
 };

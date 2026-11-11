@@ -482,3 +482,26 @@ end:
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = distinct !{!2, !1}
+
+; // -----
+
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<id = distinct[{{[0-9]+}}]<>, mustProgress = true, align = 32>
+
+; CHECK-LABEL: @align
+; ROUNDTRIP-LABEL: @align(
+define void @align() {
+entry:
+; CHECK: llvm.br ^{{.*}} loop_annotation = #[[$ANNOT_ATTR]]
+; ROUNDTRIP: br label %{{.*}}, !llvm.loop ![[LOOP:[0-9]+]]
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+; ROUNDTRIP-DAG: ![[LOOP]] = distinct !{![[LOOP]], ![[MUST_PROGRESS:[0-9]+]], ![[ALIGN:[0-9]+]]}
+; ROUNDTRIP-DAG: ![[MUST_PROGRESS]] = !{!"llvm.loop.mustprogress"}
+; ROUNDTRIP-DAG: ![[ALIGN]] = !{!"llvm.loop.align", i32 32}
+
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.mustprogress"}
+!2 = !{!"llvm.loop.align", i32 32}

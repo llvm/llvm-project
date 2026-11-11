@@ -64,6 +64,15 @@ public:
 };
 
 class IncrementalCUDADeviceParser : public IncrementalDeviceParser {
+  // Generate PTX for the last PTU.
+  llvm::Expected<llvm::StringRef> GeneratePTX();
+
+  // Generate fatbinary contents in memory
+  llvm::Error GenerateFatbinary();
+
+  int SMVersion;
+  llvm::SmallString<1024> PTXCode;
+  llvm::SmallVector<char, 1024> FatbinContent;
 
 public:
   IncrementalCUDADeviceParser(
@@ -75,17 +84,6 @@ public:
   llvm::Error GenerateOffloadBinary() override;
 
   ~IncrementalCUDADeviceParser() override;
-
-private:
-  // Generate PTX for the last PTU.
-  llvm::Expected<llvm::StringRef> GeneratePTX();
-
-  // Generate fatbinary contents in memory
-  llvm::Error GenerateFatbinary();
-
-  int SMVersion;
-  llvm::SmallString<1024> PTXCode;
-  llvm::SmallVector<char, 1024> FatbinContent;
 };
 
 } // namespace clang

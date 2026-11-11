@@ -203,7 +203,8 @@ define i64 @avx512_cond_load_cost(ptr %src, i32 %a, i64 %b, i32 %c, i32 %d) #1 {
 ; CHECK-NEXT:    [[TMP59:%.*]] = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> [[BROADCAST_SPLAT2]], <8 x i32> [[BROADCAST_SPLAT4]], <8 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[TMP60:%.*]] = or <8 x i32> [[TMP59]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = sext <8 x i32> [[TMP60]] to <8 x i64>
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr { i64, i64, i64 }, ptr [[SRC:%.*]], <8 x i64> [[TMP61]], i32 2
+; CHECK-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr [24 x i8], ptr [[SRC:%.*]], <8 x i64> [[TMP61]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i8, <8 x ptr> [[WIDE_GEP1]], i64 16
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i64> @llvm.masked.gather.v8i64.v8p0(<8 x ptr> align 8 [[WIDE_GEP]], <8 x i1> [[TMP2]], <8 x i64> poison)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)

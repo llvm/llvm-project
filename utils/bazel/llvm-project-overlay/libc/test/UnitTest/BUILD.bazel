@@ -6,7 +6,14 @@
 
 load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
 
 licenses(["notice"])
 
@@ -53,7 +60,9 @@ libc_test_library(
         "//libc:__support_c_string",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_functional",
         "//libc:__support_cpp_limits",
+        "//libc:__support_cpp_nullptr_t",
         "//libc:__support_cpp_scope",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string",
@@ -63,6 +72,7 @@ libc_test_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_integer_to_string",
         "//libc:__support_libc_assert",
         "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
@@ -95,6 +105,7 @@ libc_test_library(
             "//libc:llvm_libc_types_struct_pollfd",
             "//libc:pipe",
             "//libc:poll",
+            "//libc:signal",
             "//libc:stderr",
             "//libc:stdout",
             "//libc:strsignal",
@@ -166,6 +177,7 @@ libc_test_library(
         "//libc:__support_cpp_array",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_functional",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_type_traits",
         "//libc:__support_cpp_utility",

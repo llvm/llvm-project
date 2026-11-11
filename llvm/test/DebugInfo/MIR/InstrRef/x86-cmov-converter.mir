@@ -127,7 +127,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %10:gr32 = MOV32rr %5, debug-location !13
-    %0:gr64 = SUBREG_TO_REG killed %10, %subreg.sub_32bit, debug-location !13
+    %0:gr64 = SUBREG_TO_REG %10, %subreg.sub_32bit, debug-location !13
     JMP_1 %bb.3
 
   bb.2.for.cond.cleanup:
@@ -143,10 +143,10 @@ body:             |
     %13:gr32 = nsw IMUL32rr %11, %6, implicit-def dead $eflags, debug-location !13
     %14:gr32 = SUB32rr %13, %7, implicit-def $eflags, debug-location !13
     %15:gr32 = MOV32ri 10
-    %16:gr32 = CMOV32rr %12, killed %15, 15, implicit $eflags, debug-instr-number 1, debug-location !13
+    %16:gr32 = CMOV32rr %12, %15, 15, implicit $eflags, debug-instr-number 1, debug-location !13
     DBG_INSTR_REF !14, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
     %17:gr32 = nsw IMUL32rr %16, %12, implicit-def dead $eflags, debug-location !13
-    MOV32mr %1, 1, $noreg, 0, $noreg, killed %17, debug-location !13 :: (store (s32) into %ir.lsr.iv1)
+    MOV32mr %1, 1, $noreg, 0, $noreg, %17, debug-location !13 :: (store (s32) into %ir.lsr.iv1)
     %4:gr64 = ADD64ri8 %1, 4, implicit-def dead $eflags, debug-location !13
     %3:gr64 = DEC64r %2, implicit-def $eflags, debug-location !13
     JCC_1 %bb.2, 4, implicit $eflags, debug-location !13
@@ -185,7 +185,7 @@ body:             |
     %4:gr32 = SUB32rr %0, %1, implicit-def $eflags, debug-location !16
     %5:gr64 = CMOV64rm %2, %3, 1, $noreg, 0, $noreg, 6, implicit $eflags, debug-instr-number 1, debug-location !16 :: (load (s64) from %ir.y)
     DBG_INSTR_REF !17, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !16
-    %6:gr32 = CMOV32rm %0, killed %5, 1, $noreg, 0, $noreg, 6, implicit $eflags, debug-instr-number 2, debug-location !16 :: (load (s32) from %ir.p)
+    %6:gr32 = CMOV32rm %0, %5, 1, $noreg, 0, $noreg, 6, implicit $eflags, debug-instr-number 2, debug-location !16 :: (load (s32) from %ir.p)
     DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !16
     $eax = COPY %6, debug-location !16
     RET 0, $eax, debug-location !16

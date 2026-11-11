@@ -550,3 +550,63 @@ TEST(DependencyScanningWorkerFilesystem,
   EXPECT_FALSE(PostWorker.status(MissingPath));
   EXPECT_EQ(TracingFS->NumStatusCalls.load(), StatsAfterBurst + 1);
 }
+
+TEST(DependencyScanningWorkerFilesystem, LocalFS) {
+  auto GlobalFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  GlobalFS->setCurrentWorkingDirectory("/");
+  GlobalFS->addFile("/glob.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  DependencyScanningServiceOptions Opts;
+  DependencyScanningService Service(std::move(Opts));
+
+  {
+    auto InstrGlobalFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(GlobalFS);
+    auto LocalFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+    LocalFS->setCurrentWorkingDirectory("/");
+    LocalFS->addFile("/loc1.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
+    auto InstrLocalFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(LocalFS);
+
+    DependencyScanningWorkerFilesystem DepFS(Service, InstrGlobalFS,
+                                             InstrLocalFS);
+
+    DepFS.status("/glob.c");
+    EXPECT_EQ(InstrGlobalFS->NumStatusCalls, 1u);
+
+    DepFS.status("/glob.c");
+    EXPECT_EQ(InstrGlobalFS->NumStatusCalls, 1u); // Cached, no increase.
+
+    // LocalFS got a stat call for "/glob.c".
+    EXPECT_EQ(InstrLocalFS->NumStatusCalls, 1u);
+
+    auto Stat = DepFS.status("/loc1.c");
+    ASSERT_TRUE(Stat);
+    EXPECT_EQ(InstrLocalFS->NumStatusCalls, 2u);
+
+    DepFS.status("/loc1.c");
+    EXPECT_EQ(InstrLocalFS->NumStatusCalls, 2u); // Cached, no increase.
+  }
+
+  {
+    auto InstrGlobalFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(GlobalFS);
+    auto LocalFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+    LocalFS->setCurrentWorkingDirectory("/");
+    auto InstrLocalFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(LocalFS);
+
+    DependencyScanningWorkerFilesystem DepFS(Service, InstrGlobalFS,
+                                             InstrLocalFS);
+
+    DepFS.status("/glob.c");
+    EXPECT_EQ(InstrGlobalFS->NumStatusCalls, 0u); // Cached, no increase.
+
+    // LocalFS got a stat call for "/glob.c".
+    EXPECT_EQ(InstrLocalFS->NumStatusCalls, 1u);
+
+    auto Stat = DepFS.status("/loc1.c");
+    ASSERT_FALSE(Stat);
+    EXPECT_EQ(InstrLocalFS->NumStatusCalls, 2u); // not using global cache.
+  }
+}

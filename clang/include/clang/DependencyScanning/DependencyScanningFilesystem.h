@@ -323,7 +323,8 @@ public:
 
   DependencyScanningWorkerFilesystem(
       DependencyScanningService &Service,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS = nullptr);
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
@@ -379,6 +380,13 @@ private:
   resolveUIDThroughSharedCache(StringRef OriginalFilename,
                                const llvm::vfs::Status &Stat);
 
+  /// Resolves the cache entry through the local VFS and without going through
+  /// the global shared cache. Only relevant if \c LocalFS is non-null and
+  /// \p OriginalFilename exists in \c LocalFS.
+  const CachedFileSystemEntry *
+  createCachedFSEntryForLocal(StringRef OriginalFilename,
+                              const llvm::vfs::Status &Stat);
+
   /// Represents a filesystem entry that has been stat-ed (and potentially read)
   /// and that's about to be inserted into the cache as `CachedFileSystemEntry`.
   struct TentativeEntry {
@@ -392,7 +400,8 @@ private:
 
   /// Reads file at the given path. Enforces consistency between the file size
   /// in status and size of read contents.
-  llvm::ErrorOr<TentativeEntry> readFile(StringRef Filename);
+  static llvm::ErrorOr<TentativeEntry> readFile(StringRef Filename,
+                                                llvm::vfs::FileSystem &FS);
 
   void printImpl(raw_ostream &OS, PrintType Type,
                  unsigned IndentLevel) const override {
@@ -420,6 +429,25 @@ private:
   /// The working directory to use for making relative paths absolute before
   /// using them for cache lookups.
   llvm::ErrorOr<std::string> WorkingDirForCacheLookup;
+
+  /// If non-null it is used to resolve files without going through the global
+  /// shared cache. This is useful if the caller wants to use a specific VFS
+  /// for a compiler invocation
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS;
+
+  /// The FS that is used for queries going through the global shared cache.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS;
+
+  /// The backing storage for cached entries resolved from local FS only.
+  llvm::SpecificBumpPtrAllocator<CachedFileSystemEntry> LocalEntryStorage;
+
+  /// The backing storage for cached contents resolved from local FS only.
+  llvm::SpecificBumpPtrAllocator<CachedFileContents> LocalContentsStorage;
+
+  static const CachedFileSystemEntry *createEntry(
+      llvm::ErrorOr<TentativeEntry> &Entry,
+      llvm::SpecificBumpPtrAllocator<CachedFileContents> &ContentsStorage,
+      llvm::SpecificBumpPtrAllocator<CachedFileSystemEntry> &EntryStorage);
 
   void updateWorkingDirForCacheLookup();
 

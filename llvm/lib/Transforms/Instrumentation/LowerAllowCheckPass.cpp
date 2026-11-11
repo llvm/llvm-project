@@ -67,8 +67,7 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 
 static bool lowerAllowChecks(Function &F, FunctionAnalysisManager &AM,
                              const LowerAllowCheckPass::Options &Opts) {
-  const InstrumentationOptions &CLOpts =
-      F.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &CLOpts = getInstrumentationOptions(F);
   // Lazy analysis getters.
   auto GetBFI = [&AM, &F, BFI = (BlockFrequencyInfo *)nullptr]() mutable
       -> const BlockFrequencyInfo & {

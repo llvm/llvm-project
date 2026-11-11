@@ -29,6 +29,10 @@ using namespace llvm;
 // single letter extension rank for single letter and multi-letter extensions
 // starting with 'z'.
 enum RankFlags {
+  RF_BASE_I      = 0,
+  RF_BASE_E      = 1,
+  RF_BASE_Y      = 2,
+  RF_NUM_BASES   = 3,
   RF_Z_EXTENSION = 1 << 6,
   RF_S_EXTENSION = 2 << 6,
   RF_X_EXTENSION = 3 << 6,
@@ -41,20 +45,20 @@ static unsigned singleLetterExtensionRank(char Ext) {
   assert(isLower(Ext));
   switch (Ext) {
   case 'i':
-    return 0;
+    return RF_BASE_I;
   case 'e':
-    return 1;
+    return RF_BASE_E;
   case 'y':
-    return 2;
+    return RF_BASE_Y;
   }
 
   size_t Pos = RISCVISAUtils::AllStdExts.find(Ext);
   if (Pos != StringRef::npos)
-    return Pos + 3; // Skip 'e', 'i', and 'y' from above.
+    return Pos + RF_NUM_BASES; // Skip 'e', 'i', and 'y' from above.
 
   // If we got an unknown extension letter, then give it an alphabetical
   // order, but after all known standard extensions.
-  return 3 + RISCVISAUtils::AllStdExts.size() + (Ext - 'a');
+  return RF_NUM_BASES + RISCVISAUtils::AllStdExts.size() + (Ext - 'a');
 }
 
 // Get the rank for multi-letter extension, lower value meaning higher

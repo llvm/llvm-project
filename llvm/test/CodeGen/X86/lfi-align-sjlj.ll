@@ -1,6 +1,6 @@
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=x86_64_lfi -exception-model=sjlj < %t/sjlj.ll | FileCheck -check-prefix=SJLJ %s
-; RUN: llc -mtriple=x86_64_lfi -exception-model=sjlj -filetype=obj -o /dev/null < %t/sjlj.ll
+; RUN: llc -mtriple=x86_64_lfi < %t/sjlj.ll | FileCheck -check-prefix=SJLJ %s
+; RUN: llc -mtriple=x86_64_lfi -filetype=obj -o /dev/null < %t/sjlj.ll
 ; RUN: llc -mtriple=x86_64_lfi < %t/dwarf.ll | FileCheck -check-prefix=DWARF %s
 
 ; The SJLJ dispatch block jumps indirectly to the landing pad through a jump
@@ -9,7 +9,6 @@
 ; aligned because it is an EH pad.
 
 ;--- sjlj.ll
-; FIXME: SJLJ lowering still requires -exception-model=sjlj
 
 declare void @may_throw()
 declare i32 @__gxx_personality_sj0(...)
