@@ -8,16 +8,17 @@
 define ptr @shrinkwrapme(ptr %p) {
 ; CHECK-LABEL: shrinkwrapme:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    sub x0, x0, #4
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w8, [x0, #4]!
-; CHECK-NEXT:    cbnz w8, LBB0_1
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    ldr w9, [x0], #4
+; CHECK-NEXT:    cbnz w9, LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    stp x28, x27, [sp, #-16]! ; 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w27, -8
 ; CHECK-NEXT:    .cfi_offset w28, -16
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ldp x28, x27, [sp], #16 ; 16-byte Folded Reload
@@ -47,11 +48,11 @@ define ptr @dontshrinkwrapme(ptr %p) {
 ; CHECK-NEXT:    .cfi_offset w27, -8
 ; CHECK-NEXT:    .cfi_offset w28, -16
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    sub x0, x8, #4
 ; CHECK-NEXT:  LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w8, [x0, #4]!
-; CHECK-NEXT:    cbnz w8, LBB1_1
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ldr w9, [x8], #4
+; CHECK-NEXT:    cbnz w9, LBB1_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    ; InlineAsm End

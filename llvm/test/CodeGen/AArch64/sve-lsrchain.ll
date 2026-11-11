@@ -9,30 +9,30 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:  // %bb.1: // %for.body.lr.ph
 ; CHECK-NEXT:    rdvl x8, #-2
 ; CHECK-NEXT:    mov w9, #608 // =0x260
-; CHECK-NEXT:    ands x11, x8, x9
+; CHECK-NEXT:    ands x9, x8, x9
 ; CHECK-NEXT:    b.eq .LBB0_6
 ; CHECK-NEXT:  // %bb.2: // %for.body.us.preheader
-; CHECK-NEXT:    add x11, x2, x11, lsl #1
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    add x9, x2, x9, lsl #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov w10, wzr
-; CHECK-NEXT:    mov x12, #4 // =0x4
-; CHECK-NEXT:    mov x13, #8 // =0x8
 ; CHECK-NEXT:  .LBB0_3: // %for.body.us
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1
 ; CHECK-NEXT:    // Child Loop BB0_4 Depth 2
-; CHECK-NEXT:    add x14, x0, x9, lsl #2
-; CHECK-NEXT:    sbfiz x15, x8, #1, #32
-; CHECK-NEXT:    mov x16, x2
-; CHECK-NEXT:    ldp s0, s1, [x14]
-; CHECK-NEXT:    add x15, x15, #8
-; CHECK-NEXT:    ldp s2, s3, [x14, #8]
-; CHECK-NEXT:    ubfiz x14, x8, #1, #32
+; CHECK-NEXT:    add x11, x0, x8, lsl #2
+; CHECK-NEXT:    mov x15, x2
+; CHECK-NEXT:    ldp s0, s1, [x11]
+; CHECK-NEXT:    ldp s2, s3, [x11, #8]
+; CHECK-NEXT:    lsl w11, w8, #2
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    fcvt h1, s1
+; CHECK-NEXT:    add x14, x2, w11, sxtw #1
 ; CHECK-NEXT:    fcvt h2, s2
 ; CHECK-NEXT:    fcvt h3, s3
+; CHECK-NEXT:    add x11, x2, w11, uxtw #1
+; CHECK-NEXT:    add x12, x14, #8
+; CHECK-NEXT:    add x13, x14, #16
+; CHECK-NEXT:    add x14, x14, #24
 ; CHECK-NEXT:    mov z0.h, h0
 ; CHECK-NEXT:    mov z1.h, h1
 ; CHECK-NEXT:    mov z2.h, h2
@@ -40,58 +40,57 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:  .LBB0_4: // %for.cond.i.preheader.us
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ld1b { z4.b }, p0/z, [x16, x14]
-; CHECK-NEXT:    ldr z5, [x16]
-; CHECK-NEXT:    add x17, x16, x15
-; CHECK-NEXT:    add x18, x16, x14
-; CHECK-NEXT:    add x3, x17, #8
-; CHECK-NEXT:    add x4, x17, #16
+; CHECK-NEXT:    ldr z4, [x11]
+; CHECK-NEXT:    ldr z5, [x15]
 ; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
-; CHECK-NEXT:    ld1b { z5.b }, p0/z, [x16, x15]
+; CHECK-NEXT:    ldr z5, [x12]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
-; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x12, lsl #1]
+; CHECK-NEXT:    ldr z5, [x13]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
-; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x13, lsl #1]
+; CHECK-NEXT:    ldr z5, [x14]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
-; CHECK-NEXT:    ldr z5, [x16, #1, mul vl]
-; CHECK-NEXT:    str z4, [x16]
-; CHECK-NEXT:    ldr z4, [x18, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x15, #1, mul vl]
+; CHECK-NEXT:    str z4, [x15]
+; CHECK-NEXT:    ldr z4, [x11, #1, mul vl]
 ; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
-; CHECK-NEXT:    ldr z5, [x17, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x12, #1, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
-; CHECK-NEXT:    ldr z5, [x3, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x13, #1, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
-; CHECK-NEXT:    ldr z5, [x4, #1, mul vl]
+; CHECK-NEXT:    ldr z5, [x14, #1, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
-; CHECK-NEXT:    ldr z5, [x16, #2, mul vl]
-; CHECK-NEXT:    str z4, [x16, #1, mul vl]
-; CHECK-NEXT:    ldr z4, [x18, #2, mul vl]
+; CHECK-NEXT:    ldr z5, [x15, #2, mul vl]
+; CHECK-NEXT:    str z4, [x15, #1, mul vl]
+; CHECK-NEXT:    ldr z4, [x11, #2, mul vl]
 ; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
-; CHECK-NEXT:    ldr z5, [x17, #2, mul vl]
+; CHECK-NEXT:    ldr z5, [x12, #2, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
-; CHECK-NEXT:    ldr z5, [x3, #2, mul vl]
+; CHECK-NEXT:    ldr z5, [x13, #2, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
-; CHECK-NEXT:    ldr z5, [x4, #2, mul vl]
+; CHECK-NEXT:    ldr z5, [x14, #2, mul vl]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
-; CHECK-NEXT:    ldr z5, [x16, #3, mul vl]
-; CHECK-NEXT:    str z4, [x16, #2, mul vl]
-; CHECK-NEXT:    ldr z4, [x18, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x15, #3, mul vl]
+; CHECK-NEXT:    str z4, [x15, #2, mul vl]
+; CHECK-NEXT:    ldr z4, [x11, #3, mul vl]
+; CHECK-NEXT:    incb x11, all, mul #4
 ; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
-; CHECK-NEXT:    ldr z5, [x17, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x12, #3, mul vl]
+; CHECK-NEXT:    incb x12, all, mul #4
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
-; CHECK-NEXT:    ldr z5, [x3, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x13, #3, mul vl]
+; CHECK-NEXT:    incb x13, all, mul #4
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
-; CHECK-NEXT:    ldr z5, [x4, #3, mul vl]
+; CHECK-NEXT:    ldr z5, [x14, #3, mul vl]
+; CHECK-NEXT:    incb x14, all, mul #4
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
-; CHECK-NEXT:    str z4, [x16, #3, mul vl]
-; CHECK-NEXT:    incb x16, all, mul #4
-; CHECK-NEXT:    cmp x16, x11
+; CHECK-NEXT:    str z4, [x15, #3, mul vl]
+; CHECK-NEXT:    incb x15, all, mul #4
+; CHECK-NEXT:    cmp x15, x9
 ; CHECK-NEXT:    b.lo .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %while.cond.i..exit_crit_edge.us
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    add w10, w10, #1
-; CHECK-NEXT:    add x9, x9, #4
-; CHECK-NEXT:    add w8, w8, #16
+; CHECK-NEXT:    add x8, x8, #4
 ; CHECK-NEXT:    cmp w10, w1
 ; CHECK-NEXT:    b.ne .LBB0_3
 ; CHECK-NEXT:  .LBB0_6: // %exit78

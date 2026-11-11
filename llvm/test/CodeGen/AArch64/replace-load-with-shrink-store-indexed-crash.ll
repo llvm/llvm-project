@@ -6,14 +6,14 @@ target triple = "arm64-apple-macosx13.0.0"
 define void @_Z1hP1f(ptr %j) {
 ; CHECK-LABEL: _Z1hP1f:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB0_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x8]
-; CHECK-NEXT:    mov w10, w9
-; CHECK-NEXT:    bfi w10, w9, #16, #16
-; CHECK-NEXT:    str w10, [x8], #4
-; CHECK-NEXT:    str w9, [x0]
+; CHECK-NEXT:    add x9, x0, x8, lsl #2
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    ldr w10, [x9]
+; CHECK-NEXT:    strh w10, [x9, #2]
+; CHECK-NEXT:    str w10, [x0]
 ; CHECK-NEXT:    b .LBB0_1
 entry:
   br label %for.body
