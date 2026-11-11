@@ -1261,6 +1261,7 @@ void CodeGenModule::Release() {
   EmitGlobalAnnotations();
   EmitStaticExternCAliases();
   checkAliases();
+  finalizeInheritedTargetFeatures();
   EmitDeferredUnusedCoverageMappings();
   CodeGenPGO(*this).setValueProfilingFlag(getModule());
   CodeGenPGO(*this).setProfileVersion(getModule());
@@ -3509,9 +3510,10 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   const auto *TC = FD ? FD->getAttr<TargetClonesAttr>() : nullptr;
   bool AddedAttr = false;
-  if (TD || TV || SD || TC) {
+  if (TD || TV || SD || TC || (FD && InheritedFeatures.contains(FD))) {
     llvm::StringMap<bool> FeatureMap;
     getContext().getFunctionFeatureMap(FeatureMap, GD);
+    InheritedFeatures.addTo(getContext(), FD, FeatureMap);
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -3617,6 +3619,49 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   return AddedAttr;
 }
 
+void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
+                                          const FunctionDecl *FD) {
+  getContext().getFunctionFeatureMap(FeatureMap, FD);
+  if (FD)
+    InheritedFeatures.addTo(getContext(), FD, FeatureMap);
+}
+
+void CodeGenModule::setCPUAndFeaturesAttributes(GlobalDecl GD,
+                                                llvm::Function *F) {
+  llvm::AttrBuilder Attrs(F->getContext());
+  if (GetCPUAndFeaturesAttributes(GD, Attrs)) {
+    // We know that GetCPUAndFeaturesAttributes will always have the
+    // newest set, since it has the newest possible FunctionDecl, so the
+    // new ones should replace the old.
+    llvm::AttributeMask RemoveAttrs;
+    RemoveAttrs.addAttribute("target-cpu");
+    RemoveAttrs.addAttribute("target-features");
+    RemoveAttrs.addAttribute("fmv-features");
+    RemoveAttrs.addAttribute("tune-cpu");
+    F->removeFnAttrs(RemoveAttrs);
+    F->addFnAttrs(Attrs);
+  }
+}
+
+void CodeGenModule::finalizeInheritedTargetFeatures() {
+  // Functions got their attributes before their bodies, and those of their
+  // callees, showed what they inherit.
+  if (!InheritedFeatures.empty()) {
+    for (const auto &[GD, MangledName] : MangledDeclNames) {
+      const auto *FD = dyn_cast<FunctionDecl>(GD.getDecl());
+      if (!FD || !InheritedFeatures.contains(FD))
+        continue;
+      if (auto *F =
+              dyn_cast_or_null<llvm::Function>(GetGlobalValue(MangledName)))
+        setCPUAndFeaturesAttributes(GD, F);
+    }
+  }
+
+  for (llvm::unique_function<void()> &Check : DeferredTargetFeatureChecks)
+    Check();
+  DeferredTargetFeatureChecks.clear();
+}
+
 void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
                                           llvm::GlobalObject *GO) {
   const Decl *D = GD.getDecl();
@@ -3643,19 +3688,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         if (!D->getAttr<SectionAttr>())
           F->setSection(SA->getName());
 
-      llvm::AttrBuilder Attrs(F->getContext());
-      if (GetCPUAndFeaturesAttributes(GD, Attrs)) {
-        // We know that GetCPUAndFeaturesAttributes will always have the
-        // newest set, since it has the newest possible FunctionDecl, so the
-        // new ones should replace the old.
-        llvm::AttributeMask RemoveAttrs;
-        RemoveAttrs.addAttribute("target-cpu");
-        RemoveAttrs.addAttribute("target-features");
-        RemoveAttrs.addAttribute("fmv-features");
-        RemoveAttrs.addAttribute("tune-cpu");
-        F->removeFnAttrs(RemoveAttrs);
-        F->addFnAttrs(Attrs);
-      }
+      setCPUAndFeaturesAttributes(GD, F);
     }
 
     if (const auto *CSA = D->getAttr<CodeSegAttr>())

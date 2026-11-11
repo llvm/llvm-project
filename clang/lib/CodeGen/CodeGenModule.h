@@ -30,8 +30,10 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -501,6 +503,13 @@ private:
   llvm::MapVector<GlobalDecl, StringRef> MangledDeclNames;
   llvm::StringMap<GlobalDecl, llvm::BumpPtrAllocator> Manglings;
 
+  /// The target features that always_inline functions inherit from their
+  /// callees, which are not all known until every function is emitted.
+  CodeGenUtils::InheritedTargetFeatures InheritedFeatures;
+
+  /// Checks that depend on the target features that functions inherit.
+  std::vector<llvm::unique_function<void()>> DeferredTargetFeatureChecks;
+
   /// Global annotations.
   std::vector<llvm::Constant*> Annotations;
 
@@ -906,6 +915,20 @@ public:
   const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
   llvm::Module &getModule() const { return TheModule; }
   DiagnosticsEngine &getDiags() const { return Diags; }
+
+  CodeGenUtils::InheritedTargetFeatures &getInheritedTargetFeatures() {
+    return InheritedFeatures;
+  }
+
+  /// Like ASTContext::getFunctionFeatureMap, but with the target features
+  /// that \p FD has inherited so far.
+  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
+                             const FunctionDecl *FD);
+
+  /// Runs \p Check once the target features that functions inherit are final.
+  void addDeferredTargetFeatureCheck(llvm::unique_function<void()> Check) {
+    DeferredTargetFeatureChecks.push_back(std::move(Check));
+  }
   const llvm::DataLayout &getDataLayout() const {
     return TheModule.getDataLayout();
   }
@@ -2042,7 +2065,12 @@ private:
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder,
                                    bool SetTargetFeatures = true);
+  void setCPUAndFeaturesAttributes(GlobalDecl GD, llvm::Function *F);
   void setNonAliasAttributes(GlobalDecl GD, llvm::GlobalObject *GO);
+
+  /// Gives functions the target features that they inherited, and runs the
+  /// checks that were waiting for them.
+  void finalizeInheritedTargetFeatures();
 
   /// Set function attributes for a function declaration.
   void SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
