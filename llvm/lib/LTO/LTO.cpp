@@ -1387,12 +1387,14 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   // Finalize linking of regular LTO modules containing summaries now that
   // we have computed liveness information.
   if (!RegularLTO.ModsWithSummaries.empty()) {
-    llvm::TimeTraceScope timeScope("Link regular LTO");
-    for (auto &M : RegularLTO.ModsWithSummaries)
-      if (Error Err = linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
-        return Err;
-    RegularLTO.ModsWithSummaries.clear();
-    RegularLTO.ModsWithSummaries.shrink_to_fit();
+    {
+      llvm::TimeTraceScope timeScope("Link regular LTO");
+      for (auto &M : RegularLTO.ModsWithSummaries)
+        if (Error Err = linkRegularLTO(std::move(M), /*LivenessFromIndex=*/true))
+          return Err;
+      RegularLTO.ModsWithSummaries.clear();
+      RegularLTO.ModsWithSummaries.shrink_to_fit();
+    }
     if (Conf.PostRegularLTOLinkHook)
       Conf.PostRegularLTOLinkHook();
   }

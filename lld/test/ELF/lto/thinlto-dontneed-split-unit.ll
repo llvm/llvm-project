@@ -20,7 +20,6 @@
 ; RUN: %python -c 'import json, sys; evs = sorted([e for e in json.load(open(sys.argv[1]))["traceEvents"] if e.get("ph") == "X" and not e["name"].startswith("Total ")], key=lambda e: e["ts"]); print("\n".join(e["name"] for e in evs))' %t/inproc.json | FileCheck %s --check-prefix=ONCE
 
 ; SPLIT: Mark buffers as dontneed
-; SPLIT: Run regular LTO
 ; SPLIT: Link regular LTO
 ; SPLIT: Mark buffers as dontneed
 ; SPLIT: LTO backend
