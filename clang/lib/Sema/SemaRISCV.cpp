@@ -1622,36 +1622,25 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
 
 void SemaRISCV::checkConflictingStateAttributes(
     const FunctionDecl *CallerFD, const FunctionDecl *FD,
-    const FunctionProtoType::ExtProtoInfo &CalleeExtInfo, SourceLocation Loc) {
+    FunctionType::RISCVStateValue CallerState,
+    FunctionType::RISCVStateValue CalleeState, SourceLocation Loc) {
   ASTContext &Context = getASTContext();
 
   // Check if there's any conflicting call for every state, it should not be
   // any conflict if caller and callee are in different state.
-  if (!CallerFD ||
-      !(!FD || !FD->getBuiltinID() ||
-        Context.BuiltinInfo.isLibFunction(FD->getBuiltinID()) ||
-        Context.BuiltinInfo.isPredefinedLibFunction(FD->getBuiltinID())))
+  if (FD && FD->getBuiltinID() &&
+      !Context.BuiltinInfo.isLibFunction(FD->getBuiltinID()) &&
+      !Context.BuiltinInfo.isPredefinedLibFunction(FD->getBuiltinID()))
     return;
 
-  QualType CallerType = CallerFD->getType();
-  if (CallerType.isNull())
-    return;
-
-  const auto *FPT = CallerType->getAs<FunctionProtoType>();
-  if (!FPT)
-    return;
-
-  FunctionProtoType::ExtProtoInfo CallerExtInfo = FPT->getExtProtoInfo();
   llvm::StringMap<bool> CallerFeatureMap;
-  if (CallerExtInfo.RISCVAttributes & FunctionType::RISCVAttributeMask)
+  if (CallerState != FunctionType::RISCVNone)
     Context.getFunctionFeatureMap(CallerFeatureMap, CallerFD);
   // tuple(CallerAttr, CalleeAttr, required feature)
   const std::tuple<FunctionType::RISCVStateValue, FunctionType::RISCVStateValue,
                    StringRef>
       RISCVStateInfo[] = {
-          {FunctionType::getRISCVXsfmmState(CallerExtInfo.RISCVAttributes),
-           FunctionType::getRISCVXsfmmState(CalleeExtInfo.RISCVAttributes),
-           "xsfmmbase"}};
+          {CallerState, CalleeState, "xsfmmbase"}};
   for (auto [CallerAttr, CalleeAttr, RequiredFeature] : RISCVStateInfo) {
     // If both caller and callee are not attributed, then we're fine.
     if (CallerAttr == FunctionType::RISCVNone &&

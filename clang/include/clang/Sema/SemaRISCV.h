@@ -43,7 +43,8 @@ public:
   /// matrix state) between a caller and callee.
   void checkConflictingStateAttributes(
       const FunctionDecl *CallerFD, const FunctionDecl *FD,
-      const FunctionProtoType::ExtProtoInfo &CalleeExtInfo, SourceLocation Loc);
+      FunctionType::RISCVStateValue CallerState,
+      FunctionType::RISCVStateValue CalleeState, SourceLocation Loc);
 
   bool isValidRVVBitcast(QualType srcType, QualType destType);
 
