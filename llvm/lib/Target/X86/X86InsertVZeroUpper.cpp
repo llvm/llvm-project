@@ -141,8 +141,6 @@ static bool clobbersAllYmmAndZmmRegs(const MachineOperand &MO) {
 
 static bool hasYmmOrZmmReg(MachineInstr &MI) {
   for (const MachineOperand &MO : MI.operands()) {
-    if (MI.isCall() && MO.isRegMask() && !clobbersAllYmmAndZmmRegs(MO))
-      return true;
     if (!MO.isReg())
       continue;
     if (MO.isDebug())
@@ -153,12 +151,13 @@ static bool hasYmmOrZmmReg(MachineInstr &MI) {
   return false;
 }
 
-/// Check if given call instruction has a RegMask operand.
-static bool callHasRegMask(MachineInstr &MI) {
+/// Check if given call instruction has a RegMask operand that clobbers all
+/// YMM/ZMM registers.
+static bool callClobbersAllYmmAndZmmRegs(MachineInstr &MI) {
   assert(MI.isCall() && "Can only be called on call instructions.");
   for (const MachineOperand &MO : MI.operands()) {
     if (MO.isRegMask())
-      return true;
+      return clobbersAllYmmAndZmmRegs(MO);
   }
   return false;
 }
@@ -187,7 +186,7 @@ static void addDirtySuccessor(MachineBasicBlock &MBB,
 static bool processBasicBlock(MachineBasicBlock &MBB,
                               BlockStateMap &BlockStates,
                               DirtySuccessorsWorkList &DirtySuccessors,
-                              bool IsX86INTR, const TargetInstrInfo *TII) {
+                              bool PreservesYMM, const TargetInstrInfo *TII) {
   // Start by assuming that the block is PASS_THROUGH which implies no unguarded
   // calls.
   BlockExitState CurState = PASS_THROUGH;
@@ -199,9 +198,9 @@ static bool processBasicBlock(MachineBasicBlock &MBB,
     bool IsReturn = MI.isReturn();
     bool IsControlFlow = IsCall || IsReturn;
 
-    // No need for vzeroupper before iret in interrupt handler function,
-    // epilogue will restore YMM/ZMM registers if needed.
-    if (IsX86INTR && IsReturn)
+    // No need for vzeroupper before return in interrupt handler or
+    // preserve_all function, epilogue will restore YMM/ZMM registers if needed.
+    if (PreservesYMM && IsReturn)
       continue;
 
     // An existing VZERO* instruction resets the state.
@@ -226,12 +225,11 @@ static bool processBasicBlock(MachineBasicBlock &MBB,
     if (!IsControlFlow)
       continue;
 
-    // If the call has no RegMask, skip it as well. It usually happens on
-    // helper function calls (such as '_chkstk', '_ftol2') where standard
-    // calling convention is not used (RegMask is not used to mark register
-    // clobbered and register usage (def/implicit-def/use) is well-defined and
-    // explicitly specified.
-    if (IsCall && !callHasRegMask(MI))
+    // If the call has no RegMask, or if its RegMask preserves YMM/ZMM
+    // registers (such as preserve_all), skip it as well. Such a call preserves
+    // the caller's YMM/ZMM state without requiring a vzeroupper before the call
+    // or dirtying clean state after the call.
+    if (IsCall && !callClobbersAllYmmAndZmmRegs(MI))
       continue;
 
     // The VZEROUPPER instruction resets the upper 128 bits of YMM0-YMM15
@@ -298,7 +296,9 @@ static bool insertVZeroUpper(MachineFunction &MF) {
     return false;
 
   const TargetInstrInfo *TII = ST.getInstrInfo();
-  bool IsX86INTR = MF.getFunction().getCallingConv() == CallingConv::X86_INTR;
+  CallingConv::ID CC = MF.getFunction().getCallingConv();
+  bool PreservesYMM =
+      CC == CallingConv::X86_INTR || CC == CallingConv::PreserveAll;
   bool EverMadeChange = false;
   BlockStateMap BlockStates(MF.getNumBlockIDs());
   DirtySuccessorsWorkList DirtySuccessors;
@@ -311,7 +311,7 @@ static bool insertVZeroUpper(MachineFunction &MF) {
   // DirtySuccessors list.
   for (MachineBasicBlock &MBB : MF)
     EverMadeChange |=
-        processBasicBlock(MBB, BlockStates, DirtySuccessors, IsX86INTR, TII);
+        processBasicBlock(MBB, BlockStates, DirtySuccessors, PreservesYMM, TII);
 
   // If any YMM/ZMM regs are live-in to this function, add the entry block to
   // the DirtySuccessors list
