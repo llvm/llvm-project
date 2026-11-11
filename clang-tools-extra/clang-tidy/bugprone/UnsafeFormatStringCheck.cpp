@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include <string>
@@ -244,6 +245,7 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
     llvm_unreachable("No valid matched node in check()");
   }
 
+  // Format can be null with incorrect format string position configuration
   if (!Format)
     return;
 
@@ -262,12 +264,12 @@ void UnsafeFormatStringCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   diag(Call->getBeginLoc(),
-       IsScanfFamily
-           ? "format specifier '%%s' without field width may cause buffer "
-             "overflow; consider using '%%Ns' where N limits input length"
-           : "format specifier '%%s' without precision may cause buffer "
-             "overflow; consider using '%%.Ns' where N limits output length")
-      << Call->getSourceRange();
+     llvm::formatv("format specifier '%%s' without {0} may cause buffer overflow; "
+                   "consider using '%%{1}Ns' where N limits {2} length",
+                   IsScanfFamily ? "field width" : "precision",
+                   IsScanfFamily ? "" : ".",
+                   IsScanfFamily ? "input" : "output").str())
+    << Call->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone

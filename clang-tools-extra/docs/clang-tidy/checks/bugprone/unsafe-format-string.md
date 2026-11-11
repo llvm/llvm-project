@@ -11,6 +11,12 @@ and their variants that use `%s` format specifiers without proper limits.
 This can lead to buffer overflow vulnerabilities
 when the input string is longer than the destination buffer.
 
+## Recommendations
+
+- For `sprintf` family: Use precision specifiers (`%.Ns`) or `snprintf`
+- For `scanf` family: Use field width specifiers (`%Ns`)
+- Consider using safer string handling functions when possible
+
 ## Format Specifier Behavior
 
 The check distinguishes between different function families:
@@ -65,12 +71,12 @@ The check detects unsafe format strings in these functions:
 ## Options
 
 ```{option} CustomPrintfFunctions
-The user can specify own printf-like functions with dangerous format string
+List of printf-like functions with dangerous format string
 parameter. Default is an empty string.
 ```
 
 ```{option} CustomScanfFunctions
-The user can specify own scanf-like functions with dangerous format string
+List of scanf-like functions with dangerous format string
 parameter. Default is an empty string.
 ```
 
@@ -103,9 +109,3 @@ void test() {
   myscanf("%s", buffer); // warning
 }
 ```
-
-## Recommendations
-
-- For `sprintf` family: Use precision specifiers (`%.Ns`) or `snprintf`
-- For `scanf` family: Use field width specifiers (`%Ns`)
-- Consider using safer string handling functions when possible

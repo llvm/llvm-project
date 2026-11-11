@@ -20,9 +20,7 @@ void test_sprintf() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: format specifier '%s' without precision may cause buffer overflow; consider using '%.Ns' where N limits output length [bugprone-unsafe-format-string]
 
   mysprintf(buffer, "%.99s", input);
-  /*no warning*/
 }
-
 
 void test_scanf() {
   char buffer[100];
@@ -33,5 +31,4 @@ void test_scanf() {
 
   /*safe %s with field width */
   myscanf("%99s", buffer);
-  /* no-warning */
 }

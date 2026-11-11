@@ -42,10 +42,10 @@ void test_sprintf() {
   sprintf(buffer, "%.s", 99, input);
 
   /*limit is taken as 0*/
-  sprintf(buffer, "%.1ls", winput);
+  sprintf(buffer, "%.ls", winput);
 
   /*other format specifiers are safe */
-  sprintf(buffer, "%d %f", 42, 3.14);
+  sprintf(buffer, "%ds %fs", 42, 3.14);
 
   //Tests taken from warn-format-overflow-truncation.c
   sprintf(buffer, "hell\0 boy");
