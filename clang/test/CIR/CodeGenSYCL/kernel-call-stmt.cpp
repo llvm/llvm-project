@@ -12,8 +12,8 @@
 // functor invocation must not be emitted on the host.
 
 // Required by sycl_kernel_entry_point semantics.
-template <typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KernelInfo, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 template <typename KernelName, typename KernelType>
 [[clang::sycl_kernel_entry_point(KernelName)]]
@@ -31,11 +31,11 @@ void test() { kernel_single_task<KN>(K{}); }
 // host.
 // CIR-LABEL: cir.func {{.*}}@_Z18kernel_single_taskI2KN1KEvT0_
 // CIR-NOT:     cir.call @_ZNK1KclEv
-// CIR:         cir.call @_Z18sycl_kernel_launchI2KNJ1KEEvPKcDpT0_
+// CIR:         cir.call @_Z18sycl_kernel_launchI18__sycl_kernel_infoI2KNEJ1KEEvDpT0_
 // CIR:         cir.return
 
 // LLVM-LABEL: define {{.*}}void @_Z18kernel_single_taskI2KN1KEvT0_
 // LLVM-NOT:     call {{.*}}@_ZNK1KclEv
-// LLVM:         call void @_Z18sycl_kernel_launchI2KNJ1KEEvPKcDpT0_
+// LLVM:         call void @_Z18sycl_kernel_launchI18__sycl_kernel_infoI2KNEJ1KEEvDpT0_
 // LLVM:         ret void
 

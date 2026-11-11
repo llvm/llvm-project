@@ -25,8 +25,8 @@
 // RUN:   -emit-llvm %s -o %t-dev.ll
 // RUN: FileCheck --check-prefix=LLVM-DEV --input-file=%t-dev.ll %s
 
-template <typename KN, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KI, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 template <typename KN, typename KT>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel_entry(KT k) { k(); }

@@ -11,8 +11,8 @@
 template <typename KN, typename F>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel(F f) { f(); }
 
-template <typename KN, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KI, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 int run2() { return 1; }
 void run() { (void)run2(); }

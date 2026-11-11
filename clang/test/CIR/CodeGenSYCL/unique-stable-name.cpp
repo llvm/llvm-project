@@ -25,8 +25,8 @@
 // of the expression. Constant-evaluated uses are folded to a string literal.
 
 // Required by sycl_kernel_entry_point semantics.
-template <typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template <typename KernelInfo, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 template <typename KernelName, typename KernelType>
 [[clang::sycl_kernel_entry_point(KernelName)]]
