@@ -84,10 +84,9 @@ private:
   /// Contains information so that we we can update references in locexpr after
   /// we calculated all the final DIE offsets.
   struct LocWithReference {
-    LocWithReference(std::vector<uint8_t> &&BlockData, DWARFUnit &U, DIE &Die,
-                     dwarf::Form Form, dwarf::Attribute Attr)
-        : BlockData(BlockData), U(U), Die(Die), Form(Form), Attr(Attr) {}
-    std::vector<uint8_t> BlockData;
+    LocWithReference(DWARFUnit &U, DIE &Die, dwarf::Form Form,
+                     dwarf::Attribute Attr)
+        : U(U), Die(Die), Form(Form), Attr(Attr) {}
     DWARFUnit &U;
     DIE &Die;
     dwarf::Form Form;
