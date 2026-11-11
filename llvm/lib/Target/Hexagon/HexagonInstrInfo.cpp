@@ -3229,6 +3229,14 @@ bool HexagonInstrInfo::mayBeNewStore(const MachineInstr &MI) const {
   return (F >> HexagonII::mayNVStorePos) & HexagonII::mayNVStoreMask;
 }
 
+bool HexagonInstrInfo::isTmpLoadPseudo(const MachineInstr &MI) const {
+  return MI.getOpcode() == Hexagon::LX_L16b_pseudo;
+}
+
+bool HexagonInstrInfo::isNewStorePseudo(const MachineInstr &MI) const {
+  return MI.getOpcode() == Hexagon::LX_S16b_pseudo;
+}
+
 bool HexagonInstrInfo::producesStall(const MachineInstr &ProdMI,
       const MachineInstr &ConsMI) const {
   // There is no stall when ProdMI is not a V60 vector.

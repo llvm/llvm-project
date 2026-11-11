@@ -138,24 +138,15 @@ add_entrypoint_object(
     libc.src.__support.fixed_point.sqrt
 )
 
-add_entrypoint_object(
-  exphk
-  HDRS
-    exphk.h
-  SRCS
-    exphk.cpp
-  DEPENDS
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.CPP.bit
-)
-
-add_entrypoint_object(
-  expk
-  HDRS
-    expk.h
-  SRCS
-    expk.cpp
-  DEPENDS
-    libc.src.__support.fixed_point.fx_rep
-    libc.src.__support.CPP.bit
-)
+foreach(suffix IN ITEMS hk k uhk uk)
+  add_entrypoint_object(
+    exp${suffix}
+    HDRS
+      exp${suffix}.h
+    SRCS
+      exp${suffix}.cpp
+    DEPENDS
+      libc.src.__support.fixed_point.fx_rep
+      libc.src.__support.CPP.bit
+  )
+endforeach()

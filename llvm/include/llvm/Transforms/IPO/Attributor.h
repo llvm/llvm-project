@@ -946,13 +946,16 @@ private:
   /// argument or call site argument. See also `getCalleeArgNo` and
   /// `getCallSiteArgNo`.
   int getArgNo(bool CallbackCalleeArgIfApplicable) const {
-    if (CallbackCalleeArgIfApplicable)
-      if (Argument *Arg = getAssociatedArgument())
-        return Arg->getArgNo();
     switch (getPositionKind()) {
     case IRPosition::IRP_ARGUMENT:
       return cast<Argument>(getAsValuePtr())->getArgNo();
     case IRPosition::IRP_CALL_SITE_ARGUMENT: {
+      // Only call site arguments can be associated with a callback callee
+      // argument.
+      if (CallbackCalleeArgIfApplicable) {
+        if (Argument *Arg = getAssociatedArgument())
+          return Arg->getArgNo();
+      }
       Use &U = *getAsUsePtr();
       return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
     }
