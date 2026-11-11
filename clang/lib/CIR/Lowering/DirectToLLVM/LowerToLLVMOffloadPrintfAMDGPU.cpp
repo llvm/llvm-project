@@ -16,9 +16,12 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Matchers.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 
 namespace cir {
@@ -26,48 +29,118 @@ namespace direct {
 
 namespace {
 
+// One entry per operand, format first. A string entry means the
+// operand is a constant string; a unit entry means it is not.
+constexpr llvm::StringLiteral kPrintfConstStringsAttrName =
+    "cir.printf.const_strings";
+
+// Fold a constant through widening integral casts, each at its own width.
+// TODO: use the regular fold helpers once they fold widening cast chains
+// without also folding narrowing casts. CastOp is not ConstantLike and
+// its fold folds narrowing casts, so the chain stays hand written today.
+std::optional<llvm::APInt>
+foldConstantInt(mlir::Value value,
+                llvm::SmallPtrSetImpl<mlir::Operation *> &seen) {
+  mlir::Operation *def = value.getDefiningOp();
+  if (!def || !seen.insert(def).second)
+    return std::nullopt;
+  cir::IntAttr intAttr;
+  if (mlir::matchPattern(value, mlir::m_Constant(&intAttr)))
+    return intAttr.getValue();
+  auto cast = mlir::dyn_cast<cir::CastOp>(def);
+  if (!cast || cast.getKind() != cir::CastKind::integral)
+    return std::nullopt;
+  auto srcTy = mlir::dyn_cast<cir::IntType>(cast.getSrc().getType());
+  auto dstTy = mlir::dyn_cast<cir::IntType>(cast.getType());
+  if (!srcTy || !dstTy || dstTy.getWidth() < srcTy.getWidth() ||
+      dstTy.getWidth() > 64)
+    return std::nullopt;
+  // One widening step from a direct constant is the op's own fold;
+  // chains recurse, since fold sees only the immediate source.
+  llvm::SmallVector<mlir::OpFoldResult, 1> folded;
+  if (succeeded(cast->fold(folded)) && folded.size() == 1)
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(folded[0]))
+      if (auto foldedInt = mlir::dyn_cast<cir::IntAttr>(attr))
+        return foldedInt.getValue();
+  std::optional<llvm::APInt> foldedSrc = foldConstantInt(cast.getSrc(), seen);
+  if (!foldedSrc)
+    return std::nullopt;
+  return srcTy.isUnsigned() ? foldedSrc->zextOrTrunc(dstTy.getWidth())
+                            : foldedSrc->sextOrTrunc(dstTy.getWidth());
+}
+
 std::optional<int64_t> getConstantInt(mlir::Value value) {
-  auto constOp = value.getDefiningOp<cir::ConstantOp>();
-  auto intAttr =
-      constOp ? mlir::dyn_cast<cir::IntAttr>(constOp.getValue()) : nullptr;
-  if (!intAttr)
+  bool isUnsigned = false;
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType()))
+    isUnsigned = !intTy.isSigned();
+  llvm::SmallPtrSet<mlir::Operation *, 4> seen;
+  std::optional<llvm::APInt> result = foldConstantInt(value, seen);
+  if (!result || result->getBitWidth() > 64)
     return std::nullopt;
-  const llvm::APInt &v = intAttr.getValue();
-  if (mlir::cast<cir::IntType>(intAttr.getType()).isSigned()
-          ? v.getSignificantBits() > 64
-          : v.getActiveBits() > 63)
+  // An unsigned value past INT64_MAX cannot be a byte offset here:
+  // returning it would wrap negative in the signed offset below.
+  if (isUnsigned ? result->getActiveBits() > 63
+                 : result->getSignificantBits() > 64)
     return std::nullopt;
-  return v.getSExtValue();
+  return isUnsigned ? result->getZExtValue() : result->getSExtValue();
 }
 
 bool isByteType(mlir::Type ty) {
-  auto intTy = mlir::dyn_cast<cir::IntType>(ty);
-  return intTy && intTy.getWidth() == 8;
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
+    return intTy.getWidth() == 8;
+  return ty.isInteger(8);
+}
+
+std::optional<int64_t> scaledOffset(int64_t index, mlir::Type elemTy,
+                                    const mlir::DataLayout &dataLayout) {
+  llvm::TypeSize size = dataLayout.getTypeAllocSize(elemTy);
+  if (size.isScalable() || size.getFixedValue() >= (1ULL << 63))
+    return std::nullopt;
+  int64_t offset;
+  if (llvm::MulOverflow(index, static_cast<int64_t>(size.getFixedValue()),
+                        offset))
+    return std::nullopt;
+  return offset;
 }
 
 bool getConstantStringInfo(mlir::Value ptr, mlir::ModuleOp mod,
+                           const mlir::DataLayout &dataLayout,
                            mlir::SymbolTableCollection &symbolTables,
                            std::string &str) {
   int64_t offset = 0;
+  llvm::SmallPtrSet<mlir::Operation *, 8> seen;
   while (mlir::Operation *def = ptr.getDefiningOp()) {
+    if (!seen.insert(def).second)
+      return false;
     if (auto cast = mlir::dyn_cast<cir::CastOp>(def)) {
       if (cast.getKind() != cir::CastKind::array_to_ptrdecay &&
           cast.getKind() != cir::CastKind::bitcast &&
           cast.getKind() != cir::CastKind::address_space)
         break;
       ptr = cast.getSrc();
-    } else if (auto elt = mlir::dyn_cast<cir::GetElementOp>(def)) {
-      std::optional<int64_t> index = getConstantInt(elt.getIndex());
-      if (!index || !isByteType(elt.getElementType()) ||
-          llvm::AddOverflow(offset, *index, offset))
-        return false;
-      ptr = elt.getBase();
     } else if (auto stride = mlir::dyn_cast<cir::PtrStrideOp>(def)) {
+      mlir::Type elemTy = stride.getElementType();
+      // Lowering treats void and function elements as bytes, and
+      // neither has a data layout entry.
+      if (mlir::isa<cir::VoidType, cir::FuncType>(elemTy))
+        elemTy = cir::IntType::get(elemTy.getContext(), 8, false);
       std::optional<int64_t> index = getConstantInt(stride.getStride());
-      if (!index || !isByteType(stride.getElementType()) ||
-          llvm::AddOverflow(offset, *index, offset))
+      std::optional<int64_t> step =
+          index ? scaledOffset(*index, elemTy, dataLayout) : std::nullopt;
+      if (!step || llvm::AddOverflow(offset, *step, offset))
         return false;
       ptr = stride.getBase();
+    } else if (auto elt = mlir::dyn_cast<cir::GetElementOp>(def)) {
+      auto arrayTy =
+          mlir::dyn_cast<cir::ArrayType>(elt.getBaseType().getPointee());
+      std::optional<int64_t> index = getConstantInt(elt.getIndex());
+      std::optional<int64_t> step =
+          arrayTy && index
+              ? scaledOffset(*index, elt.getElementType(), dataLayout)
+              : std::nullopt;
+      if (!step || llvm::AddOverflow(offset, *step, offset))
+        return false;
+      ptr = elt.getBase();
     } else {
       break;
     }
@@ -76,45 +149,46 @@ bool getConstantStringInfo(mlir::Value ptr, mlir::ModuleOp mod,
   auto getGlobal = ptr.getDefiningOp<cir::GetGlobalOp>();
   if (!getGlobal)
     return false;
-
-  // The global may or may not have been converted already.
-  std::string data;
   mlir::Operation *symbol =
       symbolTables.lookupSymbolIn(mod, getGlobal.getNameAttr());
-  if (auto global = mlir::dyn_cast_if_present<cir::GlobalOp>(symbol)) {
-    std::optional<mlir::Attribute> init = global.getInitialValue();
-    auto arrayTy = mlir::dyn_cast<cir::ArrayType>(global.getSymType());
-    if (!global.getConstant() || !init || !arrayTy ||
-        !isByteType(arrayTy.getElementType()))
-      return false;
-    if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(*init)) {
-      auto strAttr = mlir::dyn_cast<mlir::StringAttr>(constArr.getElts());
-      if (!strAttr)
-        return false;
+  auto global = mlir::dyn_cast_if_present<cir::GlobalOp>(symbol);
+  if (!global)
+    return false;
+
+  std::string data;
+  std::optional<mlir::Attribute> init = global.getInitialValue();
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(global.getSymType());
+  if (!global.getConstant() || !init || !arrayTy ||
+      !isByteType(arrayTy.getElementType()))
+    return false;
+  if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(*init)) {
+    if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(constArr.getElts())) {
       data = strAttr.getValue().str();
-    } else if (!mlir::isa<cir::ZeroAttr>(*init)) {
-      return false;
-    }
-    // Add back the trailing NULs the string attribute leaves out.
-    data.resize(arrayTy.getSize(), '\0');
-  } else if (auto global =
-                 mlir::dyn_cast_if_present<mlir::LLVM::GlobalOp>(symbol)) {
-    if (!global.getConstant())
-      return false;
-    mlir::Attribute value = global.getValueOrNull();
-    if (auto strAttr = mlir::dyn_cast_if_present<mlir::StringAttr>(value)) {
-      data = strAttr.getValue().str();
-    } else if (auto dense =
-                   mlir::dyn_cast_if_present<mlir::DenseIntElementsAttr>(value);
-               dense && dense.getElementType().isInteger(8)) {
-      for (const llvm::APInt &c : dense.getValues<llvm::APInt>())
-        data.push_back(static_cast<char>(c.getZExtValue()));
+    } else if (auto arrayAttr =
+                   mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts())) {
+      for (mlir::Attribute elt : arrayAttr) {
+        llvm::APInt byte;
+        if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(elt)) {
+          if (!isByteType(intAttr.getType()))
+            return false;
+          byte = intAttr.getValue();
+        } else if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(elt)) {
+          if (!isByteType(intAttr.getType()))
+            return false;
+          byte = intAttr.getValue();
+        } else {
+          return false;
+        }
+        data.push_back(static_cast<char>(byte.getZExtValue()));
+      }
     } else {
       return false;
     }
-  } else {
+  } else if (!mlir::isa<cir::ZeroAttr>(*init)) {
     return false;
   }
+  // Add back the trailing NULs the string attribute leaves out.
+  data.resize(arrayTy.getSize(), '\0');
 
   if (offset < 0 || static_cast<uint64_t>(offset) > data.size())
     return false;
@@ -140,11 +214,24 @@ public:
                        unsigned genericAddrSpace)
       : op(op), rewriter(rewriter), dataLayout(dataLayout),
         symbolTables(symbolTables), mod(op->getParentOfType<mlir::ModuleOp>()),
-        genericAddrSpace(genericAddrSpace) {}
+        genericAddrSpace(genericAddrSpace) {
+    if (auto attr =
+            op->getAttrOfType<mlir::ArrayAttr>(kPrintfConstStringsAttrName))
+      if (attr.size() == op.getArgs().size() + 1)
+        constStrings = attr;
+  }
 
   mlir::LogicalResult lower(mlir::ValueRange args, bool isBuffered);
 
 private:
+  std::optional<std::string> getConstString(size_t operandIndex) const {
+    if (!constStrings || operandIndex >= constStrings.size())
+      return std::nullopt;
+    auto strAttr = mlir::dyn_cast<mlir::StringAttr>(constStrings[operandIndex]);
+    if (!strAttr)
+      return std::nullopt;
+    return strAttr.getValue().str();
+  }
   mlir::Value getI32(uint32_t value) {
     return mlir::LLVM::ConstantOp::create(
         rewriter, op.getLoc(), rewriter.getI32Type(), llvm::APInt(32, value));
@@ -190,6 +277,7 @@ private:
   mlir::SymbolTableCollection &symbolTables;
   mlir::ModuleOp mod;
   unsigned genericAddrSpace;
+  mlir::ArrayAttr constStrings;
 
   /// The rest of the op's block, which the expansion branches to.
   mlir::Block *cont = nullptr;
@@ -198,6 +286,40 @@ private:
 };
 
 } // namespace
+
+bool isAMDGPUPrintfModule(mlir::ModuleOp module) {
+  llvm::StringRef tripleStr;
+  if (auto tripleAttr = module->getAttrOfType<mlir::StringAttr>(
+          cir::CIRDialect::getTripleAttrName()))
+    tripleStr = tripleAttr.getValue();
+  llvm::Triple triple(tripleStr);
+  return triple.isAMDGCN() ||
+         (triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD);
+}
+
+void annotateAMDGPUPrintfStrings(mlir::ModuleOp module,
+                                 mlir::SymbolTableCollection &symbolTables) {
+  mlir::MLIRContext *ctx = module.getContext();
+  module.walk([&](cir::OffloadPrintfOp op) {
+    mlir::ModuleOp opModule = op->getParentOfType<mlir::ModuleOp>();
+    if (!isAMDGPUPrintfModule(opModule))
+      return;
+    mlir::DataLayout opLayout(opModule);
+    llvm::SmallVector<mlir::Attribute> entries;
+    auto resolve = [&](mlir::Value value) {
+      std::string str;
+      if (getConstantStringInfo(value, opModule, opLayout, symbolTables, str))
+        entries.push_back(mlir::StringAttr::get(ctx, str));
+      else
+        entries.push_back(mlir::UnitAttr::get(ctx));
+    };
+    resolve(op.getFormat());
+    for (mlir::Value arg : op.getArgs())
+      resolve(arg);
+    op->setAttr(kPrintfConstStringsAttrName,
+                mlir::ArrayAttr::get(ctx, entries));
+  });
+}
 
 mlir::Value AMDGPUPrintfLowering::createCall(llvm::StringRef name,
                                              mlir::Type resTy,
@@ -434,14 +556,12 @@ mlir::Value AMDGPUPrintfLowering::callBufferedPrintfStart(
     stringContents.push_back({"", lenWithNull, nonConstStrLen, false});
   }
 
-  mlir::OperandRange cirArgs = op->getOperands();
   for (size_t i = 1; i < args.size(); i++) {
     if (isCStringArg(args, i)) {
-      std::string argStr;
-      if (getConstantStringInfo(cirArgs[i], mod, symbolTables, argStr)) {
-        auto alignedLen = llvm::alignTo(argStr.size() + 1, 8);
-        stringContents.push_back({argStr, /*realSize=*/{}, /*alignedSize=*/{},
-                                  /*isConst=*/true});
+      if (std::optional<std::string> argStr = getConstString(i)) {
+        auto alignedLen = llvm::alignTo(argStr->size() + 1, 8);
+        stringContents.push_back({*argStr, /*realSize=*/{},
+                                  /*alignedSize=*/{}, /*isConst=*/true});
         bufSize += alignedLen;
       } else {
         lenWithNull = getStrlenWithNull(args[i]);
@@ -586,8 +706,10 @@ mlir::Value AMDGPUPrintfLowering::emitAMDGPUPrintfCall(mlir::ValueRange args,
 
   mlir::Value fmt = args[0];
 
-  if (getConstantStringInfo(op.getFormat(), mod, symbolTables, fmtStr))
+  if (std::optional<std::string> resolved = getConstString(0)) {
+    fmtStr = *resolved;
     llvm::locateAMDGPUPrintfCStrings(specIsCString, fmtStr);
+  }
 
   if (isBuffered) {
     llvm::SmallVector<StringData, 8> stringContents;

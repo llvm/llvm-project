@@ -12,6 +12,7 @@
 
 #include "LowerToLLVM.h"
 #include "LowerToLLVMMetadata.h"
+#include "LowerToLLVMOffloadPrintf.h"
 #include "LowerToLLVMOpenCLMetadata.h"
 
 #include <array>
@@ -5236,6 +5237,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   // Collect annotation info from cir.func / cir.global before conversion;
   // the annotations attribute is filtered out during FuncOp/GlobalOp lowering.
   collectGlobalAnnotations(module);
+
+  // Resolve constant printf strings while their producers are still CIR.
+  annotateAMDGPUPrintfStrings(module, symbolTables);
 
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
