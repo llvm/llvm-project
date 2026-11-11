@@ -173,10 +173,8 @@ unsigned PISARegisterInfo::getSubRegIdx(unsigned Size, unsigned Idx) const {
   case 64:
     return Subregs[3][Idx];
   default:
-    assert(0 && "unknown type size!");
-    break;
+    llvm_unreachable("unknown type size!");
   }
-  return 0;
 }
 
 unsigned PISARegisterInfo::getCompositeSubRegIdx(unsigned Size, unsigned Base,
