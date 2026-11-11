@@ -210,7 +210,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i16) addrspace(1)
 ; CHECK-NEXT: declare float @__powisf2(float, i16) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i16) addrspace(1)
-; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1)
+; CHECK-NEXT: declare void @__stack_chk_fail() addrspace(1) [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @__subsf3(float, float) addrspace(1)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128) addrspace(1)
@@ -344,8 +344,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @fmodf(float, float) addrspace(1)
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) addrspace(1) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr) addrspace(1)
-; CHECK-NEXT: declare float @frexpf(float, ptr) addrspace(1)
+; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
+; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
 ; CHECK-NEXT: declare double @ldexp(double, i16) addrspace(1)
 ; CHECK-NEXT: declare float @ldexpf(float, i16) addrspace(1)
 ; CHECK-NEXT: declare i64 @llrint(double) addrspace(1)
@@ -366,8 +366,8 @@
 ; CHECK-NEXT: declare ptr @memcpy(ptr, ptr, i16) addrspace(1)
 ; CHECK-NEXT: declare ptr @memmove(ptr, ptr, i16) addrspace(1)
 ; CHECK-NEXT: declare ptr @memset(ptr, i16, i16) addrspace(1)
-; CHECK-NEXT: declare double @modf(double, ptr) addrspace(1)
-; CHECK-NEXT: declare float @modff(float, ptr) addrspace(1)
+; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 1 dereferenceable(8)) addrspace(1)
+; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 1 dereferenceable(4)) addrspace(1)
 ; CHECK-NEXT: declare double @nan(ptr) addrspace(1)
 ; CHECK-NEXT: declare float @nanf(ptr) addrspace(1)
 ; CHECK-NEXT: declare double @nearbyint(double) addrspace(1)
@@ -378,8 +378,8 @@
 ; CHECK-NEXT: declare float @powf(float, float) addrspace(1)
 ; CHECK-NEXT: declare double @remainder(double, double) addrspace(1)
 ; CHECK-NEXT: declare float @remainderf(float, float) addrspace(1)
-; CHECK-NEXT: declare double @remquo(double, double, ptr) addrspace(1)
-; CHECK-NEXT: declare float @remquof(float, float, ptr) addrspace(1)
+; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
+; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 1 dereferenceable(2)) addrspace(1)
 ; CHECK-NEXT: declare double @rint(double) addrspace(1)
 ; CHECK-NEXT: declare float @rintf(float) addrspace(1)
 ; CHECK-NEXT: declare double @round(double) addrspace(1)
@@ -404,6 +404,7 @@
 ; CHECK-NEXT: declare double @trunc(double) addrspace(1)
 ; CHECK-NEXT: declare float @truncf(float) addrspace(1)
 ; CHECK-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

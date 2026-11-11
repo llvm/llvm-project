@@ -10,6 +10,7 @@
 #include "SPIRVNonSemanticDebugHandler.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVSubtarget.h"
+#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -30,25 +31,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 
 using namespace llvm;
-
-// When disabled, unwrap a DILexicalBlockFile to its enclosing scope.
-static cl::opt<bool> SPIRVDebugLexicalBlockDiscriminatorScope(
-    "spirv-debug-lexical-block-discriminator-scope",
-    cl::desc("Use a DebugLexicalBlockDiscriminator as a DebugScope"),
-    cl::init(false));
-
-static cl::opt<bool> SPIRVDebugScopeForwardRefs(
-    "spirv-debug-scope-forward-refs",
-    cl::desc("Forward-reference debug scopes when "
-             "SPV_KHR_relaxed_extended_instruction is enabled"),
-    cl::init(false));
 
 namespace {
 
@@ -195,7 +183,8 @@ findLastFunctionOpVariableDeclaration(const MachineFunction &MF,
 } // namespace
 
 SPIRVNonSemanticDebugHandler::SPIRVNonSemanticDebugHandler(AsmPrinter &AP)
-    : DebugHandlerBase(&AP) {}
+    : DebugHandlerBase(&AP),
+      CLOpts(static_cast<const SPIRVTargetMachine &>(AP.TM).getCLOpts()) {}
 
 // Map DWARF source language codes to NonSemantic.Shader.DebugInfo.100 source
 // language codes. Values are from the SourceLanguage enum in the
@@ -468,7 +457,7 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
 
   HasRelaxedExtInst =
-      SPIRVDebugScopeForwardRefs &&
+      CLOpts.debug_scope_forward_refs &&
       ST.canUseExtension(
           SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
   if (HasRelaxedExtInst)
@@ -1085,7 +1074,7 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 auto SPIRVNonSemanticDebugHandler::resolveScope(const DIScope *Scope,
                                                 const DICompileUnit *FallbackCU)
     -> EmitResult<MCRegister> {
-  if (!SPIRVDebugLexicalBlockDiscriminatorScope)
+  if (!CLOpts.debug_lexical_block_discriminator_scope)
     while (const auto *LBF = dyn_cast_or_null<DILexicalBlockFile>(Scope))
       Scope = LBF->getScope();
 

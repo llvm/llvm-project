@@ -6,6 +6,12 @@
 ; RUN: llc -O0 -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,WAVE64,WAVE64-O0 %s
 ; RUN: llc -O0 -mtriple=amdgpu10.30-amd-amdpal -amdgpu-prealloc-sgpr-spill-vgprs=1 < %s | FileCheck -check-prefixes=GCN,WAVE32,WAVE32-WWM-PREALLOC %s
 
+; RUN: llc -global-isel -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GISEL-WAVE32-OPT %s
+; RUN: llc -global-isel -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GISEL-WAVE64-OPT %s
+
+; RUN: llc -global-isel -O0 -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GISEL-WAVE32-O0 %s
+; RUN: llc -global-isel -O0 -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GISEL-WAVE64-O0 %s
+
 declare ptr addrspace(5) @llvm.stacksave.p5()
 declare void @llvm.stackrestore.p5(ptr addrspace(5))
 
@@ -43,6 +49,26 @@ define hidden void @stack_passed_argument([32 x i32], i32) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v0, off, s[0:3], s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: stack_passed_argument:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: stack_passed_argument:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: stack_passed_argument:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: stack_passed_argument:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   ret void
 }
 
@@ -94,6 +120,42 @@ define void @func_store_stacksave() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    ; use s4
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_store_stacksave:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s4
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_store_stacksave:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s4
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_store_stacksave:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s4
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_store_stacksave:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s4
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stacksave)
   ret void
@@ -142,6 +204,38 @@ define amdgpu_kernel void @kernel_store_stacksave() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    ; use s0
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-OPT-LABEL: kernel_store_stacksave:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s0, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s0
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-OPT-LABEL: kernel_store_stacksave:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s0, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s0
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-O0-LABEL: kernel_store_stacksave:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s0, s32, 5
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s0
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-O0-LABEL: kernel_store_stacksave:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s0, s32, 6
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s0
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    s_endpgm
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stacksave)
   ret void
@@ -223,6 +317,58 @@ define amdgpu_kernel void @kernel_store_stacksave_nocall() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v1, s0
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v0, v1, s[12:15], 0 offen
 ; WAVE32-WWM-PREALLOC-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-OPT-LABEL: kernel_store_stacksave_nocall:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_getpc_b64 s[12:13]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s12, s0
+; GISEL-WAVE32-OPT-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-WAVE32-OPT-NEXT:    s_load_dwordx4 s[12:15], s[12:13], 0x0
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_bitset0_b32 s15, 21
+; GISEL-WAVE32-OPT-NEXT:    s_add_u32 s12, s12, s11
+; GISEL-WAVE32-OPT-NEXT:    s_addc_u32 s13, s13, 0
+; GISEL-WAVE32-OPT-NEXT:    buffer_store_dword v0, off, s[12:15], s32
+; GISEL-WAVE32-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-OPT-LABEL: kernel_store_stacksave_nocall:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_getpc_b64 s[12:13]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s12, s0
+; GISEL-WAVE64-OPT-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-WAVE64-OPT-NEXT:    s_load_dwordx4 s[12:15], s[12:13], 0x0
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_add_u32 s12, s12, s11
+; GISEL-WAVE64-OPT-NEXT:    s_addc_u32 s13, s13, 0
+; GISEL-WAVE64-OPT-NEXT:    buffer_store_dword v0, off, s[12:15], s32
+; GISEL-WAVE64-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-O0-LABEL: kernel_store_stacksave_nocall:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_getpc_b64 s[12:13]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s12, s0
+; GISEL-WAVE32-O0-NEXT:    s_load_dwordx4 s[12:15], s[12:13], 0x0
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_bitset0_b32 s15, 21
+; GISEL-WAVE32-O0-NEXT:    s_add_u32 s12, s12, s11
+; GISEL-WAVE32-O0-NEXT:    s_addc_u32 s13, s13, 0
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s0, 0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[12:15], s32
+; GISEL-WAVE32-O0-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-O0-LABEL: kernel_store_stacksave_nocall:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_getpc_b64 s[12:13]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s12, s0
+; GISEL-WAVE64-O0-NEXT:    s_load_dwordx4 s[12:15], s[12:13], 0x0
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_add_u32 s12, s12, s11
+; GISEL-WAVE64-O0-NEXT:    s_addc_u32 s13, s13, 0
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s0, 0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[12:15], s32
+; GISEL-WAVE64-O0-NEXT:    s_endpgm
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   store i32 0, ptr addrspace(5) %stacksave
   ret void
@@ -363,6 +509,114 @@ define void @func_stacksave_nonentry_block(i1 %cond) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_nonentry_block:
+; GISEL-WAVE32-OPT:       ; %bb.0: ; %bb0
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s4, exec_lo
+; GISEL-WAVE32-OPT-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GISEL-WAVE32-OPT-NEXT:    s_cbranch_execz .LBB4_2
+; GISEL-WAVE32-OPT-NEXT:  ; %bb.1: ; %bb1
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s5, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s5
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:  .LBB4_2: ; %bb2
+; GISEL-WAVE32-OPT-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_nonentry_block:
+; GISEL-WAVE64-OPT:       ; %bb.0: ; %bb0
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[4:5], exec
+; GISEL-WAVE64-OPT-NEXT:    v_cmpx_ne_u32_e32 0, v0
+; GISEL-WAVE64-OPT-NEXT:    s_cbranch_execz .LBB4_2
+; GISEL-WAVE64-OPT-NEXT:  ; %bb.1: ; %bb1
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s6, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s6
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:  .LBB4_2: ; %bb2
+; GISEL-WAVE64-OPT-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_nonentry_block:
+; GISEL-WAVE32-O0:       ; %bb.0: ; %bb0
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_xor_saveexec_b32 s4, -1
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, 1
+; GISEL-WAVE32-O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-WAVE32-O0-NEXT:    v_cmp_ne_u32_e64 s5, v0, v1
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, exec_lo
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v2, s4, 0
+; GISEL-WAVE32-O0-NEXT:    s_or_saveexec_b32 s7, -1
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s7
+; GISEL-WAVE32-O0-NEXT:    s_and_b32 s4, s4, s5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL-WAVE32-O0-NEXT:    s_cbranch_execz .LBB4_2
+; GISEL-WAVE32-O0-NEXT:  ; %bb.1: ; %bb1
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s4
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:  .LBB4_2: ; %bb2
+; GISEL-WAVE32-O0-NEXT:    s_or_saveexec_b32 s7, -1
+; GISEL-WAVE32-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s7
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s4, v2, 0
+; GISEL-WAVE32-O0-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GISEL-WAVE32-O0-NEXT:    s_xor_saveexec_b32 s4, -1
+; GISEL-WAVE32-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_nonentry_block:
+; GISEL-WAVE64-O0:       ; %bb.0: ; %bb0
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[4:5]
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, 1
+; GISEL-WAVE64-O0-NEXT:    v_and_b32_e64 v0, v0, v1
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-WAVE64-O0-NEXT:    v_cmp_ne_u32_e64 s[6:7], v0, v1
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[4:5], exec
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v2, s4, 0
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v2, s5, 1
+; GISEL-WAVE64-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v2, off, s[0:3], s32 ; 4-byte Folded Spill
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[10:11]
+; GISEL-WAVE64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[4:5]
+; GISEL-WAVE64-O0-NEXT:    s_cbranch_execz .LBB4_2
+; GISEL-WAVE64-O0-NEXT:  ; %bb.1: ; %bb1
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s4
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:  .LBB4_2: ; %bb2
+; GISEL-WAVE64-O0-NEXT:    s_or_saveexec_b64 s[10:11], -1
+; GISEL-WAVE64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[10:11]
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s4, v2, 0
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s5, v2, 1
+; GISEL-WAVE64-O0-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GISEL-WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GISEL-WAVE64-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[4:5]
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
 bb0:
   br i1 %cond, label %bb1, label %bb2
 
@@ -411,6 +665,34 @@ define void @func_stackrestore_poison() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stackrestore_poison:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stackrestore_poison:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stackrestore_poison:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $sgpr4
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stackrestore_poison:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $sgpr4
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) poison)
   ret void
 }
@@ -451,6 +733,34 @@ define void @func_stackrestore_null() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stackrestore_null:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s32, 0
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stackrestore_null:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s32, 0
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stackrestore_null:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, 0
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stackrestore_null:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s4, 0
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) zeroinitializer)
   ret void
 }
@@ -491,6 +801,34 @@ define void @func_stackrestore_neg1() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stackrestore_neg1:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s32, 0x7ffffff
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stackrestore_neg1:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s32, 0x3ffffff
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stackrestore_neg1:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, -1
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stackrestore_neg1:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s4, -1
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) inttoptr (i32 -1 to ptr addrspace(5)))
   ret void
 }
@@ -531,6 +869,34 @@ define void @func_stackrestore_42() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stackrestore_42:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s32, 1
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stackrestore_42:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s32, 0
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stackrestore_42:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s4, 42
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stackrestore_42:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s4, 42
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) inttoptr (i32 42 to ptr addrspace(5)))
   ret void
 }
@@ -566,6 +932,26 @@ define void @func_stacksave_stackrestore() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s4, s32
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_stackrestore:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_stackrestore:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_stackrestore:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_stackrestore:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stacksave)
   ret void
@@ -622,6 +1008,42 @@ define void @func_stacksave_stackrestore_use() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_stackrestore_use:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s4
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_stackrestore_use:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s4
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_stackrestore_use:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s4
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_stackrestore_use:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s4
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stacksave)
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stacksave)
@@ -674,6 +1096,38 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_use() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-OPT-LABEL: kernel_stacksave_stackrestore_use:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s0, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s0
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-OPT-LABEL: kernel_stacksave_stackrestore_use:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s0, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s0
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-O0-LABEL: kernel_stacksave_stackrestore_use:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s0, s32, 5
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s0
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-O0-LABEL: kernel_stacksave_stackrestore_use:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s0, s32, 6
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s0
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    s_endpgm
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stacksave)
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stacksave)
@@ -731,6 +1185,48 @@ define void @func_stacksave_stackrestore_voffset(i32 %offset) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_stackrestore_voffset:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    v_add_nc_u32_e32 v0, s4, v0
+; GISEL-WAVE32-OPT-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_stackrestore_voffset:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    v_add_nc_u32_e32 v0, s4, v0
+; GISEL-WAVE64-OPT-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_stackrestore_voffset:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, v0
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s32, 5
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-WAVE32-O0-NEXT:    v_add_nc_u32_e64 v0, v0, v1
+; GISEL-WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_stackrestore_voffset:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, v0
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s32, 6
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s4
+; GISEL-WAVE64-O0-NEXT:    v_add_nc_u32_e64 v0, v0, v1
+; GISEL-WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   %gep = getelementptr i8, ptr addrspace(5) %stacksave, i32 %offset
   call void @llvm.stackrestore.p5(ptr addrspace(5) %gep)
@@ -775,6 +1271,36 @@ define void @func_stacksave_vgpr(ptr addrspace(5) %stack) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s4, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_vgpr:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_vgpr:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_vgpr:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s4, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_vgpr:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    v_readfirstlane_b32 s4, v0
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s4, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s4
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stack)
   ret void
 }
@@ -812,6 +1338,32 @@ define amdgpu_gfx void @func_stacksave_sgpr(ptr addrspace(5) inreg %stack) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s34, s4, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s34
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_sgpr:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s32, s4, 5
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_sgpr:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s32, s4, 6
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_sgpr:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s34, s4, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s34
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_sgpr:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s34, s4, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s34
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stack)
   ret void
 }
@@ -876,6 +1428,48 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_lshl_b32 s0, s0, 5
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-OPT-LABEL: kernel_stacksave_sgpr:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s0
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-OPT-LABEL: kernel_stacksave_sgpr:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s0
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-O0-LABEL: kernel_stacksave_sgpr:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s1, s0
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s1
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s0, s0, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s0
+; GISEL-WAVE32-O0-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-O0-LABEL: kernel_stacksave_sgpr:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s1, s0
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s1
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s0, s0, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s0
+; GISEL-WAVE64-O0-NEXT:    s_endpgm
   call void asm sideeffect "; use $0", "s"(ptr addrspace(5) %stack)
   call void @llvm.stackrestore.p5(ptr addrspace(5) %stack)
   ret void
@@ -1295,6 +1889,258 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-WWM-PREALLOC-NEXT:    ;;#ASMEND
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-OPT-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_getpc_b64 s[20:21]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s20, s0
+; GISEL-WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GISEL-WAVE32-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
+; GISEL-WAVE32-OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GISEL-WAVE32-OPT-NEXT:    v_mov_b32_e32 v3, 42
+; GISEL-WAVE32-OPT-NEXT:    v_mov_b32_e32 v4, 17
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s15, s9
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s16, s8
+; GISEL-WAVE32-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[8:9], s[0:1]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[12:13], s[4:5]
+; GISEL-WAVE32-OPT-NEXT:    s_movk_i32 s32, 0x1200
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s14, s10
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@lo
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s19, stack_passed_argument@abs32@hi
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[8:9], s[12:13]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s12, s16
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s13, s15
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_bitset0_b32 s23, 21
+; GISEL-WAVE32-OPT-NEXT:    s_add_u32 s20, s20, s11
+; GISEL-WAVE32-OPT-NEXT:    s_addc_u32 s21, s21, 0
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s17, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE32-OPT-NEXT:    buffer_store_dword v4, off, s[20:23], s32 offset:4
+; GISEL-WAVE32-OPT-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s17
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-OPT-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_getpc_b64 s[20:21]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s20, s0
+; GISEL-WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GISEL-WAVE64-OPT-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
+; GISEL-WAVE64-OPT-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GISEL-WAVE64-OPT-NEXT:    v_mov_b32_e32 v3, 42
+; GISEL-WAVE64-OPT-NEXT:    v_mov_b32_e32 v4, 17
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s15, s9
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s16, s8
+; GISEL-WAVE64-OPT-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[8:9], s[0:1]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[12:13], s[4:5]
+; GISEL-WAVE64-OPT-NEXT:    s_movk_i32 s32, 0x2400
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s14, s10
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@lo
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s19, stack_passed_argument@abs32@hi
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[8:9], s[12:13]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s12, s16
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s13, s15
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_add_u32 s20, s20, s11
+; GISEL-WAVE64-OPT-NEXT:    s_addc_u32 s21, s21, 0
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s17, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    buffer_store_dword v3, off, s[20:23], 0
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE64-OPT-NEXT:    buffer_store_dword v4, off, s[20:23], s32 offset:4
+; GISEL-WAVE64-OPT-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s17
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    s_endpgm
+;
+; GISEL-WAVE32-O0-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, 0x1200
+; GISEL-WAVE32-O0-NEXT:    s_getpc_b64 s[20:21]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s20, s0
+; GISEL-WAVE32-O0-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_bitset0_b32 s23, 21
+; GISEL-WAVE32-O0-NEXT:    s_add_u32 s20, s20, s11
+; GISEL-WAVE32-O0-NEXT:    s_addc_u32 s21, s21, 0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v3, v2
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v2, v1
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s14, s10
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s13, s9
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s12, s8
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $vgpr32 : SGPR spill to VGPR lane
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v32, s0, 0
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v32, s1, 1
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s4, v32, 0
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s5, v32, 1
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $sgpr0
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s1, s32, 5
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v32, s1, 2
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s1, 0
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s2, 42
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, s2
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v4, s1
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v1, v4, s[20:23], 0 offen
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $sgpr15
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s1, 10
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, s1
+; GISEL-WAVE32-O0-NEXT:    v_lshlrev_b32_e64 v1, v1, v2
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s1, 20
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v2, s1
+; GISEL-WAVE32-O0-NEXT:    v_lshlrev_b32_e64 v2, v2, v3
+; GISEL-WAVE32-O0-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s1, 17
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s1
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[20:23], s32 offset:4
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v2, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v3, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v4, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v5, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v6, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v7, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v8, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v9, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v10, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v11, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v12, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v13, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v14, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v15, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v17, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v18, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v19, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v20, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v21, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v22, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v23, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v24, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v25, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v26, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v27, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v28, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v29, s0
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v30, s0
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[0:1], s[20:21]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[2:3], s[22:23]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
+; GISEL-WAVE32-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s17, s18
+; GISEL-WAVE32-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s0, v32, 2
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s0
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    s_endpgm
+;
+; GISEL-WAVE64-O0-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, 0x2400
+; GISEL-WAVE64-O0-NEXT:    s_getpc_b64 s[24:25]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s24, s0
+; GISEL-WAVE64-O0-NEXT:    s_load_dwordx4 s[24:27], s[24:25], 0x0
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_add_u32 s24, s24, s11
+; GISEL-WAVE64-O0-NEXT:    s_addc_u32 s25, s25, 0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v3, v2
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v2, v1
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s14, s10
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s13, s9
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s12, s8
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $vgpr32 : SGPR spill to VGPR lane
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v32, s0, 0
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v32, s1, 1
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[8:9], s[4:5]
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s4, v32, 0
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s5, v32, 1
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $sgpr0
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s1, s32, 6
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v32, s1, 2
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s1, 0
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s2, 42
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, s2
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v4, s1
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v1, v4, s[24:27], 0 offen
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $sgpr15
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s1, 10
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, s1
+; GISEL-WAVE64-O0-NEXT:    v_lshlrev_b32_e64 v1, v1, v2
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s1, 20
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v2, s1
+; GISEL-WAVE64-O0-NEXT:    v_lshlrev_b32_e64 v2, v2, v3
+; GISEL-WAVE64-O0-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s1, 17
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s1
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[24:27], s32 offset:4
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v2, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v3, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v4, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v5, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v6, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v7, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v8, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v9, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v10, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v11, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v12, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v13, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v14, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v15, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v16, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v17, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v18, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v19, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v20, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v21, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v22, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v23, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v24, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v25, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v26, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v27, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v28, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v29, s0
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v30, s0
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[0:1], s[24:25]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[2:3], s[26:27]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
+; GISEL-WAVE64-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s17, s18
+; GISEL-WAVE64-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s0, v32, 2
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s0
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    s_endpgm
   %alloca = alloca [32 x i32], addrspace(5)
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   store volatile i32 42, ptr addrspace(5) %alloca
@@ -1716,6 +2562,232 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() #0 {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s33, s24
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-OPT-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE32-OPT:       ; %bb.0:
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s19, s33
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s33, s32
+; GISEL-WAVE32-OPT-NEXT:    s_xor_saveexec_b32 s16, -1
+; GISEL-WAVE32-OPT-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 exec_lo, s16
+; GISEL-WAVE32-OPT-NEXT:    v_writelane_b32 v32, s30, 0
+; GISEL-WAVE32-OPT-NEXT:    s_addk_i32 s32, 0x1200
+; GISEL-WAVE32-OPT-NEXT:    v_writelane_b32 v32, s31, 1
+; GISEL-WAVE32-OPT-NEXT:    v_mov_b32_e32 v0, 42
+; GISEL-WAVE32-OPT-NEXT:    v_mov_b32_e32 v1, 17
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
+; GISEL-WAVE32-OPT-NEXT:    s_lshr_b32 s18, s32, 5
+; GISEL-WAVE32-OPT-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE32-OPT-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
+; GISEL-WAVE32-OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-WAVE32-OPT-NEXT:    v_readlane_b32 s30, v32, 0
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-OPT-NEXT:    ; use s18
+; GISEL-WAVE32-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-OPT-NEXT:    v_readlane_b32 s31, v32, 1
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s32, s33
+; GISEL-WAVE32-OPT-NEXT:    s_xor_saveexec_b32 s4, -1
+; GISEL-WAVE32-OPT-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL-WAVE32-OPT-NEXT:    s_mov_b32 s33, s19
+; GISEL-WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE32-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-OPT-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE64-OPT:       ; %bb.0:
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s19, s33
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s33, s32
+; GISEL-WAVE64-OPT-NEXT:    s_xor_saveexec_b64 s[16:17], -1
+; GISEL-WAVE64-OPT-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 exec, s[16:17]
+; GISEL-WAVE64-OPT-NEXT:    v_writelane_b32 v32, s30, 0
+; GISEL-WAVE64-OPT-NEXT:    s_addk_i32 s32, 0x2400
+; GISEL-WAVE64-OPT-NEXT:    v_writelane_b32 v32, s31, 1
+; GISEL-WAVE64-OPT-NEXT:    v_mov_b32_e32 v0, 42
+; GISEL-WAVE64-OPT-NEXT:    v_mov_b32_e32 v1, 17
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s17, stack_passed_argument@abs32@hi
+; GISEL-WAVE64-OPT-NEXT:    s_lshr_b32 s18, s32, 6
+; GISEL-WAVE64-OPT-NEXT:    buffer_store_dword v0, off, s[0:3], s33
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE64-OPT-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
+; GISEL-WAVE64-OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-WAVE64-OPT-NEXT:    v_readlane_b32 s30, v32, 0
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-OPT-NEXT:    ; use s18
+; GISEL-WAVE64-OPT-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-OPT-NEXT:    v_readlane_b32 s31, v32, 1
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s32, s33
+; GISEL-WAVE64-OPT-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GISEL-WAVE64-OPT-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b64 exec, s[4:5]
+; GISEL-WAVE64-OPT-NEXT:    s_mov_b32 s33, s19
+; GISEL-WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE64-OPT-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE32-O0-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE32-O0:       ; %bb.0:
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s21, s33
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s33, s32
+; GISEL-WAVE32-O0-NEXT:    s_xor_saveexec_b32 s16, -1
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s16
+; GISEL-WAVE32-O0-NEXT:    s_add_i32 s32, s32, 0x1200
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v32, s30, 0
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v32, s31, 1
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $sgpr16
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s17, s32, 5
+; GISEL-WAVE32-O0-NEXT:    ; implicit-def: $vgpr33 : SGPR spill to VGPR lane
+; GISEL-WAVE32-O0-NEXT:    v_writelane_b32 v33, s17, 0
+; GISEL-WAVE32-O0-NEXT:    s_lshr_b32 s17, s33, 5
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s18, 42
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s18
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, s17
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s17, 17
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s17
+; GISEL-WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v1, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v2, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v3, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v4, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v5, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v6, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v7, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v8, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v9, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v10, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v11, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v12, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v13, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v14, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v15, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v16, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v17, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v18, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v19, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v20, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v21, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v22, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v23, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v24, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v25, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v26, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v27, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v28, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v29, s16
+; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v30, s16
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[18:19], s[2:3]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[0:1], s[16:17]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b64 s[2:3], s[18:19]
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
+; GISEL-WAVE32-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s17, s18
+; GISEL-WAVE32-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s4, v33, 0
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE32-O0-NEXT:    ; use s4
+; GISEL-WAVE32-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s30, v32, 0
+; GISEL-WAVE32-O0-NEXT:    v_readlane_b32 s31, v32, 1
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, s33
+; GISEL-WAVE32-O0-NEXT:    s_xor_saveexec_b32 s4, -1
+; GISEL-WAVE32-O0-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; GISEL-WAVE32-O0-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s4
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s33, s21
+; GISEL-WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE32-O0-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-WAVE64-O0-LABEL: func_stacksave_stackrestore_call_with_stack_objects:
+; GISEL-WAVE64-O0:       ; %bb.0:
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s22, s33
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s33, s32
+; GISEL-WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[16:17], -1
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[16:17]
+; GISEL-WAVE64-O0-NEXT:    s_add_i32 s32, s32, 0x2400
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v32, s30, 0
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v32, s31, 1
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $sgpr16
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s17, s32, 6
+; GISEL-WAVE64-O0-NEXT:    ; implicit-def: $vgpr33 : SGPR spill to VGPR lane
+; GISEL-WAVE64-O0-NEXT:    v_writelane_b32 v33, s17, 0
+; GISEL-WAVE64-O0-NEXT:    s_lshr_b32 s17, s33, 6
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s18, 42
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s18
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, s17
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt_vscnt null, 0x0
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s17, 17
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s17
+; GISEL-WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v1, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v2, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v3, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v4, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v5, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v6, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v7, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v8, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v9, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v10, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v11, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v12, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v13, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v14, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v15, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v16, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v17, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v18, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v19, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v20, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v21, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v22, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v23, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v24, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v25, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v26, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v27, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v28, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v29, s16
+; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v30, s16
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[18:19], s[2:3]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[16:17], s[0:1]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[0:1], s[16:17]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 s[2:3], s[18:19]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s16, stack_passed_argument@abs32@lo
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s18, stack_passed_argument@abs32@hi
+; GISEL-WAVE64-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s17, s18
+; GISEL-WAVE64-O0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s4, v33, 0
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMSTART
+; GISEL-WAVE64-O0-NEXT:    ; use s4
+; GISEL-WAVE64-O0-NEXT:    ;;#ASMEND
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s30, v32, 0
+; GISEL-WAVE64-O0-NEXT:    v_readlane_b32 s31, v32, 1
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, s33
+; GISEL-WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GISEL-WAVE64-O0-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; GISEL-WAVE64-O0-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
+; GISEL-WAVE64-O0-NEXT:    s_mov_b64 exec, s[4:5]
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s33, s22
+; GISEL-WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-WAVE64-O0-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [32 x i32], addrspace(5)
   %stacksave = call ptr addrspace(5) @llvm.stacksave.p5()
   store volatile i32 42, ptr addrspace(5) %alloca

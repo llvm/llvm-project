@@ -7310,6 +7310,17 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op1, m_Zero()))
       return Op0;
     break;
+  case Intrinsic::ushl_sat:
+  case Intrinsic::sshl_sat:
+    if (isPoisonShift(Op1, Q))
+      return PoisonValue::get(ReturnType);
+    // X << 0 -> X
+    if (match(Op1, m_Zero()))
+      return Op0;
+    // 0 << Y -> 0
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))
       if (auto *C1 = dyn_cast<Constant>(Op1))
