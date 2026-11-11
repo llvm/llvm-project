@@ -1498,8 +1498,12 @@ getDeviceInput(const ArgList &Args) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
-  // Try to extract device code from the linker input files. A bare
-  // '/WHOLEARCHIVE' extracts all archives, like --whole-archive.
+  // Try to extract device code from the input files: the objects and static
+  // libraries on the host link command line.
+  // WholeArchive: take the device code from every member of every static
+  // library, not only from the members that match the other inputs' device
+  // targets. link.exe '/WHOLEARCHIVE', without a file name and in any case,
+  // turns it on, like --whole-archive.
   bool WholeArchive =
       Args.hasArg(OPT_wholearchive_flag) ||
       llvm::any_of(Args.filtered(OPT_INPUT), [&](const opt::Arg *Arg) {
@@ -1534,11 +1538,12 @@ getDeviceInput(const ArgList &Args) {
     StringRef Input = Arg->getValue();
     bool IsWholeArchiveFile = Arg->getOption().matches(OPT_wholearchive_file);
     if (Arg->getOption().matches(OPT_INPUT)) {
-      // '/WHOLEARCHIVE:file' in a case other than the option table's lower
-      // case is a library to extract whole. '/WHOLEARCHIVE' was handled when
-      // setting WholeArchive and '/LIBPATH:dir' when collecting the search
-      // paths, so skip them. Anything else, e.g. '/wholearchive-dir/a.obj', is
-      // an input path.
+      // The parser does not know upper-case link.exe options, so they reach
+      // this loop as inputs:
+      // - '/WHOLEARCHIVE:foo.lib': take all device code from foo.lib.
+      // - '/WHOLEARCHIVE' and '/LIBPATH:dir': not files. They were used when
+      //   setting WholeArchive and collecting the search paths, so skip them.
+      // Anything else, e.g. '/wholearchive-dir/a.obj', is a file.
       if (std::optional<StringRef> File =
               getCOFFOptionValue(Input, "wholearchive:", HostTriple)) {
         Input = *File;
