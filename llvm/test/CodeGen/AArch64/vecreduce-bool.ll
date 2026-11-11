@@ -695,10 +695,8 @@ define i32 @reduce_or_v3i8(<3 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    mov v0.h[3], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w9, w8, w9
-; CHECK-NEXT:    orr w8, w9, w8, lsr #16
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w3, w4, ne
 ; CHECK-NEXT:    ret
@@ -731,12 +729,8 @@ define i32 @reduce_or_v5i8(<5 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x0000ffffffffff
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w10
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -752,12 +746,8 @@ define i32 @reduce_or_v6i8(<6 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x00ffffffffffff
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w10
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -772,11 +762,8 @@ define i32 @reduce_or_v7i8(<7 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    mov v0.b[7], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -805,15 +792,11 @@ define i32 @reduce_or_v9i8(<9 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v9i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x000000000000ff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI42_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI42_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -827,15 +810,11 @@ define i32 @reduce_or_v10i8(<10 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v10i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x0000000000ffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI43_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -849,15 +828,11 @@ define i32 @reduce_or_v11i8(<11 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v11i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x00000000ffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI44_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI44_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -871,15 +846,11 @@ define i32 @reduce_or_v12i8(<12 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v12i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x000000ffffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI45_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -893,15 +864,11 @@ define i32 @reduce_or_v13i8(<13 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v13i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x0000ffffffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI46_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI46_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -915,15 +882,11 @@ define i32 @reduce_or_v14i8(<14 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v14i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x00ffffffffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI47_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -937,15 +900,9 @@ define i32 @reduce_or_v15i8(<15 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v15i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v1.b[15], wzr
-; CHECK-NEXT:    mov d1, v1.d[1]
-; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    mov v0.b[15], wzr
+; CHECK-NEXT:    umaxv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1022,10 +979,8 @@ define i32 @reduce_or_v3i16(<3 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    mov v0.h[3], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w9, w8, w9
-; CHECK-NEXT:    orr w8, w9, w8, lsr #16
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1057,12 +1012,8 @@ define i32 @reduce_or_v5i16(<5 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x0000ffffffffff
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w10
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1079,12 +1030,8 @@ define i32 @reduce_or_v6i16(<6 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x00ffffffffffff
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w10
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1100,11 +1047,8 @@ define i32 @reduce_or_v7i16(<7 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    mov v0.b[7], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    orr x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    orr w8, w8, w9
-; CHECK-NEXT:    orr w8, w8, w8, lsr #8
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1181,10 +1125,8 @@ define i32 @reduce_or_v3i32(<3 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    mov v0.h[3], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    orr w9, w8, w9
-; CHECK-NEXT:    orr w8, w9, w8, lsr #16
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1313,10 +1255,8 @@ define i32 @reduce_xor_v3i8(<3 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    mov v0.h[3], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w9, w8, w9
-; CHECK-NEXT:    eor w8, w9, w8, lsr #16
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w3, w4, ne
 ; CHECK-NEXT:    ret
@@ -1349,12 +1289,8 @@ define i32 @reduce_xor_v5i8(<5 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x0000ffffffffff
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1370,12 +1306,8 @@ define i32 @reduce_xor_v6i8(<6 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x00ffffffffffff
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1390,11 +1322,8 @@ define i32 @reduce_xor_v7i8(<7 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    mov v0.b[7], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1423,15 +1352,11 @@ define i32 @reduce_xor_v9i8(<9 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v9i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x000000000000ff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI76_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI76_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1445,15 +1370,11 @@ define i32 @reduce_xor_v10i8(<10 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v10i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x0000000000ffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI77_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI77_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1467,15 +1388,11 @@ define i32 @reduce_xor_v11i8(<11 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v11i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x00000000ffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI78_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI78_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1489,15 +1406,11 @@ define i32 @reduce_xor_v12i8(<12 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v12i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x000000ffffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI79_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI79_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1511,15 +1424,11 @@ define i32 @reduce_xor_v13i8(<13 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v13i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x0000ffffffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI80_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI80_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1533,15 +1442,11 @@ define i32 @reduce_xor_v14i8(<14 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v14i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    movi d2, #0x00ffffffffffff
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    adrp x8, .LCPI81_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI81_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1555,15 +1460,9 @@ define i32 @reduce_xor_v15i8(<15 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v15i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov v1.b[15], wzr
-; CHECK-NEXT:    mov d1, v1.d[1]
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    mov v0.b[15], wzr
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1641,10 +1540,8 @@ define i32 @reduce_xor_v3i16(<3 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    mov v0.h[3], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w9, w8, w9
-; CHECK-NEXT:    eor w8, w9, w8, lsr #16
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1676,12 +1573,8 @@ define i32 @reduce_xor_v5i16(<5 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x0000ffffffffff
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1698,12 +1591,8 @@ define i32 @reduce_xor_v6i16(<6 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    movi d1, #0x00ffffffffffff
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    lsr x10, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1719,11 +1608,8 @@ define i32 @reduce_xor_v7i16(<7 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    mov v0.b[7], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    eor x8, x8, x8, lsr #32
-; CHECK-NEXT:    lsr x9, x8, #16
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    eor w8, w8, w8, lsr #8
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
@@ -1800,10 +1686,8 @@ define i32 @reduce_xor_v3i32(<3 x i32> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    mov v0.h[3], wzr
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    lsr x9, x8, #32
-; CHECK-NEXT:    eor w9, w8, w9
-; CHECK-NEXT:    eor w8, w9, w8, lsr #16
+; CHECK-NEXT:    addv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
