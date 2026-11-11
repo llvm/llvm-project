@@ -285,3 +285,79 @@ define void @test_vsttn_v2f64(ptr %a, <2 x double> %vec0, <2 x double> %vec1) {
   call void @llvm.aarch64.neon.vsttn.x2.v2f64.p0(<2 x double> %vec0, <2 x double> %vec1, ptr %a)
   ret void
 }
+
+define { <4 x i32>, <4 x i32> } @test_vldtn_v4i32_offset_i32(ptr %a) {
+; CHECK-LE-LABEL: test_vldtn_v4i32_offset_i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldtnp q0, q1, [x0, #32]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_vldtn_v4i32_offset_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldtnp q0, q1, [x0, #32]
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ret
+  %addr = getelementptr i8, ptr %a, i32 32
+  %pair = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.vldtn.x2.v4i32.p0(ptr %addr)
+  ret { <4 x i32>, <4 x i32> } %pair
+}
+
+define { <4 x i32>, <4 x i32> } @test_vldtn_v4i32_offset_i64(ptr %a) {
+; CHECK-LE-LABEL: test_vldtn_v4i32_offset_i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    ldtnp q0, q1, [x0, #32]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_vldtn_v4i32_offset_i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    ldtnp q0, q1, [x0, #32]
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ret
+  %addr = getelementptr i8, ptr %a, i64 32
+  %pair = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.vldtn.x2.v4i32.p0(ptr %addr)
+  ret { <4 x i32>, <4 x i32> } %pair
+}
+
+define void @test_vsttn_v4i32_offset_i32(ptr %a, <4 x i32> %vec0, <4 x i32> %vec1) {
+; CHECK-LE-LABEL: test_vsttn_v4i32_offset_i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    sttnp q0, q1, [x0, #32]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_vsttn_v4i32_offset_i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    sttnp q0, q1, [x0, #32]
+; CHECK-BE-NEXT:    ret
+  %addr = getelementptr i8, ptr %a, i32 32
+  call void @llvm.aarch64.neon.vsttn.x2.v4i32.p0(<4 x i32> %vec0, <4 x i32> %vec1, ptr %addr)
+  ret void
+}
+
+define void @test_vsttn_v4i32_offset_i64(ptr %a, <4 x i32> %vec0, <4 x i32> %vec1) {
+; CHECK-LE-LABEL: test_vsttn_v4i32_offset_i64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    sttnp q0, q1, [x0, #32]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_vsttn_v4i32_offset_i64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    sttnp q0, q1, [x0, #32]
+; CHECK-BE-NEXT:    ret
+  %addr = getelementptr i8, ptr %a, i64 32
+  call void @llvm.aarch64.neon.vsttn.x2.v4i32.p0(<4 x i32> %vec0, <4 x i32> %vec1, ptr %addr)
+  ret void
+}

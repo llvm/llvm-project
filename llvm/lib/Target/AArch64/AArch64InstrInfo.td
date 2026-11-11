@@ -3976,8 +3976,8 @@ defm LDNPQ : LoadPairNoAlloc<0b10, 1, FPR128Op, simm7s16, "ldnp">;
 }
 
 multiclass LoadPairPats<ValueType VecTy, Intrinsic OpNode, Instruction Inst> {
-  def : Pat<([VecTy, VecTy] (OpNode GPR64sp:$Rn)),
-            ([VecTy, VecTy] (Inst GPR64sp:$Rn, 0))>;
+  def : Pat<([VecTy, VecTy] (OpNode (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset))),
+            ([VecTy, VecTy] (Inst GPR64sp:$Rn, simm7s16:$offset))>;
 }
 
 def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
@@ -4883,8 +4883,9 @@ defm STNPQ : StorePairNoAlloc<0b10, 1, FPR128Op, simm7s16, "stnp">;
 }
 
 multiclass StorePairPats<ValueType VecTy, Intrinsic OpNode, Instruction Inst> {
-  def : Pat<(OpNode (VecTy FPR128:$Rt1), (VecTy FPR128:$Rt2), GPR64sp:$Rn),
-            (Inst FPR128:$Rt1, FPR128:$Rt2, GPR64sp:$Rn, 0)>;
+  def : Pat<(OpNode (VecTy FPR128:$Rt1), (VecTy FPR128:$Rt2),
+                    (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+            (Inst FPR128:$Rt1, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
 }
 
 // Armv9.6-a Load/store pair (FEAT_LSUI)
