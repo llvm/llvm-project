@@ -21,7 +21,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
@@ -43,7 +42,6 @@
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <string>
 
 namespace mlir {
 namespace xegpu {
@@ -1269,12 +1267,10 @@ void LayoutPropagation::visitTerminator(
       if (isa<VectorType>(arg.getType()) &&
           !(loop && loop.getTiedLoopInit(arg)) &&
           !isa<BlockArgument>(successorOperand->get())) {
-        std::string message;
-        llvm::raw_string_ostream os(message);
-        os << "unsupported region structure: the successor argument ";
-        arg.printAsOperand(os, OpPrintingFlags());
-        os << " is not tied to an init operand.";
-        markFailure(terminator, message);
+        markFailure(terminator,
+                    "unsupported region structure: the successor argument it "
+                    "feeds is not tied to an init operand, so its value must "
+                    "be passed through from predecessor region argument.");
       }
     }
   }
@@ -1308,6 +1304,8 @@ fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
       continue;
     }
     for (Value input : successorInputs) {
+      // A region result, e.g. %r gets the layout of %v in
+      //   %r = scf.if %c -> (vector<...>) { scf.yield %v } else { ... }
       if (auto result = dyn_cast<OpResult>(input)) {
         if (!xegpu::getDistributeLayoutAttr(result))
           xegpu::setTemporaryLayout(result, layout);
@@ -1315,7 +1313,12 @@ fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
       }
       if (target == FillTarget::RegionResults)
         continue;
-      // Loop arguments read their layouts from the tied init operands.
+      // Loop arguments read their layouts from the tied init operands, e.g.
+      // %init gets the layout of %n in
+      //   scf.for ... iter_args(%acc = %init) {
+      //     %n = arith.addf %acc, %x
+      //     scf.yield %n
+      //   }
       OpOperand *init =
           loop ? loop.getTiedLoopInit(cast<BlockArgument>(input)) : nullptr;
       if (!init || xegpu::getTemporaryLayout(*init))

@@ -1984,7 +1984,8 @@ static xegpu::DistributeLayoutAttr setupDefaultScatterIOLayout(
 
 /// Select a layout for load_gather or load_matrix. Reuse requested subgroup
 /// layouts; otherwise keep the consumer's lane_layout, restrict lane_data to a
-/// bounded innermost chunk, and recompute inst_data when needed.
+/// bounded innermost chunk, and in InstData mode set inst_data to
+/// lane_layout * lane_data.
 /// Without a requested layout, use the default scatter IO layout.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,

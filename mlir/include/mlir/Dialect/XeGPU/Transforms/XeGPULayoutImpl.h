@@ -78,7 +78,9 @@ public:
 ///
 /// Region successors are visited before predecessors where possible. To
 /// break cycles, prefer a region that exits to the parent op; this visits
-/// scf.while's before region before its after region. Regions are not revisited.
+/// scf.while's before region before its after region. Regions are not
+/// revisited. Only consumers across a loop back edge are visited after the
+/// producer of their value.
 void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
 
 /// Attach layout attributes to all vector-type operands of operations within
