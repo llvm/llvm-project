@@ -121,8 +121,6 @@ public:
   LLVM_ABI bool maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB);
   LLVM_ABI void updateSSA(BasicBlock *BB, BasicBlock *NewBB,
                           ValueToValueMapTy &ValueMapping);
-  /// Register \p New with the assumption cache if it is a copied assume.
-  void registerClonedAssume(Instruction *New);
   LLVM_ABI void cloneInstructions(ValueToValueMapTy &ValueMapping,
                                   BasicBlock::iterator BI,
                                   BasicBlock::iterator BE, BasicBlock *NewBB,
