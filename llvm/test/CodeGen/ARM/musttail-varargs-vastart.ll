@@ -57,3 +57,20 @@ define void @fwd_byval(ptr byval(%struct.S) align 4 %s, ...) nounwind {
   musttail call void (ptr, ...) @callee(ptr byval(%struct.S) align 4 %s, ...)
   ret void
 }
+
+;; A plain tail call is fine too: it can't use the caller's va_list.
+declare void @vcallee(i32, ...)
+
+define void @tail_vastart(i32 %n, ...) nounwind {
+; CHECK-LABEL: tail_vastart:
+; CHECK:       bl sink
+; CHECK:       add sp, {{(sp, )?}}#12
+; CHECK-NEXT:  b{{(\.w)?}} vcallee
+entry:
+  %ap = alloca ptr, align 4
+  call void @llvm.va_start(ptr %ap)
+  call void @sink(ptr %ap)
+  call void @llvm.va_end(ptr %ap)
+  tail call void (i32, ...) @vcallee(i32 %n, i32 1)
+  ret void
+}

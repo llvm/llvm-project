@@ -2886,16 +2886,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     }
   }
 
-  // If Caller's vararg argument has been split between registers and stack, do
-  // not perform tail call, since part of the argument is in caller's local
-  // frame. This doesn't apply to a musttail call, which has the caller's own
-  // signature.
   const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
-  if (CLI.IsVarArg && AFI_Caller->getArgRegsSaveSize() &&
-      !(CLI.CB && CLI.CB->isMustTailCall())) {
-    LLVM_DEBUG(dbgs() << "false (arg reg save area)\n");
-    return false;
-  }
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
