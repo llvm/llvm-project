@@ -58,6 +58,23 @@
 // RUN: not %clang --target=x86_64-linux-android -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-ANDROID
 // CHECK-SANC-ANDROID: unsupported option '-fsanitize=concurrency' for target 'x86_64-unknown-linux-android'
 
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=concurrency %s -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON
+// CHECK-SANC-HEXAGON-NOT: error:
+// CHECK-SANC-HEXAGON: "-fsanitize=concurrency"
+// CHECK-SANC-HEXAGON: "--whole-archive" "{{.*}}libclang_rt.csan{{.*}}.a" "--no-whole-archive"
+// CHECK-SANC-HEXAGON-NOT: csan_offload
+
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=concurrency -shared-libsan %s -### 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON-SHARED
+// CHECK-SANC-HEXAGON-SHARED-NOT: error:
+// CHECK-SANC-HEXAGON-SHARED: "-fsanitize=concurrency"
+// CHECK-SANC-HEXAGON-SHARED: libclang_rt.csan{{.*}}.so
+// CHECK-SANC-HEXAGON-SHARED-NOT: csan_offload
+
+// RUN: not %clang --target=hexagon-unknown-none-elf -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON-BAREMETAL
+// CHECK-SANC-HEXAGON-BAREMETAL: unsupported option '-fsanitize=concurrency'
+
 // RUN: not %clang --target=r600 -mcpu=cypress -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-R600
 // CHECK-SANC-R600: unsupported option '-fsanitize=concurrency' for target 'r600'
 // RUN: not %clang --target=amdgpu-amd-amdpal -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-PAL

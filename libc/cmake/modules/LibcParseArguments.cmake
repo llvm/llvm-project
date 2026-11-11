@@ -179,14 +179,14 @@ function(llvm_libc_parse_arguments name_prefix)
   endforeach()
 
   foreach(argument
-    IN LISTS
-    LLVM_LIBC_COMMON_OPTIONAL_ARGS
-    LLVM_LIBC_OPTIONAL_ARGS
-    LLVM_LIBC_SINGLE_VALUE_ARGS
-    LLVM_LIBC_MULTI_VALUE_ARGS
-    ITEMS
-    UNPARSED_ARGUMENTS
-    KEYWORDS_MISSING_VALUES
+      IN LISTS
+      LLVM_LIBC_COMMON_OPTIONAL_ARGS
+      LLVM_LIBC_OPTIONAL_ARGS
+      LLVM_LIBC_SINGLE_VALUE_ARGS
+      LLVM_LIBC_MULTI_VALUE_ARGS
+      ITEMS
+      UNPARSED_ARGUMENTS
+      KEYWORDS_MISSING_VALUES
   )
     set(${name_prefix}_${argument} "${ARG_${argument}}" PARENT_SCOPE)
   endforeach()
