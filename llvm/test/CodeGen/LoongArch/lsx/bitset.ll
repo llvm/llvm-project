@@ -95,9 +95,7 @@ entry:
 define <2 x i64> @vbitset_b(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: vbitset_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr2, 1
-; CHECK-NEXT:    vsll.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitset.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %b to <16 x i8>
@@ -111,9 +109,7 @@ entry:
 define <2 x i64> @vbitset_b_nomask(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: vbitset_b_nomask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr2, 1
-; CHECK-NEXT:    vsll.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitset.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %b to <16 x i8>
@@ -126,9 +122,7 @@ entry:
 define <2 x i64> @vbitset_h(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: vbitset_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr2, 1
-; CHECK-NEXT:    vsll.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitset.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %b to <8 x i16>
@@ -142,9 +136,7 @@ entry:
 define <2 x i64> @vbitset_h_nomask(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: vbitset_h_nomask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr2, 1
-; CHECK-NEXT:    vsll.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitset.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %b to <8 x i16>
@@ -157,9 +149,7 @@ entry:
 define <2 x i64> @vbitset_w(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: vbitset_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.w $vr2, 1
-; CHECK-NEXT:    vsll.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitset.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %b to <4 x i32>
@@ -173,9 +163,7 @@ entry:
 define <2 x i64> @vbitset_w_nomask(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-LABEL: vbitset_w_nomask:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.w $vr2, 1
-; CHECK-NEXT:    vsll.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitset.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %b to <4 x i32>
