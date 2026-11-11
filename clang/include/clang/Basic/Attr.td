@@ -2481,23 +2481,23 @@ def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
                                      "supervisor",
                                      "machine",
                                      "rnmi",
+                                     "preemptible",
+                                     "push-pop",
                                      "qci-nest",
                                      "qci-nonest",
                                      "SiFive-CLIC-preemptible",
                                      "SiFive-CLIC-stack-swap",
-                                     "preemptible",
-                                     "push-pop",
                                    ],
                                    [
                                      "supervisor",
                                      "machine",
                                      "rnmi",
+                                     "preemptible",
+                                     "pushpop",
                                      "qcinest",
                                      "qcinonest",
                                      "SiFiveCLICPreemptible",
                                      "SiFiveCLICStackSwap",
-                                     "preemptible",
-                                     "pushpop",
                                    ]>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];

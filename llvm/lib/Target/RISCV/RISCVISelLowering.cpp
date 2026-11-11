@@ -28780,17 +28780,17 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "machine",
         "supervisor",
         "rnmi",
-        "qci-nest",
-        "qci-nonest",
-        "SiFive-CLIC-preemptible",
-        "SiFive-CLIC-stack-swap",
-        "SiFive-CLIC-preemptible-stack-swap",
         "machine-preemptible",
         "supervisor-preemptible",
         "machine-push-pop",
         "supervisor-push-pop",
         "machine-preemptible-push-pop",
         "supervisor-preemptible-push-pop",
+        "qci-nest",
+        "qci-nonest",
+        "SiFive-CLIC-preemptible",
+        "SiFive-CLIC-stack-swap",
+        "SiFive-CLIC-preemptible-stack-swap",
     };
     if (!llvm::is_contained(SupportedInterruptKinds, Kind))
       reportFatalUsageError(

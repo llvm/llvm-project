@@ -190,17 +190,17 @@ public:
 
   enum class InterruptStackKind {
     None = 0,
-    QCINest,
-    QCINoNest,
-    SiFiveCLICPreemptible,
-    SiFiveCLICStackSwap,
-    SiFiveCLICPreemptibleStackSwap,
     ACLICPreemptible,
     ACLICSupervisorPreemptible,
     ACLICPushPop,
     ACLICSupervisorPushPop,
     ACLICPreemptiblePushPop,
-    ACLICSupervisorPreemptiblePushPop
+    ACLICSupervisorPreemptiblePushPop,
+    QCINest,
+    QCINoNest,
+    SiFiveCLICPreemptible,
+    SiFiveCLICStackSwap,
+    SiFiveCLICPreemptibleStackSwap
   };
 
   InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;

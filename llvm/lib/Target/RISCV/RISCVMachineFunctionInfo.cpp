@@ -73,13 +73,6 @@ RISCVMachineFunctionInfo::getInterruptStackKind(
 
   return StringSwitch<RISCVMachineFunctionInfo::InterruptStackKind>(
              InterruptVal)
-      .Case("qci-nest", InterruptStackKind::QCINest)
-      .Case("qci-nonest", InterruptStackKind::QCINoNest)
-      .Case("SiFive-CLIC-preemptible",
-            InterruptStackKind::SiFiveCLICPreemptible)
-      .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
-      .Case("SiFive-CLIC-preemptible-stack-swap",
-            InterruptStackKind::SiFiveCLICPreemptibleStackSwap)
       .Case("machine-preemptible", InterruptStackKind::ACLICPreemptible)
       .Case("supervisor-preemptible",
             InterruptStackKind::ACLICSupervisorPreemptible)
@@ -89,6 +82,13 @@ RISCVMachineFunctionInfo::getInterruptStackKind(
             InterruptStackKind::ACLICPreemptiblePushPop)
       .Case("supervisor-preemptible-push-pop",
             InterruptStackKind::ACLICSupervisorPreemptiblePushPop)
+      .Case("qci-nest", InterruptStackKind::QCINest)
+      .Case("qci-nonest", InterruptStackKind::QCINoNest)
+      .Case("SiFive-CLIC-preemptible",
+            InterruptStackKind::SiFiveCLICPreemptible)
+      .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
+      .Case("SiFive-CLIC-preemptible-stack-swap",
+            InterruptStackKind::SiFiveCLICPreemptibleStackSwap)
       .Default(InterruptStackKind::None);
 }
 

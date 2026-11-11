@@ -13,7 +13,7 @@
 // RUN: %clang_cc1 -triple riscv64-unknown-elf -verify=disabled,both \
 // RUN:   -fsyntax-only %s
 
-#ifdef CHECK_IR
+#if defined(CHECK_IR)
 __attribute__((interrupt("preemptible"))) void m_preemptible(void) {}
 __attribute__((interrupt("supervisor", "preemptible")))
 void s_preemptible(void) {}

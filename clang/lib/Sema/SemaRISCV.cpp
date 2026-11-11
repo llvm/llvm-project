@@ -1682,9 +1682,9 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   bool HasMachine = false;
   bool HasSupervisor = false;
-  bool HasSiFiveCLICType = false;
   bool HasPreemptible = false;
   bool HasPushPop = false;
+  bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
   bool ReportedDuplicateType = false;
 
@@ -1706,23 +1706,23 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
     switch (Type) {
     case RISCVInterruptAttr::machine:
-      // "machine" can be used alone, with SiFive CLIC types, or with ACLIC
-      // modifiers.
+      // "machine" can be used alone, with ACLIC modifiers, or with SiFive CLIC
+      // types.
       HasMachine = true;
       break;
     case RISCVInterruptAttr::supervisor:
       HasSupervisor = true;
-      break;
-    case RISCVInterruptAttr::SiFiveCLICPreemptible:
-    case RISCVInterruptAttr::SiFiveCLICStackSwap:
-      // SiFive-CLIC types can be combined with each other and "machine"
-      HasSiFiveCLICType = true;
       break;
     case RISCVInterruptAttr::preemptible:
       HasPreemptible = true;
       break;
     case RISCVInterruptAttr::pushpop:
       HasPushPop = true;
+      break;
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap:
+      // SiFive-CLIC types can be combined with each other and "machine"
+      HasSiFiveCLICType = true;
       break;
     case RISCVInterruptAttr::rnmi:
     case RISCVInterruptAttr::qcinest:
