@@ -57,7 +57,6 @@
 ---
 name:            test_ms1
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w1, $w2, $x0
@@ -84,7 +83,6 @@ body:             |
 ---
 name:            test_ms2_const
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w1, $x0
@@ -112,7 +110,6 @@ body:             |
 ---
 name:            test_zero_const
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w1, $x0
@@ -146,7 +143,6 @@ body:             |
 ---
 name:            test_ms3_const_both
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -169,7 +165,6 @@ body:             |
 ---
 name:            test_ms_vector
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $w1, $x0
@@ -206,7 +201,6 @@ body:             |
 ---
 name:            test_ms4_const_both_unaligned
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -233,7 +227,6 @@ body:             |
 ---
 name:            minsize
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w1, $x0

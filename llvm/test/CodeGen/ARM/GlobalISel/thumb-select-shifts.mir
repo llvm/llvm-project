@@ -25,13 +25,13 @@ body:             |
     ; CHECK: [[t2ASRrr:%[0-9]+]]:rgpr = t2ASRrr [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2ASRrr]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
 
-    %1(s32) = COPY $r1
+    %1(i32) = COPY $r1
 
-    %2(s32) = G_ASHR %0, %1
+    %2(i32) = G_ASHR %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -53,12 +53,12 @@ body:             |
     ; CHECK: [[t2LSLri:%[0-9]+]]:rgpr = t2LSLri [[COPY]], 31, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2LSLri]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
 
-    %1(s32) = G_CONSTANT i32 31
-    %2(s32) = G_SHL %0, %1
+    %1(i32) = G_CONSTANT i32 31
+    %2(i32) = G_SHL %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -81,13 +81,13 @@ body:             |
     ; CHECK: [[t2LSLrr:%[0-9]+]]:rgpr = t2LSLrr [[COPY]], [[t2MOVi]], 14 /* CC::al */, $noreg, $noreg
     ; CHECK: $r0 = COPY [[t2LSLrr]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $r0
+    %0(i32) = COPY $r0
 
-    %1(s32) = G_CONSTANT i32 32
+    %1(i32) = G_CONSTANT i32 32
 
-    %2(s32) = G_SHL %0, %1
+    %2(i32) = G_SHL %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...

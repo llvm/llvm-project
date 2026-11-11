@@ -21,12 +21,14 @@
 #include "LiveRangeUtils.h"
 #include "RegisterCoalescer.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1335,7 +1337,9 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   EqClass.clear();
   EqClass.grow(LR.getNumValNums());
 
+  const MachineDominatorTree &MDT = LIS.getDomTree();
   const VNInfo *used = nullptr, *unused = nullptr;
+  bool HasUnreachablePHIDef = false;
 
   // Determine connections.
   for (const VNInfo *VNI : LR.valnos) {
@@ -1350,6 +1354,7 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
     if (VNI->isPHIDef()) {
       const MachineBasicBlock *MBB = LIS.getMBBFromIndex(VNI->def);
       assert(MBB && "Phi-def has no defining MBB");
+      HasUnreachablePHIDef |= !MDT.isReachableFromEntry(MBB);
       // Connect to values live out of predecessors.
       for (MachineBasicBlock *Pred : MBB->predecessors())
         if (const VNInfo *PVNI = LR.getVNInfoBefore(LIS.getMBBEndIdx(Pred)))
@@ -1367,6 +1372,40 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   // Lump all the unused values in with the last used value.
   if (used && unused)
     EqClass.join(used->id, unused->id);
+
+  if (HasUnreachablePHIDef) {
+    const VNInfo *Defined = nullptr;
+    unsigned NumVals = LR.getNumValNums();
+    BitVector KeepSeparate(NumVals);
+    SmallVector<unsigned, 8> Leaders(NumVals);
+    for (const VNInfo *VNI : LR.valnos) {
+      if (VNI->isUnused())
+        continue;
+
+      unsigned Leader = EqClass.findLeader(VNI->id);
+      Leaders[VNI->id] = Leader;
+      if (!VNI->isPHIDef()) {
+        KeepSeparate.set(Leader);
+        Defined = VNI;
+      } else if (MDT.isReachableFromEntry(LIS.getMBBFromIndex(VNI->def))) {
+        KeepSeparate.set(Leader);
+      }
+    }
+
+    if (Defined) {
+      for (const VNInfo *VNI : LR.valnos) {
+        if (VNI->isUnused())
+          continue;
+
+        unsigned Leader = Leaders[VNI->id];
+        if (KeepSeparate.test(Leader))
+          continue;
+
+        EqClass.join(Defined->id, VNI->id);
+        KeepSeparate.set(Leader);
+      }
+    }
+  }
 
   EqClass.compress();
   return EqClass.getNumClasses();

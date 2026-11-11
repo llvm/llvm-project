@@ -77,7 +77,8 @@ public:
 /// has been called. In !NDEBUG builds, the following operations assert that the
 /// pointer has been checked:
 /// - dereferencing (operator*, operator->, operator[]),
-/// - extracting the pointer via take_unique(),
+/// - accessing the raw pointer via get(),
+/// - extracting the pointer via take_unique() or release(),
 /// - destruction,
 /// - being overwritten by a move assignment.
 ///
@@ -163,11 +164,25 @@ public:
     return ptr[i];
   }
 
+  /// Returns the owned pointer without releasing ownership. Asserts that the
+  /// pointer has been checked.
+  LIBC_INLINE constexpr pointer get() const {
+    state.assert_checked();
+    return ptr.get();
+  }
+
   /// Moves the owned pointer into a plain cpp::unique_ptr, leaving this
   /// CheckedPtr null. Asserts that the pointer has been checked.
   [[nodiscard]] LIBC_INLINE constexpr PtrType take_unique() {
     state.assert_checked();
     return cpp::move(ptr);
+  }
+
+  /// Releases ownership of the owned pointer and returns it, leaving this
+  /// CheckedPtr null. Asserts that the pointer has been checked.
+  [[nodiscard]] LIBC_INLINE constexpr pointer release() {
+    state.assert_checked();
+    return ptr.release();
   }
 };
 
@@ -204,6 +219,40 @@ template <typename T, typename... Args,
                                !cpp::is_same_v<T, cpp::remove_extent_t<T>[]>,
                            int> = 0>
 void make_unique(Args &&...) = delete;
+
+/// Allocates a default-initialized object of type T. Unlike make_unique, this
+/// leaves objects of trivial types (e.g. `int`) uninitialized, which avoids
+/// redundant initialization when the caller is going to overwrite the value
+/// anyway. Returns a null CheckedPtr if the allocation fails.
+template <typename T, cpp::enable_if_t<!cpp::is_array_v<T>, int> = 0>
+LIBC_INLINE CheckedPtr<T> make_unique_for_overwrite() {
+  // See make_unique for why `ac` is not inspected.
+  AllocChecker ac;
+  return CheckedPtr<T>(new (ac) T);
+}
+
+/// Allocates an array of `n` default-initialized elements. T must be an array
+/// of unknown bound (e.g. `make_unique_for_overwrite<int[]>(n)`). Unlike
+/// make_unique, this leaves elements of trivial types uninitialized. Returns a
+/// null CheckedPtr if the allocation fails. The same caveat about zero-sized
+/// allocations as for make_unique applies.
+template <
+    typename T,
+    cpp::enable_if_t<cpp::is_same_v<T, cpp::remove_extent_t<T>[]>, int> = 0>
+LIBC_INLINE CheckedPtr<T> make_unique_for_overwrite(size_t n) {
+  using Elem = cpp::remove_extent_t<T>;
+  // See make_unique for why `ac` is not inspected.
+  AllocChecker ac;
+  return CheckedPtr<T>(new (ac) Elem[n]);
+}
+
+/// Arrays of known bound (e.g. `make_unique_for_overwrite<int[4]>()`) are not
+/// supported.
+template <typename T, typename... Args,
+          cpp::enable_if_t<cpp::is_array_v<T> &&
+                               !cpp::is_same_v<T, cpp::remove_extent_t<T>[]>,
+                           int> = 0>
+void make_unique_for_overwrite(Args &&...) = delete;
 
 } // namespace LIBC_NAMESPACE_DECL
 

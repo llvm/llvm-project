@@ -31,6 +31,7 @@ class AsmPrinter;
 class Constant;
 class GlobalObject;
 class Module;
+struct SPIRVOptions;
 class SPIRVSubtarget;
 class Triple;
 
@@ -111,7 +112,7 @@ private:
                           bool UseForwardRefs = false);
 };
 
-bool spirvPreserveAuxData(const Triple &TT);
+bool spirvPreserveAuxData(const SPIRVOptions &CLOpts, const Triple &TT);
 
 } // namespace llvm
 

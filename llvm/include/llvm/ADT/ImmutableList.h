@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -62,8 +63,7 @@ public:
 /// directly, and instead should be created by ImmutableListFactory objects that
 /// manage the lifetime of a group of lists. When the factory object is
 /// reclaimed, all lists created by that factory are released as well.
-template <typename T>
-class ImmutableList {
+template <typename T> class LLVM_ATTRIBUTE_WARN_UNUSED ImmutableList {
 public:
   using value_type = T;
   using Factory = ImmutableListFactory<T>;

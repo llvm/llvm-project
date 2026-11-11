@@ -1,8 +1,12 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
 // RUN:   %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
+// RUN:   %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK %}
 
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
+// RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s %}
 
 // REQUIRES: amdgpu-registered-target
 

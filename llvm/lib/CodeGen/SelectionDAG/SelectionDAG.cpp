@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "SDNodeDbgValue.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -1469,6 +1470,7 @@ void SelectionDAG::init(MachineFunction &NewMF,
   LibInfo = LibraryInfo;
   Libcalls = LibcallsInfo;
   Context = &MF->getFunction().getContext();
+  DAGOpts = &Context->getLibraryOptions().get<SelectionDAGOptions>();
   UA = NewUA;
   PSI = PSIin;
   BFI = BFIin;
@@ -7785,7 +7787,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
+  // VECTOR_SHUFFLE_VAR is not elementwise.
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
+      Opcode == ISD::VECTOR_SHUFFLE_VAR)
     return SDValue();
 
   unsigned NumOps = Ops.size();
@@ -9055,6 +9059,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstant(Val.extractBits(ElementSize, Shift), DL, VT);
     }
     break;
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    assert(VT == N1.getValueType() &&
+           "VECTOR_SHUFFLE_VAR result and source types don't match.");
+    assert(VT.isVector() && MaskVT.isVector() &&
+           "VECTOR_SHUFFLE_VAR operands must be vectors.");
+    assert(MaskVT.getVectorElementType().isInteger() &&
+           "VECTOR_SHUFFLE_VAR mask must be a vector of integers.");
+    assert(VT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "VECTOR_SHUFFLE_VAR mask has the wrong number of elements.");
+    break;
+  }
   case ISD::EXTRACT_SUBVECTOR: {
     EVT N1VT = N1.getValueType();
     assert(VT.isVector() && N1VT.isVector() &&
@@ -10416,7 +10432,7 @@ SDValue SelectionDAG::getMemcpy(
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
-  RTLIB::LibcallImpl MemCpyImpl = TLI->getMemcpyImpl();
+  RTLIB::LibcallImpl MemCpyImpl = Libcalls->getMemcpyImpl();
 
   if (OverrideTailCall.has_value()) {
     IsTailCall = *OverrideTailCall;
@@ -14632,7 +14648,7 @@ std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
 
 static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
                                                    LSBaseSDNode *Base,
-                                                   unsigned Bytes, int Dist,
+                                                   TypeSize Bytes, int Dist,
                                                    const SelectionDAG &DAG) {
   if (LS->isVolatile() || Base->isVolatile())
     return false;
@@ -14644,28 +14660,33 @@ static bool areNonVolatileConsecutiveLoadsOrStores(LSBaseSDNode *LS,
   if (LS->getChain() != Base->getChain())
     return false;
   EVT VT = LS->getMemoryVT();
-  if (VT.getSizeInBits() / 8 != Bytes)
+  if (!VT.getScalarType().isByteSized())
+    return false;
+  if (VT.getStoreSize() != Bytes)
     return false;
 
   auto BaseLocDecomp = BaseIndexOffset::match(Base, DAG);
   auto LocDecomp = BaseIndexOffset::match(LS, DAG);
+  StackOffset Offset;
+  if (!BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
+    return false;
 
-  int64_t Offset = 0;
-  if (BaseLocDecomp.equalBaseIndex(LocDecomp, DAG, Offset))
-    return (Dist * (int64_t)Bytes == Offset);
-  return false;
+  int64_t ExpectedOffset = Dist * (int64_t)Bytes.getKnownMinValue();
+  if (Bytes.isFixed())
+    return Offset == StackOffset::getFixed(ExpectedOffset);
+  return Offset == StackOffset::getScalable(ExpectedOffset);
 }
 
 bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,
                                                   LoadSDNode *Base,
-                                                  unsigned Bytes,
+                                                  TypeSize Bytes,
                                                   int Dist) const {
   return areNonVolatileConsecutiveLoadsOrStores(LD, Base, Bytes, Dist, *this);
 }
 
 bool SelectionDAG::areNonVolatileConsecutiveStores(StoreSDNode *ST,
                                                    StoreSDNode *Base,
-                                                   unsigned Bytes,
+                                                   TypeSize Bytes,
                                                    int Dist) const {
   return areNonVolatileConsecutiveLoadsOrStores(ST, Base, Bytes, Dist, *this);
 }
