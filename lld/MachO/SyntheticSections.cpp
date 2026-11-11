@@ -982,7 +982,7 @@ void ObjCSelRefsHelper::initialize() {
     // might be aggregated.
     assert(isec->relocs.size() == 1);
     auto Reloc = isec->relocs[0];
-    if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
+    if (const auto *sym = dyn_cast_if_present<Symbol *>(Reloc.referent)) {
       if (const auto *d = dyn_cast<Defined>(sym)) {
         auto *cisec = cast<CStringInputSection>(d->isec());
         auto methname = cisec->getStringRefAtOffset(d->value);

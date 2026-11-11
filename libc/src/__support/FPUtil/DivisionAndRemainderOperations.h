@@ -16,6 +16,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
@@ -27,21 +28,31 @@ static constexpr int QUOTIENT_LSB_BITS = 3;
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE constexpr T remquo(T x, T y, int &q) {
   FPBits<T> xbits(x), ybits(y);
-  if (xbits.is_nan())
-    return x;
-  if (ybits.is_nan())
-    return y;
-  if (xbits.is_inf() || ybits.is_zero())
-    return FPBits<T>::quiet_nan().get_val();
+  if (LIBC_UNLIKELY(xbits.is_inf_or_nan() || ybits.is_inf_or_nan() ||
+                    xbits.is_zero() || ybits.is_zero())) {
+    if (xbits.is_signaling_nan() || ybits.is_signaling_nan()) {
+      raise_except_if_required(FE_INVALID);
+      return FPBits<T>::quiet_nan().get_val();
+    }
+    if (xbits.is_nan())
+      return x;
+    if (ybits.is_nan())
+      return y;
+    if (xbits.is_inf() || ybits.is_zero()) {
+      set_errno_if_required(EDOM);
+      raise_except_if_required(FE_INVALID);
+      return FPBits<T>::quiet_nan().get_val();
+    }
 
-  if (xbits.is_zero()) {
-    q = 0;
-    return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
-  }
+    if (xbits.is_zero()) {
+      q = 0;
+      return LIBC_NAMESPACE::fputil::copysign(T(0.0), x);
+    }
 
-  if (ybits.is_inf()) {
-    q = 0;
-    return x;
+    if (ybits.is_inf()) {
+      q = 0;
+      return x;
+    }
   }
 
   const Sign result_sign =

@@ -11,7 +11,6 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -43,34 +42,36 @@ public:
     class Matcher {
     public:
       virtual ~Matcher() = default;
-      virtual bool Match(ConstString class_name) = 0;
+      virtual bool Match(llvm::StringRef class_name) = 0;
 
       typedef std::unique_ptr<Matcher> UP;
     };
     class Prefix : public Matcher {
     public:
-      Prefix(ConstString p);
+      Prefix(std::string p);
       ~Prefix() override = default;
-      bool Match(ConstString class_name) override;
+      bool Match(llvm::StringRef class_name) override;
 
     private:
-      ConstString m_prefix;
+      std::string m_prefix;
     };
     class Full : public Matcher {
     public:
-      Full(ConstString n);
+      Full(std::string n);
       ~Full() override = default;
-      bool Match(ConstString class_name) override;
+      bool Match(llvm::StringRef class_name) override;
 
     private:
-      ConstString m_name;
+      std::string m_name;
     };
     typedef Matcher::UP MatcherUP;
 
-    MatcherUP GetFullMatch(ConstString n) { return std::make_unique<Full>(n); }
+    MatcherUP GetFullMatch(llvm::StringRef n) {
+      return std::make_unique<Full>(n.str());
+    }
 
-    MatcherUP GetPrefixMatch(ConstString p) {
-      return std::make_unique<Prefix>(p);
+    MatcherUP GetPrefixMatch(llvm::StringRef p) {
+      return std::make_unique<Prefix>(p.str());
     }
   };
 

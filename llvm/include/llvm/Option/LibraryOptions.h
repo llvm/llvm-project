@@ -170,4 +170,20 @@ public:
 } // namespace opt
 } // namespace llvm
 
+/// Defines the file-scope registration of options struct T for a library that
+/// has no initialization function to register it from, exempting this static
+/// constructor from -Wglobal-constructors.
+// clang-format off
+#ifdef __clang__
+#define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
+  _Pragma("clang diagnostic push")                                             \
+  _Pragma("clang diagnostic ignored \"-Wglobal-constructors\"")                \
+  static llvm::opt::RegisterLibraryOptions<T> Registration;                    \
+  _Pragma("clang diagnostic pop")
+#else
+#define LLVM_REGISTER_LIBRARY_OPTIONS(T)                                       \
+  static llvm::opt::RegisterLibraryOptions<T> Registration;
+#endif
+// clang-format on
+
 #endif // LLVM_OPTION_LIBRARYOPTIONS_H

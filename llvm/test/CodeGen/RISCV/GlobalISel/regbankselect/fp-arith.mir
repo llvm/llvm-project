@@ -5,7 +5,6 @@
 ---
 name:            fadd_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -28,7 +27,6 @@ body:             |
 ---
 name:            fsub_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -51,7 +49,6 @@ body:             |
 ---
 name:            fmul_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -74,7 +71,6 @@ body:             |
 ---
 name:            fdiv_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -97,7 +93,6 @@ body:             |
 ---
 name:            fma_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f, $f12_f
@@ -122,7 +117,6 @@ body:             |
 ---
 name:            fneg_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f
@@ -143,7 +137,6 @@ body:             |
 ---
 name:            fabs_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f
@@ -164,7 +157,6 @@ body:             |
 ---
 name:            fsqrt_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f
@@ -185,7 +177,6 @@ body:             |
 ---
 name:            fmaxnum_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -208,7 +199,6 @@ body:             |
 ---
 name:            fminnum_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -231,7 +221,6 @@ body:             |
 ---
 name:            fcopysign_f32_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_f
@@ -254,7 +243,6 @@ body:             |
 ---
 name:            fcopysign_f32_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_f, $f11_d
@@ -277,7 +265,6 @@ body:             |
 ---
 name:            fadd_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -300,7 +287,6 @@ body:             |
 ---
 name:            fsub_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -323,7 +309,6 @@ body:             |
 ---
 name:            fmul_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -346,7 +331,6 @@ body:             |
 ---
 name:            fdiv_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -369,7 +353,6 @@ body:             |
 ---
 name:            fma_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d, $f12_d
@@ -394,7 +377,6 @@ body:             |
 ---
 name:            fneg_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d
@@ -415,7 +397,6 @@ body:             |
 ---
 name:            fabs_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d
@@ -436,7 +417,6 @@ body:             |
 ---
 name:            fsqrt_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d
@@ -457,7 +437,6 @@ body:             |
 ---
 name:            fmaxnum_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -480,7 +459,6 @@ body:             |
 ---
 name:            fminnum_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -503,7 +481,6 @@ body:             |
 ---
 name:            fcopysign_f64_f64
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_d
@@ -526,7 +503,6 @@ body:             |
 ---
 name:            fcopysign_f64_f32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f10_d, $f11_f
