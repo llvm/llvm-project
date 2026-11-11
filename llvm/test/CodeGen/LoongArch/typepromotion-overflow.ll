@@ -378,21 +378,19 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 ;
 ; LA32S-LABEL: safe_add_underflow:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    sltui $a0, $a0, 1
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
+; LA32S-NEXT:    maskeqz $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
-; LA32S-NEXT:    maskeqz $a0, $a2, $a0
+; LA32S-NEXT:    masknez $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: safe_add_underflow:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
+; LA64-NEXT:    maskeqz $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cmp = icmp eq i8 %a, 0
@@ -532,21 +530,19 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 ;
 ; LA32S-LABEL: safe_sub_underflow:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    sltui $a0, $a0, 1
 ; LA32S-NEXT:    ori $a1, $zero, 8
-; LA32S-NEXT:    masknez $a1, $a1, $a0
+; LA32S-NEXT:    maskeqz $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 16
-; LA32S-NEXT:    maskeqz $a0, $a2, $a0
+; LA32S-NEXT:    masknez $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: safe_sub_underflow:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ori $a1, $zero, 8
-; LA64-NEXT:    masknez $a1, $a1, $a0
+; LA64-NEXT:    maskeqz $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 16
-; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    masknez $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %cmp.not = icmp eq i8 %a, 0

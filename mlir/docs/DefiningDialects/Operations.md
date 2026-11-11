@@ -1832,6 +1832,9 @@ property struct and for the operation's verifier to check that the enum's value
 is a valid value for the enum.
 
 The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+`DefaultValuedEnumProp` takes an `EnumInfo` and one of its cases, which
+becomes the property's default value and is elided from `prop-dict` and from
+an optional group anchored on the property.
 
 A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
 the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`

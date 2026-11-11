@@ -354,7 +354,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constexpr_atomic",
-            "values": {"c++20": 202411},
+            "values": {"c++26": 202411},
             "headers": ["atomic"],
             "unimplemented": True,
         },
@@ -1337,7 +1337,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges_as_input",
-            "values": {"c++23": 202502},
+            "values": {"c++26": 202502},
             "headers": ["ranges"],
             "unimplemented": True,
         },
@@ -1348,7 +1348,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges_cache_latest",
-            "values": {"c++23": 202411},
+            "values": {"c++26": 202411},
             "headers": ["ranges"],
             "unimplemented": True,
         },

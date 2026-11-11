@@ -43,59 +43,10 @@ using namespace llvm::PatternMatch;
 
 namespace {
 
-static cl::opt<bool> WidenLoads(
-  "amdgpu-codegenprepare-widen-constant-loads",
-  cl::desc("Widen sub-dword constant address space loads in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
-
-static cl::opt<bool>
-    BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
-                   cl::desc("Break large PHI nodes for DAGISel"),
-                   cl::ReallyHidden, cl::init(true));
-
-static cl::opt<bool>
-    ForceBreakLargePHIs("amdgpu-codegenprepare-force-break-large-phis",
-                        cl::desc("For testing purposes, always break large "
-                                 "PHIs even if it isn't profitable."),
-                        cl::ReallyHidden, cl::init(false));
-
-static cl::opt<unsigned> BreakLargePHIsThreshold(
-    "amdgpu-codegenprepare-break-large-phis-threshold",
-    cl::desc("Minimum type size in bits for breaking large PHI nodes"),
-    cl::ReallyHidden, cl::init(32));
-
-static cl::opt<bool> UseMul24Intrin(
-  "amdgpu-codegenprepare-mul24",
-  cl::desc("Introduce mul24 intrinsics in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
-
-// Legalize 64-bit division by using the generic IR expansion.
-static cl::opt<bool> ExpandDiv64InIR(
-  "amdgpu-codegenprepare-expand-div64",
-  cl::desc("Expand 64-bit division in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
-
-// Leave all division operations as they are. This supersedes ExpandDiv64InIR
-// and is used for testing the legalizer.
-static cl::opt<bool> DisableIDivExpand(
-  "amdgpu-codegenprepare-disable-idiv-expansion",
-  cl::desc("Prevent expanding integer division in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
-
-// Disable processing of fdiv so we can better test the backend implementations.
-static cl::opt<bool> DisableFDivExpand(
-  "amdgpu-codegenprepare-disable-fdiv-expansion",
-  cl::desc("Prevent expanding floating point division in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(false));
-
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
+  const AMDGPUOptions &CLOpts;
   Function &F;
   const GCNSubtarget &ST;
   const AMDGPUTargetMachine &TM;
@@ -105,6 +56,7 @@ public:
   const DataLayout &DL;
   SimplifyQuery SQ;
   const bool HasFP32DenormalFlush;
+  const bool ExpandDiv64InIR;
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
   mutable Function *LdexpF32 = nullptr;
@@ -115,11 +67,14 @@ public:
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
                            const TargetTransformInfo &TTI,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
-                           const DominatorTree *DT, const UniformityInfo &UA)
-      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TTI(TTI), TLI(TLI),
-        UA(UA), DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
+                           const DominatorTree *DT, const UniformityInfo &UA,
+                           bool ExpandDiv64InIR)
+      : CLOpts(TM.getCLOpts()), F(F), ST(TM.getSubtarget<GCNSubtarget>(F)),
+        TM(TM), TTI(TTI), TLI(TLI), UA(UA), DL(F.getDataLayout()),
+        SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
-                             DenormalMode::getPreserveSign()) {}
+                             DenormalMode::getPreserveSign()),
+        ExpandDiv64InIR(ExpandDiv64InIR) {}
 
   Function *getSqrtF32() const {
     if (SqrtF32)
@@ -274,7 +229,8 @@ public:
 class AMDGPUCodeGenPrepare : public FunctionPass {
 public:
   static char ID;
-  AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
+  explicit AMDGPUCodeGenPrepare(bool ExpandDiv64InIR = false)
+      : FunctionPass(ID), ExpandDiv64InIR(ExpandDiv64InIR) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
@@ -287,6 +243,9 @@ public:
   }
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
+
+private:
+  bool ExpandDiv64InIR;
 };
 
 } // end anonymous namespace
@@ -907,7 +866,7 @@ Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
 //
 // NOTE: rcp is the preference in cases that both are legal.
 bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
-  if (DisableFDivExpand)
+  if (!CLOpts.codegenprepare_fdiv_expansion)
     return false;
 
   Type *Ty = FDiv.getType()->getScalarType();
@@ -1450,7 +1409,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
   if (foldBinOpIntoSelect(I))
     return true;
 
-  if (UseMul24Intrin && replaceMulWithMul24(I))
+  if (CLOpts.codegenprepare_mul24 && replaceMulWithMul24(I))
     return true;
   if (tryNarrowMathIfNoOverflow(&I))
     return true;
@@ -1465,8 +1424,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
   if ((Opc == Instruction::URem || Opc == Instruction::UDiv ||
        Opc == Instruction::SRem || Opc == Instruction::SDiv) &&
-      ScalarSize <= 64 &&
-      !DisableIDivExpand) {
+      ScalarSize <= 64 && CLOpts.codegenprepare_idiv_expansion) {
     Value *Num = I.getOperand(0);
     Value *Den = I.getOperand(1);
     IRBuilder<> Builder(&I);
@@ -1535,7 +1493,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
-  if (!WidenLoads)
+  if (!CLOpts.codegenprepare_widen_constant_loads)
     return false;
 
   if ((I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
@@ -1881,16 +1839,18 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!BreakLargePHIs || getCGPassBuilderOption(TM).EnableGlobalISelOption ==
-                             cl::boolOrDefault::BOU_TRUE)
+  if (!CLOpts.codegenprepare_break_large_phis ||
+      getCGPassBuilderOption(TM).EnableGlobalISelOption ==
+          cl::boolOrDefault::BOU_TRUE)
     return false;
 
   FixedVectorType *FVT = dyn_cast<FixedVectorType>(I.getType());
   if (!FVT || FVT->getNumElements() == 1 ||
-      DL.getTypeSizeInBits(FVT) <= BreakLargePHIsThreshold)
+      DL.getTypeSizeInBits(FVT) <=
+          CLOpts.codegenprepare_break_large_phis_threshold)
     return false;
 
-  if (!ForceBreakLargePHIs && !canBreakPHINode(I))
+  if (!CLOpts.codegenprepare_force_break_large_phis && !canBreakPHINode(I))
     return false;
 
   std::vector<VectorSlice> Slices;
@@ -2274,7 +2234,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA).run();
+  return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA, ExpandDiv64InIR)
+      .run();
 }
 
 PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
@@ -2285,7 +2246,8 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   AssumptionCache *AC = &FAM.getResult<AssumptionAnalysis>(F);
   const DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   const UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
-  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TTI, TLI, AC, DT, UA);
+  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TTI, TLI, AC, DT, UA,
+                                ATM.getCLOpts().codegenprepare_expand_div64);
   if (!Impl.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -2546,6 +2508,6 @@ bool AMDGPUCodeGenPrepareImpl::visitSaturatingAdd(IntrinsicInst &I) {
 
 char AMDGPUCodeGenPrepare::ID = 0;
 
-FunctionPass *llvm::createAMDGPUCodeGenPreparePass() {
-  return new AMDGPUCodeGenPrepare();
+FunctionPass *llvm::createAMDGPUCodeGenPreparePass(bool ExpandDiv64InIR) {
+  return new AMDGPUCodeGenPrepare(ExpandDiv64InIR);
 }
