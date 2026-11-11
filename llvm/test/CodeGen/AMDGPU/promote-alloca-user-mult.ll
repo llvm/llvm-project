@@ -11,9 +11,9 @@ define amdgpu_kernel void @zot() {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG1:![0-9]+]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
@@ -24,11 +24,11 @@ define amdgpu_kernel void @zot() {
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw nsw i32 [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [[STRUCT_BARNEY:%.*]]], ptr addrspace(3) @zot.alloca, i32 0, i32 [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) @zot.alloca, i32 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP15]], i64 1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP15]], i64 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr addrspace(4) [[TMP16]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP15]], i64 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[TMP15]], i64 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr addrspace(4) [[TMP18]], align 4, !range [[RNG1]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = lshr i32 [[TMP17]], 16
 ; CHECK-NEXT:    [[TMP21:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
@@ -39,7 +39,7 @@ define amdgpu_kernel void @zot() {
 ; CHECK-NEXT:    [[TMP26:%.*]] = mul nuw nsw i32 [[TMP22]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[TMP25]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP27]], [[TMP23]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [1024 x [[STRUCT_BARNEY]]], ptr addrspace(3) @zot.alloca1, i32 0, i32 [[TMP28]]
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) @zot.alloca1, i32 [[TMP28]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(5) null, align 2147483648
 ; CHECK-NEXT:    call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) align 16 dereferenceable(16) [[TMP29]], ptr addrspace(3) align 16 dereferenceable(16) [[TMP14]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p3.p0.i64(ptr addrspace(3) align 16 dereferenceable(16) [[TMP14]], ptr align 1 dereferenceable(16) poison, i64 16, i1 false)

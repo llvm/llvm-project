@@ -415,7 +415,7 @@
 ; CHECK-NEXT: declare float @"#atanf"(float)
 ; CHECK-NEXT: declare void @"#cabs"(...)
 ; CHECK-NEXT: declare void @"#cabsf"(...)
-; CHECK-NEXT: declare ptr @"#calloc"(i64, i64)
+; CHECK-NEXT: declare noalias noundef ptr @"#calloc"(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @"#cbrt"(double)
 ; CHECK-NEXT: declare float @"#cbrtf"(float)
 ; CHECK-NEXT: declare double @"#ceil"(double)
@@ -456,8 +456,8 @@
 ; CHECK-NEXT: declare float @"#fminimumf"(float, float)
 ; CHECK-NEXT: declare double @"#fmod"(double, double)
 ; CHECK-NEXT: declare float @"#fmodf"(float, float)
-; CHECK-NEXT: declare void @"#free"(ptr)
-; CHECK-NEXT: declare double @"#frexp"(double, ptr)
+; CHECK-NEXT: declare void @"#free"(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare double @"#frexp"(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#ldexp"(double, i32)
 ; CHECK-NEXT: declare i64 @"#llrint"(double)
 ; CHECK-NEXT: declare i64 @"#llrintf"(float)
@@ -473,12 +473,12 @@
 ; CHECK-NEXT: declare i32 @"#lrintf"(float)
 ; CHECK-NEXT: declare i32 @"#lround"(double)
 ; CHECK-NEXT: declare i32 @"#lroundf"(float)
-; CHECK-NEXT: declare ptr @"#malloc"(i64)
+; CHECK-NEXT: declare noalias noundef ptr @"#malloc"(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare ptr @"#memcpy"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#memmove"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#memset"(ptr, i32, i64)
-; CHECK-NEXT: declare double @"#modf"(double, ptr)
-; CHECK-NEXT: declare float @"#modff"(float, ptr)
+; CHECK-NEXT: declare double @"#modf"(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; CHECK-NEXT: declare float @"#modff"(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#nan"(ptr)
 ; CHECK-NEXT: declare float @"#nanf"(ptr)
 ; CHECK-NEXT: declare double @"#nearbyint"(double)
@@ -489,8 +489,8 @@
 ; CHECK-NEXT: declare float @"#powf"(float, float)
 ; CHECK-NEXT: declare double @"#remainder"(double, double)
 ; CHECK-NEXT: declare float @"#remainderf"(float, float)
-; CHECK-NEXT: declare double @"#remquo"(double, double, ptr)
-; CHECK-NEXT: declare float @"#remquof"(float, float, ptr)
+; CHECK-NEXT: declare double @"#remquo"(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; CHECK-NEXT: declare float @"#remquof"(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @"#rint"(double)
 ; CHECK-NEXT: declare float @"#rintf"(float)
 ; CHECK-NEXT: declare double @"#round"(double)
@@ -505,8 +505,8 @@
 ; CHECK-NEXT: declare float @"#sinf"(float)
 ; CHECK-NEXT: declare double @"#sinh"(double)
 ; CHECK-NEXT: declare float @"#sinhf"(float)
-; CHECK-NEXT: declare double @"#sqrt"(double)
-; CHECK-NEXT: declare float @"#sqrtf"(float)
+; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) double @"#sqrt"(double) [[SQRT_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) float @"#sqrtf"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare double @"#tan"(double)
 ; CHECK-NEXT: declare float @"#tanf"(float)
 ; CHECK-NEXT: declare double @"#tanh"(double)
@@ -515,3 +515,7 @@
 ; CHECK-NEXT: declare float @"#tgammaf"(float)
 ; CHECK-NEXT: declare double @"#trunc"(double)
 ; CHECK-NEXT: declare float @"#truncf"(float)
+; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
+; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

@@ -401,9 +401,9 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile(),
-      /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-      /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
-      /*res_attrs=*/nullptr);
+      /*tbaa_struct=*/nullptr, /*access_groups=*/nullptr,
+      /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+      /*arg_attrs=*/argAttrs, /*res_attrs=*/nullptr);
   return mlir::success();
 }
 
@@ -426,7 +426,7 @@ lowerMemTransferOp(CIROp op, typename CIROp::Adaptor adaptor,
   }
   rewriter.replaceOpWithNewOp<LLVMOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
-      /*isVolatile=*/false,
+      /*isVolatile=*/false, /*tbaa_struct=*/nullptr,
       /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
       /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr, /*arg_attrs=*/argAttrs,
       /*res_attrs=*/nullptr);
@@ -3321,6 +3321,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     }
   }
 
+  if (op.getCoroutineKind())
+    passthrough.push_back(rewriter.getStringAttr("presplitcoroutine"));
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
 
@@ -6462,7 +6464,7 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
       /*tail_call_kind*/
       mlir::LLVM::TailCallKindAttr::get(
           getContext(), mlir::LLVM::tailcallkind::TailCallKind::None),
-      /*convergent=*/mlir::UnitAttr(),
+      op.getConvergentAttr(),
       mlir::LLVM::AsmDialectAttr::get(getContext(), llDialect),
       rewriter.getArrayAttr(opAttrs));
 

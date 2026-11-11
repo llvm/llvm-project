@@ -1407,8 +1407,8 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   }
 }
 
-void IRPosition::verify() {
 #ifdef EXPENSIVE_CHECKS
+void IRPosition::verify() {
   switch (getPositionKind()) {
   case IRP_INVALID:
     assert((CBContext == nullptr) &&
@@ -1472,8 +1472,8 @@ void IRPosition::verify() {
     return;
   }
   }
-#endif
 }
+#endif
 
 std::optional<Constant *>
 Attributor::getAssumedConstant(const IRPosition &IRP,
@@ -3715,16 +3715,20 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                              UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAInvariantLoadPointer>(
           IRPosition::value(*LI->getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*LI->getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*LI->getPointerOperand()));
+      }
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
       getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
                            UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
-      getOrCreateAAFor<AAAddressSpace>(
-          IRPosition::value(*SI.getPointerOperand()));
+      if (InfoCache.getFlatAddressSpace().has_value()) {
+        getOrCreateAAFor<AAAddressSpace>(
+            IRPosition::value(*SI.getPointerOperand()));
+      }
     }
     return true;
   };

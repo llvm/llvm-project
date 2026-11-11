@@ -17,6 +17,7 @@
 #include <mutex>
 #include <set>
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
@@ -54,6 +55,8 @@
 #include "MSVCUndecoratedNameParser.h"
 #include "MsvcStl.h"
 #include "lldb/lldb-enumerations.h"
+
+#include "clang/Basic/Version.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2958,6 +2961,17 @@ static PluginProperties &GetGlobalPluginProperties() {
 
 FormatEntity::Entry CPlusPlusLanguage::GetFunctionNameFormat() const {
   return GetGlobalPluginProperties().GetFunctionNameFormat();
+}
+
+std::string CPlusPlusLanguage::GetVersionInfo() const {
+  llvm::SmallVector<std::string, 2> lines;
+  std::string clang_rev = clang::getClangRevision();
+  if (!clang_rev.empty())
+    lines.push_back("  clang revision " + clang_rev);
+  std::string llvm_rev = clang::getLLVMRevision();
+  if (!llvm_rev.empty())
+    lines.push_back("  llvm revision " + llvm_rev);
+  return llvm::join(lines, "\n");
 }
 
 void CPlusPlusLanguage::DebuggerInitialize(Debugger &debugger) {
