@@ -8200,29 +8200,42 @@ void NVPTXTargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
   LLVMContext &Ctx = CI->getContext();
   Value *Addr = CI->getPointerOperand();
   Value *IsLocal = Builder.CreateIntrinsic(Intrinsic::nvvm_isspacep_local,
-                                         {Addr}, nullptr, "is.local");
+                                           {Addr}, nullptr, "is.local");
   BasicBlock *BB = CI->getParent();
   Function *F = BB->getParent();
   BasicBlock *ExitBB = BB->splitBasicBlock(CI->getIterator(), "cmpxchg.end");
+  auto *Ret = dyn_cast<ReturnInst>(ExitBB->getTerminator());
+  auto *Extract =
+      Ret ? dyn_cast_or_null<ExtractValueInst>(Ret->getReturnValue()) : nullptr;
+  bool ReturnsExtract = ExitBB->size() == 3 && CI->hasOneUse() && Extract &&
+                        Extract->hasOneUse() &&
+                        Extract->getParent() == ExitBB &&
+                        Extract->getAggregateOperand() == CI;
   BasicBlock *LocalBB = BasicBlock::Create(Ctx, "cmpxchg.local", F, ExitBB);
-  BasicBlock *AtomicBB = BasicBlock::Create(Ctx, "cmpxchg.atomic", F, ExitBB);
+  BasicBlock *AtomicBB = BasicBlock::Create(Ctx, "cmpxchg.atomic", F,
+                                            ReturnsExtract ? LocalBB : ExitBB);
 
   BB->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(BB);
   Builder.CreateCondBr(IsLocal, LocalBB, AtomicBB);
 
   Builder.SetInsertPoint(LocalBB);
-  Value *LocalAddr = Builder.CreateAddrSpaceCast(
-      Addr, PointerType::get(Ctx, NVPTXAS::ADDRESS_SPACE_LOCAL));
-  auto [Old, Success] =
-      buildCmpXchgValue(Builder, LocalAddr, CI->getCompareOperand(),
-                       CI->getNewValOperand(), CI->getAlign(), CI->isVolatile());
+  // Ordinary generic loads/stores support local memory. The branch proves the
+  // access is thread-private, so no address-space conversion is needed here.
+  auto [Old, Success] = buildCmpXchgValue(
+      Builder, Addr, CI->getCompareOperand(), CI->getNewValOperand(),
+      CI->getAlign(), CI->isVolatile());
   Value *LocalResult = nullptr;
-  if (!CI->use_empty()) {
-    LocalResult = Builder.CreateInsertValue(PoisonValue::get(CI->getType()), Old, 0);
+  if (ReturnsExtract) {
+    Builder.CreateRet(Extract->getIndices()[0] == 0 ? Old : Success)
+        ->setDebugLoc(Ret->getDebugLoc());
+  } else if (!CI->use_empty()) {
+    LocalResult =
+        Builder.CreateInsertValue(PoisonValue::get(CI->getType()), Old, 0);
     LocalResult = Builder.CreateInsertValue(LocalResult, Success, 1);
   }
-  Builder.CreateBr(ExitBB);
+  if (!ReturnsExtract)
+    Builder.CreateBr(ExitBB);
 
   CI->removeFromParent();
   CI->insertInto(AtomicBB, AtomicBB->end());
@@ -8230,15 +8243,24 @@ void NVPTXTargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
   // remaining atomic so it is not expanded again, while retaining any existing
   // address-space exclusions. Normal fence/partword lowering then applies only
   // to the atomic path.
-  MDNode *NotLocal = MDBuilder(Ctx).createRange(
-      APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL),
-      APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL + 1));
+  MDNode *NotLocal =
+      MDBuilder(Ctx).createRange(APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL),
+                                 APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL + 1));
   if (MDNode *Existing = CI->getMetadata(LLVMContext::MD_noalias_addrspace)) {
     if (MDNode *Merged = MDNode::getMostGenericRange(Existing, NotLocal))
       NotLocal = Merged;
   }
   CI->setMetadata(LLVMContext::MD_noalias_addrspace, NotLocal);
   Builder.SetInsertPoint(AtomicBB);
+  if (ReturnsExtract) {
+    // A wrapper returning just the old value or success flag need not merge
+    // the aggregate and branch to a common return. Keep both returns local to
+    // their paths, with the native atomic first in the block layout.
+    Builder.CreateRet(Builder.CreateExtractValue(CI, Extract->getIndices()[0]))
+        ->setDebugLoc(Ret->getDebugLoc());
+    ExitBB->eraseFromParent();
+    return;
+  }
   Builder.CreateBr(ExitBB);
 
   if (LocalResult) {

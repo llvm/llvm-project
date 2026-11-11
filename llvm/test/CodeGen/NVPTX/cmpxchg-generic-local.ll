@@ -8,9 +8,8 @@
 define i32 @generic_cas(ptr %p, i32 %cmp, i32 %new) noinline {
 ; CHECK-LABEL: generic_cas(
 ; CHECK: isspacep.local
-; CHECK-DAG: cvta.to.local.u64
-; CHECK-DAG: ld.local.b32
-; CHECK-DAG: st.local.b32
+; CHECK-DAG: ld.b32
+; CHECK-DAG: st.b32
 ; CHECK-DAG: atom.relaxed.sys.cas.b32
 ; CHECK: ret;
   %pair = cmpxchg ptr %p, i32 %cmp, i32 %new monotonic monotonic, align 4

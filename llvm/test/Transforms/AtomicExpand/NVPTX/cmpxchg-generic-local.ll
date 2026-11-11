@@ -7,11 +7,10 @@ define { i32, i1 } @generic_i32(ptr %p, i32 %cmp, i32 %new) {
 ; CHECK: [[ISLOCAL:%.*]] = call i1 @llvm.nvvm.isspacep.local(ptr %p)
 ; CHECK-NEXT: br i1 [[ISLOCAL]], label %cmpxchg.local, label %cmpxchg.atomic
 ; CHECK: cmpxchg.local:
-; CHECK-NEXT: [[LOCAL:%.*]] = addrspacecast ptr %p to ptr addrspace(5)
-; CHECK-NEXT: [[OLD:%.*]] = load i32, ptr addrspace(5) [[LOCAL]], align 4
+; CHECK-NEXT: [[OLD:%.*]] = load i32, ptr %p, align 4
 ; CHECK-NEXT: [[EQUAL:%.*]] = icmp eq i32 [[OLD]], %cmp
 ; CHECK-NEXT: [[NEXT:%.*]] = select i1 [[EQUAL]], i32 %new, i32 [[OLD]]
-; CHECK-NEXT: store i32 [[NEXT]], ptr addrspace(5) [[LOCAL]], align 4
+; CHECK-NEXT: store i32 [[NEXT]], ptr %p, align 4
 ; CHECK-NEXT: [[PAIR0:%.*]] = insertvalue { i32, i1 } poison, i32 [[OLD]], 0
 ; CHECK-NEXT: [[PAIR1:%.*]] = insertvalue { i32, i1 } [[PAIR0]], i1 [[EQUAL]], 1
 ; CHECK-NEXT: br label %cmpxchg.end
@@ -25,6 +24,78 @@ define { i32, i1 } @generic_i32(ptr %p, i32 %cmp, i32 %new) {
   ret { i32, i1 } %pair
 }
 
+; Returning a single component does not need an aggregate or a common return.
+define i32 @return_old(ptr %p, i32 %cmp, i32 %new) {
+; CHECK-LABEL: define i32 @return_old(
+; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
+; CHECK: cmpxchg.atomic:
+; CHECK-NEXT: [[CAS:%.*]] = cmpxchg ptr %p, i32 %cmp, i32 %new monotonic monotonic, align 4, !noalias.addrspace ![[NOTLOCAL]]
+; CHECK-NEXT: [[ATOMICOLD:%.*]] = extractvalue { i32, i1 } [[CAS]], 0
+; CHECK-NEXT: ret i32 [[ATOMICOLD]]
+; CHECK: cmpxchg.local:
+; CHECK: [[LOCALOLD:%.*]] = load i32, ptr %p, align 4
+; CHECK: store i32 {{%.*}}, ptr %p, align 4
+; CHECK-NEXT: ret i32 [[LOCALOLD]]
+; CHECK-NEXT: }
+  %pair = cmpxchg ptr %p, i32 %cmp, i32 %new monotonic monotonic, align 4
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+define i1 @return_success(ptr %p, i32 %cmp, i32 %new) {
+; CHECK-LABEL: define i1 @return_success(
+; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
+; CHECK: cmpxchg.atomic:
+; CHECK-NEXT: [[CAS:%.*]] = cmpxchg ptr %p, i32 %cmp, i32 %new monotonic monotonic, align 4, !noalias.addrspace ![[NOTLOCAL]]
+; CHECK-NEXT: [[ATOMICOK:%.*]] = extractvalue { i32, i1 } [[CAS]], 1
+; CHECK-NEXT: ret i1 [[ATOMICOK]]
+; CHECK: cmpxchg.local:
+; CHECK: [[LOCALOK:%.*]] = icmp eq i32 {{%.*}}, %cmp
+; CHECK: store i32 {{%.*}}, ptr %p, align 4
+; CHECK-NEXT: ret i1 [[LOCALOK]]
+; CHECK-NEXT: }
+  %pair = cmpxchg ptr %p, i32 %cmp, i32 %new monotonic monotonic, align 4
+  %success = extractvalue { i32, i1 } %pair, 1
+  ret i1 %success
+}
+
+; Tail returns still allow normal fence insertion on the native path.
+define i64 @return_old_seq_cst(ptr %p, i64 %cmp, i64 %new) {
+; CHECK-LABEL: define i64 @return_old_seq_cst(
+; CHECK: cmpxchg.atomic:
+; CHECK-NEXT: fence syncscope("device") seq_cst
+; CHECK-NEXT: [[CAS:%.*]] = cmpxchg volatile ptr %p, i64 %cmp, i64 %new syncscope("device") acquire acquire, align 16, !noalias.addrspace ![[NOTLOCAL]]
+; CHECK-NEXT: [[ATOMICOLD:%.*]] = extractvalue { i64, i1 } [[CAS]], 0
+; CHECK-NEXT: ret i64 [[ATOMICOLD]]
+; CHECK: cmpxchg.local:
+; CHECK-NOT: fence
+; CHECK: [[LOCALOLD:%.*]] = load volatile i64, ptr %p, align 16
+; CHECK: store volatile i64 {{%.*}}, ptr %p, align 16
+; CHECK-NEXT: ret i64 [[LOCALOLD]]
+; CHECK-NEXT: }
+  %pair = cmpxchg volatile ptr %p, i64 %cmp, i64 %new syncscope("device") seq_cst seq_cst, align 16
+  %old = extractvalue { i64, i1 } %pair, 0
+  ret i64 %old
+}
+
+declare void @side_effect()
+
+; Preserve work after the CAS, executing it once after the paths merge.
+define i32 @return_old_with_side_effect(ptr %p, i32 %cmp, i32 %new) {
+; CHECK-LABEL: define i32 @return_old_with_side_effect(
+; CHECK: cmpxchg.local:
+; CHECK: br label %cmpxchg.end
+; CHECK: cmpxchg.atomic:
+; CHECK: br label %cmpxchg.end
+; CHECK: cmpxchg.end:
+; CHECK: call void @side_effect()
+; CHECK-NEXT: ret i32
+  %pair = cmpxchg ptr %p, i32 %cmp, i32 %new monotonic monotonic, align 4
+  %old = extractvalue { i32, i1 } %pair, 0
+  call void @side_effect()
+  ret i32 %old
+}
+
 ; Strong ordering, syncscope, weak, and volatile remain on the nonlocal path.
 ; The local path preserves volatility and an explicitly stronger alignment.
 define { i64, i1 } @generic_volatile_i64(ptr %p, i64 %cmp, i64 %new) {
@@ -32,8 +103,8 @@ define { i64, i1 } @generic_volatile_i64(ptr %p, i64 %cmp, i64 %new) {
 ; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
 ; CHECK: cmpxchg.local:
 ; CHECK-NOT: fence
-; CHECK: [[OLD64:%.*]] = load volatile i64, ptr addrspace(5) {{%.*}}, align 16
-; CHECK: store volatile i64 {{%.*}}, ptr addrspace(5) {{%.*}}, align 16
+; CHECK: [[OLD64:%.*]] = load volatile i64, ptr %p, align 16
+; CHECK: store volatile i64 {{%.*}}, ptr %p, align 16
 ; CHECK-NOT: fence
 ; CHECK: cmpxchg.atomic:
 ; CHECK-NEXT: fence syncscope("device") seq_cst
@@ -47,8 +118,8 @@ define { i8, i1 } @generic_i8(ptr %p, i8 %cmp, i8 %new) {
 ; CHECK-LABEL: define { i8, i1 } @generic_i8(
 ; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
 ; CHECK: cmpxchg.local:
-; CHECK: load i8, ptr addrspace(5) {{%.*}}, align 1
-; CHECK: store i8 {{%.*}}, ptr addrspace(5) {{%.*}}, align 1
+; CHECK: load i8, ptr %p, align 1
+; CHECK: store i8 {{%.*}}, ptr %p, align 1
 ; CHECK: cmpxchg.atomic:
 ; CHECK: cmpxchg ptr {{%.*}}, i32 {{%.*}}, i32 {{%.*}} monotonic monotonic
   %pair = cmpxchg ptr %p, i8 %cmp, i8 %new monotonic monotonic, align 1
