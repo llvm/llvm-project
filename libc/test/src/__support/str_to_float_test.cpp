@@ -65,7 +65,7 @@ TEST_F(LlvmLibcStrToFltTest, SimpleDecimalConversion32HugeExponents) {
   simple_decimal_conversion_test("1e-2147483647", 0, 0, ERANGE);
 }
 
-TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
+TEST_F(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 

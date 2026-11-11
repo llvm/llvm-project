@@ -4548,6 +4548,7 @@ cc_library(
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
+        ":VectorToNVGPU",
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
@@ -4717,6 +4718,7 @@ cc_library(
         ":DataLayoutInterfaces",
         ":FunctionInterfaces",
         ":IR",
+        ":Support",
         "//llvm:ABI",
         "//llvm:Support",
     ],
@@ -6759,6 +6761,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
         ":NVVMOpSrcs__gentbl_cc_lib",
@@ -6880,6 +6883,7 @@ td_library(
     deps = [
         ":BasicPtxBuilderIntTdFiles",
         ":GPUOpsTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":LLVMOpsTdFiles",
         ":NVVMRequiresSMTraitsTdFiles",
         ":OpBaseTdFiles",
@@ -7021,6 +7025,7 @@ cc_library(
         ":IR",
         ":InferIntRangeCommon",
         ":InferIntRangeInterface",
+        ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
@@ -12658,6 +12663,26 @@ cc_library(
 )
 
 cc_library(
+    name = "VectorToGPUCommon",
+    srcs = glob([
+        "lib/Conversion/VectorToGPUCommon/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToGPUCommon/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":GPUDialect",
+        ":IR",
+        ":SCFDialect",
+        ":Support",
+        ":VectorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "VectorToGPU",
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
@@ -12674,17 +12699,42 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
-        ":LoopLikeInterface",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":TransformUtils",
+        ":VectorDialect",
+        ":VectorToGPUCommon",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToNVGPU",
+    srcs = glob([
+        "lib/Conversion/VectorToNVGPU/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToNVGPU/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":Analysis",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":GPUDialect",
+        ":IR",
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUUtils",
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",
-        ":Transforms",
         ":VectorDialect",
+        ":VectorToGPUCommon",
         ":VectorTransforms",
-        ":VectorUtils",
         "//llvm:Support",
     ],
 )

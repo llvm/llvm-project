@@ -805,10 +805,12 @@ public:
   }
 
   /// Returns true if the instructions in this block requires predication
-  /// for any reason, e.g. because tail folding now requires a predicate
-  /// or because the block in the original loop was predicated.
+  /// for any reason, e.g. because tail folding now requires a predicate,
+  /// because memory accesses are masked due to an uncountable exit with side
+  /// effects, or because the block in the original loop was predicated.
   bool blockNeedsPredicationForAnyReason(BasicBlock *BB) const {
-    return foldTailByMasking() || Legal->blockNeedsPredication(BB);
+    return foldTailByMasking() || Legal->hasUncountableExitWithSideEffects() ||
+           Legal->blockNeedsPredication(BB);
   }
 
   /// Returns true if VP intrinsics with explicit vector length support should
@@ -5077,10 +5079,9 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   // Invalidate interleave groups if all blocks of loop will be predicated.
   if (CM->blockNeedsPredicationForAnyReason(OrigLoop->getHeader()) &&
       !useMaskedInterleavedAccesses(Opts, TTI)) {
-    LLVM_DEBUG(
-        dbgs()
-        << "LV: Invalidate all interleaved groups due to fold-tail by masking "
-           "which requires masked-interleaved support.\n");
+    LLVM_DEBUG(dbgs() << "LV: Invalidate all interleaved groups due to "
+                         "predication which requires masked-interleaved "
+                         "support.\n");
     if (CM->InterleaveInfo.invalidateGroups())
       // Invalidating interleave groups also requires invalidating all decisions
       // based on them, which includes widening decisions and uniform and scalar
@@ -5575,9 +5576,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
                  *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
-  if (!BestVPlan.hasTailFolded() &&
-      TTI.hasMultiVectorLoadStore(BestUF,
-                                  TargetTransformInfo::MaskSource::None))
+  if (TTI.hasMultiVectorLoadStore(
+          BestUF, BestVPlan.hasTailFolded()
+                      ? TargetTransformInfo::MaskSource::ActiveLaneMask
+                      : TargetTransformInfo::MaskSource::None))
     RUN_VPLAN_PASS(VPlanTransforms::widenMemoryAccessesByUF, BestVPlan, BestVF,
                    BestUF, TTI);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
@@ -5598,7 +5600,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     assert(BestVPlan.hasTailFolded() && "Expected tail folding to be enabled");
     RUN_VPLAN_PASS(VPlanTransforms::materializeAliasMaskCheckBlock, BestVPlan,
                    *Legal->getRuntimePointerChecking()->getDiffChecks(),
-                   HasBranchWeights);
+                   *PSE.getSE(), HasBranchWeights);
     ++LoopsPartialAliasVectorized;
   }
 
@@ -7980,8 +7982,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (const auto &L : *LI)
-    Changed |= CFGChanged |=
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= CFGChanged |= simplifyLoop(L, DT, LI, SE, AC, nullptr,
+                                          false /* PreserveLCSSA */, TTI);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops

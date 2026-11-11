@@ -46,8 +46,9 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   }
 
   // We only include `[opt]` if a custom frame format is not specified.
-  if (!format && frame.GetFunction().GetIsOptimized())
-    stack_frame.name += " [opt]";
+  const bool is_optimized = frame.GetFunction().GetIsOptimized();
+  if (is_optimized)
+    stack_frame.isOptimized = true;
 
   std::optional<protocol::Source> source = dap.ResolveSource(frame);
   if (source && !IsAssemblySource(*source)) {
@@ -75,8 +76,9 @@ static StackFrame CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
   stack_frame.source = std::move(source);
   stack_frame.instructionPointerReference = frame.GetPC();
 
-  if (frame.IsArtificial() || frame.IsHidden())
+  if (is_optimized || frame.IsArtificial() || frame.IsHidden())
     stack_frame.presentationHint = StackFrame::ePresentationHintSubtle;
+
   if (const lldb::SBModule module = frame.GetModule()) {
     if (llvm::StringRef uuid = module.GetUUIDString(); !uuid.empty())
       stack_frame.moduleId = uuid.str();

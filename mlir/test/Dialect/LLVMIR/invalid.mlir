@@ -2474,6 +2474,11 @@ llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_
 
 // -----
 
+// expected-error@+1 {{'llvm.mlir.ifunc' op must have a function resolver}}
+llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @missing_resolver
+
+// -----
+
 llvm.func external @resolve_foo() -> !llvm.ptr
 // expected-error@+1 {{'llvm.mlir.ifunc' op 'common' linkage not supported in ifuncs}}
 llvm.mlir.ifunc common @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo dso_local

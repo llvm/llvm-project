@@ -4,7 +4,6 @@
 ---
 name:            insertelement_nxv1i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i1_0
@@ -25,7 +24,6 @@ body:             |
 ---
 name:            insertelement_nxv1i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i1_1
@@ -46,7 +44,6 @@ body:             |
 ---
 name:            insertelement_nxv1i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -76,7 +73,6 @@ body:             |
 ---
 name:            insertelement_nxv2i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i1_0
@@ -97,7 +93,6 @@ body:             |
 ---
 name:            insertelement_nxv2i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i1_1
@@ -118,7 +113,6 @@ body:             |
 ---
 name:            insertelement_nxv2i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -148,7 +142,6 @@ body:             |
 ---
 name:            insertelement_nxv4i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i1_0
@@ -169,7 +162,6 @@ body:             |
 ---
 name:            insertelement_nxv4i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i1_1
@@ -190,7 +182,6 @@ body:             |
 ---
 name:            insertelement_nxv4i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -216,7 +207,6 @@ body:             |
 ---
 name:            insertelement_nxv8i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i1_0
@@ -237,7 +227,6 @@ body:             |
 ---
 name:            insertelement_nxv8i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i1_1
@@ -258,7 +247,6 @@ body:             |
 ---
 name:            insertelement_nxv8i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -288,7 +276,6 @@ body:             |
 ---
 name:            insertelement_nxv16i1_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i1_0
@@ -309,7 +296,6 @@ body:             |
 ---
 name:            insertelement_nxv16i1_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i1_1
@@ -330,7 +316,6 @@ body:             |
 ---
 name:            insertelement_nxv16i1_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -360,7 +345,6 @@ body:             |
 ---
 name:            insertelement_nxv4i1_3
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v0, $x10
@@ -386,7 +370,6 @@ body:             |
 ---
 name:            insertelement_nxv1i8_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i8_0
@@ -407,7 +390,6 @@ body:             |
 ---
 name:            insertelement_nxv1i8_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i8_1
@@ -428,7 +410,6 @@ body:             |
 ---
 name:            insertelement_nxv1i8_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -454,7 +435,6 @@ body:             |
 ---
 name:            insertelement_nxv2i8_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i8_0
@@ -475,7 +455,6 @@ body:             |
 ---
 name:            insertelement_nxv2i8_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i8_1
@@ -496,7 +475,6 @@ body:             |
 ---
 name:            insertelement_nxv2i8_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -522,7 +500,6 @@ body:             |
 ---
 name:            insertelement_nxv4i8_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i8_0
@@ -543,7 +520,6 @@ body:             |
 ---
 name:            insertelement_nxv4i8_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i8_1
@@ -564,7 +540,6 @@ body:             |
 ---
 name:            insertelement_nxv4i8_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -590,7 +565,6 @@ body:             |
 ---
 name:            insertelement_nxv8i8_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i8_0
@@ -611,7 +585,6 @@ body:             |
 ---
 name:            insertelement_nxv8i8_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i8_1
@@ -632,7 +605,6 @@ body:             |
 ---
 name:            insertelement_nxv8i8_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -658,7 +630,6 @@ body:             |
 ---
 name:            insertelement_nxv16i8_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i8_0
@@ -679,7 +650,6 @@ body:             |
 ---
 name:            insertelement_nxv16i8_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i8_1
@@ -700,7 +670,6 @@ body:             |
 ---
 name:            insertelement_nxv16i8_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -726,7 +695,6 @@ body:             |
 ---
 name:            insertelement_nxv4i8_3
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8, $x10
@@ -752,7 +720,6 @@ body:             |
 ---
 name:            insertelement_nxv1i16_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i16_0
@@ -773,7 +740,6 @@ body:             |
 ---
 name:            insertelement_nxv1i16_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i16_1
@@ -794,7 +760,6 @@ body:             |
 ---
 name:            insertelement_nxv1i16_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -820,7 +785,6 @@ body:             |
 ---
 name:            insertelement_nxv2i16_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i16_0
@@ -841,7 +805,6 @@ body:             |
 ---
 name:            insertelement_nxv2i16_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i16_1
@@ -862,7 +825,6 @@ body:             |
 ---
 name:            insertelement_nxv2i16_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -888,7 +850,6 @@ body:             |
 ---
 name:            insertelement_nxv4i16_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i16_0
@@ -909,7 +870,6 @@ body:             |
 ---
 name:            insertelement_nxv4i16_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i16_1
@@ -930,7 +890,6 @@ body:             |
 ---
 name:            insertelement_nxv4i16_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -956,7 +915,6 @@ body:             |
 ---
 name:            insertelement_nxv8i16_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i16_0
@@ -977,7 +935,6 @@ body:             |
 ---
 name:            insertelement_nxv8i16_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i16_1
@@ -998,7 +955,6 @@ body:             |
 ---
 name:            insertelement_nxv8i16_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1024,7 +980,6 @@ body:             |
 ---
 name:            insertelement_nxv16i16_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i16_0
@@ -1045,7 +1000,6 @@ body:             |
 ---
 name:            insertelement_nxv16i16_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i16_1
@@ -1066,7 +1020,6 @@ body:             |
 ---
 name:            insertelement_nxv16i16_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1092,7 +1045,6 @@ body:             |
 ---
 name:            insertelement_nxv4i16
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8, $x10
@@ -1118,7 +1070,6 @@ body:             |
 ---
 name:            insertelement_nxv1i32_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i32_0
@@ -1139,7 +1090,6 @@ body:             |
 ---
 name:            insertelement_nxv1i32_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i32_1
@@ -1160,7 +1110,6 @@ body:             |
 ---
 name:            insertelement_nxv1i32_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1186,7 +1135,6 @@ body:             |
 ---
 name:            insertelement_nxv2i32_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i32_0
@@ -1207,7 +1155,6 @@ body:             |
 ---
 name:            insertelement_nxv2i32_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i32_1
@@ -1228,7 +1175,6 @@ body:             |
 ---
 name:            insertelement_nxv2i32_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1254,7 +1200,6 @@ body:             |
 ---
 name:            insertelement_nxv4i32_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i32_0
@@ -1275,7 +1220,6 @@ body:             |
 ---
 name:            insertelement_nxv4i32_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i32_1
@@ -1296,7 +1240,6 @@ body:             |
 ---
 name:            insertelement_nxv4i32_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1322,7 +1265,6 @@ body:             |
 ---
 name:            insertelement_nxv8i32_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i32_0
@@ -1343,7 +1285,6 @@ body:             |
 ---
 name:            insertelement_nxv8i32_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i32_1
@@ -1364,7 +1305,6 @@ body:             |
 ---
 name:            insertelement_nxv8i32_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1390,7 +1330,6 @@ body:             |
 ---
 name:            insertelement_nxv16i32_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i32_0
@@ -1411,7 +1350,6 @@ body:             |
 ---
 name:            insertelement_nxv16i32_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv16i32_1
@@ -1432,7 +1370,6 @@ body:             |
 ---
 name:            insertelement_nxv16i32_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1458,7 +1395,6 @@ body:             |
 ---
 name:            insertelement_nxv4i32
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $v8m2
@@ -1484,7 +1420,6 @@ body:             |
 ---
 name:            insertelement_nxv1i64_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i64_0
@@ -1502,7 +1437,6 @@ body:             |
 ---
 name:            insertelement_nxv1i64_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv1i64_1
@@ -1522,7 +1456,6 @@ body:             |
 ---
 name:            insertelement_nxv1i64_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1546,7 +1479,6 @@ body:             |
 ---
 name:            insertelement_nxv2i64_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i64_0
@@ -1564,7 +1496,6 @@ body:             |
 ---
 name:            insertelement_nxv2i64_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv2i64_1
@@ -1584,7 +1515,6 @@ body:             |
 ---
 name:            insertelement_nxv2i64_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1608,7 +1538,6 @@ body:             |
 ---
 name:            insertelement_nxv4i64_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i64_0
@@ -1626,7 +1555,6 @@ body:             |
 ---
 name:            insertelement_nxv4i64_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv4i64_1
@@ -1646,7 +1574,6 @@ body:             |
 ---
 name:            insertelement_nxv4i64_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1670,7 +1597,6 @@ body:             |
 ---
 name:            insertelement_nxv8i64_0
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i64_0
@@ -1688,7 +1614,6 @@ body:             |
 ---
 name:            insertelement_nxv8i64_1
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: insertelement_nxv8i64_1
@@ -1708,7 +1633,6 @@ body:             |
 ---
 name:            insertelement_nxv8i64_2
 legalized:       false
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10

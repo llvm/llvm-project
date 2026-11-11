@@ -1135,11 +1135,11 @@ define void @btc_predicate_added_multiple_times(ptr %dst, i64 %stride, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
@@ -1168,16 +1168,47 @@ define void @btc_predicate_added_multiple_times(ptr %dst, i64 %stride, i64 %n) {
 ; THRESHOLD1-LABEL: define void @btc_predicate_added_multiple_times(
 ; THRESHOLD1-SAME: ptr [[DST:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; THRESHOLD1-NEXT:  [[ENTRY:.*]]:
+; THRESHOLD1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[STRIDE]])
+; THRESHOLD1-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[STRIDE]]
+; THRESHOLD1-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 1)
+; THRESHOLD1-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], [[TMP2]]
+; THRESHOLD1-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umax.i64(i64 [[STRIDE]], i64 1)
+; THRESHOLD1-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP3]], [[TMP4]]
+; THRESHOLD1-NEXT:    [[TMP6:%.*]] = add i64 [[TMP2]], [[TMP5]]
+; THRESHOLD1-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 1
+; THRESHOLD1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP7]], 4
+; THRESHOLD1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; THRESHOLD1:       [[VECTOR_SCEVCHECK]]:
+; THRESHOLD1-NEXT:    [[IDENT_CHECK:%.*]] = icmp sle i64 [[STRIDE]], 0
+; THRESHOLD1-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; THRESHOLD1:       [[VECTOR_PH]]:
+; THRESHOLD1-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 3
+; THRESHOLD1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP7]], [[TMP8]]
+; THRESHOLD1-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], [[STRIDE]]
+; THRESHOLD1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; THRESHOLD1:       [[VECTOR_BODY]]:
+; THRESHOLD1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; THRESHOLD1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; THRESHOLD1-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP10]], align 4
+; THRESHOLD1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; THRESHOLD1-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; THRESHOLD1-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; THRESHOLD1:       [[MIDDLE_BLOCK]]:
+; THRESHOLD1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP7]], [[N_VEC]]
+; THRESHOLD1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; THRESHOLD1:       [[SCALAR_PH]]:
+; THRESHOLD1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; THRESHOLD1-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; THRESHOLD1-NEXT:    br label %[[LOOP:.*]]
 ; THRESHOLD1:       [[LOOP]]:
-; THRESHOLD1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; THRESHOLD1-NEXT:    [[IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IDX_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD1-NEXT:    [[IDX:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IDX_NEXT:%.*]], %[[LOOP]] ]
 ; THRESHOLD1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IDX]]
 ; THRESHOLD1-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; THRESHOLD1-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
 ; THRESHOLD1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], [[STRIDE]]
 ; THRESHOLD1-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; THRESHOLD1-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; THRESHOLD1-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ; THRESHOLD1:       [[EXIT]]:
 ; THRESHOLD1-NEXT:    ret void
 ;

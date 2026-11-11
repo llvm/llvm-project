@@ -1,5 +1,9 @@
 // Due to chmod
 // UNSUPPORTED: system-windows
+// On macOS CI, running the fake arch tools can take longer than
+// CLANG_TOOLCHAIN_PROGRAM_TIMEOUT, see
+// https://github.com/llvm/llvm-project/issues/238903.
+// UNSUPPORTED: system-darwin
 
 // RUN: mkdir -p %t
 // RUN: rm -f %t/amdgpu_arch_fail %t/amdgpu_arch_different

@@ -1989,6 +1989,26 @@ def truncusatu_to_fptouisat : GICombineRule<
 
 def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, truncusatu_to_fptouisat]>;
 
+// Fold (fptoui (ffloor x)) -> (fptoui x). Flooring agrees with truncation for
+// non-negative inputs. Negative inputs floor to at most -1, which makes the
+// original conversion poison.
+def fptoui_ffloor_fold : GICombineRule<
+  (defs root:$dst),
+  (match (G_FFLOOR $floor, $x),
+         (G_FPTOUI $dst, $floor)),
+  (apply (G_FPTOUI $dst, $x))>;
+
+// Fold (fptoui_sat (ffloor x)) -> (fptoui_sat x). Both forms saturate negative
+// inputs and NaN to 0.
+def fptouisat_ffloor_fold : GICombineRule<
+  (defs root:$dst),
+  (match (G_FFLOOR $floor, $x),
+         (G_FPTOUI_SAT $dst, $floor)),
+  (apply (G_FPTOUI_SAT $dst, $x))>;
+
+def fptoui_ffloor_combines : GICombineGroup<[fptoui_ffloor_fold,
+                                             fptouisat_ffloor_fold]>;
+
 // fold (fadd x, fneg(y)) -> (fsub x, y)  (G_FADD is commutative, so both
 //   operand orders are covered by two rules). The swapped-opcode legality
 //   check is inline; flags are carried via MIFlags.
@@ -3240,8 +3260,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines,
-    count_zero_poison_combines, add_shift, sub_one_from_sub,
+    truncsat_combines, fptoui_ffloor_combines, lshr_of_trunc_of_lshr,
+    ctls_combines, count_zero_poison_combines, add_shift, sub_one_from_sub,
     binop_with_neg, sub_minus_one, sub_of_mul_const, max_min_combines,
     avgfloor_u_match, avgfloor_s_match,
     avgceil_u_match, avgceil_s_match, combine_or_of_and]>;
