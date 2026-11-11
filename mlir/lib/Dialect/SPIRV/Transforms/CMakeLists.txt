@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   CanonicalizeGLPass.cpp
   ConvertToReplicatedConstantCompositePass.cpp
   DecorateCompositeTypeLayoutPass.cpp
+  InlinerPass.cpp
   LowerABIAttributesPass.cpp
   RewriteInsertsPass.cpp
   SPIRVConversion.cpp
@@ -33,6 +34,7 @@ add_mlir_dialect_library(MLIRSPIRVTransforms
   CanonicalizeGLPass.cpp
   ConvertToReplicatedConstantCompositePass.cpp
   DecorateCompositeTypeLayoutPass.cpp
+  InlinerPass.cpp
   LowerABIAttributesPass.cpp
   RewriteInsertsPass.cpp
   SPIRVWebGPUTransforms.cpp
@@ -49,4 +51,5 @@ add_mlir_dialect_library(MLIRSPIRVTransforms
   MLIRPass
   MLIRSPIRVConversion
   MLIRSPIRVUtils
+  MLIRTransformUtils
 )

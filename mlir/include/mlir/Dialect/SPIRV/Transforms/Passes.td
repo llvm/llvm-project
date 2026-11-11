@@ -31,6 +31,14 @@ def SPIRVCompositeTypeLayoutPass
   }];
 }
 
+def SPIRVInlinerPass : Pass<"spirv-inline", "spirv::ModuleOp"> {
+  let summary = "Inline function calls, honoring DontInline";
+  let description = [{
+    Inlines calls with the generic inliner, but skips callees that have the
+    `DontInline` function control. No optimization pipeline runs on callables.
+  }];
+}
+
 def SPIRVLowerABIAttributesPass : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
   let summary = "Lower SPIR-V ABI attributes to global variables and entry points";
   let description = [{

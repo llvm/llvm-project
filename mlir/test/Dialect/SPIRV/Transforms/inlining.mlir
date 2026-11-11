@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --split-input-file --pass-pipeline='builtin.module(spirv.module(inline{default-pipeline=''}))' | FileCheck %s
+// RUN: mlir-opt %s --split-input-file --pass-pipeline='builtin.module(spirv.module(spirv-inline))' | FileCheck %s --check-prefixes=CHECK,SPIRV-INLINE
 
 spirv.module Logical GLSL450 {
   spirv.func @callee() "None" {
@@ -272,9 +273,9 @@ spirv.module Logical GLSL450 {
     spirv.Return
   }
 
-  // CHECK-LABEL: @do_not_inline_dont_inline_callee
-  spirv.func @do_not_inline_dont_inline_callee() -> () "None" {
-    // CHECK-NEXT: spirv.FunctionCall @callee() : () -> ()
+  // CHECK-LABEL: @dont_inline_callee
+  spirv.func @dont_inline_callee() -> () "None" {
+    // SPIRV-INLINE-NEXT: spirv.FunctionCall @callee() : () -> ()
     spirv.FunctionCall @callee() : () -> ()
     // CHECK-NEXT: spirv.Return
     spirv.Return

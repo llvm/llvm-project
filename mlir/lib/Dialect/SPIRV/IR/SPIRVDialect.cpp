@@ -60,13 +60,6 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 
-  bool isProfitableToInline(Operation *call, Operation *callable) const final {
-    auto funcOp = dyn_cast<spirv::FuncOp>(callable);
-    return !(funcOp &&
-             spirv::bitEnumContainsAll(funcOp.getFunctionControl(),
-                                       spirv::FunctionControl::DontInline));
-  }
-
   /// Returns true if the given region 'src' can be inlined into the region
   /// 'dest' that is attached to an operation registered to the current dialect.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,

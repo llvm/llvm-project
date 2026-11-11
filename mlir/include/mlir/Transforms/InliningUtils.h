@@ -67,7 +67,6 @@ public:
                                IRMapping &valueMapping) const;
   virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
                                IRMapping &valueMapping) const;
-  virtual bool isProfitableToInline(Operation *call, Operation *callable) const;
   virtual bool shouldAnalyzeRecursively(Operation *op) const;
 
   //===--------------------------------------------------------------------===//

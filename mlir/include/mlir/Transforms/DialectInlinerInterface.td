@@ -64,17 +64,6 @@ def DialectInlinerInterface : DialectInterface<"DialectInlinerInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Returns true if inlining 'callable' into 'call', which is registered to
-        the current dialect, is profitable. Unlike 'isLegalToInline', this is
-        only a hint consulted by the inliner pass.
-      }],
-      "bool", "isProfitableToInline",
-      (ins "::mlir::Operation *":$call, "::mlir::Operation *":$callable),
-      [{
-        return true;
-      }]
-    >,
-    InterfaceMethod<[{
         This hook is invoked on an operation that contains regions. It should
         return true if the analyzer should recurse within the regions of this
         operation when computing legality and cost, false otherwise. The default
