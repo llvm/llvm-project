@@ -23,7 +23,7 @@ class BackendDiagnosticConsumer;
 class CodeGenOptions;
 class CompilerInstance;
 class LangOptions;
-class TargetOptions;
+class TargetInfo;
 
 /// Info about a module to link into the module currently being generated.
 /// Shared between the classic clang CodeGen path and the ClangIR path.
@@ -50,13 +50,13 @@ bool loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
 bool linkInModules(llvm::Module &M,
                    llvm::SmallVectorImpl<LinkModule> &LinkModules,
                    const CodeGenOptions &CodeGenOpts,
-                   const LangOptions &LangOpts, const TargetOptions &TargetOpts,
+                   const LangOptions &LangOpts, const TargetInfo &Target,
                    BackendDiagnosticConsumer &DiagConsumer);
 
 namespace CodeGen {
-/// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
-/// though we had emitted it ourselves. We remove any attributes on F that
-/// conflict with the attributes we add here.
+/// Adds attributes to \p F according to our \p CodeGenOpts, \p LangOpts and
+/// \p Target, as though we had emitted it ourselves. We remove any attributes
+/// on F that conflict with the attributes we add here.
 ///
 /// This is useful for adding attrs to bitcode modules that you want to link
 /// with but don't control, such as CUDA's libdevice.  When linking with such
@@ -74,7 +74,7 @@ namespace CodeGen {
 void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
                                               const CodeGenOptions &CodeGenOpts,
                                               const LangOptions &LangOpts,
-                                              const TargetOptions &TargetOpts,
+                                              const TargetInfo &Target,
                                               bool WillInternalize);
 } // namespace CodeGen
 

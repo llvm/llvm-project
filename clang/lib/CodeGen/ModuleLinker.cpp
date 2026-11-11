@@ -58,8 +58,7 @@ bool clang::loadLinkModules(CompilerInstance &CI, llvm::LLVMContext &Ctx,
 bool clang::linkInModules(llvm::Module &M,
                           llvm::SmallVectorImpl<LinkModule> &LinkModules,
                           const CodeGenOptions &CodeGenOpts,
-                          const LangOptions &LangOpts,
-                          const TargetOptions &TargetOpts,
+                          const LangOptions &LangOpts, const TargetInfo &Target,
                           BackendDiagnosticConsumer &DiagConsumer) {
   for (LinkModule &LM : LinkModules) {
     assert(LM.Module && "LinkModule does not actually have a module");
@@ -71,7 +70,7 @@ bool clang::linkInModules(llvm::Module &M,
         if (F.isIntrinsic())
           continue;
         CodeGen::mergeDefaultFunctionDefinitionAttributes(
-            F, CodeGenOpts, LangOpts, TargetOpts, LM.Internalize);
+            F, CodeGenOpts, LangOpts, Target, LM.Internalize);
       }
 
     DiagConsumer.setCurLinkModule(LM.Module.get());

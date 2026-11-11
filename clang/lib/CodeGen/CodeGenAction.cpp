@@ -180,7 +180,7 @@ bool BackendConsumer::LinkInModules(llvm::Module *M) {
                       /*OnlyInternalized=*/true))
     return true;
 
-  return linkInModules(*M, LinkModules, CodeGenOpts, LangOpts, TargetOpts,
+  return linkInModules(*M, LinkModules, CodeGenOpts, LangOpts, CI.getTarget(),
                        DiagConsumer);
 }
 

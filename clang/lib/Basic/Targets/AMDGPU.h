@@ -492,6 +492,13 @@ public:
 
   bool hasHIPImageSupport() const override { return HasImage; }
 
+  // Builtin bitcode must not enable images on processors without them.
+  bool overridesBuiltinBitcodeFeature(StringRef Feature) const override {
+    return getTriple().isAMDGCN() && GPUKind != llvm::AMDGPU::GK_NONE &&
+           !HasImage &&
+           (Feature == "image-insts" || Feature == "extended-image-insts");
+  }
+
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     // This is imprecise as the value can vary between 64, 128 (even 256!) bytes
     // depending on the level of cache and the target architecture. We select

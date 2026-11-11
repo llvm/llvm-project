@@ -1315,6 +1315,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
 
+- When linking device libraries (for example, ROCm device-libs) with
+  `-mlink-builtin-bitcode`, Clang no longer enables `image-insts` or
+  `extended-image-insts` on AMDGCN processors without image instructions, such
+  as gfx942, gfx950 and gfx1250. Image operations from these libraries are now
+  diagnosed instead of crashing the compiler or producing invalid code.
+
 #### BPF Support
 
 - Added `-mcpu=v5` and the `__BPF_FEATURE_HMUL` predefined macro for unsigned

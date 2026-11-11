@@ -2488,27 +2488,28 @@ static void getTrivialDefaultFunctionAttributes(
   }
 }
 
-/// Merges `target-features` from \TargetOpts and \F, and sets the result in
-/// \FuncAttr
-/// * features from \F are always kept
-/// * a feature from \TargetOpts is kept if itself and its opposite are absent
-/// from \F
+/// Merge `target-features` from \p Target and \p F into \p FuncAttr.
+/// Keep function features that the target does not override, then add target
+/// features whose names are absent from the retained function features.
 static void
 overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
                                            const llvm::Function &F,
-                                           const TargetOptions &TargetOpts) {
+                                           const TargetInfo &Target) {
+  const TargetOptions &TargetOpts = Target.getTargetOpts();
   auto FFeatures = F.getFnAttribute("target-features");
 
   llvm::StringSet<> MergedNames;
   SmallVector<StringRef> MergedFeatures;
   MergedFeatures.reserve(TargetOpts.Features.size());
 
-  auto AddUnmergedFeatures = [&](auto &&FeatureRange) {
+  auto AddUnmergedFeatures = [&](auto &&FeatureRange, bool FromFunction) {
     for (StringRef Feature : FeatureRange) {
       if (Feature.empty())
         continue;
       assert(Feature[0] == '+' || Feature[0] == '-');
       StringRef Name = Feature.drop_front(1);
+      if (FromFunction && Target.overridesBuiltinBitcodeFeature(Name))
+        continue;
       bool Merged = !MergedNames.insert(Name).second;
       if (!Merged)
         MergedFeatures.push_back(Feature);
@@ -2516,8 +2517,9 @@ overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
   };
 
   if (FFeatures.isValid())
-    AddUnmergedFeatures(llvm::split(FFeatures.getValueAsString(), ','));
-  AddUnmergedFeatures(TargetOpts.Features);
+    AddUnmergedFeatures(llvm::split(FFeatures.getValueAsString(), ','),
+                        /*FromFunction=*/true);
+  AddUnmergedFeatures(TargetOpts.Features, /*FromFunction=*/false);
 
   if (!MergedFeatures.empty()) {
     llvm::sort(MergedFeatures);
@@ -2527,8 +2529,9 @@ overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
 
 void CodeGen::mergeDefaultFunctionDefinitionAttributes(
     llvm::Function &F, const CodeGenOptions &CodeGenOpts,
-    const LangOptions &LangOpts, const TargetOptions &TargetOpts,
+    const LangOptions &LangOpts, const TargetInfo &Target,
     bool WillInternalize) {
+  const TargetOptions &TargetOpts = Target.getTargetOpts();
 
   llvm::AttrBuilder FuncAttrs(F.getContext());
   // Here we only extract the options that are relevant compared to the version
@@ -2567,7 +2570,7 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
 
   F.removeFnAttrs(AttrsToRemove);
 
-  overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, TargetOpts);
+  overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, Target);
 
   F.addFnAttrs(FuncAttrs);
 }

@@ -1591,6 +1591,12 @@ public:
     return ReadOnlyFeatures.count(Feature);
   }
 
+  /// Determine whether the target's value of the given feature overrides the
+  /// one requested by builtin bitcode linked with -mlink-builtin-bitcode.
+  virtual bool overridesBuiltinBitcodeFeature(StringRef Feature) const {
+    return false;
+  }
+
   /// Identify whether this target supports multiversioning of functions,
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {

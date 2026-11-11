@@ -192,7 +192,7 @@ static void emitCIRModuleOutput(
       AddFunctionSourceLocations(*LLVMModule);
 
     if (linkInModules(*LLVMModule, LinkModules, CGO, CI.getLangOpts(),
-                      CI.getTargetOpts(), DiagConsumer))
+                      CI.getTarget(), DiagConsumer))
       return;
 
     const LangOptions &LangOpts = CI.getLangOpts();
