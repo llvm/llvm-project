@@ -16,6 +16,7 @@ directories:
      - hdr
      - include
      - lib
+     - shared
      - src
      - startup
      - test
@@ -67,8 +68,9 @@ in fullbuild or overlay mode.
 
 The `include` directory contains:
 
-1. `*.h.def` files - These files are used to construct the generated public
-   header files.
+1. `*.yaml` files - These describe the contents of each public header. The
+   public headers are generated from them; see {ref}`header_generation`. A
+   few headers also have a `*.h.def` template file.
 2. Self contained public header files - These are header files which are
    already in the form that get installed when LLVM-libc is installed on a
    user's computer. These are mostly in the `llvm-libc-macros` and
@@ -78,6 +80,12 @@ The `include` directory contains:
 
 This directory contains a `CMakeLists.txt` file listing the targets for the
 public libraries `libc.a`, `libm.a` etc.
+
+## The `shared` directory
+
+This directory contains the headers through which other LLVM projects use
+LLVM-libc's internal code. See {ref}`hand_in_hand`, and
+{ref}`code_organization` for the constraints on code exposed this way.
 
 ## The `src` directory
 
@@ -92,6 +100,8 @@ more details on what an entrypoint is and how it is implemented, see the
    corresponding to the public `math.h` header file is named `math`. The
    implementation standard document explains more about the *header*
    directories.
+3. The `__support` directory contains internal code shared across the
+   library. {ref}`code_organization` explains what belongs there.
 
 ## The `startup` directory
 

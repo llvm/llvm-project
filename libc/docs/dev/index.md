@@ -9,6 +9,10 @@ Navigate to the links below for information on the respective topics:
 
 building_docs
 code_style
+code_organization
+implementation_guidelines
+patterns_to_avoid
+testing_guide
 source_tree_layout
 entrypoints
 implementing_a_function

@@ -8,38 +8,43 @@ The libc can be built and tested in two different modes:
 
 1. **The overlay mode** - In this mode, one uses the static archive from LLVM's
    libc along with the system libc. See {ref}`overlay_mode` for more details
-   on building and using the libc in this mode. You can only run the libc
-   unittests in this mode. To run them, one simply does:
+   on building and using the libc in this mode. To run the tests, one simply
+   does:
 
    ```sh
    $> ninja check-libc
    ```
 
-   Note that, unittests for only those functions which are part of the overlay
+   Note that, tests for only those functions which are part of the overlay
    static archive will be run with the above command.
 
 2. **The full build mode** - In this mode, the libc is used as the only libc
    for the user's application. See {ref}`full_host_build` for more details on
    building and using the libc in this mode. Once configured for a full libc
-   build, you can run three kinds of tests:
+   build, the same command builds the tests against LLVM-libc's own headers
+   and startup code and runs them:
 
-   1. Unit tests - You can run unittests by the command:
+   ```sh
+   $> ninja check-libc
+   ```
 
-      ```sh
-      $> ninja check-libc
-      ```
+   Subsets of the tests have their own targets:
 
-   2. Integration tests - You can run integration tests by the command:
+   1. Integration tests - You can run integration tests by the command:
 
       ```sh
       $> ninja libc-integration-tests
       ```
 
-   3. Shared tests - You can run tests for shared, standalone components (like math primitives) without needing the full libc runtime by the command:
+   2. Shared tests - You can run tests for shared, standalone components (like math primitives) without needing the full libc runtime by the command:
 
       ```sh
       $> ninja libc-shared-tests
       ```
+
+A change should be tested in both modes. See {ref}`testing_guide` for the
+kinds of tests, how to run a single test, and how to confirm that a test was
+not silently skipped.
 
 ## Building with VSCode
 

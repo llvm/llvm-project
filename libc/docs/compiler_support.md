@@ -17,3 +17,9 @@ is required it is possible to bootstrap `Clang` with `GCC` and then use
 
 - `Clang 11`
 - `GCC 12.2`
+
+Code that is shared with other LLVM projects through
+{ref}`Hand-in-Hand <hand_in_hand>` is compiled as part of those projects, so
+it must also build with the
+[host compilers LLVM supports](https://llvm.org/docs/GettingStarted.html#host-c-toolchain-both-compiler-and-standard-library),
+which are older.

@@ -87,8 +87,11 @@ add_entrypoint_object(
 For redirecting entrypoints (e.g., when one function is a simple alias for
 another), the `REDIRECTED` option can be specified to the rule.
 
-Entrypoint objects are generally forbidden from depending on other entrypoint
-objects. The single allowed exception is `libc.src.errno.errno`: entrypoints
+Entrypoint objects are forbidden from depending on other entrypoint objects;
+see {ref}`code_organization` for what to do instead. The allowed exceptions
+are listed in `check_entrypoint_deps` in
+`libc/cmake/modules/LLVMLibCObjectRules.cmake`. The one that matters in
+practice is `libc.src.errno.errno`: entrypoints
 that read or set `errno` should declare both `libc.src.__support.libc_errno`
 (the internal header) and `libc.src.errno.errno` (the compiled runtime storage)
 in their `DEPENDS` list. See {ref}`setting_errno` for detailed rules.
@@ -112,5 +115,13 @@ determined by `entrypoints.txt` files located in the `libc/config` tree.
 
 If you are implementing a new entrypoint, you must add its target name to the
 relevant `entrypoints.txt` files for it to be included in the library build.
-For more details on platform configuration, see the {ref}`porting` guide.
+See {ref}`code_organization` for which files those are, and the {ref}`porting`
+guide for more details on platform configuration.
+
+### Experimental entrypoints
+
+Entrypoints whose implementations are known to be incomplete are listed inside
+an `if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)` block in `entrypoints.txt`.
+The option is off by default. See {ref}`extensions_and_stubs` for when an
+entrypoint belongs there and when it can leave.
 

@@ -100,6 +100,8 @@ compiler_support
 :maxdepth: 1
 
 contributing
+design_philosophy
+abi_policy
 build_and_test
 dev/index
 math/index
