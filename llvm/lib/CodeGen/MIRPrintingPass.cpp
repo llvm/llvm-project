@@ -20,21 +20,12 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
-PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
-  M.renumberMetadataForAssembly();
-  printMIR(OS, M);
-  return PreservedAnalyses::all();
-}
-
-PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &MFAM) {
-  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
-                  .getManager();
-
+void PrintMIRPass::printMachineFunction(MachineFunction &MF,
+                                        FunctionAnalysisManager &FAM,
+                                        MachineFunctionAnalysisManager &MFAM) {
   const VirtRegMap *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
   MachineModuleSlotTracker MST(
       [&](const Function &F) {
@@ -45,6 +36,20 @@ PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
       &MF);
   MST.renumberMetadataForAssembly();
   printMIR(OS, FAM, MF, VRM);
+}
+
+PreservedAnalyses PrintMIRPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  M.renumberMetadataForAssembly();
+  printMIR(OS, M);
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
+      continue;
+    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
+    auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(F)
+                     .getManager();
+    printMachineFunction(MF, FAM, MFAM);
+  }
   return PreservedAnalyses::all();
 }
 

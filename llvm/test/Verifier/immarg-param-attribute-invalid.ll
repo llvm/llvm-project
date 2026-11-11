@@ -1,5 +1,5 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as -use-constant-int-for-fixed-length-splat < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
+; RUN: not llvm-as -use-constant-int-for-fixed-length-splat < %s -disable-output 2>&1 | FileCheck %s
 
 declare void @llvm.test.immarg.intrinsic.i32(i32 immarg)
 declare void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> immarg)

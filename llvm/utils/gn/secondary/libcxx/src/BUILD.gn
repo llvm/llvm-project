@@ -231,9 +231,6 @@ if (libcxx_enable_filesystem) {
 if (false) {
   cxx_sources += [ "pstl/libdispatch.cpp" ]
 }
-if (false) {
-  cxx_sources += [ "pstl/statpart.cpp" ]
-}
 
 if (libcxx_enable_shared) {
   shared_library("cxx_shared") {
@@ -326,6 +323,7 @@ if (libcxx_enable_experimental) {
     sources = [
       "experimental/keep.cpp",
       "experimental/log_hardening_failure.cpp",
+      "pstl/statpart.cpp",
     ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [

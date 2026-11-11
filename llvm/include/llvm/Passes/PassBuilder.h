@@ -42,70 +42,61 @@ namespace cl {
 class LibraryOptionsContext;
 } // namespace cl
 
-/// Tunable parameters for passes in the default pipelines.
+/// Tunable parameters for passes in the default pipelines. An unset optional
+/// member takes the value of its library option in the PassBuilder's
+/// LLVMContext.
 class PipelineTuningOptions {
 public:
-  /// Constructor sets pipeline tuning defaults based on the global values of
-  /// the library options. Each option can be set in the PassBuilder when using
-  /// a LLVM as a library.
-  PipelineTuningOptions() : PipelineTuningOptions(nullptr) {}
-
-  /// Reads the defaults from \p LibraryOptions, or their global values if
-  /// null.
-  LLVM_ABI explicit PipelineTuningOptions(
-      const cl::LibraryOptionsContext *LibraryOptions);
+  /// Return a copy whose unset members are set from \p LibraryOptions.
+  [[nodiscard]] LLVM_ABI PipelineTuningOptions
+  resolve(const cl::LibraryOptionsContext &LibraryOptions) const;
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
-  bool LoopInterleaving;
+  bool LoopInterleaving = true;
 
   /// Tuning option to enable/disable loop vectorization, set based on opt
   /// level.
-  bool LoopVectorization;
+  bool LoopVectorization = true;
 
   /// Tuning option to enable/disable slp loop vectorization, set based on opt
   /// level.
-  bool SLPVectorization;
+  bool SLPVectorization = false;
 
-  /// Tuning option to enable/disable loop unrolling. Its default value is true.
-  bool LoopUnrolling;
+  /// Tuning option to enable/disable loop unrolling.
+  bool LoopUnrolling = true;
 
-  /// Tuning option to enable/disable loop interchange. Its default value is
-  /// false.
-  bool LoopInterchange;
+  /// Tuning option to enable/disable loop interchange.
+  std::optional<bool> LoopInterchange;
 
-  /// Tuning option to enable/disable loop fusion. Its default value is false.
-  bool LoopFusion;
+  /// Tuning option to enable/disable loop fusion.
+  bool LoopFusion = false;
 
-  /// Tuning option to forget all SCEV loops in LoopUnroll. Its default value
-  /// is that of the flag: `-forget-scev-loop-unroll`.
-  bool ForgetAllSCEVInLoopUnroll;
+  /// Tuning option to forget all SCEV loops in LoopUnroll.
+  std::optional<bool> ForgetAllSCEVInLoopUnroll;
 
   /// Tuning option to cap the number of calls to retrive clobbering accesses in
   /// MemorySSA, in LICM.
-  unsigned LicmMssaOptCap;
+  std::optional<unsigned> LicmMssaOptCap;
 
   /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
   /// the number of access is too large.
-  unsigned LicmMssaNoAccForPromotionCap;
+  std::optional<unsigned> LicmMssaNoAccForPromotionCap;
 
-  /// Tuning option to enable/disable call graph profile. Its default value is
-  /// that of the flag: `-enable-npm-call-graph-profile`.
-  bool CallGraphProfile;
+  /// Tuning option to enable/disable call graph profile.
+  bool CallGraphProfile = true;
 
   // Add LTO pipeline tuning option to enable the unified LTO pipeline.
-  bool UnifiedLTO;
+  bool UnifiedLTO = false;
 
-  /// Tuning option to enable/disable function merging. Its default value is
-  /// false.
-  bool MergeFunctions;
+  /// Tuning option to enable/disable function merging.
+  std::optional<bool> MergeFunctions;
 
   /// Tuning option to override the default inliner threshold.
-  int InlinerThreshold;
+  int InlinerThreshold = -1;
 
   /// Tuning option to cap how many times the inliner pipeline reruns on an SCC
-  /// after devirtualizing a call. Its default value is that of the flag:
-  /// `-max-devirt-iterations`.
-  unsigned MaxDevirtIterations;
+  /// after devirtualizing a call.
+  std::optional<unsigned> MaxDevirtIterations;
 
   // Experimental option to eagerly invalidate more analyses. This has the
   // potential to decrease max memory usage in exchange for more compile time.
@@ -114,11 +105,10 @@ public:
   // stale/imprecise but still valid. Currently this invalidates all function
   // analyses after various module->function or cgscc->function adaptors in the
   // default pipelines.
-  bool EagerlyInvalidateAnalyses;
+  std::optional<bool> EagerlyInvalidateAnalyses;
 
   // Tuning option to enable/disable speculative devirtualization.
-  // Its default value is false.
-  bool DevirtualizeSpeculatively;
+  std::optional<bool> DevirtualizeSpeculatively;
 };
 
 enum class PrintPipelinePassesFormat {
@@ -156,8 +146,8 @@ public:
   };
 
   /// The pipelines read the library options of \p Context, which must outlive
-  /// the PassBuilder. If \p PTO is not given, it reads its defaults from
-  /// \p Context.
+  /// the PassBuilder. Unset members of \p PTO, or all of them if \p PTO is not
+  /// given, are set from \p Context.
   LLVM_ABI explicit PassBuilder(
       LLVMContext &Context, TargetMachine *TM = nullptr,
       std::optional<PipelineTuningOptions> PTO = std::nullopt,

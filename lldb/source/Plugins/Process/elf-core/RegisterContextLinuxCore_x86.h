@@ -10,9 +10,9 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTLINUXCORE_X86_H
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
-#include "RegisterContextPOSIXCore_x86.h"
+#include "RegisterContextELFCore_x86.h"
 
-class RegisterContextLinuxCore_x86 : public RegisterContextCorePOSIX_x86 {
+class RegisterContextLinuxCore_x86 : public RegisterContextELFCore_x86 {
 public:
   RegisterContextLinuxCore_x86(
       lldb_private::Thread &thread,

@@ -540,30 +540,15 @@ bool AreSameDerivedTypeIgnoringSequence(
     } \
   }
 
-// TODO: The kind used to be part of Type<>, but since the FOR_EACH macros only
-//       expand to a single entry, there is no purpose for these macros anymore.
-#define FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
-  PREFIX<Type<TypeCategory::Integer>> SUFFIX;
-#define FOR_EACH_REAL_KIND(PREFIX, SUFFIX) \
-  PREFIX<Type<TypeCategory::Real>> SUFFIX;
-#define FOR_EACH_COMPLEX_KIND(PREFIX, SUFFIX) \
-  PREFIX<Type<TypeCategory::Complex>> SUFFIX;
-#define FOR_EACH_CHARACTER_KIND(PREFIX, SUFFIX) \
-  PREFIX<Type<TypeCategory::Character>> SUFFIX;
-#define FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
-  PREFIX<Type<TypeCategory::Logical>> SUFFIX;
-#define FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX) \
-  PREFIX<Type<TypeCategory::Unsigned>> SUFFIX;
-
 #define FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_REAL_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_COMPLEX_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Integer>> SUFFIX; \
+  PREFIX<Type<TypeCategory::Real>> SUFFIX; \
+  PREFIX<Type<TypeCategory::Complex>> SUFFIX; \
+  PREFIX<Type<TypeCategory::Logical>> SUFFIX; \
+  PREFIX<Type<TypeCategory::Unsigned>> SUFFIX;
 #define FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_CHARACTER_KIND(PREFIX, SUFFIX)
+  PREFIX<Type<TypeCategory::Character>> SUFFIX;
 #define FOR_EACH_SPECIFIC_TYPE(PREFIX, SUFFIX) \
   FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   PREFIX<SomeDerived> SUFFIX;

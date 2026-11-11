@@ -171,9 +171,9 @@ private:
     };
 
     if (sameElements()) {
-      auto attr =
-          convertToAttribute<TC>(builder, values.front(), attributeElementType);
-      attributes.assign(values.size(), attr);
+      // A one element list makes DenseElementsAttr::get produce a splat.
+      attributes.push_back(convertToAttribute<TC>(builder, values.front(),
+                                                  attributeElementType));
       return;
     }
 

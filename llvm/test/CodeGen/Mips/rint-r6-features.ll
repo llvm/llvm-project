@@ -7,7 +7,7 @@
 ; but double precision must still use a libcall, including for strict rint.
 define float @rint_f32(float %x) {
 ; SOFT-LABEL: rint_f32:
-; SOFT:       balc rintf
+; SOFT:       jal rintf
 ; SINGLE-LABEL: rint_f32:
 ; SINGLE:       rint.s
 ; SINGLE32-LABEL: name: rint_f32
@@ -18,18 +18,18 @@ define float @rint_f32(float %x) {
 
 define double @rint_f64(double %x) {
 ; SOFT-LABEL: rint_f64:
-; SOFT:       balc rint{{$}}
+; SOFT:       jal rint{{$}}
 ; SINGLE-LABEL: rint_f64:
-; SINGLE:       balc rint{{$}}
+; SINGLE:       jal rint{{$}}
 ; SINGLE32-LABEL: name: rint_f64
-; SINGLE32:       JAL_R6 &rint,
+; SINGLE32:       JAL &rint,
   %r = call double @llvm.rint.f64(double %x)
   ret double %r
 }
 
 define float @strict_rint_f32(float %x) strictfp {
 ; SOFT-LABEL: strict_rint_f32:
-; SOFT:       balc rintf
+; SOFT:       jal rintf
 ; SINGLE-LABEL: strict_rint_f32:
 ; SINGLE:       rint.s
 ; SINGLE32-LABEL: name: strict_rint_f32
@@ -40,11 +40,11 @@ define float @strict_rint_f32(float %x) strictfp {
 
 define double @strict_rint_f64(double %x) strictfp {
 ; SOFT-LABEL: strict_rint_f64:
-; SOFT:       balc rint{{$}}
+; SOFT:       jal rint{{$}}
 ; SINGLE-LABEL: strict_rint_f64:
-; SINGLE:       balc rint{{$}}
+; SINGLE:       jal rint{{$}}
 ; SINGLE32-LABEL: name: strict_rint_f64
-; SINGLE32:       JAL_R6 &rint,
+; SINGLE32:       JAL &rint,
   %r = call double @llvm.experimental.constrained.rint.f64(double %x, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %r
 }

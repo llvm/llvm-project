@@ -1859,6 +1859,14 @@ public:
         symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
       }
     }
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      if (const auto *absent{
+              std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+        for (llvm::omp::Directive directive : absent->v.v) {
+          currScope().add_ompAssumesAbsent(directive);
+        }
+      }
+    }
   }
 
   // Make sure that the following code is properly handled:
@@ -3418,6 +3426,12 @@ Symbol &ScopeHandler::MakeHostAssocSymbol(
   // attribute would fail.
   symbol.implicitAttrs() |= hostSymbol.implicitAttrs() & Attrs{Attr::SAVE};
   symbol.flags() = hostSymbol.flags();
+  // Locality is a property of a DO CONCURRENT construct entity and its own
+  // storage; a host-associated name never inherits it (e.g. a VOLATILE
+  // statement in a BLOCK, or a locality-spec in a nested DO CONCURRENT).
+  symbol.flags() &= ~Symbol::Flags{Symbol::Flag::LocalityLocal,
+      Symbol::Flag::LocalityLocalInit, Symbol::Flag::LocalityReduce,
+      Symbol::Flag::LocalityShared};
   return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
@@ -8565,6 +8579,15 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
     prev = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
     ConvertToObjectEntity(*prev);
     ApplyImplicitRules(*prev);
+  } else {
+    // A name in a locality-spec must be a variable (F2023 C1126). An entity
+    // declared in an enclosing BLOCK is not classified as an object or a
+    // procedure until the end of the BLOCK, so classify it now; the locality
+    // checks then diagnose a name that cannot be a variable. A nested BLOCK
+    // can reach the entity through a host-association symbol (for example,
+    // after an ASYNCHRONOUS or VOLATILE statement), so classify the ultimate
+    // entity. The locality checks still use prev, which has those attributes.
+    ConvertToObjectEntity(prev->GetUltimate());
   }
   return *prev;
 }
@@ -11505,6 +11528,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  // Compiler entry points reject recovered parses before name resolution.
+  CHECK(!std::holds_alternative<parser::ErrorRecovery>(x.u));
   if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
           x.u)) {
     // TODO: global directives
@@ -11590,7 +11615,12 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       }
     }
     for (SourceName used : common::visit(
-             [](const auto &indUnit) { return GetUses(indUnit.value()); },
+             common::visitors{
+                 [](const parser::ErrorRecovery &) -> std::set<SourceName> {
+                   // The variant requires this arm, but it must never execute.
+                   DIE("Parser error recovery reached name resolution");
+                 },
+                 [](const auto &indUnit) { return GetUses(indUnit.value()); }},
              progUnit.u)) {
       uses.insert(used);
     }

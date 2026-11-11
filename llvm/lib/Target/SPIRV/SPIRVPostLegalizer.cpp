@@ -157,6 +157,7 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
     case TargetOpcode::G_SHUFFLE_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:

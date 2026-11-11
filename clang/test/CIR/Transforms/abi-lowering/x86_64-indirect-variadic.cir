@@ -30,7 +30,7 @@ module attributes {
   // A one-eightbyte record at the ellipsis coerces to a single integer
   // register and stays out of the callee pointer's function type.
   cir.func @indirect_record(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                            %arg1: !cir.ptr<!s8i>, %arg2: !rec_Pair) {
+                            %arg1: !cir.ptr<!s8i>, %arg2: !rec_Pair) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Pair) -> !s32i
     cir.return
@@ -46,7 +46,7 @@ module attributes {
   // A memory-class record at the ellipsis goes byval, as it does for a direct
   // variadic call.
   cir.func @indirect_big(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                         %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+                         %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
     cir.return
@@ -62,7 +62,7 @@ module attributes {
   // A void return needs no rewrite, but the byval slot for the ellipsis
   // argument still rewrites the call.
   cir.func @indirect_big_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>,
-                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) requires_call_conv_lowering {
     cir.call %arg0(%arg1, %arg2)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>, !rec_Big) -> ()
     cir.return
@@ -78,7 +78,7 @@ module attributes {
   // An integer narrower than int is extended at the ellipsis of an indirect
   // call just as it is for a direct one.
   cir.func @indirect_narrow(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                            %arg1: !cir.ptr<!s8i>, %arg2: !s8i) {
+                            %arg1: !cir.ptr<!s8i>, %arg2: !s8i) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s8i) -> !s32i
     cir.return
@@ -94,7 +94,7 @@ module attributes {
   // An empty record at the ellipsis is dropped, and the argument behind it
   // still stays out of the callee pointer's function type.
   cir.func @indirect_empty(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                           %arg1: !cir.ptr<!s8i>, %arg2: !rec_E0, %arg3: !s32i) {
+                           %arg1: !cir.ptr<!s8i>, %arg2: !rec_E0, %arg3: !s32i) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2, %arg3)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_E0, !s32i) -> !s32i
     cir.return
@@ -110,7 +110,7 @@ module attributes {
   // A two-eightbyte record at the ellipsis of an indirect call flattens to
   // a register per eightbyte, the same as it does for a direct call.
   cir.func @indirect_two_register(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                                  %arg1: !cir.ptr<!s8i>, %arg2: !rec_Two) {
+                                  %arg1: !cir.ptr<!s8i>, %arg2: !rec_Two) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2)
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Two) -> !s32i
     cir.return
@@ -128,7 +128,7 @@ module attributes {
   // The byval record and the Pair passed through the ellipsis stay out of it.
   cir.func @indirect_sret_mixed(%arg0: !cir.ptr<!cir.func<(!rec_Pair, !rec_E0, ...) -> !rec_Big>>,
                                 %arg1: !rec_Pair, %arg2: !rec_E0, %arg3: !rec_Big,
-                                %arg4: !rec_Pair, %arg5: !cir.ptr<!rec_Big>) {
+                                %arg4: !rec_Pair, %arg5: !cir.ptr<!rec_Big>) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2, %arg3, %arg4)
         : (!cir.ptr<!cir.func<(!rec_Pair, !rec_E0, ...) -> !rec_Big>>, !rec_Pair, !rec_E0, !rec_Big, !rec_Pair) -> !rec_Big
     cir.store %0, %arg5 : !rec_Big, !cir.ptr<!rec_Big>
@@ -145,7 +145,7 @@ module attributes {
   // A call through a pointee with no declared parameters passes every argument
   // through the ellipsis, so the callee pointer keeps its type.
   cir.func @indirect_no_declared(%arg0: !cir.ptr<!cir.func<(...) -> !s32i>>,
-                                 %arg1: !rec_Pair, %arg2: !rec_Big) {
+                                 %arg1: !rec_Pair, %arg2: !rec_Big) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2)
         : (!cir.ptr<!cir.func<(...) -> !s32i>>, !rec_Pair, !rec_Big) -> !s32i
     cir.return
@@ -162,7 +162,7 @@ module attributes {
   // caller's storage.  The declared one retypes the callee pointer, and the one
   // passed through the ellipsis stays out of its function type, as does the
   // byval record.
-  cir.func @indirect_noregs(%arg0: !cir.ptr<!cir.func<(!rec_NoRegs, ...)>>, %arg1: !rec_Big) {
+  cir.func @indirect_noregs(%arg0: !cir.ptr<!cir.func<(!rec_NoRegs, ...)>>, %arg1: !rec_Big) requires_call_conv_lowering {
     %0 = cir.alloca "x" align(4) : !cir.ptr<!rec_NoRegs>
     %1 = cir.alloca "y" align(4) : !cir.ptr<!rec_NoRegs>
     %2 = cir.load %0 : !cir.ptr<!rec_NoRegs>, !rec_NoRegs
@@ -185,14 +185,14 @@ module attributes {
   // recorded effects widen to cover it.  A scalar there hands over no memory,
   // and the effects stay as written.
   cir.func @indirect_big_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2) {memory_effects = #none}
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
     cir.return
   }
 
   cir.func @indirect_scalar_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                                 %arg1: !cir.ptr<!s8i>, %arg2: !s32i) {
+                                 %arg1: !cir.ptr<!s8i>, %arg2: !s32i) requires_call_conv_lowering {
     %0 = cir.call %arg0(%arg1, %arg2) {memory_effects = #none}
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
     cir.return

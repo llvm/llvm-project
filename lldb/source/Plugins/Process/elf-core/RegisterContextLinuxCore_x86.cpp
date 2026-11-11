@@ -213,7 +213,7 @@ static const RegisterSet g_reg_sets_x86_64[] = {
 RegisterContextLinuxCore_x86::RegisterContextLinuxCore_x86(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextCorePOSIX_x86(thread, register_info, gpregset, notes) {}
+    : RegisterContextELFCore_x86(thread, register_info, gpregset, notes) {}
 
 const RegisterSet *RegisterContextLinuxCore_x86::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {

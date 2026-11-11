@@ -83,15 +83,24 @@ llvm.func @scope_reduction(%ptr: !llvm.ptr) {
 // Scope with reduction + nowait: nowait suppresses the scope barrier
 // __kmpc_reduce_nowait / __kmpc_end_reduce_nowait emitted
 // CHECK-LABEL: define internal void @scope_reduction_nowait..omp_par
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:       omp.reduction.init:
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:         store float 0.000000e+00, ptr
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:       omp.scope.region:
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:         fadd float
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:       omp_region.finalize:
 // CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:         call i32 @__kmpc_reduce_nowait(
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:       reduce.switch.nonatomic:
+// CHECK-NOT:     call void @__kmpc_barrier(
 // CHECK:         call void @__kmpc_end_reduce_nowait(
+// CHECK-NOT:     call void @__kmpc_barrier(
+// CHECK:       {{^}}}
 
 omp.declare_reduction @add_f32_2 : f32 init {
 ^bb0(%arg0: f32):

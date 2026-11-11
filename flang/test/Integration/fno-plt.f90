@@ -11,9 +11,15 @@
 ! -fno-plt marks an external procedure and a compiler runtime call nonlazybind
 ! and requests GOT for compiler-rt. A procedure defined in this file, and an
 ! intrinsic, are left unchanged. The default does neither.
+!
+! Pin the triple. Some targets, including AIX and powerpc64le, attach an
+! implied attribute group to the define (`#0` before `{`), so a check for
+! `{` immediately after the argument list is not valid there.
 
-! RUN: %flang_fc1 -emit-llvm -fno-plt -o - %s | FileCheck %s --check-prefix=NOPLT
-! RUN: %flang_fc1 -emit-llvm -o - %s | FileCheck %s --check-prefix=PLT
+! REQUIRES: x86-registered-target
+
+! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fno-plt -o - %s | FileCheck %s --check-prefix=NOPLT
+! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=PLT
 
 subroutine test(x)
   real :: x
@@ -22,7 +28,8 @@ subroutine test(x)
   print *, x
 end subroutine
 
-! The '{' on the define line rejects nonlazybind on @test_ itself.
+! With this triple, @test_ has no function attributes. '{' immediately after
+! the argument list rejects nonlazybind on the definition.
 ! NOPLT: define void @test_({{.*}}) {
 ! NOPLT: declare void @ext_() #[[ATTR:[0-9]+]]
 ! NOPLT: declare ptr @_FortranAioBeginExternalListOutput({{.*}}) #[[ATTR]]

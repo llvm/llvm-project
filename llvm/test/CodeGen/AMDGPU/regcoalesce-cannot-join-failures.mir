@@ -33,7 +33,7 @@ body:             |
 
   bb.2:
     dead %2:sreg_32_xm0 = COPY %0.sub0:sreg_64_xexec
-    S_ENDPGM 0, implicit killed %1
+    S_ENDPGM 0, implicit %1
 
 ...
 ---
