@@ -785,7 +785,6 @@ public:
   EXPECT_EQ(Expected, Applied) << "Applied result:\n" << Applied;
 }
 
-
 TEST_F(OverridePureVirtualsTests, QualifiedNames) {
   constexpr auto Before = R"cpp(
 namespace foo { struct S{}; namespace bar { struct S2{}; } }
