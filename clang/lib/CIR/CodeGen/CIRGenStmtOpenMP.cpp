@@ -228,6 +228,7 @@ CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
   LexicalScope ls{*this, begin, builder.getInsertionBlock()};
   mlir::LogicalResult res =
       emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+  ls.forceCleanup();
   mlir::omp::TerminatorOp::create(builder, getLoc(s.getEndLoc()));
   return res;
 }
