@@ -285,41 +285,37 @@ int main(int, char**) {
     using Range = std::array<int, 0>;
 #endif
 
-    types::for_each(types::unsigned_integer_types(), types::apply_type_identity{[](auto id) {
-      using UI = typename decltype(id)::type;
+    types::for_each(
+        types::unsigned_integer_types(), types::apply_type_identity{[](auto id) {
+          using UI = typename decltype(id)::type;
 
-      // (iter, iter, size, alloc)
-      static_assert(
-          SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<UI>, Alloc> ==
-          !std::is_same_v<UI, Alloc::size_type>);
+          // (iter, iter, size, alloc)
+          static_assert(SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<UI>, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
 
-      // (iter, iter, size, hash, alloc)
-      static_assert(
-          SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<UI>, Hash, Alloc> ==
-          !std::is_same_v<UI, Alloc::size_type>);
+          // (iter, iter, size, hash, alloc)
+          static_assert(SFINAEs_away<std::unordered_set, Iter, Iter, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
 
-      // (init_list, size, alloc)
-      static_assert(
-          SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<UI>, Alloc> ==
-          !std::is_same_v<UI, Alloc::size_type>);
+          // (init_list, size, alloc)
+          static_assert(SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<UI>, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
 
-      // (init_list, size, hash, alloc)
-      static_assert(
-          SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<UI>, Hash, Alloc> ==
-          !std::is_same_v<UI, Alloc::size_type>);
+          // (init_list, size, hash, alloc)
+          static_assert(SFINAEs_away<std::unordered_set, InitList, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
 
 #if TEST_STD_VER >= 23
-      // (from_range, range, size, alloc)
-      static_assert(
-          SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
-          !std::is_same_v<UI, Alloc::size_type>);
+          // (from_range, range, size, alloc)
+          static_assert(SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
+                        !std::is_same_v<UI, Alloc::size_type>);
 
-      // (from_range, range, size, hash, alloc)
-      static_assert(
-          SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<UI>, Hash, Alloc> ==
-          !std::is_same_v<UI, Alloc::size_type>);
+          // (from_range, range, size, hash, alloc)
+          static_assert(
+              SFINAEs_away<std::unordered_set, std::from_range_t, Range, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+              !std::is_same_v<UI, Alloc::size_type>);
 #endif
-    }});
+        }});
 
     { // (iter, iter, size, alloc) - runtime check
       const int arr[] = {1, 2, 1, INT_MAX, 3};
