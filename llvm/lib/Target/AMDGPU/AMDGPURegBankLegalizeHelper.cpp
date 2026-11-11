@@ -823,14 +823,22 @@ bool RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
   LLT DstTy = MRI.getType(Dst);
   assert(DstTy == V4S16 || DstTy == V2S32 || DstTy == S64);
   LLT Ty = DstTy.divide(2);
-  auto Op1 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(1).getReg());
-  auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
+  // Split sgpr operands before copying them to vgpr, so that a half that folds
+  // away does not keep a full 64-bit vgpr copy alive.
+  auto SplitOperand = [&](Register Reg) -> std::pair<Register, Register> {
+    const RegisterBank *RB = MRI.getRegBank(Reg);
+    auto Unmerge = B.buildUnmerge({RB, Ty}, Reg);
+    if (RB == VgprRB)
+      return {Unmerge.getReg(0), Unmerge.getReg(1)};
+    return {B.buildCopy({VgprRB, Ty}, Unmerge.getReg(0)).getReg(0),
+            B.buildCopy({VgprRB, Ty}, Unmerge.getReg(1)).getReg(0)};
+  };
+  auto [Op1Lo, Op1Hi] = SplitOperand(MI.getOperand(1).getReg());
+  auto [Op2Lo, Op2Hi] = SplitOperand(MI.getOperand(2).getReg());
   unsigned Opc = MI.getOpcode();
   auto Flags = MI.getFlags();
-  auto Lo =
-      B.buildInstr(Opc, {{VgprRB, Ty}}, {Op1.getReg(0), Op2.getReg(0)}, Flags);
-  auto Hi =
-      B.buildInstr(Opc, {{VgprRB, Ty}}, {Op1.getReg(1), Op2.getReg(1)}, Flags);
+  auto Lo = B.buildInstr(Opc, {{VgprRB, Ty}}, {Op1Lo, Op2Lo}, Flags);
+  auto Hi = B.buildInstr(Opc, {{VgprRB, Ty}}, {Op1Hi, Op2Hi}, Flags);
   B.buildMergeLikeInstr(Dst, {Lo, Hi});
   MI.eraseFromParent();
   return true;
