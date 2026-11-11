@@ -26,6 +26,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    jalr ra, 0(a0)
+;
 ; RV32-GISEL-LABEL: f1:
 ; RV32-GISEL:  # %bb.0:
 ; RV32-GISEL:    lw t1, -4(a0)
@@ -112,6 +113,7 @@ define void @f2(ptr noundef %x) #0 {
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    jalr zero, 0(a0)
+;
 ; RV32-GISEL-LABEL: f2:
 ; RV32-GISEL:  # %bb.0:
 ; RV32-GISEL:    addi zero, zero, 0
@@ -150,6 +152,22 @@ define void @f2(ptr noundef %x) #0 {
 }
 
 define void @f3(ptr noundef %x) {
+; CHECK-LABEL: f3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:     sw ra, 12(sp) # 4-byte Folded Spill
+; RV64-NEXT:     sd ra, 8(sp) # 8-byte Folded Spill
+; RV32-NEXT:     .cfi_offset ra, -4
+; RV64-NEXT:     .cfi_offset ra, -8
+; CHECK-NEXT:    jalr ra, 0(a0)
+; RV32-NEXT:     lw ra, 12(sp) # 4-byte Folded Reload
+; RV64-NEXT:     ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    jalr zero, 0(ra)
+;
 ; RV32-GISEL-LABEL: f3:
 ; RV32-GISEL:       # %bb.0:
 ; RV32-GISEL-NEXT:    addi sp, sp, -16
@@ -182,6 +200,22 @@ define void @f3(ptr noundef %x) {
 declare void @g()
 
 define void @f4() {
+; CHECK-LABEL: f4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:     sw ra, 12(sp) # 4-byte Folded Spill
+; RV64-NEXT:     sd ra, 8(sp) # 8-byte Folded Spill
+; RV32-NEXT:     .cfi_offset ra, -4
+; RV64-NEXT:     .cfi_offset ra, -8
+; CHECK-NEXT:    call g
+; RV32-NEXT:     lw ra, 12(sp) # 4-byte Folded Reload
+; RV64-NEXT:     ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    jalr zero, 0(ra)
+;
 ; RV32-GISEL-LABEL: f4:
 ; RV32-GISEL:       # %bb.0:
 ; RV32-GISEL-NEXT:    addi sp, sp, -16
@@ -212,6 +246,22 @@ define void @f4() {
 }
 
 define void @f5(ptr noundef %x) {
+; CHECK-LABEL: f5:
+; CHECK:       # %bb.0:
+; CHECK:         lw t1, -4(a0)
+; CHECK-NEXT:    lui t2, 912092
+; RV32-NEXT:     addi t2, t2, -273
+; RV64-NEXT:     addiw t2, t2, -273
+; CHECK-NEXT:    beq t1, t2, .Ltmp9
+; CHECK-NEXT:  .Ltmp10:
+; CHECK-NEXT:    ebreak
+; CHECK-NEXT:    .section .kcfi_traps,"ao",@progbits,.text
+; CHECK-NEXT:  .Ltmp11:
+; CHECK-NEXT:    .word .Ltmp10-.Ltmp11
+; CHECK-NEXT:    .text
+; CHECK-NEXT:  .Ltmp9:
+; CHECK-NEXT:    jalr ra, 0(a0)
+;
 ; RV32-GISEL-LABEL: f5:
 ; RV32-GISEL:  # %bb.0:
 ; RV32-GISEL:    lw t1, -4(a0)
