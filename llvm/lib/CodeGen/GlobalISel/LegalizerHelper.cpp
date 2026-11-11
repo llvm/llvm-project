@@ -9704,8 +9704,8 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   for (unsigned I = 1; I != NumDst; ++I, Offset += DstSize) {
     auto ShiftAmt = MIRBuilder.buildConstant(IntTy, Offset);
     auto Shift = MIRBuilder.buildLShr(IntTy, SrcReg, ShiftAmt);
-    MachineOperand DstNReg = MI.getOperand(I);
-    LLT Ty = MRI.getType(DstNReg.getReg());
+    Register DstNReg = MI.getOperand(I).getReg();
+    LLT Ty = MRI.getType(DstNReg);
     if (Ty.isFloat()) {
       Register R0 = MIRBuilder.buildTrunc(LLT::integer(Ty.getSizeInBits()), Shift).getReg(0);
       MIRBuilder.buildBitcast(DstNReg, R0);
