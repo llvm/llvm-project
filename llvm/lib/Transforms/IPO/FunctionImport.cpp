@@ -2311,10 +2311,10 @@ Expected<bool> FunctionImporter::importFunctions(
       auto SetGUID = [&](Function *F) {
         F->setMetadata(
             LLVMContext::MD_guid,
-            MDNode::get(DestModule.getContext(),
-                        {ConstantAsMetadata::get(ConstantInt::get(
-                            Type::getInt64Ty(DestModule.getContext()),
-                            DI.GUID))}));
+            MDNode::get(
+                DestModule.getContext(),
+                {ConstantAsMetadata::get(ConstantInt::get(
+                    Type::getInt64Ty(DestModule.getContext()), DI.GUID))}));
       };
       if (GlobalValue *Existing = DestModule.getNamedValue(DI.Name)) {
         // A declaration created by the IRMover as a side effect of importing a
