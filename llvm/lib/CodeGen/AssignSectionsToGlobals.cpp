@@ -64,9 +64,6 @@ private:
 
   void collectGlobalObjectSections(
       SmallVectorImpl<std::pair<StringRef, StringRef>> &GOSectionPairs);
-  void collectAsmAliasSections(
-      const Triple &TT, const Target &T, MCContext &MCCtx,
-      SmallVectorImpl<std::pair<StringRef, StringRef>> &GOSectionPairs);
   StringRef getDefaultSectionNameForGlobal(const GlobalObject &GO);
 };
 
@@ -112,10 +109,8 @@ bool AssignSections::run(Module &Mod, TargetMachine *TMIn) {
   std::unique_ptr<MCAsmInfo> MAI(T.createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
     return false;
-  std::unique_ptr<llvm::MCSubtargetInfo> STI(
-      T.createMCSubtargetInfo(TT, "", ""));
   MCObjectFileInfo MOFI;
-  MCContext MCCtx(Triple(TT), *MAI, *MRI, *STI);
+  MCContext MCCtx(Triple(TT), *MAI, *MRI, TM->getMCSubtargetInfo());
   MCCtx.setObjectFileInfo(&MOFI);
   MOFI.initMCObjectFileInfo(MCCtx, /*PIC*/ false);
   TM->getObjFileLowering()->initialize(MCCtx, *TM, Mod);
