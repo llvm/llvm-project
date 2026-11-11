@@ -177,22 +177,25 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
   return success();
 }
 
-/// Wrap `op` in a vector.mask with the tile of `maskingOp`'s mask (and
-/// passthru, if any) at `offsets` with shape `sizes`. Return `op` itself if
-/// `maskingOp` is null.
+/// Wrap `tileOp`, the new transfer for one tile, in a vector.mask with the tile
+/// of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
+/// `sizes`. `maskingOp` is the vector.mask around the original transfer;
+/// `tileOp` is created outside of it. Return `tileOp` itself if `maskingOp` is
+/// null.
 static Operation *maskTile(PatternRewriter &rewriter, Location loc,
-                           Operation *op, vector::MaskingOpInterface maskingOp,
+                           Operation *tileOp,
+                           vector::MaskingOpInterface maskingOp,
                            ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
                            ArrayRef<int64_t> strides) {
   if (!maskingOp)
-    return op;
+    return tileOp;
   Value mask = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
       loc, maskingOp.getMask(), offsets, sizes, strides);
   Value passthru;
   if (maskingOp.hasPassthru())
     passthru = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
         loc, maskingOp.getPassthru(), offsets, sizes, strides);
-  return vector::maskOperation(rewriter, op, mask, passthru);
+  return vector::maskOperation(rewriter, tileOp, mask, passthru);
 }
 
 namespace {
