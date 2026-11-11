@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i8)
+declare void @use.i64(i64)
 
 define i1 @set_low_bit_mask_eq(i8 %x) {
 ; CHECK-LABEL: @set_low_bit_mask_eq(
@@ -470,6 +471,44 @@ define i1 @icmp_or_xor_2_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) "instcombine
   %cmp_1 = icmp eq i64 %xor1, 0
   %or1 = or i1 %cmp, %cmp_1
   ret i1 %or1
+}
+
+; negative test - xor multiuse
+
+define i1 @icmp_or_xor_2_multiuse_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; CHECK-LABEL: @icmp_or_xor_2_multiuse_fail(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    call void @use.i64(i64 [[XOR]])
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor = xor i64 %x1, %y1
+  call void @use.i64(i64 %xor)
+  %xor1 = xor i64 %x2, %y2
+  %or = or i64 %xor, %xor1
+  %cmp = icmp eq i64 %or, 0
+  ret i1 %cmp
+}
+
+; negative test - xor multiuse
+
+define i1 @icmp_or_xor_2_multiuse1_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
+; CHECK-LABEL: @icmp_or_xor_2_multiuse1_fail(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    call void @use.i64(i64 [[XOR1]])
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %xor = xor i64 %x1, %y1
+  %xor1 = xor i64 %x2, %y2
+  call void @use.i64(i64 %xor1)
+  %or = or i64 %xor, %xor1
+  %cmp = icmp eq i64 %or, 0
+  ret i1 %cmp
 }
 
 define i1 @icmp_or_xor_3_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
