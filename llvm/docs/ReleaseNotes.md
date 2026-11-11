@@ -350,6 +350,9 @@ Makes programs 10x faster by doing Special New Thing.
   is now an error. Previously this would fall back to the soft-float PCS while
   still emitting the hard-float ABI attribute tag.
 
+* C++ exception handling with `__CxxFrameHandler3` now works on Windows on
+  Arm.
+
 ### Changes to the AVR Backend
 
 ### Changes to the BPF Backend
