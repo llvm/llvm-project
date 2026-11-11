@@ -5324,7 +5324,7 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
 }
 
 /// Split a div/rem by a select of constants, so each arm divides by a constant:
-///   X div/rem (select C, C1, C2) --> select C, (X div/rem C1), (X div/rem C2)
+///   X div/rem (select C, K1, K2) --> select C, (X div/rem K1), (X div/rem K2)
 /// A constant divisor lowers to a shift or magic multiply, not the divider.
 SDValue DAGCombiner::foldDivRemOfSelect(SDNode *N, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
@@ -5421,8 +5421,8 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
     return V;
   }
 
-  // fold (div/rem X, (select C, C1, C2))
-  //   --> select C, (div/rem X, C1), (div/rem X, C2)
+  // fold (div/rem X, (select C, K1, K2))
+  //   --> select C, (div/rem X, K1), (div/rem X, K2)
   if (SDValue Split = foldDivRemOfSelect(N, DL))
     return Split;
 
@@ -5576,8 +5576,8 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
     return V;
   }
 
-  // fold (div/rem X, (select C, C1, C2))
-  //   --> select C, (div/rem X, C1), (div/rem X, C2)
+  // fold (div/rem X, (select C, K1, K2))
+  //   --> select C, (div/rem X, K1), (div/rem X, K2)
   if (SDValue Split = foldDivRemOfSelect(N, DL))
     return Split;
 
@@ -5747,8 +5747,8 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     }
   }
 
-  // fold (div/rem X, (select C, C1, C2))
-  //   --> select C, (div/rem X, C1), (div/rem X, C2)
+  // fold (div/rem X, (select C, K1, K2))
+  //   --> select C, (div/rem X, K1), (div/rem X, K2)
   if (SDValue Split = foldDivRemOfSelect(N, DL))
     return Split;
 
