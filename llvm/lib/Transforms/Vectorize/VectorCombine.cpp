@@ -76,9 +76,7 @@ public:
                 })),
         TTI(TTI), DT(DT), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
-        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {
-    Builder.disableGEPCanonicalization();
-  }
+        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
