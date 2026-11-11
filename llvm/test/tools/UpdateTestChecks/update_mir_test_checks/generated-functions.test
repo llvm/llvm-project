@@ -1,0 +1,70 @@
+# REQUIRES: arm-registered-target
+# RUN: split-file %s %t
+# RUN: sed 's/^# CMD:/# RUN:/' %t/input.mir > %t/default.mir
+# RUN: %update_mir_test_checks %t/default.mir
+# RUN: FileCheck %s --check-prefix=DEFAULT --implicit-check-not="LABEL: name: OUTLINED_FUNCTION" < %t/default.mir
+# RUN: cp %t/default.mir %t/generated.mir
+# RUN: %update_mir_test_checks --include-generated-funcs %t/generated.mir
+# RUN: FileCheck %s --check-prefix=GENERATED < %t/generated.mir
+# RUN: llc -mtriple=arm-- -run-pass=prolog-epilog -run-pass=machine-outliner %t/generated.mir -o - | FileCheck %t/generated.mir --check-prefix=OUTLINE
+# RUN: llc -mtriple=arm-- -run-pass=prolog-epilog %t/generated.mir -o - | FileCheck %t/generated.mir --check-prefix=PLAIN
+# RUN: cp %t/generated.mir %t/before.mir
+# RUN: %update_mir_test_checks %t/generated.mir
+# RUN: diff -u %t/before.mir %t/generated.mir
+
+# RUN: echo '# UTC_ARGS: --include-generated-funcs' > %t/args.mir
+# RUN: sed 's/^# CMD:/# RUN:/' %t/input.mir >> %t/args.mir
+# RUN: %update_mir_test_checks %t/args.mir
+# RUN: FileCheck %s --check-prefix=GENERATED < %t/args.mir
+
+# RUN: sed 's/^# CMD:/# RUN:/; /--check-prefix=PLAIN/d; s/--check-prefix=OUTLINE/--check-prefixes=COMMON,A/' %t/input.mir > %t/shared.mir
+# RUN: sed -n 's/^# CMD:/# RUN:/; /--check-prefix=OUTLINE/s/--check-prefix=OUTLINE/--check-prefixes=B,COMMON/p' %t/input.mir >> %t/shared.mir
+# RUN: %update_mir_test_checks --include-generated-funcs %t/shared.mir
+# RUN: FileCheck %s --check-prefix=SHARED < %t/shared.mir
+# RUN: llc -mtriple=arm-- -run-pass=prolog-epilog -run-pass=machine-outliner %t/shared.mir -o - | FileCheck %t/shared.mir --check-prefixes=COMMON,A
+# RUN: llc -mtriple=arm-- -run-pass=prolog-epilog -run-pass=machine-outliner %t/shared.mir -o - | FileCheck %t/shared.mir --check-prefixes=B,COMMON
+# RUN: cp %t/shared.mir %t/before.mir
+# RUN: %update_mir_test_checks %t/shared.mir
+# RUN: diff -u %t/before.mir %t/shared.mir
+
+# DEFAULT: OUTLINE-LABEL: name: first
+# DEFAULT: OUTLINE-LABEL: name: second
+# GENERATED: OUTLINE-LABEL: name: first
+# GENERATED: OUTLINE-LABEL: name: second
+# GENERATED: OUTLINE-LABEL: name: OUTLINED_FUNCTION_0
+# GENERATED: PLAIN-LABEL: name: first
+# GENERATED: PLAIN-LABEL: name: second
+# SHARED: COMMON-LABEL: name: first
+# SHARED: COMMON-LABEL: name: second
+# SHARED: COMMON-LABEL: name: OUTLINED_FUNCTION_0
+
+#--- input.mir
+# CMD: llc -mtriple=arm-- -run-pass=prolog-epilog -run-pass=machine-outliner %s -o - | FileCheck %s --check-prefix=OUTLINE
+# CMD: llc -mtriple=arm-- -run-pass=prolog-epilog %s -o - | FileCheck %s --check-prefix=PLAIN
+
+--- |
+  define void @first() { ret void }
+  define void @second() { ret void }
+...
+---
+name: first
+body: |
+  bb.0:
+    $r0 = MOVi 1, 14, $noreg, $noreg
+    $r1 = MOVi 2, 14, $noreg, $noreg
+    $r2 = MOVi 3, 14, $noreg, $noreg
+    $r3 = MOVi 4, 14, $noreg, $noreg
+    $r4 = MOVi 5, 14, $noreg, $noreg
+    BX_RET 14, $noreg
+...
+---
+name: second
+body: |
+  bb.0:
+    $r0 = MOVi 1, 14, $noreg, $noreg
+    $r1 = MOVi 2, 14, $noreg, $noreg
+    $r2 = MOVi 3, 14, $noreg, $noreg
+    $r3 = MOVi 4, 14, $noreg, $noreg
+    $r4 = MOVi 5, 14, $noreg, $noreg
+    BX_RET 14, $noreg
+...
