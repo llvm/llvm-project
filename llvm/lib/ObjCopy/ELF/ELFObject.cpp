@@ -1824,6 +1824,19 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSectionHeaders() {
     Sec->OriginalData = ArrayRef<uint8_t>(
         ElfFile.base() + Shdr.sh_offset,
         (Shdr.sh_type == SHT_NOBITS) ? (size_t)0 : Shdr.sh_size);
+    if ((isa<StringTableSection>(&*Sec) || isa<SymbolTableSection>(&*Sec)) &&
+        (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
+      Expected<ArrayRef<uint8_t>> Data = ElfFile.getSectionContents(Shdr);
+      if (!Data)
+        return Data.takeError();
+      if (Data->size() < sizeof(Elf_Chdr_Impl<ELFT>))
+        return createStringError(errc::invalid_argument,
+                                 "section '" + Sec->Name +
+                                     "': corrupted compressed section header");
+      auto *Chdr = reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data->data());
+      Sec->Align = Chdr->ch_addralign;
+      Sec->Flags = Sec->OriginalFlags = (Shdr.sh_flags & ~ELF::SHF_COMPRESSED);
+    }
   }
 
   return Error::success();
