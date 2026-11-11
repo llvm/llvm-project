@@ -1225,11 +1225,11 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   if (!RealPath)
     return std::error_code();
   RealPath->clear();
+  // Fast path: ask for the real file path via handle.
   if (getRealPathFromHandle(ResultFD, *RealPath) == errc::not_supported) {
+    // Slow path: ask for the real file path via name.
     SmallString<128> Storage;
     StringRef P = Name.toNullTerminatedStringRef(Storage);
-
-    // Use ::realpath to get the real path name
     char Buffer[PATH_MAX];
     if (::realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
@@ -1241,7 +1241,7 @@ std::error_code getRealPathFromHandle(file_t Handle,
                                       SmallVectorImpl<char> &RealPath) {
 #if defined(F_GETPATH)
   char Buffer[PATH_MAX];
-  // When F_GETPATH is availble, it is the quickest way to get
+  // When F_GETPATH is available, it is the quickest way to get
   // the real path name.
   if (::fcntl(Handle.get(), F_GETPATH, Buffer) != -1) {
     RealPath.append(Buffer, Buffer + strlen(Buffer));
@@ -1262,7 +1262,7 @@ std::error_code getRealPathFromHandle(file_t Handle,
   }
   return make_error_code(errc::not_supported);
 #else
-  return std::error_code(errc::not_supported);
+  return make_error_code(errc::not_supported);
 #endif
 }
 
