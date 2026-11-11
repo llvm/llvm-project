@@ -6,6 +6,7 @@
 @_ZTI1A = external constant ptr
 
 @unknownPtr = external global i8
+@zeroVtable = constant [4 x ptr] zeroinitializer
 
 define i8 @simple() {
 ; CHECK-LABEL: define i8 @simple() {
@@ -549,6 +550,71 @@ _Z2g2R1A.exit:                                    ; preds = %_Z2g2R1A.exit.loope
   ret void
 }
 
+
+; GVN folds %p to %o only after it has cached the local dependency of %res as
+; non-local. The non-local walk then must not use %vtable, which precedes %res
+; in its own block, as the value at the end of the predecessor.
+define ptr @nonlocalWalkSameBlockDef(ptr %o, i1 %c) {
+; CHECK-LABEL: define ptr @nonlocalWalkSameBlockDef(
+; CHECK-SAME: ptr [[O:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[OK:.*]], label %[[OTHER:.*]]
+; CHECK:       [[OK]]:
+; CHECK-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[O]], align 8, !invariant.group [[META0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[VTABLE]], getelementptr inbounds (i8, ptr @zeroVtable, i64 8)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret ptr poison
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    ret ptr null
+;
+entry:
+  br i1 %c, label %ok, label %other
+
+ok:
+  %vtable = load ptr, ptr %o, align 8, !invariant.group !0
+  %cmp = icmp eq ptr %vtable, getelementptr inbounds (i8, ptr @zeroVtable, i64 8)
+  call void @llvm.assume(i1 %cmp)
+  %vtable1 = load ptr, ptr %o, align 8
+  %off = load i64, ptr %vtable1, align 8
+  %p = getelementptr i8, ptr %o, i64 %off
+  %res = load ptr, ptr %p, align 8, !invariant.group !0
+  ret ptr %res
+
+other:
+  ret ptr null
+}
+
+; Same as above, but the block is a loop header, so the backedge is also a
+; predecessor that the walk visits.
+define ptr @nonlocalWalkSameBlockDefLoop(ptr %o, i1 %c) {
+; CHECK-LABEL: define ptr @nonlocalWalkSameBlockDefLoop(
+; CHECK-SAME: ptr [[O:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    call void @llvm.assume(i1 poison)
+; CHECK-NEXT:    call void @foo(ptr poison)
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret ptr poison
+;
+entry:
+  br label %loop
+
+loop:
+  %vtable = load ptr, ptr %o, align 8, !invariant.group !0
+  %cmp = icmp eq ptr %vtable, getelementptr inbounds (i8, ptr @zeroVtable, i64 8)
+  call void @llvm.assume(i1 %cmp)
+  %vtable1 = load ptr, ptr %o, align 8
+  %off = load i64, ptr %vtable1, align 8
+  %p = getelementptr i8, ptr %o, i64 %off
+  %res = load ptr, ptr %p, align 8, !invariant.group !0
+  call void @foo(ptr %res)
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret ptr %res
+}
 
 declare void @foo(ptr)
 declare void @foo2(ptr, i8)
