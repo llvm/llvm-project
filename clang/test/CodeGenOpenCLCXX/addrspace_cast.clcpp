@@ -1,11 +1,9 @@
-// RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s --check-prefix=OGCG
-// RUN: %if cir-enabled %{ %clang_cc1 %s -triple spir -fclangir -emit-cir -o - | FileCheck %s --check-prefix=CIR %}
+// RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 %s -triple spir -fclangir -emit-llvm -O0 -o - | FileCheck %s %}
 
-// OGCG-LABEL: define{{.*}} spir_func void @_Z3barPU3AS1i
-// CIR-LABEL: cir.func {{.*}} @_Z3barPU3AS1i
+// CHECK-LABEL: define{{.*}} spir_func void @_Z3barPU3AS1i
 void bar(global int *gl) {
-  // OGCG: addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
-  // CIR: %{{.*}} = cir.cast address_space %{{.*}} : !cir.ptr<!s32i, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(4)>
+  // CHECK: addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
   int *gen = addrspace_cast<int *>(gl);
 }
 
@@ -13,10 +11,8 @@ struct S {
   int x;
 };
 
-// OGCG-LABEL: define{{.*}} spir_func void @_Z4bar2PU3AS11S
-// CIR-LABEL: cir.func {{.*}} @_Z4bar2PU3AS11S
+// CHECK-LABEL: define{{.*}} spir_func void @_Z4bar2PU3AS11S
 void bar2(global S *s) {
-  // OGCG: addrspacecast ptr addrspace(1) %{{.*}} to ptr addrspace(4)
-  // CIR: %{{.*}} = cir.cast address_space %{{.*}} : !cir.ptr<!rec_S, target_address_space(1)> -> !cir.ptr<!rec_S, target_address_space(4)>
+  // CHECK: addrspacecast ptr addrspace(1) %{{.*}} to ptr addrspace(4)
   addrspace_cast<S *>(s)->x = 1;
 }
