@@ -46,7 +46,7 @@ define spir_kernel void @select(ptr addrspace(1) %out, ptr addrspace(1) %in, i1 
 
 ; CHECK: %[[#L2:]] = OpLoad %[[#Outer]]
 ; CHECK: %[[#E2:]] = OpCompositeExtract %[[#Inner]] %[[#L2]] 1
-; CHECK: OpCompositeExtract %[[#Float]] %[[#]] 2
+; CHECK: OpCompositeExtract %[[#Float]] %[[#E2]] 2
 define spir_kernel void @freeze(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %s = load %Outer, ptr addrspace(1) %in
   %v = extractvalue %Outer %s, 1
