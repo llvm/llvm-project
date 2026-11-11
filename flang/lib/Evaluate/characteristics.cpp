@@ -141,7 +141,8 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
       result = TypeAndShape{std::move(*type), std::move(*shape)};
     }
     if (result && type->category() == TypeCategory::Character) {
-      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc.expr())}) {
+      if (const auto *chExpr{
+              UnwrapExpr<Expr<Type<TypeCategory::Character>>>(assoc.expr())}) {
         if (auto len{chExpr->LEN()}) {
           result->set_LEN(std::move(*len));
         }

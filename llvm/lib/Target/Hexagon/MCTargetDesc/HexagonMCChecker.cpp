@@ -102,7 +102,7 @@ void HexagonMCChecker::init(MCInst const &MCI) {
     initReg(MCI, ImpUse, PredReg, isTrue);
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
-                             HexagonMCInstrInfo::hasHxxTmp(MCII, MCI)) &&
+                             HexagonMCInstrInfo::isTmpWrite(MCII, MCI)) &&
                             STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.
@@ -714,7 +714,8 @@ bool HexagonMCChecker::checkValidTmpDst() {
   }
   auto HasTmp = [&](MCInst const &I) {
     return HexagonMCInstrInfo::hasTmpDst(MCII, I) ||
-           HexagonMCInstrInfo::hasHvxTmp(MCII, I);
+           (HexagonMCInstrInfo::isTmpWrite(MCII, I) &&
+            HexagonMCInstrInfo::isHVX(MCII, I));
   };
   unsigned HasTmpCount =
       llvm::count_if(HexagonMCInstrInfo::bundleInstructions(MCII, MCB), HasTmp);

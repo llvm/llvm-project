@@ -9964,19 +9964,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitMemCmpBCmpCall(I))
           return;
         break;
-      case LibFunc_copysign:
-      case LibFunc_copysignf:
-      case LibFunc_copysignl:
-        // We already checked this call's prototype; verify it doesn't modify
-        // errno.
-        if (I.onlyReadsMemory()) {
-          SDValue LHS = getValue(I.getArgOperand(0));
-          SDValue RHS = getValue(I.getArgOperand(1));
-          setValue(&I, DAG.getNode(ISD::FCOPYSIGN, getCurSDLoc(),
-                                   LHS.getValueType(), LHS, RHS));
-          return;
-        }
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:

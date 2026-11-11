@@ -152,11 +152,8 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bits<1> prefersSlot3 = 0;
   let TSFlags{55} = prefersSlot3; // Complex XU
 
-  bits<1> hasHvxTmp = 0;
-  let TSFlags{56} = hasHvxTmp;  // vector register vX.tmp false-write
-
-  bit hasHlxTmp = 0;
-  let TSFlags{57} = hasHlxTmp;  // vector register lX.tmp false-write
+  bit isTmpWrite = 0;
+  let TSFlags{56} = isTmpWrite;  // Vector register false-write.
 
   bit CVINew = 0;
   let TSFlags{58} = CVINew;
