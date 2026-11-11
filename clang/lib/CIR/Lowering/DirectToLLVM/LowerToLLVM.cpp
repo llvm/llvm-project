@@ -3321,6 +3321,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     }
   }
 
+  if (op.getCoroutineKind())
+    passthrough.push_back(rewriter.getStringAttr("presplitcoroutine"));
   if (!passthrough.empty())
     fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
 

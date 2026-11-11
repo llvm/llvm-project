@@ -248,6 +248,7 @@ add_libc_test(
   SRCS
     snprintf_test.cpp
   DEPENDS
+    libc.src.__support.CPP.limits
     libc.src.stdio.snprintf
 )
 

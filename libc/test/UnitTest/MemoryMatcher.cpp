@@ -14,6 +14,8 @@
 
 #if LIBC_TEST_HAS_MATCHERS()
 
+using LIBC_NAMESPACE::testing::tlog;
+
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
@@ -32,42 +34,49 @@ bool equals(const cpp::span<T> &Span1, const cpp::span<T> &Span2,
   return true;
 }
 
-static void display(MatchResultListener &listener, char C) {
-  const auto print = [&listener](unsigned char i) {
-    listener << LIBC_NAMESPACE::internal::toupper(
+bool MemoryMatcher::match(MemoryView actualValue) {
+  actual = actualValue;
+  return equals(expected, actual, mismatch_size, mismatch_index);
+}
+
+static void display(char C) {
+  const auto print = [](unsigned char i) {
+    tlog << LIBC_NAMESPACE::internal::toupper(
         LIBC_NAMESPACE::internal::int_to_b36_char(i));
   };
   print(static_cast<unsigned char>(C) / 16);
   print(static_cast<unsigned char>(C) & 15);
 }
 
-static void display(MatchResultListener &listener, MemoryView View) {
+static void display(MemoryView View) {
   for (auto C : View) {
-    listener << ' ';
-    display(listener, C);
+    tlog << ' ';
+    display(C);
   }
 }
 
-bool MemoryMatcher::MatchAndExplain(MemoryView actual,
-                                    MatchResultListener *listener) const {
-  bool mismatch_size = false;
-  size_t mismatch_index = cpp::numeric_limits<size_t>::max();
-  if (equals(expected, actual, mismatch_size, mismatch_index))
-    return true;
-  if (!listener->IsInterested())
-    return false;
+void MemoryMatcher::explainError() {
   if (mismatch_size) {
-    *listener << "Size mismatch :expected : " << expected.size() << '\n'
-              << "actual   : " << actual.size() << '\n';
+    tlog << "Size mismatch :";
+    tlog << "expected : ";
+    tlog << expected.size();
+    tlog << '\n';
+    tlog << "actual   : ";
+    tlog << actual.size();
+    tlog << '\n';
   } else {
-    *listener << "Mismatch at position : " << mismatch_index << " / "
-              << expected.size() << "\nexpected :";
-    display(*listener, expected);
-    *listener << "\nactual   :";
-    display(*listener, actual);
-    *listener << '\n';
+    tlog << "Mismatch at position : ";
+    tlog << mismatch_index;
+    tlog << " / ";
+    tlog << expected.size();
+    tlog << "\n";
+    tlog << "expected :";
+    display(expected);
+    tlog << '\n';
+    tlog << "actual   :";
+    display(actual);
+    tlog << '\n';
   }
-  return false;
 }
 
 } // namespace testing
