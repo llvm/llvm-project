@@ -4030,7 +4030,12 @@ LegalizerHelper::bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
 
     // Shift the wide element to get the target element.
     auto ExtractedBits = MIRBuilder.buildLShr(NewEltTy, WideElt, OffsetBits);
-    MIRBuilder.buildTrunc(Dst, ExtractedBits);
+    if (DstTy.isFloatOrFloatVector()) {
+      Register R0 = MIRBuilder.buildTrunc(LLT::integer(DstTy.getSizeInBits()), ExtractedBits).getReg(0);
+      MIRBuilder.buildBitcast(Dst, R0);
+    } else {
+      MIRBuilder.buildTrunc(Dst, ExtractedBits);
+    }
     MI.eraseFromParent();
     return Legalized;
   }
