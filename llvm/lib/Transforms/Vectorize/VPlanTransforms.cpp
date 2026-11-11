@@ -1907,8 +1907,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
       }
 
-      // Skip recipes that aren't single scalars.
-      if (!vputils::isSingleScalar(RepOrWidenR))
+      // Skip recipes that aren't single scalars or have no underlying
+      // instruction to create a single-scalar recipe from.
+      if (!RepOrWidenR->getUnderlyingValue() ||
+          !vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Predicate to check if a user of Op introduces extra broadcasts.
