@@ -1,0 +1,73 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=spirv | FileCheck %s
+
+// Checks SPIR-V kernel argument classification outside a device compilation.
+// The default address space is then 0, and kernel pointer coercion follows the
+// default address space rather than the device flag, as in classic codegen:
+// - a default (address space 0) pointer is still passed as a CrossWorkgroup
+//   (1) pointer, and a generic (4) one is left alone;
+// - without the device flag, a record that cannot be copied is passed
+//   indirectly but not byval. Copyable aggregates are byval either way.
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.float}>
+!rec_NT = !cir.struct<"NT" {data !s32i}>
+
+module attributes {
+  cir.triple = "spirv64-unknown-unknown",
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+    gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>,
+  cir.record_layouts = {
+    S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+      has_trivial_dtor = true, record_align = 4>,
+    NT = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+      has_trivial_dtor = false, record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A default address space pointer is passed as a CrossWorkgroup pointer and
+  // cast back before the body's spill reads it.
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(spir_kernel) requires_call_conv_lowering {
+    %0 = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
+    cir.store %arg0, %0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_ptr(%[[ARG:[^:]+]]: !cir.ptr<!s32i, target_address_space(1)>{{.*}}cc(spir_kernel)
+  // CHECK-NEXT:   %[[DEF:.*]] = cir.cast address_space %[[ARG]] : !cir.ptr<!s32i, target_address_space(1)> -> !cir.ptr<!s32i>
+  // CHECK:        cir.store %[[DEF]], %{{.*}} : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+  // A generic pointer is not the default one here, so it is left alone.
+  cir.func @kernel_gen_ptr(%arg0: !cir.ptr<!s32i, target_address_space(4)>) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_gen_ptr(%arg0: !cir.ptr<!s32i, target_address_space(4)>{{.*}}cc(spir_kernel)
+  // CHECK-NOT:    cir.cast
+
+  // A copyable aggregate is byval through the default rule.
+  cir.func @kernel_rec(%arg0: !rec_S) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_rec(%{{.*}}: !cir.ptr<!rec_S> {
+  // CHECK-SAME:   llvm.byval = !rec_S
+
+  // A record that cannot be copied is passed indirectly, not byval.
+  cir.func @kernel_nt(%arg0: !rec_NT) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_nt(%{{.*}}: !cir.ptr<!rec_NT>
+  // CHECK-NOT:    llvm.byval
+  // CHECK:      cir.func{{.*}} @sentinel
+
+  cir.func @sentinel() cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+}

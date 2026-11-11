@@ -1,0 +1,191 @@
+// RUN: cir-opt %s -split-input-file -cir-call-conv-lowering=target=spirv | FileCheck %s
+
+// Checks that CallConvLowering under target=spirv classifies ordinary SPIR-V
+// functions with the LLVM ABI library's default rules, as classic codegen's
+// SPIRVABIInfo does: sub-word integers are extended, aggregates are passed
+// byval and returned through sret, and empty records are still passed byval.
+// SPIR-V has no 128-bit integer type, so a _BitInt wider than 64 bits is passed
+// and returned indirectly.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!bi64 = !cir.int<s, 64, bitint>
+!bi65 = !cir.int<s, 65, bitint>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.float}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+
+// The module has no #cir.lowering_options, as in hand-written CIR, so no
+// device compilation is assumed.
+module attributes {
+  cir.triple = "spirv64-unknown-unknown",
+  cir.record_layouts = {
+    S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+      has_trivial_dtor = true, record_align = 4>,
+    E = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+      has_trivial_dtor = true, record_align = 1>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i1, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A signed sub-word integer is sign-extended.
+  cir.func @take_s8(%arg0: !s8i) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {
+  // CHECK-SAME: llvm.signext
+
+  // The call site carries the same extension.
+  cir.func @call_s8(%arg0: !s8i) cc(spir_function) requires_call_conv_lowering {
+    cir.call @take_s8(%arg0) : (!s8i) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.call @take_s8(%arg0) : (!s8i {
+  // CHECK-SAME: llvm.signext}) -> ()
+
+  // A bool return is zero-extended.
+  cir.func @ret_bool(%arg0: !cir.bool) -> !cir.bool cc(spir_function) requires_call_conv_lowering {
+    cir.return %arg0 : !cir.bool
+  }
+
+  // CHECK: cir.func{{.*}} @ret_bool({{.*}}) -> (!cir.bool {
+  // CHECK-SAME: llvm.zeroext
+
+  // An unsigned sub-word integer is zero-extended.
+  cir.func @take_u8(%arg0: !u8i) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_u8(%arg0: !u8i {
+  // CHECK-SAME: llvm.zeroext
+
+  // A signed sub-word return is sign-extended, at the call site too.
+  cir.func @ret_s8(%arg0: !s8i) -> !s8i cc(spir_function) requires_call_conv_lowering {
+    cir.return %arg0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @ret_s8({{.*}}) -> (!s8i {
+  // CHECK-SAME: llvm.signext
+
+  cir.func @call_ret_s8(%arg0: !s8i) cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.call @ret_s8(%arg0) cc(spir_function) : (!s8i) -> !s8i
+    cir.return
+  }
+
+  // CHECK: cir.call @ret_s8(%arg0) cc(spir_function) : (!s8i {
+  // CHECK-SAME: -> (!s8i {llvm.signext})
+
+  // A _BitInt of up to 64 bits is passed and returned directly.
+  cir.func @take_bi64(%arg0: !bi64) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bi64(%arg0: !s64i_bitint) cc(spir_function)
+
+  cir.func @ret_bi64(%arg0: !bi64) -> !bi64 cc(spir_function) requires_call_conv_lowering {
+    cir.return %arg0 : !bi64
+  }
+
+  // CHECK: cir.func{{.*}} @ret_bi64(%arg0: !s64i_bitint) -> !s64i_bitint cc(spir_function)
+
+  // A wider _BitInt is passed byval and returned through sret.
+  cir.func @take_bi65(%arg0: !bi65) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bi65(%{{.*}}: !cir.ptr<!cir.int<s, 65, bitint>> {
+  // CHECK-SAME: llvm.align = 8 : i64
+  // CHECK-SAME: llvm.byval = !cir.int<s, 65, bitint>
+
+  cir.func @ret_bi65(%arg0: !cir.ptr<!bi65>) -> !bi65 cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!bi65>
+    %1 = cir.load %arg0 : !cir.ptr<!bi65>, !bi65
+    cir.store %1, %0 : !bi65, !cir.ptr<!bi65>
+    %2 = cir.load %0 : !cir.ptr<!bi65>, !bi65
+    cir.return %2 : !bi65
+  }
+
+  // CHECK: cir.func{{.*}} @ret_bi65(%{{.*}}: !cir.ptr<!cir.int<s, 65, bitint>> {
+  // CHECK-SAME: llvm.align = 8 : i64
+  // CHECK-SAME: llvm.sret = !cir.int<s, 65, bitint>
+
+  // An aggregate argument is passed byval in the private address space.
+  cir.func @take_rec(%arg0: !rec_S) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_rec(%{{.*}}: !cir.ptr<!rec_S> {
+  // CHECK-SAME: llvm.align = 4 : i64
+  // CHECK-SAME: llvm.byval = !rec_S
+
+  // An empty record is still an aggregate: passed byval, not dropped.
+  cir.func @take_empty(%arg0: !rec_E, %arg1: !s32i) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty(%{{.*}}: !cir.ptr<!rec_E> {
+  // CHECK-SAME: llvm.byval = !rec_E
+  // CHECK-SAME: !s32i
+
+  // An aggregate return goes through an sret pointer, so the function returns
+  // nothing.
+  cir.func @ret_rec() -> !rec_S cc(spir_function) requires_call_conv_lowering {
+    %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_S>
+    %1 = cir.load %0 : !cir.ptr<!rec_S>, !rec_S
+    cir.return %1 : !rec_S
+  }
+
+  // CHECK: cir.func{{.*}} @ret_rec(%{{.*}}: !cir.ptr<!rec_S> {
+  // CHECK-SAME: llvm.align = 4 : i64
+  // CHECK-SAME: llvm.sret = !rec_S
+  // CHECK-SAME: }) cc(spir_function)
+
+  // Pointers and word-sized scalars of ordinary functions are unchanged.
+  cir.func @take_ptr(%arg0: !cir.ptr<!s32i>) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_ptr(%arg0: !cir.ptr<!s32i>
+
+  cir.func @take_int(%arg0: !s32i) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_int(%arg0: !s32i
+
+  // With no lowering_options the default address space is 0, so a private
+  // kernel pointer is the default one and is passed as a CrossWorkgroup
+  // pointer.
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>
+}
+
+// -----
+
+// Without a cir.triple the target cannot be rebuilt, so the default address
+// space falls back to 0.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The default address space is 0, so a private kernel pointer is coerced.
+  cir.func @kernel_ptr_no_triple(%arg0: !cir.ptr<!s32i>) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_ptr_no_triple(%arg0: !cir.ptr<!s32i, target_address_space(1)>
+}
