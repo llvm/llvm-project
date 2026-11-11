@@ -3,7 +3,9 @@
 
 # Test that pipeliner correctly detects the loop-carried dependency between the
 # load and the store, which is indicated by `Ord` dependency from SU(2) to
-# SU(4). Note that there is no dependency within a single iteration.
+# SU(4). Note that there is no dependency within a single iteration, but alias
+# analysis is queried in cross-iteration mode, so the dependency is already
+# added when the DAG is built.
 
 # CHECK:      SU(2):   %7:intregs = L2_loadri_io %5:intregs, 0 :: (load (s32) from %ir.ptr.load)
 # CHECK-NEXT:   # preds left
@@ -16,7 +18,7 @@
 # CHECK-NEXT:     SU(0): Data Latency=0 Reg=%5
 # CHECK-NEXT:   Successors:
 # CHECK-DAG:      SU(3): Data Latency=2 Reg=%7
-# CHECK-DAG:      SU(4): Ord  Latency=1 Barrier
+# CHECK-DAG:      SU(4): Ord  Latency=0 Memory
 # CHECK-NEXT: SU(3):   %8:intregs = F2_sfadd %7:intregs, %3:intregs, implicit $usr
 # CHECK:      SU(4):   S2_storeri_io %6:intregs, 0, %8:intregs :: (store (s32) into %ir.ptr.store)
 

@@ -574,10 +574,10 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:  .LBB19_3: @ %for.cond8.preheader
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str r8, [r4, #-4]
-; CHECK-NEXT:    vstrh.16 q1, [r4, #-36]
-; CHECK-NEXT:    strh.w r9, [r4]
-; CHECK-NEXT:    vstrh.16 q1, [r4, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r3]
+; CHECK-NEXT:    strh.w r9, [r4]
+; CHECK-NEXT:    vstrh.16 q1, [r4, #-36]
+; CHECK-NEXT:    vstrh.16 q1, [r4, #-20]
 ; CHECK-NEXT:    vstrh.16 q0, [r12], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r6], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #152
@@ -629,10 +629,10 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:  .LBB19_7: @ %for.cond8.preheader.1
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str r2, [r5, #-4]
-; CHECK-NEXT:    vstrh.16 q1, [r5, #-36]
-; CHECK-NEXT:    strh.w r10, [r5]
-; CHECK-NEXT:    vstrh.16 q1, [r5, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r4]
+; CHECK-NEXT:    strh.w r10, [r5]
+; CHECK-NEXT:    vstrh.16 q1, [r5, #-36]
+; CHECK-NEXT:    vstrh.16 q1, [r5, #-20]
 ; CHECK-NEXT:    vstrh.16 q0, [r9], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r6], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r3], #152
@@ -686,10 +686,10 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:  .LBB19_11: @ %for.cond8.preheader.2
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str r7, [r0, #-4]
-; CHECK-NEXT:    vstrh.16 q1, [r0, #-36]
-; CHECK-NEXT:    strh.w r10, [r0]
-; CHECK-NEXT:    vstrh.16 q1, [r0, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r4]
+; CHECK-NEXT:    strh.w r10, [r0]
+; CHECK-NEXT:    vstrh.16 q1, [r0, #-36]
+; CHECK-NEXT:    vstrh.16 q1, [r0, #-20]
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r6], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r2], #152
@@ -744,10 +744,10 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:  .LBB19_15: @ %for.cond8.preheader.3
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    str r7, [r2, #-4]
-; CHECK-NEXT:    vstrh.16 q1, [r2, #-36]
-; CHECK-NEXT:    strh.w r10, [r2]
-; CHECK-NEXT:    vstrh.16 q1, [r2, #-20]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    strh.w r10, [r2]
+; CHECK-NEXT:    vstrh.16 q1, [r2, #-36]
+; CHECK-NEXT:    vstrh.16 q1, [r2, #-20]
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r6], #152
 ; CHECK-NEXT:    vstrh.16 q0, [r5], #152
