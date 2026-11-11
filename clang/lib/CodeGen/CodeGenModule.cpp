@@ -722,6 +722,18 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
 CodeGenModule::~CodeGenModule() {}
 
+llvm::Attribute CodeGenModule::getDefaultVScaleRange() {
+  if (!DefaultVScaleRange) {
+    auto Range = Target.getVScaleRange(
+        LangOpts, TargetInfo::ArmStreamingKind::NotStreaming);
+    DefaultVScaleRange.emplace(
+        Range ? llvm::Attribute::getWithVScaleRangeArgs(
+                    getLLVMContext(), Range->first, Range->second)
+              : llvm::Attribute());
+  }
+  return *DefaultVScaleRange;
+}
+
 void CodeGenModule::createObjCRuntime() {
   // This is just isGNUFamily(), but we want to force implementors of
   // new ABIs to decide how best to do this.
