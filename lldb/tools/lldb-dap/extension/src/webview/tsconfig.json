@@ -7,7 +7,7 @@
     "sourceMap": true,
     "strict": true,
     "noEmit": true,
-    "target": "es2017",
+    "target": "es2022",
     "types": ["vscode-webview"],
     "paths": { "@protocol/*": ["../protocol/*"] }
   },
