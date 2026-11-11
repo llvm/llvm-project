@@ -405,8 +405,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
+    libc.src.__support.checked_ptr
     libc.src.__support.common
-    libc.src.__support.CPP.optional
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
     libc.src.errno.errno
