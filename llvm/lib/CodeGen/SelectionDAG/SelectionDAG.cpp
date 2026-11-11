@@ -10401,10 +10401,16 @@ SDValue SelectionDAG::getMemcpy(
   // Then check to see if we should lower the memcpy with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemcpy(
         *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol,
-        AlwaysInline, DstPtrInfo, SrcPtrInfo);
-    if (Result.getNode())
+        AlwaysInline, IsTailCall, DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10538,10 +10544,16 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memmove with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemmove(
-        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, DstPtrInfo,
-        SrcPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, IsTailCall,
+        DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10654,9 +10666,16 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memset with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall =
+        isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/false) &&
+        !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemset(
-        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline, DstPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline,
+        IsTailCall, DstPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 

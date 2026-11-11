@@ -105,6 +105,7 @@ public:
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align DstAlign, Align SrcAlign,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 
@@ -112,20 +113,20 @@ public:
   EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                            SDValue Dst, SDValue Src, SDValue Size,
                            Align DstAlign, Align SrcAlign, bool isVolatile,
-                           MachinePointerInfo DstPtrInfo,
+                           bool &IsTailCall, MachinePointerInfo DstPtrInfo,
                            MachinePointerInfo SrcPtrInfo) const override;
 
   // Adjust parameters for memset, see RTABI section 4.3.4
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   SDValue Op3, Align Alignment, bool isVolatile,
-                                  bool AlwaysInline,
+                                  bool AlwaysInline, bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo) const override;
 
   SDValue EmitSpecializedLibcall(SelectionDAG &DAG, const SDLoc &dl,
                                  SDValue Chain, SDValue Dst, SDValue Src,
                                  SDValue Size, unsigned Align,
-                                 RTLIB::Libcall LC) const;
+                                 RTLIB::Libcall LC, bool &IsTailCall) const;
 };
 
 } // namespace llvm

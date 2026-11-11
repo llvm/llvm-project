@@ -38,6 +38,7 @@ public:
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align Alignment,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo) const override;
 
   bool hasPassthruOp(unsigned Opcode) const {

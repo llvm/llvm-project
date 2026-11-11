@@ -276,7 +276,8 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Val,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo) const {
+  IsTailCall = false;
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 
@@ -396,8 +397,9 @@ static SDValue emitConstantSizeRepmov(
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  IsTailCall = false;
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 

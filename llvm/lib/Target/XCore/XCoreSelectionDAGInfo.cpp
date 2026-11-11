@@ -26,8 +26,11 @@ XCoreSelectionDAGInfo::XCoreSelectionDAGInfo()
 SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  bool CanTailCall = IsTailCall;
+  IsTailCall = false;
+
   unsigned SizeBitWidth = Size.getValueSizeInBits();
   // Call __memcpy_4 if the src, dst and size are all 4 byte aligned.
   if (!AlwaysInline && SrcAlign >= Align(4) && DstAlign >= Align(4) &&
@@ -55,9 +58,11 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
             DAG.getExternalSymbol(MemcpyAlign4Impl,
                                   TLI.getPointerTy(DAG.getDataLayout())),
             std::move(Args))
-        .setDiscardResult();
+        .setDiscardResult()
+        .setTailCall(CanTailCall);
 
     std::pair<SDValue,SDValue> CallResult = TLI.LowerCallTo(CLI);
+    IsTailCall = CLI.IsTailCall;
     return CallResult.second;
   }
 
