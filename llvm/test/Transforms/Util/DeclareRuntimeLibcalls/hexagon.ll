@@ -174,7 +174,7 @@
 ; CHECK-NEXT: declare i64 @__hexagon_moddi3(i64, i64)
 ; CHECK-NEXT: declare i32 @__hexagon_modsi3(i32, i32)
 ; CHECK-NEXT: declare double @__hexagon_muldf3(double, double)
-; CHECK-NEXT: declare float @__hexagon_sqrtf(float)
+; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) float @__hexagon_sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__hexagon_subdf3(double, double)
 ; CHECK-NEXT: declare i64 @__hexagon_udivdi3(i64, i64)
 ; CHECK-NEXT: declare i32 @__hexagon_udivsi3(i32, i32)
@@ -240,7 +240,7 @@
 ; CHECK-NEXT: declare double @__powidf2(double, i32)
 ; CHECK-NEXT: declare float @__powisf2(float, i32)
 ; CHECK-NEXT: declare fp128 @__powitf2(fp128, i32)
-; CHECK-NEXT: declare void @__stack_chk_fail()
+; CHECK-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare double @__subdf3(double, double)
 ; CHECK-NEXT: declare float @__subsf3(float, float)
 ; CHECK-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -378,8 +378,8 @@
 ; CHECK-NEXT: declare double @fmod(double, double)
 ; CHECK-NEXT: declare float @fmodf(float, float)
 ; CHECK-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @frexp(double, ptr)
-; CHECK-NEXT: declare float @frexpf(float, ptr)
+; CHECK-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; CHECK-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare void @hexagon_memcpy_forward_vp4cp4n2(ptr, ptr, i32)
 ; CHECK-NEXT: declare double @ldexp(double, i32)
 ; CHECK-NEXT: declare float @ldexpf(float, i32)
@@ -401,8 +401,8 @@
 ; CHECK-NEXT: declare ptr @memcpy(ptr, ptr, i32)
 ; CHECK-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; CHECK-NEXT: declare ptr @memset(ptr, i32, i32)
-; CHECK-NEXT: declare double @modf(double, ptr)
-; CHECK-NEXT: declare float @modff(float, ptr)
+; CHECK-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; CHECK-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @nan(ptr)
 ; CHECK-NEXT: declare float @nanf(ptr)
 ; CHECK-NEXT: declare double @nearbyint(double)
@@ -413,8 +413,8 @@
 ; CHECK-NEXT: declare float @powf(float, float)
 ; CHECK-NEXT: declare double @remainder(double, double)
 ; CHECK-NEXT: declare float @remainderf(float, float)
-; CHECK-NEXT: declare double @remquo(double, double, ptr)
-; CHECK-NEXT: declare float @remquof(float, float, ptr)
+; CHECK-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; CHECK-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; CHECK-NEXT: declare double @rint(double)
 ; CHECK-NEXT: declare float @rintf(float)
 ; CHECK-NEXT: declare double @round(double)
@@ -439,10 +439,11 @@
 ; CHECK-NEXT: declare float @tgammaf(float)
 ; CHECK-NEXT: declare double @trunc(double)
 ; CHECK-NEXT: declare float @truncf(float)
+; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; CHECK-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 
 ; LINUX: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; LINUX-NEXT: @__stack_chk_guard = external global ptr
@@ -613,7 +614,7 @@
 ; LINUX-NEXT: declare i64 @__hexagon_moddi3(i64, i64)
 ; LINUX-NEXT: declare i32 @__hexagon_modsi3(i32, i32)
 ; LINUX-NEXT: declare double @__hexagon_muldf3(double, double)
-; LINUX-NEXT: declare float @__hexagon_sqrtf(float)
+; LINUX-NEXT: declare nofpclass(ninf nsub nnorm) float @__hexagon_sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__hexagon_subdf3(double, double)
 ; LINUX-NEXT: declare i64 @__hexagon_udivdi3(i64, i64)
 ; LINUX-NEXT: declare i32 @__hexagon_udivsi3(i32, i32)
@@ -679,7 +680,7 @@
 ; LINUX-NEXT: declare double @__powidf2(double, i32)
 ; LINUX-NEXT: declare float @__powisf2(float, i32)
 ; LINUX-NEXT: declare fp128 @__powitf2(fp128, i32)
-; LINUX-NEXT: declare void @__stack_chk_fail()
+; LINUX-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; LINUX-NEXT: declare double @__subdf3(double, double)
 ; LINUX-NEXT: declare float @__subsf3(float, float)
 ; LINUX-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -817,8 +818,8 @@
 ; LINUX-NEXT: declare double @fmod(double, double)
 ; LINUX-NEXT: declare float @fmodf(float, float)
 ; LINUX-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; LINUX-NEXT: declare double @frexp(double, ptr)
-; LINUX-NEXT: declare float @frexpf(float, ptr)
+; LINUX-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare void @hexagon_memcpy_forward_vp4cp4n2(ptr, ptr, i32)
 ; LINUX-NEXT: declare double @ldexp(double, i32)
 ; LINUX-NEXT: declare float @ldexpf(float, i32)
@@ -840,8 +841,8 @@
 ; LINUX-NEXT: declare ptr @memcpy(ptr, ptr, i32)
 ; LINUX-NEXT: declare ptr @memmove(ptr, ptr, i32)
 ; LINUX-NEXT: declare ptr @memset(ptr, i32, i32)
-; LINUX-NEXT: declare double @modf(double, ptr)
-; LINUX-NEXT: declare float @modff(float, ptr)
+; LINUX-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; LINUX-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare double @nan(ptr)
 ; LINUX-NEXT: declare float @nanf(ptr)
 ; LINUX-NEXT: declare double @nearbyint(double)
@@ -852,8 +853,8 @@
 ; LINUX-NEXT: declare float @powf(float, float)
 ; LINUX-NEXT: declare double @remainder(double, double)
 ; LINUX-NEXT: declare float @remainderf(float, float)
-; LINUX-NEXT: declare double @remquo(double, double, ptr)
-; LINUX-NEXT: declare float @remquof(float, float, ptr)
+; LINUX-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; LINUX-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare double @rint(double)
 ; LINUX-NEXT: declare float @rintf(float)
 ; LINUX-NEXT: declare double @round(double)
@@ -865,8 +866,8 @@
 ; LINUX-NEXT: declare double @scalbn(double, i32)
 ; LINUX-NEXT: declare float @scalbnf(float, i32)
 ; LINUX-NEXT: declare double @sin(double)
-; LINUX-NEXT: declare void @sincos(double, ptr, ptr)
-; LINUX-NEXT: declare void @sincosf(float, ptr, ptr)
+; LINUX-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; LINUX-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; LINUX-NEXT: declare float @sinf(float)
 ; LINUX-NEXT: declare double @sinh(double)
 ; LINUX-NEXT: declare float @sinhf(float)
@@ -880,7 +881,8 @@
 ; LINUX-NEXT: declare float @tgammaf(float)
 ; LINUX-NEXT: declare double @trunc(double)
 ; LINUX-NEXT: declare float @truncf(float)
+; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; LINUX-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; LINUX-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; LINUX-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
-; LINUX-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }

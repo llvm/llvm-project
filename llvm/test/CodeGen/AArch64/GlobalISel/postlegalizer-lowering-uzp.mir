@@ -10,7 +10,6 @@
 ---
 name:            uzp1_v4s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -33,7 +32,6 @@ body:             |
 ---
 name:            uzp2_v4s32
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -56,7 +54,6 @@ body:             |
 ---
 name:            no_uzp1
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -82,7 +79,6 @@ body:             |
 ---
 name:            no_uzp2
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -111,7 +107,6 @@ body:             |
 ---
 name:            uzp1_undef
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -136,7 +131,6 @@ body:             |
 ---
 name:            uzp2_undef
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1

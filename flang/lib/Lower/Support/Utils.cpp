@@ -964,4 +964,22 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     std::optional<llvm::omp::Directive> dir,
     bool forceHeapAllocationForPrivateDynamicArrays, bool isLinear);
 
+llvm::SmallVector<const semantics::Symbol *>
+getCommonBlockStorageMembers(const semantics::Symbol &commonBlock) {
+  llvm::SmallVector<const semantics::Symbol *> members;
+  const semantics::Scope &scope = commonBlock.owner();
+  if (scope.equivalenceSets().empty()) {
+    for (const auto &object :
+         commonBlock.get<semantics::CommonBlockDetails>().objects())
+      members.push_back(&*object);
+    return members;
+  }
+  // An object EQUIVALENCEd with a member is in the block's storage without
+  // being in a COMMON statement, so look at every symbol of the scope.
+  for (const auto &[name, symbol] : scope)
+    if (semantics::FindCommonBlockContaining(*symbol) == &commonBlock)
+      members.push_back(&*symbol);
+  return members;
+}
+
 } // end namespace Fortran::lower

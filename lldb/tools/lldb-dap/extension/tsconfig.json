@@ -6,7 +6,8 @@
     "rootDir": ".",
     "sourceMap": true,
     "strict": true,
-    "target": "es6"
+    "target": "es6",
+    "paths": { "@protocol/*": ["./src/protocol/*"] }
   },
   "include": ["src", "test"],
   "exclude": [".vscode-test", "node_modules", "src/webview"]

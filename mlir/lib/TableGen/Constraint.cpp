@@ -54,6 +54,13 @@ std::string Constraint::getConditionTemplate() const {
   return getPredicate().getCondition();
 }
 
+std::vector<StringRef> Constraint::getCppIncludes() const {
+  // Only type and attribute constraints have the field.
+  if (!def->getValue("cppIncludes"))
+    return {};
+  return def->getValueAsListOfStrings("cppIncludes");
+}
+
 StringRef Constraint::getSummary() const {
   if (std::optional<StringRef> summary =
           def->getValueAsOptionalString("summary"))
