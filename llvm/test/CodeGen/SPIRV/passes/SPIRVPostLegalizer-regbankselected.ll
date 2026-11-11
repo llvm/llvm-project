@@ -4,7 +4,7 @@
 ; The unused exponent still needs a register class once RegBankSelected is set.
 
 ; CHECK: regBankSelected: true
-; CHECK: , %[[#]]:iid(s32) = G_FFREXP
+; CHECK: , %[[#]]:iid(i32) = G_FFREXP
 
 define spir_func float @unused_exponent(float %x) {
   %r = call { float, i32 } @llvm.frexp.f32.i32(float %x)
