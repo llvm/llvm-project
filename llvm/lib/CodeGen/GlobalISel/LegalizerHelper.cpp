@@ -4031,7 +4031,10 @@ LegalizerHelper::bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
     // Shift the wide element to get the target element.
     auto ExtractedBits = MIRBuilder.buildLShr(NewEltTy, WideElt, OffsetBits);
     if (DstTy.isFloatOrFloatVector()) {
-      Register R0 = MIRBuilder.buildTrunc(LLT::integer(DstTy.getSizeInBits()), ExtractedBits).getReg(0);
+      Register R0 =
+          MIRBuilder
+              .buildTrunc(LLT::integer(DstTy.getSizeInBits()), ExtractedBits)
+              .getReg(0);
       MIRBuilder.buildBitcast(Dst, R0);
     } else {
       MIRBuilder.buildTrunc(Dst, ExtractedBits);
@@ -9146,7 +9149,8 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   // Insert the sign bit
   V = MIRBuilder.buildOr(I32, Sign, V);
 
-  MIRBuilder.buildBitcast(Dst, MIRBuilder.buildTrunc(LLT::integer(16), V).getReg(0));
+  MIRBuilder.buildBitcast(Dst,
+                          MIRBuilder.buildTrunc(LLT::integer(16), V).getReg(0));
   MI.eraseFromParent();
   return Legalized;
 }
