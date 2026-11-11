@@ -23,3 +23,13 @@ subroutine test_recursive_structure_rejected
     integer n
   end structure
 end subroutine
+
+subroutine test_nested_recursive_structure_rejected
+  structure /a/
+    integer n
+    structure /b/ q
+      !ERROR: /a/ is not a known STRUCTURE
+      record /a/ back
+    end structure
+  end structure
+end subroutine
