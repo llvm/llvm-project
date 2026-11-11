@@ -72,6 +72,7 @@ class IpltSection;
 class MemtagAndroidNote;
 class MemtagGlobalDescriptors;
 class MipsGotSection;
+class MipsStubsSection;
 class PPC64LongBranchTargetSection;
 class PackageMetadataNote;
 class PltSection;
@@ -639,6 +640,7 @@ struct InStruct {
   std::unique_ptr<SyntheticSection> mipsOptions;
   std::unique_ptr<SyntheticSection> mipsReginfo;
   std::unique_ptr<SyntheticSection> mipsRldMap;
+  std::unique_ptr<MipsStubsSection> mipsStubs;
   std::unique_ptr<SyntheticSection> ppc32Got2;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;
