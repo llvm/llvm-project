@@ -8,12 +8,7 @@ declare i8 @llvm.smin.i8(i8, i8)
 ; common addend in both equality and relational comparisons.
 define i8 @test(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
-; CHECK-NEXT:    [[TWICE:%.*]] = shl i8 [[X]], 1
-; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[DIFFERENT_NOT:%.*]] = icmp eq i8 [[TWICE]], [[SUM]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[DIFFERENT_NOT]], i8 [[M]], i8 [[X]]
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 [[R:%.*]]
 ;
   %m = call i8 @llvm.smin.i8(i8 %y, i8 %x)
   %twice = add i8 %x, %x
@@ -25,9 +20,7 @@ define i8 @test(i8 noundef %x, i8 noundef %y) {
 
 define i1 @eq_add_shl_nsw(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @eq_add_shl_nsw(
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nsw i32 %pos, %n
@@ -39,9 +32,7 @@ define i1 @eq_add_shl_nsw(i32 noundef %pos, i32 noundef %n) {
 ; Equality comparison does not require any no-wrap flags.
 define i1 @ne_add_shl_noflags(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @ne_add_shl_noflags(
-; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl i32 [[N]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add i32 %pos, %n
@@ -52,9 +43,7 @@ define i1 @ne_add_shl_noflags(i32 noundef %pos, i32 noundef %n) {
 
 define i1 @eq_shl_add_commuted(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @eq_shl_add_commuted(
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[POS:%.*]], [[N]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TWICE]], [[SUM]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TWICE:%.*]], [[SUM:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %twice = shl nsw i32 %n, 1
@@ -65,9 +54,7 @@ define i1 @eq_shl_add_commuted(i32 noundef %pos, i32 noundef %n) {
 
 define i1 @slt_add_shl_nsw(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @slt_add_shl_nsw(
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nsw i32 %pos, %n
@@ -78,9 +65,7 @@ define i1 @slt_add_shl_nsw(i32 noundef %pos, i32 noundef %n) {
 
 define i1 @sge_add_shl_nsw(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @sge_add_shl_nsw(
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nsw i32 %pos, %n
@@ -91,9 +76,7 @@ define i1 @sge_add_shl_nsw(i32 noundef %pos, i32 noundef %n) {
 
 define i1 @ult_add_shl_nuw(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @ult_add_shl_nuw(
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nuw i32 [[N]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nuw i32 %pos, %n
@@ -104,9 +87,7 @@ define i1 @ult_add_shl_nuw(i32 noundef %pos, i32 noundef %n) {
 
 define i1 @ugt_add_shl_nuw(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @ugt_add_shl_nuw(
-; CHECK-NEXT:    [[SUM:%.*]] = add nuw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nuw i32 [[N]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nuw i32 %pos, %n
@@ -117,8 +98,7 @@ define i1 @ugt_add_shl_nuw(i32 noundef %pos, i32 noundef %n) {
 
 define i1 @slt_self_shl_nsw(i32 noundef %n) {
 ; CHECK-LABEL: @slt_self_shl_nsw(
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[N]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %twice = shl nsw i32 %n, 1
@@ -128,8 +108,7 @@ define i1 @slt_self_shl_nsw(i32 noundef %n) {
 
 define i1 @sgt_self_shl_nsw(i32 noundef %n) {
 ; CHECK-LABEL: @sgt_self_shl_nsw(
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %twice = shl nsw i32 %n, 1
@@ -139,8 +118,7 @@ define i1 @sgt_self_shl_nsw(i32 noundef %n) {
 
 define i1 @sle_self_shl_nsw(i32 noundef %n) {
 ; CHECK-LABEL: @sle_self_shl_nsw(
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[N]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %twice = shl nsw i32 %n, 1
@@ -150,7 +128,7 @@ define i1 @sle_self_shl_nsw(i32 noundef %n) {
 
 define i1 @ult_self_shl_nuw(i32 noundef %n) {
 ; CHECK-LABEL: @ult_self_shl_nuw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[N:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %twice = shl nuw i32 %n, 1
@@ -160,7 +138,7 @@ define i1 @ult_self_shl_nuw(i32 noundef %n) {
 
 define i1 @uge_self_shl_nuw(i32 noundef %n) {
 ; CHECK-LABEL: @uge_self_shl_nuw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %twice = shl nuw i32 %n, 1
@@ -170,9 +148,7 @@ define i1 @uge_self_shl_nuw(i32 noundef %n) {
 
 define <2 x i1> @eq_add_shl_vec_splat(<2 x i32> noundef %pos,
 ; CHECK-LABEL: @eq_add_shl_vec_splat(
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw <2 x i32> [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw <2 x i32> [[N]], splat (i32 1)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUM:%.*]], [[TWICE:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   <2 x i32> noundef %n) {
@@ -185,10 +161,9 @@ define <2 x i1> @eq_add_shl_vec_splat(<2 x i32> noundef %pos,
 ; The shl is not removed, so extra uses must not prevent the fold.
 define i1 @eq_add_shl_multi_use_shl(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @eq_add_shl_multi_use_shl(
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N]], 1
+; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N:%.*]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[TWICE]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[POS:%.*]], [[N]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nsw i32 %pos, %n
@@ -202,9 +177,8 @@ define i1 @eq_add_shl_multi_use_shl(i32 noundef %pos, i32 noundef %n) {
 define i1 @eq_add_shl_multi_use_add(i32 noundef %pos, i32 noundef %n) {
 ; CHECK-LABEL: @eq_add_shl_multi_use_add(
 ; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[POS:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[TWICE:%.*]] = shl nsw i32 [[N]], 1
 ; CHECK-NEXT:    call void @use32(i32 [[SUM]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUM]], [[TWICE]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[POS]], [[N]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sum = add nsw i32 %pos, %n
