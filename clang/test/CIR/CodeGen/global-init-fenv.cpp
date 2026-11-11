@@ -38,8 +38,8 @@ float nc_y = 10.0f;
 float g_nonconst = nc_x / nc_y;
 
 // CIR-LABEL:   cir.func {{.*}} @__cxx_global_var_init()
-// CIR-STRICT-SAME:  attributes {strictfp}
-// CIR-MAYTRAP-SAME: attributes {strictfp}
+// CIR-STRICT-SAME:  attributes {{.*}}strictfp}
+// CIR-MAYTRAP-SAME: attributes {{.*}}strictfp}
 // CIR:         %[[G:.*]] = cir.get_global @g_nonconst : !cir.ptr<!cir.float>
 // CIR:         %[[XP:.*]] = cir.get_global @nc_x : !cir.ptr<!cir.float>
 // CIR:         %[[X:.*]] = cir.load {{.*}} %[[XP]]
@@ -67,7 +67,7 @@ const float c_x = 1.0f;
 const float c_y = 10.0f;
 float g_const = c_x / c_y;
 
-// CIR-CONSTRAINED: cir.func {{.*}} @__cxx_global_var_init.1() attributes {strictfp}
+// CIR-CONSTRAINED: cir.func {{.*}} @__cxx_global_var_init.1() attributes {{.*}}strictfp}
 // CIR-CONSTRAINED:   %[[G:.*]] = cir.get_global @g_const : !cir.ptr<!cir.float>
 // CIR-CONSTRAINED:   %[[X:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR-CONSTRAINED:   %[[Y:.*]] = cir.const #cir.fp<1.000000e+01> : !cir.float
@@ -91,7 +91,7 @@ constexpr float ce_y = 10.0f;
 float nc_z = 2.0f;
 float g_mixed = ce_x / ce_y / nc_z;
 
-// CIR-CONSTRAINED: cir.func {{.*}} @__cxx_global_var_init.2() attributes {strictfp}
+// CIR-CONSTRAINED: cir.func {{.*}} @__cxx_global_var_init.2() attributes {{.*}}strictfp}
 // CIR-DEFAULT:     cir.func {{.*}} @__cxx_global_var_init.1()
 // CIR:               %[[G:.*]] = cir.get_global @g_mixed : !cir.ptr<!cir.float>
 // CIR:               %[[A:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float

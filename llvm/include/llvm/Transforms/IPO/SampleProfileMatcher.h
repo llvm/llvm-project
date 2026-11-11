@@ -22,11 +22,17 @@
 
 namespace llvm {
 
+struct IPOOptions;
+
 using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
 using AnchorMap = std::map<LineLocation, FunctionId>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
+  const IPOOptions &Opts;
+  // -salvage-stale-profile and -salvage-unused-profile, resolved by the loader.
+  bool SalvageStaleProfile;
+  bool SalvageUnusedProfile;
   Module &M;
   SampleProfileReader &Reader;
   LazyCallGraph &CG;
@@ -113,14 +119,18 @@ class SampleProfileMatcher {
 
 public:
   SampleProfileMatcher(
-      Module &M, SampleProfileReader &Reader, LazyCallGraph &CG,
-      const PseudoProbeManager *ProbeManager, ThinOrFullLTOPhase LTOPhase,
+      const IPOOptions &Opts, Module &M, SampleProfileReader &Reader,
+      LazyCallGraph &CG, const PseudoProbeManager *ProbeManager,
+      ThinOrFullLTOPhase LTOPhase,
       HashKeyMap<DenseMap, FunctionId, Function *> &SymMap,
       std::shared_ptr<ProfileSymbolList> PSL,
-      HashKeyMap<DenseMap, FunctionId, FunctionId> &FuncNameToProfNameMap)
-      : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
-        LTOPhase(LTOPhase), FuncNameToProfNameMap(&FuncNameToProfNameMap),
-        SymbolMap(&SymMap), PSL(PSL) {};
+      HashKeyMap<DenseMap, FunctionId, FunctionId> &FuncNameToProfNameMap,
+      bool SalvageStaleProfile, bool SalvageUnusedProfile)
+      : Opts(Opts), SalvageStaleProfile(SalvageStaleProfile),
+        SalvageUnusedProfile(SalvageUnusedProfile), M(M), Reader(Reader),
+        CG(CG), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
+        FuncNameToProfNameMap(&FuncNameToProfNameMap), SymbolMap(&SymMap),
+        PSL(PSL) {};
   LLVM_ABI void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which

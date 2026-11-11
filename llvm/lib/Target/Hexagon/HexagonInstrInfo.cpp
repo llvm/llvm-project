@@ -2745,6 +2745,10 @@ bool HexagonInstrInfo::isHVXVec(const MachineInstr &MI) const {
   return HexagonII::TypeCVI_FIRST <= V && V <= HexagonII::TypeCVI_LAST;
 }
 
+bool HexagonInstrInfo::isHLXVec(const MachineInstr &MI) const {
+  return (MI.getDesc().TSFlags >> HexagonII::isHLXPos) & HexagonII::isHLXMask;
+}
+
 // Check if the Offset is a valid auto-inc imm by Load/Store Type.
 bool HexagonInstrInfo::isValidAutoIncImm(const EVT VT, int Offset) const {
   int Size = VT.getSizeInBits() / 8;
@@ -4535,6 +4539,8 @@ unsigned HexagonInstrInfo::getMemAccessSize(const MachineInstr &MI) const {
   switch (S) {
     case HexagonII::HVXVectorAccess:
       return HRI.getSpillSize(Hexagon::HvxVRRegClass);
+    case HexagonII::HLXVectorAccess:
+      return HRI.getSpillSize(Hexagon::HlxLRRegClass);
     default:
       llvm_unreachable("Unexpected instruction");
   }

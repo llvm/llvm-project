@@ -139,6 +139,15 @@ def loongarch_vanynonzero
 def loongarch_vallzero
     : SDNode<"LoongArchISD::VALLZERO", SDT_LoongArchVMSKCOND>;
 
+// Perform element-wise vector multiplication at even/odd indices,
+// and keep each result in its corresponding widened slot
+def loongarch_vmulwev: SDNode<"LoongArchISD::VMULWEV", SDT_LoongArchV2R>;
+def loongarch_vmulwod: SDNode<"LoongArchISD::VMULWOD", SDT_LoongArchV2R>;
+def loongarch_vmulwevu: SDNode<"LoongArchISD::VMULWEVU", SDT_LoongArchV2R>;
+def loongarch_vmulwodu: SDNode<"LoongArchISD::VMULWODU", SDT_LoongArchV2R>;
+def loongarch_vmulwevus: SDNode<"LoongArchISD::VMULWEVUS", SDT_LoongArchV2R>;
+def loongarch_vmulwodus: SDNode<"LoongArchISD::VMULWODUS", SDT_LoongArchV2R>;
+
 def immZExt1 : ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>;
 def immZExt2 : ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]>;
 def immZExt3 : ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]>;
@@ -2244,6 +2253,39 @@ multiclass InsertExtractPatV2<ValueType vecty, ValueType elemty> {
   }
 }
 
+multiclass VmulwPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_D") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass VmulwuPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_BU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_HU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_WU") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_DU") LSX128:$vj, LSX128:$vk)>;
+}
+
+multiclass VmulwusPat<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode (v16i8 LSX128:$vj), (v16i8 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_H_BU_B") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v8i16 LSX128:$vj), (v8i16 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_W_HU_H") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v4i32 LSX128:$vj), (v4i32 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_D_WU_W") LSX128:$vj, LSX128:$vk)>;
+  def : Pat<(OpNode (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+            (!cast<LAInst>(Inst#"_Q_DU_D") LSX128:$vj, LSX128:$vk)>;
+}
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -2282,6 +2324,14 @@ defm : PatVrVr<mul, "VMUL">;
 // VMUH_{B/H/W/D}[U]
 defm : PatVrVr<mulhs, "VMUH">;
 defm : PatVrVrU<mulhu, "VMUH">;
+
+// VMULW{EV/OD}_{H_B/W_H/D_W/Q_D}[U], VMULW{EV/OD}_{H_BU_B/W_HU_H/D_WU_W/Q_DU_D}
+defm : VmulwPat<loongarch_vmulwev, "VMULWEV">;
+defm : VmulwPat<loongarch_vmulwod, "VMULWOD">;
+defm : VmulwuPat<loongarch_vmulwevu, "VMULWEV">;
+defm : VmulwuPat<loongarch_vmulwodu, "VMULWOD">;
+defm : VmulwusPat<loongarch_vmulwevus, "VMULWEV">;
+defm : VmulwusPat<loongarch_vmulwodus, "VMULWOD">;
 
 // VMADD_{B/H/W/D}
 defm : PatVrVrVr<muladd, "VMADD">;
@@ -3002,9 +3052,39 @@ def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
 def : Pat<(v4i32 (fp_to_sint_sat v4f32:$vj, i32)), (VFTINTRZ_W_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_sint_sat v2f64:$vj, i64)), (VFTINTRZ_L_D v2f64:$vj)>;
 
+// fptosi(frint(x)) is equivalent to a conversion using the same rounding
+// mode: frint is exact in the floating-point domain, so the following
+// round-toward-zero conversion performs no additional rounding.  The same
+// holds for the saturating form, as both saturate and map NaN to zero.
+multiclass PatVrFToIntRoundLSX<SDNode ToInt, SDNode ToIntSat, SDNode Round,
+                               string InstWS, string InstLD, string InstWD> {
+  def : Pat<(v4i32 (ToInt (Round v4f32:$vj))),
+            (!cast<LAInst>(InstWS) v4f32:$vj)>;
+  def : Pat<(v2i64 (ToInt (Round v2f64:$vj))),
+            (!cast<LAInst>(InstLD) v2f64:$vj)>;
+  def : Pat<(v4i32 (ToIntSat (Round v4f32:$vj), i32)),
+            (!cast<LAInst>(InstWS) v4f32:$vj)>;
+  def : Pat<(v2i64 (ToIntSat (Round v2f64:$vj), i64)),
+            (!cast<LAInst>(InstLD) v2f64:$vj)>;
+  def : Pat<(v4i32 (loongarch_vftintrz_w_d (Round v2f64:$vj),
+                                           (Round v2f64:$vk))),
+            (!cast<LAInst>(InstWD) v2f64:$vj, v2f64:$vk)>;
+}
+
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, ffloor,
+                           "VFTINTRM_W_S", "VFTINTRM_L_D", "VFTINTRM_W_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, fceil,
+                           "VFTINTRP_W_S", "VFTINTRP_L_D", "VFTINTRP_W_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, froundeven,
+                           "VFTINTRNE_W_S", "VFTINTRNE_L_D", "VFTINTRNE_W_D">;
+defm : PatVrFToIntRoundLSX<fp_to_sint, fp_to_sint_sat, ftrunc,
+                           "VFTINTRZ_W_S", "VFTINTRZ_L_D", "VFTINTRZ_W_D">;
+
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
+def : Pat<(v4i32 (fp_to_uint (ftrunc v4f32:$vj))), (VFTINTRZ_WU_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_uint v2f64:$vj)), (VFTINTRZ_LU_D v2f64:$vj)>;
+def : Pat<(v2i64 (fp_to_uint (ftrunc v2f64:$vj))), (VFTINTRZ_LU_D v2f64:$vj)>;
 
 // VFTINTRZ_W_D
 def : Pat<(v4i32 (loongarch_vftintrz_w_d (v2f64 LSX128:$vj), (v2f64 LSX128:$vk))),
