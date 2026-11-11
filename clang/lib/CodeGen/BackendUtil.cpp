@@ -432,7 +432,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EnableTLSDESC = CodeGenOpts.EnableTLSDESC;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
-  Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
   Options.StackUsageFile = CodeGenOpts.StackUsageFile;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
@@ -1288,10 +1287,11 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   }
 
   TimeCodegenPasses([&]() {
-    Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
-        !CodeGenOpts.VerifyModule,
-        /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
+    Error CodeGenError =
+        runCodeGenPipeline(*TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr,
+                           CGFT, !CodeGenOpts.VerifyModule,
+                           /*DisableSimplifyLibCalls=*/false, /*MSI=*/nullptr,
+                           CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });

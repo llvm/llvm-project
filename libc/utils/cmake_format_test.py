@@ -242,6 +242,62 @@ class TestRule9_CleanlinessAndFileHygiene(unittest.TestCase):
         self.assertEqual(cmake_format.format_cmake_content(""), "")
         self.assertEqual(cmake_format.format_cmake_content("   \n\n  \t "), "")
 
+    def test_9_4_collapse_consecutive_blank_lines(self):
+        """Rule 9.4: Multiple consecutive blank lines are collapsed to a single blank line."""
+        code = (
+            "# Header comment\n\n\n"
+            "set(FOO bar)\n\n"
+            "   \n\t\n"
+            "if(FOO)\n\n\n"
+            "  add_entrypoint_object(\n"
+            "    target\n\n\n"
+            "    SRCS\n"
+            "      s1.cpp\n"
+            "  )\n"
+            "endif()\n"
+        )
+        expected = (
+            "# Header comment\n\n"
+            "set(FOO bar)\n\n"
+            "if(FOO)\n\n"
+            "  add_entrypoint_object(\n"
+            "    target\n\n"
+            "    SRCS\n"
+            "      s1.cpp\n"
+            "  )\n"
+            "endif()\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+    def test_9_5_strip_leading_blank_lines(self):
+        """Rule 9.5: Leading blank lines at the start of a file are stripped."""
+        self.assertEqual(
+            cmake_format.format_cmake_content("\n\nset(FOO bar)\n"),
+            "set(FOO bar)\n",
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content("  \n\t\n# Header\n\nset(FOO bar)\n"),
+            "# Header\n\nset(FOO bar)\n",
+        )
+
+    def test_9_6_preserve_blank_lines_in_multiline_literals(self):
+        """Rule 9.6: Consecutive blank lines inside quoted strings, bracket args, and bracket comments are preserved."""
+        code = (
+            "#[=[\n\n\n"
+            "  Comment block\n\n\n"
+            "]=]\n\n\n"
+            'set(DOC "line1\n\n\nline2")\n\n\n'
+            "set(RAW [=[raw1\n\n\nraw2]=])\n"
+        )
+        expected = (
+            "#[=[\n\n\n"
+            "  Comment block\n\n\n"
+            "]=]\n\n"
+            'set(DOC "line1\n\n\nline2")\n\n'
+            "set(RAW [=[raw1\n\n\nraw2]=])\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
 
 class TestDynamicSchemaLearning(unittest.TestCase):
     """Dynamic Schema Learning Tests."""

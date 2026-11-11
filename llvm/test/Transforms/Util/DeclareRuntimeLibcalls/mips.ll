@@ -252,7 +252,7 @@
 ; MIPS32-NEXT: declare double @__powidf2(double, i32 signext)
 ; MIPS32-NEXT: declare float @__powisf2(float, i32 signext)
 ; MIPS32-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
-; MIPS32-NEXT: declare void @__stack_chk_fail()
+; MIPS32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare double @__subdf3(double, double)
 ; MIPS32-NEXT: declare float @__subsf3(float, float)
 ; MIPS32-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -348,7 +348,7 @@
 ; MIPS32-NEXT: declare float @atanf(float)
 ; MIPS32-NEXT: declare void @cabs(...)
 ; MIPS32-NEXT: declare void @cabsf(...)
-; MIPS32-NEXT: declare noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare noalias noundef ptr @calloc(i32 noundef signext, i32 noundef signext) [[CALLOC_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare double @cbrt(double)
 ; MIPS32-NEXT: declare float @cbrtf(float)
 ; MIPS32-NEXT: declare double @ceil(double)
@@ -390,8 +390,8 @@
 ; MIPS32-NEXT: declare double @fmod(double, double)
 ; MIPS32-NEXT: declare float @fmodf(float, float)
 ; MIPS32-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; MIPS32-NEXT: declare double @frexp(double, ptr)
-; MIPS32-NEXT: declare float @frexpf(float, ptr)
+; MIPS32-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS32-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; MIPS32-NEXT: declare double @ldexp(double, i32 signext)
 ; MIPS32-NEXT: declare float @ldexpf(float, i32 signext)
 ; MIPS32-NEXT: declare i64 @llrint(double)
@@ -408,12 +408,12 @@
 ; MIPS32-NEXT: declare i32 @lrintf(float)
 ; MIPS32-NEXT: declare i32 @lround(double)
 ; MIPS32-NEXT: declare i32 @lroundf(float)
-; MIPS32-NEXT: declare noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare noalias noundef ptr @malloc(i32 noundef signext) [[MALLOC_ATTRS:#[0-9]+]]
 ; MIPS32-NEXT: declare ptr @memcpy(ptr, ptr, i32 signext)
 ; MIPS32-NEXT: declare ptr @memmove(ptr, ptr, i32 signext)
 ; MIPS32-NEXT: declare ptr @memset(ptr, i32 signext, i32 signext)
-; MIPS32-NEXT: declare double @modf(double, ptr)
-; MIPS32-NEXT: declare float @modff(float, ptr)
+; MIPS32-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; MIPS32-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; MIPS32-NEXT: declare double @nan(ptr)
 ; MIPS32-NEXT: declare float @nanf(ptr)
 ; MIPS32-NEXT: declare double @nearbyint(double)
@@ -424,8 +424,8 @@
 ; MIPS32-NEXT: declare float @powf(float, float)
 ; MIPS32-NEXT: declare double @remainder(double, double)
 ; MIPS32-NEXT: declare float @remainderf(float, float)
-; MIPS32-NEXT: declare double @remquo(double, double, ptr)
-; MIPS32-NEXT: declare float @remquof(float, float, ptr)
+; MIPS32-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS32-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; MIPS32-NEXT: declare double @rint(double)
 ; MIPS32-NEXT: declare float @rintf(float)
 ; MIPS32-NEXT: declare double @round(double)
@@ -437,8 +437,8 @@
 ; MIPS32-NEXT: declare double @scalbn(double, i32 signext)
 ; MIPS32-NEXT: declare float @scalbnf(float, i32 signext)
 ; MIPS32-NEXT: declare double @sin(double)
-; MIPS32-NEXT: declare void @sincos(double, ptr, ptr)
-; MIPS32-NEXT: declare void @sincosf(float, ptr, ptr)
+; MIPS32-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; MIPS32-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; MIPS32-NEXT: declare float @sinf(float)
 ; MIPS32-NEXT: declare double @sinh(double)
 ; MIPS32-NEXT: declare float @sinhf(float)
@@ -452,6 +452,7 @@
 ; MIPS32-NEXT: declare float @tgammaf(float)
 ; MIPS32-NEXT: declare double @trunc(double)
 ; MIPS32-NEXT: declare float @truncf(float)
+; MIPS32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
@@ -680,7 +681,7 @@
 ; MIPS64-NEXT: declare float @__powisf2(float, i32 signext)
 ; MIPS64-NEXT: declare fp128 @__powitf2(fp128, i32 signext)
 ; MIPS64-NEXT: declare fp128 @__powl_finite(fp128, fp128)
-; MIPS64-NEXT: declare void @__stack_chk_fail()
+; MIPS64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; MIPS64-NEXT: declare double @__subdf3(double, double)
 ; MIPS64-NEXT: declare float @__subsf3(float, float)
 ; MIPS64-NEXT: declare fp128 @__subtf3(fp128, fp128)
@@ -841,9 +842,9 @@
 ; MIPS64-NEXT: declare float @fmodf(float, float)
 ; MIPS64-NEXT: declare fp128 @fmodl(fp128, fp128)
 ; MIPS64-NEXT: declare void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; MIPS64-NEXT: declare double @frexp(double, ptr)
-; MIPS64-NEXT: declare float @frexpf(float, ptr)
-; MIPS64-NEXT: declare fp128 @frexpl(fp128, ptr)
+; MIPS64-NEXT: declare double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS64-NEXT: declare float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS64-NEXT: declare fp128 @frexpl(fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; MIPS64-NEXT: declare double @ldexp(double, i32 signext)
 ; MIPS64-NEXT: declare float @ldexpf(float, i32 signext)
 ; MIPS64-NEXT: declare fp128 @ldexpl(fp128, i32 signext)
@@ -872,9 +873,9 @@
 ; MIPS64-NEXT: declare ptr @memcpy(ptr, ptr, i64)
 ; MIPS64-NEXT: declare ptr @memmove(ptr, ptr, i64)
 ; MIPS64-NEXT: declare ptr @memset(ptr, i32 signext, i64)
-; MIPS64-NEXT: declare double @modf(double, ptr)
-; MIPS64-NEXT: declare float @modff(float, ptr)
-; MIPS64-NEXT: declare fp128 @modfl(fp128, ptr)
+; MIPS64-NEXT: declare double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; MIPS64-NEXT: declare float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS64-NEXT: declare fp128 @modfl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; MIPS64-NEXT: declare double @nan(ptr)
 ; MIPS64-NEXT: declare float @nanf(ptr)
 ; MIPS64-NEXT: declare fp128 @nanl(ptr)
@@ -890,9 +891,9 @@
 ; MIPS64-NEXT: declare double @remainder(double, double)
 ; MIPS64-NEXT: declare float @remainderf(float, float)
 ; MIPS64-NEXT: declare fp128 @remainderl(fp128, fp128)
-; MIPS64-NEXT: declare double @remquo(double, double, ptr)
-; MIPS64-NEXT: declare float @remquof(float, float, ptr)
-; MIPS64-NEXT: declare fp128 @remquol(fp128, fp128, ptr)
+; MIPS64-NEXT: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS64-NEXT: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS64-NEXT: declare fp128 @remquol(fp128, fp128, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 ; MIPS64-NEXT: declare double @rint(double)
 ; MIPS64-NEXT: declare float @rintf(float)
 ; MIPS64-NEXT: declare fp128 @rintl(fp128)
@@ -909,9 +910,9 @@
 ; MIPS64-NEXT: declare float @scalbnf(float, i32 signext)
 ; MIPS64-NEXT: declare fp128 @scalbnl(fp128, i32 signext)
 ; MIPS64-NEXT: declare double @sin(double)
-; MIPS64-NEXT: declare void @sincos(double, ptr, ptr)
-; MIPS64-NEXT: declare void @sincosf(float, ptr, ptr)
-; MIPS64-NEXT: declare void @sincosl(fp128, ptr, ptr)
+; MIPS64-NEXT: declare void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
+; MIPS64-NEXT: declare void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; MIPS64-NEXT: declare void @sincosl(fp128, ptr noalias nonnull writeonly align 16 dereferenceable(16), ptr noalias nonnull writeonly align 16 dereferenceable(16))
 ; MIPS64-NEXT: declare float @sinf(float)
 ; MIPS64-NEXT: declare double @sinh(double)
 ; MIPS64-NEXT: declare float @sinhf(float)
@@ -932,6 +933,7 @@
 ; MIPS64-NEXT: declare double @trunc(double)
 ; MIPS64-NEXT: declare float @truncf(float)
 ; MIPS64-NEXT: declare fp128 @truncl(fp128)
+; MIPS64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc") allocsize(0,1) "alloc-family"="malloc" }
 ; MIPS64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") "alloc-family"="malloc" }
 ; MIPS64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }

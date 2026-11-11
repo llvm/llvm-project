@@ -13,9 +13,7 @@
 #ifndef MLIR_DIALECT_ARMNEON_ARMNEONDIALECT_H_
 #define MLIR_DIALECT_ARMNEON_ARMNEONDIALECT_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h.inc"
 
