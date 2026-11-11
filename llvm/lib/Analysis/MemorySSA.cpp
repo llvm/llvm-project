@@ -15,8 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -141,96 +139,6 @@ public:
 
 } // namespace
 
-namespace {
-
-/// Our current alias analysis API differentiates heavily between calls and
-/// non-calls, and functions called on one usually assert on the other.
-/// This class encapsulates the distinction to simplify other code that wants
-/// "Memory affecting instructions and related data" to use as a key.
-/// For example, this class is used as a densemap key in the use optimizer.
-class MemoryLocOrCall {
-public:
-  bool IsCall = false;
-
-  MemoryLocOrCall(MemoryUseOrDef *MUD)
-      : MemoryLocOrCall(MUD->getMemoryInst()) {}
-  MemoryLocOrCall(const MemoryUseOrDef *MUD)
-      : MemoryLocOrCall(MUD->getMemoryInst()) {}
-
-  MemoryLocOrCall(Instruction *Inst) {
-    if (auto *C = dyn_cast<CallBase>(Inst)) {
-      IsCall = true;
-      Call = C;
-    } else {
-      IsCall = false;
-      // There is no such thing as a memorylocation for a fence inst, and it is
-      // unique in that regard.
-      if (!isa<FenceInst>(Inst))
-        Loc = MemoryLocation::get(Inst);
-    }
-  }
-
-  explicit MemoryLocOrCall(const MemoryLocation &Loc) : Loc(Loc) {}
-
-  const CallBase *getCall() const {
-    assert(IsCall);
-    return Call;
-  }
-
-  MemoryLocation getLoc() const {
-    assert(!IsCall);
-    return Loc;
-  }
-
-  bool operator==(const MemoryLocOrCall &Other) const {
-    if (IsCall != Other.IsCall)
-      return false;
-
-    if (!IsCall)
-      return Loc == Other.Loc;
-
-    if (Call->getCalledOperand() != Other.Call->getCalledOperand())
-      return false;
-
-    return Call->arg_size() == Other.Call->arg_size() &&
-           std::equal(Call->arg_begin(), Call->arg_end(),
-                      Other.Call->arg_begin());
-  }
-
-private:
-  union {
-    const CallBase *Call;
-    MemoryLocation Loc;
-  };
-};
-
-} // end anonymous namespace
-
-namespace llvm {
-
-template <> struct DenseMapInfo<MemoryLocOrCall> {
-  static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
-    if (!MLOC.IsCall)
-      return hash_combine(
-          MLOC.IsCall,
-          DenseMapInfo<MemoryLocation>::getHashValue(MLOC.getLoc()));
-
-    hash_code hash =
-        hash_combine(MLOC.IsCall, DenseMapInfo<const Value *>::getHashValue(
-                                      MLOC.getCall()->getCalledOperand()));
-
-    for (const Value *Arg : MLOC.getCall()->args())
-      hash = hash_combine(hash, DenseMapInfo<const Value *>::getHashValue(Arg));
-    return hash;
-  }
-
-  static bool isEqual(const MemoryLocOrCall &LHS, const MemoryLocOrCall &RHS) {
-    return LHS == RHS;
-  }
-};
-
-} // end namespace llvm
-
 /// This does one-way checks to see if Use could theoretically be hoisted above
 /// MayClobber. This will not check the other way around.
 ///
@@ -303,23 +211,13 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
   return isModSet(I);
 }
 
-template <typename AliasAnalysisType>
-static bool instructionClobbersQuery(MemoryDef *MD, const MemoryUseOrDef *MU,
-                                     const MemoryLocOrCall &UseMLOC,
-                                     AliasAnalysisType &AA) {
-  // FIXME: This is a temporary hack to allow a single instructionClobbersQuery
-  // to exist while MemoryLocOrCall is pushed through places.
-  if (UseMLOC.IsCall)
-    return instructionClobbersQuery(MD, MemoryLocation(), MU->getMemoryInst(),
-                                    AA);
-  return instructionClobbersQuery(MD, UseMLOC.getLoc(), MU->getMemoryInst(),
-                                  AA);
-}
-
 // Return true when MD may alias MU, return false otherwise.
 bool MemorySSAUtil::defClobbersUseOrDef(MemoryDef *MD, const MemoryUseOrDef *MU,
                                         AliasAnalysis &AA) {
-  return instructionClobbersQuery(MD, MU, MemoryLocOrCall(MU), AA);
+  Instruction *UseInst = MU->getMemoryInst();
+  MemoryLocation UseLoc =
+      MemoryLocation::getOrNone(UseInst).value_or(MemoryLocation());
+  return instructionClobbersQuery(MD, UseLoc, UseInst, AA);
 }
 
 namespace {
@@ -985,8 +883,7 @@ public:
   // additional query becomes heavily used we may decide to cache the result.
   // Walker instantiations will decide how to set the SkipSelf bool.
   MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *, BatchAAResults &,
-                                              unsigned &, bool,
-                                              bool UseInvariantGroup = true);
+                                              unsigned &, bool);
 };
 
 /// A MemorySSAWalker that does AA walks to disambiguate accesses. It no
@@ -1010,11 +907,6 @@ public:
                                           const MemoryLocation &Loc,
                                           BatchAAResults &BAA, unsigned &UWL) {
     return Walker->getClobberingMemoryAccessBase(MA, Loc, BAA, UWL);
-  }
-  // This method is not accessible outside of this file.
-  MemoryAccess *getClobberingMemoryAccessWithoutInvariantGroup(
-      MemoryAccess *MA, BatchAAResults &BAA, unsigned &UWL) {
-    return Walker->getClobberingMemoryAccessBase(MA, BAA, UWL, false, false);
   }
 
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *MA,
@@ -2300,23 +2192,21 @@ getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
 
 MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
     MemoryAccess *MA, BatchAAResults &BAA, unsigned &UpwardWalkLimit,
-    bool SkipSelf, bool UseInvariantGroup) {
+    bool SkipSelf) {
   auto *StartingAccess = dyn_cast<MemoryUseOrDef>(MA);
   // If this is a MemoryPhi, we can't do anything.
   if (!StartingAccess)
     return MA;
 
-  if (UseInvariantGroup) {
-    if (auto *I = getInvariantGroupClobberingInstruction(
-            *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
-      assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  if (auto *I = getInvariantGroupClobberingInstruction(
+          *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
+    assert(isa<LoadInst>(I) || isa<StoreInst>(I));
 
-      auto *ClobberMA = MSSA->getMemoryAccess(I);
-      assert(ClobberMA);
-      if (isa<MemoryUse>(ClobberMA))
-        return ClobberMA->getDefiningAccess();
-      return ClobberMA;
-    }
+    auto *ClobberMA = MSSA->getMemoryAccess(I);
+    assert(ClobberMA);
+    if (isa<MemoryUse>(ClobberMA))
+      return ClobberMA->getDefiningAccess();
+    return ClobberMA;
   }
 
   bool IsOptimized = false;
