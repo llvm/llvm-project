@@ -1406,6 +1406,27 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     // nop in big-endian situations.
     return ValReg;
   case CCValAssign::AExt: {
+    LLT Ty = MRI.getType(ValReg);
+    if (Ty.isFloat()) { // source is float type
+      Register R1 =
+          MIRBuilder.buildBitcast(LLT::integer(Ty.getSizeInBits()), ValReg)
+              .getReg(0);
+      Register R2 =
+          MIRBuilder.buildAnyExt(LLT::integer(LocTy.getSizeInBits()), R1)
+              .getReg(0);
+      if (LocTy.isFloat()) { // both source and destination are float type
+        return MIRBuilder.buildBitcast(LocTy, R2).getReg(0);
+      }
+      return R2;
+    }
+    if (LocTy.isFloat()) { // source is not float type, but destination
+                           // is float type
+      Register R1 =
+          MIRBuilder.buildAnyExt(LLT::integer(LocTy.getSizeInBits()), ValReg)
+              .getReg(0);
+      return MIRBuilder.buildBitcast(LocTy, R1).getReg(0);
+    }
+    // neither source or destination is float type
     auto MIB = MIRBuilder.buildAnyExt(LocTy, ValReg);
     return MIB.getReg(0);
   }
