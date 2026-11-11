@@ -4968,10 +4968,6 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
       const unsigned NumElts = GR.getScalarOrVectorComponentCount(ResType);
       TmpType = GR.getOrCreateSPIRVVectorType(TmpType, NumElts, I, TII);
     }
-    // Leave the low-level type (LLT) of this temp unset. The shared
-    // createVirtualRegister helper sets the full LLT, for example <8 x s32>.
-    // That is wider than the 128-bit vector register class, so the size check
-    // after selection fails.
     SrcReg = MRI->createVirtualRegister(GR.getRegClass(TmpType));
     GR.assignSPIRVTypeToVReg(TmpType, SrcReg, MRI->getMF());
     selectBoolToInt(SrcReg, TmpType, I.getOperand(1).getReg(), I, IsSigned);
@@ -5062,9 +5058,6 @@ bool SPIRVInstructionSelector::selectIntToBool(Register IntReg,
                                                SPIRVTypeInst IntTy,
                                                SPIRVTypeInst BoolTy) const {
   // To truncate to a bool, we use OpBitwiseAnd 1 and OpINotEqual to zero.
-  // Leave the LLT of this temp unset, as in selectIToF. The shared
-  // createVirtualRegister helper can set an LLT wider than the 128-bit vector
-  // register class.
   Register BitIntReg = MRI->createVirtualRegister(GR.getRegClass(IntTy));
   GR.assignSPIRVTypeToVReg(IntTy, BitIntReg, MRI->getMF());
   unsigned Opcode =
