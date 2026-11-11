@@ -770,6 +770,7 @@ namespace llvm {
     SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const;

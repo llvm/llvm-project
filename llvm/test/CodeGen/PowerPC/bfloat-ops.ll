@@ -38,31 +38,52 @@ define float @load_bfloat(ptr %p) nounwind {
 define void @store_bfloat(float %f, ptr %p) nounwind {
 ; PPC64LE-LABEL: store_bfloat:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    xsmaxdp 0, 1, 1
-; PPC64LE-NEXT:    xscvdpspn 0, 0
+; PPC64LE-NEXT:    xscvdpspn 0, 1
+; PPC64LE-NEXT:    fcmpu 0, 1, 1
 ; PPC64LE-NEXT:    mffprwz 3, 0
+; PPC64LE-NEXT:    rlwinm 5, 3, 16, 31, 31
+; PPC64LE-NEXT:    add 5, 5, 3
+; PPC64LE-NEXT:    oris 3, 3, 64
+; PPC64LE-NEXT:    addi 5, 5, 32767
+; PPC64LE-NEXT:    isel 3, 3, 5, 3
 ; PPC64LE-NEXT:    srwi 3, 3, 16
 ; PPC64LE-NEXT:    sth 3, 0(4)
 ; PPC64LE-NEXT:    blr
 ;
 ; PPC64BE-LABEL: store_bfloat:
 ; PPC64BE:       # %bb.0:
-; PPC64BE-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; PPC64BE-NEXT:    lfs 0, .LCPI1_0@toc@l(3)
-; PPC64BE-NEXT:    fmuls 0, 1, 0
-; PPC64BE-NEXT:    stfs 0, -4(1)
-; PPC64BE-NEXT:    lhz 3, -4(1)
+; PPC64BE-NEXT:    stfs 1, -4(1)
+; PPC64BE-NEXT:    fcmpu 0, 1, 1
+; PPC64BE-NEXT:    lwz 3, -4(1)
+; PPC64BE-NEXT:    bun 0, .LBB1_2
+; PPC64BE-NEXT:  # %bb.1:
+; PPC64BE-NEXT:    rlwinm 5, 3, 16, 31, 31
+; PPC64BE-NEXT:    add 3, 5, 3
+; PPC64BE-NEXT:    addi 3, 3, 32767
+; PPC64BE-NEXT:    b .LBB1_3
+; PPC64BE-NEXT:  .LBB1_2:
+; PPC64BE-NEXT:    oris 3, 3, 64
+; PPC64BE-NEXT:  .LBB1_3:
+; PPC64BE-NEXT:    srwi 3, 3, 16
 ; PPC64BE-NEXT:    sth 3, 0(4)
 ; PPC64BE-NEXT:    blr
 ;
 ; PPC32-LABEL: store_bfloat:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    stwu 1, -16(1)
-; PPC32-NEXT:    lis 4, .LCPI1_0@ha
-; PPC32-NEXT:    lfs 0, .LCPI1_0@l(4)
-; PPC32-NEXT:    fmuls 0, 1, 0
-; PPC32-NEXT:    stfs 0, 12(1)
-; PPC32-NEXT:    lhz 4, 12(1)
+; PPC32-NEXT:    stfs 1, 12(1)
+; PPC32-NEXT:    fcmpu 0, 1, 1
+; PPC32-NEXT:    lwz 4, 12(1)
+; PPC32-NEXT:    bun 0, .LBB1_2
+; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    rlwinm 5, 4, 16, 31, 31
+; PPC32-NEXT:    add 4, 5, 4
+; PPC32-NEXT:    addi 4, 4, 32767
+; PPC32-NEXT:    b .LBB1_3
+; PPC32-NEXT:  .LBB1_2:
+; PPC32-NEXT:    oris 4, 4, 64
+; PPC32-NEXT:  .LBB1_3:
+; PPC32-NEXT:    srwi 4, 4, 16
 ; PPC32-NEXT:    sth 4, 0(3)
 ; PPC32-NEXT:    addi 1, 1, 16
 ; PPC32-NEXT:    blr
@@ -107,8 +128,29 @@ define void @fptrunc_from_f64(double %d, ptr %p) nounwind {
 ; PPC64LE-LABEL: fptrunc_from_f64:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    xsrsp 0, 1
-; PPC64LE-NEXT:    xscvdpspn 0, 0
-; PPC64LE-NEXT:    mffprwz 3, 0
+; PPC64LE-NEXT:    li 6, 1
+; PPC64LE-NEXT:    xscvdpspn 2, 0
+; PPC64LE-NEXT:    fcmpu 1, 1, 0
+; PPC64LE-NEXT:    xsabsdp 1, 1
+; PPC64LE-NEXT:    xsabsdp 0, 0
+; PPC64LE-NEXT:    mffprwz 3, 2
+; PPC64LE-NEXT:    cror 20, 6, 7
+; PPC64LE-NEXT:    andi. 5, 3, 1
+; PPC64LE-NEXT:    li 5, -1
+; PPC64LE-NEXT:    cror 20, 20, 1
+; PPC64LE-NEXT:    fcmpu 0, 1, 0
+; PPC64LE-NEXT:    iselgt 5, 6, 5
+; PPC64LE-NEXT:    add 5, 3, 5
+; PPC64LE-NEXT:    isel 3, 3, 5, 20
+; PPC64LE-NEXT:    mtfprd 0, 3
+; PPC64LE-NEXT:    rlwinm 5, 3, 16, 31, 31
+; PPC64LE-NEXT:    add 5, 5, 3
+; PPC64LE-NEXT:    oris 3, 3, 64
+; PPC64LE-NEXT:    addi 5, 5, 32767
+; PPC64LE-NEXT:    xxsldwi 0, 0, 0, 1
+; PPC64LE-NEXT:    xscvspdpn 0, 0
+; PPC64LE-NEXT:    fcmpu 0, 0, 0
+; PPC64LE-NEXT:    isel 3, 3, 5, 3
 ; PPC64LE-NEXT:    srwi 3, 3, 16
 ; PPC64LE-NEXT:    sth 3, 0(4)
 ; PPC64LE-NEXT:    blr
@@ -116,8 +158,37 @@ define void @fptrunc_from_f64(double %d, ptr %p) nounwind {
 ; PPC64BE-LABEL: fptrunc_from_f64:
 ; PPC64BE:       # %bb.0:
 ; PPC64BE-NEXT:    frsp 0, 1
-; PPC64BE-NEXT:    stfs 0, -4(1)
-; PPC64BE-NEXT:    lhz 3, -4(1)
+; PPC64BE-NEXT:    stfs 0, -8(1)
+; PPC64BE-NEXT:    fcmpu 0, 1, 0
+; PPC64BE-NEXT:    cror 20, 2, 3
+; PPC64BE-NEXT:    lwz 3, -8(1)
+; PPC64BE-NEXT:    fabs 1, 1
+; PPC64BE-NEXT:    andi. 5, 3, 1
+; PPC64BE-NEXT:    fabs 0, 0
+; PPC64BE-NEXT:    cror 20, 20, 1
+; PPC64BE-NEXT:    addi 5, 3, 1
+; PPC64BE-NEXT:    fcmpu 1, 1, 0
+; PPC64BE-NEXT:    bgt 1, .LBB3_2
+; PPC64BE-NEXT:  # %bb.1:
+; PPC64BE-NEXT:    addi 5, 3, -1
+; PPC64BE-NEXT:  .LBB3_2:
+; PPC64BE-NEXT:    bc 12, 20, .LBB3_4
+; PPC64BE-NEXT:  # %bb.3:
+; PPC64BE-NEXT:    mr 3, 5
+; PPC64BE-NEXT:  .LBB3_4:
+; PPC64BE-NEXT:    stw 3, -4(1)
+; PPC64BE-NEXT:    lfs 0, -4(1)
+; PPC64BE-NEXT:    fcmpu 0, 0, 0
+; PPC64BE-NEXT:    bun 0, .LBB3_6
+; PPC64BE-NEXT:  # %bb.5:
+; PPC64BE-NEXT:    rlwinm 5, 3, 16, 31, 31
+; PPC64BE-NEXT:    add 3, 5, 3
+; PPC64BE-NEXT:    addi 3, 3, 32767
+; PPC64BE-NEXT:    b .LBB3_7
+; PPC64BE-NEXT:  .LBB3_6:
+; PPC64BE-NEXT:    oris 3, 3, 64
+; PPC64BE-NEXT:  .LBB3_7:
+; PPC64BE-NEXT:    srwi 3, 3, 16
 ; PPC64BE-NEXT:    sth 3, 0(4)
 ; PPC64BE-NEXT:    blr
 ;
@@ -125,8 +196,37 @@ define void @fptrunc_from_f64(double %d, ptr %p) nounwind {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    stwu 1, -16(1)
 ; PPC32-NEXT:    frsp 0, 1
-; PPC32-NEXT:    stfs 0, 12(1)
-; PPC32-NEXT:    lhz 4, 12(1)
+; PPC32-NEXT:    stfs 0, 8(1)
+; PPC32-NEXT:    fcmpu 1, 1, 0
+; PPC32-NEXT:    lwz 4, 8(1)
+; PPC32-NEXT:    fabs 1, 1
+; PPC32-NEXT:    fabs 0, 0
+; PPC32-NEXT:    cror 20, 6, 7
+; PPC32-NEXT:    andi. 5, 4, 1
+; PPC32-NEXT:    cror 20, 20, 1
+; PPC32-NEXT:    fcmpu 0, 1, 0
+; PPC32-NEXT:    addi 5, 4, 1
+; PPC32-NEXT:    bgt 0, .LBB3_2
+; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    addi 5, 4, -1
+; PPC32-NEXT:  .LBB3_2:
+; PPC32-NEXT:    bc 12, 20, .LBB3_4
+; PPC32-NEXT:  # %bb.3:
+; PPC32-NEXT:    mr 4, 5
+; PPC32-NEXT:  .LBB3_4:
+; PPC32-NEXT:    stw 4, 12(1)
+; PPC32-NEXT:    lfs 0, 12(1)
+; PPC32-NEXT:    fcmpu 0, 0, 0
+; PPC32-NEXT:    bun 0, .LBB3_6
+; PPC32-NEXT:  # %bb.5:
+; PPC32-NEXT:    rlwinm 5, 4, 16, 31, 31
+; PPC32-NEXT:    add 4, 5, 4
+; PPC32-NEXT:    addi 4, 4, 32767
+; PPC32-NEXT:    b .LBB3_7
+; PPC32-NEXT:  .LBB3_6:
+; PPC32-NEXT:    oris 4, 4, 64
+; PPC32-NEXT:  .LBB3_7:
+; PPC32-NEXT:    srwi 4, 4, 16
 ; PPC32-NEXT:    sth 4, 0(3)
 ; PPC32-NEXT:    addi 1, 1, 16
 ; PPC32-NEXT:    blr
@@ -173,8 +273,14 @@ define void @div_test_bfloat(ptr %a, ptr %b, ptr %c) nounwind {
 ; PPC64LE-NEXT:    xxsldwi 1, 1, 1, 1
 ; PPC64LE-NEXT:    xscvspdpn 1, 1
 ; PPC64LE-NEXT:    xsdivsp 0, 0, 1
-; PPC64LE-NEXT:    xscvdpspn 0, 0
-; PPC64LE-NEXT:    mffprwz 4, 0
+; PPC64LE-NEXT:    xscvdpspn 1, 0
+; PPC64LE-NEXT:    fcmpu 0, 0, 0
+; PPC64LE-NEXT:    mffprwz 4, 1
+; PPC64LE-NEXT:    rlwinm 5, 4, 16, 31, 31
+; PPC64LE-NEXT:    add 5, 5, 4
+; PPC64LE-NEXT:    oris 4, 4, 64
+; PPC64LE-NEXT:    addi 5, 5, 32767
+; PPC64LE-NEXT:    isel 4, 4, 5, 3
 ; PPC64LE-NEXT:    srwi 4, 4, 16
 ; PPC64LE-NEXT:    sth 4, 0(3)
 ; PPC64LE-NEXT:    blr
@@ -191,7 +297,18 @@ define void @div_test_bfloat(ptr %a, ptr %b, ptr %c) nounwind {
 ; PPC64BE-NEXT:    lfs 1, -8(1)
 ; PPC64BE-NEXT:    fdivs 0, 0, 1
 ; PPC64BE-NEXT:    stfs 0, -12(1)
-; PPC64BE-NEXT:    lhz 4, -12(1)
+; PPC64BE-NEXT:    fcmpu 0, 0, 0
+; PPC64BE-NEXT:    lwz 4, -12(1)
+; PPC64BE-NEXT:    bun 0, .LBB5_2
+; PPC64BE-NEXT:  # %bb.1:
+; PPC64BE-NEXT:    rlwinm 5, 4, 16, 31, 31
+; PPC64BE-NEXT:    add 4, 5, 4
+; PPC64BE-NEXT:    addi 4, 4, 32767
+; PPC64BE-NEXT:    b .LBB5_3
+; PPC64BE-NEXT:  .LBB5_2:
+; PPC64BE-NEXT:    oris 4, 4, 64
+; PPC64BE-NEXT:  .LBB5_3:
+; PPC64BE-NEXT:    srwi 4, 4, 16
 ; PPC64BE-NEXT:    sth 4, 0(3)
 ; PPC64BE-NEXT:    blr
 ;
@@ -208,7 +325,18 @@ define void @div_test_bfloat(ptr %a, ptr %b, ptr %c) nounwind {
 ; PPC32-NEXT:    lfs 1, 24(1)
 ; PPC32-NEXT:    fdivs 0, 0, 1
 ; PPC32-NEXT:    stfs 0, 20(1)
-; PPC32-NEXT:    lhz 4, 20(1)
+; PPC32-NEXT:    lwz 4, 20(1)
+; PPC32-NEXT:    fcmpu 0, 0, 0
+; PPC32-NEXT:    bun 0, .LBB5_2
+; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    rlwinm 5, 4, 16, 31, 31
+; PPC32-NEXT:    add 4, 5, 4
+; PPC32-NEXT:    addi 4, 4, 32767
+; PPC32-NEXT:    b .LBB5_3
+; PPC32-NEXT:  .LBB5_2:
+; PPC32-NEXT:    oris 4, 4, 64
+; PPC32-NEXT:  .LBB5_3:
+; PPC32-NEXT:    srwi 4, 4, 16
 ; PPC32-NEXT:    sth 4, 0(3)
 ; PPC32-NEXT:    addi 1, 1, 32
 ; PPC32-NEXT:    blr
