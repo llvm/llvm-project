@@ -1391,22 +1391,8 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     unsigned TokNumBytes = SLP.GetStringLength();
 
     // If the byte is in this token, return the location of the byte.
-    //
-    // The string data may have been converted to a different encoding (e.g.
-    // -fexec-charset) than the one obtained by re-lexing the source token here,
-    // so ByteNo can lie beyond the end of the last token. In that case, clamp
-    // to the end of the last token rather than failing.
-    //
-    // FIXME: When the conversion changes the number of bytes (e.g. a
-    // multi-byte UTF-8 sequence that maps to a single byte), ByteNo no longer
-    // corresponds to the byte offset in the source spelling, so the returned
-    // location can be wrong ("drift"), and diagnostics using it may point at
-    // the wrong place. Ideally, callers would fall back to the range of the
-    // entire string literal in that case, as is done for non-literal
-    // (constant-evaluated) asm strings.
-    bool IsLastToken = TokNo == getNumConcatenated() - 1;
-    if (ByteNo < TokNumBytes || IsLastToken) {
-      ByteNo = std::min(ByteNo, TokNumBytes);
+    if (ByteNo < TokNumBytes ||
+        (ByteNo == TokNumBytes && TokNo == getNumConcatenated() - 1)) {
       unsigned Offset = SLP.getOffsetOfStringByte(TheTok, ByteNo);
 
       // Now that we know the offset of the token in the spelling, use the

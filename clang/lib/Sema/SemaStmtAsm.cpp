@@ -262,7 +262,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
                                                          ConvertedAsm.size());
       return StringLiteral::Create(Context, ConvertedAsm,
                                    StringLiteralKind::Ordinary,
-                                   /*Pascal*/ false, StrTy, SL->getBeginLoc());
+                                   /*Pascal=*/false, StrTy, SL->getBeginLoc());
     }
     return SL;
   }
