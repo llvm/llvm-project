@@ -9197,8 +9197,9 @@ encoded binary sections. More details can be found in the {doc}`PC Sections Meta
 #### '`memprof`' Metadata
 
 The `memprof` metadata is used to record memory profile data on heap
-allocation calls. Multiple context-sensitive profiles can be represented
-with a single `memprof` metadata attachment.
+allocation calls for profile-guided memory optimization (MemPGO). Multiple
+context-sensitive profiles can be represented with a single `memprof` metadata
+attachment.
 
 Example:
 

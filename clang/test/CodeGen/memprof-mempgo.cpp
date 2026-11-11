@@ -1,4 +1,4 @@
-// Test end-to-end optimization pipeline with PGHO, that it does not interfere
+// Test end-to-end optimization pipeline with MemPGO, that it does not interfere
 // with other allocation instrumentation features.
 //
 // RUN: split-file %s %t
