@@ -18,7 +18,6 @@
 ---
 name:            insert_32i8_idx
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: zpr, preferred-register: '' }
   - { id: 1, class: zpr, preferred-register: '' }

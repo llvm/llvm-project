@@ -3381,6 +3381,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   unsigned Opc = Node->getOpcode();
   MVT VT = cast<AtomicSDNode>(Node)->getMemoryVT().getSimpleVT();
+  assert(TLI.getOperationAction(Opc, VT) == TargetLowering::LibCall &&
+         "expanded atomic requires a libcall action for the memory type");
   AtomicOrdering order = cast<AtomicSDNode>(Node)->getMergedOrdering();
   // Lower to outline atomic libcall if outline atomics enabled,
   // or to sync libcall otherwise

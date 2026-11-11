@@ -62,4 +62,4 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-cpu"="neoverse-512tvb" }
+attributes #0 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
