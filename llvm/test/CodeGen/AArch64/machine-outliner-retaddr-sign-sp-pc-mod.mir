@@ -114,8 +114,10 @@ body:             |
 # CHECK-NEXT: frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
 # CHECK-NEXT: $x0 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: CFI_INSTRUCTION register $w30, $w0
 # CHECK-NEXT: BL @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $sp, implicit-def $x8, implicit-def $x9, implicit $sp, implicit $xzr, implicit $x0
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x0, 0
+# CHECK-NEXT: CFI_INSTRUCTION restore $w30
 # CHECK-NEXT: frame-destroy AUTIASPPCi <mcsymbol >, implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION llvm_set_ra_state 0, 0
 # CHECK-NEXT: RET undef $lr
@@ -148,8 +150,10 @@ body:             |
 # CHECK-NEXT: frame-setup PACIASPPC implicit-def $lr, implicit $lr, implicit $sp, pre-instr-symbol <mcsymbol >
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_set_ra_state 2, <mcsymbol >
 # CHECK-NEXT: $x0 = ORRXrs $xzr, $lr, 0
+# CHECK-NEXT: CFI_INSTRUCTION register $w30, $w0
 # CHECK-NEXT: BL @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $sp, implicit-def $x8, implicit-def $x9, implicit $sp, implicit $xzr, implicit $x0
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x0, 0
+# CHECK-NEXT: CFI_INSTRUCTION restore $w30
 # CHECK-NEXT: frame-destroy AUTIASPPCi <mcsymbol >, implicit-def $lr, implicit $lr, implicit $sp
 # CHECK-NEXT: frame-destroy CFI_INSTRUCTION llvm_set_ra_state 0, 0
 # CHECK-NEXT: RET undef $lr
