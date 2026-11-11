@@ -663,17 +663,25 @@ LLVM_ABI Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
 
 /// SCEV bounds of a pointer group: the first accessed byte, the last accessed
 /// byte plus one, and a stride that must be checked to be non-negative, if any.
-struct RuntimeCheckBounds {
+struct RuntimeCheckGroupBounds {
   const SCEV *Low;
   const SCEV *High;
   const SCEV *StrideToCheck;
 };
 
-/// Return the bounds of \p CG in \p TheLoop. If \p HoistRuntimeChecks is true,
-/// bounds varying in the parent loop of \p TheLoop may be widened to cover the
-/// whole parent loop, so that checks using them can be hoisted out of it.
+/// Bounds of the two pointer groups of a runtime check.
+struct RuntimeCheckBounds {
+  RuntimeCheckGroupBounds First;
+  RuntimeCheckGroupBounds Second;
+};
+
+/// Return the bounds to use for the two pointer groups of \p Check in
+/// \p TheLoop. If \p HoistRuntimeChecks is true, bounds varying in the parent
+/// loop of \p TheLoop may be rewritten so that the check is invariant in the
+/// parent loop and holds for all of its iterations. The returned bounds are
+/// only valid for comparing the groups of \p Check against each other.
 LLVM_ABI RuntimeCheckBounds
-getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG, const Loop *TheLoop,
+getRuntimeCheckBounds(const RuntimePointerCheck &Check, const Loop *TheLoop,
                       ScalarEvolution &SE, bool HoistRuntimeChecks);
 
 /// Add code that checks at runtime if the accessed arrays in \p PointerChecks

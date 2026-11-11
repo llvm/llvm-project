@@ -45,12 +45,12 @@ define void @Test(ptr nocapture %obj, i64 %z) #0 {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[OBJ]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[I]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 132, [[TMP6]]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OBJ]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[I]], 2
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 132, [[TMP12]]
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[OBJ]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[BOUND05:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[BOUND16:%.*]] = icmp ult ptr [[TMP9]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT7:%.*]] = and i1 [[BOUND05]], [[BOUND16]]

@@ -131,14 +131,14 @@ for.end:                                          ; preds = %for.cond.cleanup
 define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-LABEL: @loop2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 40000
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 40000
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 40000
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[C]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[B]], [[SCEVGEP3]]
-; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[A1:%.*]], i64 40000
+; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[C]], [[TMP12]]
+; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[A1]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[LOOP_BODY:%.*]], label [[VECTOR_PH:%.*]]
@@ -148,19 +148,19 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META4:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !alias.scope [[META4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 20)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD7]], splat (i32 20)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP4]], align 4, !alias.scope [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope [[META7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
@@ -175,13 +175,13 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[C_GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[IV1]]
+; CHECK-NEXT:    [[C_GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[IV1]]
 ; CHECK-NEXT:    [[C_LV:%.*]] = load i32, ptr [[C_GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C_LV]], 20
-; CHECK-NEXT:    [[A_GEP_0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[IV1]]
+; CHECK-NEXT:    [[A_GEP_0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A1]], i64 [[IV1]]
 ; CHECK-NEXT:    [[A_LV_0:%.*]] = load float, ptr [[A_GEP_0]], align 4
 ; CHECK-NEXT:    [[MUL2_I81_I:%.*]] = fmul float [[X]], [[A_LV_0]]
-; CHECK-NEXT:    [[B_GEP_0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[IV1]]
+; CHECK-NEXT:    [[B_GEP_0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[IV1]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_LATCH]], label [[ELSE:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[B_LV:%.*]] = load float, ptr [[B_GEP_0]], align 4

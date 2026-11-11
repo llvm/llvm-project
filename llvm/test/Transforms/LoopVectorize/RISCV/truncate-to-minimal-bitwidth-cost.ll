@@ -259,10 +259,10 @@ define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) vsc
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P2]], i64 2042
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[P2]], i64 1021
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[P2]], i64 8168
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP4]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[P2]], i64 8168
 ; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[P2]], [[SCEVGEP5]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND1]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]

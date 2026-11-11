@@ -63,6 +63,9 @@ define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) vscale_range(2, 10
 ; NO-UNIT-STRIDE-MV-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP18]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; NO-UNIT-STRIDE-MV-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[P]], i64 512
+; NO-UNIT-STRIDE-MV-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP2]], [[SCEVGEP6]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP5]], [[SCEVGEP4]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP20:%.*]] = mul i64 [[STRIDE]], 504
 ; NO-UNIT-STRIDE-MV-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[P_STRIDED]], i64 [[TMP20]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP21:%.*]] = shl i64 [[STRIDE]], 3
@@ -72,9 +75,6 @@ define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) vscale_range(2, 10
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP23:%.*]] = icmp ugt ptr [[SCEVGEP7]], [[SCEVGEP8]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[UMAX:%.*]] = select i1 [[TMP23]], ptr [[SCEVGEP7]], ptr [[SCEVGEP8]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[UMAX]], i64 8
-; NO-UNIT-STRIDE-MV-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP2]], [[SCEVGEP6]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP5]], [[SCEVGEP4]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[BOUND010:%.*]] = icmp ult ptr [[SCEVGEP2]], [[SCEVGEP9]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[BOUND111:%.*]] = icmp ult ptr [[UMIN]], [[SCEVGEP4]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[FOUND_CONFLICT12:%.*]] = and i1 [[BOUND010]], [[BOUND111]]

@@ -52,10 +52,10 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP3:%.*]] = shl i64 [[N]], 2
 ; NORMAL_DEP_LIMIT-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 [[TMP3]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[OTHER]], i64 [[TMP3]]
-; NORMAL_DEP_LIMIT-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[INDICES]], i64 [[TMP3]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[ARRAY]], [[SCEVGEP1]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[OTHER]], [[SCEVGEP]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; NORMAL_DEP_LIMIT-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[INDICES]], i64 [[TMP3]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[ARRAY]], [[SCEVGEP2]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[INDICES]], [[SCEVGEP]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
