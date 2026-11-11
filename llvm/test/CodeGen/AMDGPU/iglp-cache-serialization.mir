@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=postmisched -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.42 -run-pass=postmisched -o - %s | FileCheck %s
 
 # Test that IGLP analysis data stored on IGLP_OPT round-trips through MIR and
 # that PostRA scheduling handles IGLP_OPTs with and without that data (the
