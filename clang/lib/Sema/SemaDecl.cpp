@@ -3517,11 +3517,12 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
         found += propagateAttribute<InheritableParamAttr>(To, From, S);
-        // Propagate the lifetimebound attribute from parameters to the
-        // most recent declaration. Note that this doesn't include the implicit
-        // 'this' parameter, as the attribute is applied to the function type in
-        // that case.
+        // Propagate the lifetimebound and lifetime_capture_by attributes from
+        // parameters to the most recent declaration. Note that this doesn't
+        // include the implicit 'this' parameter, as the attribute is applied to
+        // the function type in that case.
         found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        found += propagateAttribute<LifetimeCaptureByAttr>(To, From, S);
         return found;
       });
 }
@@ -14921,13 +14922,6 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (!Var->hasAttr<AliasAttr>()) {
       if (RequireCompleteType(Var->getLocation(),
                               Context.getBaseElementType(Type),
-                              diag::err_typecheck_decl_incomplete_type)) {
-        Var->setInvalidDecl();
-        return;
-      }
-      // Completing the element type may reveal that the array is too large.
-      if (Type->isConstantArrayType() &&
-          RequireCompleteType(Var->getLocation(), Type,
                               diag::err_typecheck_decl_incomplete_type)) {
         Var->setInvalidDecl();
         return;

@@ -6758,8 +6758,6 @@ def err_vm_func_decl : Error<
   "function declaration cannot have variably modified type">;
 def err_array_too_large : Error<
   "array is too large (%0 elements)">;
-def err_array_size_too_large : Error<
-  "array is too large (%0 bytes)">;
 
 def err_type_too_large_for_address_space : Error<
   "%0 is too large for the address space (maximum allowed size of %1 bytes)">;
@@ -14090,6 +14088,7 @@ defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|"
   "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+defvar UnsafeBufferLibcCallMsg = "function %0 is unsafe";
 def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_variable_main_argv : Warning<UnsafeBufferVariableMsg>,
@@ -14098,9 +14097,25 @@ def warn_unsafe_buffer_operation : Warning<UnsafeBufferOperationMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation_main_argv : Warning<UnsafeBufferOperationMsg>,
   InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
-def warn_unsafe_buffer_libc_call : Warning<
-  "function %0 is unsafe">,
+def warn_unsafe_buffer_libc_call : Warning<UnsafeBufferLibcCallMsg>,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_numeric_conversion :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallNumericConversion>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_string_manipulation :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallStringManipulation>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_string_examination :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallStringExamination>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_memory : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallMemory>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_io : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallIO>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_printf : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallPrintf>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_scanf : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallScanf>, DefaultIgnore;
 def warn_unsafe_buffer_format_attr_call : Warning<
   "formatting function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInFormatAttrCall>, DefaultIgnore;

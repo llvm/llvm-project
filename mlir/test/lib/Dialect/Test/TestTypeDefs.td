@@ -496,6 +496,17 @@ def TestMemrefType : Test_Type<"TestMemref",
   }];
 }
 
+// A type that is tensor-like and buffer-like but not shaped. As a tensor-like
+// type, its buffer is a builtin memref of the same element type.
+def TestUnshapedType : Test_Type<"TestUnshaped",
+    [DeclareTypeInterfaceMethods<Bufferization_TensorLikeTypeInterface,
+        ["verifyCompatibleBufferType"]>,
+     Bufferization_BufferLikeTypeInterface]> {
+  let mnemonic = "test_unshaped";
+  let parameters = (ins "mlir::Type":$elementType);
+  let assemblyFormat = "`<` $elementType `>`";
+}
+
 // Test implementation of an interface with methods specifying a
 // method body
 def TestBaseBody : Test_Type<"TestBaseBody",

@@ -6,7 +6,6 @@
 name:            zext_nxv1i16_nxv1i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -38,7 +37,6 @@ body:             |
 name:            zext_nxv1i32_nxv1i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -70,7 +68,6 @@ body:             |
 name:            zext_nxv1i64_nxv1i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -102,7 +99,6 @@ body:             |
 name:            zext_nxv2i16_nxv2i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -134,7 +130,6 @@ body:             |
 name:            zext_nxv2i32_nxv2i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -166,7 +161,6 @@ body:             |
 name:            zext_nxv2i64_nxv2i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -198,7 +192,6 @@ body:             |
 name:            zext_nxv4i16_nxv4i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -230,7 +223,6 @@ body:             |
 name:            zext_nxv4i32_nxv4i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -262,7 +254,6 @@ body:             |
 name:            zext_nxv4i64_nxv4i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -294,7 +285,6 @@ body:             |
 name:            zext_nxv8i16_nxv8i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -326,7 +316,6 @@ body:             |
 name:            zext_nxv8i32_nxv8i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -358,7 +347,6 @@ body:             |
 name:            zext_nxv8i64_nxv8i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -390,7 +378,6 @@ body:             |
 name:            zext_nxv16i16_nxv16i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m2
@@ -422,7 +409,6 @@ body:             |
 name:            zext_nxv16i32_nxv16i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m2
@@ -454,7 +440,6 @@ body:             |
 name:            zext_nxv32i16_nxv32i8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m4
@@ -486,7 +471,6 @@ body:             |
 name:            zext_nxv1i32_nxv1i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -518,7 +502,6 @@ body:             |
 name:            zext_nxv1i64_nxv1i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -550,7 +533,6 @@ body:             |
 name:            zext_nxv2i32_nxv2i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -582,7 +564,6 @@ body:             |
 name:            zext_nxv2i64_nxv2i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -614,7 +595,6 @@ body:             |
 name:            zext_nxv4i32_nxv4i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -646,7 +626,6 @@ body:             |
 name:            zext_nxv4i64_nxv4i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -678,7 +657,6 @@ body:             |
 name:            zext_nxv8i32_nxv8i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m2
@@ -710,7 +688,6 @@ body:             |
 name:            zext_nxv8i64_nxv8i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m2
@@ -742,7 +719,6 @@ body:             |
 name:            zext_nxv16i32_nxv16i16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m4
@@ -774,7 +750,6 @@ body:             |
 name:            zext_nxv1i64_nxv1i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -806,7 +781,6 @@ body:             |
 name:            zext_nxv2i64_nxv2i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8
@@ -838,7 +812,6 @@ body:             |
 name:            zext_nxv4i64_nxv4i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m2
@@ -870,7 +843,6 @@ body:             |
 name:            zext_nxv8i64_nxv8i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $v8m4
