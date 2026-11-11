@@ -320,7 +320,9 @@ defm : SBWriteResPair<WriteFBlendY,   [SBPort05], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFBlendZ,   [SBPort05], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteFVarBlend, [SBPort05], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteFVarBlendY,[SBPort05], 2, [2], 2, 7>;
-defm : SBWriteResPair<WriteFVarBlendZ,[SBPort05], 2, [2], 2, 7>; // Unsupported = 1
+defm : SBWriteResPair<WriteFMaskBlendX, [SBPort05], 2, [2], 2, 6>;
+defm : SBWriteResPair<WriteFMaskBlendY, [SBPort05], 2, [2], 2, 7>;
+defm : SBWriteResPair<WriteFMaskBlendZ, [SBPort05], 2, [2], 2, 7>; // Unsupported = 1
 
 // Conversion between integer and float.
 defm : SBWriteResPair<WriteCvtSS2I,   [SBPort0,SBPort1], 5, [1,1], 2>;
@@ -431,7 +433,9 @@ defm : SBWriteResPair<WriteBlendY,  [SBPort15], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteBlendZ,  [SBPort15], 1, [1], 1, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteVarBlend, [SBPort15], 2, [2], 2, 6>;
 defm : SBWriteResPair<WriteVarBlendY,[SBPort15], 2, [2], 2, 7>;
-defm : SBWriteResPair<WriteVarBlendZ,[SBPort15], 2, [2], 2, 7>; // Unsupported = 1
+defm : SBWriteResPair<WriteMaskBlendX, [SBPort15], 2, [2], 2, 6>;
+defm : SBWriteResPair<WriteMaskBlendY, [SBPort15], 2, [2], 2, 7>;
+defm : SBWriteResPair<WriteMaskBlendZ, [SBPort15], 2, [2], 2, 7>; // Unsupported = 1
 defm : SBWriteResPair<WriteMPSAD,  [SBPort0, SBPort15], 7, [1,2], 3, 6>;
 defm : SBWriteResPair<WriteMPSADY, [SBPort0, SBPort15], 7, [1,2], 3, 7>;
 defm : SBWriteResPair<WriteMPSADZ, [SBPort0, SBPort15], 7, [1,2], 3, 7>; // Unsupported = 1

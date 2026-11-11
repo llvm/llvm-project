@@ -1925,17 +1925,17 @@ multiclass blendmask_bw<bits<8> opc, string OpcodeStr, X86SchedWriteWidths sched
   }
 }
 
-defm VBLENDMPS : blendmask_dq<0x65, "vblendmps", SchedWriteFVarBlend,
+defm VBLENDMPS : blendmask_dq<0x65, "vblendmps", SchedWriteFMaskBlend,
                               avx512vl_f32_info>;
-defm VBLENDMPD : blendmask_dq<0x65, "vblendmpd", SchedWriteFVarBlend,
+defm VBLENDMPD : blendmask_dq<0x65, "vblendmpd", SchedWriteFMaskBlend,
                               avx512vl_f64_info>, REX_W;
-defm VPBLENDMD : blendmask_dq<0x64, "vpblendmd", SchedWriteVarBlend,
+defm VPBLENDMD : blendmask_dq<0x64, "vpblendmd", SchedWriteMaskBlend,
                               avx512vl_i32_info>;
-defm VPBLENDMQ : blendmask_dq<0x64, "vpblendmq", SchedWriteVarBlend,
+defm VPBLENDMQ : blendmask_dq<0x64, "vpblendmq", SchedWriteMaskBlend,
                               avx512vl_i64_info>, REX_W;
-defm VPBLENDMB : blendmask_bw<0x66, "vpblendmb", SchedWriteVarBlend,
+defm VPBLENDMB : blendmask_bw<0x66, "vpblendmb", SchedWriteMaskBlend,
                               avx512vl_i8_info>;
-defm VPBLENDMW : blendmask_bw<0x66, "vpblendmw", SchedWriteVarBlend,
+defm VPBLENDMW : blendmask_bw<0x66, "vpblendmw", SchedWriteMaskBlend,
                               avx512vl_i16_info>, REX_W;
 
 //===----------------------------------------------------------------------===//

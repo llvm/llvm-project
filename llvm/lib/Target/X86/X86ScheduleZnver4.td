@@ -975,7 +975,9 @@ defm : Zn4WriteResYMMPair<WriteFBlendY, [Zn4FPFMul01], 1, [1], 1>; // Floating p
 defm : Zn4WriteResZMMPair<WriteFBlendZ, [Zn4FPFMul01], 1, [2], 1>; // Floating point vector blends (ZMM).
 defm : Zn4WriteResXMMPair<WriteFVarBlend, [Zn4FPFMul01], 1, [1], 1>; // Fp vector variable blends.
 defm : Zn4WriteResYMMPair<WriteFVarBlendY, [Zn4FPFMul01], 1, [1], 1>; // Fp vector variable blends (YMM).
-defm : Zn4WriteResZMMPair<WriteFVarBlendZ, [Zn4FPFMul01], 1, [2], 1>; // Fp vector variable blends (ZMM).
+defm : Zn4WriteResXMMPair<WriteFMaskBlendX, [Zn4FPFMul01], 1, [1], 1>; // Fp vector masked blends.
+defm : Zn4WriteResYMMPair<WriteFMaskBlendY, [Zn4FPFMul01], 1, [1], 1>; // Fp vector masked blends (YMM).
+defm : Zn4WriteResZMMPair<WriteFMaskBlendZ, [Zn4FPFMul01], 1, [2], 1>; // Fp vector masked blends (ZMM).
 
 // Horizontal Add/Sub (float and integer)
 defm : Zn4WriteResXMMPair<WriteFHAdd, [Zn4FPFAdd0], 4, [2], 3>;
@@ -1185,7 +1187,9 @@ defm : Zn4WriteResYMMPair<WriteBlendY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector b
 defm : Zn4WriteResZMMPair<WriteBlendZ, [Zn4FPVMisc0123], 1, [2], 1>; // Vector blends (ZMM).
 defm : Zn4WriteResXMMPair<WriteVarBlend, [Zn4FPVMul01], 1, [1], 1>; // Vector variable blends.
 defm : Zn4WriteResYMMPair<WriteVarBlendY, [Zn4FPVMul01], 1, [1], 1>; // Vector variable blends (YMM).
-defm : Zn4WriteResZMMPair<WriteVarBlendZ, [Zn4FPVMul01], 1, [2], 1>; // Vector variable blends (ZMM).
+defm : Zn4WriteResXMMPair<WriteMaskBlendX, [Zn4FPVMul01], 1, [1], 1>; // Vector masked blends.
+defm : Zn4WriteResYMMPair<WriteMaskBlendY, [Zn4FPVMul01], 1, [1], 1>; // Vector masked blends (YMM).
+defm : Zn4WriteResZMMPair<WriteMaskBlendZ, [Zn4FPVMul01], 1, [2], 1>; // Vector masked blends (ZMM).
 defm : Zn4WriteResXMMPair<WritePSADBW, [Zn4FPVAdd0123], 3, [2], 1>;  // Vector PSADBW.
 defm : Zn4WriteResXMMPair<WritePSADBWX, [Zn4FPVAdd0123], 3, [2], 1>; // Vector PSADBW (XMM).
 defm : Zn4WriteResYMMPair<WritePSADBWY, [Zn4FPVAdd0123], 3, [2], 1>; // Vector PSADBW (YMM).

@@ -320,7 +320,9 @@ defm WriteFBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector
 defm WriteFBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Floating point vector blends (ZMM).
 defm WriteFVarBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Fp vector variable blends.
 defm WriteFVarBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Fp vector variable blends (YMM).
-defm WriteFVarBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Fp vector variable blends (YMZMM).
+defm WriteFMaskBlendX : X86SchedWritePair<ReadAfterVecXLd>; // Fp vector masked blends (XMM).
+defm WriteFMaskBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Fp vector masked blends (YMM).
+defm WriteFMaskBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Fp vector masked blends (ZMM).
 
 // FMA Scheduling helper class.
 class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
@@ -397,7 +399,9 @@ defm WriteBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Vector blends (YMM).
 defm WriteBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector blends (ZMM).
 defm WriteVarBlend  : X86SchedWritePair<ReadAfterVecXLd>; // Vector variable blends.
 defm WriteVarBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable blends (YMM).
-defm WriteVarBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector variable blends (ZMM).
+defm WriteMaskBlendX : X86SchedWritePair<ReadAfterVecXLd>; // Vector masked blends (XMM).
+defm WriteMaskBlendY : X86SchedWritePair<ReadAfterVecYLd>; // Vector masked blends (YMM).
+defm WriteMaskBlendZ : X86SchedWritePair<ReadAfterVecYLd>; // Vector masked blends (ZMM).
 defm WritePSADBW  : X86SchedWritePair<ReadAfterVecLd>;  // Vector PSADBW.
 defm WritePSADBWX : X86SchedWritePair<ReadAfterVecXLd>; // Vector PSADBW (XMM).
 defm WritePSADBWY : X86SchedWritePair<ReadAfterVecYLd>; // Vector PSADBW (YMM).
@@ -625,7 +629,10 @@ def SchedWriteFBlend
  : X86SchedWriteWidths<WriteFBlend, WriteFBlend, WriteFBlendY, WriteFBlendZ>;
 def SchedWriteFVarBlend
  : X86SchedWriteWidths<WriteFVarBlend, WriteFVarBlend,
-                       WriteFVarBlendY, WriteFVarBlendZ>;
+                       WriteFVarBlendY, WriteFVarBlendY>;
+def SchedWriteFMaskBlend
+ : X86SchedWriteWidths<WriteFMaskBlendX, WriteFMaskBlendX,
+                       WriteFMaskBlendY, WriteFMaskBlendZ>;
 
 def SchedWriteCvtDQ2PD
  : X86SchedWriteWidths<WriteCvtI2SD, WriteCvtI2PD,
@@ -694,7 +701,10 @@ def SchedWriteBlend
  : X86SchedWriteWidths<WriteBlend, WriteBlend, WriteBlendY, WriteBlendZ>;
 def SchedWriteVarBlend
  : X86SchedWriteWidths<WriteVarBlend, WriteVarBlend,
-                       WriteVarBlendY, WriteVarBlendZ>;
+                       WriteVarBlendY, WriteVarBlendY>;
+def SchedWriteMaskBlend
+ : X86SchedWriteWidths<WriteMaskBlendX, WriteMaskBlendX,
+                       WriteMaskBlendY, WriteMaskBlendZ>;
 
 // Vector size wrappers.
 // FIXME: Currently PH uses the same schedule method as PS.

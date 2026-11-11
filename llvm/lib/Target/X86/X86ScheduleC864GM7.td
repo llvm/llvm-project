@@ -895,7 +895,9 @@ defm : C4GM7WriteResFPPair<WriteFBlendY, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WriteFBlendZ, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WriteFVarBlend, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WriteFVarBlendY, [C4GM7FPU], 1>;
-defm : C4GM7WriteResFPPair<WriteFVarBlendZ, [C4GM7FPU], 1>;
+defm : C4GM7WriteResFPPair<WriteFMaskBlendX, [C4GM7FPU], 1>;
+defm : C4GM7WriteResFPPair<WriteFMaskBlendY, [C4GM7FPU], 1>;
+defm : C4GM7WriteResFPPair<WriteFMaskBlendZ, [C4GM7FPU], 1>;
 
 def C4GM7WriteFCOMI_FCOMIP:SchedWriteRes<[C4GM7FPU02, C4GM7FPU13]> {
   let Latency = 2;
@@ -1398,7 +1400,9 @@ defm : C4GM7WriteResFPPair<WriteBlendY, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WriteBlendZ, [C4GM7FPU], 1, [2], 1>;
 defm : C4GM7WriteResFPPair<WriteVarBlend, [C4GM7FPU], 1>;
 defm : C4GM7WriteResFPPair<WriteVarBlendY, [C4GM7FPU], 1>;
-defm : C4GM7WriteResFPPair<WriteVarBlendZ, [C4GM7FPU], 1, [2], 1>;
+defm : C4GM7WriteResFPPair<WriteMaskBlendX, [C4GM7FPU], 1>;
+defm : C4GM7WriteResFPPair<WriteMaskBlendY, [C4GM7FPU], 1>;
+defm : C4GM7WriteResFPPair<WriteMaskBlendZ, [C4GM7FPU], 1, [2], 1>;
 defm : C4GM7WriteResFPPair<WriteShuffle256, [C4GM7FPU01], 3>;
 defm : C4GM7WriteResFPPair<WriteVPMOV256, [C4GM7FPU02], 3>;
 defm : C4GM7WriteResFPPair<WriteVarShuffle256, [C4GM7FPU3, C4GM7FPU02], 2, [2, 2], 2>;
