@@ -2138,11 +2138,90 @@ static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
                                   bool HasDwordx3) {
   unsigned NumInsts = Bytes / MaxBytes;
   unsigned Rem = Bytes % MaxBytes;
-  if (HasDwordx3 && Rem >= 12) {
+  if (HasDwordx3 && Rem % 16 >= 12) {
     ++NumInsts;
     Rem -= 12;
   }
   return NumInsts + llvm::popcount(Rem);
+}
+
+static unsigned getNumWidenedSMEMLoads(unsigned Bytes, uint64_t Alignment,
+                                       unsigned EltBytes, unsigned MaxBytes,
+                                       bool HasDwordx3) {
+  unsigned MaxPiece = EltBytes == 1 ? 8 : MaxBytes;
+  unsigned WideBytes = PowerOf2Ceil(Bytes);
+  unsigned NumWide = 0, SmallBytes = 0;
+  for (unsigned Off = 0; Off < Bytes;) {
+    unsigned Rem = Bytes - Off;
+    unsigned Span = Rem;
+    if (Rem <= Alignment)
+      Span = std::min<uint64_t>(Alignment, WideBytes - Off);
+    unsigned Piece = std::min(llvm::bit_floor(Span), MaxPiece);
+    if (Rem <= EltBytes)
+      Piece = 4;
+    if (Piece >= MaxBytes)
+      ++NumWide;
+    else
+      SmallBytes += std::max(Piece, 4u);
+    Off += Piece;
+  }
+  return NumWide + getNumMemoryInsts(SmallBytes, 32, HasDwordx3);
+}
+
+static bool hasUniformPointerOperand(const Instruction *I) {
+  const auto *LI = dyn_cast_or_null<LoadInst>(I);
+  if (!LI)
+    return false;
+  const Value *Ptr = LI->getPointerOperand();
+  const DataLayout &DL = LI->getDataLayout();
+  APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                               /*AllowNonInbounds=*/true);
+  return AMDGPU::isTriviallyUniform(Ptr, LI);
+}
+
+static std::pair<bool, bool> getKnownBufferOobProperties(const GCNSubtarget &ST,
+                                                         const DataLayout &DL,
+                                                         const Instruction *I,
+                                                         unsigned Bytes) {
+  const Value *Ptr = I ? getLoadStorePointerOperand(I) : nullptr;
+  if (!Ptr ||
+      Ptr->getType()->getPointerAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
+    return {false, false};
+  APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  bool KnownOffset = true;
+  while (const auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+    KnownOffset = KnownOffset && GEP->accumulateConstantOffset(DL, Offset);
+    Ptr = GEP->getPointerOperand();
+  }
+  const auto *Cast = dyn_cast<AddrSpaceCastInst>(Ptr);
+  if (Cast) {
+    if (Cast->getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE)
+      return {false, false};
+    Ptr = Cast->getPointerOperand();
+  }
+  const auto *Rsrc = dyn_cast<IntrinsicInst>(Ptr);
+  if (Rsrc && Rsrc->getIntrinsicID() != Intrinsic::amdgcn_make_buffer_rsrc)
+    Rsrc = nullptr;
+  if (!Cast && !Rsrc)
+    return {false, false};
+
+  bool NoWrapFromMax =
+      KnownOffset &&
+      Offset.ule(APInt::getAllOnes(Offset.getBitWidth()) - Bytes);
+  const auto *NumRecords =
+      Rsrc ? dyn_cast<ConstantInt>(Rsrc->getArgOperand(2)) : nullptr;
+  std::optional<unsigned> NumRecordsWidth =
+      ST.getBufferResourceNumRecordsWidth();
+  if (!NumRecords || !NumRecordsWidth)
+    return {NoWrapFromMax, false};
+  APInt Bound = NumRecords->getValue().zextOrTrunc(*NumRecordsWidth);
+  if (Bound.isAllOnes())
+    return {NoWrapFromMax, true};
+  if (!KnownOffset)
+    return {false, false};
+  APInt BoundsDiff = Bound.zext(64) - Offset.zext(64);
+  return {NoWrapFromMax, BoundsDiff.sge(Bytes) || BoundsDiff.isNonPositive()};
 }
 
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -2160,18 +2239,9 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   unsigned EltBits = std::max<unsigned>(8, DL.getTypeSizeInBits(EltTy));
 
-  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
-    if (Src->isVectorTy() && EltTy->isIntegerTy(8))
-      return divideCeil(DL.getTypeSizeInBits(Src) - 1,
-                        getLoadStoreVecRegBitWidth(AddressSpace));
-    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind, OpInfo, I);
-  }
-
   auto *VecTy = dyn_cast<FixedVectorType>(Src);
-  if (VecTy && EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
+  if (VecTy && AddressSpace != AMDGPUAS::BUFFER_FAT_POINTER &&
+      EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
       !TLI->shouldCombineMemoryType(TLI->getValueType(DL, Src))) {
     Align EltAlign = commonAlignment(Alignment, EltBits / 8);
     return VecTy->getNumElements() * getMemoryOpCost(Opcode, EltTy, EltAlign,
@@ -2180,11 +2250,37 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 
   unsigned Bytes = DL.getTypeStoreSize(Src);
+  if (Opcode == Instruction::Load &&
+      (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+       AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+      Alignment >= std::min(Bytes, 4u) &&
+      (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+       hasUniformPointerOperand(I))) {
+    unsigned Dwords = divideCeil(Bytes, 4);
+    unsigned MaxBytes = getLoadStoreVecRegBitWidth(AddressSpace) / 8;
+    bool HasDwordx3 = ST->hasScalarDwordx3Loads();
+    // The last byte of a 7-byte remainder is not widened into the scalar load.
+    if (!VecTy && Bytes % 4)
+      return getNumMemoryInsts(Dwords * 4, 32, HasDwordx3) + (Bytes % 8 == 7);
+    if (Bytes % 4 || !TLI->isTypeLegal(EVT::getVectorVT(Src->getContext(),
+                                                        MVT::i32, Dwords))) {
+      unsigned EltBytes = Bytes % 4 ? EltBits / 8 : 4;
+      return getNumWidenedSMEMLoads(Bytes, Alignment.value(), EltBytes,
+                                    MaxBytes, HasDwordx3);
+    }
+    if (!HasDwordx3 && Alignment >= 8 && Dwords % 4 == 3)
+      ++Dwords;
+    return getNumMemoryInsts(Dwords * 4, MaxBytes, HasDwordx3);
+  }
+
   unsigned MaxBytes =
       std::min(16u, getLoadStoreVecRegBitWidth(AddressSpace) / 8);
   if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
       !ST->hasMultiDwordFlatScratchAddressing())
     MaxBytes = getLoadStoreVecRegBitWidth(AMDGPUAS::PRIVATE_ADDRESS) / 8;
+  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+      ST->hasLDSMisalignedBugInWGPMode())
+    MaxBytes = std::clamp<uint64_t>(Alignment.value(), 4, MaxBytes);
   bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
               AddressSpace == AMDGPUAS::REGION_ADDRESS;
   bool HasDwordx3 = ST->hasDwordx3LoadStores();
@@ -2194,19 +2290,28 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     HasUnalignedAccess = ST->hasUnalignedScratchAccessEnabled();
   else if (IsDS) {
     HasUnalignedAccess = ST->hasUnalignedDSAccessEnabled();
-    if (Alignment >= 4 && Alignment < 8)
+    if ((Alignment >= 4 || ST->hasLDSMisalignedBugInWGPMode()) && Alignment < 8)
       MaxBytes = 8;
     HasDwordx3 = HasDwordx3 &&
                  (Alignment >= 16 || (Alignment < 4 && HasUnalignedAccess));
   }
+  if (AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
+    auto [NoWrapFromMax, NoPartialOOB] =
+        getKnownBufferOobProperties(*ST, DL, I, Bytes);
+    MaxBytes = ST->getMaxBufferIntrinsicWidth(DL, Src, Alignment, NoWrapFromMax,
+                                              NoPartialOOB) /
+               8;
+  }
   if (Alignment < 4 && !HasUnalignedAccess)
     MaxBytes = std::min<unsigned>(MaxBytes, Alignment.value());
-  bool MergesDwords = ST->hasFlatInstOffsets() &&
-                      (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
-                       (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
-                        !ST->hasFlatSegmentOffsetBug()));
+  bool MergesDwords = AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
+                      (ST->hasFlatInstOffsets() &&
+                       (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
+                        (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+                         !ST->hasFlatSegmentOffsetBug())));
 
-  if (Opcode == Instruction::Load) {
+  if (Opcode == Instruction::Load &&
+      AddressSpace != AMDGPUAS::BUFFER_FAT_POINTER) {
     if (VecTy && Alignment >= PowerOf2Ceil(Bytes))
       return divideCeil(Bytes, MaxBytes);
     if (EltBits <= 16 && Alignment >= 4 && Bytes % 4) {
