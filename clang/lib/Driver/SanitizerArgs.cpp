@@ -1444,7 +1444,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     return;
   // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
   bool GPUSanitize = false;
-  if (TC.getTriple().isAMDGPU()) {
+  if (TC.getTriple().isAMDGPU() ||
+      (TC.getTriple().isSPIRV() &&
+       TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)) {
     if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                       true))
       return;
