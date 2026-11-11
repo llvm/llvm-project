@@ -779,9 +779,11 @@ define <8 x i64> @test_divv_8i64_uniform(<8 x i64> %a, i64 %b) nounwind {
 ; AVX512DQ-LABEL: test_divv_8i64_uniform:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpbroadcastq %rdi, %zmm1
-; AVX512DQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
-; AVX512DQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512DQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512DQ-NEXT:    vcvtusi2sd %rdi, {ru-sae}, %xmm15, %xmm2
+; AVX512DQ-NEXT:    vmovddup {{.*#+}} xmm3 = [1.0E+0,1.0E+0]
+; AVX512DQ-NEXT:    # xmm3 = mem[0,0]
+; AVX512DQ-NEXT:    vdivsd {rd-sae}, %xmm2, %xmm3, %xmm2
+; AVX512DQ-NEXT:    vbroadcastsd %xmm2, %zmm2
 ; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
 ; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
 ; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
@@ -853,9 +855,11 @@ define <8 x i64> @test_remv_8i64_uniform(<8 x i64> %a, i64 %b) nounwind {
 ; AVX512DQ-LABEL: test_remv_8i64_uniform:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpbroadcastq %rdi, %zmm1
-; AVX512DQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
-; AVX512DQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512DQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; AVX512DQ-NEXT:    vcvtusi2sd %rdi, {ru-sae}, %xmm15, %xmm2
+; AVX512DQ-NEXT:    vmovddup {{.*#+}} xmm3 = [1.0E+0,1.0E+0]
+; AVX512DQ-NEXT:    # xmm3 = mem[0,0]
+; AVX512DQ-NEXT:    vdivsd {rd-sae}, %xmm2, %xmm3, %xmm2
+; AVX512DQ-NEXT:    vbroadcastsd %xmm2, %zmm2
 ; AVX512DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
 ; AVX512DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
 ; AVX512DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3

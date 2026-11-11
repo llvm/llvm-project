@@ -416,9 +416,11 @@ define <8 x i64> @test_divv_8i64_uniform_strictfp(<8 x i64> %a, i64 %b) nounwind
 ; DQ-LABEL: test_divv_8i64_uniform_strictfp:
 ; DQ:       # %bb.0:
 ; DQ-NEXT:    vpbroadcastq %rdi, %zmm1
-; DQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
-; DQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; DQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; DQ-NEXT:    vcvtusi2sd %rdi, {ru-sae}, %xmm15, %xmm2
+; DQ-NEXT:    vmovddup {{.*#+}} xmm3 = [1.0E+0,1.0E+0]
+; DQ-NEXT:    # xmm3 = mem[0,0]
+; DQ-NEXT:    vdivsd {rd-sae}, %xmm2, %xmm3, %xmm2
+; DQ-NEXT:    vbroadcastsd %xmm2, %zmm2
 ; DQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
 ; DQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
 ; DQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
