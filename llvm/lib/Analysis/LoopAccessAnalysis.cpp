@@ -66,6 +66,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <optional>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -175,17 +176,29 @@ static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
   return SE.getMulExpr(A, B);
 }
 
-/// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
-/// \p MaxBTC is guaranteed inbounds of the accessed object. This does not imply
-/// that the whole accessed range is dereferenceable.
-static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
+/// The bounds, as offsets from the start of the accessed object, of the range
+/// accessed by an AddRec. See evaluatePtrAddRecAtMaxBTCWillNotWrap.
+struct AccessedRange {
+  /// The start offset of the lowest-addressed access in the accessed range.
+  const SCEV *LowOffset;
+  /// For a non-negative step, the exclusive upper offset of the accessed range.
+  /// For a negative step, the offset of the start of the highest access (the
+  /// first one, at the start of the loop), not an exclusive end.
+  const SCEV *MaxOffset;
+};
+
+/// Return the bounds of the accessed range if evaluating \p AR at \p MaxBTC
+/// cannot wrap, because \p AR at \p MaxBTC is guaranteed inbounds of the
+/// accessed object. This does not imply that the whole accessed range is
+/// dereferenceable. Return std::nullopt otherwise.
+static std::optional<AccessedRange> evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEVAddRecExpr *AR, const SCEV *MaxBTC, const SCEV *EltSize,
     ScalarEvolution &SE, const DataLayout &DL, DominatorTree *DT,
     AssumptionCache *AC, ScalarEvolution::LoopGuards &LoopGuards) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
-    return false;
+    return std::nullopt;
   const Loop *L = AR->getLoop();
   bool CheckForNonNull;
   Value *StartPtrV = StartPtr->getValue();
@@ -225,11 +238,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       });
 
   if (DerefBytesSCEV->isZero())
-    return false;
+    return std::nullopt;
 
   bool IsKnownNonNegative = SE.isKnownNonNegative(Step);
   if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
-    return false;
+    return std::nullopt;
 
   WiderTy = SE.getWiderType(WiderTy, DerefBytesSCEV->getType());
   Step = SE.getNoopOrSignExtend(Step, WiderTy);
@@ -252,16 +265,17 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     // failed.
     MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
     if (isa<SCEVCouldNotCompute>(MaxBTC))
-      return false;
+      return std::nullopt;
     MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
     DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
     if (!DistToLastIter)
-      return false;
+      return std::nullopt;
   }
 
   // Compute MaxOffset per direction: for a non-negative step, the exclusive
   // upper offset of the accessed range; for a negative step, the offset of the
   // start of the highest access.
+  const SCEV *LowOffset;
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
     // Total length in bytes of the accessed range (from the first accessed
@@ -269,10 +283,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     const SCEV *AccessedBytes = addSCEVNoOverflow(
         DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
     if (!AccessedBytes)
-      return false;
+      return std::nullopt;
+    LowOffset = StartOffset;
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
-      return false;
+      return std::nullopt;
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, LoopGuards);
   } else {
     // For a negative step StartOffset is the highest offset and AR at MaxBTC
@@ -281,11 +296,14 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     // not checked here.
     assert(SE.isKnownNegative(Step) && "must be known negative");
     if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, StartOffset, DistToLastIter))
-      return false;
+      return std::nullopt;
+    LowOffset = SE.getMinusSCEV(StartOffset, DistToLastIter);
     MaxOffset = StartOffset;
   }
   // MaxOffset must not exceed the deref-region end.
-  return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
+  if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV))
+    return std::nullopt;
+  return AccessedRange{LowOffset, MaxOffset};
 }
 
 /// Return true if \p S is known to be monotonically non-decreasing
