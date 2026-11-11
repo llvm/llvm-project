@@ -1775,10 +1775,10 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  // ... except on Windows and Darwin, which use IEEE double.
+  // ... except on Windows, UEFI and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
-  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
