@@ -936,10 +936,17 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE,
   // an increment by any integer constant is also accepted, and *Offset is set
   // to that constant.
   auto IsWideIVInc = [&](std::optional<APInt> *Offset) {
-    // (Start + C) + IV * Step stays affine for any constant C, including the
-    // Step, so it can be added to the Start value.
-    // It would not be profitable to look for a non-constant Start or C, as it
-    // would necessitate introducing an extra add or sub instruction.
+    // Also accept the IV plus a constant C, e.g. %iv.c below:
+    //
+    //   %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+    //   %iv.c = add i64 %iv, C
+    //   %iv.next = add i64 %iv, %step
+    //
+    // %iv.c is an induction with the same step as %iv, but starting at
+    // %start + C, which folds to a single constant if %start is constant. With
+    // a constant %step, this also matches the increment %iv.next, with
+    // C == %step. A non-constant C or %start would need an extra add or sub
+    // instruction, so it is not worth handling.
     const APInt *C;
     if (Offset && match(VPV, m_c_Add(m_Specific(WideIV), m_APInt(C)))) {
       *Offset = *C;
