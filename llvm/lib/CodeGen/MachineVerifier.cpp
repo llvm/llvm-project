@@ -1445,7 +1445,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     if (DstTy.isFloat() || SrcTy.isFloat()) {
-      report("g_trunc and g_anyext doesn't not accept scalar float type", MI);
+      report("G_TRUNC/G_ANYEXT doesn't accept scalar float type", MI);
     }
     break;
   }
