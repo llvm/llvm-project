@@ -359,15 +359,35 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
 }
 
 /// Returns the value of the link.exe option \p Name if \p Input is that option
-/// with a '/' prefix in any case, e.g. "dir" for "/LIBPATH:dir" and "libpath:".
-/// link.exe options are case-insensitive, but the option table only matches
-/// lower case, so other spellings are parsed as inputs. Windows hosts only.
+/// with a '/' prefix in any case, e.g. returns "dir" for Input "/LIBPATH:dir"
+/// and Name "libpath:". link.exe options are case-insensitive, but the option
+/// table only matches lower case, so other spellings are parsed as inputs.
+/// Windows hosts only.
 std::optional<StringRef> getCOFFOptionValue(StringRef Input, StringRef Name,
                                             const Triple &HostTriple) {
   if (!HostTriple.isOSWindows() || !Input.consume_front("/") ||
       !Input.consume_front_insensitive(Name))
     return std::nullopt;
   return Input;
+}
+
+/// Returns true if \p Input is the link.exe flag '/WHOLEARCHIVE' in any case,
+/// which extracts all archives like --whole-archive.
+bool isCOFFWholeArchiveFlag(StringRef Input, const Triple &HostTriple) {
+  std::optional<StringRef> Rest =
+      getCOFFOptionValue(Input, "wholearchive", HostTriple);
+  return Rest && Rest->empty();
+}
+
+/// Returns true if \p Input looks like a link.exe option, e.g. '/nologo' or
+/// '/LIBPATH:C:\dir'. Unlike a path, the option name before any ':' has no '/'
+/// or '\'. A root-level path such as '/a.obj' looks the same. Windows hosts
+/// only.
+bool isCOFFLinkerOption(StringRef Input, const Triple &HostTriple) {
+  if (!HostTriple.isOSWindows() || !Input.consume_front("/"))
+    return false;
+  StringRef Name = Input.split(':').first;
+  return !Name.empty() && Name.find_first_of("/\\") == StringRef::npos;
 }
 
 /// Returns true if \p Arg names the output file, e.g. -o, /out: or /OUT:.
@@ -1132,8 +1152,9 @@ Error handleOverrideImages(
 Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
                                ArrayRef<StringRef> WrappedFiles,
                                const ArgList &Args) {
-  // All inputs are SYCL device code, which is wrapped into a single object.
-  assert(WrappedFiles.size() <= 1 && "expected one wrapped SYCL object");
+  // All SYCL device code is wrapped into at most one object.
+  assert(WrappedFiles.size() <= 1 &&
+         "expected at most one wrapped SYCL object");
 
   StringRef WrappedFile;
   if (WrappedFiles.empty()) {
@@ -1441,8 +1462,8 @@ getDeviceInput(const ArgList &Args) {
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Collect the search paths in command line order. -L paths are used for -l
-  // libraries. link.exe style -libpath: paths are used for both libraries and
-  // other inputs.
+  // libraries. link.exe /libpath: paths, in any case, are used for both
+  // libraries and other inputs.
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   SmallVector<StringRef> InputPaths;
@@ -1482,9 +1503,7 @@ getDeviceInput(const ArgList &Args) {
   bool WholeArchive =
       Args.hasArg(OPT_wholearchive_flag) ||
       llvm::any_of(Args.filtered(OPT_INPUT), [&](const opt::Arg *Arg) {
-        std::optional<StringRef> Rest =
-            getCOFFOptionValue(Arg->getValue(), "wholearchive", HostTriple);
-        return Rest && Rest->empty();
+        return isCOFFWholeArchiveFlag(Arg->getValue(), HostTriple);
       });
   SmallVector<OffloadFile> ObjectFilesToExtract;
   SmallVector<OffloadFile> ArchiveFilesToExtract;
@@ -1505,16 +1524,6 @@ getDeviceInput(const ArgList &Args) {
     return Arg->getIndex() > 0 &&
            UnknownOptionIndices.contains(Arg->getIndex() - 1);
   };
-  // link.exe options such as '/nologo' or '/LIBPATH:C:\dir' are parsed as
-  // inputs. Unlike a path, the option name before any ':' has no '/' or '\'.
-  // A missing root-level path such as '/a.obj' looks the same, so it is not
-  // reported.
-  auto IsCOFFLinkerOption = [&](StringRef Input) {
-    if (!HostTriple.isOSWindows() || !Input.consume_front("/"))
-      return false;
-    StringRef Name = Input.split(':').first;
-    return !Name.empty() && Name.find_first_of("/\\") == StringRef::npos;
-  };
 
   for (const opt::Arg *Arg :
        Args.filtered(OPT_INPUT, OPT_library, OPT_wholearchive_file,
@@ -1528,17 +1537,16 @@ getDeviceInput(const ArgList &Args) {
     StringRef Input = Arg->getValue();
     bool IsWholeArchiveFile = Arg->getOption().matches(OPT_wholearchive_file);
     if (Arg->getOption().matches(OPT_INPUT)) {
-      // '/WHOLEARCHIVE:file', '/WHOLEARCHIVE' and '/LIBPATH:dir' in a case
-      // other than the option table's lower case.
-      std::optional<StringRef> Rest =
-          getCOFFOptionValue(Input, "wholearchive", HostTriple);
-      if (Rest && Rest->consume_front(":")) {
-        Input = *Rest;
+      // '/WHOLEARCHIVE:file' in a case other than the option table's lower
+      // case is a library to extract whole. '/WHOLEARCHIVE' and '/LIBPATH:dir'
+      // were handled above. Anything else, e.g. '/wholearchive-dir/a.obj', is
+      // an input path.
+      if (std::optional<StringRef> File =
+              getCOFFOptionValue(Input, "wholearchive:", HostTriple)) {
+        Input = *File;
         IsWholeArchiveFile = true;
-      } else if ((Rest && Rest->empty()) ||
+      } else if (isCOFFWholeArchiveFlag(Input, HostTriple) ||
                  getCOFFOptionValue(Input, "libpath:", HostTriple)) {
-        // '/WHOLEARCHIVE' or '/LIBPATH:', both handled above. Anything else,
-        // e.g. '/wholearchive-dir/a.obj', is an input path.
         continue;
       }
     }
@@ -1553,7 +1561,7 @@ getDeviceInput(const ArgList &Args) {
 
     if (!Filename || !sys::fs::exists(*Filename)) {
       if (ReportMissingInputs && !FollowsUnknownOption(Arg) &&
-          !IsCOFFLinkerOption(Input))
+          !isCOFFLinkerOption(Input, HostTriple))
         return createFileError(
             Filename ? *Filename : Input,
             make_error_code(errc::no_such_file_or_directory));
@@ -1723,11 +1731,12 @@ int main(int Argc, char **Argv) {
     // As with link.exe, the last of -o and '/out:' in any case names the
     // output, e.g. for clang-cl '/link /out:'.
     for (const opt::Arg *Arg : Args.filtered(OPT_o, OPT_out, OPT_INPUT)) {
-      if (!Arg->getOption().matches(OPT_INPUT))
-        Output = Arg->getValue();
-      else if (std::optional<StringRef> Value =
-                   getCOFFOptionValue(Arg->getValue(), "out:", Triple))
-        Output = *Value;
+      if (!isOutputArg(Arg, Triple))
+        continue;
+      // An '/OUT:file' input holds the whole option, -o and /out: the value.
+      Output = Arg->getOption().matches(OPT_INPUT)
+                   ? *getCOFFOptionValue(Arg->getValue(), "out:", Triple)
+                   : StringRef(Arg->getValue());
     }
   } else {
     Output = Args.hasArg(OPT_o) ? Args.getLastArgValue(OPT_o)
