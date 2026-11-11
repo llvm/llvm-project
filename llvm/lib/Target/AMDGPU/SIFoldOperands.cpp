@@ -2080,6 +2080,11 @@ bool SIFoldOperandsImpl::tryFoldZExtKnownZeroHi16(MachineInstr &MI) const {
     return false;
   Register Src = Src0->getReg();
 
+  // src0 also accepts a 32-bit SGPR, which cannot fill a lo16 subregister.
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(Src);
+  if (!TRI->isVGPRClass(SrcRC) || TRI->getRegSizeInBits(*SrcRC) != 16)
+    return false;
+
   MachineInstr *SrcDef = MRI->getVRegDef(Src);
   if (!SrcDef || !SIInstrFlags::isVALU(*SrcDef))
     return false;
