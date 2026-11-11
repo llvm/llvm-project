@@ -1757,11 +1757,18 @@ void SPIRVEmitIntrinsicsImpl::preprocessUndefsAndPoisons(IRBuilder<> &B) {
       // Scalar undef or extensionless scalar poison is directly translatable.
       if (IsScalar && !AsPoison)
         continue;
-      // Scalar poison in a phi materializes in the incoming block. Everything
-      // else materializes right before I.
-      if (IsScalar && Phi)
-        B.SetInsertPoint(Phi->getIncomingBlock(Idx)->getTerminator());
-      else if (!BPrepared) {
+      // A phi operand materializes in its incoming block, where it must
+      // dominate the edge. Everything else materializes right before I.
+      if (Phi) {
+        BasicBlock *InBB = Phi->getIncomingBlock(Idx);
+        // Entries for the same edge must stay identical.
+        unsigned First = Phi->getBasicBlockIndex(InBB);
+        if (First < Idx) {
+          I->setOperand(Idx, Phi->getIncomingValue(First));
+          continue;
+        }
+        B.SetInsertPoint(InBB->getTerminator());
+      } else if (!BPrepared) {
         setInsertPointSkippingPhis(B, I);
         BPrepared = true;
       }
