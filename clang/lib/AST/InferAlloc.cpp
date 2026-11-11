@@ -193,19 +193,28 @@ QualType infer_alloc::inferPossibleType(const CallExpr *E,
 
 namespace {
 /// Strips the wrappers a placement argument may have around the expression
-/// that produced the storage: parentheses, casts, member accesses (e.g. the
-/// pointer member of a size-returning allocation result), and
-/// address-of/dereference pairs.
+/// that produced the storage: parentheses, casts, direct (non-arrow) member
+/// accesses of a by-value result (e.g. the pointer member of a size-returning
+/// allocation result), and cancelling `&*` / `*&` pairs. Anything that follows
+/// a pointer into different storage (`->`, an unmatched dereference) or takes
+/// the address of a different object (an unmatched address-of) stops the walk.
 const Expr *stripToStorageSource(const Expr *E) {
   while (true) {
     E = E->IgnoreParenCasts();
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      if (ME->isArrow())
+        return E;
       E = ME->getBase();
       continue;
     }
     if (const auto *UO = dyn_cast<UnaryOperator>(E);
         UO && (UO->getOpcode() == UO_AddrOf || UO->getOpcode() == UO_Deref)) {
-      E = UO->getSubExpr();
+      const auto *Inner =
+          dyn_cast<UnaryOperator>(UO->getSubExpr()->IgnoreParens());
+      if (!Inner || Inner->getOpcode() == UO->getOpcode() ||
+          (Inner->getOpcode() != UO_AddrOf && Inner->getOpcode() != UO_Deref))
+        return E;
+      E = Inner->getSubExpr();
       continue;
     }
     return E;
@@ -257,9 +266,13 @@ public:
   }
 
   bool VisitCXXNewExpr(const CXXNewExpr *NE) {
-    // Only the standard non-allocating placement form, new (storage) T, takes
-    // the storage as its single placement argument.
-    if (NE->getNumPlacementArgs() != 1)
+    // Only the reserved non-allocating placement form, new (storage) T, is
+    // guaranteed to construct into its single placement argument. A
+    // class-specific or otherwise user-provided operator new(size_t, void *)
+    // may treat the argument as allocator state and return other storage.
+    const FunctionDecl *OperatorNew = NE->getOperatorNew();
+    if (NE->getNumPlacementArgs() != 1 || !OperatorNew ||
+        !OperatorNew->isReservedGlobalPlacementOperator())
       return true;
     const Expr *Source = stripToStorageSource(NE->getPlacementArg(0));
     QualType T = NE->getAllocatedType();

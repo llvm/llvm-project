@@ -78,7 +78,11 @@ allocation call and its surroundings, in this order:
   ```
 
   If different types are constructed into the same storage, no type is
-  inferred.
+  inferred. Only the reserved non-allocating placement form
+  `::operator new(size_t, void *)` is considered; user-provided placement
+  operators may construct elsewhere. Likewise, indirect member accesses
+  (`h->p`) and unmatched `&`/`*` name storage other than the allocation and
+  are not looked through.
 
 These are heuristics: they ignore control flow and reassignments of the
 variables involved. If no type can be inferred, the allocation receives the

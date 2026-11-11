@@ -235,6 +235,49 @@ void test_placement_new_arena(Arena &arena) {
   sink = new (arena) PlacedNoPtr();
 }
 
+// A class-specific operator new(size_t, void *) may use its argument as
+// allocator state rather than as the storage, so the allocation feeding it
+// stays untyped.
+struct ClassPlacement {
+  void *next;
+  static void *operator new(size_t, void *ctx);
+};
+// CHECK-LABEL: define dso_local void @_Z33test_placement_new_class_specificv(
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: @malloc{{.*}}!alloc_token
+// CHECK: call noundef ptr @_ZN14ClassPlacementnwEmPv(i64 noundef 8, {{.*}} !alloc_token [[META_CLASSPLACEMENT:![0-9]+]]
+void test_placement_new_class_specific() {
+  void *ctx = malloc(64);
+  sink = new (ctx) ClassPlacement;
+}
+
+// Indirect member access and an unmatched address-of name storage other than
+// the allocation itself.
+struct Holder {
+  void *p;
+};
+Holder *alloc_holder(size_t) __attribute__((malloc));
+// CHECK-LABEL: define dso_local void @_Z27test_placement_new_indirectv(
+// CHECK: call noalias noundef ptr @_Z12alloc_holderm(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: ret void
+void test_placement_new_indirect() {
+  Holder *h = alloc_holder(64);
+  sink = new (h->p) PlacedNoPtr();
+  void *mem = malloc(64);
+  sink = new (&mem) unsigned char(0);
+}
+
+// Cancelling address-of/dereference pairs are still looked through.
+// CHECK-LABEL: define dso_local noundef ptr @_Z29test_placement_new_deref_addrv(
+// CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDNOPTR]]
+PlacedNoPtr *test_placement_new_deref_addr() {
+  void *mem = malloc(64);
+  return new (*&mem) PlacedNoPtr();
+}
+
 template <typename T>
 T *placement_construct(size_t size) {
   __sized_ptr_t res = __size_returning_new(size);
@@ -259,3 +302,4 @@ void test_placement_new_template() {
 // CHECK: [[META_TESTCLASS]] = !{!"TestClass", i1 true}
 // CHECK: [[META_PLACEDNOPTR]] = !{!"PlacedNoPtr", i1 false}
 // CHECK: [[META_PLACEDWITHPTR]] = !{!"PlacedWithPtr", i1 true}
+// CHECK: [[META_CLASSPLACEMENT]] = !{!"ClassPlacement", i1 true}
