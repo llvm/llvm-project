@@ -51237,6 +51237,10 @@ static SDValue getFPReciprocalQuotient(SDValue X, SDValue Y, SelectionDAG &DAG,
                                        const SDLoc &DL) {
   EVT FPVT = X.getValueType();
   unsigned NumElts = FPVT.getVectorNumElements();
+  // A splat divisor only needs one estimate, which every chunk then shares.
+  bool SplatY =
+      (Y.getOpcode() == ISD::SINT_TO_FP || Y.getOpcode() == ISD::UINT_TO_FP) &&
+      DAG.isSplatValue(Y.getOperand(0));
   unsigned ChunkElts = Subtarget.useAVX512Regs() ? 16
                        : Subtarget.hasAVX()      ? 8
                                                  : 4;
@@ -51256,7 +51260,7 @@ static SDValue getFPReciprocalQuotient(SDValue X, SDValue Y, SelectionDAG &DAG,
   SmallVector<SDValue, 4> Quots;
   for (unsigned I = 0; I != WideElts; I += ChunkElts) {
     SDValue XC = DAG.getExtractSubvector(DL, ChunkVT, X, I);
-    SDValue YC = DAG.getExtractSubvector(DL, ChunkVT, Y, I);
+    SDValue YC = DAG.getExtractSubvector(DL, ChunkVT, Y, SplatY ? 0 : I);
     SDValue Rcp = DAG.getNode(RcpOpc, DL, ChunkVT, YC);
     XC = DAG.getNode(ISD::FMUL, DL, ChunkVT, XC, Scale);
     Quots.push_back(DAG.getNode(ISD::FMUL, DL, ChunkVT, XC, Rcp));

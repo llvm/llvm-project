@@ -8309,6 +8309,21 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
     return !Ops.empty();
   }
 
+  // vXi8 division goes through a reciprocal estimate of the divisor, and a
+  // uniform divisor only needs one. Sink the splat so SDAG can see it.
+  if (ST->hasSSE2() && VTy->getElementType()->isIntegerTy(8) &&
+      (I->getOpcode() == Instruction::UDiv ||
+       I->getOpcode() == Instruction::SDiv ||
+       I->getOpcode() == Instruction::URem ||
+       I->getOpcode() == Instruction::SRem)) {
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(I->getOperand(1));
+    if (Shuf && getSplatIndex(Shuf->getShuffleMask()) >= 0) {
+      Ops.push_back(&I->getOperandUse(1));
+      return true;
+    }
+    return false;
+  }
+
   // A uniform shift amount in a vector shift or funnel shift may be much
   // cheaper than a generic variable vector shift, so make that pattern visible
   // to SDAG by sinking the shuffle instruction next to the shift.
