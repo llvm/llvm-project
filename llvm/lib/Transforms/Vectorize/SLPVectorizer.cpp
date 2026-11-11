@@ -2221,6 +2221,9 @@ public:
       eraseInstruction(VI);
       SE->forgetValue(VI);
     }
+    // The code emitted in place of the erased scalars may invalidate the cached
+    // analyses results.
+    Cache.clear();
   }
 
   /// Checks if the instruction was already analyzed for being possible
@@ -27445,9 +27448,6 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // NOTE: removeInstructionAndOperands only marks the instruction for deletion
   // - instructions are not deleted until later.
   removeInstructionsAndOperands(ArrayRef(RemovedInsts), VectorValuesAndScales);
-  // The emitted vectorized code and the erased scalars may invalidate the
-  // cached analyses results.
-  Cache.clear();
 
   // The new vector code may capture pointers that were previously not captured
   // (e.g. the pointer operands of a masked gather), so the capture results
