@@ -24,10 +24,8 @@
 #include "mlir/Support/FileUtilities.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/InitAllDialects.h"
-#include "clang/Driver/OffloadBundler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -49,78 +47,41 @@ static llvm::cl::list<std::string>
                    llvm::cl::cat(CIROffloadMergeCategory));
 
 static llvm::cl::list<std::string>
-    TargetNames("targets", llvm::cl::CommaSeparated,
-                llvm::cl::desc("[<offload kind>-<target triple>,...]"),
-                llvm::cl::cat(CIROffloadMergeCategory));
-
-static llvm::cl::list<std::string>
     OutputFileNames("output", llvm::cl::desc("Output CIR file."),
                     llvm::cl::cat(CIROffloadMergeCategory));
-
-namespace {
-struct InputTarget {
-  std::string Input;
-  bool IsHost = false;
-};
-} // namespace
 
 static int reportError(const llvm::Twine &message) {
   llvm::errs() << "error: " << message << '\n';
   return 1;
 }
 
-// Targets are offload bundle IDs, so they are checked with
-// clang-offload-bundler's parser (thus, legalized). checkOffloadBundleID must
-// run first, since OffloadTargetInfo asserts on a malformed ID.
-static bool
-isValidCombineTarget(llvm::StringRef target,
-                     const clang::OffloadBundlerConfig &bundlerConfig) {
-  if (!clang::checkOffloadBundleID(target))
-    return false;
-
-  clang::OffloadTargetInfo offloadInfo(target, bundlerConfig);
-  // The bundler has no "cuda" offload kind, but CUDA modules are combined here.
-  return (offloadInfo.isOffloadKindValid() ||
-          offloadInfo.OffloadKind == "cuda") &&
-         offloadInfo.isTripleValid();
-}
-
-static int
-validateCombineCommandLine(llvm::SmallVectorImpl<InputTarget> &inputTargets) {
+static int validateCombineCommandLine() {
   if (InputFileNames.empty())
     return reportError("missing required -input");
-  if (TargetNames.empty())
-    return reportError("missing required -targets");
   if (OutputFileNames.empty())
     return reportError("missing required -output");
   if (OutputFileNames.size() != 1)
     return reportError("combine mode expects exactly one output");
-  if (InputFileNames.size() != TargetNames.size())
-    return reportError("number of input files and targets should match in "
-                       "combine mode");
-
-  // OffloadTargetInfo requires a bundler config; the defaults are enough to
-  // parse a target.
-  clang::OffloadBundlerConfig bundlerConfig;
-  llvm::StringSet<> seenTargets;
-  unsigned numHostTargets = 0;
-
-  for (auto [input, target] : llvm::zip_equal(InputFileNames, TargetNames)) {
-    if (!seenTargets.insert(target).second)
-      return reportError("duplicate target '" + target + "'");
-    if (!isValidCombineTarget(target, bundlerConfig))
-      return reportError("invalid target '" + target + "'");
-
-    bool isHost = clang::OffloadTargetInfo(target, bundlerConfig).hasHostKind();
-    numHostTargets += isHost;
-    inputTargets.push_back({input, isHost});
-  }
-
-  if (numHostTargets != 1)
-    return reportError("expected exactly one host target");
-  if (inputTargets.size() == 1)
-    return reportError("expected at least one device target");
   return 0;
+}
+
+// The host/device role of a module comes from the LangOptions that CIRGen
+// records in cir.lowering_options.
+static mlir::FailureOr<cir::OffloadKind>
+getOffloadKind(mlir::ModuleOp module, llvm::StringRef fileName) {
+  auto loweringOpts = module->getAttrOfType<cir::LoweringOptionsAttr>(
+      cir::CIRDialect::getLoweringOptionsAttrName());
+  if (!loweringOpts) {
+    reportError("'" + fileName + "' has no '" +
+                cir::CIRDialect::getLoweringOptionsAttrName() + "' attribute");
+    return mlir::failure();
+  }
+  if (!loweringOpts.getCuda()) {
+    reportError("'" + fileName + "' is not a CUDA or HIP compilation");
+    return mlir::failure();
+  }
+  return loweringOpts.getCudaIsDevice() ? cir::OffloadKind::Device
+                                        : cir::OffloadKind::Host;
 }
 
 static void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
@@ -131,19 +92,29 @@ static void setOffloadAttrs(mlir::ModuleOp module, llvm::StringRef name,
 }
 
 static mlir::OwningOpRef<mlir::ModuleOp>
-combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
-              mlir::MLIRContext &context) {
+combineInputs(mlir::MLIRContext &context) {
   mlir::OwningOpRef<mlir::ModuleOp> hostModule;
   llvm::SmallVector<mlir::OwningOpRef<mlir::ModuleOp>> deviceModules;
 
-  for (const InputTarget &inputTarget : inputTargets) {
+  for (const std::string &fileName : InputFileNames) {
     mlir::OwningOpRef<mlir::ModuleOp> module =
-        mlir::parseSourceFile<mlir::ModuleOp>(inputTarget.Input,
+        mlir::parseSourceFile<mlir::ModuleOp>(fileName,
                                               mlir::ParserConfig(&context));
-    if (!module)
+    if (!module) {
+      reportError("failed to parse input file");
+      return {};
+    }
+
+    mlir::FailureOr<cir::OffloadKind> offloadKind =
+        getOffloadKind(*module, fileName);
+    if (mlir::failed(offloadKind))
       return {};
 
-    if (inputTarget.IsHost) {
+    if (*offloadKind == cir::OffloadKind::Host) {
+      if (hostModule) {
+        reportError("expected exactly one host module");
+        return {};
+      }
       setOffloadAttrs(*module, "host", cir::OffloadKind::Host);
       hostModule = std::move(module);
       continue;
@@ -153,6 +124,15 @@ combineInputs(llvm::ArrayRef<InputTarget> inputTargets,
         ("device_" + llvm::Twine(deviceModules.size())).str();
     setOffloadAttrs(*module, deviceName, cir::OffloadKind::Device);
     deviceModules.push_back(std::move(module));
+  }
+
+  if (!hostModule) {
+    reportError("expected exactly one host module");
+    return {};
+  }
+  if (deviceModules.empty()) {
+    reportError("expected at least one device module");
+    return {};
   }
 
   // The container verifier expects the host module first, followed by the
@@ -199,14 +179,12 @@ int main(int argc, char **argv) {
   mlir::MLIRContext context(registry);
   context.loadDialect<cir::CIRDialect>();
 
-  llvm::SmallVector<InputTarget> inputTargets;
-  if (int errorCode = validateCombineCommandLine(inputTargets))
+  if (int errorCode = validateCombineCommandLine())
     return errorCode;
 
-  mlir::OwningOpRef<mlir::ModuleOp> container =
-      combineInputs(inputTargets, context);
+  mlir::OwningOpRef<mlir::ModuleOp> container = combineInputs(context);
   if (!container)
-    return reportError("failed to parse input file");
+    return 1;
   if (mlir::failed(mlir::verify(*container)))
     return reportError("failed to verify combined module");
 

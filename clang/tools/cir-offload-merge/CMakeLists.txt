@@ -5,12 +5,6 @@ add_clang_tool(cir-offload-merge
   cir-offload-merge.cpp
 )
 
-clang_target_link_libraries(cir-offload-merge
-  PRIVATE
-  clangBasic
-  clangDriver
-)
-
 target_link_libraries(cir-offload-merge
   PRIVATE
   CIRRegisterAllDialects

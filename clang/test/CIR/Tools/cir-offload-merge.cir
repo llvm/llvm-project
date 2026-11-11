@@ -3,15 +3,14 @@
 // RUN: cir-offload-merge -combine \
 // RUN:   -input=%t/host.cir \
 // RUN:   -input=%t/device-sm80.cir \
-// RUN:   -targets=host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 \
 // RUN:   -output=%t/combined.cir
 // RUN: FileCheck %s --check-prefix=COMBINE --input-file=%t/combined.cir
 // RUN: cir-opt %t/combined.cir --verify-roundtrip -o /dev/null
 
 // COMBINE:      module attributes {cir.offload.container} {
-// COMBINE-NEXT:   module @host attributes {cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
+// COMBINE-NEXT:   module @host attributes {{{.*}}cir.offload.kind = #cir.offload<host>, cir.triple = "x86_64-unknown-linux-gnu"} {
 // COMBINE-NEXT:     cir.func{{.*}} @host_fn
-// COMBINE:        module @device_0 attributes {cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// COMBINE:        module @device_0 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
 // COMBINE-NEXT:     cir.func{{.*}} @device_fn
 
 // The host module goes first whatever the input order; device modules keep
@@ -20,82 +19,85 @@
 // RUN:   -input=%t/device-sm90.cir \
 // RUN:   -input=%t/host.cir \
 // RUN:   -input=%t/device-sm80.cir \
-// RUN:   -targets=cuda-nvptx64-nvidia-cuda--sm_90,host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 \
 // RUN:   -output=%t/reordered.cir
 // RUN: FileCheck %s --check-prefix=REORDER --input-file=%t/reordered.cir
 
 // REORDER:      module attributes {cir.offload.container} {
 // REORDER-NEXT:   module @host
-// REORDER:        module @device_0 attributes {cir.offload.kind = #cir.offload<device>} {
+// REORDER:        module @device_0 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
 // REORDER-NEXT:   }
-// REORDER-NEXT:   module @device_1 attributes {cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// REORDER-NEXT:   module @device_1 attributes {{{.*}}cir.offload.kind = #cir.offload<device>, cir.triple = "nvptx64-nvidia-cuda"} {
+// REORDER-NEXT:     cir.func{{.*}} @device_fn
 
-// Device targets may share a triple and only differ in their target ID.
 // RUN: cir-offload-merge -combine \
-// RUN:   -input=%t/host.cir \
+// RUN:   -input=%t/host-hip.cir \
 // RUN:   -input=%t/device-gfx90a.cir \
-// RUN:   -input=%t/device-gfx90a.cir \
-// RUN:   -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a:xnack+,hip-amdgcn-amd-amdhsa--gfx90a:xnack- \
-// RUN:   -output=%t/multi-arch.cir
-// RUN: FileCheck %s --check-prefix=MULTI-ARCH --input-file=%t/multi-arch.cir
+// RUN:   -output=%t/hip.cir
+// RUN: FileCheck %s --check-prefix=HIP --input-file=%t/hip.cir
 
-// MULTI-ARCH: module @device_0 attributes {cir.offload.kind = #cir.offload<device>}
-// MULTI-ARCH: module @device_1 attributes {cir.offload.kind = #cir.offload<device>}
+// HIP:      module @host attributes {{{.*}}cir.offload.kind = #cir.offload<host>
+// HIP:      module @device_0 attributes {{{.*}}cir.offload.kind = #cir.offload<device>
 
-// RUN: not cir-offload-merge -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
+// RUN: not cir-offload-merge -input=%t/host.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-MODE
 // ERR-NO-MODE: error: expected -combine
 
-// RUN: not cir-offload-merge -combine -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-INPUT
+// RUN: not cir-offload-merge -combine -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-INPUT
 // ERR-NO-INPUT: error: missing required -input
 
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-TARGETS
-// ERR-NO-TARGETS: error: missing required -targets
-
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu 2>&1 | FileCheck %s --check-prefix=ERR-NO-OUTPUT
+// RUN: not cir-offload-merge -combine -input=%t/host.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-OUTPUT
 // ERR-NO-OUTPUT: error: missing required -output
 
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -targets=host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/a.cir -output=%t/b.cir 2>&1 | FileCheck %s --check-prefix=ERR-MULTI-OUTPUT
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -output=%t/a.cir -output=%t/b.cir 2>&1 | FileCheck %s --check-prefix=ERR-MULTI-OUTPUT
 // ERR-MULTI-OUTPUT: error: combine mode expects exactly one output
 
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-COUNT
-// ERR-COUNT: error: number of input files and targets should match in combine mode
+// RUN: not cir-offload-merge -combine -input=%t/device-sm80.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-HOSTS
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/host-hip.cir -input=%t/device-sm80.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-HOSTS
+// ERR-HOSTS: error: expected exactly one host module
 
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -targets=not-a-target -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-BAD-TARGET
-// ERR-BAD-TARGET: error: invalid target 'not-a-target'
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-DEVICE
+// ERR-NO-DEVICE: error: expected at least one device module
 
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/device-sm80.cir -targets=cuda-nvptx64-nvidia-cuda--sm_80,cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-DUP-TARGET
-// ERR-DUP-TARGET: error: duplicate target 'cuda-nvptx64-nvidia-cuda--sm_80'
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/no-lowering-options.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-OPTS
+// ERR-NO-OPTS: error: '{{.*}}no-lowering-options.cir' has no 'cir.lowering_options' attribute
 
-// RUN: not cir-offload-merge -combine -input=%t/device-sm80.cir -targets=cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-HOST
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu,host-aarch64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-HOST
-// ERR-NO-HOST: error: expected exactly one host target
+// RUN: not cir-offload-merge -combine -input=%t/host.cir -input=%t/not-offload.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NOT-OFFLOAD
+// ERR-NOT-OFFLOAD: error: '{{.*}}not-offload.cir' is not a CUDA or HIP compilation
 
-// RUN: not cir-offload-merge -combine -input=%t/host.cir -targets=host-x86_64-unknown-linux-gnu -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-NO-DEVICE
-// ERR-NO-DEVICE: error: expected at least one device target
-
-// RUN: not cir-offload-merge -combine -input=%t/invalid.cir -input=%t/device-sm80.cir -targets=host-x86_64-unknown-linux-gnu,cuda-nvptx64-nvidia-cuda--sm_80 -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-PARSE
+// RUN: not cir-offload-merge -combine -input=%t/invalid.cir -input=%t/device-sm80.cir -output=%t/out.cir 2>&1 | FileCheck %s --check-prefix=ERR-PARSE
 // ERR-PARSE: error: failed to parse input file
 
 //--- host.cir
-module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @host_fn() {
     cir.return
   }
 }
 
 //--- device-sm80.cir
-module attributes {cir.triple = "nvptx64-nvidia-cuda"} {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
   cir.func @device_fn() {
     cir.return
   }
 }
 
 //--- device-sm90.cir
-module {
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>, cir.triple = "nvptx64-nvidia-cuda"} {
+}
+
+//--- host-hip.cir
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = true, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
 }
 
 //--- device-gfx90a.cir
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = true, hip = true, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
+}
+
+//--- no-lowering-options.cir
 module {
+}
+
+//--- not-offload.cir
+module attributes {cir.lowering_options = #cir.lowering_options<exceptions = false, threadsafe_statics = true, cuda = false, cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = false, no_trapping_math = true, ssp_buffer_size = 8>} {
 }
 
 //--- invalid.cir
