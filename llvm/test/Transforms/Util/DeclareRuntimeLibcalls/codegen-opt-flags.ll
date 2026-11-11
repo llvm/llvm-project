@@ -17,6 +17,10 @@
 ; CHECK: declare arm_aapcscc void @__aeabi_memclr8(ptr, i32)
 
 ; The AEABI memory functions do not return the destination.
-; CHECK: declare arm_aapcscc void @__aeabi_memcpy(ptr, ptr, i32){{$}}
-; CHECK: declare arm_aapcscc void @__aeabi_memmove(ptr, ptr, i32){{$}}
-; CHECK: declare arm_aapcscc void @__aeabi_memset(ptr, i32, i32){{$}}
+; CHECK: declare arm_aapcscc void @__aeabi_memcpy(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32) [[MEMCPY_ATTRS:#[0-9]+]]
+; CHECK: declare arm_aapcscc void @__aeabi_memmove(ptr writeonly captures(none), ptr readonly captures(none), i32) [[MEMCPY_ATTRS]]
+; CHECK: declare arm_aapcscc void @__aeabi_memset(ptr writeonly captures(none), i32, i32) [[MEMSET_ATTRS:#[0-9]+]]
+; CHECK: declare arm_aapcs_vfpcc ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly captures(none), i32) [[MEMCPY_ATTRS]]
+
+; CHECK: attributes [[MEMCPY_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes [[MEMSET_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
