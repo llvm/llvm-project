@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_MINMAX_H
 #define _LIBCPP___ALGORITHM_RANGES_MINMAX_H
 
+#include <__algorithm/for_each.h>
 #include <__algorithm/min_max_result.h>
 #include <__algorithm/minmax_element.h>
 #include <__assert>
@@ -87,17 +88,20 @@ struct __minmax {
 
     // This optimiation is not in minmax_element because clang doesn't see through the pointers and as a result doesn't
     // vectorize the code.
-    if constexpr (contiguous_range<_Range> && is_integral_v<_ValueT> &&
+    if constexpr (random_access_range<_Range> && is_integral_v<_ValueT> &&
                   __is_cheap_to_copy<_ValueT> & __is_identity<_Proj>::value &&
                   __desugars_to_v<__less_tag, _Comp, _ValueT, _ValueT>) {
-      minmax_result<_ValueT> __result = {__r[0], __r[0]};
-      for (auto __e : __r) {
-        if (__e < __result.min)
-          __result.min = __e;
-        if (__result.max < __e)
-          __result.max = __e;
-      }
-      return __result;
+      struct _Func {
+        minmax_result<_ValueT> __result_;
+
+        constexpr void operator()(range_reference_t<_Range> __val) {
+          if (__val < __result_.min)
+            __result_.min = __val;
+          if (__result_.max < __val)
+            __result_.max = __val;
+        }
+      };
+      return std::__for_each(std::move(++__first), std::move(__last), _Func({__r[0], __r[0]}), __proj).__fun_.__result_;
     } else if constexpr (forward_range<_Range>) {
       // Special-case the one element case. Avoid repeatedly initializing objects from the result of an iterator
       // dereference when doing so might not be idempotent. The `if constexpr` avoids the extra branch in cases where
