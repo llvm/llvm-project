@@ -765,21 +765,21 @@ define void @loads_addrspace_7(i32 %arg) {
 ; CHECK-LABEL: 'loads_addrspace_7'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i32, ptr addrspace(7) poison, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load i64, ptr addrspace(7) poison, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <2 x i32>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <2 x i32>, ptr addrspace(7) poison, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <2 x i32>, ptr addrspace(7) poison, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load <3 x i32>, ptr addrspace(7) poison, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <3 x i32>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = load <3 x i32>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %6 = load <3 x i32>, ptr addrspace(7) poison, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <3 x i32>, ptr addrspace(7) poison, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <4 x i32>, ptr addrspace(7) poison, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %8 = load <4 x i32>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = load <4 x i32>, ptr addrspace(7) poison, align 8
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %10 = load <4 x i32>, ptr addrspace(7) poison, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <2 x i64>, ptr addrspace(7) poison, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = load <8 x i32>, ptr addrspace(7) poison, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = load <4 x i8>, ptr addrspace(7) poison, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = load <2 x i16>, ptr addrspace(7) poison, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = load <8 x half>, ptr addrspace(7) poison, align 16
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %16 = load <4 x i24>, ptr addrspace(7) poison, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %17 = load <3 x i12>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <2 x i64>, ptr addrspace(7) poison, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load <8 x i32>, ptr addrspace(7) poison, align 32
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %13 = load <4 x i8>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = load <2 x i16>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %15 = load <8 x half>, ptr addrspace(7) poison, align 16
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %16 = load <4 x i24>, ptr addrspace(7) poison, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %17 = load <3 x i12>, ptr addrspace(7) poison, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
   load i32, ptr addrspace(7) poison, align 4
@@ -802,16 +802,67 @@ define void @loads_addrspace_7(i32 %arg) {
   ret void
 }
 
+define void @loads_addrspace_7_known_bounds(ptr addrspace(1) %base, ptr addrspace(8) %rsrc, i32 %off) {
+; CHECK-LABEL: 'loads_addrspace_7_known_bounds'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <4 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <16 x i8>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <8 x i16>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %tail = getelementptr i8, ptr addrspace(7) %p, i32 1012
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %4 = load <16 x i8>, ptr addrspace(7) %tail, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %end = getelementptr i8, ptr addrspace(7) %p, i32 1024
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load <16 x i8>, ptr addrspace(7) %end, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %q = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <4 x i32>, ptr addrspace(7) %q, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %7 = load <16 x i8>, ptr addrspace(7) %q, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ubuf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 -1, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %u = addrspacecast ptr addrspace(8) %ubuf to ptr addrspace(7)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %u.var = getelementptr i8, ptr addrspace(7) %u, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i8>, ptr addrspace(7) %u.var, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %u.var2 = getelementptr i8, ptr addrspace(7) %u, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %9 = load <4 x i32>, ptr addrspace(7) %u.var2, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %p.var = getelementptr i8, ptr addrspace(7) %p, i32 %off
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %10 = load <16 x i8>, ptr addrspace(7) %p.var, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %direct = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = load <16 x i8>, ptr addrspace(7) %direct, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+  %buf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+  %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
+  load <4 x i32>, ptr addrspace(7) %p, align 4
+  load <16 x i8>, ptr addrspace(7) %p, align 4
+  load <8 x i16>, ptr addrspace(7) %p, align 4
+  %tail = getelementptr i8, ptr addrspace(7) %p, i32 1012
+  load <16 x i8>, ptr addrspace(7) %tail, align 4
+  %end = getelementptr i8, ptr addrspace(7) %p, i32 1024
+  load <16 x i8>, ptr addrspace(7) %end, align 4
+  %q = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
+  load <4 x i32>, ptr addrspace(7) %q, align 4
+  load <16 x i8>, ptr addrspace(7) %q, align 4
+  %ubuf = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1.i64(ptr addrspace(1) %base, i16 0, i64 -1, i32 159744)
+  %u = addrspacecast ptr addrspace(8) %ubuf to ptr addrspace(7)
+  %u.var = getelementptr i8, ptr addrspace(7) %u, i32 %off
+  load <16 x i8>, ptr addrspace(7) %u.var, align 4
+  %u.var2 = getelementptr i8, ptr addrspace(7) %u, i32 %off
+  load <4 x i32>, ptr addrspace(7) %u.var2, align 4
+  %p.var = getelementptr i8, ptr addrspace(7) %p, i32 %off
+  load <16 x i8>, ptr addrspace(7) %p.var, align 4
+  %direct = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1.i64(ptr addrspace(1) %base, i16 0, i64 1024, i32 159744)
+  load <16 x i8>, ptr addrspace(7) %direct, align 4
+  ret void
+}
+
 define void @loads_addrspace_7_unknown_offset(ptr addrspace(7) %p) {
 ; CHECK-LABEL: 'loads_addrspace_7_unknown_offset'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load <4 x i32>, ptr addrspace(7) %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = load <2 x i64>, ptr addrspace(7) %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = load <2 x i64>, ptr addrspace(7) %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = load <3 x i32>, ptr addrspace(7) %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = load <8 x i32>, ptr addrspace(7) %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load <3 x double>, ptr addrspace(7) %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load <8 x i16>, ptr addrspace(7) %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %8 = load <16 x i8>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %1 = load <4 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %2 = load <2 x i64>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = load <2 x i64>, ptr addrspace(7) %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = load <3 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %5 = load <8 x i32>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %6 = load <3 x double>, ptr addrspace(7) %p, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %7 = load <8 x i16>, ptr addrspace(7) %p, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %8 = load <16 x i8>, ptr addrspace(7) %p, align 4
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %9 = load <4 x i32>, ptr addrspace(7) %p, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;

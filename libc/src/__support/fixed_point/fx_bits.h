@@ -9,20 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 #define LLVM_LIBC_SRC___SUPPORT_FIXED_POINT_FX_BITS_H
 
+#include "hdr/stdint_proxy.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
-#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // numeric_limits
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/libc_assert.h"
+#include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
 #include "src/__support/uint128.h"
-
-#include "fx_rep.h"
 
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
 

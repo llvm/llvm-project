@@ -130,6 +130,7 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
   addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.
@@ -1115,6 +1116,28 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   // New-value stores cannot coexist with any other stores.
   if (HII.isNewValueStore(MI) && MJ.mayStore())
     return true;
+
+  // An HLX instruction with a 64-bit scalar source cannot be paired with
+  // another HLX instruction using a scalar or immediate source. Loads and
+  // stores are exempt because they do not use the shared scalar resource.
+  if (HII.isHLXVec(MI) && HII.isHLXVec(MJ) && !MJ.mayLoad() && !MJ.mayStore()) {
+    auto getScalarUses = [](const MachineInstr &MI) {
+      unsigned Uses = 0;
+      for (const MachineOperand &MO : MI.explicit_uses()) {
+        if (MO.isImm())
+          Uses |= 1;
+        else if (MO.isReg() && Hexagon::IntRegsRegClass.contains(MO.getReg()))
+          Uses |= 2;
+        else if (MO.isReg() &&
+                 Hexagon::DoubleRegsRegClass.contains(MO.getReg()))
+          Uses |= 4;
+      }
+      return Uses;
+    };
+
+    if ((getScalarUses(MI) & 4) && getScalarUses(MJ))
+      return true;
+  }
 
   switch (MI.getOpcode()) {
   case Hexagon::S2_storew_locked:
