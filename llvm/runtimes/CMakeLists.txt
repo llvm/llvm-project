@@ -3,6 +3,15 @@
 # similar although simpler functionality. We should figure out how to merge
 # the two files.
 
+set(LLVM_RUNTIMES_EXTRA_CMAKE "" CACHE STRING
+  "Extra CMake file(s) to include() at the start of llvm/runtimes/CMakeLists.txt")
+set(LLVM_RUNTIMES_EXTRA_CMAKE_AFTER "" CACHE STRING
+  "Extra CMake file(s) to include() at the end of llvm/runtimes/CMakeLists.txt")
+
+foreach(_extra_cmake IN LISTS LLVM_RUNTIMES_EXTRA_CMAKE)
+  include("${_extra_cmake}")
+endforeach()
+
 set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON;-DCLANG_RESOURCE_DIR=${CLANG_RESOURCE_DIR};-DLLVM_LIBDIR_SUFFIX=${LLVM_LIBDIR_SUFFIX}")
 if(APPLE AND CMAKE_OSX_SYSROOT AND (LLVM_TARGET_TRIPLE STREQUAL LLVM_HOST_TRIPLE))
   # Only propagate the host sysroot for native runtimes builds.
@@ -106,7 +115,7 @@ macro(append_passthrough_options out type names)
           foreach(cache IN LISTS ${variable_name})
             list(APPEND ${out} -C ${cache})
           endforeach()
-        else()
+        elseif(NOT new_name STREQUAL DEPENDS)
           string(REPLACE ";" "|" new_value "${${variable_name}}")
           list(APPEND ${out} "-D${new_name}=${new_value}")
         endif()
@@ -143,7 +152,7 @@ function(builtin_default_target compiler_rt_path)
 
   llvm_ExternalProject_Add(builtins
                            ${compiler_rt_path}/lib/builtins
-                           DEPENDS ${ARG_DEPENDS}
+                           DEPENDS ${ARG_DEPENDS} ${BUILTINS_DEPENDS}
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
@@ -171,7 +180,7 @@ function(builtin_register_target compiler_rt_path name)
 
   llvm_ExternalProject_Add(builtins-${name}
                            ${compiler_rt_path}/lib/builtins
-                           DEPENDS ${ARG_DEPENDS}
+                           DEPENDS ${ARG_DEPENDS} ${BUILTINS_DEPENDS} ${BUILTINS_${name}_DEPENDS}
                            CMAKE_ARGS -DLLVM_LIBRARY_OUTPUT_INTDIR=${LLVM_LIBRARY_DIR}
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
@@ -342,7 +351,7 @@ function(runtime_default_target)
 
   llvm_ExternalProject_Add(runtimes
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
-                           DEPENDS ${ARG_DEPENDS}
+                           DEPENDS ${ARG_DEPENDS} ${RUNTIMES_DEPENDS}
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -466,9 +475,14 @@ function(runtime_register_target name)
 
   set_enable_per_target_runtime_dir()
 
+  set(_runtime_deps ${ARG_DEPENDS} ${RUNTIMES_DEPENDS})
+  foreach(_name IN ITEMS ${ARG_BASE_NAME} ${name})
+    list(APPEND _runtime_deps ${RUNTIMES_${_name}_DEPENDS})
+  endforeach()
+
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
-                           DEPENDS ${ARG_DEPENDS}
+                           DEPENDS ${_runtime_deps}
                            # Builtins were built separately above
                            CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=OFF
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
@@ -896,3 +910,7 @@ if(LIBOMP_ENABLE_ARM64X)
   # openmp targets set up for cross build runtimes don't currently work correctly.
   add_dependencies(runtimes-configure runtimes-arm64ec-pc-windows-msvc-build)
 endif()
+
+foreach(_extra_cmake IN LISTS LLVM_RUNTIMES_EXTRA_CMAKE_AFTER)
+  include("${_extra_cmake}")
+endforeach()
