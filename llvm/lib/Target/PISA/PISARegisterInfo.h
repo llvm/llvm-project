@@ -16,6 +16,7 @@
 
 #include "PISADefines.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -87,7 +88,7 @@ private:
     PISA::Swizzle Swizzle;
     const char *SwizzleName;
   };
-  static DenseMap<unsigned, SwizzleDesc> SwizzleMap;
+  static const DenseMap<unsigned, SwizzleDesc> &getSwizzleMap();
 
   BitVector SpecialRegs;
 };

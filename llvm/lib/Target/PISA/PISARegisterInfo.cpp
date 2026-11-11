@@ -41,34 +41,37 @@ struct SpecialRegEntry {
 } // anonymous namespace
 
 static_assert(PISA::NUM_TARGET_SUBREGS == 63, "updated needed!");
-DenseMap<unsigned, PISARegisterInfo::SwizzleDesc> PISARegisterInfo::SwizzleMap =
-    {
-        {PISA::NoSubRegister, {PISA::Swizzle::NONE, nullptr}},
-        {PISA::sub8_0, {PISA::Swizzle::X, ".x"}},
-        {PISA::sub8_1, {PISA::Swizzle::Y, ".y"}},
-        {PISA::sub8_2, {PISA::Swizzle::Z, ".z"}},
-        {PISA::sub8_3, {PISA::Swizzle::W, ".w"}},
-        {PISA::sub16_0, {PISA::Swizzle::X, ".x"}},
-        {PISA::sub16_1, {PISA::Swizzle::Y, ".y"}},
-        {PISA::sub16_2, {PISA::Swizzle::Z, ".z"}},
-        {PISA::sub16_3, {PISA::Swizzle::W, ".w"}},
-        {PISA::sub32_0, {PISA::Swizzle::X, ".x"}},
-        {PISA::sub32_1, {PISA::Swizzle::Y, ".y"}},
-        {PISA::sub32_2, {PISA::Swizzle::Z, ".z"}},
-        {PISA::sub32_3, {PISA::Swizzle::W, ".w"}},
-        {PISA::sub64_0, {PISA::Swizzle::X, ".x"}},
-        {PISA::sub64_1, {PISA::Swizzle::Y, ".y"}},
-        {PISA::sub64_2, {PISA::Swizzle::Z, ".z"}},
-        {PISA::sub64_3, {PISA::Swizzle::W, ".w"}},
-        {PISA::sub8_xy, {PISA::Swizzle::XY, ".xy"}},
-        {PISA::sub8_zw, {PISA::Swizzle::ZW, ".zw"}},
-        {PISA::sub16_xy, {PISA::Swizzle::XY, ".xy"}},
-        {PISA::sub16_zw, {PISA::Swizzle::ZW, ".zw"}},
-        {PISA::sub32_xy, {PISA::Swizzle::XY, ".xy"}},
-        {PISA::sub32_zw, {PISA::Swizzle::ZW, ".zw"}},
-        {PISA::sub64_xy, {PISA::Swizzle::XY, ".xy"}},
-        {PISA::sub64_zw, {PISA::Swizzle::ZW, ".zw"}},
-};
+const DenseMap<unsigned, PISARegisterInfo::SwizzleDesc> &
+PISARegisterInfo::getSwizzleMap() {
+  static const DenseMap<unsigned, SwizzleDesc> SwizzleMap = {
+      {PISA::NoSubRegister, {PISA::Swizzle::NONE, nullptr}},
+      {PISA::sub8_0, {PISA::Swizzle::X, ".x"}},
+      {PISA::sub8_1, {PISA::Swizzle::Y, ".y"}},
+      {PISA::sub8_2, {PISA::Swizzle::Z, ".z"}},
+      {PISA::sub8_3, {PISA::Swizzle::W, ".w"}},
+      {PISA::sub16_0, {PISA::Swizzle::X, ".x"}},
+      {PISA::sub16_1, {PISA::Swizzle::Y, ".y"}},
+      {PISA::sub16_2, {PISA::Swizzle::Z, ".z"}},
+      {PISA::sub16_3, {PISA::Swizzle::W, ".w"}},
+      {PISA::sub32_0, {PISA::Swizzle::X, ".x"}},
+      {PISA::sub32_1, {PISA::Swizzle::Y, ".y"}},
+      {PISA::sub32_2, {PISA::Swizzle::Z, ".z"}},
+      {PISA::sub32_3, {PISA::Swizzle::W, ".w"}},
+      {PISA::sub64_0, {PISA::Swizzle::X, ".x"}},
+      {PISA::sub64_1, {PISA::Swizzle::Y, ".y"}},
+      {PISA::sub64_2, {PISA::Swizzle::Z, ".z"}},
+      {PISA::sub64_3, {PISA::Swizzle::W, ".w"}},
+      {PISA::sub8_xy, {PISA::Swizzle::XY, ".xy"}},
+      {PISA::sub8_zw, {PISA::Swizzle::ZW, ".zw"}},
+      {PISA::sub16_xy, {PISA::Swizzle::XY, ".xy"}},
+      {PISA::sub16_zw, {PISA::Swizzle::ZW, ".zw"}},
+      {PISA::sub32_xy, {PISA::Swizzle::XY, ".xy"}},
+      {PISA::sub32_zw, {PISA::Swizzle::ZW, ".zw"}},
+      {PISA::sub64_xy, {PISA::Swizzle::XY, ".xy"}},
+      {PISA::sub64_zw, {PISA::Swizzle::ZW, ".zw"}},
+  };
+  return SwizzleMap;
+}
 
 bool PISARegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
@@ -78,6 +81,7 @@ bool PISARegisterInfo::shouldCoalesce(
   if (!MI->isCopy())
     return false;
 
+  const DenseMap<unsigned, SwizzleDesc> &SwizzleMap = getSwizzleMap();
   return SwizzleMap.contains(SubReg) && SwizzleMap.contains(DstSubReg);
 }
 
@@ -196,14 +200,16 @@ unsigned PISARegisterInfo::getCompositeSubRegIdx(unsigned Size, unsigned Base,
 }
 
 PISA::Swizzle PISARegisterInfo::getSwizzle(unsigned SubReg) const {
-  DenseMap<unsigned, SwizzleDesc>::iterator Swizzle =
+  const DenseMap<unsigned, SwizzleDesc> &SwizzleMap = getSwizzleMap();
+  DenseMap<unsigned, SwizzleDesc>::const_iterator Swizzle =
       SwizzleMap.find(SubReg);
   assert((Swizzle != SwizzleMap.end()) && "invalid swizzle!");
   return Swizzle->second.Swizzle;
 }
 
 const char *PISARegisterInfo::getSwizzleName(unsigned SubReg) const {
-  DenseMap<unsigned, SwizzleDesc>::iterator Swizzle =
+  const DenseMap<unsigned, SwizzleDesc> &SwizzleMap = getSwizzleMap();
+  DenseMap<unsigned, SwizzleDesc>::const_iterator Swizzle =
       SwizzleMap.find(SubReg);
   assert((Swizzle != SwizzleMap.end()) && "invalid swizzle!");
   return Swizzle->second.SwizzleName;
