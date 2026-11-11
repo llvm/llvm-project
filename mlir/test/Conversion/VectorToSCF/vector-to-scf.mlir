@@ -1,3 +1,4 @@
+// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{lower-tensors=true},int-range-optimizations,loop-invariant-code-motion,canonicalize))" | FileCheck %s --check-prefix=PREFIX
 // RUN: mlir-opt %s -convert-vector-to-scf -split-input-file -allow-unregistered-dialect | FileCheck %s
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true lower-scalable=true}))" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
 // RUN: mlir-opt %s "-convert-vector-to-scf=full-unroll target-rank=0" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=TARGET-RANK-ZERO
@@ -1061,4 +1062,62 @@ func.func @negative_masked_scalable_transpose_store(%vec: vector<4x[4]xf32>, %de
   %mask = vector.create_mask %a, %b : vector<[4]x4xi1>
   vector.mask %mask { vector.transfer_write %transpose, %dest[%i, %j] {in_bounds = [true, true]} : vector<[4]x4xf32>, memref<?x?xf32> } : vector<[4]x4xi1>
   return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_prefix(
+// FULL-UNROLL-LABEL: func.func @transfer_write_prefix(
+// TARGET-RANK-ZERO-LABEL: func.func @transfer_write_prefix(
+// PREFIX-LABEL: func.func @transfer_write_prefix(
+// PREFIX-SAME: %[[V:.*]]: vector<64x8xf32>, %[[DST:.*]]: memref<?x8xf32>)
+// PREFIX: %[[C64:.*]] = arith.constant 64 : index
+// PREFIX: %[[DIM:.*]] = memref.dim %[[DST]], {{.*}} : memref<?x8xf32>
+// PREFIX: %[[END:.*]] = arith.minsi %[[DIM]], %[[C64]] : index
+// PREFIX: scf.for %[[I:.*]] = {{.*}} to %[[END]] step {{.*}} {
+// PREFIX-NEXT: %[[ROW:.*]] = memref.load {{.*}}[%[[I]]]
+// PREFIX-NEXT: vector.transfer_write %[[ROW]], %[[DST]][%[[I]], {{.*}}] {in_bounds = [true]}
+// PREFIX-NEXT: }
+func.func @transfer_write_prefix(%v: vector<64x8xf32>, %dst: memref<?x8xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %v, %dst[%c0, %c0] {in_bounds = [false, true]} : vector<64x8xf32>, memref<?x8xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_tensor_prefix(
+// FULL-UNROLL-LABEL: func.func @transfer_write_tensor_prefix(
+// TARGET-RANK-ZERO-LABEL: func.func @transfer_write_tensor_prefix(
+// PREFIX-LABEL: func.func @transfer_write_tensor_prefix(
+// PREFIX: %[[DIM:.*]] = tensor.dim {{.*}} : tensor<?x8xf32>
+// PREFIX: %[[END:.*]] = arith.minsi %[[DIM]], {{.*}} : index
+// PREFIX: %[[RESULT:.*]] = scf.for %[[I:.*]] = {{.*}} to %[[END]] step {{.*}} iter_args(%[[DST:.*]] = {{.*}}) -> (tensor<?x8xf32>) {
+// PREFIX-NEXT: %[[ROW:.*]] = memref.load {{.*}}[%[[I]]]
+// PREFIX-NEXT: %[[WRITE:.*]] = vector.transfer_write %[[ROW]], %[[DST]][%[[I]], {{.*}}] {in_bounds = [true]}
+// PREFIX-NEXT: scf.yield %[[WRITE]] : tensor<?x8xf32>
+// PREFIX-NEXT: }
+// PREFIX: return %[[RESULT]] : tensor<?x8xf32>
+func.func @transfer_write_tensor_prefix(%v: vector<64x8xf32>, %dst: tensor<?x8xf32>) -> tensor<?x8xf32> {
+  %c0 = arith.constant 0 : index
+  %r = vector.transfer_write %v, %dst[%c0, %c0] {in_bounds = [false, true]} : vector<64x8xf32>, tensor<?x8xf32>
+  return %r : tensor<?x8xf32>
+}
+
+// -----
+
+// Out-of-bounds reads initialize padding and are not ineffective iterations.
+// CHECK-LABEL: func.func @negative_transfer_read_padding(
+// FULL-UNROLL-LABEL: func.func @negative_transfer_read_padding(
+// TARGET-RANK-ZERO-LABEL: func.func @negative_transfer_read_padding(
+// PREFIX-LABEL: func.func @negative_transfer_read_padding(
+// PREFIX: %[[C64:.*]] = arith.constant 64 : index
+// PREFIX: scf.for {{.*}} to %[[C64]] step {{.*}} {
+// PREFIX: scf.if
+// PREFIX: } else {
+// PREFIX: memref.store
+func.func @negative_transfer_read_padding(%src: memref<?x8xf32>, %padding: f32) -> vector<64x8xf32> {
+  %c0 = arith.constant 0 : index
+  %v = vector.transfer_read %src[%c0, %c0], %padding {in_bounds = [false, true]} : memref<?x8xf32>, vector<64x8xf32>
+  return %v : vector<64x8xf32>
 }
