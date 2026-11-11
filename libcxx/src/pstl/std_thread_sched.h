@@ -14,13 +14,11 @@
 // Design overview:
 // - A single Scheduler instance is created on first use and never destroyed.
 //   It starts `hardware_concurrency()-1` worker threads that live forever and sleep on an atomic epoch when idle.
-// - Each worker owns a fixed-capacity Chase-Lev work-stealing queue.
-//   Extra queues are reserved for "guest" threads, i.e. any non-worker thread that calls apply().
-// - apply() puts a Task on the caller's stack and pushes one request per potential participant into the caller's queue.
-//   Workers steal those requests and run the user function on indices taken from the Task's shared atomic counter.
+// - Scheduler contains a shared board of tasks with a fixed number of slots.
+// - apply() acquires a Task, initializes it and opens it for participation by the worker threads.
+//   Workers join the Task and run the user function on indices taken from the Task's shared atomic counter.
 //   The caller also takes part and then waits for all participants to finish.
-// - Nested parallelism is supported up to a depth of 2.
-//   Deeper nesting gradually falls back to serial execution as the queues fill up.
+//   If the caller couldn't acquire a task slot, it processes the request serially.
 // - No dynamic memory is allocated or freed after initialization.
 //   If initialization fails or the machine has a single CPU core, everything runs serially.
 // - None of this code runs unless PSTL algorithms are used.
@@ -30,159 +28,61 @@
 #if _LIBCPP_HAS_THREADS
 
 #  include <__assert>
-#  include <__verbose_abort>
-#  include <algorithm>
+#  include <array>
 #  include <atomic>
-#  include <bit>
-#  include <memory>
+#  include <cstddef>
 #  include <new>
 #  include <thread>
-#  include <type_traits>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl::__statpart {
 
 // Assumptions that need to hold for this implementation.
 static_assert(std::atomic_size_t::is_always_lock_free);
-static_assert(std::atomic<std::thread::id>::is_always_lock_free);
 
 // Typedefs for apply()'s parameters.
 using ctx_t  = void*;
 using func_t = void (*)(void*, std::size_t);
 
 // Task represents the user request to apply a function to a range of iterations.
-// It is stored in the stack memory of the caller thread.
+// Tasks are stored inside the Scheduler.
 // Multiple threads can participate in working on the same task by picking up the next iteration index and applying the
 // function to it.
 struct Task {
-  const ctx_t ctx;              // The context pointer to be passed to the function.
-  const func_t func;            // The function to be applied to each iteration.
-  const std::size_t iterations; // The total number of iterations to be processed.
-  std::atomic_size_t index;     // The next index of the iteration to be processed.
-  std::atomic_size_t requests;  // The remaining number of requests to participate in working on this task.
+  using state_t                          = std::atomic_unsigned_lock_free::value_type;
+  static constexpr state_t state_unowned = 0;
+  static constexpr state_t state_owned   = 1 << 0;
+  static constexpr state_t state_open    = 1 << 1;
+  static constexpr state_t state_joined  = 1 << 2;
+
+  // State of the task slot:
+  // Bit 0: is the slot owned
+  // Bit 1: is the slot open for participation
+  // Bits 2+: the number of joined workers
+  alignas(std::hardware_destructive_interference_size) std::atomic_unsigned_lock_free state{state_unowned};
+
+  // The context pointer to be passed to the function.
+  ctx_t ctx = nullptr;
+
+  // The function to be applied to each iteration.
+  func_t func = nullptr;
+
+  // The total number of iterations to be processed.
+  // This number is atomic to allow workers speculatively skip joining a task.
+  std::atomic_size_t iterations{0};
+
+  // The next index of the iteration to be processed.
+  alignas(std::hardware_destructive_interference_size) std::atomic_size_t index{0};
 };
 
-// Implementation of "Dynamic Circular Work-Stealing Deque" by David Chase and Yossi Lev, but with a fixed-size buffer.
-// The element type is a pointer to Task, nullptr is not a valid value.
-struct alignas(std::hardware_destructive_interference_size) TaskQueue {
-  constexpr TaskQueue() noexcept         = default;
-  TaskQueue(const TaskQueue&)            = delete;
-  TaskQueue& operator=(const TaskQueue&) = delete;
-
-  // Allocates the buffer, must be called before the queue is used by any thread.
-  // The capacity is rounded up to the next power of two.
-  bool init(std::size_t capacity) noexcept {
-    capacity = std::bit_ceil(std::max<std::size_t>(capacity, 1));
-    elements_.reset(new (std::nothrow) Task*[capacity]());
-    if (!elements_)
-      return false;
-    mask_ = capacity - 1;
-    return true;
-  }
-
-  // Pushes the new task at the bottom of the queue, only called by the owner.
-  // Returns false if the queue is full.
-  bool push(Task* task) noexcept {
-    std::size_t b = bottom_.load();
-    std::size_t t = top_.load();
-    if (b - t > mask_) // top never passes bottom while the owner is pushing, so b - t is the current size
-      return false;
-    put(b, task);
-    bottom_.store(b + 1);
-    return true;
-  }
-
-  // Pops a task from the bottom of the queue, only called by the owner.
-  // Returns nullptr if the queue is empty.
-  Task* pop() noexcept {
-    std::size_t b = bottom_.load();
-    --b; // May wrap around, which is fine
-    bottom_.store(b);
-    std::size_t t = top_.load();
-    if (distance(b, t) >= 0) {
-      Task* task = get(b);
-      if (distance(b, t) > 0)
-        return task;
-      if (top_.compare_exchange_strong(t, t + 1)) {
-        bottom_.store(t + 1);
-        return task;
-      } else {
-        bottom_.store(t);
-        return nullptr;
-      }
-    } else {
-      bottom_.store(t);
-      return nullptr;
-    }
-  }
-
-  // Pops a task from the bottom of the queue only if it is the expected one, only called by the owner.
-  // Returns nullptr if the queue is empty or if the bottom task is a different one.
-  Task* pop_if(Task* expected) noexcept {
-    // Only the owner writes the elements and moves the bottom index, so peeking there is safe.
-    // If that element has already been stolen, the slot is stale, but then the queue is empty and pop() detects it.
-    if (get(bottom_.load() - 1) != expected)
-      return nullptr;
-    return pop();
-  }
-
-  // Steals a task from the top of the queue, can be called by any thread.
-  // Returns nullptr if the queue is empty. Retries when losing the race for the top element to another thread, which
-  // can only happen if that thread made progress, so the loop is lock-free.
-  Task* steal() noexcept {
-    std::size_t t = top_.load();
-    while (true) {
-      std::size_t b = bottom_.load();
-      if (distance(b, t) <= 0)
-        return nullptr;
-
-      Task* task = get(t);
-      if (top_.compare_exchange_strong(t, t + 1))
-        return task;
-      // The CAS failed and loaded the current top into t, retry with it.
-    }
-  }
-
-private:
-  // The indices are allowed to wrap around, so they must be compared via their difference.
-  // (a - b) mod 2^N interpreted as signed, correct as long as the real distance is below 2^(N-1).
-  static std::ptrdiff_t distance(std::size_t a, std::size_t b) noexcept { return static_cast<std::ptrdiff_t>(a - b); }
-
-  Task* get(std::size_t index) const noexcept {
-    // Chase-Lev is inherently racy regarding the elements in the array, wrap access with atomic_ref to remove the UB.
-    return std::atomic_ref<Task*>(elements_[index & mask_]).load(std::memory_order_relaxed);
-  }
-
-  void put(std::size_t index, Task* task) noexcept {
-    // Chase-Lev is inherently racy regarding the elements in the array, wrap access with atomic_ref to remove the UB.
-    std::atomic_ref<Task*>(elements_[index & mask_]).store(task, std::memory_order_relaxed);
-  }
-
-  std::atomic_size_t bottom_{0};
-  std::atomic_size_t top_{0};
-  std::unique_ptr<Task*[]> elements_;
-  std::size_t mask_{0};
-};
-
-// QueueOwnership represents the ownership of a queue by a thread and the number of nested acquisitions by this thread.
-struct QueueOwnership {
-  // Identification of a thread that owns a queue.
-  // Attempts to acquire ownership must be synchronized via this variable.
-  std::atomic<std::thread::id> id = {};
-
-  // Supports nested parallelism: this variable is incremented with each acquisition and decremented with each release.
-  // Must only be touched by the thread that owns the queue.
-  int acquire_count = 0;
-};
-
-// Scheduler manages the worker threads and the queues.
+// Scheduler manages the worker threads and the shared task slots.
 class Scheduler {
 public:
-  // Allocates internal data structures and starts the worker threads.
+  // Initializes internal data structures and starts the worker threads.
   Scheduler() noexcept;
 
-  // Destructor must never be called; doing so causes a verbose abort.
-  ~Scheduler();
+  // Destruction is not allowed by design.
+  ~Scheduler() = delete;
 
   // No copying or moving is allowed.
   Scheduler(const Scheduler&)            = delete;
@@ -196,31 +96,41 @@ public:
   void apply(std::size_t iterations, void* ctx, void (*func)(void*, std::size_t)) noexcept;
 
 private:
-  TaskQueue* acquire_queue(std::thread::id thread_id) noexcept;
-  void release_queue(TaskQueue* queue) noexcept;
-  void worker_thread(size_t worker_index) noexcept;
+  // Tries to find and claim ownership of a task slot.
+  Task* acquire_task() noexcept;
+
+  // Releases ownership of a task slot.
+  void release_task(Task& task) noexcept;
+
+  // Tries to join the task to help with it.
+  bool join_task(Task& task) noexcept;
+
+  // Signals that the calling thread no longer participates in the task.
+  void leave_task(Task& task) noexcept;
+
+  // Entry point of the worker threads.
+  void worker_thread() noexcept;
+
+  // Returns true if there are no worker threads, i.e. all work runs serially.
   bool is_parallelism_disabled() const noexcept;
+
+  // Designate a reasonable number of task slots that can be processed in parallel.
+  // There's nothing special about the number, but it should be enough to cover any realistic usage of PSTL.
+  // Likely in the overwhelming majority of cases no more than 1 slot will be in use.
+  static constexpr std::size_t task_slots_ = 64;
 
   // The actual number of running worker threads.
   // This number may be lower than the desired thread pool size, in case of a thread startup failure.
   // When this variable is zero, the scheduler doesn't enable its machinery and processes the incoming requests
   // serially.
-  size_t workers_count_{0};
+  std::size_t workers_count_{0};
 
-  // Task queues.
-  // [0, workers_count_) are owned by the worker threads,
-  // [workers_count_, queues_count_) can be used by the incoming guest threads.
-  std::unique_ptr<TaskQueue[]> queues_;
-
-  // Ownership of the queues in queues_, this array has the same size.
-  std::unique_ptr<QueueOwnership[]> queue_owners_;
-
-  // The number of task queues, i.e. the sizes of queues_ and queue_owners_.
-  size_t queues_count_{0};
+  // The shared storage of the tasks that can be processed in parallel.
+  std::array<Task, task_slots_> tasks_;
 
   // Wait-wake mechanism.
-  // The epoch is incremented each time task requests are pushed into a queue.
-  std::atomic_unsigned_lock_free epoch_{0};
+  // The epoch is incremented each time a new task is opened for participation.
+  alignas(std::hardware_destructive_interference_size) std::atomic_unsigned_lock_free epoch_{0};
 };
 
 // When there are fewer than 2 iterations or no worker threads available, fall back to serial execution.
@@ -231,139 +141,121 @@ inline void apply_serial(std::size_t iterations, void* ctx, void (*func)(void*, 
 }
 
 // Participate in working on the task by picking up the next iteration index and applying the function to it.
-// Once no iterations are left, decrements the task's requests counter to signal that this participant is done.
-inline void process_request(Task* task) noexcept {
-  const size_t iterations = task->iterations;
-  const ctx_t ctx         = task->ctx;
-  const func_t func       = task->func;
+// Once no iterations are left, close the task slot for participation.
+inline void process_task(Task& task) noexcept {
+  const std::size_t iterations = task.iterations.load(std::memory_order_relaxed);
+  const ctx_t ctx              = task.ctx;
+  const func_t func            = task.func;
 
-  size_t index;
-  while ((index = task->index.fetch_add(1, std::memory_order_relaxed)) < iterations) {
+  std::size_t index;
+  while ((index = task.index.fetch_add(1, std::memory_order_relaxed)) < iterations) {
     func(ctx, index);
   }
 
-  // Signal that this request to participate in the task is finished.
-  task->requests.fetch_sub(1, std::memory_order_release);
+  // Close the task if it's still open.
+  if (task.state.load(std::memory_order_relaxed) & Task::state_open) {
+    task.state.fetch_and(~Task::state_open, std::memory_order_relaxed);
+  }
 }
 
 inline Scheduler::Scheduler() noexcept {
-  const size_t cpu_threads = std::thread::hardware_concurrency();
+  const std::size_t cpu_threads = std::thread::hardware_concurrency();
   if (cpu_threads < 2) {
     return; // Nothing to do, don't enable parallelism.
   }
 
   // Start `cpu_threads - 1` worker threads since the calling thread also participates in the work,
   // thus all cpu threads will be occupied.
-  const size_t max_workers_count = cpu_threads - 1;
-
-  // Allocate at least cpu_threads * 2 slots in each TaskQueue's buffer.
-  // This factor is chosen to allow some nested parallelism, specifically with depth=2.
-  const size_t queue_capacity = cpu_threads * 2;
-
-  // Conservatively allow each cpu thread to come in as a guest and publish tasks.
-  const size_t guest_queues = cpu_threads;
-
-  // We need one queue per worker thread and one queue per guest thread.
-  queues_count_ = max_workers_count + guest_queues;
-
-  // Allocate the queues.
-  queues_.reset(new (std::nothrow) TaskQueue[queues_count_]);
-  if (!queues_)
-    return; // Failed to allocate the queues array, bail out.
-
-  // Allocate the queues' buffers.
-  for (size_t i = 0; i < queues_count_; ++i) {
-    if (!queues_[i].init(queue_capacity))
-      return; // Failed to allocate a queue buffer, bail out.
-  }
-
-  // Allocate the queue ownership array.
-  queue_owners_.reset(new (std::nothrow) QueueOwnership[queues_count_]);
-  if (!queue_owners_)
-    return; // Failed to allocate the queue ownership array, bail out.
-
-  size_t worker_idx = 0;
-  for (; worker_idx < max_workers_count; ++worker_idx) {
-    std::thread worker;
+  const std::size_t max_workers_count = cpu_threads - 1;
+  for (; workers_count_ < max_workers_count; ++workers_count_) {
 #  if _LIBCPP_HAS_EXCEPTIONS
     try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
-      worker = std::thread(&Scheduler::worker_thread, this, worker_idx);
+      std::thread(&Scheduler::worker_thread, this).detach();
 #  if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
       break; // Failed to start a worker thread, don't attempt to start any more.
     }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
-    queue_owners_[worker_idx].id.store(worker.get_id());
-    queue_owners_[worker_idx].acquire_count = 1;
-    worker.detach();
   }
-
-  // Finally, enable parallelism by committing the number of workers that have started up.
-  workers_count_ = worker_idx;
 }
 
-inline Scheduler::~Scheduler() {
-  _LIBCPP_VERBOSE_ABORT("The destructor of __pstl::__statpart::Scheduler was called, but it must never be called");
-}
-
-inline void Scheduler::worker_thread(size_t worker_index) noexcept {
+inline void Scheduler::worker_thread() noexcept {
   // Worker threads live forever and never return.
   while (true) {
-    std::atomic_unsigned_lock_free::value_type epoch = epoch_.load(); // Load the epoch before looking for work
-    Task* task                                       = nullptr;
+    // Load the epoch before looking for work.
+    std::atomic_unsigned_lock_free::value_type epoch = epoch_.load(std::memory_order_acquire);
 
-    // The queue owned by this worker thread must be empty at this time, thus there's no reason to try popping from it.
-
-    // Try to steal from other queues in a staggered manner.
-    // Loop over each queue except the one owned by this worker.
-    for (size_t i = 1; i != queues_count_; ++i) {
-      if ((task = queues_[(worker_index + i) % queues_count_].steal())) {
-        break;
+    // Look at every task slot.
+    for (Task& task : tasks_) {
+      // Try joining to help with the task.
+      if (join_task(task)) {
+        process_task(task); // Help with the task.
+        leave_task(task);   // Signal that this worker no longer works on it.
       }
     }
 
-    if (task) {
-      process_request(task); // Participate in working on the task we've just found
-    } else {
-      epoch_.wait(epoch); // No work to do, thus wait until the epoch changes
-    }
+    // No more work to do, thus wait until the epoch changes.
+    // If the epoch changed while the worker was participating in some tasks, this call will return immediately.
+    epoch_.wait(epoch, std::memory_order_relaxed);
   }
 }
 
-inline TaskQueue* Scheduler::acquire_queue(std::thread::id thread_id) noexcept {
-  // First check if this thread already owns a queue and is coming in via a nested invocation.
-  for (size_t i = 0; i < queues_count_; ++i) {
-    if (queue_owners_[i].id.load() == thread_id) {
-      // Yes, this thread already owns a queue, increment the acquire_count and return it.
-      queue_owners_[i].acquire_count++;
-      return &queues_[i];
+inline Task* Scheduler::acquire_task() noexcept {
+  // Look at every shared task slot and try to claim the first unowned one.
+  for (Task& task : tasks_) {
+    // Check if this task is currently unowned and try to atomically claim it via CAS.
+    Task::state_t expected = Task::state_unowned;
+    if (task.state.load(std::memory_order_relaxed) == Task::state_unowned &&
+        task.state.compare_exchange_strong(
+            expected, Task::state_owned, std::memory_order_acquire, std::memory_order_relaxed)) {
+      return &task; // Successfully claimed the task, return it.
     }
   }
-
-  // This thread doesn't own a queue, try to find a free one.
-  // This thread must be a guest, hence start looking past the queues owned by the workers.
-  for (size_t i = workers_count_; i < queues_count_; ++i) {
-    if (queue_owners_[i].id.load() == std::thread::id{}) {
-      // Nobody owns this queue as of now, try to atomically acquire ownership.
-      std::thread::id expected;
-      if (queue_owners_[i].id.compare_exchange_strong(expected, thread_id)) {
-        // Acquired by a new guest thread, set acquire_count to 1 and return this queue.
-        queue_owners_[i].acquire_count = 1;
-        return &queues_[i];
-      }
-    }
-  }
-
-  // Unable to acquire a queue for this thread.
+  // Failed to acquire any task slot.
   return nullptr;
 }
 
-inline void Scheduler::release_queue(TaskQueue* queue) noexcept {
-  size_t idx = static_cast<size_t>(queue - queues_.get());
-  queue_owners_[idx].acquire_count--;
-  if (queue_owners_[idx].acquire_count == 0) {
-    queue_owners_[idx].id.store(std::thread::id{});
+inline void Scheduler::release_task(Task& task) noexcept {
+  // To release the task, simply store Task::state_unowned in the task state.
+  task.state.store(Task::state_unowned, std::memory_order_release);
+}
+
+inline bool Scheduler::join_task(Task& task) noexcept {
+  // First look if the task slot is open for participation.
+  Task::state_t state = task.state.load(std::memory_order_relaxed);
+  while (state & Task::state_open) {
+    // If it's open, speculatively look at the number of iterations left to work on and the number of workers already
+    // participating. There's no need to join if there's not enough work to do.
+    std::size_t iterations = task.iterations.load(std::memory_order_relaxed);
+    std::size_t index      = task.index.load(std::memory_order_relaxed);
+    // The bits above state_open hold the number of joined workers. Dividing by state_joined extracts it.
+    std::size_t joined = state / Task::state_joined;
+    if (index >= iterations || joined + 1 >= iterations) {
+      // Either the task iterations are already exhausted or the owner plus the joined workers already cover every
+      // iteration. This task doesn't need any help.
+      return false;
+    }
+    // Try to atomically join by storing an updated state with an incremented number of joined workers.
+    if (task.state.compare_exchange_strong(
+            state, state + Task::state_joined, std::memory_order_acquire, std::memory_order_relaxed)) {
+      return true; // Successfully joined.
+    }
+    // The state has changed, try again.
+  }
+  // The task is not open for joining, bail out.
+  return false;
+}
+
+inline void Scheduler::leave_task(Task& task) noexcept {
+  _LIBCPP_ASSERT_INTERNAL(!(task.state & Task::state_open), "The task must be already closed");
+
+  // Atomically decrement the number of joined threads.
+  Task::state_t previous_state = task.state.fetch_sub(Task::state_joined, std::memory_order_release);
+
+  // If we're the last joined thread to leave, notify the current owner of the task about this.
+  if (previous_state == (Task::state_owned | Task::state_joined)) {
+    task.state.notify_one();
   }
 }
 
@@ -376,63 +268,38 @@ inline void Scheduler::apply(std::size_t iterations, void* ctx, void (*func)(voi
     return;
   }
 
-  // Identify ourselves.
-  // We can be either a guest thread or a worker thread re-entering via nested parallelism.
-  std::thread::id thread_id = std::this_thread::get_id();
-
-  // Acquire a queue for this thread.
-  TaskQueue* queue = acquire_queue(thread_id);
-  if (queue == nullptr) {
-    // If we cannot acquire a queue, fallback to serial execution.
+  // Acquire a slot to publish the new task in.
+  Task* task = acquire_task();
+  if (!task) {
+    // If we cannot acquire a task slot, fall back to serial execution.
     apply_serial(iterations, ctx, func);
     return;
   }
 
-  // Split the workload for potentially (workers_count_ + 1) participants (workers + caller thread).
-  size_t requests = std::min(workers_count_ + 1, iterations);
+  // Initialize the task that will then be opened for the workers to join in.
+  task->ctx  = ctx;
+  task->func = func;
+  task->iterations.store(iterations, std::memory_order_relaxed);
+  task->index.store(0, std::memory_order_relaxed);
 
-  // Create a task whose requests will then be pushed in the queue and stolen by the workers.
-  Task root_task{.ctx = ctx, .func = func, .iterations = iterations, .index = 0, .requests = requests};
+  // Open the task slot for others to join.
+  task->state.store(Task::state_owned | Task::state_open, std::memory_order_release);
 
-  // Push all but one request to the queue, and process the last one directly in this thread.
-  // If the queue is full (e.g. due to deep nested parallelism), the caller thread will process all remaining requests
-  // directly.
-  while (requests > 1) {
-    if (!queue->push(&root_task)) {
-      break;
-    }
-    --requests;
-  }
-
-  // Potentially wake up the sleeping workers to process the requests in the queue.
-  epoch_.fetch_add(1);
+  // Potentially wake up the sleeping workers to participate in the task.
+  epoch_.fetch_add(1, std::memory_order_release);
   epoch_.notify_all();
 
-  // Process the remaining request(s) directly in this thread.
-  while (requests > 0) {
-    process_request(&root_task);
-    --requests;
+  // Participate in working on the task directly in this thread.
+  process_task(*task);
+
+  // Wait until all workers that joined have finished and left.
+  Task::state_t state;
+  while ((state = task->state.load(std::memory_order_acquire)) != Task::state_owned) {
+    task->state.wait(state, std::memory_order_relaxed);
   }
 
-  // Wait until all requests to participate in root_task are processed.
-  // While waiting, only participate in the requests to root_task that might still be left in this queue.
-  // This loop deliberately does not try to steal requests from other queues and help with progress of their tasks,
-  // since this might end up processing the requests of root_task in an interleaved manner, which is not allowed by the
-  // Standard and can cause a deadlock inside the user code.
-  while (root_task.requests.load(std::memory_order_acquire) != 0) {
-    if (Task* task = queue->pop_if(&root_task)) {
-      // Participate in root_task, i.e. decrement its requests count, as the iterations must already be exhausted.
-      _LIBCPP_ASSERT_INTERNAL(task == &root_task, "Expected to pop the root_task from the queue");
-      _LIBCPP_ASSERT_INTERNAL(task->index.load() >= task->iterations, "The iterations must already be exhausted");
-      process_request(task);
-    } else {
-      // Wait for other threads to finish participating in root_task.
-      std::this_thread::yield();
-    }
-  }
-
-  // Release the queue for this thread.
-  release_queue(queue);
+  // Release the task slot so it can be reused.
+  release_task(*task);
 }
 
 } // namespace __pstl::__statpart
