@@ -32,8 +32,46 @@ inner.exit:
 define void @outer_no_tc(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %m, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_no_tc'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 5 to 2
-; CHECK:      Total cost of runtime checks: 2
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 7 to 3
+; CHECK:      Total cost of runtime checks: 3
+; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
+entry:
+  br label %outer.loop
+
+outer.loop:
+  %outer.iv = phi i64 [ %outer.iv.next, %inner.exit ], [ 0, %entry ]
+  %mul.us = mul nsw i64 %outer.iv, %n
+  %mul.b = shl nsw i64 %mul.us, 1
+  br label %inner.loop
+
+inner.loop:
+  %inner.iv = phi i64 [ 0, %outer.loop ], [ %inner.iv.next, %inner.loop ]
+  %add.us = add nuw nsw i64 %inner.iv, %mul.us
+  %add.b = add nuw nsw i64 %inner.iv, %mul.b
+  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.b
+  %0 = load i8, ptr %arrayidx.us, align 1
+  %arrayidx7.us = getelementptr inbounds i8, ptr %a, i64 %add.us
+  %1 = load i8, ptr %arrayidx7.us, align 1
+  %add9.us = add i8 %1, %0
+  store i8 %add9.us, ptr %arrayidx7.us, align 1
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %exitcond.not = icmp eq i64 %inner.iv.next, %n
+  br i1 %exitcond.not, label %inner.exit, label %inner.loop
+
+inner.exit:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %exitcond27.not = icmp eq i64 %outer.iv.next, %m
+  br i1 %exitcond27.not, label %outer.exit, label %outer.loop
+
+outer.exit:
+  ret void
+}
+
+define void @outer_no_tc_same_step(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %m, i64 noundef %n) {
+; CHECK-LABEL: LV: Checking a loop in 'outer_no_tc_same_step'
+; CHECK:      Calculating cost of runtime checks:
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 3 to 1
+; CHECK:      Total cost of runtime checks: 1
 ; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
@@ -69,8 +107,8 @@ outer.exit:
 define void @outer_known_tc3(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_known_tc3'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 5 to 1
-; CHECK:      Total cost of runtime checks: 1
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 7 to 2
+; CHECK:      Total cost of runtime checks: 2
 ; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
@@ -78,12 +116,14 @@ entry:
 outer.loop:
   %outer.iv = phi i64 [ %outer.iv.next, %inner.exit ], [ 0, %entry ]
   %mul.us = mul nsw i64 %outer.iv, %n
+  %mul.b = shl nsw i64 %mul.us, 1
   br label %inner.loop
 
 inner.loop:
   %inner.iv = phi i64 [ 0, %outer.loop ], [ %inner.iv.next, %inner.loop ]
   %add.us = add nuw nsw i64 %inner.iv, %mul.us
-  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.us
+  %add.b = add nuw nsw i64 %inner.iv, %mul.b
+  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.b
   %0 = load i8, ptr %arrayidx.us, align 1
   %arrayidx7.us = getelementptr inbounds i8, ptr %a, i64 %add.us
   %1 = load i8, ptr %arrayidx7.us, align 1
@@ -106,7 +146,7 @@ outer.exit:
 define void @outer_known_tc64(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_known_tc64'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 5 to 1
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 7 to 1
 ; CHECK:      Total cost of runtime checks: 1
 ; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
@@ -115,12 +155,14 @@ entry:
 outer.loop:
   %outer.iv = phi i64 [ %outer.iv.next, %inner.exit ], [ 0, %entry ]
   %mul.us = mul nsw i64 %outer.iv, %n
+  %mul.b = shl nsw i64 %mul.us, 1
   br label %inner.loop
 
 inner.loop:
   %inner.iv = phi i64 [ 0, %outer.loop ], [ %inner.iv.next, %inner.loop ]
   %add.us = add nuw nsw i64 %inner.iv, %mul.us
-  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.us
+  %add.b = add nuw nsw i64 %inner.iv, %mul.b
+  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.b
   %0 = load i8, ptr %arrayidx.us, align 1
   %arrayidx7.us = getelementptr inbounds i8, ptr %a, i64 %add.us
   %1 = load i8, ptr %arrayidx7.us, align 1
@@ -143,8 +185,8 @@ outer.exit:
 define void @outer_pgo_3(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %m, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_pgo_3'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 5 to 1
-; CHECK:      Total cost of runtime checks: 1
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 7 to 2
+; CHECK:      Total cost of runtime checks: 2
 ; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
   br label %outer.loop
@@ -152,12 +194,14 @@ entry:
 outer.loop:
   %outer.iv = phi i64 [ %outer.iv.next, %inner.exit ], [ 0, %entry ]
   %mul.us = mul nsw i64 %outer.iv, %n
+  %mul.b = shl nsw i64 %mul.us, 1
   br label %inner.loop
 
 inner.loop:
   %inner.iv = phi i64 [ 0, %outer.loop ], [ %inner.iv.next, %inner.loop ]
   %add.us = add nuw nsw i64 %inner.iv, %mul.us
-  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.us
+  %add.b = add nuw nsw i64 %inner.iv, %mul.b
+  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.b
   %0 = load i8, ptr %arrayidx.us, align 1
   %arrayidx7.us = getelementptr inbounds i8, ptr %a, i64 %add.us
   %1 = load i8, ptr %arrayidx7.us, align 1
@@ -180,7 +224,7 @@ outer.exit:
 define void @outer_pgo_minus1(ptr nocapture noundef %a, ptr nocapture noundef readonly %b, i64 noundef %m, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_pgo_minus1'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 5 to 1
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 7 to 1
 ; CHECK:      Total cost of runtime checks: 1
 ; CHECK:      LV: Minimum required TC for runtime checks to be profitable:16
 entry:
@@ -189,12 +233,14 @@ entry:
 outer.loop:
   %outer.iv = phi i64 [ %outer.iv.next, %inner.exit ], [ 0, %entry ]
   %mul.us = mul nsw i64 %outer.iv, %n
+  %mul.b = shl nsw i64 %mul.us, 1
   br label %inner.loop
 
 inner.loop:
   %inner.iv = phi i64 [ 0, %outer.loop ], [ %inner.iv.next, %inner.loop ]
   %add.us = add nuw nsw i64 %inner.iv, %mul.us
-  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.us
+  %add.b = add nuw nsw i64 %inner.iv, %mul.b
+  %arrayidx.us = getelementptr inbounds i8, ptr %b, i64 %add.b
   %0 = load i8, ptr %arrayidx.us, align 1
   %arrayidx7.us = getelementptr inbounds i8, ptr %a, i64 %add.us
   %1 = load i8, ptr %arrayidx7.us, align 1
@@ -217,8 +263,8 @@ outer.exit:
 define void @outer_known_tc3_full_range_checks(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, i64 noundef %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'outer_known_tc3_full_range_checks'
 ; CHECK:      Calculating cost of runtime checks:
-; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 5 to 1
-; CHECK:      Total cost of runtime checks: 1
+; CHECK:      We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 7 to 2
+; CHECK:      Total cost of runtime checks: 2
 ; CHECK:      LV: Minimum required TC for runtime checks to be profitable:4
 entry:
   br label %outer.loop
@@ -226,12 +272,14 @@ entry:
 outer.loop:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %inner.exit ]
   %0 = mul nsw i64 %outer.iv, %n
+  %mul.src = shl nsw i64 %0, 1
   br label %inner.loop
 
 inner.loop:
   %iv.inner = phi i64 [ 0, %outer.loop ], [ %iv.inner.next, %inner.loop ]
   %1 = add nuw nsw i64 %iv.inner, %0
-  %arrayidx.us = getelementptr inbounds i32, ptr %src, i64 %1
+  %add.src = add nuw nsw i64 %iv.inner, %mul.src
+  %arrayidx.us = getelementptr inbounds i32, ptr %src, i64 %add.src
   %2 = load i32, ptr %arrayidx.us, align 4
   %arrayidx8.us = getelementptr inbounds i32, ptr %dst, i64 %1
   %3 = load i32, ptr %arrayidx8.us, align 4
