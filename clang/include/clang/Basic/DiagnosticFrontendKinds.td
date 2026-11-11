@@ -312,6 +312,8 @@ def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
 def err_function_needs_feature : Error<
   "always_inline function %1 requires target feature '%2', but would "
   "be inlined into function %0 that is compiled without support for '%2'">;
+def note_function_needs_feature_call : Note<
+  "always_inline function %0 calls %1 here">;
 
 def err_flatten_function_needs_feature : Error<
   "flatten function %0 calls %1 which requires target feature '%2', but the "

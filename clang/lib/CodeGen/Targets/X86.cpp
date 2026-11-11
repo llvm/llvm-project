@@ -10,6 +10,7 @@
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
@@ -1622,20 +1623,6 @@ public:
 };
 } // namespace
 
-static void initFeatureMaps(const ASTContext &Ctx,
-                            llvm::StringMap<bool> &CallerMap,
-                            const FunctionDecl *Caller,
-                            llvm::StringMap<bool> &CalleeMap,
-                            const FunctionDecl *Callee) {
-  if (CalleeMap.empty() && CallerMap.empty()) {
-    // The caller is potentially nullptr in the case where the call isn't in a
-    // function.  In this case, the getFunctionFeatureMap ensures we just get
-    // the TU level setting (since it cannot be modified by 'target'..
-    Ctx.getFunctionFeatureMap(CallerMap, Caller);
-    Ctx.getFunctionFeatureMap(CalleeMap, Callee);
-  }
-}
-
 static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
                                  SourceLocation CallLoc,
                                  const FunctionDecl &Callee,
@@ -1681,8 +1668,7 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
   return false;
 }
 
-void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
-                                               const FunctionDecl *FD) const {
+static void checkAVXFunctionABI(CodeGenModule &CGM, const FunctionDecl *FD) {
   auto GetReturnTypeLoc = [](const FunctionDecl *FD) {
     if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
       TypeLoc TL = TSI->getTypeLoc();
@@ -1711,7 +1697,7 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
         CGM.getContext().getTypeSize(Ty) > 256 ? "avx512f" : "avx";
 
     llvm::StringMap<bool> FeatureMap;
-    CGM.getContext().getFunctionFeatureMap(FeatureMap, FD);
+    CGM.getFunctionFeatureMap(FeatureMap, FD);
     if (!FeatureMap.lookup(Feature)) {
       CGM.getDiags().Report(Loc, diag::warn_avx_calling_convention)
           << !IsReturn << Ty << Feature;
@@ -1740,6 +1726,58 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
   }
 }
 
+void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
+                                               const FunctionDecl *FD) const {
+  // An always_inline function inherits the target features that its callees
+  // need, which are not all known until every function is emitted.
+  if (CodeGenUtils::InheritedTargetFeatures::canInherit(CGM.getContext(), FD))
+    CGM.addDeferredTargetFeatureCheck(
+        [&CGM, FD] { checkAVXFunctionABI(CGM, FD); });
+  else
+    checkAVXFunctionABI(CGM, FD);
+}
+
+// Diagnoses passing each of Vectors, a type paired with whether it is that of
+// an argument rather than of the return value, from Caller to Callee.
+static void checkAVXParams(CodeGenModule &CGM, SourceLocation CallLoc,
+                           const FunctionDecl *Caller,
+                           const FunctionDecl *Callee,
+                           SmallVector<std::pair<QualType, bool>, 2> Vectors,
+                           bool AreFeaturesFinal) {
+  ASTContext &Ctx = CGM.getContext();
+  llvm::StringMap<bool> CallerMap;
+  llvm::StringMap<bool> CalleeMap;
+  // The caller is potentially nullptr in the case where the call isn't in a
+  // function.  In this case, the getFunctionFeatureMap ensures we just get
+  // the TU level setting (since it cannot be modified by 'target'..
+  CGM.getFunctionFeatureMap(CallerMap, Caller);
+  CGM.getFunctionFeatureMap(CalleeMap, Callee);
+
+  // An always_inline function inherits the target features that its callees
+  // need, which are not all known until every function is emitted.
+  auto CanGainFeature = [&](const FunctionDecl *FD,
+                            const llvm::StringMap<bool> &FeatureMap) {
+    return FD && CodeGenUtils::InheritedTargetFeatures::canInherit(Ctx, FD) &&
+           llvm::any_of(Vectors, [&](const std::pair<QualType, bool> &Vector) {
+             return !FeatureMap.lookup(
+                 Ctx.getTypeSize(Vector.first) > 256 ? "avx512f" : "avx");
+           });
+  };
+  if (!AreFeaturesFinal && (CanGainFeature(Caller, CallerMap) ||
+                            CanGainFeature(Callee, CalleeMap))) {
+    CGM.addDeferredTargetFeatureCheck([=, &CGM] {
+      checkAVXParams(CGM, CallLoc, Caller, Callee, Vectors,
+                     /*AreFeaturesFinal=*/true);
+    });
+    return;
+  }
+
+  for (const auto &[Ty, IsArgument] : Vectors)
+    if (checkAVXParam(CGM.getDiags(), Ctx, CallLoc, *Callee, CallerMap,
+                      CalleeMap, Ty, IsArgument))
+      return;
+}
+
 void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
                                                    SourceLocation CallLoc,
                                                    const FunctionDecl *Caller,
@@ -1749,8 +1787,11 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
   if (!Callee)
     return;
 
-  llvm::StringMap<bool> CallerMap;
-  llvm::StringMap<bool> CalleeMap;
+  ASTContext &Ctx = CGM.getContext();
+  auto IsLargeVector = [&](QualType Ty) {
+    return Ty->isVectorType() && Ctx.getTypeSize(Ty) > 128;
+  };
+  SmallVector<std::pair<QualType, bool>, 2> Vectors;
   unsigned ArgIndex = 0;
 
   // We need to loop through the actual call arguments rather than the
@@ -1763,31 +1804,24 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
     // the caller and callee features are mismatched.
     // Unfortunately, we cannot do this diagnostic in SEMA, since the callee can
     // change its ABI with attribute-target after this call.
-    if (Arg.getType()->isVectorType() &&
-        CGM.getContext().getTypeSize(Arg.getType()) > 128) {
-      initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
-      QualType Ty = Arg.getType();
+    if (IsLargeVector(Arg.getType()))
       // The CallArg seems to have desugared the type already, so for clearer
       // diagnostics, replace it with the type in the FunctionDecl if possible.
-      if (ArgIndex < Callee->getNumParams())
-        Ty = Callee->getParamDecl(ArgIndex)->getType();
-
-      if (checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, *Callee,
-                        CallerMap, CalleeMap, Ty, /*IsArgument*/ true))
-        return;
-    }
+      Vectors.push_back({ArgIndex < Callee->getNumParams()
+                             ? Callee->getParamDecl(ArgIndex)->getType()
+                             : Arg.getType(),
+                         /*IsArgument=*/true});
     ++ArgIndex;
   }
 
   // Check return always, as we don't have a good way of knowing in codegen
   // whether this value is used, tail-called, etc.
-  if (Callee->getReturnType()->isVectorType() &&
-      CGM.getContext().getTypeSize(Callee->getReturnType()) > 128) {
-    initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
-    checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, *Callee, CallerMap,
-                  CalleeMap, Callee->getReturnType(),
-                  /*IsArgument*/ false);
-  }
+  if (IsLargeVector(Callee->getReturnType()))
+    Vectors.push_back({Callee->getReturnType(), /*IsArgument=*/false});
+
+  if (!Vectors.empty())
+    checkAVXParams(CGM, CallLoc, Caller, Callee, std::move(Vectors),
+                   /*AreFeaturesFinal=*/false);
 }
 
 std::string TargetCodeGenInfo::qualifyWindowsLibrary(StringRef Lib) {

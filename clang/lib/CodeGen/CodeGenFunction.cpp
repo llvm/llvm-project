@@ -2914,7 +2914,8 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
                                           const FunctionDecl *TargetDecl) {
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   CodeGenUtils::checkTargetFeatures(CGM.getContext(), CGM.getDiags(),
-                                    getLangOpts(), E, FD, TargetDecl);
+                                    getLangOpts(), E, FD, TargetDecl,
+                                    &CGM.getInheritedTargetFeatures());
 }
 
 // Emits an error if we don't have a valid set of target features for the
@@ -2923,7 +2924,8 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
                                           const FunctionDecl *TargetDecl) {
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   CodeGenUtils::checkTargetFeatures(CGM.getContext(), CGM.getDiags(),
-                                    getLangOpts(), Loc, FD, TargetDecl);
+                                    getLangOpts(), Loc, FD, TargetDecl,
+                                    &CGM.getInheritedTargetFeatures());
 }
 
 void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {

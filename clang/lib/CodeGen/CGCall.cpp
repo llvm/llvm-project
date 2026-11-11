@@ -5725,10 +5725,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     // so only check in the case where we have both always_inline and target
     // since otherwise we could be making a conditional call after a check for
     // the proper cpu features (and it won't cause code generation issues due to
-    // function based code generation).
-    if ((TargetDecl->hasAttr<AlwaysInlineAttr>() &&
-         (TargetDecl->hasAttr<TargetAttr>() ||
-          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
+    // function based code generation). An always_inline callee is checked even
+    // without a target attribute, because it can inherit target features from
+    // the always_inline functions that it calls in turn.
+    if (TargetDecl->hasAttr<AlwaysInlineAttr>() ||
         (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
          (CurFuncDecl->hasAttr<TargetAttr>() ||
           TargetDecl->hasAttr<TargetAttr>())))
