@@ -477,6 +477,7 @@ exit:
   ret i32 0
 }
 
+; The division is only reached when the remainder is nonzero.
 define i32 @udiv_exact_unreachable(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @udiv_exact_unreachable(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {

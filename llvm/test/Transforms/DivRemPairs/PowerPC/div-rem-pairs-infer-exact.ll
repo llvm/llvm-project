@@ -2,8 +2,10 @@
 ; RUN: opt < %s -passes=instcombine -S -mtriple=powerpc64-unknown-unknown | FileCheck %s --check-prefix=INSTCOMBINE
 ; RUN: opt < %s -passes="instcombine,div-rem-pairs" -S -mtriple=powerpc64-unknown-unknown | FileCheck %s
 
-; InstCombine infers exact, but DivRemPairs drops it when reconstructing the
-; remainder from the division. Check both stages so the loss stays visible.
+; InstCombine infers exact, and DivRemPairs must drop it when it reconstructs
+; the remainder as x - quot * y. The subtraction is placed above the branch, so
+; an exact division with a non-zero remainder would make the branch condition
+; poison. Check both stages so the dropped flag stays visible.
 
 define i8 @udiv_exact_assume(i8 %x, i8 %y) {
 ; INSTCOMBINE-LABEL: define i8 @udiv_exact_assume(
@@ -59,9 +61,8 @@ define i8 @udiv_exact_assume_negative(i8 %x, i8 %y) {
   ret i8 %div3
 }
 
-
-; Exactness inferred from a dominating condition is also lost when the
-; remainder is decomposed.
+; Exactness inferred from a dominating condition must also be dropped when the
+; remainder is decomposed, for the same reason.
 
 define i8 @infer_exact_from_dom_cond_negative(i8 %X, i8 %Y) {
 ; INSTCOMBINE-LABEL: define i8 @infer_exact_from_dom_cond_negative(

@@ -1365,23 +1365,24 @@ static bool isKnownExactFromRem(const BinaryOperator &Div,
     return Known.isZero();
   };
 
-  // findValuesAffectedByCondition() records the operands of a remainder that
-  // is compared against zero, allowing these targeted cache lookups.
-  for (Value *V : {Op0, Op1}) {
-    if (Q.DC && Q.DT) {
-      for (CondBrInst *BI : Q.DC->conditionsFor(V))
-        if (IsKnownZeroRemainder(BI->getCondition()))
-          return true;
-    }
+  // findValuesAffectedByCondition() records both operands of a remainder that
+  // is compared against zero, so looking up one non-constant operand finds
+  // every candidate condition.
+  Value *V = isa<Constant>(Op0) ? Op1 : Op0;
 
-    if (Q.AC) {
-      for (auto &AssumeValueHandle : Q.AC->assumptionsFor(V)) {
-        if (!AssumeValueHandle)
-          continue;
-        auto *Assume = cast<AssumeInst>(AssumeValueHandle);
-        if (IsKnownZeroRemainder(Assume->getArgOperand(0)))
-          return true;
-      }
+  if (Q.DC && Q.DT) {
+    for (CondBrInst *BI : Q.DC->conditionsFor(V))
+      if (IsKnownZeroRemainder(BI->getCondition()))
+        return true;
+  }
+
+  if (Q.AC) {
+    for (auto &AssumeValueHandle : Q.AC->assumptionsFor(V)) {
+      if (!AssumeValueHandle)
+        continue;
+      auto *Assume = cast<AssumeInst>(AssumeValueHandle);
+      if (IsKnownZeroRemainder(Assume->getArgOperand(0)))
+        return true;
     }
   }
 
