@@ -2,8 +2,7 @@
 ; RUN: opt -loop-reduce < %s -S | opt -passes='print<scalar-evolution>,loop-unroll' -unroll-runtime -verify-scev -verify-loop-lcssa -S | FileCheck %s
 
 ; Test case for PR43458. We check that we do properly invalidate LCSSA phi
-; users in SCEV. Run -loop-reduce and print<scalar-evolution> first, so SCEV is
-; already populated.
+; users in SCEV. Run print<scalar-evolution> first, so SCEV is already populated.
 
 define void @spam() {
 ; CHECK-LABEL: @spam(

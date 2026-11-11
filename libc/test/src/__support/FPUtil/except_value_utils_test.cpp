@@ -149,25 +149,24 @@ public:
 };
 
 using ExceptValueTypes =
-    LIBC_NAMESPACE::testing::TypeList<float, double, long double,
+    LIBC_NAMESPACE::testing::Types<float, double, long double,
 #ifdef LIBC_TYPES_HAS_FLOAT16
-                                      float16,
+                                   float16,
 #endif // LIBC_TYPES_HAS_FLOAT16
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
-                                      float128,
+                                   float128,
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
-                                      BFloat16>;
+                                   BFloat16>;
 
-TYPED_TEST_F(LlvmLibcExceptValueUtilsTest, SetOverflow, ExceptValueTypes) {
-  this->test_overflow();
-}
+TYPED_TEST_SUITE(LlvmLibcExceptValueUtilsTest, ExceptValueTypes);
 
-TYPED_TEST_F(LlvmLibcExceptValueUtilsTest, SetUnderflow, ExceptValueTypes) {
+TYPED_TEST(LlvmLibcExceptValueUtilsTest, SetOverflow) { this->test_overflow(); }
+
+TYPED_TEST(LlvmLibcExceptValueUtilsTest, SetUnderflow) {
   this->test_underflow();
 }
 
-TYPED_TEST_F(LlvmLibcExceptValueUtilsTest, RaiseExceptIfRequired,
-             ExceptValueTypes) {
+TYPED_TEST(LlvmLibcExceptValueUtilsTest, RaiseExceptIfRequired) {
   this->test_raise_except();
 }
 

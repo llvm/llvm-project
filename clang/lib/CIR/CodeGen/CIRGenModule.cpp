@@ -210,6 +210,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*cuda_is_device=*/langOpts.CUDAIsDevice,
           /*hip=*/langOpts.HIP,
           /*hlsl=*/langOpts.HLSL,
+          /*sycl_is_device=*/langOpts.SYCLIsDevice,
           /*gpu_rdc=*/langOpts.GPURelocatableDeviceCode,
           /*openmp=*/langOpts.OpenMP != 0,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
@@ -3204,7 +3205,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
     // dso_local on the function if using a local alias is preferable (can avoid
     // PLT indirection).
-    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+    auto func = dyn_cast<cir::FuncOp>(gv.getOperation());
+    if (!func || func.getAliasee() || !gv.canBenefitFromLocalAlias())
       return false;
     return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }

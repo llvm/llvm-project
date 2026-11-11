@@ -572,6 +572,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     if (!Subtarget.is64Bit())
       setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v4i8}, Custom);
+    else
+      setOperationAction(ISD::BUILD_VECTOR, {MVT::v4i16, MVT::v8i8}, Custom);
 
     // P extension vector comparisons produce all 1s for true, all 0s for false
     setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
@@ -614,7 +616,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
-      setOperationAction(ISD::BUILD_VECTOR, P64VecVTs, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, MVT::v2i32, Legal);
+      setOperationAction(ISD::BUILD_VECTOR, {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
       setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT},
                          {MVT::v4i16, MVT::v8i8}, Custom);
@@ -4784,6 +4787,35 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
                      DAG.getBuildVector(WideVecVT, DL, NewOperands));
 }
 
+// Pack the scalars in Ops into the low elements of the XLen-sized vector VT,
+// skipping work for undef elements. Ops.size() must be a power of 2. Each level
+// PPAIREs the halves of Ops so that the first half supplies the even elements
+// and the second half the odd elements of the wider element type.
+static SDValue buildVectorWithPPAIREs(ArrayRef<SDValue> Ops, MVT VT,
+                                      SelectionDAG &DAG, const SDLoc &DL) {
+  assert(isPowerOf2_32(Ops.size()) && "Expected a power of 2 element count");
+  auto IsUndef = [](SDValue V) { return V.isUndef(); };
+  if (all_of(Ops, IsUndef))
+    return DAG.getUNDEF(VT);
+  if (Ops.size() == 1)
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Ops[0]);
+
+  size_t N = Ops.size() / 2;
+  SDValue Lo = buildVectorWithPPAIREs(Ops.take_front(N), VT, DAG, DL);
+  if (all_of(Ops.drop_front(N), IsUndef))
+    return Lo;
+  SDValue Hi = buildVectorWithPPAIREs(Ops.drop_front(N), VT, DAG, DL);
+
+  // PPAIRE elements are as wide as the N scalars each operand packs.
+  unsigned PairEltBits = VT.getScalarSizeInBits() * N;
+  MVT PairVT = MVT::getVectorVT(MVT::getIntegerVT(PairEltBits),
+                                VT.getSizeInBits() / PairEltBits);
+  SDValue Pair =
+      DAG.getNode(RISCVISD::PPAIRE, DL, PairVT, DAG.getBitcast(PairVT, Lo),
+                  DAG.getBitcast(PairVT, Hi));
+  return DAG.getBitcast(VT, Pair);
+}
+
 static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -4794,38 +4826,33 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (!Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
+  if (Subtarget.hasStdExtP()) {
     // Splats are legal; don't build them with PPAIRE/PACK.
     if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue())
       return DAG.getSplatVector(VT, DL, Splat);
 
-    if (VT == MVT::v2i16) {
-      SDValue Lo = DAG.getBitcast(
-          MVT::v2i16,
-          DAG.getAnyExtOrTrunc(Op->getOperand(0), DL, MVT::i32));
-      SDValue Hi = DAG.getBitcast(
-          MVT::v2i16,
-          DAG.getAnyExtOrTrunc(Op->getOperand(1), DL, MVT::i32));
-      return DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16, Lo, Hi);
+    if (Subtarget.is64Bit() || VT == MVT::v2i16) {
+      assert((!Subtarget.is64Bit() || (VT == MVT::v4i16 || VT == MVT::v8i8)) &&
+             "Unexpected RV64 P BUILD_VECTOR type");
+      SmallVector<SDValue, 8> Elts(Op->op_values());
+      return buildVectorWithPPAIREs(Elts, VT, DAG, DL);
     }
 
     if (VT == MVT::v4i8) {
       // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b,
       // d))
-      SDValue Val0 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
-      SDValue Val1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(1));
-      SDValue Val2 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
-      SDValue Val3 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-      SDValue Concat1 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val0, Val2);
-      SDValue Concat2 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Val1, Val3);
-      SDValue PPairE =
-          DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v8i8, Concat1, Concat2);
+      // FIXME: This is not the best lowering if the use of PPACK.DH forces the
+      // use of MVs to make GPR pairs.
+      SDValue Undef = DAG.getUNDEF(Op->getOperand(0).getValueType());
+      SDValue BV1 =
+          DAG.getBuildVector(MVT::v8i8, DL,
+                             {Op->getOperand(0), Undef, Undef, Undef,
+                              Op->getOperand(2), Undef, Undef, Undef});
+      SDValue BV2 =
+          DAG.getBuildVector(MVT::v8i8, DL,
+                             {Op->getOperand(1), Undef, Undef, Undef,
+                              Op->getOperand(3), Undef, Undef, Undef});
+      SDValue PPairE = DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v8i8, BV1, BV2);
 
       SDValue Lo = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 0);
       SDValue Hi = DAG.getExtractSubvector(DL, MVT::v4i8, PPairE, 4);
@@ -4834,6 +4861,19 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
                             DAG.getNode(RISCVISD::PPAIRE, DL, MVT::v2i16,
                                         DAG.getBitcast(MVT::v2i16, Lo),
                                         DAG.getBitcast(MVT::v2i16, Hi)));
+    }
+
+    if (VT == MVT::v8i8 || VT == MVT::v4i16) {
+      // Build each 32-bit half separately and concatenate them.
+      unsigned HalfN = VT.getVectorNumElements() / 2;
+      MVT HalfVT = MVT::getVectorVT(EltVT, HalfN);
+      SmallVector<SDValue, 8> Elts(Op->op_values());
+      return DAG.getNode(
+          ISD::CONCAT_VECTORS, DL, VT,
+          buildVectorWithPPAIREs(ArrayRef(Elts).take_front(HalfN), HalfVT, DAG,
+                                 DL),
+          buildVectorWithPPAIREs(ArrayRef(Elts).drop_front(HalfN), HalfVT, DAG,
+                                 DL));
     }
 
     llvm_unreachable("Unexpected RV32 P BUILD_VECTOR type");

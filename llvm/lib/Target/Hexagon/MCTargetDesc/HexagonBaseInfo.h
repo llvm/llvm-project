@@ -45,7 +45,8 @@ namespace HexagonII {
     HalfWordAccess,
     WordAccess,
     DoubleWordAccess,
-    HVXVectorAccess
+    HVXVectorAccess,
+    HLXVectorAccess
   };
 
   enum class RegType : uint8_t {
@@ -187,6 +188,9 @@ namespace HexagonII {
     HasHvxTmpPos = 56,
     HasHvxTmpMask = 0x1,
 
+    HasHlxTmpPos = 57,
+    HasHlxTmpMask = 0x1,
+
     CVINewPos = 58,
     CVINewMask = 0x1,
 
@@ -201,6 +205,9 @@ namespace HexagonII {
 
     hasUnaryRestrictionPos = 62,
     hasUnaryRestrictionMask = 0x1,
+
+    isHLXPos = 63,
+    isHLXMask = 0x1,
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //

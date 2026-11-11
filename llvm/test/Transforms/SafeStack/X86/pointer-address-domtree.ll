@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-pc-linux-gnu -safestack-use-pointer-address \
+; RUN: opt -mtriple=x86_64-pc-linux-android -safestack-use-pointer-address \
 ; RUN:   -passes='require<libcall-lowering-info>,function(require<domtree>,safe-stack,verify<domtree>)' \
 ; RUN:   -disable-output < %s
 
