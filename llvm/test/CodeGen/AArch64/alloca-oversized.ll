@@ -9,10 +9,13 @@ define void @test_oversized(ptr %dst, i32 %cond) {
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cbz w1, .LBB0_2
+; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    sub x9, x29, #32
-; CHECK-NEXT:    cmp w1, #0
-; CHECK-NEXT:    csel x8, x9, x8, eq
+; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    sub x8, x29, #32
+; CHECK-NEXT:  .LBB0_3: // %if.end
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload

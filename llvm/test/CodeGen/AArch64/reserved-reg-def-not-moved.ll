@@ -22,12 +22,12 @@ define void @licm(i32 %n) {
 ; CHECK-NEXT:  // %bb.1: // %ph
 ; CHECK-NEXT:    adrp x8, :got:mem
 ; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    mov w21, #7 // =0x7
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:mem]
 ; CHECK-NEXT:  .LBB0_2: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    subs x9, x9, #1
 ; CHECK-NEXT:    str w21, [x8], #4
+; CHECK-NEXT:    mov w21, #7 // =0x7
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: // %exit
 ; CHECK-NEXT:    ret
@@ -57,10 +57,13 @@ exit:
 define i32 @ifcvt(i32 %a, i32 %b) {
 ; CHECK-LABEL: ifcvt:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    cbz w0, .LBB1_2
+; CHECK-NEXT:  // %bb.1: // %then
+; CHECK-NEXT:    add w0, w1, #1
 ; CHECK-NEXT:    mov w21, w1
-; CHECK-NEXT:    csinc w0, w8, w1, eq
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    mov w0, #3 // =0x3
 ; CHECK-NEXT:    ret
 entry:
   %z = icmp eq i32 %a, 0
@@ -82,13 +85,15 @@ define void @ccmp(i32 %a, i32 %b) {
 ; CHECK-LABEL: ccmp:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #5
+; CHECK-NEXT:    b.ne .LBB2_3
+; CHECK-NEXT:  // %bb.1: // %second
+; CHECK-NEXT:    cmp w22, w1
 ; CHECK-NEXT:    add w21, w1, #1
-; CHECK-NEXT:    ccmp w22, w1, #0, eq
-; CHECK-NEXT:    b.eq .LBB2_2
-; CHECK-NEXT:  // %bb.1: // %exit
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_2: // %call
+; CHECK-NEXT:    b.ne .LBB2_3
+; CHECK-NEXT:  // %bb.2: // %call
 ; CHECK-NEXT:    b ext
+; CHECK-NEXT:  .LBB2_3: // %exit
+; CHECK-NEXT:    ret
 entry:
   %c1 = icmp eq i32 %a, 5
   br i1 %c1, label %second, label %exit
