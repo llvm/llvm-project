@@ -91,6 +91,9 @@ static bool containsNonTemporalStores(Function &F) {
 }
 
 static bool runImpl(Function &F, const X86Subtarget *ST) {
+  if (ST && ST->getCLOpts().disable_fence_nontemporal_stores)
+    return false;
+
   // If the target lacks SSE1, non-temporal stores cannot use MOVNT instructions
   // (they lower to regular TSO stores), and SFENCE is not supported by
   // hardware.

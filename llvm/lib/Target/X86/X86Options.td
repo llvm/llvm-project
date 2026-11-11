@@ -34,6 +34,10 @@ defm : ValueField<"x86-cmov-converter-threshold", "unsigned", "4",
 defm : BoolField<"disable-x86-domain-reassignment", "false",
   "X86: Disable Virtual Register Reassignment">;
 
+// X86FenceNonTemporalStores.cpp
+defm : BoolField<"x86-disable-fence-nontemporal-stores", "false",
+  "Disable insertion of sfence after non-temporal stores">;
+
 // X86FixupBWInsts.cpp
 defm : BoolField<"fixup-byte-word-insts", "true",
   "Change byte and word instructions to larger sizes">;
