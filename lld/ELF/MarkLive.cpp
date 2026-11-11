@@ -27,7 +27,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/STLExtras.h"
@@ -555,8 +554,8 @@ static void processSectionEdges(
 }
 
 // Parallel mark using level-synchronized BFS with depth-limited inline
-// recursion. The subtree of each queued section is visited up to depth 3 (DFS
-// for cache locality), and deeper discoveries are queued for the next level.
+// recursion. Each parallelFor iteration processes a subtree up to depth 3
+// (DFS for cache locality), then queues deeper discoveries for the next level.
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
@@ -585,10 +584,12 @@ void MarkLive<ELFT, TrackWhyLive>::markParallel() {
   while (!queue.empty()) {
     auto queues =
         std::make_unique<SmallVector<InputSection *, 0>[]>(numThreads);
-    // Workers accumulate deeper discoveries into their own local queue, merged
-    // into `queue` below.
-    parallelForSharded(numThreads, queue.size(), [&](size_t shard, size_t i) {
-      visit(*queue[i], 0, queues[shard], visit);
+    // Workers claim items off a shared counter and accumulate deeper
+    // discoveries into their own local queue, merged into `queue` below.
+    std::atomic<ptrdiff_t> next{ptrdiff_t(queue.size())};
+    parallelFor(0, numThreads, [&](size_t shard) {
+      for (ptrdiff_t i; (i = next.fetch_sub(1, std::memory_order_relaxed)) > 0;)
+        visit(*queue[i - 1], 0, queues[shard], visit);
     });
     queue.clear();
     for (size_t t = 0; t < numThreads; ++t)
