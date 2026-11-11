@@ -183,6 +183,7 @@ protected:
   }
 
   static void SetUpTestSuite() {
+    InterpreterTestBase::SetUpTestSuite();
     if (!HostSupportsOutOfProcessJIT())
       GTEST_SKIP() << "Host does not support out-of-process JIT";
 
