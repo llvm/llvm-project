@@ -175,10 +175,8 @@ static void walkRegionBackward(Region &region,
 
 void xegpu::walkBackward(Operation *root, BackwardLayoutVisitor &visitor) {
   root->walk([&](FunctionOpInterface funcOp) {
-    if (funcOp.isExternal())
-      return;
-    walkRegionBackward(funcOp.getFunctionBody(), visitor);
-    visitor.visitFunction(funcOp);
+    if (!funcOp.isExternal())
+      walkRegionBackward(funcOp.getFunctionBody(), visitor);
   });
 }
 

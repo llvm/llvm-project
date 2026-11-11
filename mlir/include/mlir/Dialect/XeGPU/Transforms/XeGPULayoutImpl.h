@@ -15,7 +15,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
@@ -69,8 +68,6 @@ public:
   virtual void visitRegionOp(RegionBranchOpInterface regionOp) = 0;
   /// Any other op.
   virtual void visitRegularOp(Operation *op) = 0;
-  /// A function, visited after its body.
-  virtual void visitFunction(FunctionOpInterface funcOp) {}
 };
 
 /// Walk function bodies under `root` in CFG post-order, visiting ops within

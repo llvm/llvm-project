@@ -103,7 +103,6 @@ private:
   void visitRegularOp(Operation *op) override;
   void visitTerminator(RegionBranchTerminatorOpInterface terminator) override;
   void visitRegionOp(RegionBranchOpInterface regionOp) override;
-  void visitFunction(FunctionOpInterface funcOp) override;
 
   //===--------------------------------------------------------------------===//
   // Transfer functions
@@ -1169,47 +1168,10 @@ static void setTensorDescLayout(Value value,
       tdescTy.getEncoding(), layout));
 }
 
-/// Require layouts for vector and tensor_desc arguments of standard
-/// FunctionType functions, and update tensor_desc argument types.
-static LogicalResult
-updateFunctionSignature(FunctionOpInterface funcOp,
-                        xegpu::GetLayoutFnTy getLayoutOfValue) {
-  // Only process functions whose type is a standard MLIR FunctionType.
-  // Functions using a different type representation (e.g. llvm.func with
-  // LLVMFunctionType) are not targets for XeGPU layout propagation, and
-  // calling setType(FunctionType{}) on them would corrupt their type.
-  if (!isa<FunctionType>(funcOp.getFunctionType()))
-    return success();
-  for (BlockArgument arg : funcOp.getArguments()) {
-    if (!isa<VectorType, xegpu::TensorDescType>(arg.getType()))
-      continue;
-    xegpu::DistributeLayoutAttr layout = getLayoutOfValue(arg);
-    if (!layout) {
-      LLVM_DEBUG(DBGS() << "Expecting layout for function argument: " << arg
-                        << " but got none.\n");
-      return failure();
-    }
-    if (isa<xegpu::TensorDescType>(arg.getType()))
-      setTensorDescLayout(arg, layout);
-  }
-  // NOTE: We assume that function results are not expected to have layouts.
-  funcOp.setType(FunctionType::get(funcOp.getContext(),
-                                   funcOp.getFunctionBody().getArgumentTypes(),
-                                   funcOp.getResultTypes()));
-  return success();
-}
-
 LogicalResult LayoutPropagation::run() {
   xegpu::walkBackward(scopeRoot, *this);
   // Stop before forward filling if any visitor reported a fatal error.
   return failure(propagationFailed);
-}
-
-void LayoutPropagation::visitFunction(FunctionOpInterface funcOp) {
-  // All layout requests from the function body have now been collected.
-  if (failed(updateFunctionSignature(
-          funcOp, [&](Value val) { return getRequestedLayout(val); })))
-    markFailure(funcOp, "Failed to update operation with the layout.");
 }
 
 void LayoutPropagation::visitRegularOp(Operation *op) {
@@ -1255,9 +1217,11 @@ void LayoutPropagation::visitTerminator(
     for (Value input : successorInputs)
       if (isa<BlockArgument>(input) && (layout = getRequestedLayout(input)))
         break;
-    for (Value input : successorInputs)
-      if (isa<OpResult>(input) && !layout)
-        layout = getRequestedLayout(input);
+    // Otherwise the region result's (an operand feeds at most one).
+    if (!layout)
+      for (Value input : successorInputs)
+        if (isa<OpResult>(input))
+          layout = getRequestedLayout(input);
     recordRequestedLayout(successorOperand->get(), layout);
 
     // Layout lookup for scf.while's after arguments follows pass-through
@@ -1276,88 +1240,13 @@ void LayoutPropagation::visitTerminator(
   }
 }
 
-/// Selects the region boundary values to fill from terminator operands.
-enum class FillTarget { RegionResults, RegionResultsAndLoopInits };
-
-/// Fill unassigned region result layouts from forwarded vector operands.
-/// Also fill tied loop init layouts when requested. Return false if any
-/// forwarded vector operand lacks a layout.
-static bool
-fillRegionBoundaryFromTerminator(RegionBranchTerminatorOpInterface terminator,
-                                 xegpu::GetLayoutFnTy getLayoutOfValue,
-                                 FillTarget target) {
-  auto regionOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
-  if (!regionOp)
-    return true;
-  auto loop = dyn_cast<LoopLikeOpInterface>(regionOp.getOperation());
-  RegionBranchSuccessorMapping mapping;
-  regionOp.getSuccessorOperandInputMapping(mapping,
-                                           RegionBranchPoint(terminator));
-  bool allLaidOut = true;
-  for (const auto &[successorOperand, successorInputs] : mapping) {
-    Value operand = successorOperand->get();
-    if (!isa<VectorType>(operand.getType()))
-      continue;
-    xegpu::DistributeLayoutAttr layout = getLayoutOfValue(operand);
-    if (!layout) {
-      allLaidOut = false;
-      continue;
-    }
-    for (Value input : successorInputs) {
-      // A region result, e.g. %r gets the layout of %v in
-      //   %r = scf.if %c -> (vector<...>) { scf.yield %v } else { ... }
-      if (auto result = dyn_cast<OpResult>(input)) {
-        if (!xegpu::getDistributeLayoutAttr(result))
-          xegpu::setTemporaryLayout(result, layout);
-        continue;
-      }
-      if (target == FillTarget::RegionResults)
-        continue;
-      // Loop arguments read their layouts from the tied init operands, e.g.
-      // %init gets the layout of %n in
-      //   scf.for ... iter_args(%acc = %init) {
-      //     %n = arith.addf %acc, %x
-      //     scf.yield %n
-      //   }
-      OpOperand *init =
-          loop ? loop.getTiedLoopInit(cast<BlockArgument>(input)) : nullptr;
-      if (!init || xegpu::getTemporaryLayout(*init))
-        continue;
-      xegpu::setTemporaryLayout(*init, layout);
-      // Also fill an unassigned non-anchor producer, such as a splat constant.
-      auto initResult = dyn_cast<OpResult>(init->get());
-      if (initResult &&
-          !isa<xegpu::AnchorLayoutInterface>(initResult.getOwner()) &&
-          !xegpu::getDistributeLayoutAttr(initResult))
-        xegpu::setTemporaryLayout(initResult, layout);
-    }
-  }
-  return allLaidOut;
-}
-
 void LayoutPropagation::visitRegionOp(RegionBranchOpInterface regionOp) {
-  // Propagate layouts requested for region arguments to init operands.
-  // The forward pass can fill remaining loop init layouts from yielded values.
+  // Propagate layouts requested for region arguments to init operands. The
+  // region results are filled by the forward pass.
   (void)xegpu::propagateRegionArgsToInits(
       regionOp, [&](Value val) { return getRequestedLayout(val); });
   for (OpOperand &operand : llvm::reverse(regionOp->getOpOperands()))
     recordRequestedLayout(operand.get(), xegpu::getTemporaryLayout(operand));
-
-  // Only use layouts from values defined inside this op, whose producers have
-  // been visited. Some may still lack an assigned layout. The forward pass
-  // attempts to fill any remaining region result layouts.
-  auto getDecidedLayout = [&](Value val) -> xegpu::DistributeLayoutAttr {
-    if (!regionOp->isAncestor(val.getParentBlock()->getParentOp()))
-      return nullptr;
-    return xegpu::getDistributeLayoutAttr(val);
-  };
-  for (Region &region : regionOp->getRegions())
-    for (Block &block : region)
-      if (auto terminator =
-              dyn_cast_if_present<RegionBranchTerminatorOpInterface>(
-                  block.empty() ? nullptr : &block.back()))
-        (void)fillRegionBoundaryFromTerminator(terminator, getDecidedLayout,
-                                               FillTarget::RegionResults);
 }
 
 void LayoutPropagation::print(llvm::raw_ostream &os) {
@@ -1674,6 +1563,9 @@ static LogicalResult updateOpWithForwardFill(mlir::OpBuilder &builder,
             xegpu::inferResultLayoutFromSourceForNonAnchorOp(op, srcLayouts);
       }
     }
+    if (!layout && result.getNumUses() > 0) {
+      op->emitWarning("op has users but no layout assigned for its result");
+    }
     // If the result is a tensor descriptor type, update the tensor desc type
     // with layout.
     if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
@@ -1819,37 +1711,102 @@ struct XeGPUPropagateLayoutPass final
 
 } // namespace
 
-/// Fill missing layouts from operand layouts and forwarded region values.
-/// This can resolve loop-carried values left unconstrained by the backward
-/// scan, such as an accumulation whose loop result is unused.
+/// Assign each region result the layout of the terminator operand forwarded
+/// to it. Fails if a forwarded vector operand has no layout.
+static LogicalResult forwardYieldOperandsToRegionResults(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue) {
+  // Only process if the terminator is inside a region branch op.
+  auto branchOp = dyn_cast<RegionBranchOpInterface>(terminator->getParentOp());
+  if (!branchOp)
+    return success();
+
+  RegionBranchSuccessorMapping mapping;
+  branchOp.getSuccessorOperandInputMapping(mapping,
+                                           RegionBranchPoint(terminator));
+  for (const auto &[successorOperand, successorInputs] : mapping) {
+    for (Value successorInput : successorInputs) {
+      // We only need to operate on vector types.
+      if (!isa<VectorType>(successorInput.getType()))
+        continue;
+      xegpu::DistributeLayoutAttr successorOperandLayout =
+          getLayoutOfValue(successorOperand->get());
+      // The forwarded operand must carry a layout to propagate.
+      if (!successorOperandLayout)
+        return failure();
+      // Assign the yield operand's layout to the region op result it feeds.
+      if (auto result = dyn_cast<OpResult>(successorInput))
+        xegpu::setDistributeLayoutAttr(result, successorOperandLayout);
+    }
+  }
+  return success();
+}
+
+static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
+                                               mlir::FunctionOpInterface funcOp,
+                                               GetLayoutFnTy getLayoutOfValue) {
+  // Only process functions whose type is a standard MLIR FunctionType.
+  // Functions using a different type representation (e.g. llvm.func with
+  // LLVMFunctionType) are not targets for XeGPU layout propagation, and
+  // calling setType(FunctionType{}) on them would corrupt their type.
+  if (!isa<FunctionType>(funcOp.getFunctionType()))
+    return success();
+  SmallVector<Type> newArgTypes;
+  // Update the function arguments.
+  for (BlockArgument arg : funcOp.getArguments()) {
+    Type argType = arg.getType();
+    newArgTypes.push_back(argType);
+    if (!isa<VectorType, xegpu::TensorDescType>(argType))
+      continue;
+    xegpu::DistributeLayoutAttr layout = getLayoutOfValue(arg);
+    if (!layout) {
+      LLVM_DEBUG(DBGS() << "Expecting layout for function argument: " << arg
+                        << " but got none.\n");
+      return failure();
+    }
+    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(argType)) {
+      auto newTdescTy = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
+      arg.setType(newTdescTy);
+      newArgTypes.back() = newTdescTy;
+    }
+  }
+  // Update the function type with the new argument types.
+  // NOTE: We assume that function results are not expected to have layouts.
+  funcOp.setType(FunctionType::get(funcOp.getContext(), newArgTypes,
+                                   funcOp.getResultTypes()));
+  return success();
+}
+
+/// Fill the layouts the backward scan leaves to the forward pass, in program
+/// order: the results of an op from its operand layouts, the region results
+/// from the terminator operands forwarded to them, and the function
+/// signatures.
 static LogicalResult
 forwardFillUnassignedLayouts(OpBuilder &builder, Operation *target,
-                             xegpu::GetLayoutFnTy getLayoutOfValue) {
+                             GetLayoutFnTy getLayoutOfValue) {
   WalkResult walkResult = target->walk([&](Operation *op) -> WalkResult {
+    if (op == target)
+      return WalkResult::advance();
     LogicalResult r = success();
-    if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
-      r = success(fillRegionBoundaryFromTerminator(
-          terminator, getLayoutOfValue, FillTarget::RegionResultsAndLoopInits));
-    else if (op != target &&
-             !isa<RegionBranchOpInterface, FunctionOpInterface>(op))
-      r = updateOpWithForwardFill(builder, op, getLayoutOfValue);
+    TypeSwitch<Operation *>(op)
+        .Case([&](RegionBranchTerminatorOpInterface terminator) {
+          r = forwardYieldOperandsToRegionResults(terminator, getLayoutOfValue);
+        })
+        .Case([&](FunctionOpInterface funcOp) {
+          r = updateFunctionOpInterface(builder, funcOp, getLayoutOfValue);
+        })
+        .Default([&](Operation *op) {
+          r = updateOpWithForwardFill(builder, op, getLayoutOfValue);
+        });
     if (failed(r)) {
       op->emitError("Failed to update operation with the layout.");
       return WalkResult::interrupt();
     }
     return WalkResult::advance();
   });
-  if (walkResult.wasInterrupted())
-    return failure();
-
-  // Delay warnings until loop terminators have filled missing init layouts.
-  target->walk([](Operation *op) {
-    for (OpResult result : op->getResults())
-      if (isa<VectorType, xegpu::TensorDescType>(result.getType()) &&
-          !result.use_empty() && !xegpu::getDistributeLayoutAttr(result))
-        op->emitWarning("op has users but no layout assigned for its result");
-  });
-  return success();
+  return failure(walkResult.wasInterrupted());
 }
 
 LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
