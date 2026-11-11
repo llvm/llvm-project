@@ -17,8 +17,8 @@ TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asinpif16(zero));
 
   // +/-1
-  EXPECT_FP_EQ(0.5f16, LIBC_NAMESPACE::asinpif16(1.0));
-  EXPECT_FP_EQ(-0.5f16, LIBC_NAMESPACE::asinpif16(-1.0));
+  EXPECT_FP_EQ(0x1.0p-1f16, LIBC_NAMESPACE::asinpif16(0x1.0p+0f16));
+  EXPECT_FP_EQ(-0x1.0p-1f16, LIBC_NAMESPACE::asinpif16(-0x1.0p+0f16));
 
   // NaN inputs
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::asinpif16(aNaN));
