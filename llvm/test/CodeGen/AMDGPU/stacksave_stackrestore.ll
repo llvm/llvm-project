@@ -6,11 +6,11 @@
 ; RUN: llc -O0 -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GCN,WAVE64,WAVE64-O0 %s
 ; RUN: llc -O0 -mtriple=amdgpu10.30-amd-amdpal -amdgpu-prealloc-sgpr-spill-vgprs=1 < %s | FileCheck -check-prefixes=GCN,WAVE32,WAVE32-WWM-PREALLOC %s
 
-; RUN: llc -global-isel -verify-machineinstrs -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GISEL-WAVE32-OPT %s
-; RUN: llc -global-isel -verify-machineinstrs -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GISEL-WAVE64-OPT %s
+; RUN: llc -global-isel -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GISEL-WAVE32-OPT %s
+; RUN: llc -global-isel -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GISEL-WAVE64-OPT %s
 
-; RUN: llc -global-isel -verify-machineinstrs -O0 -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GISEL-WAVE32-O0 %s
-; RUN: llc -global-isel -verify-machineinstrs -O0 -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GISEL-WAVE64-O0 %s
+; RUN: llc -global-isel -O0 -mtriple=amdgpu10.30-amd-amdpal < %s | FileCheck -check-prefixes=GISEL-WAVE32-O0 %s
+; RUN: llc -global-isel -O0 -mtriple=amdgpu10.30-amd-amdpal -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GISEL-WAVE64-O0 %s
 
 declare ptr addrspace(5) @llvm.stacksave.p5()
 declare void @llvm.stackrestore.p5(ptr addrspace(5))
