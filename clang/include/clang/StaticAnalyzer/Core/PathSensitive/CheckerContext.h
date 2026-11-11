@@ -273,11 +273,9 @@ public:
 
   /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of
   /// the parameter \p Pred. Allows checkers to make a chain of nodes.
-  /// The difference between this and 'addTransition()' should be that this
-  /// always attempts to create a new node (even if there is no state change
-  /// and no explicitly specified tag). Currently this logic is incorrect in
-  /// addTransition and the difference is that this function lacks one of the
-  /// two problematic early return statements.
+  /// The difference between this and 'addTransition()' is that this always
+  /// attempts to create a new node (even if there is no state change and no
+  /// explicitly specified tag).
   /// Can return nullptr if the node creation fails (when it would recreate
   /// an existing node or when the state is posteriorly overconstrained).
   ///
@@ -292,10 +290,6 @@ public:
   generateNonFatalErrorNode(ProgramStateRef State,
                             ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
-    // FIXME: This can "jump back" to an ancestor of 'Pred'. We should return
-    // either Pred or nullptr in this case.
-    if (!State)
-      return getPredecessor();
     return addTransitionImpl(State, false, Pred, Tag);
   }
 
