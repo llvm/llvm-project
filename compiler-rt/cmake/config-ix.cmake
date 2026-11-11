@@ -322,6 +322,9 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
     endif()
     string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
   endif()
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID AND CMAKE_SYSROOT)
+    string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
+  endif()
 endmacro()
 
 # Returns CFLAGS that should be used to run tests for the

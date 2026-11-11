@@ -1,4 +1,24 @@
+standard: c23
+posix: posix-2024
 c-reference-root: string/multibyte
+types:
+  char16_t:
+    c-definition: '7.30'
+    in-latest-posix: ''
+  char32_t:
+    c-definition: '7.30'
+    in-latest-posix: ''
+  char8_t:
+    c-definition: '7.30'
+    in-latest-posix: ''
+  mbstate_t:
+    c-definition: '7.30'
+    c-reference: string/multibyte/mbstate_t
+    in-latest-posix: ''
+  size_t:
+    c-definition: '7.30'
+    c-reference: types/size_t
+    in-latest-posix: ''
 functions:
   c16rtomb:
     c-definition: 7.30.2.5
@@ -8,6 +28,7 @@ functions:
     in-latest-posix: ''
   c8rtomb:
     c-definition: 7.30.2.3
+    in-latest-posix: ''
   mbrtoc16:
     c-definition: 7.30.2.4
     in-latest-posix: ''
@@ -16,6 +37,7 @@ functions:
     in-latest-posix: ''
   mbrtoc8:
     c-definition: 7.30.2.2
+    in-latest-posix: ''
 macros:
   __STDC_VERSION_UCHAR_H__:
     c-definition: 7.30.1

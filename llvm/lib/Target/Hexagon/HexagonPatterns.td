@@ -315,9 +315,19 @@ def f32zero: PatLeaf<(f32 fpimm:$F), [{
 // unspecified.
 def Usxtw:  ComplexPattern<i64, 1, "DetectUseSxtw", [], []>;
 
+// HLXsxth is similar to Usxtw, but detects i16->i32 sign-extension.
+// The returned value has type v1024i32 and contains the value being extended.
+def HLXsxth:  ComplexPattern<v1024i32, 1, "DetectUseSxth", [], []>;
+
+// HLXzxth detects i16->i32 zero-extension (similar to HLXsxth).
+// The returned value has type v1024i32 and contains the value being extended.
+def HLXzxth:  ComplexPattern<v1024i32, 1, "DetectUseZxth", [], []>;
+
 def Aext64: PatFrag<(ops node:$Rs), (i64 (anyext node:$Rs))>;
 def Zext64: PatFrag<(ops node:$Rs), (i64 (zext node:$Rs))>;
 def Sext64: PatLeaf<(i64 Usxtw:$Rs)>;
+def HLXSext32: PatLeaf<(v1024i32 HLXsxth:$Rs)>;
+def HLXZext32: PatLeaf<(v1024i32 HLXzxth:$Rs)>;
 
 def azext: PatFrags<(ops node:$Rs), [(zext node:$Rs), (anyext node:$Rs)]>;
 def asext: PatFrags<(ops node:$Rs), [(sext node:$Rs), (anyext node:$Rs)]>;
@@ -415,6 +425,11 @@ def Sext: pf1<sext>;  def Zext: pf1<zext>;
 
 def Smin: pf2<smin>;  def Smax: pf2<smax>;
 def Umin: pf2<umin>;  def Umax: pf2<umax>;
+
+def Abs: pf1<abs>;
+def Abds: pf2<abds>; def Abdu: pf2<abdu>;
+def Avgfloors: pf2<avgfloors>; def Avgflooru: pf2<avgflooru>;
+def Avgceils: pf2<avgceils>; def Avgceilu: pf2<avgceilu>;
 
 def Rol: pf2<rotl>;
 
