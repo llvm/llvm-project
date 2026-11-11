@@ -21,7 +21,7 @@
 #error "huh?"
 #endif
 
-#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 
 inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
 namespace std {
@@ -244,6 +244,9 @@ namespace strlen {
 
   const long long longArray[] = {'b'};
   constexpr int m = __builtin_strlen(fold((char *)longArray)); // both-error {{must be initialized by a constant expression}}
+
+  static_assert(!__builtin_constant_p(__builtin_strlen((const char *)L"abc")), "");
+  static_assert(!__builtin_constant_p(__builtin_strlen((const char *)U"abc")), "");
 }
 
 namespace nan {

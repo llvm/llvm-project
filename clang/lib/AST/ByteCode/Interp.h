@@ -3462,8 +3462,7 @@ inline bool arrayElemPtr(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   if (Offset.isZero()) {
-    if (const Descriptor *Desc = Ptr.getFieldDesc();
-        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
+    if (Ptr.inArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
