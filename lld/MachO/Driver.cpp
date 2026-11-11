@@ -1656,9 +1656,11 @@ static void prepareObjCStubs() {
     // here: live stubs reference them later in ObjCStubsSection::addEntry(),
     // and adding them here would mark real dylib symbols referenced before dead
     // stripping.
-    if (needsEarlyUndefinedClassRef)
+    if (needsEarlyUndefinedClassRef) {
       classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
                                       /*isWeakRef=*/false);
+      parsePendingExtracts();
+    }
     in.objcStubs->recordClassSymbol(sym, classSym);
   }
 
@@ -1696,6 +1698,7 @@ static void referenceStubBinder() {
   // StubHelperSection::setUp() adds a reference and errors out if
   // dyld_stub_binder doesn't exist in case it is actually needed.
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
+  parsePendingExtracts();
 }
 
 static void createAliases() {

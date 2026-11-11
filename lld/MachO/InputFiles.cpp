@@ -184,8 +184,7 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
-template <class Header>
-static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
+template <class Header> static bool hasCompatArch(const Header *hdr) {
   uint32_t cpuType;
   std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
 
@@ -193,10 +192,15 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
   // needs a newer CPU, so neither takes it.
   uint32_t subtype = hdr->cpusubtype & ~CPU_SUBTYPE_MASK;
   bool isArm64e = subtype == CPU_SUBTYPE_ARM64E;
-  if (hdr->cputype != cpuType ||
-      (is_contained({AK_arm64, AK_arm64e}, config->arch()) &&
-       (subtype == CPU_SUBTYPE_ARM64E_X1 ||
-        isArm64e != (config->arch() == AK_arm64e)))) {
+  return hdr->cputype == cpuType &&
+         (!is_contained({AK_arm64, AK_arm64e}, config->arch()) ||
+          (subtype != CPU_SUBTYPE_ARM64E_X1 &&
+           isArm64e == (config->arch() == AK_arm64e)));
+}
+
+template <class Header>
+static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
+  if (!hasCompatArch(hdr)) {
     Architecture arch =
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
     auto msg = config->errorForArchMismatch
@@ -1157,9 +1161,10 @@ template <class LP> void ObjFile::parseLazy() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
+  compatArch =
+      compatArch && (archiveName.empty() ? compatWithTargetArch(this, hdr)
+                                         : hasCompatArch(hdr));
   if (!compatArch)
-    return;
-  if (!(compatArch = compatWithTargetArch(this, hdr)))
     return;
 
   const load_command *cmd = findCommand(hdr, LC_SYMTAB);
