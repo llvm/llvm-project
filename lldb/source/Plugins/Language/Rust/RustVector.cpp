@@ -99,9 +99,7 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
   // "pointer" child may be omitted.
   if (!m_start)
     m_start =
-        m_backend
-            .GetChildAtNamePath({"buf", "inner", "ptr", "pointer"})
-        .get();
+        m_backend.GetChildAtNamePath({"buf", "inner", "ptr", "pointer"}).get();
 
 
   m_len = m_backend.GetChildMemberWithName("len").get();
