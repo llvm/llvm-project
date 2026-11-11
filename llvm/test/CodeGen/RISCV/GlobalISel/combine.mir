@@ -145,3 +145,56 @@ body:             |
     %2:_(s64) = G_MUL %0, %1
     $x10 = COPY %2(s64)
     PseudoRET implicit $x10
+...
+
+---
+name:            ushlsat_of_logic_rv64
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: ushlsat_of_logic_rv64
+    ; RV64: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV64-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
+    ; RV64-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C]](s32)
+    ; RV64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USHLSAT]], [[COPY1]]
+    ; RV64-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[AND]], [[C1]](s32)
+    ; RV64-NEXT: $x10 = COPY [[USHLSAT1]](s32)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s32) = COPY $x10
+    %1:_(s32) = COPY $x11
+    %2:_(s32) = G_CONSTANT i32 20
+    %3:_(s32) = G_CONSTANT i32 11
+    %4:_(s32) = G_USHLSAT %0, %2(s32)
+    %5:_(s32) = G_AND %4, %1
+    %6:_(s32) = G_USHLSAT %5, %3(s32)
+    $x10 = COPY %6(s32)
+    PseudoRET implicit $x10
+...
+
+---
+name:            sshlsat_of_logic_rv64
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: sshlsat_of_logic_rv64
+    ; RV64: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV64-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
+    ; RV64-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C]](s32)
+    ; RV64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SSHLSAT]], [[COPY1]]
+    ; RV64-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[AND]], [[C1]](s32)
+    ; RV64-NEXT: $x10 = COPY [[SSHLSAT1]](s32)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s32) = COPY $x10
+    %1:_(s32) = COPY $x11
+    %2:_(s32) = G_CONSTANT i32 20
+    %3:_(s32) = G_CONSTANT i32 11
+    %4:_(s32) = G_SSHLSAT %0, %2(s32)
+    %5:_(s32) = G_AND %4, %1
+    %6:_(s32) = G_SSHLSAT %5, %3(s32)
+    $x10 = COPY %6(s32)
+    PseudoRET implicit $x10
+...
