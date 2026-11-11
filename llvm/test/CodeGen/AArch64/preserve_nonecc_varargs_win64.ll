@@ -67,3 +67,64 @@ define i32 @caller() nounwind ssp {
   %r = tail call preserve_nonecc i32 (i32, i32, i32, i32, i32, ...) @callee(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10)
   ret i32 %r
 }
+
+define preserve_mostcc i32 @callee_pm(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, ...) nounwind noinline {
+; CHECK-LABEL: callee_pm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    mov x0, x5
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    stp x6, x7, [sp, #32]
+; CHECK-NEXT:    str x5, [sp, #24]
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %args = alloca ptr, align 8
+  call void @llvm.va_start(ptr %args)
+  %p = load ptr, ptr %args, align 8
+  %v = load i32, ptr %p, align 8
+  call void @llvm.va_end(ptr %args)
+  ret i32 %v
+}
+
+define preserve_allcc i32 @callee_pa(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, ...) nounwind noinline {
+; CHECK-LABEL: callee_pa:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    mov x0, x5
+; CHECK-NEXT:    add x8, sp, #24
+; CHECK-NEXT:    stp x6, x7, [sp, #32]
+; CHECK-NEXT:    str x5, [sp, #24]
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
+  %args = alloca ptr, align 8
+  call void @llvm.va_start(ptr %args)
+  %p = load ptr, ptr %args, align 8
+  %v = load i32, ptr %p, align 8
+  call void @llvm.va_end(ptr %args)
+  ret i32 %v
+}
+
+%struct.Large = type { [4 x i64] }
+
+define preserve_nonecc void @pn_inreg_sret(ptr inreg sret(%struct.Large) %agg.result, i64 %x) nounwind {
+; CHECK-LABEL: pn_inreg_sret:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    str x21, [x20]
+; CHECK-NEXT:    ret
+  store i64 %x, ptr %agg.result, align 8
+  ret void
+}
+
+define preserve_mostcc void @pm_inreg_sret(ptr inreg sret(%struct.Large) %agg.result, i64 %x) nounwind {
+; CHECK-LABEL: pm_inreg_sret:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x1, [x0]
+; CHECK-NEXT:    ret
+  store i64 %x, ptr %agg.result, align 8
+  ret void
+}
