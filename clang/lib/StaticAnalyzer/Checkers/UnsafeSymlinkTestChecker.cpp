@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -203,6 +204,11 @@ private:
                             CheckerContext &C) const;
 
   void initData(const RecordDecl *StatDecl, const Preprocessor &PP) const;
+  ExplodedNode *checkUseOfS_ISLNK(
+      ExplodedNode *Node, const MemRegion *Region, const Stmt *S,
+      CheckerContext &C,
+      std::function<ProgramStateRef(ProgramStateRef)> UpdateState) const;
+
   void handleLStat(const CallEvent &Call, CheckerContext &C) const;
   void handleOpen(const CallEvent &Call, CheckerContext &C) const;
   void handleFStat(const CallEvent &Call, CheckerContext &C) const;
@@ -511,6 +517,25 @@ private:
 };
 } // end anonymous namespace
 
+ExplodedNode *UnsafeSymlinkTestChecker::checkUseOfS_ISLNK(
+    ExplodedNode *Node, const MemRegion *Region, const Stmt *S,
+    CheckerContext &C,
+    std::function<ProgramStateRef(ProgramStateRef)> UpdateState) const {
+  ProgramStateRef State = Node->getState();
+  FindMacroVisitor FindS_ISLNK(C, State, getStModeRegion(Region, C));
+  if (!FindS_ISLNK.Visit(S))
+    return Node;
+
+  return C.addTransition(
+      UpdateState(State), Node,
+      getNoteTag(Region,
+                 (llvm::Twine(getFieldVarString(Region, ASTValues->StModeFD, "",
+                                                "File status value", C)) +
+                  " is checked here for symbolic link")
+                     .str(),
+                 C));
+}
+
 void UnsafeSymlinkTestChecker::checkBranchCondition(const Stmt *S,
                                                     CheckerContext &C) const {
   if (!ASTValues || !ASTValues->IsValid)
@@ -519,21 +544,12 @@ void UnsafeSymlinkTestChecker::checkBranchCondition(const Stmt *S,
   ExplodedNode *NewNode = C.getPredecessor();
   LStatCalledMapTy LStatCalled = NewNode->getState()->get<LStatCalledMap>();
   for (auto I : LStatCalled) {
-    const FieldRegion *FR = getStModeRegion(I.second.LStatD.Region, C);
-    ProgramStateRef State = NewNode->getState();
-    FindMacroVisitor FindS_ISLNK(C, State, FR);
-    if (FindS_ISLNK.Visit(S)) {
-      State = State->set<LStatCalledMap>(I.first, {I.second.LStatD, true});
-      NewNode = C.addTransition(
-          State, NewNode,
-          getNoteTag(I.second.LStatD.Region,
-                     (llvm::Twine(getFieldVarString(I.second.LStatD.Region,
-                                                    ASTValues->StModeFD, "",
-                                                    "File status value", C)) +
-                      " is checked here for symbolic link")
-                         .str(),
-                     C));
-    }
+    if (I.second.LinkCheckPerformed)
+      continue;
+    NewNode = checkUseOfS_ISLNK(
+        NewNode, I.second.LStatD.Region, S, C, [&I](ProgramStateRef State) {
+          return State->set<LStatCalledMap>(I.first, {I.second.LStatD, true});
+        });
   }
 
   LStatOpenCalledMapTy LStatOpenCalled =
@@ -541,23 +557,12 @@ void UnsafeSymlinkTestChecker::checkBranchCondition(const Stmt *S,
   for (auto I : LStatOpenCalled) {
     if (I.second.LinkCheckPerformed)
       continue;
-
-    const FieldRegion *FR = getStModeRegion(I.second.LStatD.Region, C);
-    ProgramStateRef State = NewNode->getState();
-    FindMacroVisitor FindS_ISLNK(C, State, FR);
-    if (FindS_ISLNK.Visit(S)) {
-      State = State->set<LStatOpenCalledMap>(
-          I.first, {I.second.LStatD, I.second.FStatD, true, I.second.FName});
-      NewNode = C.addTransition(
-          State, NewNode,
-          getNoteTag(I.second.LStatD.Region,
-                     (llvm::Twine(getFieldVarString(I.second.LStatD.Region,
-                                                    ASTValues->StModeFD, "",
-                                                    "File status value", C)) +
-                      " is checked here for symbolic link")
-                         .str(),
-                     C));
-    }
+    NewNode = checkUseOfS_ISLNK(
+        NewNode, I.second.LStatD.Region, S, C, [&I](ProgramStateRef State) {
+          return State->set<LStatOpenCalledMap>(
+              I.first,
+              {I.second.LStatD, I.second.FStatD, true, I.second.FName});
+        });
   }
 }
 
