@@ -91,3 +91,102 @@ entry:
     %0 = and <4 x i64> %a, splat (i64 -17179869189)
     ret <4 x i64> %0
 }
+
+define <4 x i64> @xvbitclr_b(<4 x i64> %a, <4 x i64> %b) nounwind {
+; CHECK-LABEL: xvbitclr_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.b $xr2, 1
+; CHECK-NEXT:    xvsll.b $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x i64> %b to <32 x i8>
+  %1 = and <32 x i8> %0, splat (i8 7)
+  %2 = shl nuw <32 x i8> splat (i8 1), %1
+  %3 = bitcast <32 x i8> %2 to <4 x i64>
+  %4 = xor <4 x i64> %3, splat (i64 -1)
+  %5 = and <4 x i64> %a, %4
+  ret <4 x i64> %5
+}
+
+define <4 x i64> @xvbitclr_b_nomask(<4 x i64> %a, <4 x i64> %b) nounwind {
+; CHECK-LABEL: xvbitclr_b_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.b $xr2, 1
+; CHECK-NEXT:    xvsll.b $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x i64> %b to <32 x i8>
+  %1 = shl <32 x i8> splat (i8 1), %0
+  %2 = bitcast <32 x i8> %1 to <4 x i64>
+  %3 = xor <4 x i64> %2, splat (i64 -1)
+  %4 = and <4 x i64> %a, %3
+  ret <4 x i64> %4
+}
+
+define <4 x i64> @xvbitclr_h(<4 x i64> %a, <4 x i64> %b) nounwind {
+; CHECK-LABEL: xvbitclr_h:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.h $xr2, 1
+; CHECK-NEXT:    xvsll.h $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x i64> %b to <16 x i16>
+  %1 = and <16 x i16> %0, splat (i16 15)
+  %2 = shl nuw <16 x i16> splat (i16 1), %1
+  %3 = bitcast <16 x i16> %2 to <4 x i64>
+  %4 = xor <4 x i64> %3, splat (i64 -1)
+  %5 = and <4 x i64> %a, %4
+  ret <4 x i64> %5
+}
+
+define <4 x i64> @xvbitclr_h_nomask(<4 x i64> %a, <4 x i64> %b) nounwind {
+; CHECK-LABEL: xvbitclr_h_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.h $xr2, 1
+; CHECK-NEXT:    xvsll.h $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x i64> %b to <16 x i16>
+  %1 = shl <16 x i16> splat (i16 1), %0
+  %2 = bitcast <16 x i16> %1 to <4 x i64>
+  %3 = xor <4 x i64> %2, splat (i64 -1)
+  %4 = and <4 x i64> %a, %3
+  ret <4 x i64> %4
+}
+
+define <4 x i64> @xvbitclr_w(<4 x i64> %a, <4 x i64> %b) nounwind {
+; CHECK-LABEL: xvbitclr_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.w $xr2, 1
+; CHECK-NEXT:    xvsll.w $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x i64> %b to <8 x i32>
+  %1 = and <8 x i32> %0, splat (i32 31)
+  %2 = shl nuw <8 x i32> splat (i32 1), %1
+  %3 = bitcast <8 x i32> %2 to <4 x i64>
+  %4 = xor <4 x i64> %3, splat (i64 -1)
+  %5 = and <4 x i64> %a, %4
+  ret <4 x i64> %5
+}
+
+define <4 x i64> @xvbitclr_w_nomask(<4 x i64> %a, <4 x i64> %b) nounwind {
+; CHECK-LABEL: xvbitclr_w_nomask:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvrepli.w $xr2, 1
+; CHECK-NEXT:    xvsll.w $xr1, $xr2, $xr1
+; CHECK-NEXT:    xvandn.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    ret
+entry:
+  %0 = bitcast <4 x i64> %b to <8 x i32>
+  %1 = shl <8 x i32> splat (i32 1), %0
+  %2 = bitcast <8 x i32> %1 to <4 x i64>
+  %3 = xor <4 x i64> %2, splat (i64 -1)
+  %4 = and <4 x i64> %a, %3
+  ret <4 x i64> %4
+}
