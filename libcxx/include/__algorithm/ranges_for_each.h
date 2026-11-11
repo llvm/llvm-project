@@ -53,8 +53,7 @@ private:
       auto __end = std::__for_each_n(std::move(__first), __n, __func, __proj);
       return {std::move(__end), std::move(__func)};
     } else {
-      auto __end = std::__for_each(std::move(__first), std::move(__last), __func, __proj);
-      return {std::move(__end), std::move(__func)};
+      return std::__for_each(std::move(__first), std::move(__last), std::move(__func), __proj);
     }
   }
 

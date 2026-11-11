@@ -42,8 +42,7 @@ struct __for_each_n {
   constexpr for_each_n_result<_Iter, _Func>
   operator()(_Iter __first, iter_difference_t<_Iter> __count, _Func __func, _Proj __proj = {}) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count >= 0, "for_each_n requires a non-negative count");
-    auto __last = std::__for_each_n(std::move(__first), __count, __func, __proj);
-    return {std::move(__last), std::move(__func)};
+    return std::__for_each_n(std::move(__first), __count, __func, __proj);
   }
 };
 

@@ -110,13 +110,15 @@ struct __fold_left_with_iter {
     _Up __result = std::invoke(__f, std::move(__init), *__first);
     ++__first;
     __identity __proj;
-    auto __end = std::__for_each(
-        std::move(__first),
-        std::move(__last),
-        [&](auto&& __element) {
-          __result = std::invoke(__f, std::move(__result), std::forward<decltype(__element)>(__element));
-        },
-        __proj);
+    auto __end =
+        std::__for_each(
+            std::move(__first),
+            std::move(__last),
+            [&](auto&& __element) {
+              __result = std::invoke(__f, std::move(__result), std::forward<decltype(__element)>(__element));
+            },
+            __proj)
+            .__in_;
 
     return fold_left_with_iter_result<_Ip, _Up>{std::move(__end), std::move(__result)};
   }
@@ -160,13 +162,15 @@ struct __fold_left_first_with_iter {
     _Up __result(*__first);
     ++__first;
     __identity __proj;
-    auto __end = std::__for_each(
-        std::move(__first),
-        std::move(__last),
-        [&](auto&& __element) {
-          __result = std::invoke(__func, std::move(__result), std::forward<decltype(__element)>(__element));
-        },
-        __proj);
+    auto __end =
+        std::__for_each(
+            std::move(__first),
+            std::move(__last),
+            [&](auto&& __element) {
+              __result = std::invoke(__func, std::move(__result), std::forward<decltype(__element)>(__element));
+            },
+            __proj)
+            .__in_;
 
     return fold_left_first_with_iter_result<_Iter, optional<_Up>>{std::move(__end), optional<_Up>(std::move(__result))};
   }
