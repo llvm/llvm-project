@@ -599,12 +599,8 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     LLT RegType = MRI.getType(Reg);
-    const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
-    LLT ScalarTy = RegType.isFloatOrFloatVector() ||
-                           RC == &SPIRV::fIDRegClass ||
-                           RC == &SPIRV::vfIDRegClass
-                       ? LLT::float64()
-                       : LLT::integer(64);
+    LLT ScalarTy =
+        RegType.isFloatOrFloatVector() ? LLT::float64() : LLT::integer(64);
     if (RegType.isScalar())
       MRI.setType(Reg, ScalarTy);
     else if (RegType.isPointer())
