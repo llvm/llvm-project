@@ -34,8 +34,8 @@ template<int> struct K {
   void operator()(Ts...) const {}
 };
 
-template<typename KernelName, typename... Ts>
-void sycl_kernel_launch(const char *, Ts...) {}
+template<typename KernelInfo, typename... Ts>
+void sycl_kernel_launch(Ts...) {}
 
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void skep1() {
@@ -45,10 +45,8 @@ void skep1() {
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CallExpr {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *)' lvalue Function {{.*}} 'sycl_kernel_launch' {{.*}}
-// CHECK-NEXT: | | |   `-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |       `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi1EE"
+// CHECK-NEXT: | | |   `-ImplicitCastExpr {{.*}} 'void (*)()' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'void ()' lvalue Function {{.*}} 'sycl_kernel_launch' {{.*}}
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<1>
@@ -69,10 +67,20 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | | `-CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: | | | |   `-DeclRefExpr {{.*}} 'KT' lvalue ParmVar {{.*}} 'k' 'KT'
+// CHECK-NEXT: | | | |-TemplateSpecializationType {{.*}} '__sycl_kernel_info<KNT>' dependent
+// CHECK-NEXT: | | | | |-name: '__sycl_kernel_info'
+// CHECK-NEXT: | | | | | `-ClassTemplateDecl {{.*}} referenced __sycl_kernel_info external-linkage
+// CHECK-NEXT: | | | | `-TemplateArgument type 'KNT':'type-parameter-0-0'
+// CHECK-NEXT: | | | |   `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
+// CHECK-NEXT: | | | |     `-TemplateTypeParm {{.*}} 'KNT'
 // CHECK-NEXT: | | | `-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (ADL) = 'sycl_kernel_launch' {{.*}}
-// CHECK-NEXT: | | |   `-TemplateArgument type 'KNT':'type-parameter-0-0'
-// CHECK-NEXT: | | |     `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
-// CHECK-NEXT: | | |       `-TemplateTypeParm {{.*}} 'KNT'
+// CHECK-NEXT: | | |   `-TemplateArgument type '__sycl_kernel_info<KNT>':'__sycl_kernel_info<type-parameter-0-0>'
+// CHECK-NEXT: | | |     `-TemplateSpecializationType {{.*}} '__sycl_kernel_info<KNT>' dependent
+// CHECK-NEXT: | | |       |-name: '__sycl_kernel_info'
+// CHECK-NEXT: | | |       | `-ClassTemplateDecl {{.*}} referenced __sycl_kernel_info external-linkage
+// CHECK-NEXT: | | |       `-TemplateArgument type 'KNT':'type-parameter-0-0'
+// CHECK-NEXT: | | |         `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
+// CHECK-NEXT: | | |           `-TemplateTypeParm {{.*}} 'KNT'
 // CHECK-NEXT: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // CHECK-NEXT: | `-FunctionDecl {{.*}} skep2 'void (K<2>)' explicit_instantiation_definition instantiated_from 0x{{.+}} external-linkage
@@ -92,10 +100,8 @@ void skep2<KN<2>>(K<2>);
 // CHECK-NEXT: |   | |     `-DeclRefExpr {{.*}} 'K<2>' lvalue ParmVar {{.*}} 'k' 'K<2>'
 // CHECK-NEXT: |   | |-CompoundStmt {{.*}}
 // CHECK-NEXT: |   | | `-CallExpr {{.*}} 'void'
-// CHECK-NEXT: |   | |   |-ImplicitCastExpr {{.*}} <FunctionToPointerDecay>
-// CHECK-NEXT: |   | |   | `-DeclRefExpr {{.*}} 'void (const char *, K<2>)' lvalue Function {{.*}} 'sycl_kernel_launch' {{.*}}
-// CHECK-NEXT: |   | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: |   | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi2EE"
+// CHECK-NEXT: |   | |   |-ImplicitCastExpr {{.*}} 'void (*)(K<2>)' <FunctionToPointerDecay>
+// CHECK-NEXT: |   | |   | `-DeclRefExpr {{.*}} 'void (K<2>)' lvalue Function {{.*}} 'sycl_kernel_launch' {{.*}}
 // CHECK-NEXT: |   | |   `-CXXConstructExpr {{.*}} 'K<2>' 'void (K<2> &&) noexcept'
 // CHECK-NEXT: |   | |     `-ImplicitCastExpr {{.*}} 'K<2>' xvalue <NoOp>
 // CHECK-NEXT: |   | |       `-DeclRefExpr {{.*}} 'K<2>' lvalue ParmVar {{.*}} 'k' 'K<2>'
@@ -128,10 +134,20 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | | `-CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: | | | |   `-DeclRefExpr {{.*}} 'KT' lvalue ParmVar {{.*}} 'k' 'KT'
+// CHECK-NEXT: | | | |-TemplateSpecializationType {{.*}} '__sycl_kernel_info<KNT>' dependent
+// CHECK-NEXT: | | | | |-name: '__sycl_kernel_info'
+// CHECK-NEXT: | | | | | `-ClassTemplateDecl {{.*}} referenced __sycl_kernel_info external-linkage
+// CHECK-NEXT: | | | | `-TemplateArgument type 'KNT':'type-parameter-0-0'
+// CHECK-NEXT: | | | |   `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
+// CHECK-NEXT: | | | |     `-TemplateTypeParm {{.*}} 'KNT'
 // CHECK-NEXT: | | | `-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (ADL) = 'sycl_kernel_launch' {{.*}}
-// CHECK-NEXT: | | |   `-TemplateArgument type 'KNT':'type-parameter-0-0'
-// CHECK-NEXT: | | |     `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
-// CHECK-NEXT: | | |       `-TemplateTypeParm {{.*}} 'KNT'
+// CHECK-NEXT: | | |   `-TemplateArgument type '__sycl_kernel_info<KNT>':'__sycl_kernel_info<type-parameter-0-0>'
+// CHECK-NEXT: | | |     `-TemplateSpecializationType {{.*}} '__sycl_kernel_info<KNT>' dependent
+// CHECK-NEXT: | | |       |-name: '__sycl_kernel_info'
+// CHECK-NEXT: | | |       | `-ClassTemplateDecl {{.*}} referenced __sycl_kernel_info external-linkage
+// CHECK-NEXT: | | |       `-TemplateArgument type 'KNT':'type-parameter-0-0'
+// CHECK-NEXT: | | |         `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
+// CHECK-NEXT: | | |           `-TemplateTypeParm {{.*}} 'KNT'
 // CHECK-NEXT: | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // CHECK-NEXT: | `-Function {{.*}} 'skep3' 'void (K<3>)'
@@ -151,11 +167,9 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK-NEXT: | | |   `-ImplicitCastExpr {{.*}} 'const K<3>' lvalue <NoOp>
 // CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'K<3>' lvalue ParmVar {{.*}} 'k' 'K<3>'
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
-// CHECK-NEXT: | | | `-CallExpr {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *, K<3>)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, K<3>)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, K<3>)' {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi3EE"
+// CHECK-NEXT: | | | `-CallExpr {{.*}} 'void'
+// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(K<3>)' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (K<3>)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (K<3>)' {{.*}}
 // CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'K<3>' 'void (K<3> &&) noexcept'
 // CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'K<3>' xvalue <NoOp>
 // CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'K<3>' lvalue ParmVar {{.*}} 'k' 'K<3>'
@@ -190,10 +204,8 @@ void skep4(K<4> k, int p1, int p2) {
 // CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'p2' 'int'
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CallExpr {{.*}} 'void'
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *, K<4>, int, int)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, K<4>, int, int)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, K<4>, int, int)' {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi4EE"
+// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(K<4>, int, int)' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (K<4>, int, int)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (K<4>, int, int)' {{.*}}
 // CHECK-NEXT: | | |   |-CXXConstructExpr {{.*}} 'K<4>' 'void (K<4> &&) noexcept'
 // CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'K<4>' xvalue <NoOp>
 // CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'K<4>' lvalue ParmVar {{.*}} 'k' 'K<4>'
@@ -235,10 +247,8 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK:      | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CallExpr {{.*}} 'void'
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *, int, K<5>, int, int, int)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, int, K<5>, int, int, int)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, int, K<5>, int, int, int)' {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi5EE"
+// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(int, K<5>, int, int, int)' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (int, K<5>, int, int, int)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (int, K<5>, int, int, int)' {{.*}}
 // CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: | | |   | `-ImplicitCastExpr {{.*}} 'int' xvalue <NoOp>
 // CHECK-NEXT: | | |   |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'unused1' 'int'
@@ -301,10 +311,8 @@ void skep6(const S6 &k) {
 // CHECK-NEXT: | | |   `-DeclRefExpr {{.*}} 'const S6' lvalue ParmVar {{.*}} 'k' 'const S6 &'
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CallExpr {{.*}} 'void'
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *, S6)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, S6)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, S6)' {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi6EE"
+// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(S6)' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (S6)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (S6)' {{.*}}
 // CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S6' 'void (const S6 &) noexcept'
 // CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'const S6' lvalue ParmVar {{.*}} 'k' 'const S6 &'
 // CHECK-NEXT: | | `-OutlinedFunctionDecl {{.*}}
@@ -342,10 +350,8 @@ void skep7(S7 k) {
 // CHECK-NEXT: | | |     `-DeclRefExpr {{.*}} 'S7' lvalue ParmVar {{.*}} 'k' 'S7'
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CallExpr {{.*}} 'void'
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *, S7)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, S7)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, S7)' {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi7EE"
+// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(S7)' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (S7)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (S7)' {{.*}}
 // CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S7' 'void (S7 &&) noexcept'
 // CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'S7' xvalue <NoOp>
 // CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'S7' lvalue ParmVar {{.*}} 'k' 'S7'
@@ -376,10 +382,8 @@ void skep8(S8 k) {
 // CHECK-NEXT: | | |-CompoundStmt {{.*}}
 // CHECK:      | | |-CompoundStmt {{.*}}
 // CHECK-NEXT: | | | `-CallExpr {{.*}} 'void'
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(const char *, S8)' <FunctionToPointerDecay>
-// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (const char *, S8)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (const char *, S8)' {{.*}}
-// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | | |   | `-StringLiteral {{.*}} 'const char[12]' lvalue "_ZTS6\316\264\317\204\317\207"
+// CHECK-NEXT: | | |   |-ImplicitCastExpr {{.*}} 'void (*)(S8)' <FunctionToPointerDecay>
+// CHECK-NEXT: | | |   | `-DeclRefExpr {{.*}} 'void (S8)' lvalue Function {{.*}} 'sycl_kernel_launch' 'void (S8)' {{.*}}
 // CHECK-NEXT: | | |   `-CXXConstructExpr {{.*}} 'S8' 'void (S8 &&) noexcept'
 // CHECK-NEXT: | | |     `-ImplicitCastExpr {{.*}} 'S8' xvalue <NoOp>
 // CHECK-NEXT: | | |       `-DeclRefExpr {{.*}} 'S8' lvalue ParmVar {{.*}} 'k' 'S8'
@@ -387,8 +391,8 @@ void skep8(S8 k) {
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}}
 
 class Handler {
-  template <typename KNT, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) {}
+  template <typename KIT, typename... Ts>
+  void sycl_kernel_launch(Ts...) {}
 public:
   template<typename KNT, typename KT>
   [[clang::sycl_kernel_entry_point(KNT)]]
@@ -414,6 +418,12 @@ void foo() {
 // CHECK-NEXT: | | | | |   |-DeclRefExpr {{.*}} 'KT' lvalue ParmVar {{.*}} 'k' 'KT'
 // CHECK-NEXT: | | | | |   |-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'a' 'int'
 // CHECK-NEXT: | | | | |   `-DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'b' 'int'
+// CHECK-NEXT: | | | | |-TemplateSpecializationType {{.*}} '__sycl_kernel_info<KNT>' dependent
+// CHECK-NEXT: | | | | | |-name: '__sycl_kernel_info'
+// CHECK-NEXT: | | | | | | `-ClassTemplateDecl {{.*}} <invalid sloc> referenced __sycl_kernel_info external-linkage
+// CHECK-NEXT: | | | | | `-TemplateArgument type 'KNT':'type-parameter-0-0'
+// CHECK-NEXT: | | | | |   `-TemplateTypeParmType {{.*}} 'KNT' dependent depth 0 index 0
+// CHECK-NEXT: | | | | |     `-TemplateTypeParm {{.*}} 'KNT'
 // CHECK-NEXT: | | | | `-UnresolvedMemberExpr {{.*}} '<bound member function type>' lvalue
 // CHECK-NEXT: | | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 // CHECK-NEXT: | | `-CXXMethodDecl {{.*}} used skep9 {{.*}} implicit_instantiation implicit-inline instantiated_from 0x{{.*}}
@@ -441,8 +451,6 @@ void foo() {
 // CHECK-NEXT: | |   | | `-CXXMemberCallExpr {{.*}} 'void'
 // CHECK-NEXT: | |   | |   |-MemberExpr {{.*}} '<bound member function type>' ->sycl_kernel_launch {{.*}}
 // CHECK-NEXT: | |   | |   | `-CXXThisExpr {{.*}} 'Handler *' implicit this
-// CHECK-NEXT: | |   | |   |-ImplicitCastExpr {{.*}} 'const char *' <ArrayToPointerDecay>
-// CHECK-NEXT: | |   | |   | `-StringLiteral {{.*}} 'const char[14]' lvalue "_ZTS2KNILi9EE"
 // CHECK-NEXT: | |   | |   |-CXXConstructExpr {{.*}}
 // CHECK-NEXT: | |   | |   | `-ImplicitCastExpr {{.*}} xvalue <NoOp>
 // CHECK-NEXT: | |   | |   |   `-DeclRefExpr {{.*}} lvalue ParmVar {{.*}} 'k' {{.*}}
@@ -470,4 +478,4 @@ void foo() {
 
 
 void the_end() {}
-// CHECK:      `-FunctionDecl {{.*}} the_end 'void ()' external-linkage
+// CHECK:      |-FunctionDecl {{.*}} the_end 'void ()' external-linkage
