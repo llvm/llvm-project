@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -443,7 +445,13 @@ std::string renderAttributes(const Record *Builtin, BuiltinType BT) {
     OS << "z";
   }
 
+  SmallVector<const Record *> ArgRanges;
   for (const auto *Attr : Builtin->getValueAsListOfDefs("Attributes")) {
+    if (Attr->isSubClassOf("ArgRange")) {
+      ArgRanges.push_back(Attr);
+      continue;
+    }
+
     OS << Attr->getValueAsString("Mangling");
     if (Attr->isSubClassOf("IndexedAttribute")) {
       OS << ':' << Attr->getValueAsInt("Index") << ':';
@@ -455,6 +463,46 @@ std::string renderAttributes(const Record *Builtin, BuiltinType BT) {
       OS << '>';
     }
   }
+
+  // All argument ranges are encoded together as R<Index:Lower:Upper,...>.
+  if (!ArgRanges.empty()) {
+    StringRef Prototype = Builtin->getValueAsString("Prototype").trim();
+    SmallVector<StringRef> Params;
+    if (size_t Open = Prototype.find('('); Open != StringRef::npos)
+      Params = splitParams(Prototype.drop_front(Open + 1).drop_back());
+
+    OS << "R<";
+    llvm::ListSeparator Sep(",");
+    SmallDenseSet<int64_t> SeenIndices;
+    for (const Record *Range : ArgRanges) {
+      int64_t Index = Range->getValueAsInt("Index");
+      int64_t Lower = Range->getValueAsInt("Lower");
+      int64_t Upper = Range->getValueAsInt("Upper");
+      if (Index < 0 || Index >= static_cast<int64_t>(Params.size()))
+        PrintFatalError(Builtin->getLoc(),
+                        "ArgRange index " + Twine(Index) + " out of bounds");
+
+      if (!Params[Index].starts_with("_Constant"))
+        PrintFatalError(Builtin->getLoc(), "ArgRange argument " + Twine(Index) +
+                                               " must be _Constant");
+
+      if (!isInt<32>(Lower) || !isInt<32>(Upper))
+        PrintFatalError(Builtin->getLoc(),
+                        "ArgRange bounds must fit in a 32-bit int");
+
+      if (!SeenIndices.insert(Index).second)
+        PrintFatalError(Builtin->getLoc(),
+                        "duplicate ArgRange for argument " + Twine(Index));
+
+      if (Lower >= Upper)
+        PrintFatalError(Builtin->getLoc(), "ArgRange range is empty");
+
+      OS << Sep << Index << ':' << Lower << ':' << Upper;
+    }
+
+    OS << '>';
+  }
+
   return Attributes;
 }
 
