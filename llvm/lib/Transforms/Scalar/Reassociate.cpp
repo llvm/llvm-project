@@ -367,7 +367,8 @@ static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
         return BO;
     }
   else
-    for (Instruction *Prev = BeforeInst->getPrevNode(); Prev; Prev = Prev->getPrevNode()){
+    for (Instruction *Prev = BeforeInst->getPrevNode(); Prev;
+         Prev = Prev->getPrevNode()) {
       if (!match(Prev, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
         continue;
       BinaryOperator *BO = cast<BinaryOperator>(Prev);
