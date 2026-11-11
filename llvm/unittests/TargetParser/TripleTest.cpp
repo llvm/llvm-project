@@ -1839,14 +1839,20 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("wasm64-unknown-unknown").getDefaultLongDoubleFormat());
 
-  // 64-bit MIPS uses IEEE quad; 32-bit MIPS uses IEEE double. Both are
-  // independent of the environment.
+  // 64-bit MIPS uses IEEE quad, except on FreeBSD; 32-bit MIPS uses IEEE
+  // double. Both are independent of the environment.
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64-unknown-linux").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64el-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips64-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips64el-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mipsisa64r6-unknown-freebsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("mips-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
