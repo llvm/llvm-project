@@ -7069,13 +7069,6 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
   // Only deal with constant step to save compile time.
   if (!isa<SCEVConstant>(Step))
     return ConstantRange::getFull(BitWidth);
-
-  // Computing ranges below (including via loop guards) can recursively end up
-  // back here for the same AddRec.
-  if (!PendingRangeSharpening.insert(AddRec).second)
-    return ConstantRange::getFull(BitWidth);
-  llvm::scope_exit ClearOnExit([&]() { PendingRangeSharpening.erase(AddRec); });
-
   // Let's make sure that we can prove that we do not self-wrap during
   // MaxBECount iterations. We need this because MaxBECount is a maximum
   // iteration count estimate, and we might infer nw from some exit for which we
@@ -13991,7 +13984,6 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingMerges(std::move(Arg.PendingMerges)),
-      PendingRangeSharpening(std::move(Arg.PendingRangeSharpening)),
       ConstantMultipleCache(std::move(Arg.ConstantMultipleCache)),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
@@ -14036,8 +14028,6 @@ ScalarEvolution::~ScalarEvolution() {
 
   assert(PendingLoopPredicates.empty() && "isImpliedCond garbage");
   assert(PendingMerges.empty() && "isImpliedViaMerge garbage");
-  assert(PendingRangeSharpening.empty() &&
-         "getRangeForAffineNoSelfWrappingAR garbage");
   assert(!WalkingBEDominatingConds && "isLoopBackedgeGuardedByCond garbage!");
   assert(!ProvingSplitPredicate && "ProvingSplitPredicate garbage!");
 }
@@ -15645,6 +15635,11 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
     // Avoid analyzing unreachable blocks so that we don't get trapped
     // traversing cycles with ill-formed dominance or infinite cycles
     if (!SE.DT.isReachableFromEntry(InBlock))
+      return {nullptr, scCouldNotCompute};
+
+    // Skip backedges into the phi's block. Evaluating them may query the range
+    // of that loop's own AddRecs.
+    if (SE.DT.dominates(Phi.getParent(), InBlock))
       return {nullptr, scCouldNotCompute};
 
     auto [G, Inserted] = IncomingGuards.try_emplace(InBlock, LoopGuards(SE));
