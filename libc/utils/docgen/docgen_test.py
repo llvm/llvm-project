@@ -45,6 +45,8 @@ class DocgenTest(unittest.TestCase):
     def test_implements_fn(self):
         self.assertTrue(Header("stdio.h").implements_fn("printf"))
         self.assertTrue(Header("netinet/in.h").implements_fn("htonl"))
+        self.assertTrue(Header("math.h").implements_fn("acospif"))
+        self.assertFalse(Header("math.h").implements_fn("tgamma"))
         self.assertFalse(Header("stdio.h").implements_fn("sqrt"))
         self.assertFalse(Header("math.h").implements_fn("printf"))
 
@@ -69,6 +71,8 @@ class DocgenTest(unittest.TestCase):
 
     def test_implements_macro(self):
         self.assertTrue(Header("assert.h").implements_macro("assert"))
+        self.assertTrue(Header("math.h").implements_macro("isnan"))
+        self.assertFalse(Header("math.h").implements_macro("isgreater"))
         self.assertFalse(Header("sys/syscall.h").macro_file_exists())
         self.assertTrue(Header("sys/syscall.h").implements_macro("SYS_read"))
         self.assertTrue(Header("errno.h").implements_macro("errno"))
@@ -283,6 +287,38 @@ class DocgenTest(unittest.TestCase):
             "9699919799.2018edition/functions/gettimeofday.html",
         )
         self.assertEqual(posix_url(Header("stdio.h"), "printf", "function", {}), "")
+
+    def test_families_md(self):
+        math_hdr = Header("math.h")
+        ev = math_hdr.evaluate_family("atan2", math_hdr.api["families"]["atan2"])
+        self.assertTrue(ev["implemented"])
+        self.assertTrue(ev["variants"]["float"]["implemented"])
+        self.assertEqual(ev["variants"]["double"]["accuracy"], "1 ULP")
+        self.assertFalse(ev["variants"]["double_double"]["implemented"])
+
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            print_header_status_md(math_hdr, math_hdr.api)
+        math_out = buf.getvalue()
+        self.assertIn("{doc}`../math/index`", math_out)
+        self.assertIn("## Basic Operations", math_out)
+        self.assertIn("## Higher Math Functions", math_out)
+        self.assertNotIn("## GPU Conformance", math_out)
+        self.assertIn('title="atan2: Implemented (1 ULP)">1 ULP</span>', math_out)
+        self.assertIn('title="log_bf16: Implemented"', math_out)
+        self.assertIn(
+            'class="hc-status-na" title="Not applicable">N/A</span>', math_out
+        )
+        self.assertIn("F.10.1.4", math_out)
+
+        cmplx_hdr = Header("complex.h")
+        cbuf = io.StringIO()
+        with redirect_stdout(cbuf):
+            print_header_status_md(cmplx_hdr, cmplx_hdr.api)
+        cmplx_out = cbuf.getvalue()
+        self.assertIn("## Function Families", cmplx_out)
+        self.assertIn('title="carg: Implemented (1 ULP)">1 ULP</span>', cmplx_out)
+        self.assertIn("G.6.2.1", cmplx_out)
 
 
 if __name__ == "__main__":
