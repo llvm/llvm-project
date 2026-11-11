@@ -105,3 +105,13 @@ define {i64, double} @caller4(i64 %a0) nounwind {
 ; CHECK:    CALL64pcrel32 @callee4, CustomRegMask($bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$dh,$di,$dih,$dil,$dl,$dx,$ebp,$ebx,$ecx,$edi,$edx,$esi,$hbp,$hbx,$hcx,$hdi,$hdx,$hsi,$rbp,$rbx,$rcx,$rdi,$rdx,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$xmm1,$xmm2,$xmm3,$xmm4,$xmm5,$xmm6,$xmm7,$xmm8,$xmm9,$xmm10,$xmm11,$xmm12,$xmm13,$xmm14,$xmm15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh), implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $xmm0
 
 ; CHECK:    RET 0, $rax, $xmm0
+
+; Check that on AVX targets, returning %xmm0 also removes its superregister %ymm0
+; from CustomRegMask.
+define {i64, double} @caller4_avx(i64 %a0) "target-features"="+avx" nounwind {
+  %b1 = call preserve_allcc {i64, double} @callee4(i64 %a0, i64 %a0, i64 %a0, i64 %a0, i64 %a0)
+  ret {i64, double} %b1
+}
+; CHECK:    name: caller4_avx
+; CHECK:    CALL64pcrel32 @callee4, CustomRegMask($bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$dh,$di,$dih,$dil,$dl,$dx,$ebp,$ebx,$ecx,$edi,$edx,$esi,$hbp,$hbx,$hcx,$hdi,$hdx,$hsi,$rbp,$rbx,$rcx,$rdi,$rdx,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$xmm1,$xmm2,$xmm3,$xmm4,$xmm5,$xmm6,$xmm7,$xmm8,$xmm9,$xmm10,$xmm11,$xmm12,$xmm13,$xmm14,$xmm15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh,$ymm1,$ymm2,$ymm3,$ymm4,$ymm5,$ymm6,$ymm7,$ymm8,$ymm9,$ymm10,$ymm11,$ymm12,$ymm13,$ymm14,$ymm15), implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $xmm0
+; CHECK:    RET 0, $rax, $xmm0
