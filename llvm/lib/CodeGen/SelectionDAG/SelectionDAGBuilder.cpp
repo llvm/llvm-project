@@ -5842,6 +5842,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
     Result = getTargetNonMemIntrinsicNode(*I.getType(), HasChain, Ops, VTs);
   }
 
+  if (MDNode *Hint = TLI.getTargetIntrinsicHint(I))
+    DAG.addTargetHint(Result.getNode(), Hint);
+
   Result = handleTargetIntrinsicRet(I, HasChain, OnlyLoad, Result);
 
   setValue(&I, Result);

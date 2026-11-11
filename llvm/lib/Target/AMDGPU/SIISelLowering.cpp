@@ -21704,6 +21704,11 @@ SITargetLowering::getTargetMMOFlags(const Instruction &I) const {
   return Flags;
 }
 
+MDNode *SITargetLowering::getTargetIntrinsicHint(const CallInst &I) const {
+  // Read by the MFMA selection predicates (CanUseAGPR_MAI).
+  return AMDGPU::getMFMAAGPRHint(I);
+}
+
 void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
     Instruction *AI) const {
   // Given: atomicrmw fadd ptr %addr, float %val ordering
