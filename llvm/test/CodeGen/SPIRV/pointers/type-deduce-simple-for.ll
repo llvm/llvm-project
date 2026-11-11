@@ -63,3 +63,47 @@ body:
 exit:
   ret void
 }
+
+; A call result stored to null, then compared with a local address, keeps its
+; OpFunctionCall type.
+; CHECK-SPIRV-LABEL: Begin function store_call_result_then_icmp
+; CHECK-SPIRV: %[[#StoreCall:]] = OpFunctionCall %[[#]]
+; CHECK-SPIRV: OpStore %[[#]] %[[#StoreCall]] Aligned 8
+; CHECK-SPIRV: %[[#StoreLoc:]] = OpPtrCastToGeneric %[[#]] %[[#]]
+; CHECK-COMPAT64: %[[#StoreLocInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#StoreLoc]]
+; CHECK-COMPAT64: %[[#StoreCallInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#StoreCall]]
+; CHECK-COMPAT32: %[[#StoreLocInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#StoreLoc]]
+; CHECK-COMPAT32: %[[#StoreCallInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#StoreCall]]
+; CHECK-COMPAT: OpINotEqual %[[#BoolTy]] %[[#StoreLocInt]] %[[#StoreCallInt]]
+; CHECK-DEFVER: OpPtrNotEqual %[[#]] %[[#StoreLoc]] %[[#StoreCall]]
+
+declare spir_func ptr addrspace(4) @f()
+define spir_func i1 @store_call_result_then_icmp() {
+entry:
+  %v = alloca ptr addrspace(4), align 8
+  %call = call spir_func ptr addrspace(4) @f()
+  store ptr addrspace(4) %call, ptr addrspace(4) null, align 8
+  %cast = addrspacecast ptr %v to ptr addrspace(4)
+  %cmp = icmp ne ptr addrspace(4) %cast, %call
+  ret i1 %cmp
+}
+
+; The same comparison, with no store.
+; CHECK-SPIRV-LABEL: Begin function icmp_call_result_only
+; CHECK-SPIRV: %[[#IcmpCall:]] = OpFunctionCall %[[#]]
+; CHECK-SPIRV: %[[#IcmpLoc:]] = OpPtrCastToGeneric %[[#]] %[[#]]
+; CHECK-COMPAT64: %[[#IcmpLocInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#IcmpLoc]]
+; CHECK-COMPAT64: %[[#IcmpCallInt:]] = OpConvertPtrToU %[[#LongTy]] %[[#IcmpCall]]
+; CHECK-COMPAT32: %[[#IcmpLocInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#IcmpLoc]]
+; CHECK-COMPAT32: %[[#IcmpCallInt:]] = OpConvertPtrToU %[[#IntTy]] %[[#IcmpCall]]
+; CHECK-COMPAT: OpINotEqual %[[#BoolTy]] %[[#IcmpLocInt]] %[[#IcmpCallInt]]
+; CHECK-DEFVER: OpPtrNotEqual %[[#]] %[[#IcmpLoc]] %[[#IcmpCall]]
+
+define spir_func i1 @icmp_call_result_only() {
+entry:
+  %v = alloca ptr addrspace(4), align 8
+  %call = call spir_func ptr addrspace(4) @f()
+  %cast = addrspacecast ptr %v to ptr addrspace(4)
+  %cmp = icmp ne ptr addrspace(4) %cast, %call
+  ret i1 %cmp
+}

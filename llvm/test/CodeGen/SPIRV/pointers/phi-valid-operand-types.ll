@@ -47,3 +47,28 @@ entry:
   store i32 32, ptr %p
   ret ptr %p
 }
+
+; A call result phi'd with a local address keeps its OpFunctionCall type.
+; CHECK-LABEL: Begin function phi_call_result
+; CHECK: %[[#PhiVar:]] = OpVariable %[[#]]
+; CHECK: %[[#PhiCall:]] = OpFunctionCall %[[#]]
+; CHECK: %[[#PhiCast:]] = OpPtrCastToGeneric %[[#PhiPtr:]] %[[#PhiVar]]
+; CHECK: %[[#Phi:]] = OpPhi %[[#PhiPtr]] %[[#PhiCast]] %[[#]] %[[#]]
+; CHECK: OpPtrNotEqual %[[#]] %[[#Phi]] %[[#PhiCall]]
+
+declare ptr addrspace(4) @f()
+define i1 @phi_call_result(i1 %c) {
+entry:
+  %a = alloca ptr addrspace(4), align 8
+  %x = tail call ptr addrspace(4) @f()
+  %ac = addrspacecast ptr %a to ptr addrspace(4)
+  br i1 %c, label %t, label %j
+
+t:
+  br label %j
+
+j:
+  %p = phi ptr addrspace(4) [ %ac, %entry ], [ %x, %t ]
+  %r = icmp ne ptr addrspace(4) %p, %x
+  ret i1 %r
+}
