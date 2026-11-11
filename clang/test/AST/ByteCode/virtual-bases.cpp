@@ -414,12 +414,11 @@ namespace ConstantDestruction {
     }
   };
 
-  struct X : virtual V { // expected-note {{in call to}}
+  struct X : virtual V {
     constexpr X() : V(true) {}
   };
   constexpr X x; // both-error {{constexpr variable 'x' must have constant destruction}} \
-                 // both-note {{in call to}} \
-                 // ref-note {{in call to}}
+                 // both-note 2{{in call to}}
 }
 
 namespace Offsets {
@@ -486,4 +485,13 @@ namespace MostDerivedIsArrayElem {
   static_assert(d[0].k == 0);
   static_assert(d[8].n == 7);
   static_assert(d[8].k == 0);
+}
+
+namespace TemoprariesInVirtualBaseInitializer {
+  struct S {};
+  struct C {
+    C(C &, S s = S());
+  };
+  struct D : virtual C {};
+  void foo(D d) { D d2(d); };
 }

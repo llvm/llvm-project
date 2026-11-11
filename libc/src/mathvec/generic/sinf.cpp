@@ -11,9 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/mathvec/sinf.h"
 #include "src/__support/mathvec/sinf.h"
 #include "src/mathvec/abi_prefix.h"
+#include "src/mathvec/sinf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

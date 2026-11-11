@@ -57,7 +57,9 @@ class TargetAPITestCase(TestBase):
         self.build()
         self.get_description()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureAll(
+        oslist=["windows"], debug_info=no_match(["pdb"]), bugnumber="llvm.org/pr21765"
+    )
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()
@@ -183,7 +185,6 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(
             ["foo", "bar"], ["baz"], self.get_process_working_directory()
         )
-        process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn("arg: foo", output)
@@ -193,7 +194,6 @@ class TargetAPITestCase(TestBase):
         self.runCmd("setting set target.run-args foo")
         self.runCmd("setting set target.env-vars bar=baz")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn("arg: foo", output)
@@ -202,14 +202,12 @@ class TargetAPITestCase(TestBase):
         # Clear all the run args set above.
         self.runCmd("setting clear target.run-args")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        process.Continue()
         self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertNotIn("arg: foo", output)
 
         self.runCmd("settings set target.disable-stdio true")
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        process.Continue()
         self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertEqual(output, "")
@@ -241,28 +239,14 @@ class TargetAPITestCase(TestBase):
 
     def find_global_variables(self, exe_name):
         """Exercise SBTarget.FindGlobalVariables() API."""
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         # rdar://problem/9700873
         # Find global variable value fails for dwarf if inferior not started
         # (Was CrashTracer: [USER] 1 crash in Python at _lldb.so: lldb_private::MemoryCache::Read + 94)
-        #
         # Remove the lines to create a breakpoint and to start the inferior
         # which are workarounds for the dwarf case.
-
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line1)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-        # Make sure we hit our breakpoint:
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
+        target, _, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c"), self.line1, exe_name=exe_name
+        )
 
         value_list = target.FindGlobalVariables("my_global_var_of_char_type", 3)
         self.assertEqual(value_list.GetSize(), 1)
@@ -394,6 +378,7 @@ class TargetAPITestCase(TestBase):
             False,
             error,
         )
+        self.assertSuccess(error)
         process.Continue()
         # self.runCmd("process status")
         if lldb.remote_platform:

@@ -40,11 +40,11 @@ test.format_opt_symbol_name_attr_op
 test.format_opt_symbol_ref_attr_op @foo {test.unit}
 test.format_opt_symbol_ref_attr_op {test.unit}
 
-// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
-test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
+// CHECK: test.format_attr_dict_w_keyword <attr = 10>
+test.format_attr_dict_w_keyword <attr = 10>
 
-// CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
-test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64}
+// CHECK: test.format_attr_dict_w_keyword <attr = 10, opt_attr = 10> attributes {tag = "test"}
+test.format_attr_dict_w_keyword <attr = 10, opt_attr = 10> attributes {tag = "test"}
 
 // CHECK: test.format_buildable_type_op %[[I64]]
 %ignored = test.format_buildable_type_op %i64
@@ -227,6 +227,15 @@ test.format_optional_default_enum_attr case10
 // CHECK: test.format_optional_default_enum_attr
 // CHECK-NOT: case5
 test.format_optional_default_enum_attr case5
+
+// CHECK: test.format_optional_default_enum_props case10 read, write{{$}}
+test.format_optional_default_enum_props case10 read, write
+
+// CHECK: test.format_optional_default_enum_props write{{$}}
+test.format_optional_default_enum_props case5 write
+
+// CHECK: test.format_optional_default_enum_props{{$}}
+test.format_optional_default_enum_props case5 none
 
 //===----------------------------------------------------------------------===//
 // Format optional operands and results
@@ -534,7 +543,7 @@ test.format_optional_operand_type(%i64) : i64
 // CHECK: test.with_properties_and_attr 16 <rhs = 16>
 test.with_properties_and_attr 16 <{rhs = 16 : i64}>
 
-// CHECK: test.with_properties_and_inferred_type 16 <rhs = 16, packed = unit>
+// CHECK: test.with_properties_and_inferred_type 16 <rhs = 16, packed>
 %should_be_i32 = test.with_properties_and_inferred_type 16 <{packed, rhs = 16 : i64}>
 // Assert through the verifier that its inferred as i32.
 test.format_all_types_match_var %should_be_i32, %i32 : i32

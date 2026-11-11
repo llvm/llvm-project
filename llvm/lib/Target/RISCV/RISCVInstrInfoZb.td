@@ -656,9 +656,13 @@ def : Pat<(i32 (or (or (shl GPR:$op1rs2, (XLenVT 24)),
                 (XLenVT (PACKH zexti8:$op1rs1, GPR:$op1rs2)))>;
 }
 
-let Predicates = [HasStdExtZbkbOrP, IsRV64] in
+let Predicates = [HasStdExtZbkbOrP, IsRV64] in {
 def : Pat<(i64 (or zexti32:$rs1, (shl GPR:$rs2, (i64 32)))),
           (PACK zexti32:$rs1, GPR:$rs2)>;
+
+def : Pat<(i64 (or zexti32:$rs1, (and GPR:$rs2, 0xffffffff00000000))),
+          (PACK zexti32:$rs1, (XLenVT (SRLI GPR:$rs2, 32)))>;
+}
 
 let Predicates = [HasStdExtZbkb, IsRV64] in {
 def : Pat<(i64 (or (shl zexti8:$rs2, (XLenVT 24)),

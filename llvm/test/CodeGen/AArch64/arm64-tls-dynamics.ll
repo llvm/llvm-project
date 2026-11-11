@@ -1,15 +1,24 @@
 ; Verify the call site info. If the call site info is not
 ; in the valid state, an assert should be triggered.
 ; RUN: llc < %s -debug-entry-values -mtriple=arm64-none-linux-gnu -stop-after=machineverifier -relocation-model=pic -aarch64-elf-ldtls-generation=1 < %s
+; RUN: llc < %s -debug-entry-values -mtriple=arm64-none-linux-gnu -global-isel -stop-after=machineverifier -relocation-model=pic -aarch64-elf-ldtls-generation=1 < %s
 
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOLD %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-NOLD-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -relocation-model=pic -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOLD %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -relocation-model=pic -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-NOLD-RELOC %s
+
 ; FIXME: We currently produce "small" code for the tiny model
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=tiny -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=tiny -verify-machineinstrs < %s | FileCheck %s
+
 ; FIXME: We currently error for the large code model
 ; RUN: not --crash llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=large -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LARGE
+; RUN: not --crash llc -mtriple=arm64-none-linux-gnu -global-isel -relocation-model=pic -aarch64-elf-ldtls-generation=1 -code-model=large -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LARGE
 
 ; CHECK-LARGE: ELF TLS only supported in small memory model
 
@@ -26,16 +35,14 @@ define i32 @test_generaldynamic() {
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var
 ; CHECK-NEXT: .tlsdesccall general_dynamic_var
 ; CHECK-NEXT: blr [[CALLEE]]
+; CHECK: mrs x[[TP:[0-9]+]], TPIDR_EL0
+; CHECK: ldr w0, [x[[TP]], x0]
 
 ; CHECK-NOLD: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:general_dynamic_var
 ; CHECK-NOLD-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var]
 ; CHECK-NOLD-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var
 ; CHECK-NOLD-NEXT: .tlsdesccall general_dynamic_var
 ; CHECK-NOLD-NEXT: blr [[CALLEE]]
-
-
-; CHECK: mrs x[[TP:[0-9]+]], TPIDR_EL0
-; CHECK: ldr w0, [x[[TP]], x0]
 ; CHECK-NOLD: mrs x[[TP:[0-9]+]], TPIDR_EL0
 ; CHECK-NOLD: ldr w0, [x[[TP]], x0]
 
@@ -126,7 +133,7 @@ define ptr @test_localdynamic_addr() {
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:_TLS_MODULE_BASE_
 ; CHECK-NEXT: .tlsdesccall _TLS_MODULE_BASE_
 ; CHECK-NEXT: blr [[CALLEE]]
-; CHECK-NEXT: add x[[TPOFF:[0-9]+]], x0, :dtprel_hi12:local_dynamic_var
+; CHECK-DAG: add x[[TPOFF:[0-9]+]], x0, :dtprel_hi12:local_dynamic_var
 ; CHECK-DAG: add x[[TPOFF]], x[[TPOFF]], :dtprel_lo12_nc:local_dynamic_var
 ; CHECK-DAG: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK: add x0, x[[TPIDR]], x[[TPOFF]]

@@ -22,9 +22,9 @@ func.func @test_same_index(%arg_var: !fir.box<!fir.array<?x?xf32>>,
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %dscope = fir.dummy_scope : !fir.dscope
-  %var:2 = hlfir.declare %arg_var dummy_scope %dscope {uniq_name = "_QFtest_same_indexEvar"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %i:2 = hlfir.declare %arg_i dummy_scope %dscope {uniq_name = "_QFtest_same_indexEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %mask:2 = hlfir.declare %arg_mask dummy_scope %dscope {uniq_name = "_QFtest_same_indexEmask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %var:2 = hlfir.declare %arg_var dummy_scope %dscope uniq_name("_QFtest_same_indexEvar") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %i:2 = hlfir.declare %arg_i dummy_scope %dscope uniq_name("_QFtest_same_indexEi") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %mask:2 = hlfir.declare %arg_mask dummy_scope %dscope uniq_name("_QFtest_same_indexEmask") : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   hlfir.where {
     hlfir.yield %mask#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
   } do {
@@ -64,9 +64,9 @@ func.func @test_same_index_expr(%arg_var: !fir.box<!fir.array<?x?xf32>>,
   %c1 = arith.constant 1 : index
   %c1_i32 = arith.constant 1 : i32
   %dscope = fir.dummy_scope : !fir.dscope
-  %var:2 = hlfir.declare %arg_var dummy_scope %dscope {uniq_name = "_QFtest_same_index_exprEvar"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %i:2 = hlfir.declare %arg_i dummy_scope %dscope {uniq_name = "_QFtest_same_index_exprEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %mask:2 = hlfir.declare %arg_mask dummy_scope %dscope {uniq_name = "_QFtest_same_index_exprEmask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %var:2 = hlfir.declare %arg_var dummy_scope %dscope uniq_name("_QFtest_same_index_exprEvar") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %i:2 = hlfir.declare %arg_i dummy_scope %dscope uniq_name("_QFtest_same_index_exprEi") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %mask:2 = hlfir.declare %arg_mask dummy_scope %dscope uniq_name("_QFtest_same_index_exprEmask") : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   hlfir.where {
     hlfir.yield %mask#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
   } do {
@@ -110,9 +110,9 @@ func.func @test_disjoint_section(%arg_var: !fir.box<!fir.array<?x?xf32>>,
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
   %dscope = fir.dummy_scope : !fir.dscope
-  %var:2 = hlfir.declare %arg_var dummy_scope %dscope {uniq_name = "_QFtest_disjoint_sectionEvar"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-  %i:2 = hlfir.declare %arg_i dummy_scope %dscope {uniq_name = "_QFtest_disjoint_sectionEi"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %mask:2 = hlfir.declare %arg_mask dummy_scope %dscope {uniq_name = "_QFtest_disjoint_sectionEmask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
+  %var:2 = hlfir.declare %arg_var dummy_scope %dscope uniq_name("_QFtest_disjoint_sectionEvar") : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %i:2 = hlfir.declare %arg_i dummy_scope %dscope uniq_name("_QFtest_disjoint_sectionEi") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %mask:2 = hlfir.declare %arg_mask dummy_scope %dscope uniq_name("_QFtest_disjoint_sectionEmask") : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>)
   hlfir.where {
     hlfir.yield %mask#0 : !fir.box<!fir.array<?x!fir.logical<4>>>
   } do {

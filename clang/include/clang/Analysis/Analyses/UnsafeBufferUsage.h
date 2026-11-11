@@ -82,6 +82,19 @@ public:
   }
 };
 
+/// The family of an unsafe libc function. Each family except `Other` has its
+/// own subgroup of -Wunsafe-buffer-usage-in-libc-call.
+enum class UnsafeLibcFunctionFamily {
+  Other,
+  NumericConversion,
+  StringManipulation,
+  StringExamination,
+  Memory,
+  IO,
+  Printf,
+  Scanf,
+};
+
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
 class UnsafeBufferUsageHandler {
@@ -118,9 +131,12 @@ public:
   ///  is 3 if string arguments do not guarantee null-termination
   ///  is 4 if the callee takes va_list
   ///  has bit 3 (0x8) set if the callee is a function with the format attribute
+  /// \param Family the family of the callee, ignored when `PrintfInfo` has the
+  /// format attribute bit set
   /// \param UnsafeArg one of the actual arguments that is unsafe, non-null
   /// only when `2 <= PrintfInfo <= 3 (ignoring the "format attribute" bit)`
   virtual void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
+                                    UnsafeLibcFunctionFamily Family,
                                     ASTContext &Ctx,
                                     const Expr *UnsafeArg = nullptr) = 0;
 
@@ -179,9 +195,15 @@ public:
   virtual bool
   ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const = 0;
 
-  /// \return true iff unsafe libc call should NOT be reported at `Loc`
+  /// \return true iff every kind of unsafe libc call warning should NOT be
+  /// reported at `Loc`
   virtual bool
   ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const = 0;
+
+  /// \return true iff unsafe calls to functions with the format attribute
+  /// should NOT be reported at `Loc`
+  virtual bool
+  ignoreUnsafeBufferInFormatAttrCall(const SourceLocation &Loc) const = 0;
 
   /// \return true iff array subscript accesses on fixed size arrays should NOT
   /// be reported at `Loc`

@@ -232,8 +232,7 @@ protected:
   SparseSolver<TestLatticeKey, TestLatticeVal> Solver;
 
 public:
-  SparsePropagationTest()
-      : M("", Context), Builder(Context), Solver(&Lattice) {}
+  SparsePropagationTest() : M("", Context), Builder(M), Solver(&Lattice) {}
 };
 } // namespace
 

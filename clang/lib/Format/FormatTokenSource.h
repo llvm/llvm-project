@@ -195,8 +195,7 @@ public:
       : Line(Line), TokenSource(TokenSource), ResetToken(ResetToken),
         PreviousLineLevel(Line.Level), PreviousTokenSource(TokenSource),
         Token(nullptr), PreviousToken(nullptr) {
-    FakeEOF.Tok.startToken();
-    FakeEOF.Tok.setKind(tok::eof);
+    FakeEOF.Tok = Token::createEof();
     TokenSource = this;
     Line.Level = 0;
     Line.InPPDirective = true;

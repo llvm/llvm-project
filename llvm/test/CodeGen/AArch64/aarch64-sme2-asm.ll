@@ -47,38 +47,38 @@ define <2 x float> @sme_nosve_nonstreaming(ptr %in) "target-features"="+sme,-sve
 entry:
 ; CHECK-LABEL: name: sme_nosve_nonstreaming
 ; CHECK:  INLINEASM &"smstart sm; smstop sm;"
-; CHECK-SAME: implicit-def early-clobber $q0
-; CHECK-SAME: implicit-def early-clobber $q1
-; CHECK-SAME: implicit-def early-clobber $q2
-; CHECK-SAME: implicit-def early-clobber $q3
-; CHECK-SAME: implicit-def early-clobber $q4
-; CHECK-SAME: implicit-def early-clobber $q5
-; CHECK-SAME: implicit-def early-clobber $q6
-; CHECK-SAME: implicit-def early-clobber $q7
-; CHECK-SAME: implicit-def early-clobber $q8
-; CHECK-SAME: implicit-def early-clobber $q9
-; CHECK-SAME: implicit-def early-clobber $q10
-; CHECK-SAME: implicit-def early-clobber $q11
-; CHECK-SAME: implicit-def early-clobber $q12
-; CHECK-SAME: implicit-def early-clobber $q13
-; CHECK-SAME: implicit-def early-clobber $q14
-; CHECK-SAME: implicit-def early-clobber $q15
-; CHECK-SAME: implicit-def early-clobber $q16
-; CHECK-SAME: implicit-def early-clobber $q17
-; CHECK-SAME: implicit-def early-clobber $q18
-; CHECK-SAME: implicit-def early-clobber $q19
-; CHECK-SAME: implicit-def early-clobber $q20
-; CHECK-SAME: implicit-def early-clobber $q21
-; CHECK-SAME: implicit-def early-clobber $q22
-; CHECK-SAME: implicit-def early-clobber $q23
-; CHECK-SAME: implicit-def early-clobber $q24
-; CHECK-SAME: implicit-def early-clobber $q25
-; CHECK-SAME: implicit-def early-clobber $q26
-; CHECK-SAME: implicit-def early-clobber $q27
-; CHECK-SAME: implicit-def early-clobber $q28
-; CHECK-SAME: implicit-def early-clobber $q29
-; CHECK-SAME: implicit-def early-clobber $q30
-; CHECK-SAME: implicit-def early-clobber $q31
+; CHECK-SAME: implicit-def dead early-clobber $q0
+; CHECK-SAME: implicit-def dead early-clobber $q1
+; CHECK-SAME: implicit-def dead early-clobber $q2
+; CHECK-SAME: implicit-def dead early-clobber $q3
+; CHECK-SAME: implicit-def dead early-clobber $q4
+; CHECK-SAME: implicit-def dead early-clobber $q5
+; CHECK-SAME: implicit-def dead early-clobber $q6
+; CHECK-SAME: implicit-def dead early-clobber $q7
+; CHECK-SAME: implicit-def dead early-clobber $q8
+; CHECK-SAME: implicit-def dead early-clobber $q9
+; CHECK-SAME: implicit-def dead early-clobber $q10
+; CHECK-SAME: implicit-def dead early-clobber $q11
+; CHECK-SAME: implicit-def dead early-clobber $q12
+; CHECK-SAME: implicit-def dead early-clobber $q13
+; CHECK-SAME: implicit-def dead early-clobber $q14
+; CHECK-SAME: implicit-def dead early-clobber $q15
+; CHECK-SAME: implicit-def dead early-clobber $q16
+; CHECK-SAME: implicit-def dead early-clobber $q17
+; CHECK-SAME: implicit-def dead early-clobber $q18
+; CHECK-SAME: implicit-def dead early-clobber $q19
+; CHECK-SAME: implicit-def dead early-clobber $q20
+; CHECK-SAME: implicit-def dead early-clobber $q21
+; CHECK-SAME: implicit-def dead early-clobber $q22
+; CHECK-SAME: implicit-def dead early-clobber $q23
+; CHECK-SAME: implicit-def dead early-clobber $q24
+; CHECK-SAME: implicit-def dead early-clobber $q25
+; CHECK-SAME: implicit-def dead early-clobber $q26
+; CHECK-SAME: implicit-def dead early-clobber $q27
+; CHECK-SAME: implicit-def dead early-clobber $q28
+; CHECK-SAME: implicit-def dead early-clobber $q29
+; CHECK-SAME: implicit-def dead early-clobber $q30
+; CHECK-SAME: implicit-def dead early-clobber $q31
   %0 = load <2 x float>, ptr %in, align 8
   call void asm sideeffect "smstart sm; smstop sm;", "~{z0},~{z1},~{z2},~{z3},~{z4},~{z5},~{z6},~{z7},~{z8},~{z9},~{z10},~{z11},~{z12},~{z13},~{z14},~{z15},~{z16},~{z17},~{z18},~{z19},~{z20},~{z21},~{z22},~{z23},~{z24},~{z25},~{z26},~{z27},~{z28},~{z29},~{z30},~{z31}"()
   ret <2 x float> %0
@@ -88,38 +88,38 @@ define <2 x float> @sme_nosve_streaming(ptr %in) "target-features"="+sme,-sve" "
 entry:
 ; CHECK-LABEL: name: sme_nosve_streaming
 ; CHECK:  INLINEASM &"smstart sm; smstop sm;"
-; CHECK-SAME: implicit-def early-clobber $z0
-; CHECK-SAME: implicit-def early-clobber $z1
-; CHECK-SAME: implicit-def early-clobber $z2
-; CHECK-SAME: implicit-def early-clobber $z3
-; CHECK-SAME: implicit-def early-clobber $z4
-; CHECK-SAME: implicit-def early-clobber $z5
-; CHECK-SAME: implicit-def early-clobber $z6
-; CHECK-SAME: implicit-def early-clobber $z7
-; CHECK-SAME: implicit-def early-clobber $z8
-; CHECK-SAME: implicit-def early-clobber $z9
-; CHECK-SAME: implicit-def early-clobber $z10
-; CHECK-SAME: implicit-def early-clobber $z11
-; CHECK-SAME: implicit-def early-clobber $z12
-; CHECK-SAME: implicit-def early-clobber $z13
-; CHECK-SAME: implicit-def early-clobber $z14
-; CHECK-SAME: implicit-def early-clobber $z15
-; CHECK-SAME: implicit-def early-clobber $z16
-; CHECK-SAME: implicit-def early-clobber $z17
-; CHECK-SAME: implicit-def early-clobber $z18
-; CHECK-SAME: implicit-def early-clobber $z19
-; CHECK-SAME: implicit-def early-clobber $z20
-; CHECK-SAME: implicit-def early-clobber $z21
-; CHECK-SAME: implicit-def early-clobber $z22
-; CHECK-SAME: implicit-def early-clobber $z23
-; CHECK-SAME: implicit-def early-clobber $z24
-; CHECK-SAME: implicit-def early-clobber $z25
-; CHECK-SAME: implicit-def early-clobber $z26
-; CHECK-SAME: implicit-def early-clobber $z27
-; CHECK-SAME: implicit-def early-clobber $z28
-; CHECK-SAME: implicit-def early-clobber $z29
-; CHECK-SAME: implicit-def early-clobber $z30
-; CHECK-SAME: implicit-def early-clobber $z31
+; CHECK-SAME: implicit-def dead early-clobber $z0
+; CHECK-SAME: implicit-def dead early-clobber $z1
+; CHECK-SAME: implicit-def dead early-clobber $z2
+; CHECK-SAME: implicit-def dead early-clobber $z3
+; CHECK-SAME: implicit-def dead early-clobber $z4
+; CHECK-SAME: implicit-def dead early-clobber $z5
+; CHECK-SAME: implicit-def dead early-clobber $z6
+; CHECK-SAME: implicit-def dead early-clobber $z7
+; CHECK-SAME: implicit-def dead early-clobber $z8
+; CHECK-SAME: implicit-def dead early-clobber $z9
+; CHECK-SAME: implicit-def dead early-clobber $z10
+; CHECK-SAME: implicit-def dead early-clobber $z11
+; CHECK-SAME: implicit-def dead early-clobber $z12
+; CHECK-SAME: implicit-def dead early-clobber $z13
+; CHECK-SAME: implicit-def dead early-clobber $z14
+; CHECK-SAME: implicit-def dead early-clobber $z15
+; CHECK-SAME: implicit-def dead early-clobber $z16
+; CHECK-SAME: implicit-def dead early-clobber $z17
+; CHECK-SAME: implicit-def dead early-clobber $z18
+; CHECK-SAME: implicit-def dead early-clobber $z19
+; CHECK-SAME: implicit-def dead early-clobber $z20
+; CHECK-SAME: implicit-def dead early-clobber $z21
+; CHECK-SAME: implicit-def dead early-clobber $z22
+; CHECK-SAME: implicit-def dead early-clobber $z23
+; CHECK-SAME: implicit-def dead early-clobber $z24
+; CHECK-SAME: implicit-def dead early-clobber $z25
+; CHECK-SAME: implicit-def dead early-clobber $z26
+; CHECK-SAME: implicit-def dead early-clobber $z27
+; CHECK-SAME: implicit-def dead early-clobber $z28
+; CHECK-SAME: implicit-def dead early-clobber $z29
+; CHECK-SAME: implicit-def dead early-clobber $z30
+; CHECK-SAME: implicit-def dead early-clobber $z31
   %0 = load <2 x float>, ptr %in, align 8
   call void asm sideeffect "smstart sm; smstop sm;", "~{z0},~{z1},~{z2},~{z3},~{z4},~{z5},~{z6},~{z7},~{z8},~{z9},~{z10},~{z11},~{z12},~{z13},~{z14},~{z15},~{z16},~{z17},~{z18},~{z19},~{z20},~{z21},~{z22},~{z23},~{z24},~{z25},~{z26},~{z27},~{z28},~{z29},~{z30},~{z31}"()
   ret <2 x float> %0

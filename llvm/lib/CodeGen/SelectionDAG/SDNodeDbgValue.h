@@ -23,19 +23,22 @@ namespace llvm {
 
 class DIVariable;
 class DIExpression;
+class GlobalValue;
 class SDNode;
 class Value;
 class raw_ostream;
 
 /// Holds the information for a single machine location through SDISel; either
-/// an SDNode, a constant, a stack location, or a virtual register.
+/// an SDNode, a constant, a stack location, a virtual register, or the address
+/// of a global.
 class SDDbgOperand {
 public:
   enum Kind {
-    SDNODE = 0,  ///< Value is the result of an expression.
-    CONST = 1,   ///< Value is a constant.
-    FRAMEIX = 2, ///< Value is contents of a stack location.
-    VREG = 3     ///< Value is a virtual register.
+    SDNODE = 0,    ///< Value is the result of an expression.
+    CONST = 1,     ///< Value is a constant.
+    FRAMEIX = 2,   ///< Value is contents of a stack location.
+    VREG = 3,      ///< Value is a virtual register.
+    GLOBALADDR = 4 ///< Value is the address of a global.
   };
   Kind getKind() const { return kind; }
 
@@ -69,6 +72,12 @@ public:
     return u.VReg;
   }
 
+  /// Returns the GlobalValue whose address describes the variable.
+  const GlobalValue *getGlobal() const {
+    assert(kind == GLOBALADDR);
+    return u.GA;
+  }
+
   static SDDbgOperand fromNode(SDNode *Node, unsigned ResNo) {
     return SDDbgOperand(Node, ResNo);
   }
@@ -80,6 +89,9 @@ public:
   }
   static SDDbgOperand fromConst(const Value *Const) {
     return SDDbgOperand(Const);
+  }
+  static SDDbgOperand fromGlobalAddr(const GlobalValue *GV) {
+    return SDDbgOperand(GV, GLOBALADDR);
   }
 
   bool operator!=(const SDDbgOperand &Other) const { return !(*this == Other); }
@@ -95,6 +107,8 @@ public:
       return getVReg() == Other.getVReg();
     case FRAMEIX:
       return getFrameIx() == Other.getFrameIx();
+    case GLOBALADDR:
+      return getGlobal() == Other.getGlobal();
     }
     return false;
   }
@@ -106,9 +120,10 @@ private:
       SDNode *Node;   ///< Valid for expressions.
       unsigned ResNo; ///< Valid for expressions.
     } s;
-    const Value *Const; ///< Valid for constants.
-    unsigned FrameIx;   ///< Valid for stack objects.
-    unsigned VReg;      ///< Valid for registers.
+    const Value *Const;    ///< Valid for constants.
+    unsigned FrameIx;      ///< Valid for stack objects.
+    unsigned VReg;         ///< Valid for registers.
+    const GlobalValue *GA; ///< Valid for global addresses.
   } u;
 
   /// Constructor for non-constants.
@@ -118,6 +133,12 @@ private:
   }
   /// Constructor for constants.
   SDDbgOperand(const Value *C) : kind(CONST) { u.Const = C; }
+  /// Constructor for global addresses. Takes an explicit Kind because a
+  /// GlobalValue would otherwise be ambiguous with the Value constructor.
+  SDDbgOperand(const GlobalValue *GV, Kind Kind) : kind(Kind) {
+    assert(Kind == GLOBALADDR && "Invalid SDDbgValue constructor");
+    u.GA = GV;
+  }
   /// Constructor for virtual registers and frame indices.
   SDDbgOperand(unsigned VRegOrFrameIdx, Kind Kind) : kind(Kind) {
     assert((Kind == VREG || Kind == FRAMEIX) &&

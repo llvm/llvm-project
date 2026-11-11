@@ -6,6 +6,9 @@
 
 # CHECK-ASM-AND-OBJ: qk.c.lbu s0, 0(s0)
 # CHECK-ASM: encoding: [0x00,0x20]
+qk.c.lbu s0, (s0)
+# CHECK-ASM-AND-OBJ: qk.c.lbu s0, 0(s0)
+# CHECK-ASM: encoding: [0x00,0x20]
 qk.c.lbu s0, 0(s0)
 # CHECK-ASM-AND-OBJ: qk.c.lbu s0, 1(s0)
 # CHECK-ASM: encoding: [0x00,0x30]
@@ -23,6 +26,9 @@ qk.c.lbu s0, 8(s0)
 # CHECK-ASM: encoding: [0x00,0x28]
 qk.c.lbu s0, 16(s0)
 
+# CHECK-ASM-AND-OBJ: qk.c.sb s0, 0(s0)
+# CHECK-ASM: encoding: [0x00,0xa0]
+qk.c.sb s0, (s0)
 # CHECK-ASM-AND-OBJ: qk.c.sb s0, 0(s0)
 # CHECK-ASM: encoding: [0x00,0xa0]
 qk.c.sb s0, 0(s0)
@@ -44,6 +50,9 @@ qk.c.sb s0, 16(s0)
 
 # CHECK-ASM-AND-OBJ: qk.c.lhu s0, 0(s0)
 # CHECK-ASM: encoding: [0x02,0x20]
+qk.c.lhu s0, (s0)
+# CHECK-ASM-AND-OBJ: qk.c.lhu s0, 0(s0)
+# CHECK-ASM: encoding: [0x02,0x20]
 qk.c.lhu s0, 0(s0)
 # CHECK-ASM-AND-OBJ: qk.c.lhu s0, 2(s0)
 # CHECK-ASM: encoding: [0x22,0x20]
@@ -61,6 +70,9 @@ qk.c.lhu s0, 16(s0)
 # CHECK-ASM: encoding: [0x02,0x30]
 qk.c.lhu s0, 32(s0)
 
+# CHECK-ASM-AND-OBJ: qk.c.sh s0, 0(s0)
+# CHECK-ASM: encoding: [0x02,0xa0]
+qk.c.sh s0, (s0)
 # CHECK-ASM-AND-OBJ: qk.c.sh s0, 0(s0)
 # CHECK-ASM: encoding: [0x02,0xa0]
 qk.c.sh s0, 0(s0)
@@ -82,6 +94,9 @@ qk.c.sh s0, 32(s0)
 
 # CHECK-ASM-AND-OBJ: qk.c.lbusp s0, 0(sp)
 # CHECK-ASM: encoding: [0x00,0x80]
+qk.c.lbusp s0, (sp)
+# CHECK-ASM-AND-OBJ: qk.c.lbusp s0, 0(sp)
+# CHECK-ASM: encoding: [0x00,0x80]
 qk.c.lbusp s0, 0(sp)
 # CHECK-ASM-AND-OBJ: qk.c.lbusp s0, 1(sp)
 # CHECK-ASM: encoding: [0x80,0x80]
@@ -96,6 +111,9 @@ qk.c.lbusp s0, 4(sp)
 # CHECK-ASM: encoding: [0x00,0x84]
 qk.c.lbusp s0, 8(sp)
 
+# CHECK-ASM-AND-OBJ: qk.c.sbsp s0, 0(sp)
+# CHECK-ASM: encoding: [0x40,0x80]
+qk.c.sbsp s0, (sp)
 # CHECK-ASM-AND-OBJ: qk.c.sbsp s0, 0(sp)
 # CHECK-ASM: encoding: [0x40,0x80]
 qk.c.sbsp s0, 0(sp)
@@ -114,6 +132,9 @@ qk.c.sbsp s0, 8(sp)
 
 # CHECK-ASM-AND-OBJ: qk.c.lhusp s0, 0(sp)
 # CHECK-ASM: encoding: [0x20,0x80]
+qk.c.lhusp s0, (sp)
+# CHECK-ASM-AND-OBJ: qk.c.lhusp s0, 0(sp)
+# CHECK-ASM: encoding: [0x20,0x80]
 qk.c.lhusp s0, 0(sp)
 # CHECK-ASM-AND-OBJ: qk.c.lhusp s0, 2(sp)
 # CHECK-ASM: encoding: [0x20,0x81]
@@ -128,6 +149,9 @@ qk.c.lhusp s0, 8(sp)
 # CHECK-ASM: encoding: [0xa0,0x80]
 qk.c.lhusp s0, 16(sp)
 
+# CHECK-ASM-AND-OBJ: qk.c.shsp s0, 0(sp)
+# CHECK-ASM: encoding: [0x60,0x80]
+qk.c.shsp s0, (sp)
 # CHECK-ASM-AND-OBJ: qk.c.shsp s0, 0(sp)
 # CHECK-ASM: encoding: [0x60,0x80]
 qk.c.shsp s0, 0(sp)

@@ -332,11 +332,16 @@ namespace llvm {
                                        const SelectionDAG &DAG,
                                        unsigned Depth = 0) const override;
 
-    Align getPrefLoopAlignment(MachineLoop *ML) const override;
+    Align
+    getPrefLoopAlignment(MachineLoop *ML,
+                         const MachineBasicBlock *BlockToAlign) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       return true;
     }
+
+    /// True unless the subtarget has FeatureFenceKeepsReservation.
+    bool fenceClearsLoadLinkedReservation() const override;
 
     Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                           AtomicOrdering Ord) const override;
@@ -350,6 +355,10 @@ namespace llvm {
                                    AtomicOrdering Ord) const override;
 
     bool shouldInlineQuadwordAtomics() const;
+
+    ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
+      return ISD::ZERO_EXTEND;
+    }
 
     TargetLowering::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
@@ -568,8 +577,8 @@ namespace llvm {
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode(const Module &M) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     unsigned getJumpTableEncoding() const override;
     bool isJumpTableRelative() const override;
@@ -739,12 +748,12 @@ namespace llvm {
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerABDU(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,

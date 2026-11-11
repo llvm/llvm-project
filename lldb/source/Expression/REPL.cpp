@@ -377,6 +377,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           }
         }
 
+        bool run_command_interpreter = false;
         if (!handled) {
           LockedStreamFile locked_error_stream = error_stream_sp->Lock();
           bool useColors =
@@ -419,13 +420,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             locked_error_stream.Printf(
                 "Enter LLDB commands to investigate (type help "
                 "for assistance.)\n");
-            {
-              lldb::IOHandlerSP io_handler_sp(ci.GetIOHandler());
-              if (io_handler_sp) {
-                io_handler_sp->SetIsDone(false);
-                debugger.RunIOHandlerAsync(ci.GetIOHandler());
-              }
-            }
+            run_command_interpreter = true;
             break;
 
           case lldb::eExpressionTimedOut:
@@ -448,6 +443,18 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             locked_error_stream.Printf(
                 "error: expression thread vanished -- %s\n", error.AsCString());
             break;
+          }
+        }
+
+        // RunIOHandlerAsync takes the IOHandler stack mutex, and
+        // Debugger::PrintAsync takes that mutex before the mutex shared by the
+        // output and error streams. Don't call RunIOHandlerAsync while holding
+        // the error stream lock.
+        if (run_command_interpreter) {
+          lldb::IOHandlerSP io_handler_sp(ci.GetIOHandler());
+          if (io_handler_sp) {
+            io_handler_sp->SetIsDone(false);
+            debugger.RunIOHandlerAsync(ci.GetIOHandler());
           }
         }
 

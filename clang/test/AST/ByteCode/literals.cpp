@@ -30,6 +30,9 @@ static_assert(!__objc_no, "");
 
 static_assert((long long)0x00000000FFFF0000 == 4294901760, "");
 
+int kk[3];
+static_assert(kk + 3 == &kk[3], "");
+
 constexpr bool b = number;
 static_assert(b, "");
 constexpr int one = true;

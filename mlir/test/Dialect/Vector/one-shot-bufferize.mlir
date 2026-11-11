@@ -12,6 +12,8 @@ func.func @mask(%t0: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vect
   return %0 : tensor<?xf32>
 }
 
+// -----
+
 // CHECK-LABEL: func @mask_scalable(
 //  CHECK-SAME:     %[[t0:.*]]: memref<?xf32, strided<[?], offset: ?>>
 func.func @mask_scalable(%t0: tensor<?xf32>, %val: vector<[16]xf32>, %idx: index, %m0: vector<[16]xi1>) -> tensor<?xf32> {
@@ -40,4 +42,202 @@ func.func @reading_xfer_write(%t: tensor<5x10xf32>, %v: vector<4x11xf32>) -> ten
   %c0 = arith.constant 0 : index
   %1 = vector.transfer_write %v, %t[%c0, %c0] : vector<4x11xf32>, tensor<5x10xf32>
   return %1 : tensor<5x10xf32>
+}
+
+// -----
+
+// A write to [0, 4) does not conflict with a read from [4, 8), so the write
+// can bufferize in-place.
+
+// CHECK-LABEL: func @disjoint_transfer_read_write(
+//  CHECK-SAME:     %[[T:.*]]: memref<8xf32, strided<[?], offset: ?>>
+//   CHECK-NOT:   memref.alloc
+//   CHECK-NOT:   memref.copy
+//       CHECK:   vector.transfer_write %{{.*}}, %[[T]][%{{.*}}]
+//       CHECK:   vector.transfer_read %[[T]][%{{.*}}]
+//       CHECK:   return %[[T]],
+
+// CHECK-ANALYSIS-LABEL: func @disjoint_transfer_read_write(
+// CHECK-ANALYSIS: vector.transfer_write
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
+// CHECK-ANALYSIS: vector.transfer_read
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none", "none"]
+func.func @disjoint_transfer_read_write(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %v: vector<4xf32>) -> (tensor<8xf32>, vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %pad = arith.constant 0.0 : f32
+  %written = vector.transfer_write %v, %t[%c0]
+      : vector<4xf32>, tensor<8xf32>
+  %read = vector.transfer_read %t[%c4], %pad
+      : tensor<8xf32>, vector<4xf32>
+  return %written, %read : tensor<8xf32>, vector<4xf32>
+}
+
+// -----
+
+// A write to [0, 4) conflicts with a read from [2, 6), so the write must
+// bufferize out-of-place.
+
+// CHECK-LABEL: func @overlapping_transfer_read_write(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+//       CHECK:   memref.copy %{{.*}}, %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @overlapping_transfer_read_write(
+// CHECK-ANALYSIS: vector.transfer_write
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+// CHECK-ANALYSIS: vector.transfer_read
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none", "none"]
+func.func @overlapping_transfer_read_write(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %v: vector<4xf32>) -> (tensor<8xf32>, vector<4xf32>) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %pad = arith.constant 0.0 : f32
+  %written = vector.transfer_write %v, %t[%c0]
+      : vector<4xf32>, tensor<8xf32>
+  %read = vector.transfer_read %t[%c2], %pad
+      : tensor<8xf32>, vector<4xf32>
+  return %written, %read : tensor<8xf32>, vector<4xf32>
+}
+
+// -----
+
+// If the subsets cannot be proven disjoint, the write must bufferize
+// out-of-place.
+
+// CHECK-LABEL: func @unknown_transfer_read_write(
+//       CHECK:   %[[ALLOC:.*]] = memref.alloc
+//       CHECK:   memref.copy %{{.*}}, %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @unknown_transfer_read_write(
+// CHECK-ANALYSIS: vector.transfer_write
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["none", "false", "none"]
+// CHECK-ANALYSIS: vector.transfer_read
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true", "none", "none"]
+func.func @unknown_transfer_read_write(
+    %t: tensor<8xf32> {bufferization.writable = true},
+    %v: vector<4xf32>, %write_idx: index,
+    %read_idx: index) -> (tensor<8xf32>, vector<4xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %written = vector.transfer_write %v, %t[%write_idx]
+      : vector<4xf32>, tensor<8xf32>
+  %read = vector.transfer_read %t[%read_idx], %pad
+      : tensor<8xf32>, vector<4xf32>
+  return %written, %read : tensor<8xf32>, vector<4xf32>
+}
+
+// -----
+
+// Masked-off elements retain their values from the destination.
+
+// CHECK-LABEL: func @masked_xfer_write(
+//  CHECK-SAME: %[[T:.*]]: memref<4xf32,
+//       CHECK: %[[ALLOC:.*]] = memref.alloc
+//       CHECK: memref.copy %[[T]], %[[ALLOC]]
+//       CHECK: vector.transfer_write %{{.*}}, %[[ALLOC]][
+//       CHECK: return %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @masked_xfer_write(
+// CHECK-ANALYSIS-SAME: tensor<4xf32> {bufferization.access = "read",
+func.func @masked_xfer_write(
+    %t: tensor<4xf32> {bufferization.writable = false},
+    %v: vector<4xf32>, %mask: vector<4xi1>) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  %written = vector.transfer_write %v, %t[%c0], %mask
+      : vector<4xf32>, tensor<4xf32>
+  return %written : tensor<4xf32>
+}
+
+// -----
+
+// A lower-rank write updates one row, so the other rows must be copied.
+
+// CHECK-LABEL: func @lower_rank_xfer_write(
+//  CHECK-SAME: %[[T:.*]]: memref<4x4xf32,
+//       CHECK: %[[ALLOC:.*]] = memref.alloc
+//       CHECK: memref.copy %[[T]], %[[ALLOC]]
+//       CHECK: vector.transfer_write %{{.*}}, %[[ALLOC]][
+//       CHECK: return %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @lower_rank_xfer_write(
+// CHECK-ANALYSIS-SAME: tensor<4x4xf32> {bufferization.access = "read",
+func.func @lower_rank_xfer_write(
+    %t: tensor<4x4xf32> {bufferization.writable = false},
+    %v: vector<4xf32>) -> tensor<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %written = vector.transfer_write %v, %t[%c0, %c0]
+      : vector<4xf32>, tensor<4x4xf32>
+  return %written : tensor<4x4xf32>
+}
+
+// -----
+
+// The transpose makes the write cover an 8x4 slice of a 4x8 tensor.
+// The last four columns must be preserved.
+
+// CHECK-LABEL: func @partial_permuted_xfer_write(
+//  CHECK-SAME: %[[T:.*]]: memref<4x8xf32,
+//       CHECK: %[[ALLOC:.*]] = memref.alloc
+//       CHECK: memref.copy %[[T]], %[[ALLOC]]
+//       CHECK: vector.transfer_write %{{.*}}, %[[ALLOC]][
+//       CHECK: return %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @partial_permuted_xfer_write(
+// CHECK-ANALYSIS-SAME: tensor<4x8xf32> {bufferization.access = "read",
+func.func @partial_permuted_xfer_write(
+    %t: tensor<4x8xf32> {bufferization.writable = false},
+    %v: vector<4x8xf32>) -> tensor<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %written = vector.transfer_write %v, %t[%c0, %c0]
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+      : vector<4x8xf32>, tensor<4x8xf32>
+  return %written : tensor<4x8xf32>
+}
+
+// -----
+
+// The transpose makes an 8x4 vector cover the entire 4x8 destination.
+
+// CHECK-LABEL: func @full_permuted_xfer_write(
+//       CHECK: %[[ALLOC:.*]] = memref.alloc
+//   CHECK-NOT: memref.copy
+//       CHECK: vector.transfer_write %{{.*}}, %[[ALLOC]][
+//   CHECK-NOT: memref.copy
+//       CHECK: return %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @full_permuted_xfer_write(
+// CHECK-ANALYSIS-SAME: tensor<4x8xf32> {bufferization.access = "none",
+func.func @full_permuted_xfer_write(
+    %t: tensor<4x8xf32> {bufferization.writable = false},
+    %v: vector<8x4xf32>) -> tensor<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %written = vector.transfer_write %v, %t[%c0, %c0]
+      {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+      : vector<8x4xf32>, tensor<4x8xf32>
+  return %written : tensor<4x8xf32>
+}
+
+// -----
+
+// The dimension omitted by the map has size one, so the write covers the
+// entire destination.
+
+// CHECK-LABEL: func @full_lower_rank_xfer_write(
+//       CHECK: %[[ALLOC:.*]] = memref.alloc
+//   CHECK-NOT: memref.copy
+//       CHECK: vector.transfer_write %{{.*}}, %[[ALLOC]][
+//   CHECK-NOT: memref.copy
+//       CHECK: return %[[ALLOC]]
+
+// CHECK-ANALYSIS-LABEL: func @full_lower_rank_xfer_write(
+// CHECK-ANALYSIS-SAME: tensor<1x4xf32> {bufferization.access = "none",
+func.func @full_lower_rank_xfer_write(
+    %t: tensor<1x4xf32> {bufferization.writable = false},
+    %v: vector<4xf32>) -> tensor<1x4xf32> {
+  %c0 = arith.constant 0 : index
+  %written = vector.transfer_write %v, %t[%c0, %c0]
+      : vector<4xf32>, tensor<1x4xf32>
+  return %written : tensor<1x4xf32>
 }

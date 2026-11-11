@@ -14,12 +14,12 @@ jobs:
     name: Build Package
     strategy:
       matrix:
-        os: [ubuntu-24.04, windows-2025, macos-26]
+        os: [ubuntu-26.04, windows-2025, macos-26]
     runs-on: ${{ matrix.os }}
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Build Binaries
@@ -38,7 +38,7 @@ jobs:
           cp ../../../build/bin/split-file ./src/llvm_testing_tools/binaries/split-file
           python3 -m build
       - name: Upload Packages
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages-${{ matrix.os }}
           path: ./llvm/utils/llvm-testing-tools/dist/*

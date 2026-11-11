@@ -10,6 +10,9 @@
 //  Declarations that describe the RISC-V register files
 //===----------------------------------------------------------------------===//
 
+defvar RV32 = DefaultMode;
+def RV64 : HwMode<[IsRV64]>;
+
 let Namespace = "RISCV" in {
 class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let HWEncoding{4-0} = Enc;
@@ -288,8 +291,6 @@ def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
 def XLenVecI32VT : ValueTypeByHwMode<[RV64],
                                      [v2i32]>;
 
-def XLenVecQAccVT : ValueTypeByHwMode<[RV32, RV64],
-                                      [v2i16, v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -315,6 +316,11 @@ class GPRRegisterClass<dag regList>
   let RegInfos = XLenRI;
 }
 
+class YGPRRegisterClass<dag regList>
+    : RISCVRegisterClass<[YLenVT], 64, regList> {
+  let RegInfos = YLenRI;
+}
+
 // The order of registers represents the preferred allocation sequence.
 // Registers are listed in the order caller-save, callee-save, specials.
 def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
@@ -327,15 +333,13 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
   let DiagnosticString = "register must be a GPR";
 }
 
-def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
-                         (add (sequence "X%u_Y", 10, 17),
-                              (sequence "X%u_Y", 5, 7),
-                              (sequence "X%u_Y", 28, 31),
-                              (sequence "X%u_Y", 8, 9),
-                              (sequence "X%u_Y", 18, 27),
-                              (sequence "X%u_Y", 0, 4))> {
-  let RegInfos = YLenRI;
-  let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X0_Y, 32, /*RVELimit=*/16>";
+def YGPR : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 17),
+                                  (sequence "X%u_Y", 5, 7),
+                                  (sequence "X%u_Y", 28, 31),
+                                  (sequence "X%u_Y", 8, 9),
+                                  (sequence "X%u_Y", 18, 27),
+                                  (sequence "X%u_Y", 0, 4))> {
+  let DiagnosticString = GPR.DiagnosticString;
 }
 
 def GPRX0 : GPRRegisterClass<(add X0)> {
@@ -344,11 +348,13 @@ def GPRX0 : GPRRegisterClass<(add X0)> {
 }
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X1, 1>";
   let DiagnosticType = "InvalidRegClassGPRX1";
   let DiagnosticString = "register must be ra (x1)";
 }
 
 def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X5, 5>";
   let DiagnosticType = "InvalidRegClassGPRX5";
   let DiagnosticString = "register must be t0 (x5)";
 }
@@ -356,6 +362,9 @@ def GPRX5 : GPRRegisterClass<(add X5)> {
 def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
   let DiagnosticType = "InvalidRegClassGPRNoX0";
   let DiagnosticString = "register must be a GPR excluding zero (x0)";
+}
+def YGPRNoX0 : YGPRRegisterClass<(sub YGPR, X0_Y)> {
+  let DiagnosticString = GPRNoX0.DiagnosticString;
 }
 
 def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
@@ -394,6 +403,7 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
 def SP : GPRRegisterClass<(add X2)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2, 2>";
   let DiagnosticType = "InvalidRegClassSP";
   let DiagnosticString = "register must be sp (x2)";
 }
@@ -408,6 +418,10 @@ def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
 def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticType = "InvalidRegClassGPRX1X5";
   let DiagnosticString = "register must be ra or t0 (x1 or x5)";
+  // sspopchk/sspush (RISCVInstrInfoZicfiss.td) share their encoding with the
+  // generic mop.r.28/mop.rr.7 Zimop instructions except for this operand, so
+  // fall back to decoding those when the register isn't x1 or x5.
+  let hasCompleteDecoder = false;
 }
 
 def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
@@ -423,21 +437,9 @@ def XLenPairRI : RegInfoByHwMode<
       [RV32,                RV64],
       [RegInfo<64, 64, 32>, RegInfo<128, 128, 64>]>;
 
-// Dummy zero register for use in the register pair containing X0 (as X1 is
-// not read to or written when the X0 register pair is used).
-def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
-
-// Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
-// register's existence from changing codegen (due to the regPressureSetLimit
-// for the GPR register class being altered).
-def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
-
 let RegAltNameIndices = [ABIRegAltName] in {
-  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName,
-                                    [X0, DUMMY_REG_PAIR_WITH_X0],
-                                    X0.AltNames> {
-    let SubRegIndices = [sub_gpr_even, sub_gpr_odd];
-    let CoveredBySubRegs = 1;
+  def X0_Pair : RISCVRegWithSubRegs<0, X0.AsmName, [X0], X0.AltNames> {
+    let SubRegIndices = [sub_gpr_even];
   }
   foreach I = 1-15 in {
     defvar Index = !shl(I, 1);

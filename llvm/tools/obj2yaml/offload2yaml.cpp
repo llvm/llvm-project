@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "obj2yaml.h"
-#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/OffloadYAML.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
+
+#include <memory>
 
 using namespace llvm;
 
@@ -18,7 +21,7 @@ namespace {
 
 void populateYAML(OffloadYAML::Binary &YAMLBinary,
                   ArrayRef<std::unique_ptr<object::OffloadBinary>> OBinaries,
-                  UniqueStringSaver Saver) {
+                  UniqueStringSaver &Saver) {
   for (const auto &OBinaryPtr : OBinaries) {
     object::OffloadBinary &OB = *OBinaryPtr;
 
@@ -35,12 +38,12 @@ void populateYAML(OffloadYAML::Binary &YAMLBinary,
     }
 
     if (!OB.getImage().empty())
-      Member.Content = arrayRefFromStringRef(OB.getImage());
+      Member.Content = arrayRefFromStringRef(Saver.save(OB.getImage()));
   }
 }
 
 Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
-                                     UniqueStringSaver Saver) {
+                                     UniqueStringSaver &Saver) {
   std::unique_ptr<OffloadYAML::Binary> YAMLBinary =
       std::make_unique<OffloadYAML::Binary>();
 
@@ -50,15 +53,27 @@ Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
   while (Offset < Source.getBufferSize()) {
     MemoryBufferRef Buffer = MemoryBufferRef(
         Source.getBuffer().drop_front(Offset), Source.getBufferIdentifier());
+    std::unique_ptr<MemoryBuffer> Aligned;
+    if (!isAddrAligned(Align(object::OffloadBinary::getAlignment()),
+                       Buffer.getBufferStart())) {
+      Aligned = MemoryBuffer::getMemBufferCopy(Buffer.getBuffer(),
+                                               Buffer.getBufferIdentifier());
+      Buffer = *Aligned;
+    }
+    auto HeaderOrErr = object::OffloadBinary::extractHeader(Buffer);
+    if (!HeaderOrErr)
+      return HeaderOrErr.takeError();
+    const object::OffloadBinary::Header *TheHeader = *HeaderOrErr;
+    uint64_t Size = TheHeader->Size;
+
     auto BinariesOrErr = object::OffloadBinary::create(Buffer);
     if (!BinariesOrErr)
       return BinariesOrErr.takeError();
 
-    SmallVector<std::unique_ptr<object::OffloadBinary>> &Binaries =
-        *BinariesOrErr;
-    populateYAML(*YAMLBinary, Binaries, Saver);
+    populateYAML(*YAMLBinary, *BinariesOrErr, Saver);
 
-    Offset += Binaries[0]->getSize();
+    Offset =
+        alignTo(Offset + Size, Align(object::OffloadBinary::getAlignment()));
   }
 
   return YAMLBinary.release();

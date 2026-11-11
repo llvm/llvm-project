@@ -2,18 +2,18 @@
 
 """Sphinx extension for llvm-project checks/lints.
 
-Enable by adding "llvm_sphinx.checks" to the sphinx `extensions` list.
+Enable by adding "llvm_sphinx.ext.checks" to the Sphinx `extensions` list.
 """
 
 import sys
 from typing import Dict, List
+
 from llvm_sphinx.help import venv_help
 
 try:
     from sphinx.application import Sphinx
     from sphinx.environment import BuildEnvironment
     from sphinx.util import logging
-    from sphinx.errors import ExtensionError
 except ImportError as err:
     print(venv_help(err), file=sys.stderr)
     raise

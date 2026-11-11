@@ -46,14 +46,16 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
 template <class _Tp, size_t _Np>
-concept __has_tuple_element = __tuple_like<_Tp> && _Np < tuple_size<_Tp>::value;
+concept __has_tuple_element = __tuple_like<_Tp> && _Np < tuple_size<_Tp>::value && requires(_Tp __t) {
+  { std::get<_Np>(__t) } -> convertible_to<const tuple_element_t<_Np, _Tp>&>;
+};
 
 template <class _Tp, size_t _Np>
 concept __returnable_element = is_reference_v<_Tp> || move_constructible<tuple_element_t<_Np, _Tp>>;
@@ -414,9 +416,9 @@ inline constexpr auto values   = elements<1>;
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

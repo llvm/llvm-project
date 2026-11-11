@@ -5,12 +5,12 @@
 // Immediate out of lower bound [-16, 14].
 
 ld2h {z12.h, z13.h}, p4/z, [x12, #-18, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: ld2h {z12.h, z13.h}, p4/z, [x12, #-18, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld2h {z7.h, z8.h}, p3/z, [x1, #16, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: ld2h {z7.h, z8.h}, p3/z, [x1, #16, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
@@ -19,12 +19,12 @@ ld2h {z7.h, z8.h}, p3/z, [x1, #16, MUL VL]
 // Immediate not a multiple of two.
 
 ld2h {z12.h, z13.h}, p4/z, [x12, #-7, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: ld2h {z12.h, z13.h}, p4/z, [x12, #-7, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld2h {z7.h, z8.h}, p3/z, [x1, #5, MUL VL]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 2 in range [-16, 14].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 2 in range [-16, 14].
 // CHECK-NEXT: ld2h {z7.h, z8.h}, p3/z, [x1, #5, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 
 #include "ScriptedInterfaceUsages.h"
+#include "lldb/Interpreter/ScriptedInstanceRegistry.h"
 
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -20,6 +21,7 @@
 
 #include "llvm/Support/Compiler.h"
 
+#include <cassert>
 #include <optional>
 #include <string>
 
@@ -27,7 +29,15 @@ namespace lldb_private {
 class ScriptedInterface {
 public:
   ScriptedInterface() = default;
-  virtual ~ScriptedInterface() = default;
+  virtual ~ScriptedInterface() { UnregisterInstance(); }
+
+  /// Delete the copy constructor. The copy would share the registry entry, and
+  /// the first one destroyed would unregister it while the other is still
+  /// alive.
+  /// @{
+  ScriptedInterface(const ScriptedInterface &) = delete;
+  ScriptedInterface &operator=(const ScriptedInterface &) = delete;
+  /// @}
 
   StructuredData::GenericSP GetScriptObjectInstance() {
     return m_object_instance_sp;
@@ -36,6 +46,11 @@ public:
   const std::optional<ScriptedMetadata> &GetScriptedMetadata() const {
     return m_scripted_metadata;
   }
+
+  /// The name this interface is registered under with the PluginManager.
+  /// Every concrete scripted interface registers itself as a plugin, together
+  /// with the kind of extension it drives, so this name identifies that kind.
+  virtual llvm::StringRef GetPluginName() = 0;
 
   /// Whether the user can invoke this extension directly, the way a scripted
   /// command can. Those never introduce the target's API mutex bypass, so at
@@ -50,6 +65,17 @@ public:
 
   virtual llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const = 0;
+
+  /// Methods a script may legitimately leave out, for which LLDB has a
+  /// documented answer.
+  ///
+  /// This is the counterpart of GetAbstractMethodRequirements(): a method is
+  /// either required, and its absence rejects the class outright, or listed
+  /// here, and its absence is an expected answer. Only methods named here may
+  /// be dispatched with ScriptedPythonInterface::DispatchToOptional().
+  virtual llvm::SmallVector<llvm::StringLiteral> GetOptionalMethods() const {
+    return {};
+  }
 
   virtual llvm::Expected<FileSpec> GetScriptedModulePath() {
     return llvm::make_error<UnimplementedError>();
@@ -84,32 +110,42 @@ public:
     return {};
   }
 
-  template <typename T = StructuredData::ObjectSP>
-  static bool CheckStructuredDataObject(llvm::StringRef caller, T obj,
-                                        Status &error) {
-    if (!obj)
-      return ErrorWithMessage<bool>(caller, "Null Structured Data object",
-                                    error);
-
-    if (!obj->IsValid()) {
-      return ErrorWithMessage<bool>(caller, "Invalid StructuredData object",
-                                    error);
-    }
-
-    if (error.Fail())
-      return ErrorWithMessage<bool>(caller, error.AsCString(), error);
-
-    return true;
-  }
-
   static bool CreateInstance(lldb::ScriptLanguage language,
                              ScriptedInterfaceUsages usages) {
     return false;
   }
 
 protected:
+  void RegisterInstance(const lldb::ScriptedInstanceRegistrySP &registry_sp,
+                        std::string class_name, FileSpec source_path,
+                        StructuredData::DictionarySP args_sp) {
+    assert(registry_sp && "registering with an invalid registry");
+    assert(!m_registry_wp.lock() && "script object is already registered");
+    ScriptedInstanceInfo info;
+    info.plugin_name = GetPluginName();
+    info.class_name = std::move(class_name);
+    if (m_object_instance_sp)
+      info.object_address =
+          reinterpret_cast<uintptr_t>(m_object_instance_sp->GetValue());
+    info.source_path = std::move(source_path);
+    info.args_sp = std::move(args_sp);
+    m_registry_id = registry_sp->Add(std::move(info));
+    m_registry_wp = registry_sp;
+  }
+
   StructuredData::GenericSP m_object_instance_sp;
   std::optional<ScriptedMetadata> m_scripted_metadata;
+
+private:
+  void UnregisterInstance() {
+    // The interpreter owning the registry may already be gone.
+    if (auto registry_sp = m_registry_wp.lock())
+      registry_sp->Remove(m_registry_id);
+    m_registry_wp.reset();
+  }
+
+  lldb::ScriptedInstanceRegistryWP m_registry_wp;
+  uint64_t m_registry_id = 0;
 };
 } // namespace lldb_private
 

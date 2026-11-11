@@ -10,6 +10,7 @@ VERS1.0 {
     __llvmRegisterManagedVar;
     __llvmRegisterSurface;
     __llvmRegisterTexture;
+    __LLVMOffloadingPerThreadDefaultStream;
     __tgt_register_lib;
     __tgt_unregister_lib;
   local:

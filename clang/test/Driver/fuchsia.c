@@ -64,9 +64,19 @@
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
 
-// RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
-// RUN:     --emit-static-lib 2>&1 | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
-// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia --emit-static-lib \
+// RUN:       -Xstatic-lib-tool -U -Xstatic-lib-tool --format=gnu -o %t.out 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
+// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD" "-U" "--format=gnu" "{{.*}}.out"
+
+// The libtool-only options do not apply to ar(1) and are reported unused.
+// RUN: %clang -### %s --target=x86_64-unknown-fuchsia --emit-static-lib \
+// RUN:       --static-lib-target-arch-only 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK-LIBTOOL-ARG %s
+// CHECK-LIBTOOL-ARG: warning: argument unused during compilation: '--static-lib-target-arch-only'
+// CHECK-LIBTOOL-ARG: {{.*}}llvm-ar{{.*}}" "rcsD"
+// CHECK-LIBTOOL-ARG-NOT: "--static-lib-target-arch-only"
+// CHECK-LIBTOOL-ARG-NOT: "-arch_only"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FP-ALL

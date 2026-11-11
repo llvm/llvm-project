@@ -1,5 +1,52 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s
 
+// -----
+
+llvm.func @target_enter_data_iterated_depend(%x: !llvm.ptr) {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%i: i64) = (%one to %one step %one) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@+2 {{Unhandled clause depend in omp.target_enter_data}}
+  // expected-error@+1 {{LLVM Translation failed}}
+  omp.target_enter_data depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_exit_data_iterated_depend(%x: !llvm.ptr) {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%i: i64) = (%one to %one step %one) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@+2 {{Unhandled clause depend in omp.target_exit_data}}
+  // expected-error@+1 {{LLVM Translation failed}}
+  omp.target_exit_data depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_update_iterated_depend(%x: !llvm.ptr) {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%i: i64) = (%one to %one step %one) {
+    omp.yield(%x : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@+2 {{Unhandled clause depend in omp.target_update}}
+  // expected-error@+1 {{LLVM Translation failed}}
+  omp.target_update depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 
 llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
   // expected-warning@below {{hint clause discarded}}
@@ -77,17 +124,6 @@ llvm.func @sections_allocate(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @scope_allocate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.scope operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.scope}}
-  omp.scope allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.private {type = private} @x.privatizer : i32 init {
 ^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
   %c0 = llvm.mlir.constant(0 : i32) : i32
@@ -126,7 +162,7 @@ atomic {
 llvm.func @scan_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause reduction with modifier in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
+  omp.wsloop reduction(inscan @add_f32 %x -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.scan inclusive(%prv : !llvm.ptr)
       omp.yield
@@ -157,7 +193,7 @@ atomic {
 llvm.func @parallel_task_reduction_modifier_byref(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause task reduction modifier with by-ref reduction in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel reduction(mod: task, byref @add_f32 %x -> %prv : !llvm.ptr) {
+  omp.parallel reduction(task byref @add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -586,7 +622,7 @@ omp.declare_reduction @add_reduction_modifier_i32 : i32 init {
 llvm.func @taskloop_reduction_modifier(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause reduction with modifier in omp.taskloop.context operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
-  omp.taskloop.context reduction(mod:inscan, @add_reduction_modifier_i32 %x -> %arg0 : !llvm.ptr) {
+  omp.taskloop.context reduction(inscan @add_reduction_modifier_i32 %x -> %arg0 : !llvm.ptr) {
     omp.taskloop.wrapper {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.yield
@@ -627,13 +663,17 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
 
 // -----
 
-llvm.func @taskwait_nowait() {
-  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait nowait {
-    omp.terminator
+// `nowait` on dispatch is unimplemented for OpenMP <= 5.1; from 5.2 it has no
+// effect and is accepted (see openmp-dispatch.mlir).
+module attributes {omp.version = #omp.version<version = 51>} {
+  llvm.func @dispatch_nowait() {
+    // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.dispatch operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.dispatch}}
+    omp.dispatch nowait {
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // -----

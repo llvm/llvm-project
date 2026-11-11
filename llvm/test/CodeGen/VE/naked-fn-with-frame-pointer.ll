@@ -21,8 +21,8 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-NEXT:    st %s10, 8(, %s11)
 ; CHECK-NEXT:    or %s9, 0, %s11
 ; CHECK-NEXT:    lea %s11, -240(, %s11)
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -31,7 +31,7 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    lea %s0, main@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, main@hi(, %s0)

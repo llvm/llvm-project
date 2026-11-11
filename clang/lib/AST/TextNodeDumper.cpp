@@ -619,6 +619,7 @@ static bool isSimpleAPValue(const APValue &Value) {
   case APValue::LValue:
   case APValue::MemberPointer:
   case APValue::AddrLabelDiff:
+  case APValue::Reflection:
     return true;
   case APValue::Vector:
   case APValue::Array:
@@ -879,6 +880,21 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     OS << " - ";
     OS << "&&" << Value.getAddrLabelDiffRHS()->getLabel()->getName();
     return;
+  case APValue::Reflection:
+    OS << "Reflection ";
+    switch (Value.getReflectionOperandKind()) {
+    case ReflectionKind::Null:
+      OS << "std::meta::info{}";
+      break;
+    case ReflectionKind::Type: {
+      OS << "^^";
+      const TypeSourceInfo *TSI = static_cast<const TypeSourceInfo *>(
+          Value.getReflectionOpaqueOperand());
+      TSI->getType().print(OS, PrintPolicy);
+      break;
+    }
+    }
+    return;
   }
   llvm_unreachable("Unknown APValue kind!");
 }
@@ -968,7 +984,7 @@ void TextNodeDumper::dumpBareConcept(TemplateName TN) {
 
   ColorScope Color(OS, ShowColors, ASTDumpColor::DeclName);
   OS << " '";
-  OS << TD->getDeclName();
+  TN.print(OS, PrintPolicy, TemplateName::Qualified::None);
   OS << '\'';
 }
 
@@ -1391,6 +1407,19 @@ void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
     });
     return;
   }
+  case TemplateName::PackIndexingTemplate: {
+    OS << " pack_indexing";
+    const PackIndexingTemplateStorage *PI = TN.getAsPackIndexingTemplate();
+    if (PI->isFullySubstituted())
+      OS << " fully_substituted";
+    if (UnsignedOrNone Index = PI->getSelectedIndex())
+      OS << " index " << *Index;
+    dumpTemplateName(PI->getPattern(), "pattern");
+    AddChild("index", [=] { Visit(PI->getIndexExpr()); });
+    for (TemplateName Expansion : PI->getExpansions())
+      dumpTemplateName(Expansion, "expansion");
+    return;
+  }
   // FIXME: Implement these.
   case TemplateName::OverloadedTemplate:
     OS << " overloaded";
@@ -1493,7 +1522,7 @@ void TextNodeDumper::dumpLinkageAndVisibility(const NamedDecl *ND) {
 }
 
 void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
-  if (!Node->hasLabelTarget())
+  if (!Node->isNamed())
     return;
 
   OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
@@ -1673,8 +1702,7 @@ void clang::TextNodeDumper::VisitDependentScopeDeclRefExpr(
 void clang::TextNodeDumper::VisitDependentTemplateIdExpr(
     const DependentTemplateIdExpr *Node) {
   OS << (Node->isConceptReference() ? " concept" : " variable template");
-  OS << ' ';
-  dumpBareTemplateName(Node->getTemplateName());
+  dumpTemplateName(Node->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitUnresolvedLookupExpr(
@@ -2140,14 +2168,13 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   case VectorKind::SveFixedLengthPredicate:
     OS << " fixed-length sve predicate vector";
     break;
-  case VectorKind::RVVFixedLengthData:
-    OS << " fixed-length rvv data vector";
-    break;
-  case VectorKind::RVVFixedLengthMask:
-  case VectorKind::RVVFixedLengthMask_1:
-  case VectorKind::RVVFixedLengthMask_2:
-  case VectorKind::RVVFixedLengthMask_4:
-    OS << " fixed-length rvv mask vector";
+  default:
+    assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
+           "unexpected vector kind");
+    OS << (isRVVFixedLengthMaskVectorKind(T->getVectorKind())
+               ? " fixed-length rvv mask vector ratio "
+               : " fixed-length rvv data vector lmul ")
+       << getRVVFixedLengthString(T->getVectorKind());
     break;
   }
   OS << " " << T->getNumElements();
@@ -3398,6 +3425,10 @@ void TextNodeDumper::VisitOpenACCRoutineDeclAttr(
       for (const Stmt *S : C->children())
         AddChild([=] { Visit(S); });
     });
+}
+
+void TextNodeDumper::VisitOMPCaptureKindAttr(const OMPCaptureKindAttr *A) {
+  OS << " " << llvm::omp::getOpenMPClauseName(A->getCaptureKind());
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {

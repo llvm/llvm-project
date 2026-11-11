@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64GlobalISelUtils.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/Support/Debug.h"
 
 #define GET_GICOMBINER_DEPS
@@ -173,7 +175,7 @@ bool matchAArch64MulConstCombine(
     // Conservatively do not lower to shift+add+shift if the mul might be
     // folded into madd or msub.
     if (MRI.hasOneNonDBGUse(Dst)) {
-      MachineInstr &UseMI = *MRI.use_instr_begin(Dst);
+      MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Dst);
       unsigned UseOpc = UseMI.getOpcode();
       if (UseOpc == TargetOpcode::G_ADD || UseOpc == TargetOpcode::G_PTR_ADD ||
           UseOpc == TargetOpcode::G_SUB)
@@ -255,54 +257,6 @@ void applyAArch64MulConstCombine(
   B.setInstrAndDebugLoc(MI);
   ApplyFn(B, MI.getOperand(0).getReg());
   MI.eraseFromParent();
-}
-
-/// Try to fold a G_MERGE_VALUES of 2 s32 sources, where the second source
-/// is a zero, into a G_ZEXT of the first.
-bool matchFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  auto &Merge = cast<GMerge>(MI);
-  LLT SrcTy = MRI.getType(Merge.getSourceReg(0));
-  if (SrcTy != LLT::scalar(32) || Merge.getNumSources() != 2)
-    return false;
-  return mi_match(Merge.getSourceReg(1), MRI, m_SpecificICst(0));
-}
-
-void applyFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, GISelChangeObserver &Observer) {
-  // Mutate %d(s64) = G_MERGE_VALUES %a(s32), 0(s32)
-  //  ->
-  // %d(s64) = G_ZEXT %a(s32)
-  Observer.changingInstr(MI);
-  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
-  MI.removeOperand(2);
-  Observer.changedInstr(MI);
-}
-
-/// \returns True if a G_ANYEXT instruction \p MI should be mutated to a G_ZEXT
-/// instruction.
-bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  // If this is coming from a scalar compare then we can use a G_ZEXT instead of
-  // a G_ANYEXT:
-  //
-  // %cmp:_(s32) = G_[I|F]CMP ... <-- produces 0/1.
-  // %ext:_(s64) = G_ANYEXT %cmp(s32)
-  //
-  // By doing this, we can leverage more KnownBits combines.
-  assert(MI.getOpcode() == TargetOpcode::G_ANYEXT);
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  return MRI.getType(Dst).isScalar() &&
-         mi_match(Src, MRI,
-                  m_any_of(m_GICmp(m_Pred(), m_Reg(), m_Reg()),
-                           m_GFCmp(m_Pred(), m_Reg(), m_Reg())));
-}
-
-void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                             MachineIRBuilder &B,
-                             GISelChangeObserver &Observer) {
-  Observer.changingInstr(MI);
-  MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
-  Observer.changedInstr(MI);
 }
 
 /// Match a 128b store of zero and split it into two 64 bit stores, for
@@ -459,9 +413,8 @@ void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B, Register &SrcReg) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  LLT HalfTy =
-      DstTy.changeElementCount(DstTy.getElementCount().multiplyCoefficientBy(2))
-          .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+  LLT HalfTy = DstTy.changeElementCount(DstTy.getElementCount() * 2)
+                   .changeElementSize(DstTy.getScalarSizeInBits() / 2);
 
   Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
   Register CastReg =
@@ -609,19 +562,24 @@ static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
   return true;
 }
 
-static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
-                                  MachineRegisterInfo &MRI, MachineIRBuilder &B,
-                                  GISelChangeObserver &Observer) {
-  Register Src = MI.getOperand(1).getReg();
-  Register Tmp = MI.getOperand(2).getReg();
-  Register Mul1 = Sub.getOperand(1).getReg();
-  Register Mul2 = Sub.getOperand(2).getReg();
-  Observer.changingInstr(MI);
-  B.buildInstr(AArch64::G_SUB, {Tmp}, {Src, Mul1});
-  MI.getOperand(1).setReg(Tmp);
-  MI.getOperand(2).setReg(Mul2);
-  Sub.eraseFromParent();
-  Observer.changedInstr(MI);
+/// Match a vector G_ASHR/G_LSHR whose amount is not a valid immediate. These
+/// are lowered to SSHL/USHL of the negated amount by vashr_to_sshl and
+/// vlshr_to_ushl, so the negation can be folded into a constant amount.
+/// Splat-immediate shifts are left for vashr_vlshr_imm.
+bool matchVAshrLshrToSShl(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR);
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isVector())
+    return false;
+  // Leave shifts by zero to the identity combines, which remove them.
+  if (isBuildVectorAllZeros(*MRI.getVRegDef(MI.getOperand(2).getReg()), MRI,
+                            /*AllowUndef=*/true))
+    return false;
+  // Leave shifts by a valid immediate to vashr_vlshr_imm.
+  int64_t Cnt;
+  return !AArch64GISelUtils::isVShiftRImm(MI.getOperand(2).getReg(), MRI, Ty,
+                                          Cnt);
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
@@ -718,12 +676,6 @@ static bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
   return true;
 }
 
-static cl::opt<bool>
-    EnableConsecutiveMemOpOpt("aarch64-postlegalizer-consecutive-memops",
-                              cl::init(true), cl::Hidden,
-                              cl::desc("Enable consecutive memop optimization "
-                                       "in AArch64PostLegalizerCombiner"));
-
 static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
                                                CSEMIRBuilder &MIB) {
   // This combine needs to run after all reassociations/folds on pointer
@@ -750,7 +702,9 @@ static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
   bool Changed = false;
   auto &MRI = MF.getRegInfo();
 
-  if (!EnableConsecutiveMemOpOpt)
+  if (!MF.getSubtarget<AArch64Subtarget>()
+           .getCLOpts()
+           .postlegalizer_consecutive_memops)
     return Changed;
 
   SmallVector<StoreInfo, 8> Stores;
@@ -827,9 +781,8 @@ static bool optimizeConsecutiveMemOpAddressing(MachineFunction &MF,
           continue;
 
         Register PtrReg = St->getPointerReg();
-        if (mi_match(
-                PtrReg, MRI,
-                m_OneNonDBGUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
+        if (mi_match(PtrReg, MRI,
+                     m_OneUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
           GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(PtrReg));
           StoreInfo New = {St, PtrAdd, Offset.getSExtValue(), StoredValTy};
 
@@ -987,7 +940,8 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   const bool IsOptNone = TM->isGlobalISelOptNone();
-  bool EnableOpt = !IsOptNone;
+  bool EnableOpt =
+      !IsOptNone && !shouldSkipOptimizationForOptBisect(MF.getFunction());
 
   GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   MachineDominatorTree *MDT =

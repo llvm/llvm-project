@@ -138,7 +138,7 @@ class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
       : CodeGenTargetMachineImpl(
-            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Target(), Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {
     // With an empty Triple, `initAsmInfo` cannot be called. Provide

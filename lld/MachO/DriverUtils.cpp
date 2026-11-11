@@ -32,41 +32,10 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-// Create prefix string literals used in Options.td
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-// Create table mapping all options defined in Options.td
-static constexpr OptTable::Info optInfo[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES,                                                                     \
-   SUBCOMMANDIDS_OFFSET},
-#include "Options.inc"
-#undef OPTION
-};
-
-MachOOptTable::MachOOptTable()
-    : GenericOptTable(OptionStrTable, OptionPrefixesTable, optInfo) {}
+MachOOptTable::MachOOptTable() : OptTable(optionTables()) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -134,6 +103,26 @@ void MachOOptTable::printHelp(CommonLinkerContext &ctx, const char *argv0,
   outs << '\n';
 }
 
+// If any SDK contains the directory, use those directories in SDK order
+// instead of falling back to the host.
+SmallVector<StringRef>
+macho::getRerootedSearchPaths(StringRef searchPath, ArrayRef<StringRef> roots) {
+  SmallVector<StringRef> paths;
+  // NOTE: only absolute paths are re-rooted to syslibroot(s)
+  if (path::is_absolute(searchPath, path::Style::posix)) {
+    for (StringRef root : roots) {
+      SmallString<261> buffer(root);
+      path::append(buffer, searchPath);
+      // Do not warn about paths that are computed via the syslib roots
+      if (fs::is_directory(buffer))
+        paths.push_back(saver().save(buffer.str()));
+    }
+  }
+  if (paths.empty())
+    paths.push_back(searchPath);
+  return paths;
+}
+
 static std::string rewritePath(StringRef s) {
   if (fs::exists(s))
     return relativeToRoot(s);
@@ -178,6 +167,14 @@ std::string macho::createResponseFile(const InputArgList &args) {
       break;
     case OPT_F:
     case OPT_L:
+      // Resolve SDK prefixes before making search paths relative: relative
+      // search paths are not rerooted when the reproducer is replayed.
+      for (StringRef path :
+           getRerootedSearchPaths(arg->getValue(), config->systemLibraryRoots))
+        os << arg->getSpelling() << " " << quote(rewritePath(path)) << "\n";
+      break;
+    case OPT_non_global_symbols_strip_list:
+    case OPT_non_global_symbols_no_strip_list:
     case OPT_bundle_loader:
     case OPT_exported_symbols_list:
     case OPT_order_file:

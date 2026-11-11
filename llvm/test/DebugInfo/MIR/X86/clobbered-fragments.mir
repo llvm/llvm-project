@@ -1,4 +1,4 @@
-# RUN: llc -O1 -start-after=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -O1 -start-after=live-debug-values -o - %s | FileCheck %s
 
 # Reproducer based on the following C file:
 #

@@ -23,6 +23,9 @@ macro(add_sanitizer_rt_symbols name)
     "PARENT_TARGET"
     "ARCHS;EXTRA"
     ${ARGN})
+  if(NOT ARG_PARENT_TARGET)
+    message(FATAL_ERROR "add_sanitizer_rt_symbols(${name}) requires PARENT_TARGET")
+  endif()
   foreach(arch ${ARG_ARCHS})
     set(target_name ${name}-${arch})
     set(stamp ${CMAKE_CURRENT_BINARY_DIR}/${target_name}.syms-stamp)
@@ -42,12 +45,15 @@ macro(add_sanitizer_rt_symbols name)
     add_custom_target(${target_name}-symbols ALL
       DEPENDS ${stamp}
       SOURCES ${SANITIZER_GEN_DYNAMIC_LIST} ${ARG_EXTRA})
+    add_dependencies(${ARG_PARENT_TARGET} ${target_name}-symbols)
+    get_compiler_rt_install_component(${target_name} ${ARG_PARENT_TARGET}
+                                      component)
     get_compiler_rt_install_dir(${arch} install_dir)
     install(FILES $<TARGET_FILE:${target_name}>.syms
-            DESTINATION ${install_dir})
-    if(ARG_PARENT_TARGET)
-      add_dependencies(${ARG_PARENT_TARGET} ${target_name}-symbols)
-    endif()
+            DESTINATION ${install_dir}
+            COMPONENT ${component})
+    add_dependencies(install-${component} ${target_name}-symbols)
+    add_dependencies(install-${component}-stripped ${target_name}-symbols)
   endforeach()
 endmacro()
 

@@ -1,0 +1,80 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!rec_SomeClass = !cir.struct<"SomeClass" {data !s32i}>
+
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @Bar(!s32i) -> !s32i
+
+// A musttail call returns directly from the function, so it never runs the
+// enclosing cleanup. Only cleanups that returning makes unnecessary may be
+// skipped; a destructor call is not one of them.
+cir.func @dtor_cleanup(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  // expected-error @below {{'cir.cleanup.scope' op cleanup is not redundant before a return, so it cannot be skipped by a musttail call}}
+  cir.cleanup.scope {
+    // expected-note @below {{musttail call is here}}
+    %1 = cir.call @Bar(%arg0) musttail : (!s32i) -> !s32i
+    cir.return %1 : !s32i
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.unreachable
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_SomeClass = !cir.struct<"SomeClass" {data !s32i}>
+
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @Bar(!s32i) -> !s32i
+
+// The musttail call skips every enclosing cleanup, not just the innermost
+// one, so the outer scope is rejected as well.
+cir.func @nested_dtor_cleanup(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!cir.int<u, 8>>>
+  // expected-error @below {{'cir.cleanup.scope' op cleanup is not redundant before a return, so it cannot be skipped by a musttail call}}
+  cir.cleanup.scope {
+    cir.cleanup.scope {
+      // expected-note @below {{musttail call is here}}
+      %2 = cir.call @Bar(%arg0) musttail : (!s32i) -> !s32i
+      cir.return %2 : !s32i
+    } cleanup normal {
+      %2 = cir.load %1 : !cir.ptr<!cir.ptr<!cir.int<u, 8>>>, !cir.ptr<!cir.int<u, 8>>
+      cir.stackrestore %2 : !cir.ptr<!cir.int<u, 8>>
+      cir.yield
+    }
+    cir.yield
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.unreachable
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_SomeClass = !cir.struct<"SomeClass" {data !s32i}>
+
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @Bar(!s32i) -> !s32i
+
+// An EH-only cleanup is skipped just the same: the tail call replaces the
+// frame that the cleanup would have unwound through.
+cir.func @eh_dtor_cleanup(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  // expected-error @below {{'cir.cleanup.scope' op cleanup is not redundant before a return, so it cannot be skipped by a musttail call}}
+  cir.cleanup.scope {
+    // expected-note @below {{musttail call is here}}
+    %1 = cir.call @Bar(%arg0) musttail : (!s32i) -> !s32i
+    cir.return %1 : !s32i
+  } cleanup eh {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.unreachable
+}

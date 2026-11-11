@@ -282,7 +282,7 @@ class GoogleTest(TestFormat):
         return cmd
 
     @staticmethod
-    def post_process_shard_results(selected_tests, discovered_tests):
+    def post_process_shard_results(selected_tests, discovered_tests, opts):
         def remove_gtest(tests):
             return [t for t in tests if t.gtest_json_file is None]
 
@@ -332,10 +332,20 @@ class GoogleTest(TestFormat):
                         )
 
                         output = ""
-                        if testinfo["result"] == "SKIPPED":
+                        if "failures" in testinfo:
+                            # Remember that this shard's non-zero exit code is
+                            # accounted for by a test we know about, even if
+                            # that test ends up excluded just below.
+                            has_failure_in_shard = True
+
+                        # A gtest shard is a single lit test, so --filter-out
+                        # cannot select individual gtest cases at discovery
+                        # time. Apply it here, where the real names are known.
+                        if opts.filter_out.search(subtest.getFullName()):
+                            returnCode = lit.Test.EXCLUDED
+                        elif testinfo["result"] == "SKIPPED":
                             returnCode = lit.Test.SKIPPED
                         elif "failures" in testinfo:
-                            has_failure_in_shard = True
                             returnCode = (
                                 lit.Test.XFAIL
                                 if test.isExpectedToFail()

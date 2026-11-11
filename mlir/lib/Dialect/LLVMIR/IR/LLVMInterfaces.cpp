@@ -13,6 +13,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -80,6 +81,28 @@ mlir::LLVM::detail::verifyDereferenceableOpInterface(Operation *op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// RangeOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::LLVM::detail::verifyRangeOpInterface(Operation *op) {
+  auto iface = cast<RangeOpInterface>(op);
+
+  ConstantRangeAttr range = iface.getRangeOrNull();
+  if (!range)
+    return success();
+  if (op->getNumResults() != 1)
+    return op->emitOpError("expected op to have a single result");
+  auto intType =
+      dyn_cast<IntegerType>(getElementTypeOrSelf(op->getResult(0).getType()));
+  if (!intType || intType.getWidth() != range.getLower().getBitWidth())
+    return op->emitOpError(
+        "expected range bitwidth to match the integer (element) result type");
+  if (range.getLower() == range.getUpper())
+    return op->emitOpError("expected range to be neither empty nor full");
+  return success();
+}
+
 SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
   return {getPtr()};
 }
@@ -114,6 +137,22 @@ SmallVector<Value> mlir::LLVM::MemsetOp::getAccessedOperands() {
 
 SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
   return {getDst()};
+}
+
+SmallVector<Value> mlir::LLVM::MaskedLoadOp::getAccessedOperands() {
+  return {getData()};
+}
+
+SmallVector<Value> mlir::LLVM::MaskedStoreOp::getAccessedOperands() {
+  return {getData()};
+}
+
+SmallVector<Value> mlir::LLVM::masked_gather::getAccessedOperands() {
+  return {getPtrs()};
+}
+
+SmallVector<Value> mlir::LLVM::masked_scatter::getAccessedOperands() {
+  return {getPtrs()};
 }
 
 SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {

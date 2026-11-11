@@ -21,7 +21,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     omp.yield(%0 : !llvm.ptr)
   }
 
-  llvm.func @test_array_reduction_() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
+  llvm.func @test_array_reduction_() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -91,7 +91,7 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
     omp.yield(%0 : !llvm.ptr)
   }
 
-  llvm.func @test_array_reduction_() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
+  llvm.func @test_array_reduction_() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr

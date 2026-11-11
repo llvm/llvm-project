@@ -144,7 +144,7 @@ program main
    cptr = c_null_ptr
   !$omp end target data
 
-  !ERROR: At least one of MAP, USE_DEVICE_ADDR, USE_DEVICE_PTR clauses must appear on TARGET DATA directive
+  !ERROR: One of MAP, USE_DEVICE_ADDR or USE_DEVICE_PTR clauses is required on TARGET DATA directive
   !$omp target data device(0)
   do i = 1, N
      a = 3.14d0

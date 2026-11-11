@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @store_threshold(ptr %p, [2 x i64] %a) {
 ; CHECK-LABEL: define void @store_threshold(
 ; CHECK-SAME: ptr [[P:%.*]], [2 x i64] [[A:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds (i8, ptr @__dfsan_arg_origin_tls, i64 4), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue [2 x i8] [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [2 x i8] [[TMP2]], 1

@@ -18,7 +18,7 @@
 // RUN:   -fprofile-instrument=clang -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefix=HOST %s
 //
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fgpu-rdc --offload-new-driver \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fgpu-rdc \
 // RUN:   -cuid=abc -fprofile-instrument=clang -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefix=HOST-RDC %s
 

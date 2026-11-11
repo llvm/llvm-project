@@ -12,7 +12,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcSqrtf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
+using LlvmLibcSqrtbf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -20,7 +20,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 static constexpr uint16_t POS_START = 0x0000U;
 static constexpr uint16_t POS_STOP = 0x7f80U;
 
-TEST_F(LlvmLibcSqrtf16Test, PositiveRange) {
+TEST_F(LlvmLibcSqrtbf16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x,

@@ -17,6 +17,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Error.h"
 
@@ -255,6 +257,8 @@ class Generator {
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;
+  LLVMContext Context;
+  std::unique_ptr<Module> M;
   TargetLoweringObjectFile *TLOF; // Owned by TargetMachine;
   std::unique_ptr<AsmPrinter> Asm;
   BumpPtrAllocator Allocator;

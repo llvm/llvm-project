@@ -405,16 +405,17 @@ def ROCDL_WaveBarrierOp : ROCDL_ConcreteNonMemIntrOp<"wave.barrier", [], 0> {
 
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
+def ROCDLBarrier : LLVM_PointerInAddressSpace<15>;
 
 def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
+  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
 
     Example:
     ```mlir
     // Initialize a named barrier with member count.
-    rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
+    rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<15>
     ```
   }];
   let results = (outs);
@@ -437,7 +438,7 @@ def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0
 }
 
 def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$memberCnt)> {
+  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr, I32Attr:$memberCnt)> {
   let description = [{
     Available on gfx1250+.
 
@@ -446,7 +447,7 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
     Example:
     ```mlir
     // Signal a named barrier with variable ID.
-    rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
+    rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<15>
     ```
   }];
   let results = (outs);
@@ -454,14 +455,14 @@ def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 
 }
 
 def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr)> {
   let description = [{
     Available on gfx1250+.
 
     Example:
     ```mlir
     // Join a named barrier.
-    rocdl.s.barrier.join %ptr : !llvm.ptr<3>
+    rocdl.s.barrier.join %ptr : !llvm.ptr<15>
     ```
   }];
   let results = (outs);
@@ -529,14 +530,14 @@ def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", 
 }
 
 def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barrier.state", [], 1, [], []>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr)> {
   let description = [{
     Available on gfx1250+.
 
     Example:
     ```mlir
     // Query named barrier state by pointer.
-    %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
+    %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<15> -> i32
     ```
   }];
   let results = (outs I32:$res);
@@ -544,7 +545,7 @@ def ROCDL_GetNamedBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.named.barri
 }
 
 def ROCDL_WakeupBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.wakeup.barrier", [], 0, [], []>,
-  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  Arguments<(ins Arg<ROCDLBarrier, "", []>:$ptr)> {
   let description = [{
     Wakes up waves associated with a given named barrier. Note, This op does not release waves waiting
     at the barrier. It just signal other waves in the same work-group waiting on the indicated named barrier
@@ -554,7 +555,7 @@ def ROCDL_WakeupBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.wakeup.barrier", [], 0
     Example:
     ```mlir
     // Wake up waves waiting on a named barrier.
-    rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
+    rocdl.s.wakeup.barrier %ptr : !llvm.ptr<15>
     ```
   }];
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
@@ -674,8 +675,9 @@ def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0,
   let assemblyFormat = "$count attr-dict";
 }
 
-def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
-    Arguments<(ins)> {
+def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0, [0], ["stages"]>,
+    Arguments<(ins DefaultValuedAttr<ROCDL_AsyncStagesAttr,
+                     "::mlir::ROCDL::AsyncStages::all">:$stages)> {
   let summary = "Mark the end of a group of asynchronous operations";
   let description = [{
       This operation, in conjunction with `rocdl.wait.asyncmark`, forms the
@@ -684,24 +686,31 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
       and gfx1250's tensor loads.
 
       Details of its behavior can be found in
-      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.md).
 
       See `rocdl.wait.asyncmark`'s documentation for a usage example.
 
+      `stages` is a mask of the async stages to mark: the mark is appended to
+      the sequence of every stage it names. `all` names every stage.
+
       Example:
       ```mlir
-      // Mark the end of an async operation group.
+      // Mark the end of an async operation group in every stage.
       rocdl.asyncmark
+      // Mark the end of a group of tensor loads and stores alone.
+      rocdl.asyncmark stages = tensor
       ```
 
       Available on gfx9 and later.
   }];
   let results = (outs);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`stages` `=` enum($stages)^)? attr-dict";
 }
 
-def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0], ["count"]>,
-    Arguments<(ins I16Attr:$count)> {
+def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0, 1], ["count", "stages"]>,
+    Arguments<(ins I16Attr:$count,
+                   DefaultValuedAttr<ROCDL_AsyncStagesAttr,
+                     "::mlir::ROCDL::AsyncStages::all">:$stages)> {
   let summary = "Wait until N or fewer async operation groups are unexecuted";
   let description = [{
       This operation, along with `rocdl.asyncmark`, forms the compiler-provided
@@ -711,8 +720,12 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       that were parts of any async group (established by asyncmark in program order)
       other than the `count` previously-added ones will have finished executing.
 
+      `stages` is a mask of the async stages to wait on: each stage it names
+      is waited on separately, using its own sequence of asyncmarks. `all`
+      names every stage.
+
       For more detail, including on how this mechanism composes with function calls,
-      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.md).
 
       Available on gfx9 and later.
 
@@ -720,6 +733,8 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```mlir
       // Wait until at most N async groups remain outstanding.
       rocdl.wait.asyncmark 1
+      // The same, counting the tensor groups alone.
+      rocdl.wait.asyncmark 1 stages = tensor
       ```
 
       Usage example:
@@ -738,7 +753,7 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       ```
   }];
   let results = (outs);
-  let assemblyFormat = "$count attr-dict";
+  let assemblyFormat = "$count (`stages` `=` enum($stages)^)? attr-dict";
 }
 
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
@@ -757,7 +772,7 @@ def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["prio
 
 def ROCDL_SchedBarrier : ROCDL_ConcreteNonMemIntrOp<"sched.barrier", [], 0, [0],["mask"]>,
   Arguments<(ins ROCDL_SchedGroupMaskAttr:$mask)> {
-  let assemblyFormat = "$mask attr-dict";
+  let assemblyFormat = "enum($mask) attr-dict";
   let description = [{
     Insert a scheduling barrier with the given mask. The mask is a
     bitfield that controls which instruction types may be scheduled
@@ -785,7 +800,7 @@ def ROCDL_SchedGroupBarrier
       [0, 1, 2], ["mask", "size", "groupId"]>,
     Arguments<(ins ROCDL_SchedGroupMaskAttr:$mask, I32Attr:$size,
                    I32Attr:$groupId)> {
-  let assemblyFormat = "$mask `,` $size `,` $groupId attr-dict";
+  let assemblyFormat = "enum($mask) `,` $size `,` $groupId attr-dict";
   let description = [{
     Insert a scheduling group barrier. The first parameter uses the same
     scheduling group mask values as `rocdl.sched.barrier`.
@@ -827,7 +842,8 @@ class ROCDL_Mfma_IntrOpBase<string mnemonic, ROCDL_NamedType ABType,
              blgpAttr:$blgp)> {
   let results = (outs CDType:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $cbsz `,` $abid `,` $blgp attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` $cbsz `,` $abid `,` enum($blgp)
+    attr-dict `:` functional-type(operands, $res)
   }];
 }
 
@@ -877,7 +893,9 @@ class ROCDL_Mfma_Scale_IntrOp<string mnemonic, Type AB, Type CD> :
              I32:$scaleB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` $cbsz `,` $blgp `,` $opselA `,` $scaleA `,` $opselB `,` $scaleB attr-dict `:` functional-type(operands, $res)
+    $a `,` $b `,` $c `,` enum($cbsz) `,` enum($blgp) `,` $opselA `,`
+    $scaleA `,` $opselB `,` $scaleB attr-dict `:`
+    functional-type(operands, $res)
   }];
   let description = [{
     Scaled matrix fused multiply-add (MFMA) intrinsic with per-operand scaling.
@@ -1115,7 +1133,7 @@ class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` enum($modC) prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1142,7 +1160,7 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` enum($modC) prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1169,7 +1187,7 @@ class ROCDL_WMMA_ModsC_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> : R
              DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
   let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
   let assemblyFormat = [{
-    $a `,` $b `,` $c `,` `modC` `=` $modC prop-dict attr-dict `:`
+    $a `,` $b `,` $c `,` `modC` `=` enum($modC) prop-dict attr-dict `:`
     functional-type(operands, $res)
   }];
   let description = [{
@@ -1244,10 +1262,12 @@ class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $scaleA `,` $scaleB `,`
-    `fmtA` `=` $fmtA `,` `fmtB` `=` $fmtB `,`
-    `modC` `=` $modC `,`
-    `scaleAType` `=` $scaleAType `,` `fmtScaleA` `=` $fmtScaleA `,`
-    `scaleBType` `=` $scaleBType `,` `fmtScaleB` `=` $fmtScaleB
+    `fmtA` `=` enum($fmtA) `,` `fmtB` `=` enum($fmtB) `,`
+    `modC` `=` enum($modC) `,`
+    `scaleAType` `=` enum($scaleAType) `,`
+    `fmtScaleA` `=` enum($fmtScaleA) `,`
+    `scaleBType` `=` enum($scaleBType) `,`
+    `fmtScaleB` `=` enum($fmtScaleB)
     prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
@@ -1289,9 +1309,11 @@ class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleEx
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $scaleA `,` $scaleB `,`
-    `modC` `=` $modC `,`
-    `scaleAType` `=` $scaleAType `,` `fmtScaleA` `=` $fmtScaleA `,`
-    `scaleBType` `=` $scaleBType `,` `fmtScaleB` `=` $fmtScaleB
+    `modC` `=` enum($modC) `,`
+    `scaleAType` `=` enum($scaleAType) `,`
+    `fmtScaleA` `=` enum($fmtScaleA) `,`
+    `scaleBType` `=` enum($scaleBType) `,`
+    `fmtScaleB` `=` enum($fmtScaleB)
     prop-dict attr-dict `:` functional-type(operands, $res)
   }];
   let description = [{
@@ -2132,6 +2154,23 @@ def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicRet<"umin">;
 def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicRet<"fadd">;
 
 //===---------------------------------------------------------------------===//
+// Deprecated raw buffer ops taking a vector<4xi32> resource
+
+// Shared documentation for the ops that take their buffer resource as a
+// vector<4xi32> and map to the deprecated llvm.amdgcn.raw.buffer.* intrinsics.
+// `suffix` is the part of the intrinsic name after "raw.buffer.", and also
+// selects the rocdl.raw.ptr.buffer.* replacement.
+class ROCDL_DeprecatedV4I32BufferDoc<string suffix> {
+  string description = [{
+    Deprecated. This op takes its buffer resource as a `vector<4xi32>` and maps
+    to `llvm.amdgcn.raw.buffer.}] # suffix # [{`, which is deprecated and will
+    be removed in a future LLVM release. Use `rocdl.raw.ptr.buffer.}]
+    # suffix # [{`, which takes a `!llvm.ptr<8>` resource produced by
+    `rocdl.make.buffer.rsrc`, instead.
+  }];
+}
+
+//===---------------------------------------------------------------------===//
 // Raw buffer load/store intrinsics
 
 def ROCDL_RawBufferLoadOp :
@@ -2140,6 +2179,7 @@ def ROCDL_RawBufferLoadOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux)> {
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"load">.description;
   let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
 }
 
@@ -2150,6 +2190,7 @@ def ROCDL_RawBufferStoreOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"store">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2162,6 +2203,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.cmpswap">.description;
   let assemblyFormat = [{
     attr-dict `(` $src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,`
     custom<CachePolicy>($aux) `)` `:` type($res) `,` type($rsrc)
@@ -2284,6 +2326,7 @@ def ROCDL_RawBufferAtomicFAddOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.fadd">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2298,6 +2341,7 @@ def ROCDL_RawBufferAtomicFMaxOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.fmax">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2312,6 +2356,7 @@ def ROCDL_RawBufferAtomicSMaxOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.smax">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2326,6 +2371,7 @@ def ROCDL_RawBufferAtomicUMinOp :
                  I32:$offset,
                  I32:$soffset,
                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
+  let description = ROCDL_DeprecatedV4I32BufferDoc<"atomic.umin">.description;
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 

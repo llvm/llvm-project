@@ -1,8 +1,12 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
 // RUN:   %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
+// RUN:   %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK %}
 
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
 // RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -cl-std=CL2.0 -triple amdgpu9.0a-amd-amdhsa \
+// RUN:   -S -o - %s | FileCheck -check-prefix=GFX90A %s %}
 
 // REQUIRES: amdgpu-registered-target
 
@@ -125,7 +129,7 @@ void test_ds_addf_local_f32(__local float *addr, float x){
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, float %{{.+}} syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 void test_global_add_f32(float *rtn, global float *addr, float x) {
   *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }

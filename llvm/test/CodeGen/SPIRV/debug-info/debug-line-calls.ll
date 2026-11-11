@@ -27,6 +27,7 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_INC]] [[INC]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_INC]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V2]] [[V2]] [[V10]] [[V11]]
 ; CHECK-NEXT: [[T0:%[0-9]+]] = OpIAdd [[I32]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V3]] [[V3]] [[V3]] [[V4]]
@@ -38,6 +39,7 @@
 ; CHECK-NEXT: OpFunctionParameter
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF_CALLER]] [[CALLER]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF_CALLER]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V6]] [[V6]] [[V12]] [[V13]]
 ; CHECK-NEXT: OpFunctionCall [[I32]] [[INC]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V7]] [[V7]] [[V12]] [[V13]]

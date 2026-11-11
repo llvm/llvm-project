@@ -11,13 +11,13 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:    mov %i2, %g4
 ; SPARC-NEXT:    umul %i2, %i5, %i2
 ; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    ld [%fp+92], %l4
+; SPARC-NEXT:    ld [%fp+92], %l5
 ; SPARC-NEXT:    umul %i4, %i3, %i3
 ; SPARC-NEXT:    rd %y, %o1
 ; SPARC-NEXT:    ld [%fp+96], %g3
 ; SPARC-NEXT:    umul %i5, %g2, %l3
 ; SPARC-NEXT:    rd %y, %o0
-; SPARC-NEXT:    umul %l4, %i1, %l2
+; SPARC-NEXT:    umul %l5, %i1, %l2
 ; SPARC-NEXT:    rd %y, %l1
 ; SPARC-NEXT:    add %i3, %i2, %i2
 ; SPARC-NEXT:    umul %i0, %g3, %i3
@@ -32,20 +32,20 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:    rd %y, %i2
 ; SPARC-NEXT:    addxcc %l2, %o2, %o4
 ; SPARC-NEXT:    umul %g4, %g3, %g3
-; SPARC-NEXT:    rd %y, %l5
+; SPARC-NEXT:    rd %y, %l4
 ; SPARC-NEXT:    addcc %g3, %i2, %i2
-; SPARC-NEXT:    addxcc %l5, 0, %g3
-; SPARC-NEXT:    umul %g2, %l4, %g2
-; SPARC-NEXT:    rd %y, %l5
+; SPARC-NEXT:    addxcc %l4, 0, %g3
+; SPARC-NEXT:    umul %g2, %l5, %g2
+; SPARC-NEXT:    rd %y, %l4
 ; SPARC-NEXT:    addcc %g2, %i2, %i2
-; SPARC-NEXT:    addxcc %l5, 0, %g2
+; SPARC-NEXT:    addxcc %l4, 0, %g2
 ; SPARC-NEXT:    addcc %g3, %g2, %g2
 ; SPARC-NEXT:    addxcc %g0, 0, %g3
-; SPARC-NEXT:    umul %g4, %l4, %l5
+; SPARC-NEXT:    umul %g4, %l5, %l4
 ; SPARC-NEXT:    rd %y, %o3
-; SPARC-NEXT:    addcc %l5, %g2, %l5
+; SPARC-NEXT:    addcc %l4, %g2, %l4
 ; SPARC-NEXT:    addxcc %o3, %g3, %o3
-; SPARC-NEXT:    addcc %l5, %l3, %g2
+; SPARC-NEXT:    addcc %l4, %l3, %g2
 ; SPARC-NEXT:    addxcc %o3, %o4, %g3
 ; SPARC-NEXT:    mov 1, %l3
 ; SPARC-NEXT:    cmp %g3, %o3
@@ -54,17 +54,17 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:  ! %bb.1: ! %start
 ; SPARC-NEXT:    mov %g0, %o4
 ; SPARC-NEXT:  .LBB0_2: ! %start
-; SPARC-NEXT:    cmp %g2, %l5
+; SPARC-NEXT:    cmp %g2, %l4
 ; SPARC-NEXT:    bcs .LBB0_4
-; SPARC-NEXT:    mov %l3, %l5
+; SPARC-NEXT:    mov %l3, %l4
 ; SPARC-NEXT:  ! %bb.3: ! %start
-; SPARC-NEXT:    mov %g0, %l5
+; SPARC-NEXT:    mov %g0, %l4
 ; SPARC-NEXT:  .LBB0_4: ! %start
 ; SPARC-NEXT:    cmp %g3, %o3
 ; SPARC-NEXT:    be .LBB0_6
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:  ! %bb.5: ! %start
-; SPARC-NEXT:    mov %o4, %l5
+; SPARC-NEXT:    mov %o4, %l4
 ; SPARC-NEXT:  .LBB0_6: ! %start
 ; SPARC-NEXT:    cmp %g4, 0
 ; SPARC-NEXT:    bne .LBB0_8
@@ -96,11 +96,11 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:  ! %bb.15: ! %start
 ; SPARC-NEXT:    mov %g0, %g4
 ; SPARC-NEXT:  .LBB0_16: ! %start
-; SPARC-NEXT:    cmp %l4, 0
+; SPARC-NEXT:    cmp %l5, 0
 ; SPARC-NEXT:    bne .LBB0_18
-; SPARC-NEXT:    mov %l3, %l4
+; SPARC-NEXT:    mov %l3, %l5
 ; SPARC-NEXT:  ! %bb.17: ! %start
-; SPARC-NEXT:    mov %g0, %l4
+; SPARC-NEXT:    mov %g0, %l5
 ; SPARC-NEXT:  .LBB0_18: ! %start
 ; SPARC-NEXT:    cmp %i0, 0
 ; SPARC-NEXT:    bne .LBB0_20
@@ -116,13 +116,13 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:  .LBB0_22: ! %start
 ; SPARC-NEXT:    and %o4, %o3, %o2
 ; SPARC-NEXT:    cmp %l1, 0
-; SPARC-NEXT:    and %o0, %l4, %o0
+; SPARC-NEXT:    and %o0, %l5, %o0
 ; SPARC-NEXT:    bne .LBB0_24
 ; SPARC-NEXT:    mov %l3, %l1
 ; SPARC-NEXT:  ! %bb.23: ! %start
 ; SPARC-NEXT:    mov %g0, %l1
 ; SPARC-NEXT:  .LBB0_24: ! %start
-; SPARC-NEXT:    or %o2, %o1, %l4
+; SPARC-NEXT:    or %o2, %o1, %l5
 ; SPARC-NEXT:    cmp %l2, %l0
 ; SPARC-NEXT:    or %o0, %l6, %l6
 ; SPARC-NEXT:    bcs .LBB0_26
@@ -130,7 +130,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:  ! %bb.25: ! %start
 ; SPARC-NEXT:    mov %g0, %l0
 ; SPARC-NEXT:  .LBB0_26: ! %start
-; SPARC-NEXT:    or %l4, %l7, %l2
+; SPARC-NEXT:    or %l5, %l7, %l2
 ; SPARC-NEXT:    orcc %i5, %i4, %g0
 ; SPARC-NEXT:    or %l6, %l1, %l1
 ; SPARC-NEXT:    bne .LBB0_28
@@ -148,7 +148,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:    and %l3, %i4, %i1
 ; SPARC-NEXT:    or %i1, %i0, %i0
 ; SPARC-NEXT:    or %i0, %i5, %i0
-; SPARC-NEXT:    or %i0, %l5, %i0
+; SPARC-NEXT:    or %i0, %l4, %i0
 ; SPARC-NEXT:    and %i0, 1, %i4
 ; SPARC-NEXT:    mov %g3, %i0
 ; SPARC-NEXT:    ret

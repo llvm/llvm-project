@@ -1,4 +1,5 @@
-// RUN: %libomp-compile-and-run | FileCheck %s --match-full-lines
+// RUN: %libomp-compile -fopenmp-version=60 && %libomp-run \
+// RUN:   | FileCheck %s --match-full-lines
 
 #include <stdlib.h>
 #include <stdio.h>

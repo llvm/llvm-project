@@ -32,6 +32,10 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -42,6 +46,10 @@
 
 #  ifdef __cpp_lib_generic_unordered_lookup
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_node_extract
@@ -74,6 +82,10 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -84,6 +96,10 @@
 
 #  ifdef __cpp_lib_generic_unordered_lookup
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_node_extract
@@ -119,6 +135,10 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -129,6 +149,10 @@
 
 #  ifdef __cpp_lib_generic_unordered_lookup
 #    error "__cpp_lib_generic_unordered_lookup should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_node_extract
@@ -173,6 +197,10 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should not be defined before c++23"
 #  endif
@@ -189,6 +217,10 @@
 #  endif
 #  if __cpp_lib_generic_unordered_lookup != 201811L
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_node_extract
@@ -242,6 +274,10 @@
 #    error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_unordered_map
+#    error "__cpp_lib_constexpr_unordered_map should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should be defined in c++23"
 #  endif
@@ -261,6 +297,10 @@
 #  endif
 #  if __cpp_lib_generic_unordered_lookup != 201811L
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_node_extract
@@ -332,6 +372,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_unordered_map != 202502L
+#      error "__cpp_lib_constexpr_unordered_map should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should be defined in c++26"
 #  endif
@@ -351,6 +404,10 @@
 #  endif
 #  if __cpp_lib_generic_unordered_lookup != 201811L
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++26"
+#  endif
+
+#  ifdef __cpp_lib_map_lookup
+#    error "__cpp_lib_map_lookup should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_node_extract
@@ -422,6 +479,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_unordered_map != 202502L
+#      error "__cpp_lib_constexpr_unordered_map should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_unordered_map
+#      error "__cpp_lib_constexpr_unordered_map should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_containers_ranges
 #    error "__cpp_lib_containers_ranges should be defined in c++29"
 #  endif
@@ -441,6 +511,19 @@
 #  endif
 #  if __cpp_lib_generic_unordered_lookup != 201811L
 #    error "__cpp_lib_generic_unordered_lookup should have the value 201811L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_map_lookup
+#      error "__cpp_lib_map_lookup should be defined in c++29"
+#    endif
+#    if __cpp_lib_map_lookup != 202606L
+#      error "__cpp_lib_map_lookup should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_map_lookup
+#      error "__cpp_lib_map_lookup should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_node_extract

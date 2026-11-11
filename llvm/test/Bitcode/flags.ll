@@ -7,7 +7,7 @@
 ; Make sure the flags are serialized/deserialized properly for both
 ; forward and backward references.
 
-define void @foo() nounwind {
+define void @foo(ptr addrspace(1) %p, <2 x ptr addrspace(1)> %pv) nounwind {
 entry:
   br label %first
 
@@ -32,6 +32,9 @@ second:                                           ; preds = %first
   %tv = trunc <2 x i32> %aa to <2 x i16>
   %ii = icmp samesign ult i32 %a, %z
   %iv = icmp samesign ult <2 x i32> %aa, %aa
+  %an = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  %ap = addrspacecast ptr addrspace(1) %p to ptr
+  %anv = addrspacecast nonnull <2 x ptr addrspace(1)> %pv to <2 x ptr>
   unreachable
 
 first:                                                    ; preds = %entry
@@ -57,5 +60,6 @@ first:                                                    ; preds = %entry
   %ttv = trunc <2 x i32> %aa to <2 x i16>
   %icm = icmp samesign ult i32 %a, %zz
   %icv = icmp samesign ult <2 x i32> %aa, %aa
+  %ann = addrspacecast nonnull ptr addrspace(1) %p to ptr
   br label %second
 }

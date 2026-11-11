@@ -9,6 +9,7 @@
 #include "PrintfMatcher.h"
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/core_structs.h"
@@ -24,44 +25,46 @@ using printf_core::FormatFlags;
 using printf_core::FormatSection;
 using printf_core::LengthModifier;
 
-bool FormatSectionMatcher::match(FormatSection actualValue) {
-  actual = actualValue;
-  return expected == actual;
-}
-
 namespace {
 
 #define IF_FLAG_SHOW_FLAG(flag_name)                                           \
   do {                                                                         \
     if ((form.flags & FormatFlags::flag_name) == FormatFlags::flag_name)       \
-      tlog << "\n\t\t" << #flag_name;                                          \
+      listener << "\n\t\t" << #flag_name;                                      \
   } while (false)
 #define CASE_LM(lm)                                                            \
   case (LengthModifier::lm):                                                   \
-    tlog << #lm;                                                               \
+    listener << #lm;                                                           \
     break
 #define CASE_LM_BIT_WIDTH(lm, bw)                                              \
   case (LengthModifier::lm):                                                   \
-    tlog << #lm << "\n\tbit width: :" << bw;                                   \
+    listener << #lm << "\n\tbit width: :" << bw;                               \
     break
 
-static void display(FormatSection form) {
-  tlog << "Raw String (len " << form.raw_string.size() << "): \"";
-  for (size_t i = 0; i < form.raw_string.size(); ++i) {
-    tlog << form.raw_string[i];
+template <typename CharT>
+void display_impl(MatchResultListener &listener, FormatSection<CharT> form) {
+  listener << "Raw String (len " << form.raw_string.size() << "): \"";
+  cpp::string raw_string_utf8;
+  if constexpr (cpp::is_same_v<CharT, char>) {
+    raw_string_utf8 = form.raw_string;
+  } else {
+    raw_string_utf8 = try_convert_to_utf8(form.raw_string);
   }
-  tlog << "\"";
+  for (size_t i = 0; i < raw_string_utf8.size(); ++i) {
+    listener << raw_string_utf8[i];
+  }
+  listener << "\"";
   if (form.has_conv) {
-    tlog << "\n\tHas Conv\n\tFlags:";
+    listener << "\n\tHas Conv\n\tFlags:";
     IF_FLAG_SHOW_FLAG(LEFT_JUSTIFIED);
     IF_FLAG_SHOW_FLAG(FORCE_SIGN);
     IF_FLAG_SHOW_FLAG(SPACE_PREFIX);
     IF_FLAG_SHOW_FLAG(ALTERNATE_FORM);
     IF_FLAG_SHOW_FLAG(LEADING_ZEROES);
-    tlog << "\n";
-    tlog << "\tmin width: " << form.min_width << "\n";
-    tlog << "\tprecision: " << form.precision << "\n";
-    tlog << "\tlength modifier: ";
+    listener << "\n";
+    listener << "\tmin width: " << form.min_width << "\n";
+    listener << "\tprecision: " << form.precision << "\n";
+    listener << "\tlength modifier: ";
     switch (form.length_modifier) {
       CASE_LM(none);
       CASE_LM(l);
@@ -80,26 +83,36 @@ static void display(FormatSection form) {
       CASE_LM_BIT_WIDTH(wf, form.bit_width);
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     }
-    tlog << "\n";
-    tlog << "\tconversion name: " << form.conv_name << "\n";
-    if (form.conv_name == 'p' || form.conv_name == 'n' || form.conv_name == 's')
-      tlog << "\tpointer value: "
-           << int_to_hex<uintptr_t>(
-                  reinterpret_cast<uintptr_t>(form.conv_val_ptr))
-           << "\n";
-    else if (form.conv_name != '%')
-      tlog << "\tvalue: " << int_to_hex(form.conv_val_raw) << "\n";
+
+    cpp::string conv_name_utf8;
+    if constexpr (cpp::is_same_v<CharT, char>) {
+      conv_name_utf8 = cpp::string(&form.conv_name, 1);
+    } else {
+      conv_name_utf8 =
+          try_convert_to_utf8(cpp::wstring_view(&form.conv_name, 1));
+    }
+    listener << "\n";
+    listener << "\tconversion name: " << conv_name_utf8 << "\n";
+    if (conv_name_utf8 == "p" || conv_name_utf8 == "n" || conv_name_utf8 == "s")
+      listener << "\tpointer value: "
+               << int_to_hex<uintptr_t>(
+                      reinterpret_cast<uintptr_t>(form.conv_val_ptr))
+               << "\n";
+    else if (conv_name_utf8 != "%")
+      listener << "\tvalue: " << int_to_hex(form.conv_val_raw) << "\n";
   }
 }
+
 } // anonymous namespace
 
-void FormatSectionMatcher::explainError() {
-  tlog << "expected format section: ";
-  display(expected);
-  tlog << '\n';
-  tlog << "actual format section  : ";
-  display(actual);
-  tlog << '\n';
+void display(MatchResultListener &listener,
+             const FormatSection<char> &format_section) {
+  display_impl(listener, format_section);
+}
+
+void display(MatchResultListener &listener,
+             const FormatSection<wchar_t> &format_section) {
+  display_impl(listener, format_section);
 }
 
 } // namespace testing

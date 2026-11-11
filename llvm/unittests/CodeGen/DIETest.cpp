@@ -222,4 +222,95 @@ TEST(DIEValueListTest, DeleteValue) {
   EXPECT_FALSE(List.deleteValue(dwarf::DW_AT_high_pc));
 }
 
+TEST(DIETest, GetUnitDie) {
+  // A DIEUnit owns exactly one DIE, its unit DIE, whatever the root tag is, so
+  // the walk up from a nested DIE has to reach the unit for every unit root
+  // tag.
+  static const dwarf::Tag UnitTags[] = {
+      dwarf::DW_TAG_compile_unit, dwarf::DW_TAG_partial_unit,
+      dwarf::DW_TAG_type_unit, dwarf::DW_TAG_skeleton_unit};
+
+  BumpPtrAllocator Alloc;
+  for (dwarf::Tag UnitTag : UnitTags) {
+    BasicDIEUnit Unit(UnitTag);
+    Unit.setDebugSectionOffset(0x100);
+
+    DIE &Root = Unit.getUnitDie();
+    DIE &Namespace = Root.addChild(DIE::get(Alloc, dwarf::DW_TAG_namespace));
+    DIE &Struct =
+        Namespace.addChild(DIE::get(Alloc, dwarf::DW_TAG_structure_type));
+    Struct.setOffset(0x20);
+
+    EXPECT_EQ(&Root, Struct.getUnitDie());
+    EXPECT_EQ(static_cast<DIEUnit *>(&Unit), Struct.getUnit());
+    EXPECT_EQ(0x120u, Struct.getDebugSectionOffset());
+  }
+}
+
+TEST(DIETest, GetUnitDieWithoutUnit) {
+  // A tree carrying a unit root tag that was never handed to a DIEUnit belongs
+  // to no unit, so there is no absolute offset to compute for anything in it.
+  BumpPtrAllocator Alloc;
+  DIE *Root = DIE::get(Alloc, dwarf::DW_TAG_compile_unit);
+  DIE &Struct = Root->addChild(DIE::get(Alloc, dwarf::DW_TAG_structure_type));
+
+  EXPECT_EQ(nullptr, Root->getUnitDie());
+  EXPECT_EQ(nullptr, Root->getUnit());
+  EXPECT_EQ(nullptr, Struct.getUnitDie());
+  EXPECT_EQ(nullptr, Struct.getUnit());
+}
+
+TEST(DIETest, RemoveAndTakeChildren) {
+  BumpPtrAllocator Alloc;
+  auto CreateDIE = [&Alloc](dwarf::Tag Tag) { return DIE::get(Alloc, Tag); };
+  auto GetTags = [](const DIE &Parent) {
+    SmallVector<dwarf::Tag, 4> Tags;
+    for (const DIE &Child : Parent.children()) {
+      EXPECT_EQ(Child.getParent(), &Parent);
+      Tags.push_back(Child.getTag());
+    }
+    return Tags;
+  };
+
+  DIE *Parent = CreateDIE(dwarf::DW_TAG_subprogram);
+  DIE *Var = CreateDIE(dwarf::DW_TAG_variable);
+  Parent->addChild(Var);
+  DIE *Label = CreateDIE(dwarf::DW_TAG_label);
+  Parent->addChild(Label);
+
+  DIE *Pending = CreateDIE(dwarf::DW_TAG_lexical_block);
+  Pending->addChild(CreateDIE(dwarf::DW_TAG_structure_type));
+  Pending->addChild(CreateDIE(dwarf::DW_TAG_typedef));
+
+  // Move to the front.
+  Parent->takeChildren(*Pending, /*AtFront=*/true);
+  EXPECT_FALSE(Pending->hasChildren());
+  EXPECT_EQ(GetTags(*Parent),
+            (SmallVector<dwarf::Tag, 4>{
+                dwarf::DW_TAG_structure_type, dwarf::DW_TAG_typedef,
+                dwarf::DW_TAG_variable, dwarf::DW_TAG_label}));
+
+  // Remove the first child, a middle child and the last child.
+  Parent->removeChild(*Parent->children().begin());
+  Parent->removeChild(*Var);
+  Parent->removeChild(*Label);
+  EXPECT_EQ(Var->getParent(), nullptr);
+  EXPECT_EQ(Label->getParent(), nullptr);
+  EXPECT_EQ(GetTags(*Parent),
+            (SmallVector<dwarf::Tag, 4>{dwarf::DW_TAG_typedef}));
+
+  // Move to the back.
+  Pending->addChild(Var);
+  Pending->addChild(Label);
+  Parent->takeChildren(*Pending);
+  EXPECT_FALSE(Pending->hasChildren());
+  EXPECT_EQ(GetTags(*Parent), (SmallVector<dwarf::Tag, 4>{
+                                  dwarf::DW_TAG_typedef, dwarf::DW_TAG_variable,
+                                  dwarf::DW_TAG_label}));
+
+  // Moving from a DIE without children does nothing.
+  Parent->takeChildren(*Pending, /*AtFront=*/true);
+  EXPECT_EQ(GetTags(*Parent).size(), 3u);
+}
+
 } // end namespace

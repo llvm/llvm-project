@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 // RUN: %libomptarget-compileoptxx-run-and-check-generic
 // UNSUPPORTED: intelgpu
+// UNSUPPORTED: nvidiagpu
 
 // Cloned from multiple_reductions.cpp for array reductions.
 

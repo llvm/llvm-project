@@ -1,6 +1,8 @@
 // Ensure that schedule can be used with the guided kind-type and simd construct
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @test_simd_guided() {
   %0 = llvm.mlir.constant (1 : i64) : i64
   %c1_i32 = llvm.mlir.constant (1 : i32) : i32
@@ -9,7 +11,7 @@ llvm.func @test_simd_guided() {
   %c4_i32 = llvm.mlir.constant (4 : i32) : i32
   %1 = llvm.alloca %0 x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr
   omp.wsloop schedule(guided = %c4_i32 : i32, simd) {
-    omp.simd linear(%1 : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
+    omp.simd linear(@lin.i32 %1 -> %lin0 : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
       omp.loop_nest (%arg1) : i32 = (%c0_i32) to (%c64_i32) inclusive step (%c1_i32) {
         omp.yield
       }

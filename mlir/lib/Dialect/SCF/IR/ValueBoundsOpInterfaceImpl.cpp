@@ -101,6 +101,16 @@ struct ForOpInterface
     if (dim.has_value() || isa<BlockArgument>(value))
       return;
 
+    // The closed form below holds only if the loop runs at least once (the
+    // trip count is not clamped at 0) and the bounds are compared as signed
+    // integers.
+    if (forOp.getUnsignedCmp() ||
+        !cstr.populateAndCompare(
+            forOp.getUpperBound(),
+            ValueBoundsConstraintSet::ComparisonOperator::GT,
+            forOp.getLowerBound()))
+      return;
+
     // `value` is result of `forOp`, we can prove that:
     // %result == %init_arg + trip_count * (%yielded_value - %iter_arg).
     // Where trip_count is (ub - lb) / step.
@@ -117,6 +127,9 @@ struct ForOpInterface
     auto forOp = cast<ForOp>(op);
 
     if (value == forOp.getInductionVar()) {
+      // The IV bounds are signed; unsigned loops are not modeled.
+      if (forOp.getUnsignedCmp())
+        return;
       return populateIVBounds(forOp.getLowerBound(), forOp.getUpperBound(),
                               forOp.getStep(), value, cstr);
     }

@@ -40,6 +40,40 @@ llvm.func @shl_multiple() -> i32 {
   llvm.return %2 : i32
 }
 
+// CHECK-LABEL: llvm.func @shl_wide_out_of_range_shift
+llvm.func @shl_wide_out_of_range_shift() -> i128 {
+  // CHECK-DAG: %[[LHS:.*]] = llvm.mlir.constant(1 : i128) : i128
+  %lhs = llvm.mlir.constant(1 : i128) : i128
+  // CHECK-DAG: %[[RHS:.*]] = llvm.mlir.constant(1267650600228229401496703205376 : i128) : i128
+  %rhs = llvm.mlir.constant(1267650600228229401496703205376 : i128) : i128
+  // CHECK: %[[RESULT:.*]] = llvm.shl %[[LHS]], %[[RHS]] : i128
+  %result = llvm.shl %lhs, %rhs : i128
+  // CHECK: llvm.return %[[RESULT]] : i128
+  llvm.return %result : i128
+}
+
+// CHECK-LABEL: llvm.func @shl_boundary_out_of_range_shift
+llvm.func @shl_boundary_out_of_range_shift() -> i128 {
+  // CHECK-DAG: %[[LHS:.*]] = llvm.mlir.constant(1 : i128) : i128
+  %lhs = llvm.mlir.constant(1 : i128) : i128
+  // CHECK-DAG: %[[RHS:.*]] = llvm.mlir.constant(128 : i128) : i128
+  %rhs = llvm.mlir.constant(128 : i128) : i128
+  // CHECK: %[[RESULT:.*]] = llvm.shl %[[LHS]], %[[RHS]] : i128
+  %result = llvm.shl %lhs, %rhs : i128
+  // CHECK: llvm.return %[[RESULT]] : i128
+  llvm.return %result : i128
+}
+
+// CHECK-LABEL: llvm.func @shl_largest_valid_shift
+llvm.func @shl_largest_valid_shift() -> i128 {
+  %lhs = llvm.mlir.constant(1 : i128) : i128
+  %rhs = llvm.mlir.constant(127 : i128) : i128
+  %result = llvm.shl %lhs, %rhs : i128
+  // CHECK: %[[RES:.*]] = llvm.mlir.constant(-170141183460469231731687303715884105728 : i128) : i128
+  // CHECK: llvm.return %[[RES]] : i128
+  llvm.return %result : i128
+}
+
 // -----
 
 // CHECK-LABEL: llvm.func @or_basic

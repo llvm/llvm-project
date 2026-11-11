@@ -32,7 +32,6 @@
 #undef GetDeviceCount
 #undef SetDevice
 #undef HostAlloc
-#undef HostAllocFlags
 #undef HostAllocDefault
 #undef HostAllocPortable
 #undef HostAllocMapped
@@ -41,6 +40,9 @@
 #undef FreeHost
 #undef GetDeviceProperties
 #undef Stream_t
+#undef StreamDefault
+#undef StreamNonBlocking
 #undef StreamCreate
+#undef StreamCreateWithFlags
 #undef StreamDestroy
 #undef StreamSynchronize

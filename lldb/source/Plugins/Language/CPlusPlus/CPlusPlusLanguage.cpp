@@ -9,6 +9,7 @@
 #include "CPlusPlusLanguage.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 
 #include <functional>
@@ -17,13 +18,16 @@
 #include <set>
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 #include "llvm/Support/ErrorExtras.h"
 
 #include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -57,19 +61,36 @@ using namespace lldb_private::formatters;
 
 LLDB_PLUGIN_DEFINE(CPlusPlusLanguage)
 
+static Mangled::ManglingScheme g_itanium_scheme = Mangled::eManglingSchemeNone;
+static Mangled::ManglingScheme g_msvc_scheme = Mangled::eManglingSchemeNone;
+
+static bool IsCPlusPlusManglingScheme(Mangled::ManglingScheme scheme) {
+  // A scheme that couldn't be registered, because the registry was full, is
+  // eManglingSchemeNone.
+  return scheme != Mangled::eManglingSchemeNone &&
+         (scheme == g_itanium_scheme || scheme == g_msvc_scheme);
+}
+
 void CPlusPlusLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "C++ Language",
                                 CreateInstance, &DebuggerInitialize);
+  // "___Z" is a clang extension for block invocations.
+  g_itanium_scheme =
+      Mangled::RegisterManglingScheme({"_Z", "___Z"}, eLanguageTypeC_plus_plus);
+  g_msvc_scheme =
+      Mangled::RegisterManglingScheme({"?"}, eLanguageTypeC_plus_plus);
 }
 
 void CPlusPlusLanguage::Terminate() {
+  Mangled::UnregisterManglingScheme(g_msvc_scheme);
+  Mangled::UnregisterManglingScheme(g_itanium_scheme);
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
 std::unique_ptr<Language::MethodName>
-CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
+CPlusPlusLanguage::GetMethodName(llvm::StringRef full_name) const {
   std::unique_ptr<CxxMethodName> cpp_method =
-      std::make_unique<CxxMethodName>(full_name);
+      std::make_unique<CxxMethodName>(full_name.str());
   cpp_method->IsValid();
   return cpp_method;
 }
@@ -80,7 +101,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
     return {eFunctionNameTypeFull, std::nullopt};
 
   FunctionNameType func_name_type = eFunctionNameTypeNone;
-  CxxMethodName method(name);
+  CxxMethodName method(name.GetStringRef().str());
   llvm::StringRef basename = method.GetBasename();
   if (basename.empty()) {
     llvm::StringRef context;
@@ -105,10 +126,164 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 }
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
-  auto mangling_scheme =
-      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
-  return mangling_scheme == Mangled::eManglingSchemeItanium ||
-         mangling_scheme == Mangled::eManglingSchemeMSVC;
+  return IsCPlusPlusManglingScheme(
+      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef()));
+}
+
+static char *GetMSVCDemangledStr(llvm::StringRef M) {
+  char *demangled_cstr = llvm::microsoftDemangle(
+      M, nullptr, nullptr,
+      llvm::MSDemangleFlags(
+          llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
+          llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr && demangled_cstr[0])
+      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M.data(), demangled_cstr);
+    else
+      LLDB_LOGF(log, "demangled msvc: %s -> error", M.data());
+  }
+
+  return demangled_cstr;
+}
+
+static std::pair<char *, DemangledNameInfo>
+GetItaniumDemangledStr(const char *M) {
+  char *demangled_cstr = nullptr;
+
+  DemangledNameInfo info;
+  llvm::ItaniumPartialDemangler ipd;
+  bool err = ipd.partialDemangle(M);
+  if (!err) {
+    // Default buffer and size (OutputBuffer will realloc in case it's too
+    // small).
+    size_t demangled_size = 80;
+    demangled_cstr = static_cast<char *>(std::malloc(80));
+
+    TrackingOutputBuffer OB(demangled_cstr, demangled_size);
+    demangled_cstr = ipd.finishDemangle(&OB);
+    info = std::move(OB.NameInfo);
+
+    assert(demangled_cstr &&
+           "finishDemangle must always succeed if partialDemangle did");
+    assert(demangled_cstr[OB.getCurrentPosition() - 1] == '\0' &&
+           "Expected demangled_size to return length including trailing null");
+  }
+
+  if (Log *log = GetLog(LLDBLog::Demangle)) {
+    if (demangled_cstr)
+      LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
+    else
+      LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
+
+    if (!info.hasBasename())
+      LLDB_LOGF(log,
+                "demangled itanium: %s -> error: failed to retrieve name info",
+                M);
+  }
+
+  return {demangled_cstr, std::move(info)};
+}
+
+Language::DemangledName
+CPlusPlusLanguage::DemangleSymbol(ConstString mangled,
+                                  Mangled::ManglingScheme scheme,
+                                  const DemangleOptions &options) const {
+  DemangledName demangled;
+  if (scheme == g_itanium_scheme) {
+    auto [demangled_cstr, info] = GetItaniumDemangledStr(mangled.GetCString());
+    if (demangled_cstr) {
+      demangled.name = demangled_cstr;
+      std::free(demangled_cstr);
+    }
+    if (options.want_info)
+      demangled.info = std::move(info);
+  } else if (scheme == g_msvc_scheme) {
+    if (char *demangled_cstr = GetMSVCDemangledStr(mangled.GetStringRef())) {
+      demangled.name = demangled_cstr;
+      std::free(demangled_cstr);
+    }
+  }
+  return demangled;
+}
+
+/// Returns true for the Itanium names that aren't worth indexing as functions.
+static bool SkipItaniumName(llvm::StringRef mangled) {
+  if (mangled.size() < 3 || !mangled.starts_with("_Z"))
+    return true;
+
+  // Avoid the following types of symbols in the index.
+  switch (mangled[2]) {
+  case 'G': // guard variables
+  case 'T': // virtual tables, VTT structures, typeinfo structures + names
+  case 'Z': // named local entities (if we eventually handle
+            // eSymbolTypeData, we will want this back)
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+namespace {
+/// Parses Itanium or MSVC mangled function names. Their mangling doesn't tell
+/// whether a declaration context is a class or a namespace.
+class CPlusPlusMangledNameParser : public Language::MangledNameParser {
+public:
+  explicit CPlusPlusMangledNameParser(Mangled::ManglingScheme scheme)
+      : m_scheme(scheme) {}
+
+  std::optional<Mangled::FunctionNameParts>
+  Parse(const Mangled &mangled) override {
+    if (!ParseRichManglingInfo(mangled))
+      return std::nullopt;
+
+    Mangled::FunctionNameParts parts;
+    llvm::StringRef base_name = m_rmc.ParseFunctionBaseName();
+    if (base_name.empty())
+      return parts;
+
+    // Parsing the context reuses the buffer that base_name points into.
+    parts.basename = ConstString(base_name);
+    llvm::StringRef decl_context = m_rmc.ParseFunctionDeclContextName();
+    if (decl_context.empty()) {
+      parts.kind = Mangled::FunctionNameKind::TopLevel;
+      return parts;
+    }
+
+    parts.decl_context = ConstString(decl_context);
+    parts.kind = m_rmc.IsCtorOrDtor()
+                     ? Mangled::FunctionNameKind::ConstructorOrDestructor
+                     : Mangled::FunctionNameKind::Unknown;
+    return parts;
+  }
+
+private:
+  bool ParseRichManglingInfo(const Mangled &mangled) {
+    ConstString mangled_name = mangled.GetMangledName();
+    if (m_scheme == g_itanium_scheme)
+      return !SkipItaniumName(mangled_name) &&
+             m_rmc.FromItaniumName(mangled_name);
+
+    // There is no rich mangling info for MSVC names, so parse the demangled
+    // name with CPlusPlusLanguage::CxxMethodName instead.
+    ConstString demangled = mangled.GetDemangledName();
+    return !demangled.IsEmpty() && m_rmc.FromCxxMethodName(demangled);
+  }
+
+  Mangled::ManglingScheme m_scheme;
+  /// Instantiation of the demangler is expensive, so better use a single one
+  /// for all entries during batch processing.
+  RichManglingContext m_rmc;
+};
+} // namespace
+
+std::unique_ptr<Language::MangledNameParser>
+CPlusPlusLanguage::CreateMangledNameParser(
+    Mangled::ManglingScheme scheme) const {
+  if (!IsCPlusPlusManglingScheme(scheme))
+    return nullptr;
+  return std::make_unique<CPlusPlusMangledNameParser>(scheme);
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -125,7 +300,7 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
                                         // eventually handle eSymbolTypeData,
                                         // we will want this back)
     {
-      CxxMethodName cxx_method(demangled_name);
+      CxxMethodName cxx_method(demangled_name.GetStringRef().str());
       if (!cxx_method.GetBasename().empty()) {
         std::string shortname;
         if (!cxx_method.GetContext().empty())
@@ -227,10 +402,10 @@ static bool IsTrivialContext(llvm::StringRef context) {
 /// but replaces each argument type with the variable name
 /// and the corresponding pretty-printed value
 static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
-                                            char const *full_name,
+                                            llvm::StringRef full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
-  CPlusPlusLanguage::CxxMethodName cpp_method{ConstString(full_name)};
+  CPlusPlusLanguage::CxxMethodName cpp_method{full_name.str()};
 
   if (!cpp_method.IsValid())
     return false;
@@ -257,6 +432,14 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
+static DemangledNameInfoCache &GetDemangledInfoCache() {
+  static DemangledNameInfoCache g_cache;
+  // Pick up any changes to the size the user made since the last call.
+  g_cache.SetMaxEntries(ModuleList::GetGlobalModuleListProperties()
+                            .GetDemangledNameInfoCacheSize());
+  return g_cache;
+}
+
 static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
@@ -269,7 +452,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
         "function '{0}' does not have a demangled name",
         mangled.GetMangledName());
 
-  const DemangledNameInfo *info = mangled.GetDemangledInfo();
+  std::optional<DemangledNameInfo> info = GetDemangledInfoCache().Get(mangled);
   if (!info)
     return llvm::createStringErrorV(
         "function '{0}' does not have demangled info", demangled_name);
@@ -474,7 +657,7 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // function don't have return types and templates in the name.
   // A::B::C::fun(std::vector<T> &) const
   size_t arg_start, arg_end;
-  llvm::StringRef full(m_full.GetCString());
+  llvm::StringRef full(m_full);
   llvm::StringRef parens("()", 2);
   if (ReverseFindMatchingChars(full, parens, arg_start, arg_end)) {
     m_arguments = full.substr(arg_start, arg_end - arg_start + 1);
@@ -511,11 +694,11 @@ bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
 }
 
 void CPlusPlusLanguage::CxxMethodName::Parse() {
-  if (!m_parsed && m_full) {
+  if (!m_parsed && !m_full.empty()) {
     if (TrySimplifiedParse()) {
       m_parse_error = false;
     } else {
-      CPlusPlusNameParser parser(m_full.GetStringRef());
+      CPlusPlusNameParser parser(m_full);
       if (auto function = parser.ParseAsFunctionDefinition()) {
         m_basename = function->name.basename;
         m_context = function->name.context;
@@ -555,14 +738,14 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
   // If we can't parse the incoming name, then just check that it contains path.
   if (m_parse_error)
-    return m_full.GetStringRef().contains(path);
+    return llvm::StringRef(m_full).contains(path);
 
   llvm::StringRef identifier;
   llvm::StringRef context;
   const bool success =
       CPlusPlusLanguage::ExtractContextAndIdentifier(path, context, identifier);
   if (!success)
-    return m_full.GetStringRef().contains(path);
+    return llvm::StringRef(m_full).contains(path);
 
   // Basename may include template arguments.
   // E.g.,
@@ -599,7 +782,7 @@ bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
 
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
-  CxxMethodName demangled_name(demangled);
+  CxxMethodName demangled_name(demangled.GetStringRef().str());
   return demangled_name.ContainsPath(path);
 }
 
@@ -699,7 +882,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
   if (!demangled)
     return ConstString();
 
-  CxxMethodName cpp_name(demangled);
+  CxxMethodName cpp_name(demangled.GetStringRef().str());
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
   if (!scope_qualified_name.size())
@@ -722,7 +905,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
     Mangled mangled(alternate_mangled_name);
     ConstString demangled = mangled.GetDemangledName();
 
-    CxxMethodName alternate_cpp_name(demangled);
+    CxxMethodName alternate_cpp_name(demangled.GetStringRef().str());
     if (!cpp_name.IsValid())
       continue;
 
@@ -1537,6 +1720,24 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
+GenericAtomicSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                      const lldb::ValueObjectSP &valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlAtomic(*valobj_sp))
+    return MsvcStlAtomicSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppAtomicSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool GenericAtomicSummaryProvider(ValueObject &valobj, Stream &stream,
+                                         const TypeSummaryOptions &options) {
+  if (IsMsvcStlAtomic(valobj))
+    return MsvcStlAtomicSummaryProvider(valobj, stream, options);
+  return LibStdcppAtomicSummaryProvider(valobj, stream, options);
+}
+
+static lldb_private::SyntheticChildrenFrontEnd *
 GenericSmartPointerSyntheticFrontEndCreator(CXXSyntheticChildren *children,
                                             lldb::ValueObjectSP valobj_sp) {
   if (!valobj_sp)
@@ -1885,6 +2086,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring_view summary provider"));
 
+  AddCXXSynthetic(cpp_category_sp, GenericAtomicSyntheticFrontEndCreator,
+                  "std::atomic synthetic children", "^std::atomic<.+>$",
+                  stl_synth_flags, true);
   // NOTE: it is loaded as a common formatter because the libc++ version is not
   // in the `__1` namespace, hence we need to dispatch based on the class
   // layout.
@@ -1953,6 +2157,9 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::initializer_list summary provider",
                 "^std::initializer_list<.+>$", stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericAtomicSummaryProvider,
+                "std::atomic summary provider", "^std::atomic<.+>$",
+                stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
                 "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
@@ -2101,13 +2308,6 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   stl_summary_flags.SetDontShowChildren(false);
 
-  AddCXXSynthetic(cpp_category_sp, MsvcStlAtomicSyntheticFrontEndCreator,
-                  "MSVC STL std::atomic synthetic children",
-                  "^std::atomic<.+>$", stl_synth_flags, true);
-
-  AddCXXSummary(cpp_category_sp, MsvcStlAtomicSummaryProvider,
-                "MSVC STL std::atomic summary provider", "^std::atomic<.+>$",
-                stl_summary_flags, true);
   AddCXXSynthetic(cpp_category_sp, MsvcStlTreeIterSyntheticFrontEndCreator,
                   "MSVC STL tree iterator synthetic children",
                   "^std::_Tree(_const)?_iterator<.+>(( )?&)?$", stl_synth_flags,

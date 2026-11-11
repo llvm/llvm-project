@@ -285,7 +285,7 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 ///   }
 struct CopyToLoadAndStore : public OpRewritePattern<memref::CopyOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::CopyOp op,
                                 PatternRewriter &rewriter) const final {
@@ -574,7 +574,7 @@ getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
 struct RewriteLoadFromReinterpretCast
     : public OpRewritePattern<memref::LoadOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::LoadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -619,7 +619,9 @@ public:
     // we can safely erase it.
     if (rc.getResult().hasOneUse())
       rewriter.eraseOp(rc);
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, rcInput, rcInputIdxs);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(
+        op, rcInput, rcInputIdxs, op.getNontemporalAttr(),
+        op.getAlignmentAttr(), op.getInvariantAttr());
     return success();
   }
 };

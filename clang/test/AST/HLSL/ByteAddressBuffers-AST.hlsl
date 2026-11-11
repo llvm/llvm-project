@@ -82,6 +82,24 @@ RESOURCE Buffer;
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
+// Heap info constructor
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]] 'void (hlsl::__detail::heap_resource_info)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__detail::heap_resource_info'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromheap' '__hlsl_resource_t (__hlsl_resource_t, unsigned int) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__detail::heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__detail::heap_resource_info'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // Static __createFromBinding method
 
 // CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]] (unsigned int, unsigned int, int, unsigned int, const char *)' static
@@ -298,6 +316,9 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
+// CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
+// CHECK-LOAD-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_transpose_if_memory_is_row_major' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *' <Dependent>
 // CHECK-LOAD-NEXT: CallExpr {{.*}} '<dependent type>'
@@ -306,6 +327,7 @@ RESOURCE Buffer;
 // CHECK-LOAD-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-LOAD-NEXT: CXXScalarValueInitExpr {{.*}} 'element_type *'
+// CHECK-LOAD-NEXT: IntegerLiteral {{.*}} 'int' 1
 // CHECK-LOAD-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK-LOAD: CXXMethodDecl {{.*}} Load 'element_type (unsigned int, out unsigned int)
@@ -410,7 +432,11 @@ RESOURCE Buffer;
 // CHECK-STORE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
 // CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-STORE-NEXT: CXXScalarValueInitExpr {{.*}} 'element_type *'
+// CHECK-STORE-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
+// CHECK-STORE-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-STORE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_transpose_if_memory_is_row_major' 'void (...) noexcept'
 // CHECK-STORE-NEXT: DeclRefExpr {{.*}} 'element_type' lvalue ParmVar {{.*}} 'Value' 'element_type'
+// CHECK-STORE-NEXT: IntegerLiteral {{.*}} 'int' 0
 // CHECK-STORE-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // GetDimensions method

@@ -7,6 +7,10 @@ RUN: lldb-test symbols %t.dir/FuncSymbolsTest.exe | FileCheck --check-prefix=CHE
 ; Link multiple objects
 ; In this test, We don't check demangled name of a mangled function.
 
+; This uses the same input as SymbolFile/NativePDB/func-symbols.test. However, DIA
+; creates one named `Type` per function and uses identical UIDs for `Type` and
+; `Function`, whereas native creates one unnamed type per signature and has different UIDs.
+
 CHECK-ONE: Module [[MD:.*]]
 CHECK-ONE-DAG: SymbolFile pdb ([[MD]])
 CHECK-ONE-DAG: [[TY0:.*]]:   Type{[[UID0:.*]]} , name = "Func_arg_array", decl = FuncSymbolsTestMain.cpp:3, compiler_type = {{.*}} int (int *)

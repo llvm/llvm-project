@@ -23,7 +23,6 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 
 using namespace llvm;
 
@@ -488,7 +487,6 @@ bool TGLexer::LexInclude() {
     return true;
   }
 
-  Dependencies.insert(IncludedFile);
   // Save the line number and lex buffer of the includer.
   CurBuf = SrcMgr.getMemoryBuffer(CurBuffer)->getBuffer();
   CurPtr = CurBuf.begin();

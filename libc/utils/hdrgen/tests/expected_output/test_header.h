@@ -50,7 +50,7 @@ _Float16 func_e(float128) __NOEXCEPT;
 #endif // LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
 
 extern obj object_1;
-extern obj object_2;
+extern obj object_2[3];
 
 __END_C_DECLS
 

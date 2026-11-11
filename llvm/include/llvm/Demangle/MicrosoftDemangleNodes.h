@@ -82,6 +82,10 @@ enum OutputFlags {
   OF_NoVariableType = 1 << 5,
   OF_NoVoidParameter = 1 << 6,
   OF_NoDecorativeRTTITypeDescriptor = 1 << 7,
+  /// Do not insert a space between template arguments (like MSVC does).
+  OF_CompactTemplateLists = 1 << 8,
+  /// Add a space between nested closing braces of templates.
+  OF_SplitTemplateClosers = 1 << 9,
 };
 
 // Types
@@ -355,6 +359,8 @@ struct DEMANGLE_ABI FunctionSignatureNode : public TypeNode {
 
   void outputPre(OutputBuffer &OB, OutputFlags Flags) const override;
   void outputPost(OutputBuffer &OB, OutputFlags Flags) const override;
+
+  void outputPreSignature(OutputBuffer &OB, OutputFlags Flags) const;
 
   static bool classof(const Node *N) {
     return N->kind() >= NodeKind::FunctionSignature &&

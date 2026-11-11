@@ -10,6 +10,39 @@
 
 // TODO: Some test cases from this file should be moved to other dialects.
 
+#bias = affine_map<(d0, d1) -> (d0)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+
+// CHECK-LABEL: func @interchanged_bias_add_inplace(
+//  CHECK-SAME:   %[[BIAS:.*]]: memref<16xf32
+//  CHECK-SAME:   %[[DST:.*]]: memref<8x16xf32
+//   CHECK-NOT:   memref.alloc
+//   CHECK-NOT:   memref.copy
+//       CHECK:   linalg.generic
+//  CHECK-SAME:     ins(%[[BIAS]], %[[DST]]
+//  CHECK-SAME:     outs(%[[DST]]
+func.func @interchanged_bias_add_inplace(
+    %bias: tensor<16xf32>,
+    %dst: tensor<8x16xf32> {bufferization.writable = true})
+    -> tensor<8x16xf32> {
+  // This indexing-map configuration can be produced by interchanging the
+  // loops of an identity-mapped in-place elementwise update. The projected
+  // map of %bias does not participate in the conflict between the two uses of
+  // %dst.
+  %0 = linalg.generic {
+      indexing_maps = [#bias, #transpose, #transpose],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%bias, %dst : tensor<16xf32>, tensor<8x16xf32>)
+      outs(%dst : tensor<8x16xf32>) {
+    ^bb0(%bias_elem: f32, %old: f32, %out: f32):
+      %1 = arith.addf %old, %bias_elem : f32
+      linalg.yield %1 : f32
+    } -> tensor<8x16xf32>
+  return %0 : tensor<8x16xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func private @fill_inplace(
 //  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 // CHECK-NO-LAYOUT-MAP-LABEL: func private @fill_inplace(%{{.*}}: memref<?xf32>) {

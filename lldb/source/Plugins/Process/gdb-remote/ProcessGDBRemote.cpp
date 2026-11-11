@@ -68,6 +68,8 @@
 #include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
@@ -75,7 +77,9 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
@@ -103,6 +107,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -313,9 +318,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_async_listener_sp(
           Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
       m_async_thread_state_mutex(), m_thread_ids(), m_thread_pcs(),
-      m_jstopinfo_sp(), m_jthreadsinfo_sp(), m_shared_cache_info_sp(),
-      m_shared_cache_info_mutex(), m_continue_c_tids(), m_continue_C_tids(),
-      m_continue_s_tids(), m_continue_S_tids(), m_max_memory_size(0),
+      m_continue_c_tids(), m_continue_C_tids(), m_continue_s_tids(),
+      m_continue_S_tids(), m_max_memory_size(0),
       m_remote_stub_max_memory_size(0), m_addr_to_mmap_size(),
       m_thread_create_bp_sp(), m_waiting_for_attach(false), m_command_sp(),
       m_breakpoint_pc_offset(0), m_initial_tid(LLDB_INVALID_THREAD_ID),
@@ -944,7 +948,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
+#ifdef _WIN32
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+#else
+          SetSTDIOPseudoTerminal(pty);
+#endif
         }
 #ifdef _WIN32
         else if (m_stdin_forward) {
@@ -1016,6 +1024,9 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVContSupported("c");
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
+
+  // Empty unless the server advertised "address-spaces+" in qSupported.
+  m_address_spaces = m_gdb_comm.GetAddressSpaces();
 
   // First dispatch any commands from the platform:
   auto handle_cmds = [&] (const Args &args) ->  void {
@@ -1175,6 +1186,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -1353,9 +1365,9 @@ Status ProcessGDBRemote::WillResume() {
   m_continue_C_tids.clear();
   m_continue_s_tids.clear();
   m_continue_S_tids.clear();
-  m_jstopinfo_sp.reset();
-  m_jthreadsinfo_sp.reset();
-  m_shared_cache_info_sp.reset();
+  m_jstopinfo.Lock()->reset();
+  m_jthreadsinfo.Lock()->reset();
+  m_shared_cache_info.Lock()->reset();
   return Status();
 }
 
@@ -1680,9 +1692,10 @@ size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
 bool ProcessGDBRemote::UpdateThreadIDList() {
   std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
-  if (m_jthreadsinfo_sp) {
+  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos = m_jthreadsinfo_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1806,6 +1819,26 @@ void ProcessGDBRemote::SetThreadPc(const ThreadSP &thread_sp, uint64_t index) {
   }
 }
 
+std::optional<size_t> ProcessGDBRemote::FindThreadIDIndex(lldb::tid_t tid) {
+  // This runs for every thread at a stop, so searching m_thread_ids would make
+  // the stop quadratic in the number of threads. m_thread_ids is rewritten in
+  // several places that leave m_thread_id_positions alone, so trust a cached
+  // position only if m_thread_ids still has tid there, and rebuild otherwise.
+  std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
+  auto it = m_thread_id_positions.find(tid);
+  if (it != m_thread_id_positions.end() && it->second < m_thread_ids.size() &&
+      m_thread_ids[it->second] == tid)
+    return it->second;
+
+  m_thread_id_positions.clear();
+  for (auto [i, id] : llvm::enumerate(m_thread_ids))
+    m_thread_id_positions.try_emplace(id, i);
+  it = m_thread_id_positions.find(tid);
+  if (it == m_thread_id_positions.end())
+    return std::nullopt;
+  return it->second;
+}
+
 bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
     ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
@@ -1822,7 +1855,8 @@ bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
           if (thread_dict->GetValueForKeyAsInteger<lldb::tid_t>(
                   "tid", tid, LLDB_INVALID_THREAD_ID)) {
             if (tid == thread->GetID())
-              return (bool)SetThreadStopInfo(thread_dict);
+              return (bool)SetThreadStopInfo(thread_dict,
+                                             thread->shared_from_this());
           }
         }
       }
@@ -1833,18 +1867,27 @@ bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
-  if (GetThreadStopInfoFromJSON(thread, m_jthreadsinfo_sp))
+  // packet (we're at a public stop).
+  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  if (GetThreadStopInfoFromJSON(thread, threads_info_sp))
     return true;
 
-  // See if we got thread stop info for any threads valid stop info reasons
-  // threads via the "jstopinfo" packet stop reply packet key/value pair?
-  if (m_jstopinfo_sp) {
-    // If we have "jstopinfo" then we have stop descriptions for all threads
-    // that have stop reasons, and if there is no entry for a thread, then it
-    // has no stop reason.
-    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp))
+  // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
+  // with a mach exception description for any thread that has a stop reason.
+  StructuredData::ObjectSP stop_info_sp = *m_jstopinfo.Lock();
+  if (stop_info_sp) {
+    // Any thread not described in `jstopinfo` has no stop reason.
+    // If a no-stop-reason thread is stopped at a breakpoint site (but
+    // hasn't yet hit the breakpoint instruction), note that in the
+    // Thread state so we will hit the breakpoint when we resume execution.
+    if (!GetThreadStopInfoFromJSON(thread, stop_info_sp)) {
+      addr_t pc = thread->GetRegisterContext()->GetPC();
+      BreakpointSiteSP bp_site_sp =
+          thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+      if (bp_site_sp && IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
+        thread->SetThreadStoppedAtUnexecutedBP(pc);
       thread->SetStopInfo(StopInfoSP());
+    }
     return true;
   }
 
@@ -1887,14 +1930,14 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     LazyBool associated_with_dispatch_queue, addr_t dispatch_queue_t,
     std::string &queue_name, QueueKind queue_kind, uint64_t queue_serial,
     std::vector<lldb::addr_t> &added_binaries,
-    StructuredData::ObjectSP &detailed_binaries_info) {
+    StructuredData::ObjectSP &detailed_binaries_info, ThreadSP thread_sp) {
 
   if (tid == LLDB_INVALID_THREAD_ID)
     return nullptr;
 
-  ThreadSP thread_sp;
-  // Scope for "locker" below
-  {
+  // Stop info is set for every thread at a stop, so a search of the thread
+  // list for each would take time quadratic in the number of threads.
+  if (!thread_sp || thread_sp->GetProtocolID() != tid) {
     // m_thread_list_real does have its own mutex, but we need to hold onto the
     // mutex between the call to m_thread_list_real.FindThreadByID(...) and the
     // m_thread_list_real.AddThread(...) so it doesn't change on us
@@ -1913,9 +1956,8 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
   reg_ctx_sp->InvalidateIfNeeded(true);
 
-  auto iter = llvm::find(m_thread_ids, tid);
-  if (iter != m_thread_ids.end())
-    SetThreadPc(thread_sp, iter - m_thread_ids.begin());
+  if (std::optional<size_t> index = FindThreadIDIndex(tid))
+    SetThreadPc(thread_sp, *index);
 
   ParseExpeditedRegisters(expedited_register_map, thread_sp);
 
@@ -2114,6 +2156,15 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           thread_sp->SetStopInfo(
               StopInfo::CreateStopReasonVForkDone(*thread_sp));
           handled = true;
+        } else if (reason == "dyld") {
+          if (llvm::Error error = LoadModules()) {
+            Log *log = GetLog(GDBRLog::Process);
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "failed to load modules: {0}");
+          }
+          thread_sp->SetStopInfo(
+              StopInfo::CreateStopReasonDyld(*thread_sp, description.c_str()));
+          handled = true;
         }
       }
 
@@ -2222,7 +2273,8 @@ ProcessGDBRemote::HandleThreadAsyncInterrupt(uint8_t signo,
 }
 
 lldb::ThreadSP
-ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
+ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict,
+                                    lldb::ThreadSP thread_sp) {
   static constexpr llvm::StringLiteral g_key_tid("tid");
   static constexpr llvm::StringLiteral g_key_name("name");
   static constexpr llvm::StringLiteral g_key_reason("reason");
@@ -2361,8 +2413,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                   const size_t bytes_copied =
                       bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
                   if (bytes_copied == byte_size)
-                    m_memory_cache.AddL1CacheData(mem_cache_addr,
-                                                  data_buffer_sp);
+                    AddCacheData(mem_cache_addr, data_buffer_sp);
                 }
               }
             }
@@ -2406,7 +2457,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
       tid, expedited_register_map, signo, thread_name, reason, description,
       exc_type, exc_data, thread_dispatch_qaddr, queue_vars_valid,
       associated_with_dispatch_queue, dispatch_queue_t, queue_name, queue_kind,
-      queue_serial_number, added_binaries, detailed_binaries_info);
+      queue_serial_number, added_binaries, detailed_binaries_info,
+      std::move(thread_sp));
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
@@ -2494,7 +2546,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         // This JSON contains thread IDs and thread stop info for all threads.
         // It doesn't contain expedited registers, memory or queue info.
-        m_jstopinfo_sp = StructuredData::ParseJSON(json);
+        *m_jstopinfo.Lock() = StructuredData::ParseJSON(json);
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
         // Now convert the HEX bytes into a string value
@@ -2552,7 +2604,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
             const size_t bytes_copied =
                 bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
             if (bytes_copied == byte_size)
-              m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
+              AddCacheData(mem_cache_addr, data_buffer_sp);
           }
         }
       } else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 ||
@@ -2886,19 +2938,28 @@ void ProcessGDBRemote::WillPublicStop() {
   // runtime queue information (iOS and MacOSX only), and more. Expediting
   // memory will help stack backtracing be much faster. Expediting registers
   // will make sure we don't have to read the thread registers for GPRs.
-  m_jthreadsinfo_sp = m_gdb_comm.GetThreadsInfo();
+  StructuredData::ObjectSP threads_info_sp = m_gdb_comm.GetThreadsInfo();
+  *m_jthreadsinfo.Lock() = threads_info_sp;
 
-  if (m_jthreadsinfo_sp) {
+  if (threads_info_sp) {
     // Now set the stop info for each thread and also expedite any registers
     // and memory that was in the jThreadsInfo response.
-    StructuredData::Array *thread_infos = m_jthreadsinfo_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
     if (thread_infos) {
+      std::unordered_map<lldb::tid_t, ThreadSP> threads;
+      for (const ThreadSP &thread_sp : m_thread_list_real.Threads())
+        threads.try_emplace(thread_sp->GetProtocolID(), thread_sp);
       const size_t n = thread_infos->GetSize();
       for (size_t i = 0; i < n; ++i) {
         StructuredData::Dictionary *thread_dict =
             thread_infos->GetItemAtIndex(i)->GetAsDictionary();
-        if (thread_dict)
-          SetThreadStopInfo(thread_dict);
+        if (!thread_dict)
+          continue;
+        lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+        thread_dict->GetValueForKeyAsInteger("tid", tid);
+        auto thread = threads.find(tid);
+        SetThreadStopInfo(thread_dict,
+                          thread == threads.end() ? nullptr : thread->second);
       }
     }
   }
@@ -2910,6 +2971,13 @@ size_t ProcessGDBRemote::DoReadMemory(const ProcessAddress &process_addr,
   using xPacketState = GDBRemoteCommunicationClient::xPacketState;
 
   lldb::addr_t addr = process_addr.GetValue();
+  lldb::addr_space_t addr_space = process_addr.GetAddressSpace();
+  if (addr_space != LLDB_DEFAULT_ADDRESS_SPACE_ID &&
+      !m_gdb_comm.GetAddressSpacesSupported()) {
+    error = Status::FromErrorString("address spaces are not supported");
+    return 0;
+  }
+
   GetMaxMemorySize();
   xPacketState x_state = m_gdb_comm.GetxPacketState();
 
@@ -2924,11 +2992,35 @@ size_t ProcessGDBRemote::DoReadMemory(const ProcessAddress &process_addr,
     size = max_memory_size;
   }
 
-  char packet[64];
-  int packet_len;
-  packet_len = ::snprintf(packet, sizeof(packet), "%c%" PRIx64 ",%" PRIx64,
-                          x_state != xPacketState::Unimplemented ? 'x' : 'm',
-                          (uint64_t)addr, (uint64_t)size);
+  // A non-default address space rides on an "address_space:<hex-id>;" suffix,
+  // followed by "thread:<hex-tid>;" when that space is thread specific.
+  std::string suffix;
+  if (addr_space != LLDB_DEFAULT_ADDRESS_SPACE_ID) {
+    llvm::Expected<AddressSpaceInfo> info = GetAddressSpaceInfo(addr_space);
+    if (!info) {
+      error = Status::FromError(info.takeError());
+      return 0;
+    }
+    suffix =
+        llvm::formatv(";address_space:{0};", llvm::utohexstr(addr_space, true));
+    if (info->is_thread_specific) {
+      std::optional<lldb::tid_t> tid = process_addr.GetThreadID();
+      if (!tid) {
+        error = Status::FromErrorStringWithFormat(
+            "address space \"%s\" is thread specific, but no thread was "
+            "specified",
+            info->name.c_str());
+        return 0;
+      }
+      suffix += llvm::formatv("thread:{0};", llvm::utohexstr(*tid, true));
+    }
+  }
+
+  char packet[128];
+  int packet_len =
+      ::snprintf(packet, sizeof(packet), "%c%" PRIx64 ",%" PRIx64 "%s",
+                 x_state != xPacketState::Unimplemented ? 'x' : 'm',
+                 (uint64_t)addr, (uint64_t)size, suffix.c_str());
   assert(packet_len + 1 < (int)sizeof(packet));
   UNUSED_IF_ASSERT_DISABLED(packet_len);
   StringExtractorGDBRemote response;
@@ -3084,6 +3176,7 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
         response_str);
 
   // Sizes are separated by a `,`.
+  unsigned num_sizes = 0;
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(BASE_16, read_size))
@@ -3095,17 +3188,27 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
                                       "enough data, requested sizes: {0}",
                                       sizes_str);
 
+    if (read_size > buffer.size())
+      return llvm::createStringErrorV(
+          "MultiMemRead response size {0} exceeds remaining buffer {1}",
+          read_size, buffer.size());
+
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
 
-    assert(buffer.size() >= read_size);
     llvm::MutableArrayRef<uint8_t> region_to_write =
         buffer.take_front(read_size);
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
     memory_regions.push_back(region_to_write);
+    ++num_sizes;
   }
+
+  if (num_sizes != expected_num_ranges)
+    return llvm::createStringErrorV(
+        "MultiMemRead response had {0} sizes, expected {1}", num_sizes,
+        expected_num_ranges);
 
   return llvm::Error::success();
 }
@@ -3345,6 +3448,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                               packet.GetData());
   }
   return 0;
+}
+
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions(
+      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
@@ -4301,12 +4425,45 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!accelerator_target_sp)
     return llvm::createStringError("failed to create accelerator target");
 
+  llvm::scope_exit delete_accelerator_target([&] {
+    debugger.GetTargetList().DeleteTarget(accelerator_target_sp);
+    accelerator_target_sp->Destroy();
+  });
+
   PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
   if (!platform_sp)
     return llvm::createStringErrorV(
         "no platform '{0}' compatible with triple '{1}' for the accelerator "
         "target",
         connect_info.platform_name, connect_info.triple);
+
+  TargetSP native_target_sp = GetTarget().shared_from_this();
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      native_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
+
+  bool created_group = !group_sp;
+  if (created_group) {
+    group_sp = debugger.GetTargetGroupList()
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerators>(
+                       "CPU and accelerator targets");
+  }
+
+  llvm::scope_exit restore_target_group([&] {
+    group_sp->RemoveTarget(accelerator_target_sp);
+    if (created_group) {
+      group_sp->RemoveTarget(native_target_sp);
+      debugger.GetTargetGroupList().DeleteTargetGroup(group_sp);
+    }
+  });
+
+  if (llvm::Error membership_error =
+          group_sp->AddTarget(native_target_sp, TargetGroup::Role::CPU))
+    return membership_error;
+  if (llvm::Error membership_error = group_sp->AddTarget(
+          accelerator_target_sp, TargetGroup::Role::Accelerator))
+    return membership_error;
+
   ProcessSP process_sp =
       connect_info.synchronous
           ? platform_sp->ConnectProcessSynchronous(
@@ -4321,6 +4478,8 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!process_sp)
     return llvm::createStringError("failed to connect to the accelerator");
 
+  restore_target_group.release();
+  delete_accelerator_target.release();
   accelerator_target_sp->SetTargetSessionName(actions.session_name);
 
   // Broadcast the new-target event so API clients can detect it.
@@ -4550,8 +4709,12 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    std::string plugin_name;
+    if (std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings())
+      plugin_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, plugin_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -4745,11 +4908,13 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
 }
 
 StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
-  std::lock_guard<std::mutex> guard(m_shared_cache_info_mutex);
+  // Held across the query so a second caller waits for the answer instead of
+  // sending the packet again.
+  auto shared_cache_info = m_shared_cache_info.Lock();
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
-  if (m_shared_cache_info_sp || !m_gdb_comm.GetSharedCacheInfoSupported())
-    return m_shared_cache_info_sp;
+  if (*shared_cache_info || !m_gdb_comm.GetSharedCacheInfoSupported())
+    return *shared_cache_info;
 
   StreamString packet;
   packet << "jGetSharedCacheInfo:";
@@ -4794,10 +4959,10 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
           HostInfo::SharedCacheIndexFiles(sc_path, uuid, sc_mode);
         }
       }
-      m_shared_cache_info_sp = response_sp;
+      *shared_cache_info = response_sp;
     }
   }
-  return m_shared_cache_info_sp;
+  return *shared_cache_info;
 }
 
 Status ProcessGDBRemote::ConfigureStructuredData(
@@ -5313,6 +5478,298 @@ void ParseFlags(
       });
 }
 
+static const RegisterTypeBuiltin *
+ResolveGDBBuiltinType(llvm::StringRef type_name) {
+  // These names and sizes follow GDB's predefined target-description types in
+  // gdbsupport/tdesc.cc. ARM FPA is intentionally omitted because GCC removed
+  // support for it in 2012.
+  static const RegisterTypeBuiltin bool_type("bool", eEncodingUint,
+                                             eFormatBoolean, 1);
+  static const RegisterTypeBuiltin int8_type("int8", eEncodingSint,
+                                             eFormatDecimal, 1);
+  static const RegisterTypeBuiltin int16_type("int16", eEncodingSint,
+                                              eFormatDecimal, 2);
+  static const RegisterTypeBuiltin int32_type("int32", eEncodingSint,
+                                              eFormatDecimal, 4);
+  static const RegisterTypeBuiltin int64_type("int64", eEncodingSint,
+                                              eFormatDecimal, 8);
+  static const RegisterTypeBuiltin int128_type("int128", eEncodingSint,
+                                               eFormatDecimal, 16);
+  static const RegisterTypeBuiltin uint8_type("uint8", eEncodingUint,
+                                              eFormatHex, 1);
+  static const RegisterTypeBuiltin uint16_type("uint16", eEncodingUint,
+                                               eFormatHex, 2);
+  static const RegisterTypeBuiltin uint32_type("uint32", eEncodingUint,
+                                               eFormatHex, 4);
+  static const RegisterTypeBuiltin uint64_type("uint64", eEncodingUint,
+                                               eFormatHex, 8);
+  static const RegisterTypeBuiltin uint128_type("uint128", eEncodingUint,
+                                                eFormatHex, 16);
+  static const RegisterTypeBuiltin code_ptr_type(
+      "code_ptr", eEncodingUint, eFormatAddressInfo, std::nullopt);
+  static const RegisterTypeBuiltin data_ptr_type(
+      "data_ptr", eEncodingUint, eFormatAddressInfo, std::nullopt);
+  static const RegisterTypeBuiltin ieee_half_type("ieee_half", eEncodingIEEE754,
+                                                  eFormatFloat, 2);
+  static const RegisterTypeBuiltin ieee_single_type(
+      "ieee_single", eEncodingIEEE754, eFormatFloat, 4);
+  static const RegisterTypeBuiltin ieee_double_type(
+      "ieee_double", eEncodingIEEE754, eFormatFloat, 8);
+  static const RegisterTypeBuiltin i387_ext_type("i387_ext", eEncodingIEEE754,
+                                                 eFormatFloat, 10);
+  static const RegisterTypeBuiltin bfloat16_type("bfloat16", eEncodingIEEE754,
+                                                 eFormatFloat, 2);
+
+  return llvm::StringSwitch<const RegisterTypeBuiltin *>(type_name)
+      .Case("bool", &bool_type)
+      .Case("int8", &int8_type)
+      .Case("int16", &int16_type)
+      .Case("int32", &int32_type)
+      .Case("int64", &int64_type)
+      .Case("int128", &int128_type)
+      .Case("uint8", &uint8_type)
+      .Case("uint16", &uint16_type)
+      .Case("uint32", &uint32_type)
+      .Case("uint64", &uint64_type)
+      .Case("uint128", &uint128_type)
+      .Case("code_ptr", &code_ptr_type)
+      .Case("data_ptr", &data_ptr_type)
+      .Case("ieee_half", &ieee_half_type)
+      .Case("ieee_single", &ieee_single_type)
+      .Case("ieee_double", &ieee_double_type)
+      .Case("i387_ext", &i387_ext_type)
+      .Case("bfloat16", &bfloat16_type)
+      .Default(nullptr);
+}
+
+static const RegisterType *
+ResolveGDBType(llvm::StringRef type_name,
+               const RegisterTypeMap &feature_register_types) {
+  auto type_it = feature_register_types.find(type_name);
+  if (type_it != feature_register_types.end())
+    return type_it->second;
+  return ResolveGDBBuiltinType(type_name);
+}
+
+static void
+ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
+            std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::optional<llvm::StringRef> id;
+  std::optional<llvm::StringRef> element_type_name;
+  std::optional<uint32_t> count;
+
+  vector_node.ForEachAttribute(
+      [&id, &element_type_name, &count, log](llvm::StringRef name,
+                                             llvm::StringRef value) {
+        if (name == "id") {
+          id = value;
+        } else if (name == "type") {
+          element_type_name = value;
+        } else if (name == "count") {
+          uint32_t parsed_count = 0;
+          if (llvm::to_integer(value, parsed_count))
+            count = parsed_count;
+          else
+            LLDB_LOG(log, "ProcessGDBRemote::ParseVector Invalid count \"{0}\"",
+                     value);
+        } else {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseVector Ignoring unknown attribute "
+                   "\"{0}\"",
+                   name);
+        }
+        return true;
+      });
+
+  // GDB limits vectors to 65536 elements. This is also LLDB's maximum
+  // register size in bytes, so use the existing named limit.
+  constexpr uint32_t max_vector_count = RegisterValue::kMaxRegisterByteSize;
+  if (!id || id->empty() || !element_type_name || element_type_name->empty() ||
+      !count || *count == 0 || *count > max_vector_count) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseVector Ignoring vector with invalid "
+                  "id, type, or count");
+    return;
+  }
+
+  if (feature_register_types.contains(*id)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Ignoring duplicate type \"{0}\"",
+             *id);
+    return;
+  }
+
+  const RegisterType *element_type =
+      ResolveGDBType(*element_type_name, feature_register_types);
+  if (!element_type) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Could not resolve element type "
+             "\"{0}\" for vector \"{1}\"",
+             *element_type_name, *id);
+    return;
+  }
+
+  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector, RegisterTypeUnion>(
+          element_type)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Found element type \"{0}\" for "
+             "vector \"{1}\", but it is not a builtin, vector, or union "
+             "type",
+             *element_type_name, *id);
+    return;
+  }
+
+  std::optional<uint64_t> element_size = element_type->GetByteSize();
+  if (element_size &&
+      *element_size > RegisterValue::kMaxRegisterByteSize / *count) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseVector Size of vector \"{0}\" is too "
+             "large",
+             *id);
+    return;
+  }
+
+  auto vector_type =
+      std::make_unique<RegisterTypeVector>(id->str(), element_type, *count);
+  feature_register_types.try_emplace(*id, vector_type.get());
+  owned_register_types.push_back(std::move(vector_type));
+}
+
+static std::vector<RegisterTypeUnion::Field>
+ParseUnionFields(const XMLNode &union_node, llvm::StringRef union_id,
+                 const RegisterTypeMap &feature_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::vector<RegisterTypeUnion::Field> fields;
+  bool invalid_field = false;
+
+  union_node.ForEachChildElementWithName(
+      "field", [&fields, &invalid_field, log, &feature_register_types,
+                union_id](const XMLNode &field_node) {
+        std::optional<llvm::StringRef> name;
+        std::optional<llvm::StringRef> type_name;
+
+        field_node.ForEachAttribute(
+            [&name, &type_name, log, union_id](llvm::StringRef attribute,
+                                               llvm::StringRef value) {
+              if (attribute == "name")
+                name = value;
+              else if (attribute == "type")
+                type_name = value;
+              else
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseUnionFields Ignoring unknown "
+                         "attribute \"{0}\" in a field of union \"{1}\"",
+                         attribute, union_id);
+              return true;
+            });
+
+        if (!name || name->empty() || !type_name || type_name->empty()) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Union \"{0}\" has a "
+                   "field missing a non-empty name or type",
+                   union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        const RegisterType *field_type =
+            ResolveGDBType(*type_name, feature_register_types);
+        if (!field_type) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Could not resolve type "
+                   "\"{0}\" for field \"{1}\" of union \"{2}\"",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector,
+                       RegisterTypeUnion>(field_type)) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Found type \"{0}\" "
+                   "for field \"{1}\", but it is not a builtin, vector, or "
+                   "union type. Union \"{2}\" will be ignored.",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        fields.emplace_back(name->str(), field_type);
+        return true;
+      });
+
+  // Reject the whole union if any field is invalid. Retaining only valid fields
+  // would misrepresent the target's type definition.
+  if (invalid_field) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it contains an invalid field",
+             union_id);
+    fields.clear();
+  } else if (fields.empty()) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it has no fields",
+             union_id);
+  }
+  return fields;
+}
+
+static void
+ParseUnion(const XMLNode &union_node, RegisterTypeMap &feature_register_types,
+           std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::optional<llvm::StringRef> id;
+
+  union_node.ForEachAttribute(
+      [&id, log](llvm::StringRef name, llvm::StringRef value) {
+        if (name == "id")
+          id = value;
+        else
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnion Ignoring unknown attribute "
+                   "\"{0}\"",
+                   name);
+        return true;
+      });
+
+  if (!id || id->empty()) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseUnion Ignoring union without an id");
+    return;
+  }
+
+  if (feature_register_types.contains(*id)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnion Ignoring duplicate type \"{0}\"",
+             *id);
+    return;
+  }
+
+  std::vector<RegisterTypeUnion::Field> fields =
+      ParseUnionFields(union_node, *id, feature_register_types);
+  if (fields.empty())
+    return;
+
+  auto union_type =
+      std::make_unique<RegisterTypeUnion>(id->str(), std::move(fields));
+  feature_register_types.try_emplace(*id, union_type.get());
+  owned_register_types.push_back(std::move(union_type));
+}
+
+static void ParseCompositeTypes(
+    XMLNode feature_node, RegisterTypeMap &feature_register_types,
+    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  feature_node.ForEachChildElement(
+      [&feature_register_types,
+       &owned_register_types](const XMLNode &type_node) {
+        if (type_node.NameIs("vector"))
+          ParseVector(type_node, feature_register_types, owned_register_types);
+        else if (type_node.NameIs("union"))
+          ParseUnion(type_node, feature_register_types, owned_register_types);
+        return true;
+      });
+}
+
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
@@ -5335,6 +5792,20 @@ bool ParseRegisters(
     if (const auto *flags_type =
             llvm::dyn_cast<RegisterTypeFlags>(register_type.second))
       flags_type->DumpToLog(log);
+
+  // Enums and flags retain their dedicated passes above. Vectors and unions
+  // can reference one another, so parse them together in document order. A
+  // referenced composite type must precede its user.
+  ParseCompositeTypes(feature_node, feature_register_types,
+                      owned_register_types);
+  for (const auto &register_type : feature_register_types)
+    if (const auto *vector_type =
+            llvm::dyn_cast<RegisterTypeVector>(register_type.second))
+      vector_type->DumpToLog(log);
+  for (const auto &register_type : feature_register_types)
+    if (const auto *union_type =
+            llvm::dyn_cast<RegisterTypeUnion>(register_type.second))
+      union_type->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",
@@ -5416,11 +5887,70 @@ bool ParseRegisters(
         });
 
         if (!gdb_type.empty()) {
-          // gdb_type could reference some flags type defined in XML.
+          // gdb_type could reference a type defined in this feature.
           auto it = feature_register_types.find(gdb_type);
           if (it != feature_register_types.end()) {
-            if (const auto *flags_type =
-                    llvm::dyn_cast<RegisterTypeFlags>(it->second)) {
+            if (const auto *vector_type =
+                    llvm::dyn_cast<RegisterTypeVector>(it->second)) {
+              std::optional<uint64_t> type_size = vector_type->GetByteSize();
+              if (reg_info.byte_size > RegisterValue::kMaxRegisterByteSize) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Register {0} is "
+                         "too large for vector type {1}",
+                         reg_info.name, vector_type->GetID());
+              } else if (!vector_type->IsByteSizeCompatible(
+                             reg_info.byte_size)) {
+                if (!type_size) {
+                  LLDB_LOG(log,
+                           "ProcessGDBRemote::ParseRegisters Size of register "
+                           "{0} is incompatible with vector type {1}",
+                           reg_info.name, vector_type->GetID());
+                } else {
+                  LLDB_LOG(
+                      log,
+                      "ProcessGDBRemote::ParseRegisters Size of register type "
+                      "{0} ({1} bytes) for register {2} does not match the "
+                      "register size ({3} bytes). Ignoring this type.",
+                      vector_type->GetID(), *type_size, reg_info.name,
+                      reg_info.byte_size);
+                }
+              } else {
+                reg_info.register_type = vector_type;
+                if (!encoding_set) {
+                  reg_info.encoding = eEncodingVector;
+                  encoding_set = true;
+                }
+                if (!format_set) {
+                  reg_info.format = eFormatVectorOfUInt8;
+                  format_set = true;
+                }
+              }
+            } else if (const auto *union_type =
+                           llvm::dyn_cast<RegisterTypeUnion>(it->second)) {
+              if (reg_info.byte_size > RegisterValue::kMaxRegisterByteSize) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Register {0} is "
+                         "too large for union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else if (!union_type->IsByteSizeCompatible(
+                             reg_info.byte_size)) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Size of register "
+                         "{0} is incompatible with union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else {
+                reg_info.register_type = union_type;
+                if (!encoding_set) {
+                  reg_info.encoding = eEncodingUint;
+                  encoding_set = true;
+                }
+                if (!format_set) {
+                  reg_info.format = eFormatHex;
+                  format_set = true;
+                }
+              }
+            } else if (const auto *flags_type =
+                           llvm::dyn_cast<RegisterTypeFlags>(it->second)) {
               if (reg_info.byte_size == flags_type->GetSize())
                 reg_info.register_type = flags_type;
               else
@@ -5862,6 +6392,9 @@ lldb::ModuleSP ProcessGDBRemote::LoadModuleAtAddress(const FileSpec &file,
 llvm::Error ProcessGDBRemote::LoadModules() {
   using lldb_private::process_gdb_remote::ProcessGDBRemote;
 
+  if (m_dyld_up && m_dyld_up->HandleStopReasonDynamicLoader())
+    return llvm::ErrorSuccess();
+
   // request a list of loaded libraries from GDBServer
   llvm::Expected<LoadedModuleInfoList> module_list = GetLoadedModuleList();
   if (!module_list)
@@ -5932,7 +6465,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 
@@ -6143,17 +6676,19 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "qSaveCore returned no core path");
 
-    // now transfer the core file
     FileSpec remote_core{llvm::StringRef(path)};
+    FileSpec local_core{outfile};
     Platform &platform = *GetTarget().GetPlatform();
-    Status error = platform.GetFile(remote_core, FileSpec(outfile));
 
-    if (platform.IsRemote()) {
-      // NB: we unlink the file on error too
-      platform.Unlink(remote_core);
-      if (error.Fail())
-        return error.ToError();
-    }
+    if (!platform.IsRemote() && remote_core == local_core)
+      return true;
+
+    // now transfer the core file
+    Status error = platform.GetFile(remote_core, local_core);
+    // NB: we unlink the file on error too
+    platform.Unlink(remote_core);
+    if (error.Fail())
+      return error.ToError();
 
     return true;
   }

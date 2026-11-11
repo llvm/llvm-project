@@ -2813,7 +2813,7 @@ void *MachProcess::STDIOThread(void *arg) {
     } else if (num_set_fds == 0) {
     } else {
       char s[1024];
-      s[sizeof(s) - 1] = '\0'; // Ensure we have NULL termination
+      s[sizeof(s) - 1] = '\0'; // Ensure we have null termination
       ssize_t bytes_read = 0;
       if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &read_fds)) {
         do {
@@ -3750,24 +3750,27 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     size_t ocount = 0;
     bool slice_preference_set = false;
 
-    if (cpu_subtype != 0) {
-      typedef int (*posix_spawnattr_setarchpref_np_t)(
-          posix_spawnattr_t *, size_t, cpu_type_t *, cpu_subtype_t *, size_t *);
-      posix_spawnattr_setarchpref_np_t posix_spawnattr_setarchpref_np_fn =
-          (posix_spawnattr_setarchpref_np_t)dlsym(
-              RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
-      if (posix_spawnattr_setarchpref_np_fn) {
-        err.SetError((*posix_spawnattr_setarchpref_np_fn)(
-            &attr, 1, &cpu_type, &cpu_subtype, &ocount));
-        slice_preference_set = err.Success();
-        if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
-          err.LogThreaded(
-              "::posix_spawnattr_setarchpref_np ( &attr, 1, cpu_type = "
-              "0x%8.8x, cpu_subtype = 0x%8.8x, count => %llu )",
-              cpu_type, cpu_subtype, (uint64_t)ocount);
-        if (err.Fail() != 0 || ocount != 1)
-          return INVALID_NUB_PROCESS;
-      }
+    typedef int (*posix_spawnattr_setarchpref_np_t)(
+        posix_spawnattr_t *, size_t, cpu_type_t *, cpu_subtype_t *, size_t *);
+    posix_spawnattr_setarchpref_np_t posix_spawnattr_setarchpref_np_fn =
+        (posix_spawnattr_setarchpref_np_t)dlsym(
+            RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
+    if (posix_spawnattr_setarchpref_np_fn) {
+      // The kernel matches subtypes exactly. Fall back to any subtype for
+      // binaries without the requested slice.
+      cpu_type_t cpu_types[] = {cpu_type, cpu_type};
+      cpu_subtype_t cpu_subtypes[] = {cpu_subtype, CPU_SUBTYPE_ANY};
+      const size_t count = std::size(cpu_types);
+      err.SetError((*posix_spawnattr_setarchpref_np_fn)(&attr, count, cpu_types,
+                                                        cpu_subtypes, &ocount));
+      slice_preference_set = err.Success();
+      if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
+        err.LogThreaded(
+            "::posix_spawnattr_setarchpref_np ( &attr, %zu, cpu_type = "
+            "0x%8.8x, cpu_subtype = 0x%8.8x, count => %llu )",
+            count, cpu_type, cpu_subtype, (uint64_t)ocount);
+      if (err.Fail() != 0 || ocount != count)
+        return INVALID_NUB_PROCESS;
     }
 
     if (!slice_preference_set) {

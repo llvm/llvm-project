@@ -396,3 +396,62 @@ loop:
 exit:
   ret void
 }
+
+define void @multiple_store_load_forward_deps(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
+; CHECK-LABEL: 'multiple_store_load_forward_deps'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %ld.C = load i32, ptr %gep.C.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.C, ptr %gep.C.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:            %ld.A = load i32, ptr %gep.A.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.A, ptr %gep.A.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        BackwardVectorizable:
+; CHECK-NEXT:            %ld.B = load i32, ptr %gep.B.ld, align 4 ->
+; CHECK-NEXT:            store i32 %ld.B, ptr %gep.B.st, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %gep.C.ld = getelementptr i32, ptr %C, i64 %iv
+  %ld.C = load i32, ptr %gep.C.ld, align 4
+  %iv.C.st = add nuw nsw i64 %iv, 64
+  %gep.C.st = getelementptr i32, ptr %C, i64 %iv.C.st
+  store i32 %ld.C, ptr %gep.C.st, align 4
+
+  %iv.x2 = mul i64 %iv, 2
+  %gep.A.ld = getelementptr i32, ptr %A, i64 %iv.x2
+  %ld.A = load i32, ptr %gep.A.ld, align 4
+  %iv.A.st = add i64 %iv.x2, 6
+  %gep.A.st = getelementptr i32, ptr %A, i64 %iv.A.st
+  store i32 %ld.A, ptr %gep.A.st, align 4
+
+  %gep.B.ld = getelementptr i32, ptr %B, i64 %iv
+  %ld.B = load i32, ptr %gep.B.ld, align 4
+  %iv.B.st = add nuw nsw i64 %iv, 64
+  %gep.B.st = getelementptr i32, ptr %B, i64 %iv.B.st
+  store i32 %ld.B, ptr %gep.B.st, align 4
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

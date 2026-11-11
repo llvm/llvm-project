@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +movbe -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +movbe -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-X64 %}
 // RUN: %clang_cc1 -ffreestanding %s -triple=i686-apple-darwin -target-feature +movbe -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=i686-apple-darwin -target-feature +movbe -emit-llvm -o - | FileCheck %s %}
 
 
 #include <immintrin.h>

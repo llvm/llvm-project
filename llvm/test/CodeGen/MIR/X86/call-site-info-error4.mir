@@ -12,7 +12,7 @@
 ---
 name: baa
 callSites:
-  - {bb: 0, offset: 0, fwdArgRegs:
+  - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$edi' } }
 body: |
   bb.0:

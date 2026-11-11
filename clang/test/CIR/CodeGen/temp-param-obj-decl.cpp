@@ -46,13 +46,14 @@ HasMem get_m() { return m; }
 // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!rec_HasMem>
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZTAXtl6HasMemLi2EEE : !cir.ptr<!rec_HasMem>
 // CIR: cir.copy %[[GET_GLOB]] align(4) to %[[RET_ALLOCA]] align(4) : !cir.ptr<!rec_HasMem>
+// CIR-NEXT: %[[RET_PTR:.*]] = cir.cast bitcast %[[RET_ALLOCA]] : !cir.ptr<!rec_HasMem> -> !cir.ptr<!s32i>
+// CIR-NEXT: %[[RET:.*]] = cir.load align(4) %[[RET_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT: cir.return %[[RET]] : !s32i
 // 
 // LLVM-BOTH-LABEL: define linkonce_odr i32 @_Z5get_mIXtl6HasMemLi2EEEES0_v()
 // LLVM-BOTH: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[RET_ALLOCA:.*]], ptr {{.*}}@_ZTAXtl6HasMemLi2EEE, i64 4, i1 false)
-// LLVM: %[[LOAD_RET:.*]] = load %struct.HasMem, ptr %[[RET_ALLOCA]]
-// LLVM: store %struct.HasMem %[[LOAD_RET]], ptr %[[COERCE:.*]], align 4
-// LLVM: %[[TO_RET:.*]] = load i32, ptr %[[COERCE]]
-// LLVM: ret i32 %[[TO_RET]]
+// LLVM-NEXT: %[[TO_RET:.*]] = load i32, ptr %[[RET_ALLOCA]], align 4
+// LLVM-NEXT: ret i32 %[[TO_RET]]
 
 // OGCG: %[[COERCE:.*]] = getelementptr{{.*}} %struct.HasMem, ptr %[[RET_ALLOCA]], i32 0, i32 0
 // OGCG: %[[TO_RET:.*]] = load i32, ptr %[[COERCE]]

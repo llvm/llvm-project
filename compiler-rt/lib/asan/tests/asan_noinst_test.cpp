@@ -178,14 +178,26 @@ TEST(AddressSanitizer, ThreadedQuarantineTest) {
   // Run the routine once to warm up ASAN internal structures to get more
   // predictable incremental memory changes.
   pthread_t t;
+#  ifdef _WIN32
   PTHREAD_CREATE(&t, NULL, ThreadedQuarantineTestWorker, 0);
+#  else
+  int Result = pthread_create(&t, NULL, ThreadedQuarantineTestWorker, 0);
+  if (Result == EAGAIN)
+    GTEST_SKIP() << "Not enough resources to create warm up thread (EAGAIN)";
+#  endif
   PTHREAD_JOIN(t, 0);
 
-  const int n_threads = 3000;
+  const int n_threads = ASAN_AVOID_EXPENSIVE_TESTS ? 90 : 3000;
   size_t mmaped1 = __sanitizer_get_heap_size();
   for (int i = 0; i < n_threads; i++) {
     pthread_t t;
+#  ifdef _WIN32
     PTHREAD_CREATE(&t, NULL, ThreadedQuarantineTestWorker, 0);
+#  else
+    Result = pthread_create(&t, NULL, ThreadedQuarantineTestWorker, 0);
+    if (Result == EAGAIN)
+      break;
+#  endif
     PTHREAD_JOIN(t, 0);
     size_t mmaped2 = __sanitizer_get_heap_size();
     // Figure out why this much memory is required.

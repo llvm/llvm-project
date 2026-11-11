@@ -1,6 +1,5 @@
 ; Check that we don't end up with duplicated array types in TypeMap.
-; No FileCheck needed, we only want to check the absence of errors.
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o -
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#]] = OpTypeArray %[[#]] %[[#]]
@@ -10,7 +9,9 @@
 
 define spir_kernel void @foo() {
 entry:
-  alloca [2 x ptr addrspace(4)], align 8
-  alloca %duplicate, align 8
+  %a = alloca [2 x ptr addrspace(4)], align 8
+  %b = alloca %duplicate, align 8
+  store ptr addrspace(4) null, ptr %a, align 8
+  store ptr addrspace(4) null, ptr %b, align 8
   ret void
 }

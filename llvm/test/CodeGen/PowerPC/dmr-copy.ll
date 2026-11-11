@@ -154,20 +154,20 @@ define void @foo(ptr noundef readonly captures(none) %p1, ptr noundef readonly c
 ; CHECK-NEXT:    dmsetdmrz dmr0
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi2, vsp36, vsp34, 1
 ; CHECK-NEXT:    lxvp vsp34, 64(r3)
 ; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-NEXT:    dmmr dmr2, dmr0
-; CHECK-NEXT:    dmxor dmr2, dmr1
+; CHECK-NEXT:    dmxxinstdmr512 wacc2, vsp36, vsp34, 0
+; CHECK-NEXT:    dmmr dmr1, dmr0
+; CHECK-NEXT:    dmxor dmr1, dmr2
 ; CHECK-NEXT:    lxvp vsp34, 0(r4)
 ; CHECK-NEXT:    lxvp vsp36, 32(r4)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi2, vsp36, vsp34, 1
 ; CHECK-NEXT:    lxvp vsp34, 64(r4)
 ; CHECK-NEXT:    lxvp vsp36, 96(r4)
-; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-NEXT:    dmxor dmr0, dmr1
-; CHECK-NEXT:    dmmr dmr1, dmr2
+; CHECK-NEXT:    dmxxinstdmr512 wacc2, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxor dmr0, dmr2
+; CHECK-NEXT:    dmmr dmr1, dmr1
 ; CHECK-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
 ; CHECK-NEXT:    stxvp vsp34, 96(r5)
 ; CHECK-NEXT:    stxvp vsp36, 64(r5)
@@ -188,20 +188,20 @@ define void @foo(ptr noundef readonly captures(none) %p1, ptr noundef readonly c
 ; CHECK-BE-NEXT:    dmsetdmrz dmr0
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi2, vsp36, vsp34, 1
 ; CHECK-BE-NEXT:    lxvp vsp34, 32(r3)
 ; CHECK-BE-NEXT:    lxvp vsp36, 0(r3)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-BE-NEXT:    dmmr dmr2, dmr0
-; CHECK-BE-NEXT:    dmxor dmr2, dmr1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc2, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmmr dmr1, dmr0
+; CHECK-BE-NEXT:    dmxor dmr1, dmr2
 ; CHECK-BE-NEXT:    lxvp vsp34, 96(r4)
 ; CHECK-BE-NEXT:    lxvp vsp36, 64(r4)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc_hi2, vsp36, vsp34, 1
 ; CHECK-BE-NEXT:    lxvp vsp34, 32(r4)
 ; CHECK-BE-NEXT:    lxvp vsp36, 0(r4)
-; CHECK-BE-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-BE-NEXT:    dmxor dmr0, dmr1
-; CHECK-BE-NEXT:    dmmr dmr1, dmr2
+; CHECK-BE-NEXT:    dmxxinstdmr512 wacc2, vsp36, vsp34, 0
+; CHECK-BE-NEXT:    dmxor dmr0, dmr2
+; CHECK-BE-NEXT:    dmmr dmr1, dmr1
 ; CHECK-BE-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc_hi1, 1
 ; CHECK-BE-NEXT:    stxvp vsp36, 96(r5)
 ; CHECK-BE-NEXT:    stxvp vsp34, 64(r5)

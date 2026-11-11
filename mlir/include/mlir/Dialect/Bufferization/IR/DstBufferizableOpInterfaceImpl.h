@@ -44,8 +44,18 @@ struct DstBufferizableOpInterfaceExternalModel
       return {{dstOp.getTiedOpResult(&opOperand), BufferRelation::Equivalent}};
     return {};
   }
-};
 
+  AliasingOpOperandList
+  getAliasingOpOperands(Operation *op, Value value,
+                        const AnalysisState &state) const {
+    // OpResults alias with their respective tied output operands.
+    auto result = dyn_cast<OpResult>(value);
+    if (!result)
+      return {};
+    auto dstOp = cast<DestinationStyleOpInterface>(op);
+    return {{dstOp.getTiedOpOperand(result), BufferRelation::Equivalent}};
+  }
+};
 } // namespace bufferization
 } // namespace mlir
 

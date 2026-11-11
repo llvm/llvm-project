@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -253,26 +254,22 @@ public:
     return LeafTy::get(getKnownMinValue() / RHS, isScalable());
   }
 
-  constexpr LeafTy multiplyCoefficientBy(ScalarTy RHS) const {
-    return LeafTy::get(getKnownMinValue() * RHS, isScalable());
-  }
-
   constexpr LeafTy coefficientNextPowerOf2() const {
     return LeafTy::get(
         static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
         isScalable());
   }
 
-  /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
-  /// will result in a value whose quantity matches our own.
+  /// Returns true if there exists a value X where RHS*X will result in a value
+  /// whose quantity matches our own.
   constexpr bool
   hasKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     return isScalable() == RHS.isScalable() &&
            getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
-  /// Returns a value X where RHS.multiplyCoefficientBy(X) will result in a
-  /// value whose quantity matches our own.
+  /// Returns a value X where RHS*X will result in a value whose quantity
+  /// matches our own.
   constexpr ScalarTy
   getKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     assert(hasKnownScalarFactor(RHS) && "Expected RHS to be a known factor!");
@@ -324,7 +321,15 @@ public:
   constexpr bool isVector() const {
     return (isScalable() && getKnownMinValue() != 0) || getKnownMinValue() > 1;
   }
+  constexpr bool isPowerOf2() const {
+    // VScale is a power of two, which just leaves the known minimum to test.
+    return isPowerOf2_32(getKnownMinValue());
+  }
 };
+
+inline hash_code hash_value(const ElementCount &EC) {
+  return hash_combine(EC.getKnownMinValue(), EC.isScalable());
+}
 
 // Stores the size of a type. If the type is of fixed size, it will represent
 // the exact size. If the type is a scalable vector, it will represent the known
@@ -336,6 +341,10 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
 public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
+
+  // ElementCount is just a TypeSize with reduced range.
+  explicit constexpr TypeSize(const ElementCount &EC)
+      : FixedOrScalableQuantity(EC.getKnownMinValue(), EC.isScalable()) {}
 
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);
@@ -375,7 +384,7 @@ public:
   operator ScalarTy() const {
     if (isScalable()) {
       reportFatalInternalError(
-          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "cannot implicitly convert a scalable size to a fixed-width size in "
           "`TypeSize::operator ScalarTy()`");
     }
     return getFixedValue();
@@ -389,6 +398,11 @@ public:
   friend constexpr TypeSize operator*(const TypeSize &LHS, const unsigned RHS) {
     return LHS * (ScalarTy)RHS;
   }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const TypeSize &LHS, const unsigned long RHS) {
+    return LHS * (ScalarTy)RHS;
+  }
   friend constexpr TypeSize operator*(const TypeSize &LHS, const int64_t RHS) {
     return LHS * (ScalarTy)RHS;
   }
@@ -399,6 +413,11 @@ public:
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const int64_t LHS, const TypeSize &RHS) {
+    return RHS * LHS;
+  }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const unsigned long LHS, const TypeSize &RHS) {
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const uint64_t LHS, const TypeSize &RHS) {

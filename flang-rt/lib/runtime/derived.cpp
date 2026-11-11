@@ -472,8 +472,9 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
     } else if (component_->genre() == typeInfo::Component::Genre::Data) {
       if (!componentDerived || componentDerived->noDestructionNeeded()) {
         SkipToNextComponent();
-      } else if (fixedStride_) {
-        // faster path, no need for subscripts, can reuse descriptor
+      } else if (fixedStride_ && component_->rank() == 0) {
+        // Scalar components can reuse a scalar descriptor without subscripts.
+        // Array components need their bounds established below.
         char *p{instance_.OffsetElement<char>(
             elementAt_ * *fixedStride_ + component_->offset())};
         Descriptor &compDesc{componentDescriptor_.descriptor()};

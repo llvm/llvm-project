@@ -7,7 +7,7 @@
 
 ; CHECK:  rotrv $2, $4
 ; mips16: .ent rot0
-; MM32:   li16  $2, 32
+; MM32:   li16  $2, 0
 ; MM32:   subu16  $2, $2, $5
 ; MM32:   rotrv $2, $4, $2
 define i32 @rot0(i32 %a, i32 %b) nounwind readnone {

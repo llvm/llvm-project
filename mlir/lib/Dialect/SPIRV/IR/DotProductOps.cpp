@@ -141,7 +141,7 @@ getIntegerDotProductCapabilities(Operation *op) {
   }
 
   auto vecTy = cast<VectorType>(factorTy);
-  if (vecTy.getElementTypeBitWidth() == 8) {
+  if (vecTy.getElementTypeBitWidth() == 8 && vecTy.getNumElements() == 4) {
     capabilities.push_back(dotProductInput4x8BitCap);
     return capabilities;
   }

@@ -9,14 +9,12 @@
 _start:
 // CHECK-LABEL: <_start>:
 /// The auipc of the pair, replaced by a nop once the call is rewritten.
-// CHECK-NEXT: nop
 // CHECK-NEXT: jal t0, 0x{{.*}} <f>
   call t0, f
 /// A jal in direct range is rewritten on its own, with no auipc to nop out.
 // CHECK-NEXT: jal t0, 0x{{.*}} <f>
   jal t0, f
 /// A call that already links through ra keeps ra.
-// CHECK-NEXT: nop
 // CHECK-NEXT: jal 0x{{.*}} <f>
   call f
 // CHECK-NEXT: jal 0x{{.*}} <f>

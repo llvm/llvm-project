@@ -8,11 +8,6 @@
 
 # Flang support for UNSIGNED type
 
-```{contents}
----
-local:
----
-```
 
 For better compatibility with GNU Fortran and Sun Fortran,
 this compiler supports an option (`-funsigned`) that enables

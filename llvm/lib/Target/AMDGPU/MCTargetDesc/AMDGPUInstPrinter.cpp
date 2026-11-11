@@ -171,6 +171,11 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     if (Imm & CPol::NV)
       O << " nv";
 
+    if (STI.hasFeature(AMDGPU::FeatureCacheFillSize)) {
+      const int64_t CFS = Imm & CPol::CFS;
+      printCFS(CFS, O);
+    }
+
     return;
   }
 
@@ -262,6 +267,27 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
     O << "SCOPE_SYS";
   else
     llvm_unreachable("unexpected scope policy value");
+}
+
+void AMDGPUInstPrinter::printCFS(int64_t CFS, raw_ostream &O) {
+  if (CFS == CPol::CFS_256B)
+    return;
+
+  O << " cfs:";
+
+  switch (CFS) {
+  case CPol::CFS_128B:
+    O << "CFS_128B";
+    break;
+  case CPol::CFS_64B:
+    O << "CFS_64B";
+    break;
+  case CPol::CFS_32B:
+    O << "CFS_32B";
+    break;
+  default:
+    llvm_unreachable("unexpected cache fill size value");
+  }
 }
 
 void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
@@ -385,6 +411,18 @@ static MCRegister getRegFromMIA(MCRegister Reg, unsigned OpNo,
   if (MCRegister NewReg = AMDGPU::getVGPRWithMSBs(Reg, OpMSBs, MRI))
     return NewReg;
   return Reg;
+}
+
+void AMDGPUInstPrinter::printRsrcReg(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  MCRegister Reg = MI->getOperand(OpNo).getReg();
+  bool IsIndexReg = AMDGPU::isRsrcIndexReg(Reg, MRI);
+  if (IsIndexReg)
+    O << "rsrcidx(";
+  printRegOperand(Reg, MI->getOpcode(), OpNo, O, MRI);
+  if (IsIndexReg)
+    O << ')';
 }
 
 void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
@@ -586,7 +624,7 @@ void AMDGPUInstPrinter::printImmediateBF16(uint32_t Imm,
   if (printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
     return;
 
-  O << formatHex(static_cast<uint64_t>(Imm));
+  O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
 }
 
 void AMDGPUInstPrinter::printImmediateF16(uint32_t Imm,
@@ -881,6 +919,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
       printImmediateF16(Op.getImm(), STI, O);
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
@@ -1092,6 +1131,7 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (!AMDGPU::isLegalDPALU_DPPControl(STI, Imm) &&
+      STI.hasFeature(AMDGPU::FeatureDPALU_DPP) &&
       AMDGPU::isDPALU_DPP(Desc, MII, STI)) {
     O << " /* DP ALU dpp only supports "
       << (isGFX12(STI) ? "row_share" : "row_newbcast") << " */";
@@ -1945,16 +1985,6 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
-}
-
-void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  uint8_t Imm = MI->getOperand(OpNo).getImm();
-  if (!Imm)
-    return;
-
-  O << " scale_sel:" << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

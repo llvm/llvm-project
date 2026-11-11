@@ -119,8 +119,9 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
 
 // Waits for all the threads in the block to converge and issues a fence.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_threads(void) {
+  __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_WRKGRP);
   __builtin_amdgcn_s_barrier();
-  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+  __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_WRKGRP);
 }
 
 // Wait for all threads in the wavefront to converge, this is a noop on AMDGPU.
@@ -136,16 +137,14 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
   return __builtin_amdgcn_ds_bpermute(__lane << 2, __x);
 }
 
-// Returns true if the flat pointer points to AMDGPU 'shared' memory.
+// Returns true if the pointer points to AMDGPU 'shared' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(const void *ptr) {
-  return __builtin_amdgcn_is_shared((void [[clang::address_space(0)]] *)((
-      void [[clang::opencl_generic]] *)ptr));
+  return __builtin_amdgcn_is_shared(ptr);
 }
 
-// Returns true if the flat pointer points to AMDGPU 'private' memory.
+// Returns true if the pointer points to AMDGPU 'private' memory.
 _DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(const void *ptr) {
-  return __builtin_amdgcn_is_private((void [[clang::address_space(0)]] *)((
-      void [[clang::opencl_generic]] *)ptr));
+  return __builtin_amdgcn_is_private(ptr);
 }
 
 // Terminates execution of the associated wavefront.

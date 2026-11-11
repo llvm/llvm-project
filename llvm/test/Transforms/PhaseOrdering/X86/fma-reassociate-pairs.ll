@@ -64,7 +64,7 @@ define double @fadd_fmul_2_right(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x double>, ptr [[Z]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract <2 x double> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd reassoc nsz contract <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[R:%.*]] = tail call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP5]])
 ; CHECK-NEXT:    ret double [[R]]
 ;

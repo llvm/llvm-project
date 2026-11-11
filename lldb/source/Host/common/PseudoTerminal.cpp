@@ -64,12 +64,27 @@ void PseudoTerminal::Reset() {
 llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
   Reset();
 #if LLDB_ENABLE_POSIX
+#if defined(__OpenBSD__)
+  // OpenBSD's posix_openpt() fails with EINVAL if O_CLOEXEC is passed, so set
+  // FD_CLOEXEC after opening instead.
+  const bool cloexec = oflag & O_CLOEXEC;
+  oflag &= ~O_CLOEXEC;
+#endif
+
   // Open the primary side of a pseudo terminal
   m_primary_fd = ::posix_openpt(oflag);
   if (m_primary_fd < 0) {
     return llvm::errorCodeToError(
         std::error_code(errno, std::generic_category()));
   }
+
+#if defined(__OpenBSD__)
+  if (cloexec && ::fcntl(m_primary_fd, F_SETFD, FD_CLOEXEC) == -1) {
+    std::error_code EC(errno, std::generic_category());
+    ClosePrimaryFileDescriptor();
+    return llvm::errorCodeToError(EC);
+  }
+#endif
 
   // Grant access to the secondary pseudo terminal
   if (::grantpt(m_primary_fd) < 0) {

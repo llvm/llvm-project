@@ -52,6 +52,12 @@ static int printSupportedCPUs(llvm::StringRef triple) {
 }
 
 int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
+  // Initialize targets first, so that --version shows registered targets and
+  // CompilerInstance's library options include the targets'.
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+
   // Create CompilerInstance
   std::unique_ptr<CompilerInstance> flang(new CompilerInstance());
 
@@ -71,11 +77,6 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
                                  diagsBuffer);
   bool success = CompilerInvocation::createFromArgs(flang->getInvocation(),
                                                     argv, diags, argv0);
-
-  // Initialize targets first, so that --version shows registered targets.
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmPrinters();
 
   // --print-supported-cpus takes priority over the actual compilation.
   if (flang->getFrontendOpts().printSupportedCPUs)

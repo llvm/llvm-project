@@ -253,6 +253,11 @@ void unaryops(void) {
   (void)((struct ww {float x;}){3}.x--);
 }
 
+/// Elements of a file-scope compound literal carry their evaluated value.
+static long *addr_as_int = (long[]){2, (long)"x"};
+static const char **into_string = (const char *[]){&"abc"[1]};
+static int **int_as_ptr = (int *[]){(int *)(intptr_t)16};
+
 /// This used to fail because we didn't properly mark the struct
 /// initialized through a CompoundLiteralExpr as initialized.
 struct TestStruct {
@@ -417,11 +422,11 @@ void callReturnsComplex(void) {
   c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
 
-int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+int complexMul[2 * (22222222222wb + 2i) == 2]; // pedantic-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
 
-int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // pedantic-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
 
@@ -474,3 +479,21 @@ void AddrLabelDiffSub(void) {
                                                              // all-error {{use of undeclared label 'baz'}} \
                                                              // pedantic-warning 2{{use of GNU address-of-label extension}}
 }
+
+void *memset(void*, int, unsigned long);
+typedef struct Parse Parse;
+struct Parse {
+  int aTempReg;
+  int sLastToken;
+};
+
+Parse sqlite3Prepare_sParse;
+void sqlite3Prepare(void) {
+  memset( ((char *)&sqlite3Prepare_sParse) + sizeof(int), 0, sizeof(int));
+}
+
+int strcmp(const char *, const char *);
+const union u {
+  char c[2];
+} str[] = {"", ""};
+const int strcmpFoo = strcmp((const char *)str, (const char *)str); // all-error {{not a compile-time constant}}

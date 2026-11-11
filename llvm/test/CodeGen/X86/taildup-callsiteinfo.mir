@@ -3,9 +3,9 @@
 # Test case adapted from test/CodeGen/X86/taildup-heapallocsite.ll.
 
 # CHECK-LABEL: callSites:
-# CHECK-NEXT:   - { bb: 1, offset: 1, fwdArgRegs:
+# CHECK-NEXT:   - { bb: '%bb.1', offset: 1, fwdArgRegs:
 # CHECK-NEXT:       - { arg: 0, reg: '$rcx' } }
-# CHECK-NEXT:   - { bb: 2, offset: 1, fwdArgRegs:
+# CHECK-NEXT:   - { bb: '%bb.2', offset: 1, fwdArgRegs:
 # CHECK-NEXT:       - { arg: 0, reg: '$rcx' } }
 
 --- |
@@ -39,7 +39,7 @@ tracksRegLiveness: true
 liveins:
   - { reg: '$rcx', virtual-reg: '' }
 callSites:
-  - { bb: 3, offset: 0, fwdArgRegs:
+  - { bb: '%bb.3', offset: 0, fwdArgRegs:
       - { arg: 0, reg: '$rcx' } }
 body:             |
   bb.0.entry:
@@ -68,9 +68,9 @@ body:             |
     liveins: $ecx
 
     CALL64pcrel32 @alloc, csr_win64, implicit $rsp, implicit $ssp, implicit $ecx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
-    SEH_BeginEpilogue
+    frame-destroy SEH_BeginEpilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 40, implicit-def dead $eflags
-    SEH_EndEpilogue
+    frame-destroy SEH_EndEpilogue
     TAILJMPd64 @f2, csr_win64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp
 
 ...

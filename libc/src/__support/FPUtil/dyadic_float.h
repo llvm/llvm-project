@@ -9,13 +9,13 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 
-#include "FEnvImpl.h"
-#include "FPBits.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "multiply_add.h"
-#include "rounding_mode.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -139,25 +139,21 @@ template <size_t Bits> struct DyadicFloat {
 
   // Used for aligning exponents.  Output might not be normalized.
   LIBC_INLINE constexpr DyadicFloat &shift_left(unsigned shift_length) {
-    if (shift_length < Bits) {
-      exponent -= static_cast<int>(shift_length);
+    exponent -= static_cast<int>(shift_length);
+    if (shift_length < Bits)
       mantissa <<= shift_length;
-    } else {
-      exponent = 0;
+    else
       mantissa = MantissaType(0);
-    }
     return *this;
   }
 
   // Used for aligning exponents.  Output might not be normalized.
   LIBC_INLINE constexpr DyadicFloat &shift_right(unsigned shift_length) {
-    if (shift_length < Bits) {
-      exponent += static_cast<int>(shift_length);
+    exponent += static_cast<int>(shift_length);
+    if (shift_length < Bits)
       mantissa >>= shift_length;
-    } else {
-      exponent = 0;
+    else
       mantissa = MantissaType(0);
-    }
     return *this;
   }
 
@@ -187,42 +183,61 @@ template <size_t Bits> struct DyadicFloat {
     return DyadicFloat(result_sign, result_exponent, result_mantissa);
   }
 
-  template <typename T, bool ShouldSignalExceptions>
-  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT cpp::enable_if_t<
-      cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
-  generic_as() const {
-    using FPBits = FPBits<T>;
-    using StorageType = typename FPBits::StorageType;
+  // The integer core of generic_as().  The destination is named by FPType, so
+  // it also covers formats with no usable native type (float16 without
+  // _Float16).
+  template <FPType DstType, bool ShouldSignalExceptions>
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT typename FPRep<DstType>::StorageType
+  generic_as_bits() const {
+    using DstRep = FPRep<DstType>;
+    using StorageType = typename DstRep::StorageType;
+    // Native type used to pick the exception-raising specialization; formats
+    // without one fall back to the generic version.
+    using ExceptT = cpp::conditional_t<
+        DstType == FPType::IEEE754_Binary32, float,
+        cpp::conditional_t<DstType == FPType::IEEE754_Binary64, double, void>>;
+    static_assert(DstRep::FRACTION_LEN < Bits);
 
-    constexpr int EXTRA_FRACTION_LEN = Bits - 1 - FPBits::FRACTION_LEN;
+    constexpr int EXTRA_FRACTION_LEN = Bits - 1 - DstRep::FRACTION_LEN;
 
     if (mantissa == 0)
-      return FPBits::zero(sign).get_val();
+      return DstRep::zero(sign).uintval();
 
     int unbiased_exp = get_unbiased_exponent();
 
-    if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
+    if (unbiased_exp + DstRep::EXP_BIAS >= DstRep::MAX_BIASED_EXPONENT) {
+      if (!cpp::is_constant_evaluated()) {
+#if !(defined(LIBC_MATH_HAS_NO_EXCEPT) &&                                      \
+      defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY))
+        if constexpr (ShouldSignalExceptions && internal::HAS_HW_FPU<ExceptT>) {
+          set_errno_if_required(ERANGE);
+          ExceptT r = internal::OVERFLOW_FACTOR<ExceptT> *
+                      internal::OVERFLOW_VAL<ExceptT>[sign.is_neg()];
+          return FPBits<ExceptT>(r).uintval();
+        }
+#endif
+      }
       if constexpr (ShouldSignalExceptions) {
         set_errno_if_required(ERANGE);
-        raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+        raise_overflow_except_if_required<ExceptT>();
       }
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      return FPBits::inf(sign).get_val();
+      return DstRep::inf(sign).uintval();
 #else  // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       switch (quick_get_round()) {
       case FE_TONEAREST:
-        return FPBits::inf(sign).get_val();
+        return DstRep::inf(sign).uintval();
       case FE_TOWARDZERO:
-        return FPBits::max_normal(sign).get_val();
+        return DstRep::max_normal(sign).uintval();
       case FE_DOWNWARD:
         if (sign.is_pos())
-          return FPBits::max_normal(Sign::POS).get_val();
-        return FPBits::inf(Sign::NEG).get_val();
+          return DstRep::max_normal(Sign::POS).uintval();
+        return DstRep::inf(Sign::NEG).uintval();
       case FE_UPWARD:
         if (sign.is_neg())
-          return FPBits::max_normal(Sign::NEG).get_val();
-        return FPBits::inf(Sign::POS).get_val();
+          return DstRep::max_normal(Sign::NEG).uintval();
+        return DstRep::inf(Sign::POS).uintval();
       default:
         __builtin_unreachable();
       }
@@ -235,10 +250,10 @@ template <size_t Bits> struct DyadicFloat {
     bool sticky = false;
     bool underflow = false;
 
-    if (unbiased_exp < -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
+    if (unbiased_exp < -DstRep::EXP_BIAS - DstRep::FRACTION_LEN) {
       sticky = true;
       underflow = true;
-    } else if (unbiased_exp == -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
+    } else if (unbiased_exp == -DstRep::EXP_BIAS - DstRep::FRACTION_LEN) {
       round = true;
       // underflow is detected pre-rounding FE_UNDERFLOW may be raised
       // even if rounding produces a non-underflow result
@@ -248,12 +263,12 @@ template <size_t Bits> struct DyadicFloat {
     } else {
       int extra_fraction_len = EXTRA_FRACTION_LEN;
 
-      if (unbiased_exp < 1 - FPBits::EXP_BIAS) {
+      if (unbiased_exp < 1 - DstRep::EXP_BIAS) {
         underflow = true;
-        extra_fraction_len += 1 - FPBits::EXP_BIAS - unbiased_exp;
+        extra_fraction_len += 1 - DstRep::EXP_BIAS - unbiased_exp;
       } else {
         out_biased_exp =
-            static_cast<StorageType>(unbiased_exp + FPBits::EXP_BIAS);
+            static_cast<StorageType>(unbiased_exp + DstRep::EXP_BIAS);
       }
 
       if (extra_fraction_len > 0) {
@@ -269,7 +284,7 @@ template <size_t Bits> struct DyadicFloat {
     bool lsb = (out_mantissa & 1) != 0;
 
     StorageType result =
-        FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
+        DstRep::create_value(sign, out_biased_exp, out_mantissa).uintval();
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     if (round && (lsb || sticky))
@@ -294,21 +309,30 @@ template <size_t Bits> struct DyadicFloat {
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     if (ShouldSignalExceptions && (round || sticky)) {
-      int excepts = FE_INEXACT;
-      if (FPBits(result).is_inf()) {
+      if (DstRep(result).is_inf()) {
         set_errno_if_required(ERANGE);
-        excepts |= FE_OVERFLOW;
+        raise_overflow_except_if_required<ExceptT>();
       } else if (underflow) {
         set_errno_if_required(ERANGE);
-        excepts |= FE_UNDERFLOW;
+        raise_underflow_except_if_required<ExceptT>();
+      } else {
+        raise_except_if_required(FE_INEXACT);
       }
-      raise_except_if_required(excepts);
     }
 
-    return FPBits(result).get_val();
+    return result;
   }
 
-  template <typename T, bool ShouldSignalExceptions,
+  template <typename T, bool ShouldSignalExceptions>
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT cpp::enable_if_t<
+      cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
+  generic_as() const {
+    return FPBits<T>(
+               generic_as_bits<get_fp_type<T>(), ShouldSignalExceptions>())
+        .get_val();
+  }
+
+  template <typename T, bool ShouldSignalExceptions = true,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
@@ -326,20 +350,32 @@ template <size_t Bits> struct DyadicFloat {
 
     if (LIBC_UNLIKELY(exp_hi > 2 * FPBits<T>::EXP_BIAS)) {
       // Results overflow.
-      T d_hi =
-          FPBits<T>::create_value(sign, 2 * FPBits<T>::EXP_BIAS, IMPLICIT_MASK)
-              .get_val();
-      // volatile prevents constant propagation that would result in infinity
-      // always being returned no matter the current rounding mode.
-      volatile T two = static_cast<T>(2.0);
-      T r = two * d_hi;
+      if (cpp::is_constant_evaluated())
+        return FPBits<T>::inf(sign).get_val();
 
-      // TODO: Whether rounding down the absolute value to max_normal should
-      // also raise FE_OVERFLOW and set ERANGE is debatable.
-      if (ShouldSignalExceptions && FPBits<T>(r).is_inf())
+      if constexpr (ShouldSignalExceptions)
         set_errno_if_required(ERANGE);
 
-      return r;
+#if defined(LIBC_MATH_HAS_NO_EXCEPT) &&                                        \
+    defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY)
+      return FPBits<T>::inf(sign).get_val();
+#else
+      if constexpr (ShouldSignalExceptions && internal::HAS_HW_FPU<T>) {
+        return internal::OVERFLOW_FACTOR<T> *
+               internal::OVERFLOW_VAL<T>[sign.is_neg()];
+      } else {
+        if constexpr (ShouldSignalExceptions)
+          raise_overflow_except_if_required<T>();
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+        int rounding = quick_get_round();
+        if (rounding == FE_TOWARDZERO ||
+            (rounding == FE_DOWNWARD && sign.is_pos()) ||
+            (rounding == FE_UPWARD && sign.is_neg()))
+          return FPBits<T>::max_normal(sign).get_val();
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+        return FPBits<T>::inf(sign).get_val();
+      }
+#endif
     }
 
     bool denorm = false;
@@ -416,15 +452,14 @@ template <size_t Bits> struct DyadicFloat {
         // Output is denormal after rounding, clear the implicit bit for
         // 80-bit long double.
         r_bits -= IMPLICIT_MASK;
+      }
 
-        // TODO: IEEE Std 754-2019 lets implementers choose whether to check
-        // for "tininess" before or after rounding for base-2 formats, as long
-        // as the same choice is made for all operations. Our choice to check
-        // after rounding might not be the same as the hardware's.
-        if (ShouldSignalExceptions && round_and_sticky) {
-          set_errno_if_required(ERANGE);
-          raise_except_if_required(FE_UNDERFLOW);
-        }
+      // Underflow exception and ERANGE are signaled when an unrounded result
+      // in the denormal range is inexact, even if destination rounding rounds
+      // it up to min_normal.
+      if (ShouldSignalExceptions && round_and_sticky) {
+        set_errno_if_required(ERANGE);
+        raise_underflow_except_if_required<T>();
       }
 
       return FPBits<T>(r_bits).get_val();
@@ -435,7 +470,7 @@ template <size_t Bits> struct DyadicFloat {
 
   // Assume that it is already normalized.
   // Output is rounded correctly with respect to the current rounding mode.
-  template <typename T, bool ShouldSignalExceptions,
+  template <typename T, bool ShouldSignalExceptions = true,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
@@ -459,7 +494,7 @@ template <size_t Bits> struct DyadicFloat {
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   LIBC_INLINE explicit constexpr operator T() const {
-    return as<T, /*ShouldSignalExceptions=*/false>();
+    return as<T, /*ShouldSignalExceptions=*/true>();
   }
 
   LIBC_INLINE constexpr MantissaType as_mantissa_type() const {

@@ -51,9 +51,9 @@ body:             |
     CLFIMux %3, 42, implicit-def $cc
     %5:vr64bit = VL64 %0, 0, $noreg :: (load (s64) from %ir.x)
     %6:vr64bit = VL64 %0, 8, $noreg :: (load (s64) from %ir.arrayidx1)
-    %7:vr64bit = nsz arcp contract afn reassoc nofpexcept WFADB killed %6, killed %5, implicit $fpc
+    %7:vr64bit = nsz arcp contract afn reassoc nofpexcept WFADB %6, %5, implicit $fpc
     %8:grx32bit = SELRMux %2, %1, 14, 4, implicit $cc
-    STMux killed %8, %4, 0, $noreg :: (store (s32) into %ir.dst)
+    STMux %8, %4, 0, $noreg :: (store (s32) into %ir.dst)
     $f0d = COPY %7
     Return implicit $f0d
 
@@ -96,9 +96,9 @@ body:             |
     %0:addr64bit = COPY $r2d
     %5:vr64bit = VL64 %0, 0, $noreg :: (load (s64) from %ir.x)
     %6:vr64bit = VL64 %0, 8, $noreg :: (load (s64) from %ir.arrayidx1)
-    %7:vr64bit = nsz arcp contract afn reassoc nofpexcept WFADB killed %6, killed %5, implicit $fpc
+    %7:vr64bit = nsz arcp contract afn reassoc nofpexcept WFADB %6, %5, implicit $fpc
     %8:grx32bit = SELRMux %2, %1, 14, 4, implicit $cc
-    STMux killed %8, %4, 0, $noreg :: (store (s32) into %ir.dst)
+    STMux %8, %4, 0, $noreg :: (store (s32) into %ir.dst)
     $f0d = COPY %7
     Return implicit $f0d
 

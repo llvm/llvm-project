@@ -32,11 +32,14 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -49,26 +52,31 @@ STATISTIC(NumMarked, "Number of Loads/Stores Marked");
 
 namespace {
 
-struct RISCVQCRelaxMarking : public MachineFunctionPass {
+struct RISCVQCRelaxMarkingLegacy : public MachineFunctionPass {
   static char ID;
 
   bool runOnMachineFunction(MachineFunction &) override;
 
-  RISCVQCRelaxMarking() : MachineFunctionPass(ID) {}
+  RISCVQCRelaxMarkingLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return RISCV_QC_RELAX_MARKING_NAME; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 } // end namespace
 
-char RISCVQCRelaxMarking::ID = 0;
+char RISCVQCRelaxMarkingLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVQCRelaxMarking, DEBUG_TYPE, RISCV_QC_RELAX_MARKING_NAME,
-                false, false)
+INITIALIZE_PASS(RISCVQCRelaxMarkingLegacy, DEBUG_TYPE,
+                RISCV_QC_RELAX_MARKING_NAME, false, false)
 
 /// Returns an instance of the Make Compressible Optimization pass.
-FunctionPass *llvm::createRISCVQCRelaxMarkingPass() {
-  return new RISCVQCRelaxMarking();
+FunctionPass *llvm::createRISCVQCRelaxMarkingLegacyPass() {
+  return new RISCVQCRelaxMarkingLegacy();
 }
 
 static bool isUImm7LSB000(const MachineOperand &MO) {
@@ -134,10 +142,7 @@ static unsigned getQCMarkedOpcode(const MachineInstr &MI,
   }
 }
 
-bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+static bool runQCRelaxMarking(MachineFunction &MF) {
   // This is only relevant for QC.E.LI with a symbol, which we only use in the
   // small code model.
   if (MF.getTarget().getCodeModel() != CodeModel::Small)
@@ -217,4 +222,18 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool RISCVQCRelaxMarkingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runQCRelaxMarking(MF);
+}
+
+PreservedAnalyses
+RISCVQCRelaxMarkingPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  return runQCRelaxMarking(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                     .preserveSet<CFGAnalyses>()
+                               : PreservedAnalyses::all();
 }

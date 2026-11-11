@@ -11,8 +11,9 @@
 
 namespace llvm::cas {
 
-/// Represents the result of validating the contents using
-/// \c validateOnDiskUnifiedCASDatabasesIfNeeded.
+/// Represents the result of validating the contents, e.g. using
+/// \c validateOnDiskUnifiedCASDatabasesIfNeeded, or of recovering from a
+/// failed validation, e.g. using \c recoverOnDiskUnifiedCASDatabases.
 ///
 /// Note: invalid results are handled as an \c Error.
 enum class ValidationResult {
@@ -20,7 +21,7 @@ enum class ValidationResult {
   Valid,
   /// The data was invalid, but was recovered.
   Recovered,
-  /// Validation was skipped, as it was not needed.
+  /// Validation or recovery was skipped, as it was not needed.
   Skipped,
 };
 

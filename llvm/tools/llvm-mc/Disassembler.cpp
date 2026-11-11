@@ -116,6 +116,7 @@ static bool SkipToToken(StringRef &Str) {
 
 static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
                                 SourceMgr &SM, bool HexBytes) {
+  bool ErrorOccurred = false;
   while (SkipToToken(Str)) {
     // Handled by higher level
     if (Str[0] == '[' || Str[0] == ']')
@@ -151,6 +152,7 @@ static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
       Str = Str.substr(Str.find('\n'));
       ByteArray.first.clear();
       ByteArray.second.clear();
+      ErrorOccurred = true;
       continue;
     }
 
@@ -159,7 +161,7 @@ static bool byteArrayFromString(ByteArrayTy &ByteArray, StringRef &Str,
     Str = Str.substr(Next);
   }
 
-  return false;
+  return ErrorOccurred;
 }
 
 int Disassembler::disassemble(const Target &T, MCSubtargetInfo &STI,
@@ -171,7 +173,8 @@ int Disassembler::disassemble(const Target &T, MCSubtargetInfo &STI,
   std::unique_ptr<const MCDisassembler> DisAsm(
     T.createMCDisassembler(STI, Ctx));
   if (!DisAsm) {
-    errs() << "error: no disassembler for target " << TheTriple.str() << '\n';
+    SM.PrintMessage(SMLoc(), SourceMgr::DK_Error,
+                    "no disassembler for target " + TheTriple.str());
     return -1;
   }
 

@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK
+// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm \
+// RUN:   -disable-llvm-passes -o - | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,NATIVE_HALF
 
 // CHECK-LABEL: test_select_bool_int
 // CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, i32 {{%.*}}, i32 {{%.*}}
@@ -31,6 +35,22 @@ int2 test_select_bool_vector(bool cond0, int2 tVal, int2 fVal) {
 // CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, <1 x i32> {{%.*}}, <1 x i32> {{%.*}}
 // CHECK: ret <1 x i32> [[SELECT]]
 int1 test_select_vector_1(bool1 cond0, int1 tVals, int1 fVals) {
+  return select(cond0, tVals, fVals);
+}
+
+// CHECK-LABEL: test_select_float_vector_1
+// CHECK: [[SELECT:%.*]] = select {{.*}}i1 {{%.*}}, <1 x float> {{%.*}}, <1 x float> {{%.*}}
+// CHECK: ret <1 x float> [[SELECT]]
+float1 test_select_float_vector_1(bool1 cond0, float1 tVals, float1 fVals) {
+  return select(cond0, tVals, fVals);
+}
+
+// CHECK-LABEL: test_select_half_vector_1
+// NO_HALF: [[SELECT:%.*]] = select {{.*}}i1 {{%.*}}, <1 x float> {{%.*}}, <1 x float> {{%.*}}
+// NO_HALF: ret <1 x float> [[SELECT]]
+// NATIVE_HALF: [[SELECT:%.*]] = select {{.*}}i1 {{%.*}}, <1 x half> {{%.*}}, <1 x half> {{%.*}}
+// NATIVE_HALF: ret <1 x half> [[SELECT]]
+half1 test_select_half_vector_1(bool1 cond0, half1 tVals, half1 fVals) {
   return select(cond0, tVals, fVals);
 }
 
@@ -81,6 +101,45 @@ int4 test_select_vector_vector_scalar(bool4 cond0, int4 tVals, int fVal) {
 // CHECK: [[SELECT:%.*]] = select <4 x i1> {{%.*}}, <4 x i32> [[SPLAT1]], <4 x i32> [[SPLAT2]]
 // CHECK: ret <4 x i32> [[SELECT]]
 int4 test_select_vector_scalar_scalar(bool4 cond0, int tVal, int fVal) {
+  return select(cond0, tVal, fVal);
+}
+
+// CHECK-LABEL: test_select_vector_17
+// CHECK: [[SELECT:%.*]] = select <17 x i1> {{%.*}}, <17 x i32> {{%.*}}, <17 x i32> {{%.*}}
+// CHECK: ret <17 x i32> [[SELECT]]
+vector<int, 17> test_select_vector_17(vector<bool, 17> cond0,
+                                   vector<int, 17> tVals,
+                                   vector<int, 17> fVals) {
+  return select(cond0, tVals, fVals);
+}
+
+// CHECK-LABEL: test_select_vector_5_scalar_vector
+// CHECK: [[COND:%.*]] = load <5 x i32>, ptr %cond0.addr, align 4
+// CHECK: [[TOBOOL:%.*]] = icmp ne <5 x i32> [[COND]], zeroinitializer
+// CHECK: [[SELECT:%.*]] = select <5 x i1> [[TOBOOL]], <5 x i32> {{%.*}}, <5 x i32> {{%.*}}
+// CHECK: ret <5 x i32> [[SELECT]]
+vector<int, 5> test_select_vector_5_scalar_vector(vector<int, 5> cond0,
+                                                 int tVal,
+                                                 vector<int, 5> fVals) {
+  return select(cond0, tVal, fVals);
+}
+
+// CHECK-LABEL: test_select_vector_20_vector_scalar
+// CHECK: [[SELECT:%.*]] = select <20 x i1> {{%.*}}, <20 x i32> {{%.*}}, <20 x i32> {{%.*}}
+// CHECK: ret <20 x i32> [[SELECT]]
+vector<int, 20> test_select_vector_20_vector_scalar(vector<bool, 20> cond0,
+                                                 vector<int, 20> tVals,
+                                                 int fVal) {
+  return select(cond0, tVals, fVal);
+}
+
+// CHECK-LABEL: test_select_vector_8_scalar_scalar
+// CHECK: [[COND:%.*]] = load <8 x i32>, ptr %cond0.addr, align 4
+// CHECK: [[TOBOOL:%.*]] = icmp ne <8 x i32> [[COND]], zeroinitializer
+// CHECK: [[SELECT:%.*]] = select <8 x i1> [[TOBOOL]], <8 x i32> {{%.*}}, <8 x i32> {{%.*}}
+// CHECK: ret <8 x i32> [[SELECT]]
+vector<int, 8> test_select_vector_8_scalar_scalar(vector<int, 8> cond0,
+                                                 int tVal, int fVal) {
   return select(cond0, tVal, fVal);
 }
 

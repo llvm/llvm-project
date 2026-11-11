@@ -50,10 +50,23 @@ test.with_custom_prop_dict <optional = "set", defaulted = 43, prop = 6, attr = 5
 
 // A field name that is also the start of an attribute must not be consumed by
 // the legacy DictionaryAttr compatibility probe.
-// CHECK: test.with_custom_prop_dict <prop = 8, unit = unit, attr = 7>
+// CHECK: test.with_custom_prop_dict <prop = 8, unit, attr = 7>
 // GENERIC: "test.with_custom_prop_dict"()
 // GENERIC-SAME: <{attr = 7 : i32, defaulted = 42 : i64, prop = 8 : i64, unit}>
-test.with_custom_prop_dict <unit = unit, attr = 7, prop = 8>
+test.with_custom_prop_dict <unit, attr = 7, prop = 8>
+
+// UnitAttr entries use the same presence-only spelling as attribute
+// dictionaries. The explicit value spelling remains accepted and is
+// canonicalized by the printer.
+// CHECK: test.with_custom_prop_dict <prop = 10, attr = 9, unit_attr>
+// GENERIC: "test.with_custom_prop_dict"()
+// GENERIC-SAME: <{attr = 9 : i32, defaulted = 42 : i64, prop = 10 : i64, unit = false, unit_attr}>
+test.with_custom_prop_dict <unit_attr, attr = 9, prop = 10>
+
+// CHECK: test.with_custom_prop_dict <prop = 12, unit, attr = 11, unit_attr>
+// GENERIC: "test.with_custom_prop_dict"()
+// GENERIC-SAME: <{attr = 11 : i32, defaulted = 42 : i64, prop = 12 : i64, unit, unit_attr}>
+test.with_custom_prop_dict <attr = 11, unit_attr = unit, unit = unit, prop = 12>
 
 // Inherent attributes use their custom assembly printer in the key-value
 // spelling. Optional enum attributes compile and are omitted when absent.
@@ -61,6 +74,11 @@ test.with_custom_prop_dict <unit = unit, attr = 7, prop = 8>
 test.with_custom_attr_prop_dict <attr = first, prop = 9>
 // CHECK: test.with_custom_attr_prop_dict <prop = 10, attr = first, optionalAttr = second>
 test.with_custom_attr_prop_dict <optionalAttr = second, prop = 10, attr = first>
+
+// Comma-separated bit enums are bracketed so their commas cannot be confused
+// with separators between prop-dict entries.
+// CHECK: test.with_custom_bit_enum_attr_prop_dict <flags = [read, write], next = 9>
+test.with_custom_bit_enum_attr_prop_dict <next = 9, flags = [write, read]>
 
 // Properties bound elsewhere in the assembly format are excluded from the
 // key-value list.

@@ -210,6 +210,9 @@ class Sema;
     /// HLSL matrix splat from scalar or boolean type.
     ICK_HLSL_Matrix_Splat,
 
+    /// HLSL packed type conversion to and from uint
+    ICK_HLSL_Packed_Type_Conversion,
+
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
   };
@@ -1375,9 +1378,13 @@ class Sema;
     void clear(CandidateSetKind CSK);
 
     using iterator = SmallVectorImpl<OverloadCandidate>::iterator;
+    using const_iterator = SmallVectorImpl<OverloadCandidate>::const_iterator;
 
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
+
+    const_iterator begin() const { return Candidates.begin(); }
+    const_iterator end() const { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
 

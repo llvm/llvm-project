@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/macros/config.h"
 #include "str_to_fp_test.h"
 
@@ -27,8 +28,17 @@ TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64ExtendedExp) {
 
 TEST_F(LlvmLibcStrToDblTest, ClingerFastPathFloat64NegativeExp) {
   clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989,
+                         internal::RoundDirection::Up);
+  clinger_fast_path_test(1, -10, 0x1b7cdfd9d7bdbb, 989,
+                         internal::RoundDirection::Down);
+  clinger_fast_path_test(295851801554362, -12, 0x127da0faaaaaab, 1031,
+                         internal::RoundDirection::Up);
+  clinger_fast_path_test(295851801554362, -12, 0x127da0faaaaaab, 1031,
+                         internal::RoundDirection::Down);
   clinger_fast_path_test(1, -20, 0x179ca10c924223, 956);
   clinger_fast_path_fails_test(1, -25);
+  clinger_fast_path_fails_test(1, INT32_MIN);
 }
 
 TEST_F(LlvmLibcStrToDblTest, EiselLemireFloat64Simple) {
@@ -75,6 +85,21 @@ TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversion64BasicExponents) {
   simple_decimal_conversion_test("1e-300", 0x156e1fc2f8f359, 26);
 }
 
+TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversion64HugeExponents) {
+  // Decimal points beyond the valid input range of exp10_to_exp2 (646456636)
+  // must still be classified as out of range, and do so without looping.
+  simple_decimal_conversion_test("1e646456635", 0, 0x7ff, ERANGE);
+  simple_decimal_conversion_test("1e646456636", 0, 0x7ff, ERANGE);
+  simple_decimal_conversion_test("1e646456637", 0, 0x7ff, ERANGE);
+  simple_decimal_conversion_test("1e1000000000", 0, 0x7ff, ERANGE);
+  simple_decimal_conversion_test("9007199254740993e2147483647", 0, 0x7ff,
+                                 ERANGE);
+  simple_decimal_conversion_test("1e-646456636", 0, 0, ERANGE);
+  simple_decimal_conversion_test("1e-646456637", 0, 0, ERANGE);
+  simple_decimal_conversion_test("1e-1000000000", 0, 0, ERANGE);
+  simple_decimal_conversion_test("1e-2147483647", 0, 0, ERANGE);
+}
+
 TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversion64BasicSubnormals) {
   simple_decimal_conversion_test("1e-320", 0x7e8, 0, ERANGE);
   simple_decimal_conversion_test("1e-308", 0x730d67819e8d2, 0, ERANGE);
@@ -95,7 +120,7 @@ TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversion64SubnormalRounding) {
                                  1);
 }
 
-TEST(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
+TEST_F(LlvmLibcStrToDblTest, SimpleDecimalConversionExtraTypes) {
   uint64_t double_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 

@@ -2,9 +2,9 @@
 
   ! CHECK-LABEL: func @_QQmain() {
   ! CHECK:         %[[VAL_0:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xf32>>
-  ! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) {uniq_name = "_QFEa"}
+  ! CHECK:         %[[A:.*]]:2 = hlfir.declare %[[VAL_0]](%{{.*}}) uniq_name("_QFEa")
   ! CHECK:         %[[VAL_2:.*]] = fir.address_of(@_QFEb) : !fir.ref<!fir.array<10xf32>>
-  ! CHECK:         %[[B:.*]]:2 = hlfir.declare %[[VAL_2]](%{{.*}}) {uniq_name = "_QFEb"}
+  ! CHECK:         %[[B:.*]]:2 = hlfir.declare %[[VAL_2]](%{{.*}}) uniq_name("_QFEb")
 
   ! Statement: where (a > 4.0) b = -a
   ! CHECK:         hlfir.where {

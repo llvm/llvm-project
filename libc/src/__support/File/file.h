@@ -1,41 +1,35 @@
-//===--- A platform independent file data structure -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Platform independent file data structure.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "file_io_result.h"
+#include "file_mode.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
 #include "hdr/types/wchar_t.h"
 #include "hdr/types/wint_t.h"
-#include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
 #include "src/__support/wchar/mbstate.h"
 
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-struct FileIOResult {
-  size_t value;
-  int error;
-
-  constexpr FileIOResult(size_t val) : value(val), error(0) {}
-  constexpr FileIOResult(size_t val, int error) : value(val), error(error) {}
-
-  constexpr bool has_error() { return error != 0; }
-
-  constexpr operator size_t() { return value; }
-};
 
 // This a generic base class to encapsulate a platform independent file data
 // structure. Platform specific specializations should create a subclass as
@@ -51,7 +45,7 @@ public:
   static File *list_all;
   static Mutex list_lock;
 
-  File *get_next() const { return next; }
+  LIBC_INLINE File *get_next() const { return next; }
 
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
 
@@ -67,29 +61,17 @@ public:
   using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
-  using ModeFlags = uint32_t;
+  // This is a convenience RAII class to lock and unlock file objects.
+  class FileLock {
+    File *file;
 
-  // The three different types of flags below are to be used with '|' operator.
-  // Their values correspond to mutually exclusive bits in a 32-bit unsigned
-  // integer value. A flag set can include both READ and WRITE if the file
-  // is opened in update mode (ie. if the file was opened with a '+' the mode
-  // string.)
-  enum class OpenMode : ModeFlags {
-    READ = 0x1,
-    WRITE = 0x2,
-    APPEND = 0x4,
-    PLUS = 0x8,
-  };
+  public:
+    LIBC_INLINE explicit FileLock(File *f) : file(f) { file->lock(); }
 
-  // Denotes a file opened in binary mode (which is specified by including
-  // the 'b' character in teh mode string.)
-  enum class ContentType : ModeFlags {
-    BINARY = 0x10,
-  };
+    LIBC_INLINE ~FileLock() { file->unlock(); }
 
-  // Denotes a file to be created for writing.
-  enum class CreateType : ModeFlags {
-    EXCLUSIVE = 0x100,
+    LIBC_INLINE FileLock(const FileLock &) = delete;
+    LIBC_INLINE FileLock(FileLock &&) = delete;
   };
 
 private:
@@ -121,8 +103,8 @@ private:
   // free-ed when close method is called on the stream.
   bool own_buf;
 
-  // The mode in which the file was opened.
-  ModeFlags mode;
+  // Used to handle the File's mode
+  FileMode mode;
 
   // Current read or write pointer.
   size_t pos;
@@ -140,32 +122,16 @@ private:
   Orientation orientation;
   internal::mbstate mbstate;
 
-  // This is a convenience RAII class to lock and unlock file objects.
-  class FileLock {
-    File *file;
-
-  public:
-    explicit FileLock(File *f) : file(f) { file->lock(); }
-
-    ~FileLock() { file->unlock(); }
-
-    FileLock(const FileLock &) = delete;
-    FileLock(FileLock &&) = delete;
-  };
-
 protected:
-  constexpr bool write_allowed() const {
-    return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
-                   static_cast<ModeFlags>(OpenMode::APPEND) |
-                   static_cast<ModeFlags>(OpenMode::PLUS));
+  LIBC_INLINE constexpr bool write_allowed() const {
+    return mode.write_allowed();
   }
 
-  constexpr bool read_allowed() const {
-    return mode & (static_cast<ModeFlags>(OpenMode::READ) |
-                   static_cast<ModeFlags>(OpenMode::PLUS));
+  LIBC_INLINE constexpr bool read_allowed() const {
+    return mode.read_allowed();
   }
 
-  void reset_stream_state_unlocked(ModeFlags new_mode) {
+  LIBC_INLINE void reset_stream_state_unlocked(FileMode new_mode) {
     mode = new_mode;
     pos = 0;
     prev_op = FileOp::NONE;
@@ -185,14 +151,14 @@ public:
   // meaningful - that is, |buffer| is nullptr if and only if |buffer_size|
   // is zero. This way, we will not have to employ the semantics of
   // the set_buffer method and allocate a buffer.
-  constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 uint8_t *buffer, size_t buffer_size, int buffer_mode,
-                 bool owned, ModeFlags modeflags)
+  LIBC_INLINE constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf,
+                             CloseFunc *cf, uint8_t *buffer, size_t buffer_size,
+                             int buffer_mode, bool owned, FileMode mode)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
                                   /*robust=*/false, /*pshared=*/false),
         ungetc_buf{}, buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
-        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
+        own_buf(owned), mode(mode), pos(0), prev_op(FileOp::NONE),
         read_limit(0), eof(false), err(false),
         orientation(Orientation::UNORIENTED), mbstate(), prev(nullptr),
         next(nullptr) {
@@ -203,7 +169,7 @@ public:
   FileIOResult write_unlocked(const void *data, size_t len);
 
   // Buffered write of |len| bytes from |data| under the file lock.
-  FileIOResult write(const void *data, size_t len) {
+  LIBC_INLINE FileIOResult write(const void *data, size_t len) {
     FileLock l(this);
     return write_unlocked(data, len);
   }
@@ -212,18 +178,48 @@ public:
   FileIOResult read_unlocked(void *data, size_t len);
 
   // Buffered read of |len| bytes into |data| under the file lock.
-  FileIOResult read(void *data, size_t len) {
+  LIBC_INLINE FileIOResult read(void *data, size_t len) {
     FileLock l(this);
     return read_unlocked(data, len);
   }
 
-  ErrorOr<int> seek(off_t offset, int whence);
+  ErrorOr<int> seek_unlocked(off_t offset, int whence);
 
-  ErrorOr<off_t> tell();
+  LIBC_INLINE ErrorOr<int> seek(off_t offset, int whence) {
+    FileLock lock(this);
+    return seek_unlocked(offset, whence);
+  }
+
+  ErrorOr<off_t> tell_unlocked();
+
+  LIBC_INLINE ErrorOr<off_t> tell() {
+    FileLock lock(this);
+    return tell_unlocked();
+  }
+
+  // An internal representation of the stream's position and parse state.
+  struct Position {
+    off_t offset;
+    internal::mbstate state;
+  };
+
+  ErrorOr<Position> get_pos_unlocked();
+
+  LIBC_INLINE ErrorOr<Position> get_pos() {
+    FileLock lock(this);
+    return get_pos_unlocked();
+  }
+
+  ErrorOr<int> set_pos_unlocked(const Position &fpos);
+
+  LIBC_INLINE ErrorOr<int> set_pos(const Position &fpos) {
+    FileLock lock(this);
+    return set_pos_unlocked(fpos);
+  }
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
-  int flush() {
+  LIBC_INLINE int flush() {
     FileLock lock(this);
     return flush_unlocked();
   }
@@ -233,60 +229,34 @@ public:
   // Returns EOF on error and keeps the file unchanged.
   int ungetc_unlocked(int c);
 
-  int ungetc(int c) {
+  LIBC_INLINE int ungetc(int c) {
     FileLock lock(this);
     return ungetc_unlocked(c);
   }
 
   FileIOResult write_unlocked(const wchar_t *ws, size_t len);
 
-  FileIOResult write(const wchar_t *ws, size_t len) {
+  LIBC_INLINE FileIOResult write(const wchar_t *ws, size_t len) {
     FileLock l(this);
     return write_unlocked(ws, len);
   }
 
   FileIOResult read_unlocked(wchar_t *ws, size_t len);
 
-  FileIOResult read(wchar_t *ws, size_t len) {
+  LIBC_INLINE FileIOResult read(wchar_t *ws, size_t len) {
     FileLock l(this);
     return read_unlocked(ws, len);
   }
 
   ErrorOr<wint_t> ungetwc_unlocked(wint_t wc);
 
-  ErrorOr<wint_t> ungetwc(wint_t wc) {
+  LIBC_INLINE ErrorOr<wint_t> ungetwc(wint_t wc) {
     FileLock lock(this);
     return ungetwc_unlocked(wc);
   }
 
-  // Does the following:
-  // 1. If in write mode, Write out any data present in the buffer.
-  // 2. Call platform_close.
-  // platform_close is expected to cleanup the complete file object.
-  int close() {
-    {
-      FileLock lock(this);
-      if (prev_op == FileOp::WRITE && pos > 0) {
-        auto buf_result = platform_write(this, buf, pos);
-        if (buf_result.has_error() || buf_result.value < pos) {
-          err = true;
-          return buf_result.error;
-        }
-      }
-    }
-
-    // If we own the buffer, delete it before calling the platform close
-    // implementation. The platform close should not need to access the buffer
-    // and we need to clean it up before the entire structure is removed.
-    if (own_buf)
-      delete buf;
-
-    // Platform close is expected to cleanup the file data structure which
-    // includes the file mutex. Hence, we call platform_close after releasing
-    // the file lock. Another thread doing file operations while a thread is
-    // closing the file is undefined behavior as per POSIX.
-    return platform_close(this);
-  }
+  // Closes the file stream and frees up all resources owned by it.
+  int close();
 
   // Sets the internal buffer to |buffer| with buffering mode |mode|.
   // |size| is the size of |buffer|. If |size| is non-zero, but |buffer|
@@ -302,12 +272,12 @@ public:
   // is ENOMEM.
   int set_buffer(void *buffer, size_t size, int buffer_mode);
 
-  void lock() { mutex.lock(); }
-  void unlock() { mutex.unlock(); }
+  LIBC_INLINE void lock() { mutex.lock(); }
+  LIBC_INLINE void unlock() { mutex.unlock(); }
 
-  bool error_unlocked() const { return err; }
+  LIBC_INLINE bool error_unlocked() const { return err; }
 
-  bool error() {
+  LIBC_INLINE bool error() {
     FileLock l(this);
     return error_unlocked();
   }
@@ -319,42 +289,40 @@ public:
   // for the pre-processor.
 #pragma push_macro("clearerr_unlocked")
 #undef clearerr_unlocked
-  void clearerr_unlocked() { err = false; }
+  LIBC_INLINE void clearerr_unlocked() { err = false; }
 #pragma pop_macro("clearerr_unlocked")
 
-  void clearerr() {
+  LIBC_INLINE void clearerr() {
     FileLock l(this);
     clearerr_unlocked();
   }
 
-  bool iseof_unlocked() { return eof; }
+  LIBC_INLINE bool iseof_unlocked() { return eof; }
 
-  bool iseof() {
+  LIBC_INLINE bool iseof() {
     FileLock l(this);
     return iseof_unlocked();
   }
 
-  Orientation get_orientation_unlocked() const { return orientation; }
+  LIBC_INLINE Orientation get_orientation_unlocked() const {
+    return orientation;
+  }
 
-  Orientation get_orientation() {
+  LIBC_INLINE Orientation get_orientation() {
     FileLock l(this);
     return get_orientation_unlocked();
   }
 
-  Orientation try_set_orientation_unlocked(Orientation o) {
+  LIBC_INLINE Orientation try_set_orientation_unlocked(Orientation o) {
     if (orientation == Orientation::UNORIENTED)
       orientation = o;
     return orientation;
   }
 
-  Orientation try_set_orientation(Orientation o) {
+  LIBC_INLINE Orientation try_set_orientation(Orientation o) {
     FileLock l(this);
     return try_set_orientation_unlocked(o);
   }
-
-  // Returns an bit map of flags corresponding to enumerations of
-  // OpenMode, ContentType and CreateType.
-  static ModeFlags mode_flags(const char *mode);
 
 private:
   FileIOResult write_unlocked_impl(const void *data, size_t len);
@@ -368,7 +336,7 @@ private:
   FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
   size_t copy_data_from_buf(uint8_t *data, size_t len);
 
-  constexpr void adjust_buf() {
+  LIBC_INLINE constexpr void adjust_buf() {
     if (read_allowed() && (buf == nullptr || bufsize == 0)) {
       // We should allow atleast one ungetc operation.
       // This might give an impression that a buffer will be used even when

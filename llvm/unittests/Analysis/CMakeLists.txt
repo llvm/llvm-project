@@ -25,6 +25,7 @@ set(ANALYSIS_TEST_SOURCES
   CGSCCPassManagerTest.cpp
   ConstraintSystemTest.cpp
   CtxProfAnalysisTest.cpp
+  CycleInfoTest.cpp
   DDGTest.cpp
   DomTreeUpdaterTest.cpp
   DXILResourceTest.cpp

@@ -7,7 +7,7 @@
 int f1(int x) {
   // CHECK: [[TOBOOL:%.*]] = icmp ne i32 %{{.*}}, 0
   // CHECK-NEXT: [[STEP:%.*]] = zext i1 [[TOBOOL]] to i64
-  // CHECK-NEXT: [[COUNTER:%.*]] = load i64, ptr getelementptr inbounds ([2 x i64], ptr @__profc_f1, i32 0, i32 1)
+  // CHECK-NEXT: [[COUNTER:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @__profc_f1, i64 8)
   // CHECK-NEXT: add i64 [[COUNTER]], [[STEP]]
   // CHECK: [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 1
   return x ? 0 : 1;

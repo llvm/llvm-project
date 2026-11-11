@@ -18,14 +18,25 @@ TEST(LlvmLibcPutcTest, PrintOut) {
 
   constexpr char simple[] = "A simple string written to stdout\n";
   for (const char &c : simple) {
+    if (!c)
+      break;
     result = LIBC_NAMESPACE::putchar(c);
-    EXPECT_GE(result, 0);
+    EXPECT_EQ(result, static_cast<int>(static_cast<unsigned char>(c)));
   }
 
   constexpr char more[] = "A simple string written to stderr\n";
   for (const char &c : more) {
+    if (!c)
+      break;
     result = LIBC_NAMESPACE::fputc(
         c, reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr));
+    EXPECT_GE(result, 0);
   }
-  EXPECT_GE(result, 0);
+}
+
+TEST(LlvmLibcPutcTest, ReturnsTheByteUnsigned) {
+  // A byte above 0x7f comes back as an unsigned char, never sign extended.
+  EXPECT_EQ(LIBC_NAMESPACE::fputc(
+                0xff, reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr)),
+            0xff);
 }

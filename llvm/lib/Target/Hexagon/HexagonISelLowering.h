@@ -107,9 +107,6 @@ public:
   SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerROTL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerSIGN_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
@@ -121,7 +118,6 @@ public:
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
   LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -238,8 +234,8 @@ public:
   /// is legal.  It is frequently not legal in PIC relocation models.
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
 
   /// isLegalICmpImmediate - Return true if the specified immediate is legal
   /// icmp immediate, that is the target has icmp instructions which can
@@ -501,6 +497,14 @@ private:
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinMax(SDValue Op, unsigned PairwiseOpc,
+                                   bool IgnoreNaN, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMin(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMax(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMinimum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxVecReduceFMaximum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMinNum(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFMaxNum(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
@@ -532,6 +536,25 @@ private:
                                 SelectionDAG &DAG) const;
   void ReplaceHvxNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                              SelectionDAG &DAG) const;
+
+  void initializeHLXLowering();
+  bool isHlxSingleTy(MVT Ty) const;
+  bool isHlxPairTy(MVT Ty) const;
+  bool isHlxOperation(SDNode *N, SelectionDAG &DAG) const;
+  bool allowsHlxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
+                             unsigned *Fast) const;
+  TypePair typeHlxSplit(MVT VecTy) const;
+  SDValue splitHlxPairArgLoad(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                              SDValue BaseAddr, MVT PairTy,
+                              MachinePointerInfo PtrInfo) const;
+  void splitHlxPairArgStore(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                            SDValue StoreVal, SDValue BaseAddr, MVT PairTy,
+                            MachinePointerInfo PtrInfo,
+                            SmallVectorImpl<SDValue> &MemOpChains) const;
+  SDValue LowerHlxPairIntrinsic(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxSelect(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxOperation(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
 

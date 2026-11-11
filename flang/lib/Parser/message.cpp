@@ -9,6 +9,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-set.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdarg>
@@ -90,6 +91,10 @@ const char *MessageFormattedText::Convert(std::string_view &&s) {
 
 const char *MessageFormattedText::Convert(CharBlock x) {
   return Convert(x.ToString());
+}
+
+const char *MessageFormattedText::Convert(llvm::StringRef x) {
+  return Convert(x.str());
 }
 
 std::string MessageExpectedText::ToString() const {

@@ -732,15 +732,6 @@ public:
   bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
     return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
   }
-  bool TraverseTypeConstraint(const TypeConstraint *C) {
-    if (auto *E = C->getImmediatelyDeclaredConstraint()) {
-      // Technically this expression is 'implicit' and not traversed by the RAV.
-      // However, the range is correct, so we visit expression to avoid adding
-      // an extra kind to 'DynTypeNode' that hold 'TypeConstraint'.
-      return TraverseStmt(E);
-    }
-    return Base::TraverseTypeConstraint(C);
-  }
 
   // Override child traversal for certain node types.
   using RecursiveASTVisitor::getStmtChildren;

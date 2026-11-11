@@ -76,6 +76,22 @@ LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
 
 } // End of namespace zstd
 
+namespace xz {
+
+/// Return true if LLVM was built with LZMA support (LLVM_ENABLE_LZMA).
+LLVM_ABI bool isAvailable();
+
+/// Decompress an xz stream. Unlike zlib and zstd, the uncompressed size does
+/// not need to be supplied by the caller: it is recovered from the stream
+/// index, and \p Output is resized to fit. \p Output is left empty if an error
+/// is returned.
+///
+/// Requires isAvailable(); calling this otherwise is a fatal error.
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output);
+
+} // End of namespace xz
+
 enum class Format {
   Zlib,
   Zstd,
@@ -114,6 +130,9 @@ struct Params {
 // return a string literal describing the reason.
 LLVM_ABI const char *getReasonIfUnsupported(Format F);
 
+// Return nullptr if LLVM can decompress Input, otherwise a string literal.
+LLVM_ABI const char *getReasonIfUnsupported(ArrayRef<uint8_t> Input);
+
 // Compress Input with the specified format P.Format. If Level is -1, use
 // *::DefaultCompression for the format.
 LLVM_ABI void compress(Params P, ArrayRef<uint8_t> Input,
@@ -126,6 +145,10 @@ LLVM_ABI Error decompress(Format F, ArrayRef<uint8_t> Input,
                           SmallVectorImpl<uint8_t> &Output,
                           size_t UncompressedSize);
 LLVM_ABI Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                          SmallVectorImpl<uint8_t> &Output,
+                          size_t UncompressedSize);
+// Infer the compression format from the input.
+LLVM_ABI Error decompress(ArrayRef<uint8_t> Input,
                           SmallVectorImpl<uint8_t> &Output,
                           size_t UncompressedSize);
 

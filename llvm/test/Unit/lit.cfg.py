@@ -63,3 +63,11 @@ if sys.platform in ["win32", "cygwin"] and os.path.isdir(config.shlibdir):
 # Win32 may use %SYSTEMDRIVE% during file system shell operations, so propagate.
 if sys.platform == "win32" and "SYSTEMDRIVE" in os.environ:
     config.environment["SYSTEMDRIVE"] = os.environ["SYSTEMDRIVE"]
+
+# The unit tests on z/OS need auto-conversion turned on.
+if sys.platform == "zos":
+    config.environment["_BPXK_AUTOCVT"] = "ON"
+    config.environment["_TAG_REDIR_IN"] = "TXT"
+    config.environment["_TAG_REDIR_OUT"] = "TXT"
+    config.environment["_TAG_REDIR_ERR"] = "TXT"
+    config.environment["_CEE_RUNOPTS"] = "FILETAG(AUTOCVT,AUTOTAG) POSIX(ON)"

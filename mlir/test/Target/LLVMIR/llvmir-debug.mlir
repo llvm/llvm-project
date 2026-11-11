@@ -734,7 +734,7 @@ llvm.func @subranges(%arg: !llvm.ptr) {
 #sty1 = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)",
  sizeInBits = 32, alignInBits = 8, stringLength = #var,
  stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>,
- stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+ stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #bt>
 #var1 = #llvm.di_local_variable<scope = #sp, name = "str1", type = #sty1>
 #sty2 = #llvm.di_string_type<tag = DW_TAG_string_type>
 #var2 = #llvm.di_local_variable<scope = #sp, name = "str2", type = #sty2>
@@ -748,8 +748,9 @@ llvm.func @string_ty(%arg0: !llvm.ptr) {
 #loc1 = loc("test.f90":1:1)
 #loc2 = loc(fused<#sp>[#loc1])
 
-// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8)
+// CHECK-DAG: !DIStringType(name: "character(*)", stringLength: ![[VAR:[0-9]+]], stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), size: 32, align: 8, charType: ![[CHARTYPE:[0-9]+]])
 // CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "string_size"{{.*}} flags: DIFlagArtificial)
+// CHECK-DAG: ![[CHARTYPE]] = !DIBasicType(name: "int", size: 32)
 // CHECK-DAG: !DIStringType()
 // -----
 
@@ -942,3 +943,25 @@ llvm.func @variant_part_emission(%arg0: i32) {
   llvm.intr.dbg.value #di_local = %arg0 : i32 loc(#loc)
   llvm.return loc(#loc)
 } loc(#loc)
+
+// -----
+
+// CHECK-LABEL: define void @recursive_variant_part
+// CHECK: ![[VARIANT:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_variant_part, elements: ![[ELEMENTS:[0-9]+]])
+// CHECK: ![[ELEMENTS]] = !{![[MEMBER:[0-9]+]]}
+// CHECK: ![[MEMBER]] = !DIDerivedType(tag: DW_TAG_member, scope: ![[VARIANT]], baseType: null)
+
+#recursive_variant_file = #llvm.di_file<"a.rs" in "">
+#recursive_variant_self = #llvm.di_composite_type<recId = distinct[106]<>, isRecSelf = true>
+#recursive_variant_member = #llvm.di_derived_type<tag = DW_TAG_member, scope = #recursive_variant_self>
+#recursive_variant_type = #llvm.di_composite_type<recId = distinct[106]<>, tag = DW_TAG_variant_part, elements = #recursive_variant_member>
+#recursive_variant_subroutine = #llvm.di_subroutine_type<types = #recursive_variant_type>
+#recursive_variant_cu = #llvm.di_compile_unit<id = distinct[107]<>, sourceLanguage = DW_LANG_C, file = #recursive_variant_file, emissionKind = Full>
+#recursive_variant_sp = #llvm.di_subprogram<id = distinct[108]<>, compileUnit = #recursive_variant_cu, file = #recursive_variant_file, subprogramFlags = "Definition", type = #recursive_variant_subroutine>
+#recursive_variant_loc = loc(fused<#recursive_variant_sp>[unknown])
+
+module {
+  llvm.func @recursive_variant_part() {
+    llvm.return
+  } loc(#recursive_variant_loc)
+}

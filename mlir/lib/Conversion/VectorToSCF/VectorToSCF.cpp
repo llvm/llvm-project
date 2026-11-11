@@ -54,6 +54,15 @@ static bool isTensorOp(VectorTransferOpInterface xferOp) {
   return false;
 }
 
+/// Fail to match if the transfer op is masked by a vector.mask.
+template <typename OpTy>
+static LogicalResult checkNotMasked(OpTy xferOp, PatternRewriter &rewriter) {
+  if (xferOp.isMasked())
+    return rewriter.notifyMatchFailure(
+        xferOp, "masked by vector.mask, lower the mask first");
+  return success();
+}
+
 /// Patterns that inherit from this struct have access to
 /// VectorTransferToSCFOptions.
 template <typename OpTy>
@@ -201,8 +210,12 @@ static Value generateInBoundsCheck(
     Value base = xferOp.getIndices()[*dim];
     Value memrefIdx =
         affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
-    cond = arith::CmpIOp::create(lb, arith::CmpIPredicate::sgt, memrefDim,
-                                 memrefIdx);
+    Value zero = arith::ConstantIndexOp::create(lb, 0);
+    Value nonNegative =
+        arith::CmpIOp::create(lb, arith::CmpIPredicate::sge, memrefIdx, zero);
+    Value inRange = arith::CmpIOp::create(lb, arith::CmpIPredicate::slt,
+                                          memrefIdx, memrefDim);
+    cond = arith::AndIOp::create(lb, nonNegative, inRange);
   }
 
   // Condition check 2: Masked in?
@@ -272,7 +285,7 @@ template <typename OpTy>
 static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
                                 unsigned targetRank) {
   if (newXferOp.getVectorType().getRank() > targetRank)
-    newXferOp->setAttr(kPassLabel, b.getUnitAttr());
+    newXferOp->setDiscardableAttr(kPassLabel, b.getUnitAttr());
 }
 
 namespace lowering_n_d {
@@ -550,9 +563,11 @@ struct Strategy<TransferWriteOp> {
 template <typename OpTy>
 static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
                                         VectorTransferToSCFOptions options) {
-  if (xferOp->hasAttr(kPassLabel))
+  if (xferOp->hasDiscardableAttr(kPassLabel))
     return rewriter.notifyMatchFailure(
         xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
+  if (failed(checkNotMasked(xferOp, rewriter)))
+    return failure();
   if (xferOp.getVectorType().getRank() <= options.targetRank)
     return rewriter.notifyMatchFailure(
         xferOp, "xferOp vector rank <= transformation target rank");
@@ -567,6 +582,10 @@ static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
       xferOp.getShapedType().getElementType())
     return rewriter.notifyMatchFailure(
         xferOp, "Mismatching source and destination element types.");
+  Operation *op = xferOp.getOperation();
+  if (!op->getParentWithTrait<OpTrait::AutomaticAllocationScope>())
+    return rewriter.notifyMatchFailure(
+        xferOp, "xferOp is not inside an automatic allocation scope");
 
   return success();
 }
@@ -606,7 +625,7 @@ struct PrepareTransferReadConversion
 
     auto buffers = allocBuffers(rewriter, xferOp);
     auto *newXfer = rewriter.clone(*xferOp.getOperation());
-    newXfer->setAttr(kPassLabel, rewriter.getUnitAttr());
+    newXfer->setDiscardableAttr(kPassLabel, rewriter.getUnitAttr());
     if (xferOp.getMask()) {
       dyn_cast<TransferReadOp>(newXfer).getMaskMutable().assign(
           buffers.maskBuffer);
@@ -615,7 +634,8 @@ struct PrepareTransferReadConversion
     Location loc = xferOp.getLoc();
     memref::StoreOp::create(rewriter, loc, newXfer->getResult(0),
                             buffers.dataBuffer);
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer,
+                                                ValueRange{});
 
     return success();
   }
@@ -658,10 +678,11 @@ struct PrepareTransferWriteConversion
     auto buffers = allocBuffers(rewriter, xferOp);
     memref::StoreOp::create(rewriter, loc, xferOp.getVector(),
                             buffers.dataBuffer);
-    auto loadedVec = memref::LoadOp::create(rewriter, loc, buffers.dataBuffer);
+    auto loadedVec =
+        memref::LoadOp::create(rewriter, loc, buffers.dataBuffer, ValueRange{});
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getValueToStoreMutable().assign(loadedVec);
-      xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
+      xferOp->setDiscardableAttr(kPassLabel, rewriter.getUnitAttr());
     });
 
     if (xferOp.getMask()) {
@@ -906,7 +927,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (!xferOp->hasAttr(kPassLabel))
+    if (!xferOp->hasDiscardableAttr(kPassLabel))
       return rewriter.notifyMatchFailure(
           xferOp, "kPassLabel is present (progressing lowering in progress)");
 
@@ -1073,6 +1094,8 @@ struct ScalableTransposeTransferWriteConversion
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     if (failed(checkLowerTensors(writeOp, rewriter)))
+      return failure();
+    if (failed(checkNotMasked(writeOp, rewriter)))
       return failure();
 
     VectorType vectorType = writeOp.getVectorType();
@@ -1300,6 +1323,8 @@ struct UnrollTransferReadConversion
           xferOp, "vector rank is less or equal to target rank");
     if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
+    if (failed(checkNotMasked(xferOp, rewriter)))
+      return failure();
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
       return rewriter.notifyMatchFailure(
@@ -1445,6 +1470,8 @@ struct UnrollTransferWriteConversion
       return failure();
 
     if (failed(checkLowerTensors(xferOp, rewriter)))
+      return failure();
+    if (failed(checkNotMasked(xferOp, rewriter)))
       return failure();
     // Transfer ops that modify the element type are not supported atm.
     if (inputVectorTy.getElementType() !=
@@ -1655,6 +1682,8 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
                                 PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (xferOp.getTransferRank() == 0)
+      return failure();
+    if (failed(checkNotMasked(xferOp, rewriter)))
       return failure();
     auto map = xferOp.getPermutationMap();
     auto memRefType = dyn_cast<MemRefType>(xferOp.getShapedType());

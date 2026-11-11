@@ -76,18 +76,18 @@ define i32 @fadd_fsub_constant_lhs_mix(float %s) {
 entry:
   %a = fadd float %s, 1.000000e+00
   %fa = tail call float @llvm.fabs.f32(float %a)
-  %ca = fcmp ueq float %fa, 0x7FF0000000000000
+  %ca = fcmp ueq float %fa, +inf
   %mulb = fmul float %s, 1.125000e+00
   %b = fsub float 0.000000e+00, %mulb
   %fb = tail call float @llvm.fabs.f32(float %b)
-  %cb = fcmp ueq float %fb, 0x7FF0000000000000
+  %cb = fcmp ueq float %fb, +inf
   %d = fsub float 2.000000e+00, %s
   %fd = tail call float @llvm.fabs.f32(float %d)
-  %cd = fcmp ueq float %fd, 0x7FF0000000000000
+  %cd = fcmp ueq float %fd, +inf
   %mule = fmul float %s, 2.000000e+00
   %e = fadd float %mule, 0.000000e+00
   %fe = tail call float @llvm.fabs.f32(float %e)
-  %ce = fcmp ueq float %fe, 0x7FF0000000000000
+  %ce = fcmp ueq float %fe, +inf
   br i1 %ca, label %abort, label %split
 
 split:

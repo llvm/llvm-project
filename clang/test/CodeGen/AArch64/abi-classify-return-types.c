@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32
-// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,LE
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64,BE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-max-bitint-width=1024 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32,LE --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies return types in
 // the same way that Clang does without the library.
@@ -86,3 +86,193 @@ _BitInt(128) ret_bitint128(void) { return 0; }
 
 _BitInt(129) ret_bitint129(void) { return 0; }
 // CHECK: define{{.*}} void @ret_bitint129(ptr dead_on_unwind noalias writable sret(i256) align 16 %{{.*}})
+
+// Homogeneous floating-point aggregates are returned directly.
+_Complex float ret_complex_float() { return 1.0f; }
+// CHECK: define{{.*}} { float, float } @ret_complex_float
+
+typedef struct {
+  float a, b;
+} HFA2f;
+HFA2f ret_hfa2f() { return (HFA2f){1.0f, 2.0f}; }
+// CHECK: define{{.*}} %struct.HFA2f @ret_hfa2f
+
+typedef struct {
+  double a, b, c, d;
+} HFA4d;
+HFA4d ret_hfa4d() { return (HFA4d){1.0, 2.0, 3.0, 4.0}; }
+// CHECK: define{{.*}} %struct.HFA4d @ret_hfa4d
+
+typedef struct {
+  float v[3];
+} HFA3arr;
+HFA3arr ret_hfa3arr() { return (HFA3arr){{1.0f, 2.0f, 3.0f}}; }
+// CHECK: define{{.*}} %struct.HFA3arr @ret_hfa3arr
+
+typedef struct {
+  _Float16 a, b;
+} HFA2h;
+HFA2h ret_hfa2h() { return (HFA2h){1.0f, 2.0f}; }
+// CHECK: define{{.*}} %struct.HFA2h @ret_hfa2h
+
+// Short-vector aggregates (HVAs) follow the same rules.
+typedef float v2f32_t __attribute__((vector_size(8)));
+typedef struct {
+  v2f32_t a, b;
+} HVA2x64;
+HVA2x64 ret_hva2x64() {
+  HVA2x64 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HVA2x64 @ret_hva2x64
+
+typedef float v4f32_t __attribute__((vector_size(16)));
+typedef struct {
+  v4f32_t a, b;
+} HVA2x128;
+HVA2x128 ret_hva2x128() {
+  HVA2x128 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HVA2x128 @ret_hva2x128
+
+typedef float v3f32_t __attribute__((vector_size(12)));
+typedef struct {
+  v3f32_t a;
+} HVA3x32;
+HVA3x32 ret_hva3x32() {
+  HVA3x32 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HVA3x32 @ret_hva3x32
+
+// A 2x2 float matrix is four homogeneous float members.
+typedef struct {
+  fx2x2_t m;
+} HFAMatrix;
+HFAMatrix ret_hfa_matrix() {
+  HFAMatrix r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HFAMatrix @ret_hfa_matrix
+
+typedef float fx2x1_t __attribute__((matrix_type(2, 1)));
+typedef struct {
+  fx2x1_t m;
+} HFAMatrix2;
+HFAMatrix2 ret_hfa_matrix2() {
+  HFAMatrix2 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HFAMatrix2 @ret_hfa_matrix2
+
+// Empty records and zero-size types are ignored as returns (void).
+typedef struct {
+} Empty;
+Empty ret_empty(void) {
+  Empty e;
+  return e;
+}
+// CHECK: define{{.*}} void @ret_empty()
+
+typedef union {
+} EmptyUnion;
+EmptyUnion ret_empty_union(void) {
+  EmptyUnion u;
+  return u;
+}
+// CHECK: define{{.*}} void @ret_empty_union()
+
+typedef struct {
+  int arr[0];
+} ZeroSize;
+ZeroSize ret_zerosize(void) {
+  ZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_zerosize()
+
+typedef struct {
+  ZeroSize inner;
+} NestedZeroSize;
+NestedZeroSize ret_nested_zerosize(void) {
+  NestedZeroSize z;
+  return z;
+}
+// CHECK: define{{.*}} void @ret_nested_zerosize()
+
+typedef float v2f32 __attribute__((vector_size(8)));
+v2f32 ret_v2f32(void) { return (v2f32){1.0f, 2.0f}; }
+// CHECK: define{{.*}} <2 x float> @ret_v2f32
+
+typedef float v4f32 __attribute__((vector_size(16)));
+v4f32 ret_v4f32(void) { return (v4f32){1.0f, 2.0f, 3.0f, 4.0f}; }
+// CHECK: define{{.*}} <4 x float> @ret_v4f32
+
+typedef char v16i8 __attribute__((vector_size(16)));
+v16i8 ret_v16i8(void) { return (v16i8){0}; }
+// CHECK: define{{.*}} <16 x i8> @ret_v16i8
+
+typedef float v8f32 __attribute__((vector_size(32)));
+v8f32 ret_v8f32(void) { return (v8f32){0}; }
+// CHECK: define{{.*}} void @ret_v8f32(ptr dead_on_unwind noalias writable sret(<8 x float>) align 16 %{{.*}})
+
+typedef char v17i8 __attribute__((vector_size(17)));
+v17i8 ret_v17i8(void) { return (v17i8){0}; }
+// CHECK: define{{.*}} void @ret_v17i8(ptr dead_on_unwind noalias writable sret(<17 x i8>) align 16 %{{.*}})
+
+// Aggregates of at most 16 bytes are returned in registers. Little-endian
+// values of at most 8 bytes keep their exact width. Big-endian values are
+// widened to a multiple of 8 bytes. A result widened to 16 bytes is a pair
+// of i64 unless its ABI alignment is 16 bytes, in which case it is an i128.
+// Larger aggregates are returned indirectly. LE is every little-endian
+// triple in this file. BE is aarch64_be.
+
+typedef struct { char c; } OneChar;
+OneChar ret_one_char(void) { return (OneChar){0}; }
+// LE: define{{.*}} i8 @ret_one_char
+// BE: define{{.*}} i64 @ret_one_char
+
+typedef struct { char a, b, c; } ThreeChars;
+ThreeChars ret_three_chars(void) { return (ThreeChars){0}; }
+// LE: define{{.*}} i24 @ret_three_chars
+// BE: define{{.*}} i64 @ret_three_chars
+
+typedef struct { int a; } OneInt;
+OneInt ret_one_int(void) { return (OneInt){0}; }
+// LE: define{{.*}} i32 @ret_one_int
+// BE: define{{.*}} i64 @ret_one_int
+
+typedef struct { int a, b; } TwoInts;
+TwoInts ret_two_ints(void) { return (TwoInts){0}; }
+// CHECK: define{{.*}} i64 @ret_two_ints
+
+typedef struct { int a, b, c; } ThreeInts;
+ThreeInts ret_three_ints(void) { return (ThreeInts){0}; }
+// CHECK: define{{.*}} [2 x i64] @ret_three_ints
+
+typedef struct { int a, b, c, d; } FourInts;
+FourInts ret_four_ints(void) { return (FourInts){0}; }
+// CHECK: define{{.*}} [2 x i64] @ret_four_ints
+
+typedef struct { __int128 x; } OneI128;
+OneI128 ret_i128(void) { return (OneI128){0}; }
+// CHECK: define{{.*}} i128 @ret_i128
+
+typedef struct __attribute__((aligned(16))) { int a; } OveralignedInt;
+OveralignedInt ret_overaligned_int(void) { return (OveralignedInt){0}; }
+// CHECK: define{{.*}} i128 @ret_overaligned_int
+
+typedef struct { long a, b; } TwoLongs;
+TwoLongs ret_two_longs(void) { return (TwoLongs){0}; }
+// LONG64: define{{.*}} [2 x i64] @ret_two_longs
+// LONG32: define{{.*}} i64 @ret_two_longs
+
+typedef struct { long a, b, c; } ThreeLongs;
+ThreeLongs ret_three_longs(void) { ThreeLongs s = {0}; return s; }
+// LONG64: define{{.*}} void @ret_three_longs(ptr dead_on_unwind noalias writable sret(%struct.ThreeLongs) align 8 %{{.*}})
+// LONG32: define{{.*}} [2 x i64] @ret_three_longs
+
+typedef struct { int a[5]; } FiveInts;
+FiveInts ret_five_ints(void) { FiveInts s = {0}; return s; }
+// CHECK: define{{.*}} void @ret_five_ints(ptr dead_on_unwind noalias writable sret(%struct.FiveInts) align 4 %{{.*}})

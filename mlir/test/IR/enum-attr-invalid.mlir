@@ -2,7 +2,7 @@
 
 func.func @test_invalid_enum_case() -> () {
   // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'value' [first, second, third]}}
-  test.op_with_enum #test<enum fourth>
+  test.op_with_enum #test.enum<fourth>
 }
 
 // -----
@@ -62,7 +62,7 @@ func.func @test_bit_enum_prop_not_keyword() -> () {
 // -----
 
 func.func @test_bit_enum_prop_wrong_keyword() -> () {
-  // expected-error@+2 {{expected one of [read, write, execute] for a test bit enum, got: chroot}}
+  // expected-error@+2 {{expected one of [none, read, write, execute] for a test bit enum, got: chroot}}
   // expected-error@+1 {{invalid value for property value1, expected a test bit enum}}
   test.op_with_bit_enum_prop read, chroot : ()
   return

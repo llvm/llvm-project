@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
+#include "clang/CIR/LoweringHelpers.h"
 
 namespace cir {
 
@@ -24,21 +25,29 @@ namespace direct {
 
 struct LLVMBlockAddressInfo;
 
-/// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
-/// lowering attributes to-be-stored in memory. When the attribute may contain
-/// block address attributes, `blockInfoAddr` is used to resolve them.
-mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
-                                mlir::ConversionPatternRewriter &rewriter,
-                                mlir::SymbolTableCollection &symbolTables,
-                                const mlir::TypeConverter *converter,
-                                LLVMBlockAddressInfo *blockInfoAddr = nullptr);
+/// Convert a CIR attribute to an LLVM value, or return null on failure.
+/// May use the datalayout for lowering attributes to-be-stored in memory. When
+/// the attribute may contain block address attributes, `blockInfoAddr` is used
+/// to resolve them.
+mlir::Value
+lowerCirAttrAsValue(mlir::Location parentLoc, mlir::ModuleOp parentModule,
+                    mlir::Attribute attr,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    mlir::SymbolTableCollection &symbolTables,
+                    const mlir::TypeConverter *converter,
+                    const CIRPreConversionTypeMap &preConversionTypes,
+                    LLVMBlockAddressInfo *blockInfoAddr = nullptr);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
-void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
-                              cir::SideEffect sideEffect,
-                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn, bool &noReturn);
+/// Declare `fnName` with type `fnTy` before the function enclosing `srcOp`,
+/// unless the module already has a symbol of that name.
+void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
+                                mlir::SymbolTableCollection &symbolTables,
+                                mlir::Operation *srcOp, llvm::StringRef fnName,
+                                mlir::Type fnTy,
+                                mlir::ArrayAttr argAttrs = nullptr,
+                                mlir::ArrayAttr resAttrs = nullptr);
 
 struct LLVMBlockAddressInfo {
   // Get the next tag index
@@ -79,7 +88,7 @@ private:
   // name) pair so it can be patched later.
   llvm::DenseMap<mlir::LLVM::BlockAddressOp, cir::BlockAddrInfoAttr>
       unresolvedBlockAddressOp;
-  int32_t blockTagOpIndex;
+  int32_t blockTagOpIndex = 0;
 };
 
 mlir::LogicalResult lowerToConstrainedFPIntrinsic(
@@ -91,9 +100,21 @@ mlir::LogicalResult lowerToConstrainedFPIntrinsic(
 template <typename LLVMOp>
 mlir::LogicalResult lowerConstrainableFPOp(
     mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    const mlir::TypeConverter &typeConverter,
+    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
     mlir::ConversionPatternRewriter &rewriter,
     llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
+
+// Convert the value of a CIR attribute or property to the LLVM property that
+// a generated lowering forwards it to (`llvmOpProps`). The overload is picked
+// by the C++ type of the CIR value.
+mlir::LLVM::IntegerOverflowFlags
+convertToLLVMProperty(mlir::MLIRContext *ctx, cir::OverflowFlags flags);
+mlir::LLVM::FastmathFlagsAttr
+convertToLLVMProperty(mlir::MLIRContext *ctx,
+                      std::optional<cir::FastMathFlags> flags);
+mlir::IntegerAttr convertToLLVMProperty(mlir::MLIRContext *ctx,
+                                        cir::FPClassTest flags);
+mlir::IntegerAttr convertToLLVMProperty(mlir::MLIRContext *ctx, bool flag);
 
 #define GET_LLVM_LOWERING_PATTERNS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"

@@ -8,11 +8,6 @@
 
 # Control Flow Graph
 
-```{contents}
----
-local:
----
-```
 
 ## Concept
 After a Fortran subprogram has been parsed, its names resolved, and all its

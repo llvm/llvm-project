@@ -51,7 +51,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasLZCNT = Subtarget.hasLZCNT();
   bool HasBMI = Subtarget.hasBMI();
 
-  const LLT p0 = LLT::pointer(0, TM.getPointerSizeInBits(0));
+  const LLT p0 = LLT::pointer(0, Subtarget.isTarget64BitLP64() ? 64 : 32);
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);

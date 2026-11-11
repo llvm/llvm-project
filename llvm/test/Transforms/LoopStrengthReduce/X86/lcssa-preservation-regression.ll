@@ -76,7 +76,6 @@ define void @regression2() {
 ; CHECK:       [[LOOP1_LATCH1_LOOP1_LATCH3_CRIT_EDGE]]:
 ; CHECK-NEXT:    [[PHI_LCSSA:%.*]] = phi i32 [ [[PHI]], %[[LOOP1_LATCH1]] ]
 ; CHECK-NEXT:    [[SPLIT:%.*]] = phi i32 [ 0, %[[LOOP1_LATCH1]] ]
-; CHECK-NEXT:    [[SPLIT1:%.*]] = phi i32 [ [[PHI]], %[[LOOP1_LATCH1]] ]
 ; CHECK-NEXT:    br label %[[LOOP1_LATCH3]]
 ; CHECK:       [[LOOP1_LATCH3]]:
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi i32 [ [[SPLIT]], %[[LOOP1_LATCH1_LOOP1_LATCH3_CRIT_EDGE]] ], [ [[PHI6_PH]], %[[LOOP1_LATCH3SPLIT]] ]
@@ -134,7 +133,6 @@ define i64 @regression3() {
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    br i1 false, label %[[LOOP1_LATCH_FUNCEXIT_CRIT_EDGE]], label %[[LOOP1_HEADER]]
 ; CHECK:       [[LOOP1_LATCH_FUNCEXIT_CRIT_EDGE]]:
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[ASHR]], %[[LOOP1_LATCH]] ]
 ; CHECK-NEXT:    br label %[[FUNCEXIT]]
 ;
 entry:
@@ -200,4 +198,64 @@ for.body:                                              ; preds = %for.body, %whi
   %sub = sub i32 0, %phi3
   %icmp = icmp eq i32 %phi7, %sub
   br i1 false, label %while.cond.outer, label %for.body
+}
+
+declare i32 @bar()
+declare i32 @__gxx_personality_v0(...)
+
+define i32 @regression5() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define i32 @regression5() personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[OTHER:%.*]] = invoke i32 @bar()
+; CHECK-NEXT:            to label %[[LOOP_BODY:.*]] unwind label %[[LPAD1:.*]]
+; CHECK:       [[LOOP_BODY]]:
+; CHECK-NEXT:    [[OTHER2:%.*]] = invoke i32 @bar()
+; CHECK-NEXT:            to label %[[LOOP_LATCH]] unwind label %[[LPAD2:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[LPAD2]]:
+; CHECK-NEXT:    [[OTHER_LCSSA_PH3:%.*]] = phi i32 [ [[OTHER]], %[[LOOP_BODY]] ]
+; CHECK-NEXT:    [[IV_LCSSA_PH4:%.*]] = phi i32 [ 0, %[[LOOP_BODY]] ]
+; CHECK-NEXT:    [[LPAD6:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label %[[LPAD:.*]]
+; CHECK:       [[LPAD1]]:
+; CHECK-NEXT:    [[IV_LCSSA7:%.*]] = phi i32 [ [[IV]], %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[OTHER_LCSSA_PH:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[LPAD5:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    br label %[[LPAD]]
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[OTHER_LCSSA:%.*]] = phi i32 [ [[OTHER_LCSSA_PH]], %[[LPAD1]] ], [ [[OTHER_LCSSA_PH3]], %[[LPAD2]] ]
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV_LCSSA7]], %[[LPAD1]] ], [ [[IV_LCSSA_PH4]], %[[LPAD2]] ]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[OTHER_LCSSA]], [[IV_LCSSA]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %other = invoke i32 @bar()
+  to label %loop.body unwind label %lpad
+
+loop.body:
+  %iv.next = add i32 %iv, 1
+  %other2 = invoke i32 @bar()
+  to label %loop.latch unwind label %lpad
+
+loop.latch:
+  br label %loop.header
+
+lpad:
+  %other.lcssa = phi i32 [ 0, %loop.header ], [ %other, %loop.body ]
+  %iv.lcssa = phi i32 [ %iv, %loop.header ], [ 0, %loop.body ]
+  %lp = landingpad { ptr, i32 }
+  cleanup
+  %res = add i32 %other.lcssa, %iv.lcssa
+  ret i32 %res
 }

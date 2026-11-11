@@ -1,11 +1,17 @@
-//===-- Tests for TSS API like pthread_setspecific etc. -------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Tests for TSS API like pthread_setspecific etc.
+///
+//===----------------------------------------------------------------------===//
 
+#include "hdr/limits_macros.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_exit.h"
 #include "src/pthread/pthread_getspecific.h"
@@ -28,6 +34,11 @@ static pthread_key_t key;
 static void dtor(void *data) {
   auto *v = reinterpret_cast<int *>(data);
   *v = THREAD_DATA_FINIVAL;
+}
+
+static void *func_set_key(void *) {
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, &child_thread_data), 0);
+  return nullptr;
 }
 
 // Used to test that we don't call the destructor when the mapped value in NULL.
@@ -78,8 +89,64 @@ static void null_value_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
 }
 
+static void *dtor_getspecific_val;
+static void dtor_verify_getspecific_nullptr(void *) {
+  dtor_getspecific_val = LIBC_NAMESPACE::pthread_getspecific(key);
+}
+
+static void getspecific_nullptr_in_dtor_test() {
+  pthread_t th;
+  dtor_getspecific_val = &dtor_getspecific_val;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(
+                &key, &dtor_verify_getspecific_nullptr),
+            0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_create(&th, nullptr, &func_set_key, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, nullptr), 0);
+  ASSERT_EQ(dtor_getspecific_val, nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
+}
+
+static int dtor_call_count = 0;
+static void dtor_multiple(void *data) {
+  ++dtor_call_count;
+  if (dtor_call_count < 2)
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, data), 0);
+}
+
+static void multiple_dtor_test() {
+  pthread_t th;
+  dtor_call_count = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(&key, &dtor_multiple), 0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_create(&th, nullptr, &func_set_key, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, nullptr), 0);
+  ASSERT_EQ(dtor_call_count, 2);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
+}
+
+static void dtor_continuous_reset(void *data) {
+  ++dtor_call_count;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_setspecific(key, data), 0);
+}
+
+static void dtor_iteration_limit_test() {
+  pthread_t th;
+  dtor_call_count = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_create(&key, &dtor_continuous_reset),
+            0);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::pthread_create(&th, nullptr, &func_set_key, nullptr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_join(th, nullptr), 0);
+  ASSERT_EQ(dtor_call_count, PTHREAD_DESTRUCTOR_ITERATIONS);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_key_delete(key), 0);
+}
+
 TEST_MAIN() {
   standard_usage_test();
   null_value_test();
+  getspecific_nullptr_in_dtor_test();
+  multiple_dtor_test();
+  dtor_iteration_limit_test();
   return 0;
 }

@@ -24,11 +24,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    UseSaveRestoreFunclet("arc-save-restore-funclet", cl::Hidden,
-                          cl::desc("Use arc callee save/restore functions"),
-                          cl::init(true));
-
 static const char *store_funclet_name[] = {
     "__st_r13_to_r15", "__st_r13_to_r16", "__st_r13_to_r17", "__st_r13_to_r18",
     "__st_r13_to_r19", "__st_r13_to_r20", "__st_r13_to_r21", "__st_r13_to_r22",
@@ -151,7 +146,7 @@ void ARCFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm(-4);
     AlreadyAdjusted += 4;
   }
-  if (UseSaveRestoreFunclet && Last > ARC::R14) {
+  if (ST.getCLOpts().save_restore_funclet && Last > ARC::R14) {
     LLVM_DEBUG(dbgs() << "Creating store funclet.\n");
     // BL to __save_r13_to_<TRI->getRegAsmName()>
     StackSlotsUsedByFunclet = Last - ARC::R12;
@@ -264,7 +259,7 @@ void ARCFrameLowering::emitEpilogue(MachineFunction &MF,
   unsigned Last = determineLastCalleeSave(CSI);
   unsigned StackSlotsUsedByFunclet = 0;
   // Now, restore the callee save registers.
-  if (UseSaveRestoreFunclet && Last > ARC::R14) {
+  if (ST.getCLOpts().save_restore_funclet && Last > ARC::R14) {
     // BL to __ld_r13_to_<TRI->getRegAsmName()>
     StackSlotsUsedByFunclet = Last - ARC::R12;
     AmountAboveFunclet += 4 * (StackSlotsUsedByFunclet + 1);
@@ -358,7 +353,8 @@ bool ARCFrameLowering::assignCalleeSavedSpillSlots(
     (void)StackObj;
     CurOffset -= 4;
   }
-  if (MFI.hasCalls() || (UseSaveRestoreFunclet && Last > ARC::R14)) {
+  if (MFI.hasCalls() ||
+      (ST.getCLOpts().save_restore_funclet && Last > ARC::R14)) {
     // Create a fixed slot for BLINK.
     int StackObj  = MFI.CreateFixedSpillStackObject(4, CurOffset, true);
     LLVM_DEBUG(dbgs() << "Creating fixed object (" << StackObj
@@ -404,7 +400,7 @@ bool ARCFrameLowering::spillCalleeSavedRegisters(
                     << MBB.getParent()->getName() << "\n");
   // There are routines for saving at least 3 registers (r13 to r15, etc.)
   unsigned Last = determineLastCalleeSave(CSI);
-  if (UseSaveRestoreFunclet && Last > ARC::R14) {
+  if (ST.getCLOpts().save_restore_funclet && Last > ARC::R14) {
     // Use setObjectOffset for these registers.
     // Needs to be in or before processFunctionBeforeFrameFinalized.
     // Or, do assignCalleeSaveSpillSlots?
@@ -421,7 +417,7 @@ bool ARCFrameLowering::restoreCalleeSavedRegisters(
                     << MBB.getParent()->getName() << "\n");
   // There are routines for saving at least 3 registers (r13 to r15, etc.)
   unsigned Last = determineLastCalleeSave(CSI);
-  if (UseSaveRestoreFunclet && Last > ARC::R14) {
+  if (ST.getCLOpts().save_restore_funclet && Last > ARC::R14) {
     // Will be handled in epilog.
     return true;
   }
@@ -489,7 +485,7 @@ MachineBasicBlock::iterator ARCFrameLowering::eliminateCallFramePseudoInstr(
 
 bool ARCFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  bool HasFP = MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  bool HasFP = MF.disableFramePointerElim() ||
                MF.getFrameInfo().hasVarSizedObjects() ||
                MF.getFrameInfo().isFrameAddressTaken() ||
                RegInfo->hasStackRealignment(MF);

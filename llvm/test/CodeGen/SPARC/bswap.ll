@@ -1168,4 +1168,205 @@ define void @u64tou32_bswapstore_truncated(ptr %0, i64 %1) #0 {
   ret void
 }
 
+@g16 = global i16 0, align 2
+@g32 = global i32 0, align 4
+@g64 = global i64 0, align 8
+
+define void @global_bswapstore_i16(i16 %0) #0 {
+; SPARC32-LABEL: global_bswapstore_i16:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    sethi %hi(g16), %o1
+; SPARC32-NEXT:    add %o1, %lo(g16), %o1
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    stha %o0, [%o1] #ASI_P_L
+;
+; SPARCEL-LABEL: global_bswapstore_i16:
+; SPARCEL:       ! %bb.0:
+; SPARCEL-NEXT:    sethi %hi(g16), %o1
+; SPARCEL-NEXT:    add %o1, %lo(g16), %o1
+; SPARCEL-NEXT:    retl
+; SPARCEL-NEXT:    stha %o0, [%o1] #ASI_P
+;
+; SPARC64-LABEL: global_bswapstore_i16:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    sethi %h44(g16), %o1
+; SPARC64-NEXT:    add %o1, %m44(g16), %o1
+; SPARC64-NEXT:    sllx %o1, 12, %o1
+; SPARC64-NEXT:    add %o1, %l44(g16), %o1
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    stha %o0, [%o1] #ASI_P_L
+  %2 = tail call i16 @llvm.bswap.i16(i16 %0)
+  store i16 %2, ptr @g16, align 2
+  ret void
+}
+
+define void @global_bswapstore_i32(i32 %0) #0 {
+; SPARC32-LABEL: global_bswapstore_i32:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    sethi %hi(g32), %o1
+; SPARC32-NEXT:    add %o1, %lo(g32), %o1
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    sta %o0, [%o1] #ASI_P_L
+;
+; SPARCEL-LABEL: global_bswapstore_i32:
+; SPARCEL:       ! %bb.0:
+; SPARCEL-NEXT:    sethi %hi(g32), %o1
+; SPARCEL-NEXT:    add %o1, %lo(g32), %o1
+; SPARCEL-NEXT:    retl
+; SPARCEL-NEXT:    sta %o0, [%o1] #ASI_P
+;
+; SPARC64-LABEL: global_bswapstore_i32:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    sethi %h44(g32), %o1
+; SPARC64-NEXT:    add %o1, %m44(g32), %o1
+; SPARC64-NEXT:    sllx %o1, 12, %o1
+; SPARC64-NEXT:    add %o1, %l44(g32), %o1
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    sta %o0, [%o1] #ASI_P_L
+  %2 = tail call i32 @llvm.bswap.i32(i32 %0)
+  store i32 %2, ptr @g32, align 4
+  ret void
+}
+
+define void @global_bswapstore_i64(i64 %0) #0 {
+; SPARC32-LABEL: global_bswapstore_i64:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    add %sp, -104, %sp
+; SPARC32-NEXT:    add %sp, 96, %o2
+; SPARC32-NEXT:    sta %o0, [%o2] #ASI_P_L
+; SPARC32-NEXT:    add %sp, 100, %o0
+; SPARC32-NEXT:    sta %o1, [%o0] #ASI_P_L
+; SPARC32-NEXT:    ld [%sp+96], %o1
+; SPARC32-NEXT:    ld [%sp+100], %o0
+; SPARC32-NEXT:    sethi %hi(g64), %o2
+; SPARC32-NEXT:    std %o0, [%o2+%lo(g64)]
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    add %sp, 104, %sp
+;
+; SPARCEL-LABEL: global_bswapstore_i64:
+; SPARCEL:       ! %bb.0:
+; SPARCEL-NEXT:    add %sp, -104, %sp
+; SPARCEL-NEXT:    add %sp, 96, %o2
+; SPARCEL-NEXT:    sta %o0, [%o2] #ASI_P
+; SPARCEL-NEXT:    add %sp, 100, %o0
+; SPARCEL-NEXT:    sta %o1, [%o0] #ASI_P
+; SPARCEL-NEXT:    ld [%sp+96], %o1
+; SPARCEL-NEXT:    ld [%sp+100], %o0
+; SPARCEL-NEXT:    sethi %hi(g64), %o2
+; SPARCEL-NEXT:    std %o0, [%o2+%lo(g64)]
+; SPARCEL-NEXT:    retl
+; SPARCEL-NEXT:    add %sp, 104, %sp
+;
+; SPARC64-LABEL: global_bswapstore_i64:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    sethi %h44(g64), %o1
+; SPARC64-NEXT:    add %o1, %m44(g64), %o1
+; SPARC64-NEXT:    sllx %o1, 12, %o1
+; SPARC64-NEXT:    add %o1, %l44(g64), %o1
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    stxa %o0, [%o1] #ASI_P_L
+  %2 = tail call i64 @llvm.bswap.i64(i64 %0)
+  store i64 %2, ptr @g64, align 8
+  ret void
+}
+
+define i16 @global_bswapload_i16() #0 {
+; SPARC32-LABEL: global_bswapload_i16:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    sethi %hi(g16), %o0
+; SPARC32-NEXT:    add %o0, %lo(g16), %o0
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    lduha [%o0] #ASI_P_L, %o0
+;
+; SPARCEL-LABEL: global_bswapload_i16:
+; SPARCEL:       ! %bb.0:
+; SPARCEL-NEXT:    sethi %hi(g16), %o0
+; SPARCEL-NEXT:    add %o0, %lo(g16), %o0
+; SPARCEL-NEXT:    retl
+; SPARCEL-NEXT:    lduha [%o0] #ASI_P, %o0
+;
+; SPARC64-LABEL: global_bswapload_i16:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    sethi %h44(g16), %o0
+; SPARC64-NEXT:    add %o0, %m44(g16), %o0
+; SPARC64-NEXT:    sllx %o0, 12, %o0
+; SPARC64-NEXT:    add %o0, %l44(g16), %o0
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    lduha [%o0] #ASI_P_L, %o0
+  %1 = load i16, ptr @g16, align 2
+  %2 = tail call i16 @llvm.bswap.i16(i16 %1)
+  ret i16 %2
+}
+
+define i32 @global_bswapload_i32() #0 {
+; SPARC32-LABEL: global_bswapload_i32:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    sethi %hi(g32), %o0
+; SPARC32-NEXT:    add %o0, %lo(g32), %o0
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    lda [%o0] #ASI_P_L, %o0
+;
+; SPARCEL-LABEL: global_bswapload_i32:
+; SPARCEL:       ! %bb.0:
+; SPARCEL-NEXT:    sethi %hi(g32), %o0
+; SPARCEL-NEXT:    add %o0, %lo(g32), %o0
+; SPARCEL-NEXT:    retl
+; SPARCEL-NEXT:    lda [%o0] #ASI_P, %o0
+;
+; SPARC64-LABEL: global_bswapload_i32:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    sethi %h44(g32), %o0
+; SPARC64-NEXT:    add %o0, %m44(g32), %o0
+; SPARC64-NEXT:    sllx %o0, 12, %o0
+; SPARC64-NEXT:    add %o0, %l44(g32), %o0
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    lda [%o0] #ASI_P_L, %o0
+  %1 = load i32, ptr @g32, align 4
+  %2 = tail call i32 @llvm.bswap.i32(i32 %1)
+  ret i32 %2
+}
+
+define i64 @global_bswapload_i64() #0 {
+; SPARC32-LABEL: global_bswapload_i64:
+; SPARC32:       ! %bb.0:
+; SPARC32-NEXT:    add %sp, -104, %sp
+; SPARC32-NEXT:    sethi %hi(g64), %o0
+; SPARC32-NEXT:    ldd [%o0+%lo(g64)], %o0
+; SPARC32-NEXT:    add %sp, 96, %o2
+; SPARC32-NEXT:    sta %o1, [%o2] #ASI_P_L
+; SPARC32-NEXT:    add %sp, 100, %o2
+; SPARC32-NEXT:    sta %o0, [%o2] #ASI_P_L
+; SPARC32-NEXT:    ld [%sp+96], %o0
+; SPARC32-NEXT:    ld [%sp+100], %o1
+; SPARC32-NEXT:    retl
+; SPARC32-NEXT:    add %sp, 104, %sp
+;
+; SPARCEL-LABEL: global_bswapload_i64:
+; SPARCEL:       ! %bb.0:
+; SPARCEL-NEXT:    add %sp, -104, %sp
+; SPARCEL-NEXT:    sethi %hi(g64), %o0
+; SPARCEL-NEXT:    ldd [%o0+%lo(g64)], %o0
+; SPARCEL-NEXT:    add %sp, 96, %o2
+; SPARCEL-NEXT:    sta %o1, [%o2] #ASI_P
+; SPARCEL-NEXT:    add %sp, 100, %o2
+; SPARCEL-NEXT:    sta %o0, [%o2] #ASI_P
+; SPARCEL-NEXT:    ld [%sp+96], %o0
+; SPARCEL-NEXT:    ld [%sp+100], %o1
+; SPARCEL-NEXT:    retl
+; SPARCEL-NEXT:    add %sp, 104, %sp
+;
+; SPARC64-LABEL: global_bswapload_i64:
+; SPARC64:       ! %bb.0:
+; SPARC64-NEXT:    sethi %h44(g64), %o0
+; SPARC64-NEXT:    add %o0, %m44(g64), %o0
+; SPARC64-NEXT:    sllx %o0, 12, %o0
+; SPARC64-NEXT:    add %o0, %l44(g64), %o0
+; SPARC64-NEXT:    retl
+; SPARC64-NEXT:    ldxa [%o0] #ASI_P_L, %o0
+  %1 = load i64, ptr @g64, align 8
+  %2 = tail call i64 @llvm.bswap.i64(i64 %1)
+  ret i64 %2
+}
+
 attributes #0 = { nounwind }
+

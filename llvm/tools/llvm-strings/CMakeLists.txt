@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(StringsOptsTableGen)
 
 add_llvm_tool(llvm-strings
@@ -14,6 +14,10 @@ add_llvm_tool(llvm-strings
   DEPENDS
   StringsOptsTableGen
   )
+
+if(APPLE)
+  target_link_libraries(llvm-strings PRIVATE iconv)
+endif()
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(strings llvm-strings)

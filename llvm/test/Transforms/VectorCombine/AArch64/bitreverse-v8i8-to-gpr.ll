@@ -81,8 +81,8 @@ define i64 @no_fold_innerbitcast_multiuse(i64 %x, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[X]] to <8 x i8>
 ; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[X]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %1 = bitcast i64 %x to <8 x i8>

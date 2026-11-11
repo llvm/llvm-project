@@ -1026,3 +1026,78 @@ v_trunc_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
 
 v_trunc_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_ceil_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_ceil_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_cos_f16_e32 v128, 0xfe0b
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_exp_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_exp_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_floor_f16_e32 v128, 0xfe0b
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_floor_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_floor_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_fract_f16_e32 v128, 0xfe0b
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_log_f16_e32 v128, 0xfe0b
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_log_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_log_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_log_f16_e32 v255, v1 quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_log_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_log_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_log_f16_e32 v5, v199 quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_not_b16_e32 v128, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_rcp_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_rndne_f16_e32 v128, 0xfe0b
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_rsq_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_rsq_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_sat_pk_u8_i16_e32 v199, v5
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_sqrt_f16_e32 v255, v1
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_sqrt_f16_e32 v5, v199
+// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode

@@ -14,8 +14,11 @@
 ; DATA: Cost of 8 for VF vscale x 4: EMIT{{.*}} = active lane mask
 
 ; EVL: Cost of 1 for VF vscale x 1: EMIT{{.*}} = EXPLICIT-VECTOR-LENGTH
+; EVL: Cost of 0 for VF vscale x 1: EMIT-SCALAR vp<{{.*}}> = zext vp<%evl> to i64
 ; EVL: Cost of 1 for VF vscale x 2: EMIT{{.*}} = EXPLICIT-VECTOR-LENGTH
+; EVL: Cost of 0 for VF vscale x 2: EMIT-SCALAR vp<{{.*}}> = zext vp<%evl> to i64
 ; EVL: Cost of 1 for VF vscale x 4: EMIT{{.*}} = EXPLICIT-VECTOR-LENGTH
+; EVL: Cost of 0 for VF vscale x 4: EMIT-SCALAR vp<{{.*}}> = zext vp<%evl> to i64
 
 define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 entry:

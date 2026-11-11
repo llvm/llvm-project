@@ -22,6 +22,7 @@ __ZTI3optIbE:
 // CHECK-NEXT:   Magic: Magic (0xFEEDFACE)
 // CHECK-NEXT:   CpuType: X86 (0x7)
 // CHECK-NEXT:   CpuSubType: CPU_SUBTYPE_I386_ALL (0x3)
+// CHECK-NEXT:   CpuCapabilities: 0x0
 // CHECK-NEXT:   FileType: Relocatable (0x1)
 // CHECK-NEXT:   NumOfLoadCommands: 4
 // CHECK-NEXT:   SizeOfLoadCommands: 380

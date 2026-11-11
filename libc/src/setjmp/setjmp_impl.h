@@ -29,8 +29,13 @@ namespace LIBC_NAMESPACE_DECL {
 #ifdef LIBC_COMPILER_IS_GCC
 [[gnu::nothrow]]
 #endif
-[[gnu::returns_twice]] int
-setjmp(jmp_buf buf);
+// Public packaging on Mach-O emits only the C symbol. Bind internal references
+// to that symbol; this does not add a C `_setjmp` alias.
+[[gnu::returns_twice]] int setjmp(jmp_buf buf)
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(__APPLE__)
+    asm("_setjmp")
+#endif
+        ;
 
 } // namespace LIBC_NAMESPACE_DECL
 

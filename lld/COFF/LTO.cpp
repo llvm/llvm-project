@@ -56,7 +56,8 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.LibraryOptions = &ctx.config.libraryOptions;
+  c.Options = getTargetOptions(ctx.config.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.config.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -216,7 +217,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.config.ltoCache.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.config.ltoCache,
-                             createAddBufferFn(files, file_names)));
+                             createAddBufferFn(files, file_names),
+                             !ctx.config.dtltoDistributor.empty()));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {

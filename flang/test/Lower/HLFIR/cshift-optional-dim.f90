@@ -13,7 +13,7 @@ subroutine cshift_optional_dim(a, sh, dim)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcshift_optional_dim(
 ! CHECK-SAME:    {{.*}}: !fir.ref<i32> {fir.bindc_name = "dim", fir.optional})
-! CHECK:         %[[DECL_DIM:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<optional>
+! CHECK:         %[[DECL_DIM:.*]]:2 = hlfir.declare {{.*}} {{.*}}fortran_attrs<optional>
 ! CHECK:         %[[IS_PRESENT:.*]] = fir.is_present %[[DECL_DIM]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:         %[[DIM_LOADED:.*]] = fir.if %[[IS_PRESENT]] -> (i32) {
 ! CHECK:           %[[LOADED:.*]] = fir.load %[[DECL_DIM]]#0 : !fir.ref<i32>
@@ -35,7 +35,7 @@ subroutine eoshift_optional_dim(a, sh, dim)
 end subroutine
 ! CHECK-LABEL: func.func @_QPeoshift_optional_dim(
 ! CHECK-SAME:    {{.*}}: !fir.ref<i32> {fir.bindc_name = "dim", fir.optional})
-! CHECK:         %[[DECL_DIM2:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<optional>
+! CHECK:         %[[DECL_DIM2:.*]]:2 = hlfir.declare {{.*}} {{.*}}fortran_attrs<optional>
 ! CHECK:         %[[IS_PRESENT2:.*]] = fir.is_present %[[DECL_DIM2]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK:         %[[DIM_LOADED2:.*]] = fir.if %[[IS_PRESENT2]] -> (i32) {
 ! CHECK:           %[[LOADED2:.*]] = fir.load %[[DECL_DIM2]]#0 : !fir.ref<i32>

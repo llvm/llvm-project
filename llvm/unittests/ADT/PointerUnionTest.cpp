@@ -310,7 +310,7 @@ struct alignas(4) LowAlign {
 };
 
 // Wrapper around a PointerUnion that over-claims NumLowBitsAvailable,
-// mimicking LazyGenerationalUpdatePtr's PLTT on 32-bit.
+// mimicking LazyGenerationalDeclPtr's PLTT on 32-bit.
 struct OverClaimWrapper {
   PointerUnion<HighAlign *, LowAlign *> Value;
 

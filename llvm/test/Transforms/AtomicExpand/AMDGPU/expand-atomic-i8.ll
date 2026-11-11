@@ -2284,7 +2284,6 @@ define i8 @test_atomicrmw_usub_cond_i8_flat_agent_align2(ptr %ptr, i8 %value) {
 ; R600-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i8
 ; R600-NEXT:    ret i8 [[EXTRACTED3]]
 ;
-; R600NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
   %res = atomicrmw usub_cond ptr %ptr, i8 %value syncscope("agent") seq_cst, align 2
   ret i8 %res
 }

@@ -96,7 +96,7 @@ public:
   Binary(const Binary &other) = delete;
   virtual ~Binary();
 
-  virtual Error initContent() { return Error::success(); };
+  virtual Error initContent() { return Error::success(); }
 
   StringRef getData() const;
   StringRef getFileName() const;

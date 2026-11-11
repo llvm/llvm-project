@@ -3,10 +3,9 @@ Regression test for the Memory64List size accounting in minidump save-core.
 
 When a saved range contains an unreadable page the read fails part-way. The
 range's DataSize must equal the number of bytes actually written to the shared
-Memory64 blob; if it instead records the number of bytes ReadMemoryInChunks read
-(which includes the partially-read bytes that were dropped on the error), the
-blob's cumulative offsets desync and the descriptors claim more data than the
-file holds. See MinidumpFileBuilder::ReadWriteMemoryInChunks.
+Memory64 blob, otherwise blob's cumulative offsets desync and the descriptors
+claim more data than the file holds. See
+MinidumpFileBuilder::ReadWriteMemoryInChunks.
 """
 
 import os
@@ -54,13 +53,11 @@ class ProcessSaveCoreMinidumpSizeMismatchTestCase(TestBase):
     @skipIf(archs=["arm$"])
     def test_memory64_datasize_matches_written_bytes(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        lldbutil.run_break_set_by_source_regexp(self, "Set a breakpoint here")
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertState(process.GetState(), lldb.eStateStopped)
+        _, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
 
-        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         readable_region = frame.FindVariable("readable_region").GetValueAsUnsigned()
         readable_region_size = frame.FindVariable(
             "readable_region_size"

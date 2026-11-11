@@ -99,25 +99,7 @@ define void @trunc_sat_u8u16_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <vscale x 4 x i16>, ptr %x, align 16
   %2 = tail call <vscale x 4 x i16> @llvm.smax.v4i16(<vscale x 4 x i16> %1, <vscale x 4 x i16> splat (i16 0))
-  %3 = tail call <vscale x 4 x i16> @llvm.smin.v4i16(<vscale x 4 x i16> %2, <vscale x 4 x i16> splat (i16 255))
-  %4 = trunc <vscale x 4 x i16> %3 to <vscale x 4 x i8>
-  store <vscale x 4 x i8> %4, ptr %y, align 8
-  ret void
-}
-
-define void @trunc_sat_u8u16_minmax(ptr %x, ptr %y) {
-; CHECK-LABEL: trunc_sat_u8u16_minmax:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl1re16.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v8, 0
-; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    ret
-  %1 = load <vscale x 4 x i16>, ptr %x, align 16
-  %2 = tail call <vscale x 4 x i16> @llvm.smin.v4i16(<vscale x 4 x i16> %1, <vscale x 4 x i16> splat (i16 255))
-  %3 = tail call <vscale x 4 x i16> @llvm.smax.v4i16(<vscale x 4 x i16> %2, <vscale x 4 x i16> splat (i16 0))
+  %3 = tail call <vscale x 4 x i16> @llvm.umin.v4i16(<vscale x 4 x i16> %2, <vscale x 4 x i16> splat (i16 255))
   %4 = trunc <vscale x 4 x i16> %3 to <vscale x 4 x i8>
   store <vscale x 4 x i8> %4, ptr %y, align 8
   ret void
@@ -224,26 +206,7 @@ define void @trunc_sat_u16u32_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <vscale x 4 x i32>, ptr %x, align 16
   %2 = tail call <vscale x 4 x i32> @llvm.smax.v4i32(<vscale x 4 x i32> %1, <vscale x 4 x i32> splat (i32 1))
-  %3 = tail call <vscale x 4 x i32> @llvm.smin.v4i32(<vscale x 4 x i32> %2, <vscale x 4 x i32> splat (i32 65535))
-  %4 = trunc <vscale x 4 x i32> %3 to <vscale x 4 x i16>
-  store <vscale x 4 x i16> %4, ptr %y, align 8
-  ret void
-}
-
-define void @trunc_sat_u16u32_minmax(ptr %x, ptr %y) {
-; CHECK-LABEL: trunc_sat_u16u32_minmax:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl2re32.v v8, (a0)
-; CHECK-NEXT:    li a0, 50
-; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnclipu.wi v10, v8, 0
-; CHECK-NEXT:    vs1r.v v10, (a1)
-; CHECK-NEXT:    ret
-  %1 = load <vscale x 4 x i32>, ptr %x, align 16
-  %2 = tail call <vscale x 4 x i32> @llvm.smin.v4i32(<vscale x 4 x i32> %1, <vscale x 4 x i32> splat (i32 65535))
-  %3 = tail call <vscale x 4 x i32> @llvm.smax.v4i32(<vscale x 4 x i32> %2, <vscale x 4 x i32> splat (i32 50))
+  %3 = tail call <vscale x 4 x i32> @llvm.umin.v4i32(<vscale x 4 x i32> %2, <vscale x 4 x i32> splat (i32 65535))
   %4 = trunc <vscale x 4 x i32> %3 to <vscale x 4 x i16>
   store <vscale x 4 x i16> %4, ptr %y, align 8
   ret void
@@ -350,25 +313,7 @@ define void @trunc_sat_u32u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <vscale x 4 x i64>, ptr %x, align 16
   %2 = tail call <vscale x 4 x i64> @llvm.smax.v4i64(<vscale x 4 x i64> %1, <vscale x 4 x i64> splat (i64 0))
-  %3 = tail call <vscale x 4 x i64> @llvm.smin.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 4294967295))
-  %4 = trunc <vscale x 4 x i64> %3 to <vscale x 4 x i32>
-  store <vscale x 4 x i32> %4, ptr %y, align 8
-  ret void
-}
-
-define void @trunc_sat_u32u64_minmax(ptr %x, ptr %y) {
-; CHECK-LABEL: trunc_sat_u32u64_minmax:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl4re64.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v12, v8, 0
-; CHECK-NEXT:    vs2r.v v12, (a1)
-; CHECK-NEXT:    ret
-  %1 = load <vscale x 4 x i64>, ptr %x, align 16
-  %2 = tail call <vscale x 4 x i64> @llvm.smin.v4i64(<vscale x 4 x i64> %1, <vscale x 4 x i64> splat (i64 4294967295))
-  %3 = tail call <vscale x 4 x i64> @llvm.smax.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 0))
+  %3 = tail call <vscale x 4 x i64> @llvm.umin.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 4294967295))
   %4 = trunc <vscale x 4 x i64> %3 to <vscale x 4 x i32>
   store <vscale x 4 x i32> %4, ptr %y, align 8
   ret void
@@ -441,27 +386,7 @@ define void @trunc_sat_u8u32_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <vscale x 4 x i32>, ptr %x, align 16
   %2 = tail call <vscale x 4 x i32> @llvm.smax.v4i32(<vscale x 4 x i32> %1, <vscale x 4 x i32> splat (i32 0))
-  %3 = tail call <vscale x 4 x i32> @llvm.smin.v4i32(<vscale x 4 x i32> %2, <vscale x 4 x i32> splat (i32 255))
-  %4 = trunc <vscale x 4 x i32> %3 to <vscale x 4 x i8>
-  store <vscale x 4 x i8> %4, ptr %y, align 8
-  ret void
-}
-
-define void @trunc_sat_u8u32_minmax(ptr %x, ptr %y) {
-; CHECK-LABEL: trunc_sat_u8u32_minmax:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl2re32.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnclipu.wi v10, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v10, 0
-; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    ret
-  %1 = load <vscale x 4 x i32>, ptr %x, align 16
-  %2 = tail call <vscale x 4 x i32> @llvm.smin.v4i32(<vscale x 4 x i32> %1, <vscale x 4 x i32> splat (i32 255))
-  %3 = tail call <vscale x 4 x i32> @llvm.smax.v4i32(<vscale x 4 x i32> %2, <vscale x 4 x i32> splat (i32 0))
+  %3 = tail call <vscale x 4 x i32> @llvm.umin.v4i32(<vscale x 4 x i32> %2, <vscale x 4 x i32> splat (i32 255))
   %4 = trunc <vscale x 4 x i32> %3 to <vscale x 4 x i8>
   store <vscale x 4 x i8> %4, ptr %y, align 8
   ret void
@@ -542,29 +467,7 @@ define void @trunc_sat_u8u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <vscale x 4 x i64>, ptr %x, align 16
   %2 = tail call <vscale x 4 x i64> @llvm.smax.v4i64(<vscale x 4 x i64> %1, <vscale x 4 x i64> splat (i64 0))
-  %3 = tail call <vscale x 4 x i64> @llvm.smin.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 255))
-  %4 = trunc <vscale x 4 x i64> %3 to <vscale x 4 x i8>
-  store <vscale x 4 x i8> %4, ptr %y, align 8
-  ret void
-}
-
-define void @trunc_sat_u8u64_minmax(ptr %x, ptr %y) {
-; CHECK-LABEL: trunc_sat_u8u64_minmax:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl4re64.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, zero
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v12, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v8, 0
-; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    ret
-  %1 = load <vscale x 4 x i64>, ptr %x, align 16
-  %2 = tail call <vscale x 4 x i64> @llvm.smin.v4i64(<vscale x 4 x i64> %1, <vscale x 4 x i64> splat (i64 255))
-  %3 = tail call <vscale x 4 x i64> @llvm.smax.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 0))
+  %3 = tail call <vscale x 4 x i64> @llvm.umin.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 255))
   %4 = trunc <vscale x 4 x i64> %3 to <vscale x 4 x i8>
   store <vscale x 4 x i8> %4, ptr %y, align 8
   ret void
@@ -638,28 +541,7 @@ define void @trunc_sat_u16u64_maxmin(ptr %x, ptr %y) {
 ; CHECK-NEXT:    ret
   %1 = load <vscale x 4 x i64>, ptr %x, align 16
   %2 = tail call <vscale x 4 x i64> @llvm.smax.v4i64(<vscale x 4 x i64> %1, <vscale x 4 x i64> splat (i64 1))
-  %3 = tail call <vscale x 4 x i64> @llvm.smin.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 65535))
-  %4 = trunc <vscale x 4 x i64> %3 to <vscale x 4 x i16>
-  store <vscale x 4 x i16> %4, ptr %y, align 8
-  ret void
-}
-
-define void @trunc_sat_u16u64_minmax(ptr %x, ptr %y) {
-; CHECK-LABEL: trunc_sat_u16u64_minmax:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl4re64.v v8, (a0)
-; CHECK-NEXT:    li a0, 50
-; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vmax.vx v8, v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnclipu.wi v12, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnclipu.wi v8, v12, 0
-; CHECK-NEXT:    vs1r.v v8, (a1)
-; CHECK-NEXT:    ret
-  %1 = load <vscale x 4 x i64>, ptr %x, align 16
-  %2 = tail call <vscale x 4 x i64> @llvm.smin.v4i64(<vscale x 4 x i64> %1, <vscale x 4 x i64> splat (i64 65535))
-  %3 = tail call <vscale x 4 x i64> @llvm.smax.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 50))
+  %3 = tail call <vscale x 4 x i64> @llvm.umin.v4i64(<vscale x 4 x i64> %2, <vscale x 4 x i64> splat (i64 65535))
   %4 = trunc <vscale x 4 x i64> %3 to <vscale x 4 x i16>
   store <vscale x 4 x i16> %4, ptr %y, align 8
   ret void

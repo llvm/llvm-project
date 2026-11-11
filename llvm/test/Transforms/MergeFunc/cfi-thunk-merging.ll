@@ -177,7 +177,7 @@ attributes #3 = { noreturn nounwind }
 ; LOWERTYPETESTS-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B_ADDR]], align 4
 ; LOWERTYPETESTS-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 ; LOWERTYPETESTS-NEXT:    [[TMP1:%.*]] = zext i1 [[TOBOOL]] to i64
-; LOWERTYPETESTS-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr @.cfi.jumptable, ptr getelementptr inbounds ([2 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; LOWERTYPETESTS-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr @.cfi.jumptable, ptr getelementptr inbounds (i8, ptr @.cfi.jumptable, i64 8)
 ; LOWERTYPETESTS-NEXT:    store ptr [[COND]], ptr [[FP]], align 8
 ; LOWERTYPETESTS-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FP]], align 8
 ; LOWERTYPETESTS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64

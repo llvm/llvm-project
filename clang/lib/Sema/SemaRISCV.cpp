@@ -278,15 +278,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
         RVVIntrinsic::computeBuiltinTypes(
             BasicProtoSeq, /*IsMasked=*/false,
-            /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
+            /*HasMaskedOffOperand=*/false,
+            /*MaskedPrototypeHasResultMask=*/false, Record.HasVL, Record.NF,
             UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
     if (Record.HasMasked)
       ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
           BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
-          Record.IsTuple);
+          Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+          MaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -332,8 +333,9 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
             llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicProtoSeq, /*IsMasked=*/false,
-                    /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
-                    UnMaskedPolicyScheme, P, Record.IsTuple);
+                    /*HasMaskedOffOperand=*/false,
+                    /*MaskedPrototypeHasResultMask=*/false, Record.HasVL,
+                    Record.NF, UnMaskedPolicyScheme, P, Record.IsTuple);
             std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
                 BaseType, Log2LMUL, Record.NF, PolicyPrototype);
             InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -355,8 +357,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
           llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
               RVVIntrinsic::computeBuiltinTypes(
                   BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-                  Record.HasVL, Record.NF, MaskedPolicyScheme, P,
-                  Record.IsTuple);
+                  Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+                  MaskedPolicyScheme, P, Record.IsTuple);
           std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
               BaseType, Log2LMUL, Record.NF, PolicyPrototype);
           InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -966,6 +968,26 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCV::BI__builtin_riscv_sm4ks:
   case RISCV::BI__builtin_riscv_sm4ed:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
+  // Check the psati/pusati saturation width.
+  case RISCV::BI__builtin_riscv_psati_i16x2:
+  case RISCV::BI__builtin_riscv_psati_i16x4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 16);
+  case RISCV::BI__builtin_riscv_psati_i32x2:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case RISCV::BI__builtin_riscv_pusati_u16x2:
+  case RISCV::BI__builtin_riscv_pusati_u16x4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case RISCV::BI__builtin_riscv_pusati_u32x2:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  // Check the sati/usati saturation width.
+  case RISCV::BI__builtin_riscv_sati_i32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case RISCV::BI__builtin_riscv_sati_i64:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 64);
+  case RISCV::BI__builtin_riscv_usati_u32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case RISCV::BI__builtin_riscv_usati_u64:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 63);
   // Check if rnum is in [0, 10]
   case RISCV::BI__builtin_riscv_aes64ks1i:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 10);
@@ -1598,6 +1620,111 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
     Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfofp8min";
 }
 
+void SemaRISCV::checkConflictingStateAttributes(
+    const FunctionDecl *CallerFD, const FunctionDecl *FD,
+    const FunctionProtoType::ExtProtoInfo &CalleeExtInfo, SourceLocation Loc) {
+  ASTContext &Context = getASTContext();
+
+  // Check if there's any conflicting call for every state, it should not be
+  // any conflict if caller and callee are in different state.
+  if (!CallerFD ||
+      !(!FD || !FD->getBuiltinID() ||
+        Context.BuiltinInfo.isLibFunction(FD->getBuiltinID()) ||
+        Context.BuiltinInfo.isPredefinedLibFunction(FD->getBuiltinID())))
+    return;
+
+  QualType CallerType = CallerFD->getType();
+  if (CallerType.isNull())
+    return;
+
+  const auto *FPT = CallerType->getAs<FunctionProtoType>();
+  if (!FPT)
+    return;
+
+  FunctionProtoType::ExtProtoInfo CallerExtInfo = FPT->getExtProtoInfo();
+  llvm::StringMap<bool> CallerFeatureMap;
+  if (CallerExtInfo.RISCVAttributes & FunctionType::RISCVAttributeMask)
+    Context.getFunctionFeatureMap(CallerFeatureMap, CallerFD);
+  // tuple(CallerAttr, CalleeAttr, required feature)
+  const std::tuple<FunctionType::RISCVStateValue, FunctionType::RISCVStateValue,
+                   StringRef>
+      RISCVStateInfo[] = {
+          {FunctionType::getRISCVXsfmmState(CallerExtInfo.RISCVAttributes),
+           FunctionType::getRISCVXsfmmState(CalleeExtInfo.RISCVAttributes),
+           "xsfmmbase"}};
+  for (auto [CallerAttr, CalleeAttr, RequiredFeature] : RISCVStateInfo) {
+    // If both caller and callee are not attributed, then we're fine.
+    if (CallerAttr == FunctionType::RISCVNone &&
+        CalleeAttr == FunctionType::RISCVNone)
+      continue;
+
+    if (!Context.getTargetInfo().hasFeature(RequiredFeature) &&
+        !CallerFeatureMap.lookup(RequiredFeature)) {
+      // check if corresponding attributes are enabled.
+      Diag(Loc, diag::err_riscv_call_invalid_features) << RequiredFeature;
+      continue;
+    }
+
+    switch (CallerAttr) {
+    case FunctionType::RISCVNone:
+      if (CalleeAttr != FunctionType::RISCVNew) {
+        // Check limitation:
+        // 1. Only __riscv_new function can be called in non-attributed
+        // function.
+        Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+            << "Only __riscv_new function can be called in "
+               "non-attributed function.";
+      }
+      break;
+    case FunctionType::RISCVIn:
+      if (CalleeAttr != FunctionType::RISCVIn &&
+          CalleeAttr != FunctionType::RISCVPreserves) {
+        // 2. Function with __riscv_in can only call __riscv_in and
+        // __riscv_preserves function.
+        Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+            << "Function with __riscv_in can only call __riscv_in and "
+               "__riscv_preserves function.";
+      }
+      break;
+    case FunctionType::RISCVOut:
+      if (CalleeAttr != FunctionType::RISCVIn &&
+          CalleeAttr != FunctionType::RISCVOut &&
+          CalleeAttr != FunctionType::RISCVPreserves) {
+        // 3. Function with __riscv_out can only call
+        // __riscv_in, __riscv_out and __riscv_preserves function.
+        Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+            << "Function with __riscv_out can only call "
+               "__riscv_in, __riscv_out and __riscv_preserves "
+               "function.";
+      }
+      break;
+    case FunctionType::RISCVPreserves:
+      if (CalleeAttr != FunctionType::RISCVPreserves) {
+        // 4. Function with __riscv_preserves can only call
+        // __riscv_preserves function.
+        Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+            << "Function with __riscv_preserves can only call "
+               "__riscv_preserves function.";
+      }
+      break;
+    case FunctionType::RISCVNew:
+    case FunctionType::RISCVInOut:
+      if (CalleeAttr == FunctionType::RISCVNone ||
+          CalleeAttr == FunctionType::RISCVNew) {
+        // Handle remainings: __riscv_new, __riscv_inout
+        // 5. Function with attribute can only call function with
+        // attribute(except for __riscv_new), i.e. __riscv_new and
+        // non-attributed function can not be called in attributed
+        // function.
+        Diag(Loc, diag::err_conflicting_attributes_riscv_state)
+            << "__riscv_new and non-attributed function can not be "
+               "called in attributed function.";
+      }
+      break;
+    }
+  }
+}
+
 /// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the
 /// first RVV type (e.g. an RVV scalable type) to the second type (e.g. an RVV
 /// VLS type) allowed?
@@ -1612,7 +1739,7 @@ bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
-    return VecTy && VecTy->getVectorKind() == VectorKind::RVVFixedLengthData;
+    return VecTy && isRVVFixedLengthDataVectorKind(VecTy->getVectorKind());
   };
 
   return ValidScalableConversion(srcTy, destTy) ||

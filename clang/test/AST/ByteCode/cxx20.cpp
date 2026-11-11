@@ -1531,3 +1531,90 @@ namespace SubPtr {
   }
   static_assert(dynAlloc() == 1);
 }
+
+namespace InvalidVirtualCall {
+  struct A {
+    virtual void foo(); // both-note {{overridden virtual function is here}}
+  };
+
+  struct B : A {
+    constexpr void bar() { foo(); } // both-error {{never produces a constant expression}} \
+                                    // both-note {{non-constexpr function 'foo' cannot be used in a constant expression}}
+    static void foo(); // both-error {{'static' member function 'foo' overrides a virtual function in a base class}} \
+                       // both-note {{declared here}}
+  };
+}
+
+namespace FailInTrivialCopy {
+
+  struct S {
+    S &operator=(const S &) = default;
+    int val; // ref-note {{subobject declared here}}
+  };
+
+  constexpr bool foo() {
+    S s1; // expected-note {{declared here}}
+    S s2{42};
+    s2 = s1; // expected-note {{read of uninitialized object}} \
+             // ref-note {{subobject 'val' is not initialized}} \
+             // both-note {{in call to}}
+    return true;
+  }
+
+  static_assert(foo(), ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
+}
+
+namespace DiscardedConstevalStruct {
+  struct S { int x; };
+  consteval S make() { return S{42}; }
+
+  void discard_cast() {
+    (void)make();
+  }
+
+  int discard_comma() {
+    return (make(), 0); // both-warning {{left operand of comma operator has no effect}}
+  }
+}
+
+namespace ConditionalOperatorInBORHS {
+  struct S { int x; };
+
+  struct a {
+    int c = 12;
+
+    constexpr int e() {
+
+      0 && (0 ? 0 : 0); // both-warning {{use of logical '&&' with constant operand}} \
+                        // both-note {{use '&' for a bitwise operation}} \
+                        // both-note {{remove constant to silence this warning}} \
+                        // both-warning {{expression result unused}}
+
+      int f = c;
+
+      return (f);
+    }
+  };
+  static_assert(a{}.e() == 12);
+}
+
+namespace BaseRedecl {
+  struct S;
+  struct A {
+    constexpr char foo() const { return 'A'; }
+    constexpr ~A() {}
+  };
+  struct S : A {};
+  struct B : S {};
+  struct N : B {};
+  struct C : A {
+    A *a;
+    constexpr C(A *a) : a(a) {}
+  };
+  struct D : N, C {
+    constexpr D() : C((B *)this) {}
+  };
+
+  constexpr D d;
+}

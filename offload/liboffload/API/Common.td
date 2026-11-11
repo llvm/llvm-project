@@ -152,9 +152,9 @@ def ol_dimensions_t : Struct {
 def ol_init_args_t : Struct {
   let desc = "Configuration arguments for olInit.";
   let members = [
-    StructMember<"size_t", "Size", "Size of this struct, used for ABI compatibility. Must be set to sizeof(ol_init_args_t) by the caller.">,
-    StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
-    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">
+    StructMember<"size_t", "Size", "Size of this struct in bytes, used for ABI compatibility. Set it to sizeof(ol_init_args_t), or initialize the struct with `OL_INIT_ARGS_INIT`.">,
+    StructMember<"uint32_t", "NumPlatforms", "Number of entries in `Platforms`. Zero selects all platforms.">,
+    StructMember<"const ol_platform_backend_t*", "Platforms", "Backends to select. The array is not accessed after `olInit` returns and may be freed. May be NULL if `NumPlatforms` is zero.">
   ];
 }
 
@@ -164,24 +164,68 @@ def OL_INIT_ARGS_INIT : Macro {
 }
 
 def olInit : Function {
-  let desc = "Perform initialization of the Offload library";
+  let desc = "Initialize the Offload library.";
   let details = [
-    "This must be the first API call made by a user of the Offload library",
-    "Each call will increment an internal reference count that is decremented by `olShutDown`",
-    "If InitArgs is NULL, default configuration is used which initializes all available platforms"
+    "`olInit` must be called before any other function.",
+    "Each successful call to `olInit` increments the library's reference "
+    "count and each call to `olShutDown` decrements it. The library is torn "
+    "down when the count reaches zero, and may be initialized again "
+    "afterwards.",
+    "`InitArgs` selects the platforms the library can use. While the library "
+    "is initialized, further calls only increment the reference count and "
+    "`InitArgs` is ignored. If `InitArgs` is NULL or `InitArgs->NumPlatforms` "
+    "is zero, all platforms are selected. Otherwise:",
+    "- The backends listed in `InitArgs->Platforms` are selected.",
+    "- The host platform is always selected, whether listed or not.",
+    "- Duplicate entries, unknown values, and backends not supported by this "
+    "library are ignored.",
+    "`olInit` does not require the vendor drivers to be installed. A "
+    "platform's driver is loaded the first time its devices are accessed, "
+    "for example by `olIterateDevices`. A platform whose driver cannot be "
+    "loaded reports no devices rather than an error.",
+    "The environment variables `OFFLOAD_TRACE` and "
+    "`OFFLOAD_DISABLE_VALIDATION` are read when `olInit` initializes the "
+    "library. Changes made afterwards are not seen until the library has been "
+    "shut down and initialized again.",
+    "`olInit` is thread safe."
   ];
   let params = [
-    Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
+    Param<"const ol_init_args_t*", "InitArgs", "Optional configuration. NULL selects all platforms.", PARAM_IN_OPTIONAL>
   ];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`InitArgs->Size` is smaller than `sizeof(ol_init_args_t)`"
+    ]>,
+    Return<"OL_ERRC_INVALID_NULL_POINTER", [
+      "`InitArgs->NumPlatforms` is greater than zero and `InitArgs->Platforms` is NULL"
+    ]>,
+    Return<"OL_ERRC_UNINITIALIZED", [
+      "The library was shut down at process exit and cannot be initialized again"
+    ]>
+  ];
 }
 
 def olShutDown : Function {
-  let desc = "Release the resources in use by Offload";
+  let desc = "Release a reference to the Offload library.";
   let details = [
-    "This decrements an internal reference count. When this reaches 0, all resources will be released",
-    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED"
+    "Each call decrements the reference count incremented by `olInit`. The "
+    "library shuts down when the count reaches zero and every platform that "
+    "was used is deinitialized. Queues, events, allocations, programs and all "
+    "other objects obtained from the library are left in an undefined state "
+    "and must not be used. Before the final call, the caller must ensure that "
+    "all submitted work has completed and release every object it created.",
+    "An error reported by a platform while it shuts down is returned. The "
+    "library shuts down regardless.",
+    "`olShutDown` is thread safe.",
+    "If the process exits while the reference count is not zero, the library "
+    "shuts itself down. Calls to `olShutDown` made after that succeed and do "
+    "nothing, so a balancing call from an exit handler or static destructor "
+    "is safe."
   ];
   let params = [];
-  let returns = [];
+  let returns = [
+    Return<"OL_ERRC_UNINITIALIZED", [
+      "The reference count is zero: `olInit` has not been called, or the count was already decremented to zero"
+    ]>
+  ];
 }

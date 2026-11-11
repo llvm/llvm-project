@@ -1,0 +1,41 @@
+# RUN: split-file %s %t
+# RUN: llc -mtriple=nvptx64 -run-pass=none -verify-machineinstrs %t/valid.mir -o /dev/null
+# RUN: not --crash llc -mtriple=nvptx64 -run-pass=none -verify-machineinstrs %t/invalid.mir -o /dev/null 2>&1 | FileCheck %s
+
+# A flexible operand still constrains the register class when given a register.
+# CHECK: Bad machine code: Illegal virtual register for instruction
+# CHECK: Expected a B32 register, but got a B64 register
+# CHECK: Bad machine code: Illegal virtual register for instruction
+# CHECK: Expected a B32 register, but got a B16 register
+# CHECK: Bad machine code: Illegal virtual register for instruction
+# CHECK: Expected a B32 register, but got a B64 register
+
+#--- valid.mir
+---
+name: valid
+body: |
+  bb.0:
+    %0:b32 = IMPLICIT_DEF
+    %1:b32 = INT_FNS %0, %0, %0
+    %2:b32 = INT_FNS %0, %0, -1
+    %3:b32 = INT_FNS %0, 31, %0
+    %4:b32 = INT_FNS %0, 31, -1
+    %5:b32 = INT_FNS -2147483648, %0, %0
+    %6:b32 = INT_FNS -2147483648, %0, -1
+    %7:b32 = INT_FNS -2147483648, 31, %0
+    %8:b32 = INT_FNS -2147483648, 31, -1
+    Return
+...
+
+#--- invalid.mir
+---
+name: invalid
+body: |
+  bb.0:
+    %0:b64 = IMPLICIT_DEF
+    %1:b16 = IMPLICIT_DEF
+    %2:b32 = INT_FNS %0, 31, -1
+    %3:b32 = INT_FNS -1, %1, -1
+    %4:b32 = INT_FNS -1, 31, %0
+    Return
+...

@@ -14,8 +14,8 @@ define half @normal_fadd(half %x, half %y) {
   ; CHECK-CVT-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-CVT-NEXT:   [[FCVTSHr:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr1:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY1]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[FCVTSHr1]], killed [[FCVTSHr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr killed [[FADDSrr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[FCVTSHr1]], [[FCVTSHr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[FADDSrr]], implicit $fpcr
   ; CHECK-CVT-NEXT:   $h0 = COPY [[FCVTHSr]]
   ; CHECK-CVT-NEXT:   RET_ReallyLR implicit $h0
   ;
@@ -42,8 +42,8 @@ define half @fast_fadd(half %x, half %y) {
   ; CHECK-CVT-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-CVT-NEXT:   [[FCVTSHr:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FCVTSHr [[COPY]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr1:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FCVTSHr [[COPY1]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed [[FCVTSHr1]], killed [[FCVTSHr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nnan ninf nsz arcp contract afn reassoc nofpexcept FCVTHSr killed [[FADDSrr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr [[FCVTSHr1]], [[FCVTSHr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nnan ninf nsz arcp contract afn reassoc nofpexcept FCVTHSr [[FADDSrr]], implicit $fpcr
   ; CHECK-CVT-NEXT:   $h0 = COPY [[FCVTHSr]]
   ; CHECK-CVT-NEXT:   RET_ReallyLR implicit $h0
   ;
@@ -70,8 +70,8 @@ define half @ninf_fadd(half %x, half %y) {
   ; CHECK-CVT-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-CVT-NEXT:   [[FCVTSHr:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr [[COPY]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr1:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr [[COPY1]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[FCVTSHr1]], killed [[FCVTSHr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = ninf nofpexcept FCVTHSr killed [[FADDSrr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[FCVTSHr1]], [[FCVTSHr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = ninf nofpexcept FCVTHSr [[FADDSrr]], implicit $fpcr
   ; CHECK-CVT-NEXT:   $h0 = COPY [[FCVTHSr]]
   ; CHECK-CVT-NEXT:   RET_ReallyLR implicit $h0
   ;
@@ -102,12 +102,12 @@ define half @normal_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-CVT-NEXT:   [[FCVTSHr:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY1]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr1:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY2]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[FCVTSHr1]], killed [[FCVTSHr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr killed [[FADDSrr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTSHr2:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr killed [[FCVTHSr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[FCVTSHr1]], [[FCVTSHr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[FADDSrr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTSHr2:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[FCVTHSr]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr3:%[0-9]+]]:fpr32 = nofpexcept FCVTSHr [[COPY]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[FCVTSHr2]], killed [[FCVTSHr3]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr1:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr killed [[FADDSrr1]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[FCVTSHr2]], [[FCVTSHr3]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr1:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[FADDSrr1]], implicit $fpcr
   ; CHECK-CVT-NEXT:   $h0 = COPY [[FCVTHSr1]]
   ; CHECK-CVT-NEXT:   RET_ReallyLR implicit $h0
   ;
@@ -119,7 +119,7 @@ define half @normal_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-FP16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-FP16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-FP16-NEXT:   [[FADDHrr:%[0-9]+]]:fpr16 = nofpexcept FADDHrr [[COPY2]], [[COPY1]], implicit $fpcr
-  ; CHECK-FP16-NEXT:   [[FADDHrr1:%[0-9]+]]:fpr16 = nofpexcept FADDHrr killed [[FADDHrr]], [[COPY]], implicit $fpcr
+  ; CHECK-FP16-NEXT:   [[FADDHrr1:%[0-9]+]]:fpr16 = nofpexcept FADDHrr [[FADDHrr]], [[COPY]], implicit $fpcr
   ; CHECK-FP16-NEXT:   $h0 = COPY [[FADDHrr1]]
   ; CHECK-FP16-NEXT:   RET_ReallyLR implicit $h0
 entry:
@@ -138,10 +138,10 @@ define half @nnan_ninf_contract_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-CVT-NEXT:   [[FCVTSHr:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FCVTSHr [[COPY1]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FCVTSHr [[COPY2]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[FCVTSHr1]], killed [[FCVTSHr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr [[FCVTSHr1]], [[FCVTSHr]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr2:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FCVTSHr [[COPY]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[FADDSrr]], killed [[FCVTSHr2]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept FCVTHSr killed [[FADDSrr1]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr [[FADDSrr]], [[FCVTSHr2]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept FCVTHSr [[FADDSrr1]], implicit $fpcr
   ; CHECK-CVT-NEXT:   $h0 = COPY [[FCVTHSr]]
   ; CHECK-CVT-NEXT:   RET_ReallyLR implicit $h0
   ;
@@ -153,7 +153,7 @@ define half @nnan_ninf_contract_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-FP16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-FP16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-FP16-NEXT:   [[FADDHrr:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept FADDHrr [[COPY2]], [[COPY1]], implicit $fpcr
-  ; CHECK-FP16-NEXT:   [[FADDHrr1:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept FADDHrr killed [[FADDHrr]], [[COPY]], implicit $fpcr
+  ; CHECK-FP16-NEXT:   [[FADDHrr1:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept FADDHrr [[FADDHrr]], [[COPY]], implicit $fpcr
   ; CHECK-FP16-NEXT:   $h0 = COPY [[FADDHrr1]]
   ; CHECK-FP16-NEXT:   RET_ReallyLR implicit $h0
 entry:
@@ -172,12 +172,12 @@ define half @ninf_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-CVT-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-CVT-NEXT:   [[FCVTSHr:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr [[COPY1]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr1:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr [[COPY2]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[FCVTSHr1]], killed [[FCVTSHr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = ninf nofpexcept FCVTHSr killed [[FADDSrr]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTSHr2:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr killed [[FCVTHSr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[FCVTSHr1]], [[FCVTSHr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = ninf nofpexcept FCVTHSr [[FADDSrr]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTSHr2:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr [[FCVTHSr]], implicit $fpcr
   ; CHECK-CVT-NEXT:   [[FCVTSHr3:%[0-9]+]]:fpr32 = ninf nofpexcept FCVTSHr [[COPY]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[FCVTSHr2]], killed [[FCVTSHr3]], implicit $fpcr
-  ; CHECK-CVT-NEXT:   [[FCVTHSr1:%[0-9]+]]:fpr16 = ninf nofpexcept FCVTHSr killed [[FADDSrr1]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[FCVTSHr2]], [[FCVTSHr3]], implicit $fpcr
+  ; CHECK-CVT-NEXT:   [[FCVTHSr1:%[0-9]+]]:fpr16 = ninf nofpexcept FCVTHSr [[FADDSrr1]], implicit $fpcr
   ; CHECK-CVT-NEXT:   $h0 = COPY [[FCVTHSr1]]
   ; CHECK-CVT-NEXT:   RET_ReallyLR implicit $h0
   ;
@@ -189,7 +189,7 @@ define half @ninf_fadd_sequence(half %x, half %y, half %z) {
   ; CHECK-FP16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-FP16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
   ; CHECK-FP16-NEXT:   [[FADDHrr:%[0-9]+]]:fpr16 = ninf nofpexcept FADDHrr [[COPY2]], [[COPY1]], implicit $fpcr
-  ; CHECK-FP16-NEXT:   [[FADDHrr1:%[0-9]+]]:fpr16 = ninf nofpexcept FADDHrr killed [[FADDHrr]], [[COPY]], implicit $fpcr
+  ; CHECK-FP16-NEXT:   [[FADDHrr1:%[0-9]+]]:fpr16 = ninf nofpexcept FADDHrr [[FADDHrr]], [[COPY]], implicit $fpcr
   ; CHECK-FP16-NEXT:   $h0 = COPY [[FADDHrr1]]
   ; CHECK-FP16-NEXT:   RET_ReallyLR implicit $h0
 entry:

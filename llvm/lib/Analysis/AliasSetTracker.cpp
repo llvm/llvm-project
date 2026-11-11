@@ -426,27 +426,6 @@ void AliasSetTracker::add(BasicBlock &BB) {
     add(&I);
 }
 
-void AliasSetTracker::add(const AliasSetTracker &AST) {
-  assert(&AA == &AST.AA &&
-         "Merging AliasSetTracker objects with different Alias Analyses!");
-
-  // Loop over all of the alias sets in AST, adding the members contained
-  // therein into the current alias sets.  This can cause alias sets to be
-  // merged together in the current AST.
-  for (const AliasSet &AS : AST) {
-    if (AS.Forward)
-      continue; // Ignore forwarding alias sets
-
-    // If there are any call sites in the alias set, add them to this AST.
-    for (Instruction *Inst : AS.UnknownInsts)
-      add(Inst);
-
-    // Loop over all of the memory locations in this alias set.
-    for (const MemoryLocation &ASMemLoc : AS.MemoryLocs)
-      addMemoryLocation(ASMemLoc, AS.Access);
-  }
-}
-
 AliasSet &AliasSetTracker::mergeAllAliasSets() {
   assert(!AliasAnyAS && (TotalAliasSetSize > SaturationThreshold) &&
          "Full merge should happen once, when the saturation threshold is "

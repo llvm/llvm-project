@@ -234,15 +234,17 @@ program acc_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
-  !$acc loop tile(2, 2)
+  !$acc loop tile(2, 4)
   DO i = 1, n
     DO j = 1, n
       c(i, j) = d(i, j)
     END DO
   END DO
 
+! The tile sizes keep their clause order; the induction variables are listed
+! outermost first.
 ! CHECK:      [[TILESIZE1:%.*]] = arith.constant 2 : i32
-! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
+! CHECK:      [[TILESIZE2:%.*]] = arith.constant 4 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true, true>) independent
@@ -408,9 +410,9 @@ end subroutine
 ! A DO CONCURRENT index-name is a construct entity distinct from a like-named
 ! dummy argument, so the induction variables are fresh construct-local
 ! allocations that get privatized (not the dummy arguments).
-! CHECK-DAG: %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i"}
-! CHECK-DAG: %[[ALLOCA_J:.*]] = fir.alloca i32 {bindc_name = "j"}
-! CHECK-DAG: %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k"}
+! CHECK-DAG: %[[ALLOCA_I:.*]] = fir.alloca i32 <{bindc_name = "i"}>
+! CHECK-DAG: %[[ALLOCA_J:.*]] = fir.alloca i32 <{bindc_name = "j"}>
+! CHECK-DAG: %[[ALLOCA_K:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 ! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[ALLOCA_I]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[ALLOCA_J]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("j") -> !fir.ref<i32>
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[ALLOCA_K]] : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("k") -> !fir.ref<i32>

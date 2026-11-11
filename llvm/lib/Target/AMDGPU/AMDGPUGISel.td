@@ -47,6 +47,14 @@ def gi_vop3pmods :
     GIComplexOperandMatcher<s32, "selectVOP3PMods">,
     GIComplexPatternEquiv<VOP3PMods>;
 
+def gi_vop3pmodspkfmaopsel0 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsPkFmaOpSel0">,
+    GIComplexPatternEquiv<VOP3PModsPkFmaOpSel0>;
+
+def gi_vop3pmodspkaddmulopsel0 :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsPkAddMulOpSel0">,
+    GIComplexPatternEquiv<VOP3PModsPkAddMulOpSel0>;
+
 def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
@@ -304,6 +312,7 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE_TFE, SIbuffer_load_byte_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT, SIbuffer_load_format>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_TFE, SIbuffer_load_format_tfe>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16, SIbuffer_load_format_d16>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE, SIbuffer_load_format_d16_tfe>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT, SItbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT_D16, SItbuffer_load_d16>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_STORE, SIbuffer_store>;
@@ -455,6 +464,9 @@ def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm">,
 
 def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i8timm>;
+
+def gi_as_prefetch_len : GICustomOperandRenderer<"renderPrefetchLen">,
+  GISDNodeXFormEquiv<as_prefetch_len>;
 
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;

@@ -108,11 +108,11 @@ bool RISCVExpandPseudoPostRAImpl::expandMovAddr(
   bool Renamable = MBBI->getOperand(0).isRenamable();
 
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::LUI))
-      .addReg(DstReg, RegState::Define | getRenamableRegState(Renamable))
+      .addDef(DstReg, getRenamableRegState(Renamable))
       .add(MBBI->getOperand(1));
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADDI))
-      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead) |
-                          getRenamableRegState(Renamable))
+      .addDef(DstReg,
+              getDeadRegState(DstIsDead) | getRenamableRegState(Renamable))
       .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable))
       .add(MBBI->getOperand(2));
   MBBI->eraseFromParent();
@@ -131,11 +131,11 @@ bool RISCVExpandPseudoPostRAImpl::expandAddUpperImm(
 
   // Expand to LUI+ADD: the immediate is already the upper 20-bit value.
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::LUI))
-      .addReg(DstReg, RegState::Define | getRenamableRegState(Renamable))
+      .addDef(DstReg, getRenamableRegState(Renamable))
       .addImm(Hi);
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::ADD))
-      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead) |
-                          getRenamableRegState(Renamable))
+      .addDef(DstReg,
+              getDeadRegState(DstIsDead) | getRenamableRegState(Renamable))
       .addReg(BaseReg)
       .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable));
 

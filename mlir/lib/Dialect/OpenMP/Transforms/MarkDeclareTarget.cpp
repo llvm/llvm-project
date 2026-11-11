@@ -218,15 +218,17 @@ class MarkDeclareTargetPass
     for (auto funcOp : getOperation().getOps<FunctionOpInterface>()) {
       auto declareTargetOp =
           llvm::dyn_cast<omp::DeclareTargetInterface>(funcOp.getOperation());
+      omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
 
-      if (!declareTargetOp || !declareTargetOp.isDeclareTarget())
+      if (!declareTargetAttr)
         continue;
 
       // Add to the worklist all called functions with the declare_target
       // information of this one, so it gets propagated.
       for (auto &callee : calls[funcOp.getName()])
         worklist.push_back(
-            {callee.getKey(), declareTargetOp.getDeclareTargetDeviceType()});
+            {callee.getKey(), declareTargetAttr.getDeviceType()});
     }
 
     // Add to the worklist all functions reached from target regions.
@@ -248,15 +250,17 @@ class MarkDeclareTargetPass
       // declare_target information to functions for which the user hasn't
       // specified an explicit behavior.
       auto declareTargetOp = dyn_cast<omp::DeclareTargetInterface>(*funcOp);
-      if (!declareTargetOp || (declareTargetOp.isDeclareTarget() &&
-                               !declareTargetOp.isImplicitDeclareTarget()))
+      omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
+      if (!declareTargetOp ||
+          (declareTargetAttr && !declareTargetAttr.getImplicit()))
         continue;
 
       omp::DeclareTargetDeviceType changedDeviceType;
-      if (declareTargetOp.isDeclareTarget()) {
+      if (declareTargetAttr) {
         // Implicit declare_target update.
         omp::DeclareTargetDeviceType currentDeviceType =
-            declareTargetOp.getDeclareTargetDeviceType();
+            declareTargetAttr.getDeviceType();
 
         // Skip the update (and adding callees to the worklist) if the added
         // info doesn't change anything.

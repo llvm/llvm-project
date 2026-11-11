@@ -16,7 +16,7 @@
 // CHECK: [[DUMMY_SCOPE:%[0-9]+]] = fir.dummy_scope : !fir.dscope
 // CHECK: [[INDEX_CAST:%[0-9]+]] = arith.index_cast [[C2_I64]] : i64 to index
 // CHECK: [[SHIFT:%[0-9]+]] = fir.shift [[INDEX_CAST]] : (index) -> !fir.shift<1>
-// CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] uniq_name("x") : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
 // CHECK: [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]]([[SHIFT]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
 // CHECK: [[BOX_ADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 // CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
@@ -38,7 +38,7 @@ func.func @load_shift_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x
   %0 = fir.dummy_scope : !fir.dscope
   %1 = arith.index_cast %c2_i64 : i64 to index
   %2 = fir.shift %1 : (index) -> !fir.shift<1>
-  %3 = fir.declare %arg0(%2) dummy_scope %0 {uniq_name = "x"} : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %3 = fir.declare %arg0(%2) dummy_scope %0 uniq_name("x") : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
   %4 = fir.rebox %3(%2) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
   %5 = fir.array_coor %4 %c6 : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   %6 = fir.load %5 : !fir.ref<f32>
@@ -62,7 +62,7 @@ func.func @load_shift_1d(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x
 // CHECK: [[INDEX_CAST1:%[0-9]+]] = arith.index_cast [[C2_I64]] : i64 to index
 // CHECK: [[INDEX_CAST2:%[0-9]+]] = arith.index_cast [[C3_I64]] : i64 to index
 // CHECK: [[SHIFT:%[0-9]+]] = fir.shift [[INDEX_CAST1]], [[INDEX_CAST2]] : (index, index) -> !fir.shift<2>
-// CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+// CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] uniq_name("x") : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK: [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]]([[SHIFT]]) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK: [[BOX_ADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 // CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?x?xf32>>) -> memref<?x?xf32>
@@ -94,7 +94,7 @@ func.func @load_shift_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
   %1 = arith.index_cast %c2_i64 : i64 to index
   %2 = arith.index_cast %c3_i64 : i64 to index
   %3 = fir.shift %1, %2 : (index, index) -> !fir.shift<2>
-  %4 = fir.declare %arg0(%3) dummy_scope %0 {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
+  %4 = fir.declare %arg0(%3) dummy_scope %0 uniq_name("x") : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.dscope) -> !fir.box<!fir.array<?x?xf32>>
   %5 = fir.rebox %4(%3) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
   %7 = fir.array_coor %5(%3) %c6, %c7 : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, index, index) -> !fir.ref<f32>
   %8 = fir.load %7 : !fir.ref<f32>
@@ -120,7 +120,7 @@ func.func @load_shift_2d(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = 
 // CHECK: [[INDEX_CAST2:%[0-9]+]] = arith.index_cast [[C1_I64]] : i64 to index
 // CHECK: [[INDEX_CAST3:%[0-9]+]] = arith.index_cast [[C3_I64]] : i64 to index
 // CHECK: [[SHIFT:%[0-9]+]] = fir.shift [[INDEX_CAST1]], [[INDEX_CAST2]], [[INDEX_CAST3]] : (index, index, index) -> !fir.shift<3>
-// CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] {uniq_name = "x"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+// CHECK: [[DECLARE:%[0-9]+]] = fir.declare %arg0([[SHIFT]]) dummy_scope [[DUMMY_SCOPE]] uniq_name("x") : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK: [[REBOX:%[0-9]+]] = fir.rebox [[DECLARE]]([[SHIFT]]) : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>) -> !fir.box<!fir.array<?x?x?xf32>>
 // CHECK: [[BOX_ADDR:%[0-9]+]] = fir.box_addr [[REBOX]] : (!fir.box<!fir.array<?x?x?xf32>>) -> !fir.ref<!fir.array<?x?x?xf32>>
 // CHECK: [[CONVERT:%[0-9]+]] = fir.convert [[BOX_ADDR]] : (!fir.ref<!fir.array<?x?x?xf32>>) -> memref<?x?x?xf32>
@@ -161,7 +161,7 @@ func.func @load_shift_3d(%arg0: !fir.box<!fir.array<?x?x?xf32>> {fir.bindc_name 
   %2 = arith.index_cast %c1_i64 : i64 to index
   %3 = arith.index_cast %c3_i64 : i64 to index
   %4 = fir.shift %1, %2, %3 : (index, index, index) -> !fir.shift<3>
-  %5 = fir.declare %arg0(%4) dummy_scope %0 {uniq_name = "x"} : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
+  %5 = fir.declare %arg0(%4) dummy_scope %0 uniq_name("x") : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, !fir.dscope) -> !fir.box<!fir.array<?x?x?xf32>>
   %6 = fir.rebox %5(%4) : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>) -> !fir.box<!fir.array<?x?x?xf32>>
   %8 = fir.array_coor %6(%4) %c9, %c10, %c9 : (!fir.box<!fir.array<?x?x?xf32>>, !fir.shift<3>, index, index, index) -> !fir.ref<f32>
   %9 = fir.load %8 : !fir.ref<f32>

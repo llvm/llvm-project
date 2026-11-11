@@ -3,9 +3,9 @@
 ; Make sure we emit this diagnostic only once (which means we don't visit the
 ; same DISubprogram twice.
 ; CHECK: subprogram definitions must have a compile unit
-; CHECK-NEXT: !3 = distinct !DISubprogram(name: "patatino", scope: null, type: !4, spFlags: DISPFlagDefinition)
+; CHECK-NEXT: !{{[0-9]+}} = distinct !DISubprogram(name: "patatino", scope: null, type: !{{[0-9]+}}, spFlags: DISPFlagDefinition)
 ; CHECK-NOT: subprogram definitions must have a compile unit
-; CHECK-NOT: !3 = distinct !DISubprogram(name: "patatino", scope: null, type: !4, spFlags: DISPFlagDefinition)
+; CHECK-NOT: !{{[0-9]+}} = distinct !DISubprogram(name: "patatino", scope: null, type: !{{[0-9]+}}, spFlags: DISPFlagDefinition)
 ; CHECK: warning: ignoring invalid debug info
 
 define void @tinkywinky() !dbg !3 { ret void }

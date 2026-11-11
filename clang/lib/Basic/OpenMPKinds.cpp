@@ -854,7 +854,7 @@ bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
     OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
          DKind == OMPD_split || DKind == OMPD_interchange ||
-         DKind == OMPD_stripe;
+         DKind == OMPD_stripe || DKind == OMPD_flatten;
 }
 
 bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
@@ -879,7 +879,7 @@ bool clang::needsTaskBasedThreadLimit(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_target || DKind == OMPD_target_parallel ||
          DKind == OMPD_target_parallel_for ||
          DKind == OMPD_target_parallel_for_simd || DKind == OMPD_target_simd ||
-         DKind == OMPD_target_parallel_loop;
+         DKind == OMPD_target_parallel_loop || DKind == OMPD_target_loop;
 }
 
 bool clang::isOpenMPExecutableDirective(OpenMPDirectiveKind DKind) {
@@ -946,6 +946,24 @@ bool clang::isOpenMPOrderConcurrentNestableDirective(
   return false;
 }
 
+bool clang::isOpenMPSimdizableDirective(OpenMPDirectiveKind DKind,
+                                        OpenMPBindClauseKind BindKind,
+                                        const LangOptions &LangOpts) {
+  if (DKind == OMPD_loop) // binding region undefined: bind(thread)
+    return BindKind == OMPC_BIND_thread;
+  // Directives that may be encountered during execution of a simd region are:
+  // OpenMP 5.x: ordered simd, simd, scan and atomic
+  // OpenMP 6.0: above plus all loop-transformation directives
+  if (DKind == OMPD_ordered_blockassoc || DKind == OMPD_simd ||
+      DKind == OMPD_scan || DKind == OMPD_atomic)
+    return true;
+
+  if (LangOpts.OpenMP >= 60)
+    return isOpenMPLoopTransformationDirective(DKind);
+
+  return false;
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
@@ -984,10 +1002,8 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_loop:
       // TODO: 'loop' may require different capture regions depending on the
       // bind clause or the parent directive when there is no bind clause.
-      // If any of the directives that push regions here are parents of 'loop',
-      // assume 'parallel'. Otherwise do nothing.
-      if (!CaptureRegions.empty() &&
-          !llvm::is_contained(CaptureRegions, OMPD_parallel))
+      // Only 'teams' parents get 'parallel'; 'target loop' is emitted as simd.
+      if (!CaptureRegions.empty() && CaptureRegions.back() == OMPD_teams)
         CaptureRegions.push_back(OMPD_parallel);
       else
         return true;

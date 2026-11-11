@@ -22,8 +22,8 @@ the coding style of LLVM. It can also be installed as a pre-commit git hook to
 check the coding style before submitting it. The canonical source of this script
 is in the LLVM source tree under llvm/utils/git.
 
-For C/C++ code it uses clang-format and for Python code it uses darker (which
-in turn invokes black).
+For C/C++ code it uses clang-format, for Python code it uses darker (which
+in turn invokes black), and for LLVM-libc CMake files it uses cmake_format.py.
 
 You can learn more about the LLVM coding style on llvm.org:
 https://llvm.org/docs/CodingStandards.html
@@ -33,8 +33,9 @@ directory:
 
 ln -s $(pwd)/llvm/utils/git/code-format-helper.py .git/hooks/pre-commit
 
-You can control the exact path to clang-format or darker with the following
-environment variables: $CLANG_FORMAT_PATH and $DARKER_FORMAT_PATH.
+You can control the exact path to clang-format, darker, or cmake_format.py with
+the following environment variables: $CLANG_FORMAT_PATH, $DARKER_FORMAT_PATH,
+and $CMAKE_FORMAT_PATH.
 """
 
 
@@ -423,11 +424,11 @@ You can test this locally with the following command:
             match = re.match("a/([^ ]+)", lines[0] if lines else "")
             filename = match[1] if match else ""
             if filename.endswith(".ll"):
-                undef_regex = r"(?<!%)\bundef\b"
+                undef_regex = r"^[+][^;\n]*(?<!%)\bundef\b"
             else:
-                undef_regex = r"UndefValue::get"
+                undef_regex = r"^[+].*UndefValue::get"
             # search for additions of undef
-            if re.search(r"^[+].*" + undef_regex, file, re.MULTILINE):
+            if re.search(undef_regex, file, re.MULTILINE):
                 files.append(filename)
 
         if not files:
@@ -466,7 +467,123 @@ Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedB
         return report
 
 
-ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
+class CMakeFormatHelper(FormatHelper):
+    name = "cmake-format"
+    friendly_name = "CMake code formatter"
+
+    def _construct_command(self) -> List[str]:
+        return [
+            sys.executable,
+            self.cmake_fmt_path,
+            "--dry-run",
+            "--diff",
+        ] + self._cmake_files
+
+    @property
+    def instructions(self) -> str:
+        return " ".join(["python3", self.cmake_fmt_path, "-i"] + self._cmake_files)
+
+    @property
+    def check_instructions(self) -> str:
+        return " ".join(
+            ["python3", self.cmake_fmt_path, "--dry-run", "--diff"] + self._cmake_files
+        )
+
+    def pr_comment_text_for_diff(self, diff: str) -> str:
+        return f"""
+:warning: {self.friendly_name}, {self.name} found issues in your code. :warning:
+
+<details>
+<summary>
+You can fix this locally with the following command:
+</summary>
+
+``````````bash
+{self.instructions}
+``````````
+
+You can also preview the formatting diff without modifying files:
+
+``````````bash
+{self.check_instructions}
+``````````
+
+</details>
+
+<details>
+<summary>
+View the diff from {self.name} here.
+</summary>
+
+``````````diff
+{diff}
+``````````
+
+</details>
+"""
+
+    def filter_changed_files(self, changed_files: List[str]) -> List[str]:
+        filtered_files = []
+        for path in changed_files:
+            if not path.startswith("libc/"):
+                continue
+            if os.path.basename(path) == "CMakeLists.txt" or path.endswith(".cmake"):
+                if os.path.exists(path):
+                    filtered_files.append(path)
+        return filtered_files
+
+    @property
+    def cmake_fmt_path(self) -> str:
+        if "CMAKE_FORMAT_PATH" in os.environ:
+            return os.environ["CMAKE_FORMAT_PATH"]
+        return "libc/utils/cmake_format.py"
+
+    def has_tool(self) -> bool:
+        return os.path.isfile(self.cmake_fmt_path)
+
+    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
+        cmake_files = self.filter_changed_files(changed_files)
+        if not cmake_files:
+            return None
+        self._cmake_files = cmake_files
+        cmake_cmd = self._construct_command()
+        if args.verbose:
+            print(f"Running: {' '.join(cmake_cmd)}")
+        proc = subprocess.run(cmake_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if args.verbose:
+            sys.stdout.write(proc.stderr.decode("utf-8"))
+
+        if proc.returncode != 0:
+            # formatting needed, or the command otherwise failed
+            stdout = proc.stdout.decode("utf-8")
+            if args.verbose:
+                print(f"error: {self.name} exited with code {proc.returncode}")
+                if stdout:
+                    print(
+                        "error: CMake files are not formatted according to "
+                        "LLVM-libc style."
+                    )
+                    print(f"To fix this locally, run:\n  {self.instructions}")
+                    print(
+                        "To preview the formatting diff locally, run:\n"
+                        f"  {self.check_instructions}"
+                    )
+                    # Print the diff in the log so that it is viewable there
+                    print(stdout)
+            elif stdout:
+                print(f"To fix CMake formatting, run:\n  {self.instructions}")
+            return stdout
+        else:
+            sys.stdout.write(proc.stdout.decode("utf-8"))
+            return None
+
+
+ALL_FORMATTERS = (
+    DarkerFormatHelper(),
+    ClangFormatHelper(),
+    CMakeFormatHelper(),
+    UndefGetFormatHelper(),
+)
 
 
 def hook_main():

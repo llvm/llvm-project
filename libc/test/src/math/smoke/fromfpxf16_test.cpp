@@ -10,4 +10,4 @@
 
 #include "src/math/fromfpxf16.h"
 
-LIST_FROMFPX_TESTS(float16, LIBC_NAMESPACE::fromfpxf16)
+LIST_FROMFPX_TESTS(Fromfpxf16, float16, LIBC_NAMESPACE::fromfpxf16)

@@ -27,9 +27,10 @@ class LLVM_ABI SeedCollection final : public FunctionPass {
   RegionPassManager RPM;
   /// The auxiliary argument passed to the pass that tells us that we should
   /// collect seeds of different types.
-  static constexpr StringRef DiffTypesArgStr = "enable-diff-types";
-  /// Collect seeds of different types.
-  bool AllowDiffTypes = false;
+  AuxPassArgsRegistry ArgsRegistry;
+  AuxPassArg AllowDiffTypes = ArgsRegistry.createArg("enable-diff-types");
+  AuxPassArg CollectLoads = ArgsRegistry.createArg("loads");
+  AuxPassArg CollectStores = ArgsRegistry.createArg("stores");
 
 public:
   SeedCollection(StringRef Pipeline, StringRef AuxArg);

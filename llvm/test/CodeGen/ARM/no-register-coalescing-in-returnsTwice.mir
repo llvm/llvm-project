@@ -100,18 +100,18 @@ body:             |
     %2:gpr = ADDri %1, 40, 14, $noreg, $noreg
     VST1q64 %2, 0, %0, 14, $noreg
     %3:gpr = ADDri %1, 24, 14, $noreg, $noreg
-    VST1q64 killed %3, 0, %0, 14, $noreg
+    VST1q64 %3, 0, %0, 14, $noreg
     %4:gpr = nuw ADDri %1, 8, 14, $noreg, $noreg
     VST1q64 %4, 0, %0, 14, $noreg
     %5:gpr = MOVi 0, 14, $noreg, $noreg
     STRi12 %5, %stack.0.P0, 72, 14, $noreg
     ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
     %6:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
-    $r0 = COPY killed %6
+    $r0 = COPY %6
     BL @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
     ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
     %7:gpr = COPY killed $r0
-    CMPri killed %7, 0, 14, $noreg, implicit-def $cpsr
+    CMPri %7, 0, 14, $noreg, implicit-def $cpsr
     Bcc %bb.4, 1, killed $cpsr
     B %bb.1
   bb.1:
@@ -120,47 +120,47 @@ body:             |
     %25:gpr = LDRi12 %stack.0.P0, 4, 14, $noreg
     %27:gpr = COPY $sp
     %29:gpr = MOVi16 72, 14, $noreg
-    %61:gpr = COPY killed %29
-    %62:gpr = COPY killed %4
-    %63:gpr = COPY killed %27
+    %61:gpr = COPY %29
+    %62:gpr = COPY %4
+    %63:gpr = COPY %27
   bb.2 (call-frame-size 72):
-    %35:gpr = COPY killed %63
-    %33:gpr = COPY killed %62
-    %31:gpr = COPY killed %61
-    %32:gpr = COPY killed %33
+    %35:gpr = COPY %63
+    %33:gpr = COPY %62
+    %31:gpr = COPY %61
+    %32:gpr = COPY %33
     %36:dpr, %32:gpr = VLD1d32wb_fixed %32, 0, 14, $noreg
-    %34:gpr = COPY killed %35
-    %34:gpr = VST1d32wb_fixed %34, 0, killed %36, 14, $noreg
-    %30:gpr = SUBri killed %31, 8, 14, $noreg, def $cpsr
-    %61:gpr = COPY killed %30
-    %62:gpr = COPY killed %32
-    %63:gpr = COPY killed %34
+    %34:gpr = COPY %35
+    %34:gpr = VST1d32wb_fixed %34, 0, %36, 14, $noreg
+    %30:gpr = SUBri %31, 8, 14, $noreg, def $cpsr
+    %61:gpr = COPY %30
+    %62:gpr = COPY %32
+    %63:gpr = COPY %34
     Bcc %bb.2, 1, killed $cpsr
   bb.3 (call-frame-size 72):
     successors:
     %28:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
-    $r0 = COPY killed %28
-    $r2 = COPY killed %24
-    $r3 = COPY killed %25
+    $r0 = COPY %28
+    $r2 = COPY %24
+    $r3 = COPY %25
     BL @_Z3barPx3S37z, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r2, implicit killed $r3, implicit-def $sp
     ADJCALLSTACKUP 72, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
   bb.4:
     successors: %bb.5(0x00000001), %bb.6(0x7fffffff)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0, 12, implicit-def dead early-clobber $r1, 12, implicit-def dead early-clobber $r2, 12, implicit-def dead early-clobber $r3, 12, implicit-def dead early-clobber $r4, 12, implicit-def dead early-clobber $r5, 12, implicit-def dead early-clobber $r6, 12, implicit-def dead early-clobber $r7, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def early-clobber $sp, 12, implicit-def dead early-clobber $lr
-    VST1q64 killed %2, 0, %0, 14, $noreg
-    %11:gpr = ADDri killed %1, 52, 14, $noreg, $noreg
-    VST1q32 killed %11, 0, killed %0, 14, $noreg
+    VST1q64 %2, 0, %0, 14, $noreg
+    %11:gpr = ADDri %1, 52, 14, $noreg, $noreg
+    VST1q32 %11, 0, %0, 14, $noreg
     STRi12 %5, %stack.0.P0, 12, 14, $noreg
-    STRi12 killed %5, %stack.0.P0, 8, 14, $noreg
+    STRi12 %5, %stack.0.P0, 8, 14, $noreg
     %13:gpr = MOVi 42, 14, $noreg, $noreg
-    STRi12 killed %13, %stack.0.P0, 32, 14, $noreg
+    STRi12 %13, %stack.0.P0, 32, 14, $noreg
     ADJCALLSTACKDOWN 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
     %14:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
-    $r0 = COPY killed %14
+    $r0 = COPY %14
     BL @setjmp, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0
     ADJCALLSTACKUP 0, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
     %15:gpr = COPY killed $r0
-    CMPri killed %15, 0, 14, $noreg, implicit-def $cpsr
+    CMPri %15, 0, 14, $noreg, implicit-def $cpsr
     Bcc %bb.6, 1, killed $cpsr
     B %bb.5
   bb.5:
@@ -169,46 +169,46 @@ body:             |
     %18:gpr = LDRi12 %stack.0.P0, 0, 14, $noreg
     %19:gpr = LDRi12 %stack.0.P0, 4, 14, $noreg
     %21:gpr = COPY $sp
-    %37:gpr = COPY killed %4
+    %37:gpr = COPY %4
     %39:dpr, %37:gpr = VLD1d32wb_fixed %37, 0, 14, $noreg
-    %38:gpr = COPY killed %21
-    %38:gpr = VST1d32wb_fixed %38, 0, killed %39, 14, $noreg
-    %40:gpr = COPY killed %37
+    %38:gpr = COPY %21
+    %38:gpr = VST1d32wb_fixed %38, 0, %39, 14, $noreg
+    %40:gpr = COPY %37
     %42:dpr, %40:gpr = VLD1d32wb_fixed %40, 0, 14, $noreg
-    %41:gpr = COPY killed %38
-    %41:gpr = VST1d32wb_fixed %41, 0, killed %42, 14, $noreg
-    %43:gpr = COPY killed %40
+    %41:gpr = COPY %38
+    %41:gpr = VST1d32wb_fixed %41, 0, %42, 14, $noreg
+    %43:gpr = COPY %40
     %45:dpr, %43:gpr = VLD1d32wb_fixed %43, 0, 14, $noreg
-    %44:gpr = COPY killed %41
-    %44:gpr = VST1d32wb_fixed %44, 0, killed %45, 14, $noreg
-    %46:gpr = COPY killed %43
+    %44:gpr = COPY %41
+    %44:gpr = VST1d32wb_fixed %44, 0, %45, 14, $noreg
+    %46:gpr = COPY %43
     %48:dpr, %46:gpr = VLD1d32wb_fixed %46, 0, 14, $noreg
-    %47:gpr = COPY killed %44
-    %47:gpr = VST1d32wb_fixed %47, 0, killed %48, 14, $noreg
-    %49:gpr = COPY killed %46
+    %47:gpr = COPY %44
+    %47:gpr = VST1d32wb_fixed %47, 0, %48, 14, $noreg
+    %49:gpr = COPY %46
     %51:dpr, %49:gpr = VLD1d32wb_fixed %49, 0, 14, $noreg
-    %50:gpr = COPY killed %47
-    %50:gpr = VST1d32wb_fixed %50, 0, killed %51, 14, $noreg
-    %52:gpr = COPY killed %49
+    %50:gpr = COPY %47
+    %50:gpr = VST1d32wb_fixed %50, 0, %51, 14, $noreg
+    %52:gpr = COPY %49
     %54:dpr, %52:gpr = VLD1d32wb_fixed %52, 0, 14, $noreg
-    %53:gpr = COPY killed %50
-    %53:gpr = VST1d32wb_fixed %53, 0, killed %54, 14, $noreg
-    %55:gpr = COPY killed %52
+    %53:gpr = COPY %50
+    %53:gpr = VST1d32wb_fixed %53, 0, %54, 14, $noreg
+    %55:gpr = COPY %52
     %57:dpr, %55:gpr = VLD1d32wb_fixed %55, 0, 14, $noreg
-    %56:gpr = COPY killed %53
-    %56:gpr = VST1d32wb_fixed %56, 0, killed %57, 14, $noreg
-    %58:gpr = COPY killed %55
+    %56:gpr = COPY %53
+    %56:gpr = VST1d32wb_fixed %56, 0, %57, 14, $noreg
+    %58:gpr = COPY %55
     %60:dpr, dead %58:gpr = VLD1d32wb_fixed %58, 0, 14, $noreg
-    %59:gpr = COPY killed %56
-    dead %59:gpr = VST1d32wb_fixed %59, 0, killed %60, 14, $noreg
+    %59:gpr = COPY %56
+    dead %59:gpr = VST1d32wb_fixed %59, 0, %60, 14, $noreg
     %22:gpr = ADDri %stack.1.jb1, 0, 14, $noreg, $noreg
-    $r0 = COPY killed %22
-    $r2 = COPY killed %18
-    $r3 = COPY killed %19
+    $r0 = COPY %22
+    $r2 = COPY %18
+    $r3 = COPY %19
     BL @_Z3fooPx3S18z, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r2, implicit killed $r3, implicit-def $sp
     ADJCALLSTACKUP 64, 0, 14, $noreg, implicit-def dead $sp, implicit $sp
   bb.6:
     %16:gpr = MOVi 0, 14, $noreg, $noreg
-    $r0 = COPY killed %16
+    $r0 = COPY %16
     BX_RET 14, $noreg, implicit killed $r0
 ...

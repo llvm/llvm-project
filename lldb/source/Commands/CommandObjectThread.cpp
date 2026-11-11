@@ -663,96 +663,117 @@ protected:
     ThreadPlanSP new_plan_sp;
     Status new_plan_status;
 
-    if (m_step_type == eStepTypeInto) {
-      StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
-      assert(frame != nullptr);
+    StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
+    assert(frame != nullptr);
 
-      if (frame->HasDebugInformation()) {
-        AddressRange range;
-        SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
-        if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER) {
-          llvm::Error err =
-              sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range);
-          if (err) {
-            result.AppendErrorWithFormatv("invalid end-line option: {0}.",
-                                          llvm::toString(std::move(err)));
-            return;
+    // First see if the frame has a custom step plan for us:
+    if (frame) {
+      llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+          frame->GetThreadPlanForStepType(m_step_type);
+      if (auto llvm_err = frame_plan_result.takeError()) {
+        result.AppendErrorWithFormat(
+            "scripted frame provider got an error "
+            "while constructing step plan: \"%s\"",
+            llvm::toString(std::move(llvm_err)).c_str());
+        return;
+      }
+      new_plan_sp = *frame_plan_result;
+    }
+
+    if (new_plan_sp) {
+      thread->QueueThreadPlan(new_plan_sp, abort_other_plans);
+      new_plan_sp->SetStopOthers(bool_stop_other_threads);
+    } else {
+      if (m_step_type == eStepTypeInto) {
+        if (frame->HasDebugInformation()) {
+          AddressRange range;
+          SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
+          if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER) {
+            llvm::Error err = sc.GetAddressRangeFromHereToEndLine(
+                m_options.m_end_line, range);
+            if (err) {
+              result.AppendErrorWithFormatv("invalid end-line option: {0}.",
+                                            llvm::toString(std::move(err)));
+              return;
+            }
+          } else if (m_options.m_end_line_is_block_end) {
+            Status error;
+            Block *block = frame->GetSymbolContext(eSymbolContextBlock).block;
+            if (!block) {
+              result.AppendErrorWithFormat("Could not find the current block");
+              return;
+            }
+
+            AddressRange block_range;
+            Address pc_address = frame->GetFrameCodeAddress();
+            block->GetRangeContainingAddress(pc_address, block_range);
+            if (!block_range.GetBaseAddress().IsValid()) {
+              result.AppendErrorWithFormat(
+                  "Could not find the current block address");
+              return;
+            }
+            lldb::addr_t pc_offset_in_block =
+                pc_address.GetFileAddress() -
+                block_range.GetBaseAddress().GetFileAddress();
+            lldb::addr_t range_length =
+                block_range.GetByteSize() - pc_offset_in_block;
+            range = AddressRange(pc_address, range_length);
+          } else {
+            range = sc.line_entry.range;
           }
-        } else if (m_options.m_end_line_is_block_end) {
-          Status error;
-          Block *block = frame->GetSymbolContext(eSymbolContextBlock).block;
-          if (!block) {
-            result.AppendErrorWithFormat("Could not find the current block");
-            return;
+
+          new_plan_sp = thread->QueueThreadPlanForStepInRange(
+              abort_other_plans, range,
+              frame->GetSymbolContext(eSymbolContextEverything),
+              m_options.m_step_in_target, stop_other_threads, new_plan_status,
+              m_options.m_step_in_avoid_no_debug,
+              m_options.m_step_out_avoid_no_debug);
+
+          if (new_plan_sp && !m_options.m_avoid_regexp.empty()) {
+            ThreadPlanStepInRange *step_in_range_plan =
+                static_cast<ThreadPlanStepInRange *>(new_plan_sp.get());
+            step_in_range_plan->SetAvoidRegexp(
+                m_options.m_avoid_regexp.c_str());
           }
+        } else
+          new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+              false, abort_other_plans, bool_stop_other_threads,
+              new_plan_status);
+      } else if (m_step_type == eStepTypeOver) {
 
-          AddressRange block_range;
-          Address pc_address = frame->GetFrameCodeAddress();
-          block->GetRangeContainingAddress(pc_address, block_range);
-          if (!block_range.GetBaseAddress().IsValid()) {
-            result.AppendErrorWithFormat(
-                "Could not find the current block address");
-            return;
-          }
-          lldb::addr_t pc_offset_in_block =
-              pc_address.GetFileAddress() -
-              block_range.GetBaseAddress().GetFileAddress();
-          lldb::addr_t range_length =
-              block_range.GetByteSize() - pc_offset_in_block;
-          range = AddressRange(pc_address, range_length);
-        } else {
-          range = sc.line_entry.range;
-        }
-
-        new_plan_sp = thread->QueueThreadPlanForStepInRange(
-            abort_other_plans, range,
-            frame->GetSymbolContext(eSymbolContextEverything),
-            m_options.m_step_in_target, stop_other_threads, new_plan_status,
-            m_options.m_step_in_avoid_no_debug,
-            m_options.m_step_out_avoid_no_debug);
-
-        if (new_plan_sp && !m_options.m_avoid_regexp.empty()) {
-          ThreadPlanStepInRange *step_in_range_plan =
-              static_cast<ThreadPlanStepInRange *>(new_plan_sp.get());
-          step_in_range_plan->SetAvoidRegexp(m_options.m_avoid_regexp.c_str());
-        }
-      } else
+        if (frame->HasDebugInformation())
+          new_plan_sp = thread->QueueThreadPlanForStepOverRange(
+              abort_other_plans,
+              frame->GetSymbolContext(eSymbolContextEverything).line_entry,
+              frame->GetSymbolContext(eSymbolContextEverything),
+              stop_other_threads, new_plan_status,
+              m_options.m_step_out_avoid_no_debug);
+        else
+          new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+              true, abort_other_plans, bool_stop_other_threads,
+              new_plan_status);
+      } else if (m_step_type == eStepTypeTrace) {
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
             false, abort_other_plans, bool_stop_other_threads, new_plan_status);
-    } else if (m_step_type == eStepTypeOver) {
-      StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
-
-      if (frame->HasDebugInformation())
-        new_plan_sp = thread->QueueThreadPlanForStepOverRange(
-            abort_other_plans,
-            frame->GetSymbolContext(eSymbolContextEverything).line_entry,
-            frame->GetSymbolContext(eSymbolContextEverything),
-            stop_other_threads, new_plan_status,
-            m_options.m_step_out_avoid_no_debug);
-      else
+      } else if (m_step_type == eStepTypeTraceOver) {
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
             true, abort_other_plans, bool_stop_other_threads, new_plan_status);
-    } else if (m_step_type == eStepTypeTrace) {
-      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          false, abort_other_plans, bool_stop_other_threads, new_plan_status);
-    } else if (m_step_type == eStepTypeTraceOver) {
-      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, bool_stop_other_threads, new_plan_status);
-    } else if (m_step_type == eStepTypeOut) {
-      new_plan_sp = thread->QueueThreadPlanForStepOut(
-          abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
-          eVoteNoOpinion,
-          thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
-          new_plan_status, m_options.m_step_out_avoid_no_debug);
-    } else if (m_step_type == eStepTypeScripted) {
-      ScriptedMetadata scripted_metadata(m_class_options.GetName(),
-                                         m_class_options.GetStructuredData());
-      new_plan_sp = thread->QueueThreadPlanForStepScripted(
-          abort_other_plans, scripted_metadata, bool_stop_other_threads,
-          new_plan_status);
-    } else {
-      result.AppendError("step type is not supported");
-      return;
+      } else if (m_step_type == eStepTypeOut) {
+        new_plan_sp = thread->QueueThreadPlanForStepOut(
+            abort_other_plans, nullptr, false, bool_stop_other_threads,
+            eVoteYes, eVoteNoOpinion,
+            thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
+            new_plan_status, m_options.m_step_out_avoid_no_debug);
+      } else if (m_step_type == eStepTypeScripted) {
+        ScriptedMetadata scripted_metadata(m_class_options.GetName(),
+                                           m_class_options.GetStructuredData());
+        new_plan_sp = thread->QueueThreadPlanForStepScripted(
+            abort_other_plans, scripted_metadata, bool_stop_other_threads,
+            new_plan_status);
+      } else {
+        result.AppendError("step type is not supported");
+        return;
+      }
     }
 
     // If we got a new plan, then set it to be a controlling plan (User level
@@ -1069,8 +1090,6 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = GetTarget();
-
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("need a valid process to step");
@@ -1140,9 +1159,6 @@ protected:
           return;
         }
 
-        LineEntry function_start;
-        std::vector<addr_t> address_list;
-
         // Find the beginning & end index of the function, but first make
         // sure it is valid:
         if (!sc.function) {
@@ -1151,65 +1167,16 @@ protected:
           return;
         }
 
-        RangeVector<uint32_t, uint32_t> line_idx_ranges;
-        for (const AddressRange &range : sc.function->GetAddressRanges()) {
-          auto [begin, end] = line_table->GetLineEntryIndexRange(range);
-          line_idx_ranges.Append(begin, end - begin);
-        }
-        line_idx_ranges.Sort();
-
-        bool found_something = false;
-
-        // Since not all source lines will contribute code, check if we are
-        // setting the breakpoint on the exact line number or the nearest
-        // subsequent line number and set breakpoints at all the line table
-        // entries of the chosen line number (exact or nearest subsequent).
-        for (uint32_t line_number : line_numbers) {
-          LineEntry line_entry;
-          bool exact = false;
-          if (sc.comp_unit->FindLineEntry(0, line_number, nullptr, exact,
-                                          &line_entry) == UINT32_MAX)
-            continue;
-
-          found_something = true;
-          line_number = line_entry.line;
-          exact = true;
-          uint32_t end_func_idx = line_idx_ranges.GetMaxRangeEnd(0);
-          uint32_t idx = sc.comp_unit->FindLineEntry(
-              line_idx_ranges.GetMinRangeBase(UINT32_MAX), line_number, nullptr,
-              exact, &line_entry);
-          while (idx < end_func_idx) {
-            if (line_idx_ranges.FindEntryIndexThatContains(idx) != UINT32_MAX) {
-              addr_t address =
-                  line_entry.range.GetBaseAddress().GetLoadAddress(target);
-              if (address != LLDB_INVALID_ADDRESS)
-                address_list.push_back(address);
-            }
-            idx = sc.comp_unit->FindLineEntry(idx + 1, line_number, nullptr,
-                                              exact, &line_entry);
-          }
-        }
-
-        for (lldb::addr_t address : m_options.m_until_addrs) {
-          AddressRange unused;
-          if (sc.function->GetRangeContainingLoadAddress(address, *target,
-                                                         unused))
-            address_list.push_back(address);
-        }
-
-        if (address_list.empty()) {
-          if (found_something)
-            result.AppendErrorWithFormat(
-                "Until target outside of the current function");
-          else
-            result.AppendErrorWithFormat(
-                "No line entries matching until target");
-
+        llvm::Expected<std::vector<addr_t>> address_list =
+            GetStepUntilAddresses(*frame, sc.comp_unit->GetPrimaryFile(),
+                                  line_numbers, m_options.m_until_addrs);
+        if (!address_list) {
+          result.AppendError(llvm::toString(address_list.takeError()));
           return;
         }
 
         new_plan_sp = thread->QueueThreadPlanForStepUntil(
-            abort_other_plans, address_list, m_options.m_stop_others,
+            abort_other_plans, *address_list, m_options.m_stop_others,
             m_options.m_frame_idx, new_plan_status);
         if (new_plan_sp) {
           // User level plans should be controlling plans so they can be

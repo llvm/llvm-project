@@ -3,10 +3,6 @@
 
 # pp-trace User's Manual
 
-```{toctree}
-:hidden: true
-```
-
 {program}`pp-trace` is a standalone tool that traces preprocessor
 activity. It's also used as a test of Clang's PPCallbacks interface.
 It runs a given source file through the Clang preprocessor, displaying
@@ -771,4 +767,3 @@ To build from source:
 [building llvm with cmake]: https://llvm.org/docs/CMake.html
 [clang tools documentation]: https://clang.llvm.org/docs/ClangTools.html
 [getting started with the llvm system]: https://llvm.org/docs/GettingStarted.html
-

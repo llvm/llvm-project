@@ -213,8 +213,27 @@ void UnwindInfoSectionImpl::prepare() {
         // to avoid overflowing the 3-personality limit.
         FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry()];
         fde.personality = canonicalizePersonality(fde.personality);
+        // If ICF folded the LSDA, point at the surviving copy.
+        if (fde.lsda)
+          fde.lsda = fde.lsda->canonical();
       }
     }
+}
+
+// arm64e's unwinder expects signed personality pointers.
+static void addPersonalityGotEntry(Symbol *s) {
+  if (config->arch() == AK_arm64e)
+    in.authGot->addEntry(s);
+  else
+    in.got->addEntry(s);
+}
+
+static bool hasPersonalityGotEntry(const Symbol *s) {
+  return config->arch() == AK_arm64e ? in.authGot->contains(s) : s->isInGot();
+}
+
+static uint64_t getPersonalityGotVA(const Symbol *s) {
+  return config->arch() == AK_arm64e ? in.authGot->getVA(s) : s->getGotVA();
 }
 
 // Compact unwind relocations have different semantics, so we handle them in a
@@ -237,7 +256,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
     // Since compact unwind sections aren't part of the inputSections vector,
     // they don't get canonicalized by scanRelocations(), so we have to do the
     // canonicalization here.
-    if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+    if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
       r.referent = referentIsec->canonical();
 
     // Functions and LSDA entries always reside in the same object file as the
@@ -247,7 +266,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
     if (r.offset != cuLayout.personalityOffset)
       continue;
 
-    if (auto *s = r.referent.dyn_cast<Symbol *>()) {
+    if (auto *s = dyn_cast_if_present<Symbol *>(r.referent)) {
       // Personality functions are nearly always system-defined (e.g.,
       // ___gxx_personality_v0 for C++) and relocated as dylib symbols.  When an
       // application provides its own personality function, it might be
@@ -280,7 +299,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
             personalityTable[{defined->isec(), defined->value}];
         if (personality == nullptr) {
           personality = defined;
-          in.got->addEntry(defined);
+          addPersonalityGotEntry(defined);
         } else if (personality != defined) {
           r.referent = personality;
         }
@@ -288,11 +307,11 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       }
 
       assert(isa<DylibSymbol>(s));
-      in.got->addEntry(s);
+      addPersonalityGotEntry(s);
       continue;
     }
 
-    if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+    if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent)) {
       assert(!isCoalescedWeak(referentIsec));
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic
@@ -300,12 +319,12 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       // in the GOT, use that to avoid creating a duplicate entry. All GOT
       // entries needed by non-unwind sections will have already been added
       // by this point.
-      Symbol *&s = personalityTable[{referentIsec, r.addend}];
+      Symbol *&s = personalityTable[{referentIsec, r.getAddend()}];
       if (s == nullptr) {
         Defined *const *gotEntry =
             llvm::find_if(referentIsec->symbols, [&](Defined const *d) {
-              return d->value == static_cast<uint64_t>(r.addend) &&
-                     d->isInGot();
+              return d->value == static_cast<uint64_t>(r.getAddend()) &&
+                     hasPersonalityGotEntry(d);
             });
         if (gotEntry != referentIsec->symbols.end()) {
           s = *gotEntry;
@@ -313,17 +332,17 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
           // This runs after dead stripping, so the noDeadStrip argument does
           // not matter.
           s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
-                            r.addend, /*size=*/0, /*isWeakDef=*/false,
+                            r.getAddend(), /*size=*/0, /*isWeakDef=*/false,
                             /*isExternal=*/false, /*isPrivateExtern=*/false,
                             /*includeInSymtab=*/true,
                             /*isReferencedDynamically=*/false,
                             /*noDeadStrip=*/false);
           s->used = true;
-          in.got->addEntry(s);
+          addPersonalityGotEntry(s);
         }
       }
       r.referent = s;
-      r.addend = 0;
+      r.setAddend(0);
     }
   }
 }
@@ -639,7 +658,7 @@ void UnwindInfoSectionImpl::writeTo(uint8_t *buf) const {
 
   // Personalities
   for (const Symbol *personality : personalities)
-    *i32p++ = personality->getGotVA() - in.header->addr;
+    *i32p++ = getPersonalityGotVA(personality) - in.header->addr;
 
   // FIXME: LD64 checks and warns aboutgaps or overlapse in cuEntries address
   // ranges. We should do the same too

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangTidyFeatureModule.h"
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
 #include "ConfigProvider.h"
@@ -67,7 +68,7 @@ protected:
 
   LSPClient &start() {
     EXPECT_FALSE(Server) << "Already initialized";
-    Server.emplace(Client.transport(), FS, Opts);
+    Server.emplace(Client.transport(), FS, std::move(Opts));
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
     Client.call("initialize", llvm::json::Object{});
     return Client;
@@ -214,7 +215,8 @@ TEST_F(LSPTest, ClangTidyRename) {
     ClangTidyOpts.CheckOptions["readability-identifier-naming.FunctionCase"] =
         "CamelCase";
   };
-  Opts.ClangTidyProvider = ClangTidyProvider;
+  FeatureModules.add(
+      std::make_unique<ClangTidyFeatureModule>(ClangTidyProvider));
   auto &Client = start();
   Client.didOpen("foo.hpp", Header.code());
   Client.didOpen("foo.cpp", Source.code());
@@ -272,7 +274,8 @@ TEST_F(LSPTest, ClangTidyCrash_Issue109367) {
                                         llvm::StringRef) {
     ClangTidyOpts.Checks = {"-*,boost-use-ranges"};
   };
-  Opts.ClangTidyProvider = ClangTidyProvider;
+  FeatureModules.add(
+      std::make_unique<ClangTidyFeatureModule>(ClangTidyProvider));
   // Check that registering the boost-use-ranges checker's matchers
   // on two different threads does not cause a crash.
   auto &Client = start();
@@ -308,9 +311,8 @@ TEST_F(LSPTest, IncomingCalls) {
 }
 
 TEST_F(LSPTest, CDBConfigIntegration) {
-  auto CfgProvider =
+  Opts.ConfigProvider =
       config::Provider::fromAncestorRelativeYAMLFiles(".clangd", FS);
-  Opts.ConfigProvider = CfgProvider.get();
 
   // Map bar.cpp to a different compilation database which defines FOO->BAR.
   FS.Files[".clangd"] = R"yaml(
@@ -364,15 +366,6 @@ TEST_F(LSPTest, ModulesTest) {
   EXPECT_EQ(10, Client.call("get", nullptr).takeValue());
   EXPECT_THAT(Client.takeNotifications("changed"),
               ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
-}
-
-// Creates a Callback that writes its received value into an
-// std::optional<Expected>.
-template <typename T>
-llvm::unique_function<void(llvm::Expected<T>)>
-capture(std::optional<llvm::Expected<T>> &Out) {
-  Out.reset();
-  return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
 }
 
 TEST_F(LSPTest, FeatureModulesThreadingTest) {

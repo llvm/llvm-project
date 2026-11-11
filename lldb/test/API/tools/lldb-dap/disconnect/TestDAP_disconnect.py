@@ -39,8 +39,18 @@ class TestDAP_disconnect(DAPTestCaseBase):
         # Verify we haven't produced the side effect file yet.
         self.assertFalse(os.path.exists(side_effect))
 
-        session.disconnect(terminateDebuggee=True)
-        session.wait_for_event(TerminatedEvent, after=stop_event)
+        # Verify we receive the exited and terminated event before the disconnect response.
+        response = session.disconnect(terminateDebuggee=True)
+        exited = session.wait_for_exited_event(after=stop_event)
+        self.assertNotEqual(exited.body.exitCode, 0)
+        terminated = session.wait_for_terminated_event(after=stop_event)
+        self.assertLess(terminated.seq, response.seq)
+        self.assertLess(exited.seq, response.seq)
+
+        with self.assertRaises(DAPError):
+            # We should not receive a second terminated event. The check doesn't
+            # stall, since the event history is closed.
+            session.wait_for_terminated_event(after=terminated)
 
         # Verify we didn't produce the side effect file.
         self.assertFalse(os.path.exists(side_effect))
@@ -65,7 +75,6 @@ class TestDAP_disconnect(DAPTestCaseBase):
         proc = self.spawnSubprocess(
             program, [sync_file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-        self.addTearDownHook(lambda: proc.kill())
 
         lldbutil.wait_for_file_on_target(self, sync_file_path)
 
@@ -84,9 +93,31 @@ class TestDAP_disconnect(DAPTestCaseBase):
         wait_for_attach_var = top_frame.evaluate("wait_for_attach", context="hover")
         self.assertEqual(wait_for_attach_var.result, "false")
 
-        session.disconnect()
+        # Verify we receive the terminated event before the disconnect response.
+        disconnect_resp = session.disconnect()
+        possible_events = (ExitedEvent, TerminatedEvent, StoppedEvent)
+        end_event = session.wait_for_any_event(possible_events, after=stop_event)
+        self.assertIsInstance(end_event, TerminatedEvent)
+        self.assertLess(end_event.seq, disconnect_resp.seq)
 
         # Wait for the process to run to completion.
         proc.wait(timeout=10)
 
         self.assertTrue(os.path.exists(side_effect))
+
+    def test_disconnect_after_exit(self):
+        """
+        Disconnecting after the process exited doesn't send another
+        "terminated" event.
+        """
+        program = self.getBuildArtifact("a.out")
+        session = self.build_and_create_session(disconnect_automatically=False)
+        process_event = session.launch(LaunchArgs(program))
+        session.verify_process_exited(after=process_event)
+        terminated = session.wait_for_terminated_event(after=process_event)
+
+        session.disconnect()
+        with self.assertRaises(DAPError):
+            # We should not receive a second terminated event. The check doesn't
+            # stall, since the event history is closed.
+            session.wait_for_terminated_event(after=terminated)

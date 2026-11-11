@@ -48,8 +48,8 @@ def main() {
 # CHECK-NEXT:  Params: []
 # CHECK-NEXT:  Block {
 # CHECK-NEXT:    VarDecl value<Struct> @{{.*}}struct-ast.toy:16:3
-# CHECK-NEXT:      Struct Literal:             Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00]] @{{.*}}struct-ast.toy:16:19
-# CHECK-NEXT:        Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00]] @{{.*}}struct-ast.toy:16:43
+# CHECK-NEXT:      Struct Literal:             Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00 ], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00 ] ] @{{.*}}struct-ast.toy:16:19
+# CHECK-NEXT:        Literal: <2, 3>[ <3>[ 1.000000e+00, 2.000000e+00, 3.000000e+00 ], <3>[ 4.000000e+00, 5.000000e+00, 6.000000e+00 ] ] @{{.*}}struct-ast.toy:16:43
 # CHECK-NEXT:       @{{.*}}struct-ast.toy:16:18
 # CHECK-NEXT:    VarDecl c<> @{{.*}}struct-ast.toy:19:3
 # CHECK-NEXT:      Call 'multiply_transpose' [ @{{.*}}struct-ast.toy:19:11

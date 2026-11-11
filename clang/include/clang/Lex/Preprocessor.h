@@ -376,10 +376,6 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The source location of the \c module contextual keyword we just
-  /// lexed, if any.
-  SourceLocation ModuleDeclLoc;
-
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
 
@@ -1091,7 +1087,7 @@ private:
   llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// The set of known macros exported from modules.
-  llvm::FoldingSet<ModuleMacro> ModuleMacros;
+  llvm::UniquingSet<ModuleMacro> ModuleMacros;
 
   /// The names of potential module macros that we've not yet processed.
   llvm::SmallVector<IdentifierInfo *, 32> PendingModuleMacroNames;
@@ -2190,6 +2186,15 @@ public:
 
   DiagnosticBuilder Diag(const Token &Tok, unsigned DiagID) const {
     return Diags->Report(Tok.getLocation(), DiagID);
+  }
+
+  DiagnosticBuilder DiagCompat(SourceLocation Loc,
+                               unsigned CompatDiagID) const {
+    return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
+  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagID) const {
+    return Diag(Tok, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
   }
 
   /// Return the 'spelling' of the token at the given

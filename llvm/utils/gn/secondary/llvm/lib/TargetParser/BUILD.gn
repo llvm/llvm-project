@@ -14,6 +14,7 @@ static_library("TargetParser") {
     "AVRTargetParser.cpp",
     "CSKYTargetParser.cpp",
     "Host.cpp",
+    "IntelGPUTargetParser.cpp",
     "LoongArchTargetParser.cpp",
     "NVPTXTargetParser.cpp",
     "PPCTargetParser.cpp",

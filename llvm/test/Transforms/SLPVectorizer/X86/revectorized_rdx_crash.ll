@@ -19,19 +19,21 @@ define void @test(i1 %arg, ptr %p) {
 ; CHECK:       for.cond.preheader:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], ptr [[P:%.*]], i64 0, i64 2
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], ptr [[P]], i64 0, i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[I]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[I1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 0, [[TMP3]]
+; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [100 x i32], ptr [[P]], i64 0, i64 4
+; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds [100 x i32], ptr [[P]], i64 0, i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[I3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[I2]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[I1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[I]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP6]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[OP_RDX3]], 2
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 0, [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[OP_RDX2]], 2
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[OP_RDX]], [[TMP5]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OP_RDX1]], [[FOR_COND_PREHEADER]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[OP_RDX]], [[FOR_COND_PREHEADER]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

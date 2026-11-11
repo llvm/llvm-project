@@ -10,22 +10,22 @@ module {
   // A helper function with no declare_target attribute initially.
   // After the pass, it should be marked because @caller calls it.
   // CHECK-LABEL: cir.func private @helper
-  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)
+  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to
   cir.func private @helper() {
     cir.return
   }
 
   // Explicitly marked as declare_target; calls @helper.
   // CHECK-LABEL: cir.func @caller
-  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>
-  cir.func @caller() attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
+  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>
+  cir.func @caller() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
     cir.call @helper() : () -> ()
     cir.return
   }
 
   // Called from within an omp.target region; should be marked as nohost.
   // CHECK-LABEL: cir.func private @device_helper
-  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)
+  // CHECK-SAME: omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = to
   cir.func private @device_helper() {
     cir.return
   }
