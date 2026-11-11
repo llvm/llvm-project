@@ -31,16 +31,6 @@ def ArmNeon_Dialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
-// ArmNeon type definition
-//===----------------------------------------------------------------------===//
-
-class NeonVectorOfLength<int length, Type elementType> : ShapedContainerType<
-  [elementType], And<[IsVectorOfShape<[length]>,
-  IsFixedVectorOfAnyRankTypePred, IsVectorOfRank1Pred]>,
-  "a 1D vector with length " # length,
-  "::mlir::VectorType">;
-
-//===----------------------------------------------------------------------===//
 // ArmNeon Op classes
 //===----------------------------------------------------------------------===//
 
@@ -104,9 +94,9 @@ def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
   //   (vector<8xi8>, vector<8xi8>) -> (vector<8xi16>)
   //   (vector<4xi16>, vector<4xi16>) -> (vector<4xi32>)
   //   (vector<2xi32>, vector<2xi32>) -> (vector<2xi64>)
-  let arguments = (ins VectorOfLengthAndType<[8, 4, 2], [I8, I16, I32]>:$a,
-                       VectorOfLengthAndType<[8, 4, 2], [I8, I16, I32]>:$b);
-  let results = (outs VectorOfLengthAndType<[8, 4, 2], [I16, I32, I64]>:$res);
+  let arguments = (ins FixedVectorOfLengthAndType<[8, 4, 2], [I8, I16, I32]>:$a,
+                       FixedVectorOfLengthAndType<[8, 4, 2], [I8, I16, I32]>:$b);
+  let results = (outs FixedVectorOfLengthAndType<[8, 4, 2], [I16, I32, I64]>:$res);
   let assemblyFormat =
     "$a `,` $b attr-dict `:` type($a) `to` type($res)";
 }
@@ -135,9 +125,9 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
   // Supports either:
   //   (vector<2xi32>, vector<8xi8>, vector<8xi8>) -> vector<2xi32>
   //   (vector<4xi32>, vector<16xi8>, vector<16xi8>) -> vector<4xi32>
-  let arguments = (ins VectorOfLengthAndType<[4, 2], [I32]>:$a,
-                       VectorOfLengthAndType<[16, 8], [I8]>:$b,
-                       VectorOfLengthAndType<[16, 8], [I8]>:$c);
+  let arguments = (ins FixedVectorOfLengthAndType<[4, 2], [I32]>:$a,
+                       FixedVectorOfLengthAndType<[16, 8], [I8]>:$b,
+                       FixedVectorOfLengthAndType<[16, 8], [I8]>:$c);
   let results = (outs VectorOfLengthAndType<[4, 2], [I32]>:$res);
   let assemblyFormat =
     "$a `,` $b `,` $c attr-dict `:` type($b) `,` type($c) `to` type($res)";
@@ -168,11 +158,11 @@ def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          NeonVectorOfLength<4, I32>:$acc,
-          NeonVectorOfLength<16, I8>:$src1,
-          NeonVectorOfLength<16, I8>:$src2
+          FixedVectorOfRankAndLengthAndType<[1], [4], [I32]>:$acc,
+          FixedVectorOfRankAndLengthAndType<[1], [16], [I8]>:$src1,
+          FixedVectorOfRankAndLengthAndType<[1], [16], [I8]>:$src2
   );
-  let results = (outs NeonVectorOfLength<4, I32>:$res);
+  let results = (outs FixedVectorOfLengthAndType<[4], [I32]>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
@@ -203,11 +193,11 @@ def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          NeonVectorOfLength<4, I32>:$acc,
-          NeonVectorOfLength<16, I8>:$src1,
-          NeonVectorOfLength<16, I8>:$src2
+          FixedVectorOfLengthAndType<[4], [I32]>:$acc,
+          FixedVectorOfLengthAndType<[16], [I8]>:$src1,
+          FixedVectorOfLengthAndType<[16], [I8]>:$src2
   );
-  let results = (outs NeonVectorOfLength<4, I32>:$res);
+  let results = (outs FixedVectorOfLengthAndType<[4], [I32]>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
@@ -239,11 +229,11 @@ def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
   }];
   // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
   let arguments = (ins
-          NeonVectorOfLength<4, I32>:$acc,
-          NeonVectorOfLength<16, I8>:$src1,
-          NeonVectorOfLength<16, I8>:$src2
+          FixedVectorOfRankAndLengthAndType<[1], [4], [I32]>:$acc,
+          FixedVectorOfRankAndLengthAndType<[1], [16], [I8]>:$src1,
+          FixedVectorOfRankAndLengthAndType<[1], [16], [I8]>:$src2
   );
-  let results = (outs NeonVectorOfLength<4, I32>:$res);
+  let results = (outs FixedVectorOfLengthAndType<[4], [I32]>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
@@ -271,11 +261,11 @@ def BfmmlaOp : ArmNeon_IntrOp<"bfmmla", [], [], 1, [
   }];
   // Supports (vector<8xbf16>, vector<8xbf16>) -> (vector<2xf32>)
   let arguments = (ins
-    NeonVectorOfLength<4, F32>:$acc,
-    NeonVectorOfLength<8, BF16>:$src1,
-    NeonVectorOfLength<8, BF16>:$src2
+    FixedVectorOfRankAndLengthAndType<[1], [4], [F32]>:$acc,
+    FixedVectorOfRankAndLengthAndType<[1], [8], [BF16]>:$src1,
+    FixedVectorOfRankAndLengthAndType<[1], [8], [BF16]>:$src2
   );
-  let results = (outs NeonVectorOfLength<4, F32>:$res);
+  let results = (outs FixedVectorOfLengthAndType<[4], [F32]>:$res);
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
@@ -322,10 +312,10 @@ def Sdot2dOp : ArmNeon_2dOp<"sdot", [
   //   (vector<2xi32>, vector<2x4xi8>, vector<2x4xi8>) -> vector<2xi32>
   //   (vector<4xi32>, vector<4x4xi8>, vector<4x4xi8>) -> vector<4xi32>
   // TODO: how do we express 2D shape requirements here?
-  let arguments = (ins VectorOfLengthAndType<[4, 2], [I32]>:$a,
-                       VectorOfLengthAndType<[16, 8], [I8]>:$b,
-                       VectorOfLengthAndType<[16, 8], [I8]>:$c);
-  let results = (outs VectorOfLengthAndType<[4, 2], [I32]>:$res);
+  let arguments = (ins FixedVectorOfLengthAndType<[4, 2], [I32]>:$a,
+                       FixedVectorOfLengthAndType<[16, 8], [I8]>:$b,
+                       FixedVectorOfLengthAndType<[16, 8], [I8]>:$c);
+  let results = (outs FixedVectorOfLengthAndType<[4, 2], [I32]>:$res);
   let assemblyFormat =
     "$a `,` $b `,` $c attr-dict `:` type($b) `,` type($c) `to` type($res)";
   let extraClassDeclaration = [{

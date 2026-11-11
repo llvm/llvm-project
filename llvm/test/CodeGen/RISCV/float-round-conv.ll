@@ -146,22 +146,22 @@ define i64 @test_floor_si64(float %x) {
 define zeroext i8 @test_floor_ui8(float %x) {
 ; RV32IF-LABEL: test_floor_ui8:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rdn
+; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: test_floor_ui8:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rdn
+; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; RV64IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: test_floor_ui8:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rdn
+; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: test_floor_ui8:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rdn
+; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    ret
   %a = call float @llvm.floor.f32(float %x)
   %b = fptoui float %a to i8
@@ -171,22 +171,22 @@ define zeroext i8 @test_floor_ui8(float %x) {
 define zeroext i16 @test_floor_ui16(float %x) {
 ; RV32IF-LABEL: test_floor_ui16:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rdn
+; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: test_floor_ui16:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rdn
+; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; RV64IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: test_floor_ui16:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rdn
+; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: test_floor_ui16:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rdn
+; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    ret
   %a = call float @llvm.floor.f32(float %x)
   %b = fptoui float %a to i16
@@ -196,22 +196,22 @@ define zeroext i16 @test_floor_ui16(float %x) {
 define signext i32 @test_floor_ui32(float %x) {
 ; RV32IF-LABEL: test_floor_ui32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rdn
+; RV32IF-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: test_floor_ui32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.wu.s a0, fa0, rdn
+; RV64IF-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; RV64IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: test_floor_ui32:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rdn
+; RV32IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: test_floor_ui32:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.wu.s a0, a0, rdn
+; RV64IZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    ret
   %a = call float @llvm.floor.f32(float %x)
   %b = fptoui float %a to i32
@@ -221,16 +221,6 @@ define signext i32 @test_floor_ui32(float %x) {
 define i64 @test_floor_ui64(float %x) {
 ; RV32IF-LABEL: test_floor_ui64:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    lui a0, 307200
-; RV32IF-NEXT:    fmv.w.x fa5, a0
-; RV32IF-NEXT:    fabs.s fa4, fa0
-; RV32IF-NEXT:    flt.s a0, fa4, fa5
-; RV32IF-NEXT:    beqz a0, .LBB7_2
-; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    fcvt.w.s a0, fa0, rdn
-; RV32IF-NEXT:    fcvt.s.w fa5, a0, rdn
-; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
-; RV32IF-NEXT:  .LBB7_2:
 ; RV32IF-NEXT:    addi sp, sp, -16
 ; RV32IF-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -244,20 +234,11 @@ define i64 @test_floor_ui64(float %x) {
 ;
 ; RV64IF-LABEL: test_floor_ui64:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rdn
+; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; RV64IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: test_floor_ui64:
 ; RV32IZFINX:       # %bb.0:
-; RV32IZFINX-NEXT:    fabs.s a1, a0
-; RV32IZFINX-NEXT:    lui a2, 307200
-; RV32IZFINX-NEXT:    flt.s a1, a1, a2
-; RV32IZFINX-NEXT:    beqz a1, .LBB7_2
-; RV32IZFINX-NEXT:  # %bb.1:
-; RV32IZFINX-NEXT:    fcvt.w.s a1, a0, rdn
-; RV32IZFINX-NEXT:    fcvt.s.w a1, a1, rdn
-; RV32IZFINX-NEXT:    fsgnj.s a0, a1, a0
-; RV32IZFINX-NEXT:  .LBB7_2:
 ; RV32IZFINX-NEXT:    addi sp, sp, -16
 ; RV32IZFINX-NEXT:    .cfi_def_cfa_offset 16
 ; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -271,7 +252,7 @@ define i64 @test_floor_ui64(float %x) {
 ;
 ; RV64IZFINX-LABEL: test_floor_ui64:
 ; RV64IZFINX:       # %bb.0:
-; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rdn
+; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rtz
 ; RV64IZFINX-NEXT:    ret
   %a = call float @llvm.floor.f32(float %x)
   %b = fptoui float %a to i64

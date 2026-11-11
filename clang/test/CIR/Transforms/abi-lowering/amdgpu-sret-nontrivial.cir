@@ -51,4 +51,17 @@ module attributes {
   // CHECK-NEXT:   cir.call @make(%[[SRET]]) : (!cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable}) -> ()
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
+
+  // A discarded result still gets stack memory, passed as a generic pointer.
+  cir.func @discard_nt() requires_call_conv_lowering {
+    %0 = cir.call @make() : () -> !rec_NT
+    cir.return
+  }
+
+  // CHECK-NEXT: cir.func @discard_nt() {
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "sret" align(4) : !cir.ptr<!rec_NT, target_address_space(5)>
+  // CHECK-NEXT:   %[[SLOT_VIEW:.*]] = cir.cast address_space %[[SLOT]] : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+  // CHECK-NEXT:   cir.call @make(%[[SLOT_VIEW]]) : (!cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
 }

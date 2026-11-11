@@ -6,7 +6,6 @@
 name:            fold
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -36,7 +35,6 @@ body:             |
 name:            dont_fold_s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -62,7 +60,6 @@ body:             |
 name:            dont_fold_copy
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -87,7 +84,6 @@ body:             |
 name:            dont_fold_bitcast
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -115,7 +111,6 @@ body:             |
 name:            dont_fold_trunc
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -142,7 +137,6 @@ body:             |
 name:            dont_fold_phi
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_phi
   ; CHECK: bb.0:
@@ -188,7 +182,6 @@ body:             |
 name:            dont_look_through_copy
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1

@@ -43,9 +43,9 @@ define float @sinf(float %x) {
 ; CHECK: declare float @remainderf(float, float)
 ; CHECK: declare x86_fp80 @remainderl(x86_fp80, x86_fp80)
 
-; CHECK: declare double @remquo(double, double, ptr)
-; CHECK: declare float @remquof(float, float, ptr)
-; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr)
+; CHECK: declare double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; CHECK: declare float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
+; CHECK: declare x86_fp80 @remquol(x86_fp80, x86_fp80, ptr noalias nonnull writeonly align 4 dereferenceable(4))
 
 ; CHECK: declare double @scalbln(double, i64)
 ; CHECK: declare float @scalblnf(float, i64)
