@@ -2083,8 +2083,11 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   auto size = std::get<1>(var.getInterval());
   fir::SequenceType::Shape shape(1, size);
   auto seqTy = fir::SequenceType::get(shape, i8Ty);
-  mlir::Value local = builder.allocateLocal(loc, seqTy, aggName, "", {}, {},
-                                            /*target=*/false);
+  mlir::Value local =
+      builder.allocateLocal(loc, seqTy, aggName, "", {}, {}, /*target=*/false);
+  // Request the alignment, which the storage type does not imply.
+  if (std::size_t alignment = var.getAggregateStore().getAlignment())
+    local.getDefiningOp<fir::AllocaOp>().setAlignment(alignment);
   insertAggregateStore(storeMap, var, local);
 }
 
