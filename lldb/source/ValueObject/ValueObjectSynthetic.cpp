@@ -293,7 +293,10 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
 
       {
         std::lock_guard<std::mutex> guard(m_child_mutex);
-        if (synth_guy->IsSyntheticChildrenGenerated())
+        // m_children_byindex holds raw pointers, so a child that our
+        // ClusterManager does not own has to be kept alive here.
+        if (synth_guy->IsSyntheticChildrenGenerated() ||
+            synth_guy->GetManager() != GetManager())
           m_synthetic_children_cache.push_back(synth_guy);
         m_children_byindex[idx] = synth_guy.get();
       }
