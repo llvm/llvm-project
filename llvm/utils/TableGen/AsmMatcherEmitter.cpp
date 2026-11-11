@@ -2240,25 +2240,25 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
             RegClass && Info.RegConversions.contains(RegClass);
         // Registers are always converted the same, don't duplicate the
         // conversion function based on them unless they need to be coerced.
-        bool IsPlainReg = Op.Class->isRegisterClass() && !HasRegCoercion;
-        Signature += "__";
         std::string Class;
-        Class = IsPlainReg       ? "Reg"
-                : HasRegCoercion ? RegClass->getName().str()
-                                 : Op.Class->ClassName;
+        std::string Name = "CVT_";
+        if (HasRegCoercion) {
+          Class = RegClass->getName().str();
+          Name += "convertTo" + Class;
+        } else if (Op.Class->isRegisterClass()) {
+          Class = "Reg";
+          Name += "Reg";
+        } else {
+          Class = Op.Class->ClassName;
+          Name += Op.Class->RenderMethod;
+        }
+        Signature += "__";
         Signature += Class;
         Signature += utostr(OpInfo.MINumOperands);
         Signature += "_" + itostr(OpInfo.AsmOperandNum);
 
         // Add the conversion kind, if necessary, and get the associated ID
         // the index of its entry in the vector).
-        std::string Name = "CVT_";
-        if (IsPlainReg)
-          Name += "Reg";
-        else if (HasRegCoercion)
-          Name += "convertTo" + Class;
-        else
-          Name += Op.Class->RenderMethod;
         if (Op.Class->IsOptional) {
           // For optional operands we must also care about DefaultMethod
           assert(HasOptionalOperands);
