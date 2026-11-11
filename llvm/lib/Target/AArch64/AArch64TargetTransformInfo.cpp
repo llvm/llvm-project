@@ -7062,13 +7062,10 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
   if (IsUnsigned && Opcode == Instruction::Add &&
-      VecVT.isScalableVectorOf(MVT::i1) && ResVT.isSimple()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
-
+      VecVT.isScalableVectorOf(MVT::i1) && ResVT.isSimple() &&
+      getTLI()->isTypeLegal(VecVT)) {
     // This is vecreduce.add(ZExt(mask)) which can lower as cntp(mask).
-    // If this type requires splitting each split requires a cntp + add.
-    if (LT.second.isScalableVectorOf(MVT::i1))
-      return (LT.first - 1) * 2 + 1;
+    return 1;
   }
 
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
