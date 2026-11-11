@@ -501,6 +501,18 @@ public:
                               const TargetRegisterClass &RC,
                               bool IncludeCalls = true) const;
 
+  // Whether \p Reg is among the registers a function uses, the ones
+  // getNumUsedPhysRegs counts: an operand for which countsTowardRegisterUsage
+  // is true names it or an alias, or, if \p IncludeCalls is true, a call may
+  // clobber it.
+  bool isPhysRegCounted(const MachineRegisterInfo &MRI, MCRegister Reg,
+                        bool IncludeCalls = true) const;
+
+  // Whether \p MO counts toward the registers a function uses. An undef use
+  // reads no value and does not, except on a return, where the return address
+  // or values an epilog reads can be undef, and in inline asm.
+  static bool countsTowardRegisterUsage(const MachineOperand &MO);
+
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG
                              : std::optional<uint8_t>{};
