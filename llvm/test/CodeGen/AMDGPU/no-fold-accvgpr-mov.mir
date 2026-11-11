@@ -15,7 +15,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-  ; CHECK-NEXT:   S_BITCMP1_B32 killed [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
+  ; CHECK-NEXT:   S_BITCMP1_B32 [[S_LOAD_DWORD_IMM]], 0, implicit-def $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -41,7 +41,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[PHI1]], 1, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_ASHR_I32_:%[0-9]+]]:sreg_32 = S_ASHR_I32 [[PHI1]], 31, implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 killed [[S_ASHR_I32_]], killed [[S_OR_B32_]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_ASHR_I32_]], [[S_OR_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1, [[V_MOV_B32_e32_]], %subreg.sub2, [[V_MOV_B32_e32_]], %subreg.sub3
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE1]]
@@ -49,7 +49,7 @@ body:             |
   ; CHECK-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
   ; CHECK-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_2:%[0-9]+]]:agpr_32 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:areg_128_align2 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[V_ACCVGPR_WRITE_B32_e64_]], %subreg.sub1, [[V_ACCVGPR_WRITE_B32_e64_1]], %subreg.sub2, [[V_ACCVGPR_WRITE_B32_e64_2]], %subreg.sub3
-  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY4]], [[COPY4]], killed [[REG_SEQUENCE2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_MFMA_F32_16X16X16F16_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY4]], [[COPY4]], [[REG_SEQUENCE2]], 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -183,7 +183,7 @@ body:             |
 
     %0:sgpr_64(p4) = COPY $sgpr4_sgpr5
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
-    S_BITCMP1_B32 killed %1, 0, implicit-def $scc
+    S_BITCMP1_B32 %1, 0, implicit-def $scc
     %2:sgpr_32 = S_MOV_B32 0
     %3:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
     %4:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -207,12 +207,12 @@ body:             |
 
     %14:sreg_32 = S_OR_B32 %10, 1, implicit-def dead $scc
     %15:sreg_32 = S_ASHR_I32 %10, 31, implicit-def dead $scc
-    %16:sreg_32 = S_AND_B32 killed %15, killed %14, implicit-def dead $scc
+    %16:sreg_32 = S_AND_B32 %15, %14, implicit-def dead $scc
     %17:vreg_128_align2 = REG_SEQUENCE %8, %subreg.sub0, %4, %subreg.sub1, %4, %subreg.sub2, %4, %subreg.sub3
     %18:sreg_64 = REG_SEQUENCE %2, %subreg.sub0, %2, %subreg.sub1
     %19:vreg_64_align2 = COPY %18
     %20:areg_128_align2 = COPY %17
-    %21:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %19, %19, killed %20, 0, 0, 0, implicit $mode, implicit $exec
+    %21:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 %19, %19, %20, 0, 0, 0, implicit $mode, implicit $exec
     %22:vgpr_32 = COPY %21.sub0
     %23:sreg_64 = S_MOV_B64 0
 

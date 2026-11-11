@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            cmp_sgt_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sgt_i7
@@ -28,6 +29,7 @@ body:             |
 ...
 ---
 name:            cmp_sgt_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sgt_i8
@@ -53,6 +55,7 @@ body:             |
 ...
 ---
 name:            cmp_sgt_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sgt_i16
@@ -78,6 +81,7 @@ body:             |
 ...
 ---
 name:            cmp_sgt_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sgt_i32
@@ -96,6 +100,7 @@ body:             |
 ...
 ---
 name:            cmp_sgt_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sgt_i48
@@ -130,6 +135,7 @@ body:             |
 ...
 ---
 name:            cmp_sgt_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sgt_i64
@@ -157,6 +163,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_slt_i7
@@ -182,6 +189,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_slt_i8
@@ -207,6 +215,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_slt_i16
@@ -232,6 +241,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_slt_i32
@@ -250,6 +260,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_slt_i48
@@ -284,6 +295,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_slt_i64
@@ -311,6 +323,7 @@ body:             |
 ...
 ---
 name:            cmp_sge_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sge_i7
@@ -336,6 +349,7 @@ body:             |
 ...
 ---
 name:            cmp_sge_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sge_i8
@@ -361,6 +375,7 @@ body:             |
 ...
 ---
 name:            cmp_sge_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sge_i16
@@ -386,6 +401,7 @@ body:             |
 ...
 ---
 name:            cmp_sge_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sge_i32
@@ -404,6 +420,7 @@ body:             |
 ...
 ---
 name:            cmp_sge_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sge_i48
@@ -438,6 +455,7 @@ body:             |
 ...
 ---
 name:            cmp_sge_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sge_i64
@@ -465,6 +483,7 @@ body:             |
 ...
 ---
 name:            cmp_sle_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sle_i7
@@ -490,6 +509,7 @@ body:             |
 ...
 ---
 name:            cmp_sle_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sle_i8
@@ -515,6 +535,7 @@ body:             |
 ...
 ---
 name:            cmp_sle_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sle_i16
@@ -540,6 +561,7 @@ body:             |
 ...
 ---
 name:            cmp_sle_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sle_i32
@@ -558,6 +580,7 @@ body:             |
 ...
 ---
 name:            cmp_sle_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sle_i48
@@ -592,6 +615,7 @@ body:             |
 ...
 ---
 name:            cmp_sle_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_sle_i64
@@ -619,6 +643,7 @@ body:             |
 ...
 ---
 name:            cmp_ugt_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ugt_i7
@@ -642,6 +667,7 @@ body:             |
 ...
 ---
 name:            cmp_ugt_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ugt_i8
@@ -665,6 +691,7 @@ body:             |
 ...
 ---
 name:            cmp_ugt_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ugt_i16
@@ -688,6 +715,7 @@ body:             |
 ...
 ---
 name:            cmp_ugt_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ugt_i32
@@ -706,6 +734,7 @@ body:             |
 ...
 ---
 name:            cmp_ugt_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ugt_i48
@@ -741,6 +770,7 @@ body:             |
 ...
 ---
 name:            cmp_ugt_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ugt_i64
@@ -768,6 +798,7 @@ body:             |
 ...
 ---
 name:            cmp_ult_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ult_i7
@@ -791,6 +822,7 @@ body:             |
 ...
 ---
 name:            cmp_ult_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ult_i8
@@ -814,6 +846,7 @@ body:             |
 ...
 ---
 name:            cmp_ult_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ult_i16
@@ -837,6 +870,7 @@ body:             |
 ...
 ---
 name:            cmp_ult_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ult_i32
@@ -855,6 +889,7 @@ body:             |
 ...
 ---
 name:            cmp_ult_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ult_i48
@@ -890,6 +925,7 @@ body:             |
 ...
 ---
 name:            cmp_ult_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ult_i64
@@ -917,6 +953,7 @@ body:             |
 ...
 ---
 name:            cmp_uge_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_uge_i7
@@ -940,6 +977,7 @@ body:             |
 ...
 ---
 name:            cmp_uge_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_uge_i8
@@ -963,6 +1001,7 @@ body:             |
 ...
 ---
 name:            cmp_uge_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_uge_i16
@@ -986,6 +1025,7 @@ body:             |
 ...
 ---
 name:            cmp_uge_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_uge_i32
@@ -1004,6 +1044,7 @@ body:             |
 ...
 ---
 name:            cmp_uge_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_uge_i48
@@ -1039,6 +1080,7 @@ body:             |
 ...
 ---
 name:            cmp_uge_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_uge_i64
@@ -1066,6 +1108,7 @@ body:             |
 ...
 ---
 name:            cmp_ule_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ule_i7
@@ -1089,6 +1132,7 @@ body:             |
 ...
 ---
 name:            cmp_ule_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ule_i8
@@ -1112,6 +1156,7 @@ body:             |
 ...
 ---
 name:            cmp_ule_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ule_i16
@@ -1135,6 +1180,7 @@ body:             |
 ...
 ---
 name:            cmp_ule_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ule_i32
@@ -1153,6 +1199,7 @@ body:             |
 ...
 ---
 name:            cmp_ule_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ule_i48
@@ -1188,6 +1235,7 @@ body:             |
 ...
 ---
 name:            cmp_ule_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ule_i64
@@ -1215,6 +1263,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_i7
@@ -1238,6 +1287,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_i8
@@ -1261,6 +1311,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_i16
@@ -1284,6 +1335,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_i32
@@ -1302,6 +1354,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_i48
@@ -1338,6 +1391,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_i64
@@ -1366,6 +1420,7 @@ body:             |
 ...
 ---
 name:            cmp_ne_i7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ne_i7
@@ -1389,6 +1444,7 @@ body:             |
 ...
 ---
 name:            cmp_ne_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ne_i8
@@ -1412,6 +1468,7 @@ body:             |
 ...
 ---
 name:            cmp_ne_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ne_i16
@@ -1435,6 +1492,7 @@ body:             |
 ...
 ---
 name:            cmp_ne_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ne_i32
@@ -1453,6 +1511,7 @@ body:             |
 ...
 ---
 name:            cmp_ne_i48
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ne_i48
@@ -1489,6 +1548,7 @@ body:             |
 ...
 ---
 name:            cmp_ne_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_ne_i64
@@ -1517,6 +1577,7 @@ body:             |
 ...
 ---
 name:            cmp_eq_ptr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: cmp_eq_ptr
@@ -1535,6 +1596,7 @@ body:             |
 ...
 ---
 name:            cmp_slt_i128
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11

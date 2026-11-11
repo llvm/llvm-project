@@ -1137,6 +1137,15 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
               .setMIFlag(Flag);
     break;
   }
+  case AArch64::STRQui:
+  case AArch64::LDRQui: {
+    unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQ))
+              .addImm(Reg)
+              .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
   case AArch64::STPQi:
   case AArch64::LDPQi: {
     unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(0).getReg());
@@ -1145,6 +1154,17 @@ AArch64FrameLowering::insertSEH(MachineBasicBlock::iterator MBBI,
               .addImm(Reg0)
               .addImm(Reg1)
               .addImm(Imm * 16)
+              .setMIFlag(Flag);
+    break;
+  }
+  case AArch64::LDRQpost:
+    Imm = -Imm;
+    [[fallthrough]];
+  case AArch64::STRQpre: {
+    unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
+    MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveAnyRegQX))
+              .addImm(Reg)
+              .addImm(Imm)
               .setMIFlag(Flag);
     break;
   }
@@ -1567,7 +1587,7 @@ static bool produceCompactUnwindFrame(const AArch64FrameLowering &AFL,
 }
 
 static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
-                                             unsigned SpillCount, unsigned Reg1,
+                                             int PairOffset, unsigned Reg1,
                                              unsigned Reg2, bool NeedsWinCFI,
                                              const TargetRegisterInfo *TRI) {
   // If we are generating register pairs for a Windows function that requires
@@ -1590,7 +1610,7 @@ static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
   if (TRI->getEncodingValue(Reg2) == TRI->getEncodingValue(Reg1) + 1)
     return SpillExtendedVolatile
                ? !((Reg1 == AArch64::FP && Reg2 == AArch64::LR) ||
-                   (SpillCount % 2) == 0)
+                   (PairOffset % 16) == 0)
                : false;
 
   // If pairing a GPR with LR, the pair can be described by the save_lrpair
@@ -1606,12 +1626,12 @@ static bool invalidateWindowsRegisterPairing(bool SpillExtendedVolatile,
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(bool SpillExtendedVolatile,
-                                      unsigned SpillCount, unsigned Reg1,
+                                      int PairOffset, unsigned Reg1,
                                       unsigned Reg2, bool UsesWinAAPCS,
                                       bool NeedsWinCFI, bool NeedsFrameRecord,
                                       const TargetRegisterInfo *TRI) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(SpillExtendedVolatile, SpillCount,
+    return invalidateWindowsRegisterPairing(SpillExtendedVolatile, PairOffset,
                                             Reg1, Reg2, NeedsWinCFI, TRI);
 
   // If we need to store the frame record, don't pair any register
@@ -1851,30 +1871,26 @@ void computeCalleeSaveRegisterGroups(const AArch64FrameLowering &AFL,
     // Add the next reg to the pair if it is in the same register class.
     if (unsigned(i + RegInc) < Count && !HasCSHazardPadding) {
       MCRegister NextReg = CSI[i + RegInc].getReg();
-      unsigned SpillCount = NeedsWinCFI ? FirstReg - i : i;
       int Aligned = AlignOffset(ByteOffset, Scale);
       int PairOffset = IsWindows ? Aligned : Aligned + StackFillDir * 2 * Scale;
       bool PairFitsImmRange =
           PairOffset / Scale >= -64 && PairOffset / Scale <= 63;
       switch (RGI.Type) {
       case RegGroupInfo::GPR:
-        if (AArch64::GPR64RegClass.contains(NextReg) && PairFitsImmRange &&
-            !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
-                                       RGI.Reg1, NextReg, IsWindows,
-                                       NeedsWinCFI, NeedsFrameRecord, TRI))
-          RGI.Reg2 = NextReg;
-        break;
       case RegGroupInfo::FPR64:
-        if (AArch64::FPR64RegClass.contains(NextReg) && PairFitsImmRange &&
-            !invalidateRegisterPairing(SpillExtendedVolatile, SpillCount,
+      case RegGroupInfo::FPR128: {
+        const TargetRegisterClass &SpillRC =
+            RGI.Type == RegGroupInfo::GPR     ? AArch64::GPR64RegClass
+            : RGI.Type == RegGroupInfo::FPR64 ? AArch64::FPR64RegClass
+                                              : AArch64::FPR128RegClass;
+
+        if (SpillRC.contains(NextReg) && PairFitsImmRange &&
+            !invalidateRegisterPairing(SpillExtendedVolatile, PairOffset,
                                        RGI.Reg1, NextReg, IsWindows,
                                        NeedsWinCFI, NeedsFrameRecord, TRI))
           RGI.Reg2 = NextReg;
         break;
-      case RegGroupInfo::FPR128:
-        if (AArch64::FPR128RegClass.contains(NextReg) && PairFitsImmRange)
-          RGI.Reg2 = NextReg;
-        break;
+      }
       case RegGroupInfo::PPR:
         break;
       case RegGroupInfo::ZPR: {

@@ -35,6 +35,7 @@
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector
 ; CHECK-NEXT:   verify
+; CHECK-NEXT: xcore-asm-printer-begin
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     xcore-isel
@@ -80,6 +81,7 @@
 ; CHECK-NEXT:     fentry-insert
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
+; CHECK-NEXT:     xcore-frame-to-args-offset-elimination
 ; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
@@ -87,4 +89,6 @@
 ; CHECK-NEXT:     machine-sanmd
 ; CHECK-NEXT:     stack-frame-layout
 ; CHECK-NEXT:     verify
+; CHECK-NEXT:     xcore-asm-printer
 ; CHECK-NEXT:   free-machine-function
+; CHECK-NEXT: xcore-asm-printer-end

@@ -9,7 +9,7 @@
 // The current implementation of this functionality requires special
 // combination of libraries that are not used by default on NetBSD
 // XFAIL: target={{.*netbsd.*}}
-// FIXME: Bug 42703
+// FIXME: https://github.com/llvm/llvm-project/issues/42048
 // XFAIL: target={{.*solaris.*}}
 
 // https://reviews.llvm.org/D111703 made compiler incompatible with released NDK.

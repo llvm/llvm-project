@@ -2987,13 +2987,34 @@ LibraryOptionsContext &cl::getCAPILibraryOptions() {
   return C;
 }
 
-void LLVMParseCommandLineOptions(int argc, const char *const *argv,
-                                 const char *Overview) {
+static bool llvmParseCommandLineOptionsImpl(int argc, const char *const *argv,
+                                            const char *Overview,
+                                            raw_ostream *Errs) {
   LibraryOptionsContext &C = getCAPILibraryOptions();
   size_t Begin = C.args().size();
-  parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, &nulls());
+  bool Res = parseCommandLineOptions(C, ArrayRef(argv, argc), Overview, Errs);
 
   // Code without a context, such as a target machine created through the C
   // API, reads the global values.
   replayLibraryArgs(C.args().drop_front(Begin), nullptr);
+
+  return Res;
+}
+
+void LLVMParseCommandLineOptions(int argc, const char *const *argv,
+                                 const char *Overview) {
+  llvmParseCommandLineOptionsImpl(argc, argv, Overview, &nulls());
+}
+
+LLVMBool LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
+                                              const char *Overview,
+                                              char **ErrorMessage) {
+  *ErrorMessage = nullptr;
+  SmallString<128> Err;
+  raw_svector_ostream Stream(Err);
+  if (!llvmParseCommandLineOptionsImpl(argc, argv, Overview, &Stream)) {
+    *ErrorMessage = strdup(Err.c_str());
+    return 1;
+  }
+  return 0;
 }

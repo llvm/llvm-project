@@ -300,14 +300,15 @@ void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
 // a weak reference to CELQBST, so without it autocall would not include it.
 void SystemZXPLINKAsmPrinter::emitCELQMAIN(const Function &MainFn) {
   MCSymbol *MainSym = getSymbol(&MainFn);
-  auto ExternalOSSymbol = [&](StringRef Name) {
+  auto ExternalOSSymbol = [&](StringRef Name, bool IsRenameable) {
     MCSymbol *Sym = OutContext.getOrCreateSymbol(Name);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_OSLinkage);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    getTargetStreamer()->emitRenameable(Sym, IsRenameable);
     return Sym;
   };
-  MCSymbol *CELQINPL = ExternalOSSymbol("CELQINPL");
-  MCSymbol *CELQBST = ExternalOSSymbol("CELQBST");
+  MCSymbol *CELQINPL = ExternalOSSymbol("CELQINPL", /*IsRenameable=*/false);
+  MCSymbol *CELQBST = ExternalOSSymbol("CELQBST", /*IsRenameable=*/true);
 
   OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getTextSection());
@@ -701,6 +702,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
+  ZOS->emitRenameable(CELQSTRT, /*IsRenamable=*/false);
 
   // Create symbol and assign to streamer field for use in PPA1.
   ZOS->PPA2Sym = OutContext.createTempSymbol("PPA2", false);
@@ -819,19 +821,19 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
   const GlobalAlias *GA = dyn_cast<GlobalAlias>(CV);
   const GlobalVariable *GV = dyn_cast<GlobalVariable>(CV);
   const Function *FV = dyn_cast<Function>(CV);
-  bool IsFunc = !GV && (FV || (GA && isa<Function>(GA->getAliaseeObject())));
 
-  MCSymbol *Sym = NULL;
-
+  MCSymbol *Sym = nullptr;
   if (GA)
     Sym = getSymbol(GA);
-  else if (IsFunc)
+  else if (FV)
     Sym = getSymbol(FV);
   else if (GV)
     Sym = getSymbol(GV);
+  else
+    return AsmPrinter::lowerConstant(CV);
 
-  if (IsFunc) {
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+  // Functions and function aliases need special handling.
+  if (FV || (GA && isa<Function>(GA->getAliaseeObject()))) {
     // A function pointer must point to a function descriptor (a V-con would
     // yield the entry point instead), and it must compare equal to the address
     // of the same function taken in code. For a function that is not internal,
@@ -858,11 +860,10 @@ const MCExpr *SystemZXPLINKAsmPrinter::lowerConstant(const Constant *CV,
             SystemZ::S_None, OutContext),
         MCConstantExpr::create(Disp, OutContext), OutContext);
   }
-  if (Sym) {
-    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
-    return MCSymbolRefExpr::create(Sym, OutContext);
-  }
-  return AsmPrinter::lowerConstant(CV);
+  auto *ZOS = getTargetStreamer();
+  ZOS->emitADA(Sym, OutContext.getObjectFileInfo()->getADASection());
+  OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
+  return MCSymbolRefExpr::create(Sym, OutContext);
 }
 
 void SystemZXPLINKAsmPrinter::emitFunctionEntryLabel() {

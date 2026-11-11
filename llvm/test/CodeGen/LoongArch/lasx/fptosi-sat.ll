@@ -2,6 +2,15 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 --mattr=+lasx < %s | FileCheck %s
 
+declare <8 x float> @llvm.floor.v8f32(<8 x float>)
+declare <4 x double> @llvm.floor.v4f64(<4 x double>)
+declare <8 x float> @llvm.ceil.v8f32(<8 x float>)
+declare <4 x double> @llvm.ceil.v4f64(<4 x double>)
+declare <8 x float> @llvm.roundeven.v8f32(<8 x float>)
+declare <4 x double> @llvm.roundeven.v4f64(<4 x double>)
+declare <8 x float> @llvm.trunc.v8f32(<8 x float>)
+declare <4 x double> @llvm.trunc.v4f64(<4 x double>)
+
 define void @fptosi_sat_v8f32_to_v8i32(ptr %res, ptr %a) nounwind {
 ; CHECK-LABEL: fptosi_sat_v8f32_to_v8i32:
 ; CHECK:       # %bb.0: # %entry
@@ -87,5 +96,117 @@ entry:
   %i = fptosi <4 x float> %v to <4 x i64>
   %r = select <4 x i1> %c, <4 x i64> zeroinitializer, <4 x i64> %i
   store <4 x i64> %r, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_floor_v8f32_to_v8i32(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_floor_v8f32_to_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrm.w.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x float>, ptr %in
+  %v1 = call <8 x float> @llvm.floor.v8f32(<8 x float> %v0)
+  %v2 = call <8 x i32> @llvm.fptosi.sat.v8i32.v8f32(<8 x float> %v1)
+  store <8 x i32> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_floor_v4f64_to_v4i64(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_floor_v4f64_to_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrm.l.d $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x double>, ptr %in
+  %v1 = call <4 x double> @llvm.floor.v4f64(<4 x double> %v0)
+  %v2 = call <4 x i64> @llvm.fptosi.sat.v4i64.v4f64(<4 x double> %v1)
+  store <4 x i64> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_ceil_v8f32_to_v8i32(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_ceil_v8f32_to_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrp.w.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x float>, ptr %in
+  %v1 = call <8 x float> @llvm.ceil.v8f32(<8 x float> %v0)
+  %v2 = call <8 x i32> @llvm.fptosi.sat.v8i32.v8f32(<8 x float> %v1)
+  store <8 x i32> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_ceil_v4f64_to_v4i64(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_ceil_v4f64_to_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrp.l.d $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x double>, ptr %in
+  %v1 = call <4 x double> @llvm.ceil.v4f64(<4 x double> %v0)
+  %v2 = call <4 x i64> @llvm.fptosi.sat.v4i64.v4f64(<4 x double> %v1)
+  store <4 x i64> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_roundeven_v8f32_to_v8i32(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_roundeven_v8f32_to_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrne.w.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x float>, ptr %in
+  %v1 = call <8 x float> @llvm.roundeven.v8f32(<8 x float> %v0)
+  %v2 = call <8 x i32> @llvm.fptosi.sat.v8i32.v8f32(<8 x float> %v1)
+  store <8 x i32> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_roundeven_v4f64_to_v4i64(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_roundeven_v4f64_to_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrne.l.d $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x double>, ptr %in
+  %v1 = call <4 x double> @llvm.roundeven.v4f64(<4 x double> %v0)
+  %v2 = call <4 x i64> @llvm.fptosi.sat.v4i64.v4f64(<4 x double> %v1)
+  store <4 x i64> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_trunc_v8f32_to_v8i32(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_trunc_v8f32_to_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrz.w.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x float>, ptr %in
+  %v1 = call <8 x float> @llvm.trunc.v8f32(<8 x float> %v0)
+  %v2 = call <8 x i32> @llvm.fptosi.sat.v8i32.v8f32(<8 x float> %v1)
+  store <8 x i32> %v2, ptr %res
+  ret void
+}
+
+define void @fptosi_sat_trunc_v4f64_to_v4i64(ptr %res, ptr %in) {
+; CHECK-LABEL: fptosi_sat_trunc_v4f64_to_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrz.l.d $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x double>, ptr %in
+  %v1 = call <4 x double> @llvm.trunc.v4f64(<4 x double> %v0)
+  %v2 = call <4 x i64> @llvm.fptosi.sat.v4i64.v4f64(<4 x double> %v1)
+  store <4 x i64> %v2, ptr %res
   ret void
 }

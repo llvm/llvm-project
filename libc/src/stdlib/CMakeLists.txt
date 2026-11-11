@@ -81,8 +81,8 @@ add_entrypoint_object(
 # GCC-12 crashed when building environ_internal during GIMPLE pass: waccess.
 set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
-  (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
-  (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
+    (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
+    (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
   set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
     "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
     "-fdisable-tree-waccess3")
@@ -98,6 +98,7 @@ set(environ_internal_deps
   libc.src.__support.macros.attributes
   libc.src.__support.macros.config
   libc.src.string.memory_utils.inline_memcpy
+  libc.src.string.memory_utils.inline_strcmp
 )
 set(environ_internal_compile_options ${environ_internal_gcc12_workaround})
 
@@ -561,6 +562,11 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
         ${SCUDO_DEPS}
     )
     add_entrypoint_external(
+      reallocarray
+      DEPENDS
+        ${SCUDO_DEPS}
+    )
+    add_entrypoint_external(
       aligned_alloc
       DEPENDS
         ${SCUDO_DEPS}
@@ -589,6 +595,9 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
     )
     add_entrypoint_external(
       realloc
+    )
+    add_entrypoint_external(
+      reallocarray
     )
     add_entrypoint_external(
       aligned_alloc

@@ -188,7 +188,8 @@ struct CombineContractABTranspose final
       return failure();
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes(),
+        contractOp.getKind(), contractOp.getFastmath());
     return success();
   }
 };
@@ -263,7 +264,8 @@ struct CombineContractResultTranspose final
 
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         resTOp, contractOp.getLhs(), contractOp.getRhs(), accTOp.getVector(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes(),
+        contractOp.getKind(), contractOp.getFastmath());
     return success();
   }
 };
@@ -396,19 +398,16 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
     }
   }
 
-  // Check that compressing unused dims isn't removing all reduction dimension
-  // pairs. For example, if the vector.contract had only one reduction
-  // iterator and that was a unit-dimension created by a broadcast,
-  // then we should bail here, otherwise we would create a contract without
-  // a reduction dimension pair.
+  // Bail if no reduction iterator survives on both LHS and RHS: folding a
+  // one-sided unit-dim broadcast would leave an unpaired reduction iterator
+  // and produce an invalid contract.
   bool hasReductionIteratorApplyingOnBothSides = false;
   for (unsigned i = 0; i < iterators.size(); ++i) {
     if (!isReductionIterator(iterators[i]))
       continue;
-    if (getResultIndex(maps[0], i) && getResultIndex(maps[1], i)) {
-      hasReductionIteratorApplyingOnBothSides = true;
-      break;
-    }
+    if (!getResultIndex(maps[0], i) || !getResultIndex(maps[1], i))
+      return failure();
+    hasReductionIteratorApplyingOnBothSides = true;
   }
   if (!hasReductionIteratorApplyingOnBothSides)
     return failure();
@@ -420,7 +419,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
 
   Operation *newOp = vector::ContractionOp::create(
       rewriter, contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
-      rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
+      rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators),
+      contractOp.getKind(), contractOp.getFastmath());
 
   // Handle the mask.
   if (maskingOp) {
@@ -1899,7 +1899,7 @@ struct CanonicalizeContractMatmulToMMT final
     }
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res, rewriter.getAffineMapArrayAttr(canonicalForm),
-        op.getIteratorTypes());
+        op.getIteratorTypes(), op.getKind(), op.getFastmath());
     return success();
   };
 
@@ -1943,7 +1943,8 @@ struct FoldArithExtIntoContractionOp
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhsDefOp->getOperand(0), rhsDefOp->getOperand(0),
         contractOp.getAcc(), contractOp.getIndexingMapsAttr(),
-        contractOp.getIteratorTypesAttr());
+        contractOp.getIteratorTypesAttr(), contractOp.getKind(),
+        contractOp.getFastmath());
 
     return success();
   }

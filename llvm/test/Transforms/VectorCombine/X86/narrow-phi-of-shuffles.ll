@@ -1744,6 +1744,38 @@ finally:
   ret <32 x float> %val3
 }
 
+; Negative test for #237543: Ensure we don't narrow the phi when a shuffle mask selects the second operand (poison).
+define <2 x i32> @issue237543(i1 %c, <1 x i32> %v) {
+; CHECK-LABEL: define <2 x i32> @issue237543(
+; CHECK-SAME: i1 [[C:%.*]], <1 x i32> [[V:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    [[S0:%.*]] = shufflevector <1 x i32> [[V]], <1 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    [[S1:%.*]] = shufflevector <1 x i32> [[V]], <1 x i32> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[P:%.*]] = phi <2 x i32> [ [[S0]], %[[A]] ], [ [[S1]], %[[B]] ]
+; CHECK-NEXT:    ret <2 x i32> [[P]]
+;
+entry:
+  br i1 %c, label %a, label %b
+
+a:
+  %s0 = shufflevector <1 x i32> %v, <1 x i32> poison, <2 x i32> zeroinitializer
+  br label %join
+
+b:
+  %s1 = shufflevector <1 x i32> %v, <1 x i32> poison, <2 x i32> <i32 1, i32 1>
+  br label %join
+
+join:
+  %p = phi <2 x i32> [ %s0, %a ], [ %s1, %b ]
+  ret <2 x i32> %p
+}
+
 declare void @func0() local_unnamed_addr
 
 declare void @func1() local_unnamed_addr
