@@ -43,6 +43,8 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/Test.h"
 
+#if LIBC_TEST_HAS_MATCHERS()
+
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
@@ -305,5 +307,7 @@ ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
 
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TEST_HAS_MATCHERS()
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H
