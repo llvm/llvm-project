@@ -45,8 +45,11 @@ def VeeREH1Model : SchedMachineModel {
 
 let SchedModel = VeeREH1Model in {
 
+// IssueWidth limits issue to the two slots. These are the functional units the
+// slots use: one ALU per slot, and one LSU, multiplier and divider shared by
+// both. A load or multiply pairs with an ALU op, and a load with a multiply,
+// but two loads or two multiplies do not pair.
 let BufferSize = 0 in {
-// One ALU per issue slot.
 def VeeREH1ALU0 : ProcResource<1>;
 def VeeREH1ALU1 : ProcResource<1>;
 def VeeREH1ALU : ProcResGroup<[VeeREH1ALU0, VeeREH1ALU1]>;
