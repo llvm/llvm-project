@@ -3843,6 +3843,7 @@ libc_support_library(
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_normal_float",
         ":__support_macros_config",
+        ":__support_macros_optimization",
     ],
 )
 

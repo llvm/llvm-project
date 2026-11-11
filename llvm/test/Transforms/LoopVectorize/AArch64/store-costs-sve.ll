@@ -68,17 +68,16 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 101)
-; PRED-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 101, i64 [[TMP1]])
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; PRED-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
+; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 101)
 ; PRED-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PRED-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
-; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; PRED-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
@@ -102,7 +101,7 @@ exit:
 
 define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-LABEL: define void @trunc_store(
-; DEFAULT-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i16 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; DEFAULT-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i16 [[X:%.*]]) #[[ATTR0]] {
 ; DEFAULT-NEXT:  [[ITER_CHECK:.*]]:
 ; DEFAULT-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
@@ -182,7 +181,7 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    ret void
 ;
 ; PRED-LABEL: define void @trunc_store(
-; PRED-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i16 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; PRED-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i16 [[X:%.*]]) #[[ATTR0]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
@@ -251,7 +250,7 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }
 attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 
 
