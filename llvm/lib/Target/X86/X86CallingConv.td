@@ -1039,6 +1039,17 @@ def CC_X86_64_Preserve_None : CallingConv<[
   // from being incorrectly assigned to registers, which would cause the required 
   // caller-side copy to not be emitted.
   CCIfByVal<CCPassByVal<8, 8>>,
+
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
+
+  // The 'nest' parameter, if any, is passed in R10.
+  CCIfNest<CCIfSubtarget<"isTarget64BitILP32()", CCAssignToReg<[R10D]>>>,
+  CCIfNest<CCAssignToReg<[R10]>>,
+
+  // Pointers are always passed in full 64-bit registers.
+  CCIfPtr<CCCustom<"CC_X86_64_Pointer">>,
+
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
   //   - RBP        frame pointer
@@ -1049,6 +1060,11 @@ def CC_X86_64_Preserve_None : CallingConv<[
   // call "normal" functions without saving and restoring incoming values:
   CCIfType<[i32], CCAssignToReg<[R12D, R13D, R14D, R15D, EDI, ESI,
                                  EDX, ECX, R8D, R9D, R11D, EAX]>>,
+
+  // i128 can be either passed in two i64 registers, or on the stack, but
+  // not split across register and stack. Handle this with a custom function.
+  CCIfType<[i64],
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_64_I128">>>,
 
   CCIfType<[i64], CCAssignToReg<[R12, R13, R14, R15, RDI, RSI,
                                  RDX, RCX, R8, R9, R11, RAX]>>,
@@ -1096,7 +1112,8 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
-  CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
+  CCIfCC<"CallingConv::PreserveNone",
+    CCIfNotVarArg<CCDelegateTo<CC_X86_64_Preserve_None>>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
 
   // Mingw64 and native Win64 use Win64 CC

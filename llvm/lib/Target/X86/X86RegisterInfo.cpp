@@ -718,7 +718,14 @@ bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
 
   CallingConv::ID CC = MF.getFunction().getCallingConv();
 
-  if (CC == CallingConv::X86_64_SysV && IsSubReg(X86::RAX, Reg))
+  if ((CC == CallingConv::X86_64_SysV || CC == CallingConv::PreserveNone) &&
+      IsSubReg(X86::RAX, Reg))
+    return true;
+
+  if (CC == CallingConv::PreserveNone &&
+      llvm::any_of(
+          ArrayRef<MCPhysReg>{X86::R11, X86::R12, X86::R13, X86::R14, X86::R15},
+          [&](MCPhysReg RegA) { return IsSubReg(RegA, Reg); }))
     return true;
 
   if (llvm::any_of(
