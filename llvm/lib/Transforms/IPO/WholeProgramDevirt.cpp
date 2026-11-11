@@ -566,9 +566,11 @@ struct DevirtModule {
   std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
   PatternList FunctionsToSkip;
 
+  const bool DevirtSpeculatively;
   DevirtModule(Module &M, ModuleAnalysisManager &MAM,
                ModuleSummaryIndex *ExportSummary,
-               const ModuleSummaryIndex *ImportSummary)
+               const ModuleSummaryIndex *ImportSummary,
+               bool DevirtSpeculatively)
       : Opts(getIPOOptions(M)), M(M), MAM(MAM),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         ExportSummary(ExportSummary), ImportSummary(ImportSummary),
@@ -581,7 +583,8 @@ struct DevirtModule {
         RemarksEnabled(areRemarksEnabled()),
         OREGetter([&](Function &F) -> OptimizationRemarkEmitter & {
           return FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-        }) {
+        }),
+        DevirtSpeculatively(DevirtSpeculatively) {
     assert(!(ExportSummary && ImportSummary));
     FunctionsToSkip.init(SkipFunctionNames);
   }
@@ -695,7 +698,8 @@ struct DevirtModule {
 
   // Lower the module using the action and summary passed as command line
   // arguments. For testing purposes only.
-  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM);
+  static bool runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                            bool DevirtuSpeculatively);
 };
 
 struct DevirtIndex {
@@ -751,10 +755,10 @@ struct DevirtIndex {
 
 PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  Opts = &getIPOOptions(M);
+  DevirtSpeculatively |= getIPOOptions(M).devirtualize_speculatively;
 
   if (UseCommandLine) {
-    if (!DevirtModule::runForTesting(M, MAM))
+    if (!DevirtModule::runForTesting(M, MAM, DevirtSpeculatively))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
@@ -764,13 +768,13 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   // needs, such as the module, the analyses and the summaries.
   std::optional<ModuleSummaryIndex> Index;
   ModuleSummaryIndex *Export = ExportSummary;
-  if (!ExportSummary && !ImportSummary) {
+  if (!ExportSummary && !ImportSummary && DevirtSpeculatively) {
     // Build the ExportSummary from the module.
     ProfileSummaryInfo PSI(M);
     Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
     Export = &*Index;
   }
-  if (!DevirtModule(M, MAM, Export, ImportSummary).run())
+  if (!DevirtModule(M, MAM, Export, ImportSummary, DevirtSpeculatively).run())
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
@@ -975,7 +979,8 @@ static Error checkCombinedSummaryForTesting(const IPOOptions &Opts,
   return ErrorSuccess();
 }
 
-bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
+bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM,
+                                 bool DevirtSpeculatively) {
   const IPOOptions &Opts = getIPOOptions(M);
   StringRef ReadSummary = Opts.wholeprogramdevirt_read_summary;
   StringRef WriteSummary = Opts.wholeprogramdevirt_write_summary;
@@ -1007,7 +1012,8 @@ bool DevirtModule::runForTesting(Module &M, ModuleAnalysisManager &MAM) {
       DevirtModule(
           M, MAM,
           SummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
-          SummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr)
+          SummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr,
+          DevirtSpeculatively)
           .run();
 
   if (!WriteSummary.empty()) {
@@ -1076,7 +1082,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (TM.Bits->GV->getVCallVisibility() ==
         GlobalObject::VCallVisibilityPublic) {
       HasPublicTarget = true;
-      if (!Opts.devirtualize_speculatively)
+      if (!DevirtSpeculatively)
         return false;
     }
 
@@ -2467,7 +2473,7 @@ bool DevirtModule::run() {
   Function *PublicTypeTestFunc = nullptr;
   // If we are in speculative devirtualization mode, we can work on the public
   // type test intrinsics.
-  if (Opts.devirtualize_speculatively)
+  if (DevirtSpeculatively)
     PublicTypeTestFunc =
         Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeTestFunc =
