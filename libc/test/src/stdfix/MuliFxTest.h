@@ -11,6 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_STDFIX_MULIFXTEST_H
+#define LLVM_LIBC_TEST_SRC_STDFIX_MULIFXTEST_H
+
 #include "test/UnitTest/Test.h"
 
 #include "llvm-libc-macros/stdfix-macros.h"
@@ -158,3 +161,5 @@ public:
   TEST_F(LlvmLibcMuli##Name##Test, BasicNumbers) { testBasicNumbers(&func); }  \
   TEST_F(LlvmLibcMuli##Name##Test, EdgeCases) { testEdgeCases(&func); }        \
   static_assert(true, "Require semicolon.")
+
+#endif // LLVM_LIBC_TEST_SRC_STDFIX_MULIFXTEST_H

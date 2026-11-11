@@ -28,6 +28,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     and constraints on `Symbol` operations.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/SymbolTable.h"];
 
   let methods = [
     InterfaceMethod<"Returns the name of this symbol.",
@@ -214,6 +215,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
     within an operation.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/SymbolTable.h"];
 
   let methods = [
     InterfaceMethod<"Verify the symbol uses held by this operation.",
@@ -232,6 +234,7 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
     than per symbol table, or querying symbols usage of sibblings).
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/SymbolTable.h"];
 
   let methods = [
     InterfaceMethod<"Verify the symbol uses held by this attribute of this operation.",
@@ -246,6 +249,7 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
 // Symbol Traits
 //===----------------------------------------------------------------------===//
 
+let cppIncludes = ["mlir/IR/SymbolTable.h"] in {
 // Op stores its symbol name in a `sym_name` inherent attribute.
 def SymbolName : NativeOpTrait<"SymbolName">;
 
@@ -254,5 +258,7 @@ def SymbolVisibility : NativeOpTrait<"SymbolVisibility">;
 
 // Op defines a symbol table.
 def SymbolTable : NativeOpTrait<"SymbolTable">;
+
+} // let cppIncludes = ["mlir/IR/SymbolTable.h"]
 
 #endif // MLIR_IR_SYMBOLINTERFACES

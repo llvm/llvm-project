@@ -14,19 +14,12 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
 using namespace llvm;
-
-namespace llvm {
-cl::opt<unsigned> AsmMacroMaxNestingDepth(
-    "asm-macro-max-nesting-depth", cl::init(100), cl::Hidden,
-    cl::desc("The maximum nesting depth allowed for assembly macros."));
-}
 
 MCAsmParser::MCAsmParser(MCContext &Ctx, MCStreamer &Out, SourceMgr &SM,
                          const MCAsmInfo &MAI)

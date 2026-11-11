@@ -1,12 +1,12 @@
 ; RUN: rm -rf %t.cache
 ; RUN: opt -module-hash -module-summary %s -o %t.bc
+; RUN: sed 's/TUNE_PLACEHOLDER/sce/' %s | opt -module-hash -module-summary -o %t.tune.bc
 
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -mcpu=core2
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -x86-relax-relocations=0
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -function-sections
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -data-sections
-; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -debugger-tune=sce
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -mattr=+sse2
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -relocation-model=static
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -code-model=large
@@ -16,6 +16,7 @@
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -aa-pipeline=basic-aa
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -override-triple=x86_64-unknown-linux-gnu
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -default-triple=x86_64-unknown-linux-gnu
+; RUN: llvm-lto2 run -o %t.o %t.tune.bc -cache-dir %t.cache -r=%t.tune.bc,globalfunc,plx
 ; RUN: ls %t.cache | count 15
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -25,3 +26,7 @@ define void @globalfunc() {
 entry:
   ret void
 }
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 1, !"debugger-tuning", !"TUNE_PLACEHOLDER"}

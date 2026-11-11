@@ -18,7 +18,6 @@
 ---
 name:            test_blockaddress
 alignment:       4
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
