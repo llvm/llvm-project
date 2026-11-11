@@ -127,15 +127,16 @@ entry:
   ret void
 }
 
-; AArch64 has no native predicated urem, so the masked intrinsic is not
-; cheaper here: the direct <7 x i32> urem is unchanged.
 define void @urem_v7i32(ptr noalias %dst, ptr noalias %x, ptr noalias %y) vscale_range(2,2) {
 ; CHECK-LABEL: define void @urem_v7i32(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <7 x i32>, ptr [[Y]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = urem <7 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <7 x i32> [[TMP2]], <7 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i32> @llvm.masked.urem.v8i32(<8 x i32> [[TMP5]], <8 x i32> [[TMP6]], <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false>)
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP4]], <8 x i32> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    store <7 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -83,23 +83,23 @@ define void @select_sve_vscale2(<8 x i32> %a32, <8 x i32> %b32, <4 x i64> %a64, 
 ; SVE-NEXT:  Cost Model: Found costs of 1 for: %v32i8 = select <32 x i1> poison, <32 x i8> poison, <32 x i8> poison
 ; SVE-NEXT:  Cost Model: Found costs of 2 for: %v64i8 = select <64 x i1> poison, <64 x i8> poison, <64 x i8> poison
 ; SVE-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:16 Lat:24 SizeLat:24 for: %v8i16 = select <8 x i1> poison, <8 x i16> poison, <8 x i16> poison
-; SVE-NEXT:  Cost Model: Found costs of 16 for: %v16i16 = select <16 x i1> poison, <16 x i16> poison, <16 x i16> poison
+; SVE-NEXT:  Cost Model: Found costs of 1 for: %v16i16 = select <16 x i1> poison, <16 x i16> poison, <16 x i16> poison
 ; SVE-NEXT:  Cost Model: Found costs of 2 for: %v32i16 = select <32 x i1> poison, <32 x i16> poison, <32 x i16> poison
 ; SVE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:12 SizeLat:12 for: %v4i32 = select <4 x i1> poison, <4 x i32> poison, <4 x i32> poison
-; SVE-NEXT:  Cost Model: Found costs of 8 for: %v8i32 = select <8 x i1> poison, <8 x i32> poison, <8 x i32> poison
-; SVE-NEXT:  Cost Model: Found costs of 16 for: %v16i32 = select <16 x i1> poison, <16 x i32> poison, <16 x i32> poison
+; SVE-NEXT:  Cost Model: Found costs of 1 for: %v8i32 = select <8 x i1> poison, <8 x i32> poison, <8 x i32> poison
+; SVE-NEXT:  Cost Model: Found costs of 2 for: %v16i32 = select <16 x i1> poison, <16 x i32> poison, <16 x i32> poison
 ; SVE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:6 for: %v2i64 = select <2 x i1> poison, <2 x i64> poison, <2 x i64> poison
-; SVE-NEXT:  Cost Model: Found costs of 80 for: %v4i64 = select <4 x i1> poison, <4 x i64> poison, <4 x i64> poison
-; SVE-NEXT:  Cost Model: Found costs of 160 for: %v8i64 = select <8 x i1> poison, <8 x i64> poison, <8 x i64> poison
-; SVE-NEXT:  Cost Model: Found costs of 320 for: %v16i64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
+; SVE-NEXT:  Cost Model: Found costs of 1 for: %v4i64 = select <4 x i1> poison, <4 x i64> poison, <4 x i64> poison
+; SVE-NEXT:  Cost Model: Found costs of 2 for: %v8i64 = select <8 x i1> poison, <8 x i64> poison, <8 x i64> poison
+; SVE-NEXT:  Cost Model: Found costs of 4 for: %v16i64 = select <16 x i1> poison, <16 x i64> poison, <16 x i64> poison
 ; SVE-NEXT:  Cost Model: Found costs of 2 for: %v4f32 = select <4 x i1> poison, <4 x float> poison, <4 x float> poison
 ; SVE-NEXT:  Cost Model: Found costs of 1 for: %v8f32 = select <8 x i1> poison, <8 x float> poison, <8 x float> poison
 ; SVE-NEXT:  Cost Model: Found costs of 2 for: %v2f64 = select <2 x i1> poison, <2 x double> poison, <2 x double> poison
 ; SVE-NEXT:  Cost Model: Found costs of 1 for: %v4f64 = select <4 x i1> poison, <4 x double> poison, <4 x double> poison
 ; SVE-NEXT:  Cost Model: Found costs of 1 for: %cmp32 = icmp slt <8 x i32> %a32, %b32
-; SVE-NEXT:  Cost Model: Found costs of 8 for: %sel32 = select <8 x i1> %cmp32, <8 x i32> %a32, <8 x i32> %b32
+; SVE-NEXT:  Cost Model: Found costs of 1 for: %sel32 = select <8 x i1> %cmp32, <8 x i32> %a32, <8 x i32> %b32
 ; SVE-NEXT:  Cost Model: Found costs of 1 for: %cmp64 = icmp slt <4 x i64> %a64, %b64
-; SVE-NEXT:  Cost Model: Found costs of 80 for: %sel64 = select <4 x i1> %cmp64, <4 x i64> %a64, <4 x i64> %b64
+; SVE-NEXT:  Cost Model: Found costs of 1 for: %sel64 = select <4 x i1> %cmp64, <4 x i64> %a64, <4 x i64> %b64
 ; SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v16i8 = select <16 x i1> poison, <16 x i8> poison, <16 x i8> poison

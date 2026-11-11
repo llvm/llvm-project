@@ -5658,6 +5658,10 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   // We don't lower some vector selects well that are wider than the register
   // width. TODO: Improve this with different cost kinds.
   if (isa<FixedVectorType>(ValTy) && Opcode == Instruction::Select) {
+    auto LT = getTypeLegalizationCost(ValTy);
+    if (TLI->useSVEForFixedLengthVectorVT(LT.second, !ST->isNeonAvailable()))
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                       Op1Info, Op2Info, I);
     // We would need this many instructions to hide the scalarization happening.
     const int AmortizationCost = 20;
 
@@ -5680,7 +5684,6 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
           MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32, MVT::v2f64};
       static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
 
-      auto LT = getTypeLegalizationCost(ValTy);
       if (any_of(ValidMinMaxTys, equal_to(LT.second)) ||
           (ST->hasFullFP16() &&
            any_of(ValidFP16MinMaxTys, equal_to(LT.second))))
