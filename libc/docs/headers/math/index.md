@@ -18,7 +18,8 @@ log
 
 ## Source Locations
 
-- The main source is located at: [libc/src/math](https://github.com/llvm/llvm-project/tree/main/libc/src/math).
+- The main entrypoint source is located at: [libc/src/math](https://github.com/llvm/llvm-project/tree/main/libc/src/math).
+- The core header-only math implementations are located at: [libc/src/\_\_support/math](https://github.com/llvm/llvm-project/tree/main/libc/src/__support/math).
 - The tests are located at: [libc/test/src/math](https://github.com/llvm/llvm-project/tree/main/libc/test/src/math).
 - The floating point utilities are located at: [libc/src/\_\_support/FPUtil](https://github.com/llvm/llvm-project/tree/main/libc/src/__support/FPUtil).
 
@@ -53,7 +54,7 @@ log
 
 ## Add a new math function to LLVM libc
 
-- To add a new math function, follow the steps at: [libc/src/math/docs/add_math_function.md](https://github.com/llvm/llvm-project/tree/main/libc/src/math/docs/add_math_function.md).
+- To add or refactor a math function, see {ref}`add_math_function`.
 
 ## Implementation Status
 
@@ -74,15 +75,21 @@ log
   - [darwin-x86_64](https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/x86_64/entrypoints.txt)
   - [darwin-aarch64](https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/aarch64/entrypoints.txt)
 
+- To check math functions enabled for FreeBSD:
+
+  - [freebsd-x86_64](https://github.com/llvm/llvm-project/tree/main/libc/config/freebsd/x86_64/entrypoints.txt)
+
 - To check math functions enabled for GPU:
 
   - [amdgpu-entrypoints](https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/amdgpu/entrypoints.txt)
   - [nvptx-entrypoints](https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/nvptx/entrypoints.txt)
+  - [spirv-entrypoints](https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/spirv/entrypoints.txt)
 
 - To check math functions enabled for embedded system:
 
   - [baremetal-aarch64](https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/aarch64/entrypoints.txt)
   - [baremetal-aarch32](https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt)
+  - [baremetal-hexagon](https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/hexagon/entrypoints.txt)
   - [baremetal-riscv32](https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/riscv/entrypoints.txt)
 
 ## Basic Operations
