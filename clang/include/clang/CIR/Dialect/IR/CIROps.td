@@ -1071,7 +1071,8 @@ defvar CIR_ReturnableScopes = [
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
-  ParentOneOf<CIR_ReturnableScopes>, Terminator
+  ParentOneOf<CIR_ReturnableScopes>, Terminator,
+  CIR_SynthesizedTerminatorOpInterface
 ]> {
   let summary = "Return from function";
   let description = [{
@@ -4973,6 +4974,11 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     /// cannot be resolved.
     cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
 
+    /// Whether the callee is known not to return, e.g. it is [[noreturn]].
+    bool isNoReturn() {
+      return (*this)->hasAttr(cir::CIRDialect::getNoReturnAttrName());
+    }
+
     void setArg(unsigned index, mlir::Value value) {
       if (!isIndirect()) {
         setOperand(index, value);
@@ -6252,7 +6258,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
 // UnreachableOp
 //===----------------------------------------------------------------------===//
 
-def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
+def CIR_UnreachableOp : CIR_Op<"unreachable", [
+  Terminator, CIR_SynthesizedTerminatorOpInterface
+]> {
   let summary = "invoke immediate undefined behavior";
   let description = [{
     If the program control flow reaches a `cir.unreachable` operation, the
@@ -6275,7 +6283,9 @@ def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
 // TrapOp
 //===----------------------------------------------------------------------===//
 
-def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
+def CIR_TrapOp : CIR_Op<"trap", [
+  Terminator, CIR_SynthesizedTerminatorOpInterface
+]> {
   let summary = "Exit the program abnormally";
   let description = [{
     The cir.trap operation causes the program to exit abnormally. The
