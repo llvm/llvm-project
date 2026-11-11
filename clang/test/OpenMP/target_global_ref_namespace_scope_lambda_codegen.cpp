@@ -35,6 +35,16 @@ auto combined_directive = []() {
   ref = 42;
 };
 
+auto nested_in_parallel = []() {
+#pragma omp parallel
+  {
+// CHECK-DAG: define internal void @{{"?}}__omp_offloading_{{.*}}clEv_l[[#@LINE+2]]{{"?}}(
+// DEVICE-DAG: define weak_odr protected void @{{"?}}__omp_offloading_{{.*}}clEv_l[[#@LINE+1]]{{"?}}(
+#pragma omp target
+    ref = 42;
+  }
+};
+
 auto static_local = []() {
   static int &local_ref = x;
 // CHECK-DAG: define internal void @{{"?}}__omp_offloading_{{.*}}clEv_l[[#@LINE+2]]{{"?}}(
@@ -113,6 +123,7 @@ void use() {
   lambda();
   nested_lambda()();
   combined_directive();
+  nested_in_parallel();
   static_local();
   default_argument();
   slice_work(0, 0, 0);

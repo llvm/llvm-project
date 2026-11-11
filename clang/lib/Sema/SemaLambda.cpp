@@ -518,11 +518,11 @@ void Sema::handleLambdaNumbering(
     Class->setLambdaContextDecl(ContextDecl);
 
   CXXRecordDecl::LambdaNumbering Numbering;
-  bool IsOpenMPOffload = getLangOpts().OpenMPIsTargetDevice ||
-                         !getLangOpts().OMPTargetTriples.empty();
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost ||
-                (IsOpenMPOffload &&
+                (getLangOpts().OpenMP &&
+                 (getLangOpts().OpenMPIsTargetDevice ||
+                  !getLangOpts().OMPTargetTriples.empty()) &&
                  !Class->getDeclContext()->getNonClosureAncestor()))) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
     // ODR. Both device- and host-compilation need to have a consistent naming

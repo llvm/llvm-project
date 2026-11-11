@@ -11600,14 +11600,15 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   // An implicitly-defined constructor is only reachable from its uses.
   if (const auto *E = dyn_cast<CXXConstructExpr>(S)) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
-    if (!Ctor->isUserProvided() && ScannedImplicitCtors.insert(Ctor).second)
+    if (!Ctor->isUserProvided() && Ctor->hasBody() &&
+        ScannedImplicitCtors.insert(Ctor).second)
       scanConstructorForTargetRegions(Ctor, ParentName);
   }
 
   // Regions in a lambda are named after its enclosing non-closure function
   // (CurFuncDecl) or, when there is none, after the call operator itself.
   if (const auto *L = dyn_cast<LambdaExpr>(S)) {
-    CXXMethodDecl *CallOp = L->getCallOperator();
+    const CXXMethodDecl *CallOp = L->getCallOperator();
     if (const auto *Parent =
             dyn_cast_or_null<FunctionDecl>(CallOp->getNonClosureContext())) {
       ParentName = getTargetRegionParentName(Parent);
