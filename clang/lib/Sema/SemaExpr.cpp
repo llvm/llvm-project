@@ -11499,6 +11499,10 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHSTy->isSveVLSBuiltinType() || RHSTy->isSveVLSBuiltinType())
     return CheckSizelessVectorOperands(LHS, RHS, Loc, IsCompAssign,
                                        ArithConvKind::Arithmetic);
+  // In HLSL, multiplying or dividing two matrices is element-wise.
+  if (getLangOpts().HLSL && LHSTy->isConstantMatrixType() &&
+      RHSTy->isConstantMatrixType())
+    return CheckMatrixElementwiseOperands(LHS, RHS, Loc, IsCompAssign);
   if (!IsDiv &&
       (LHSTy->isConstantMatrixType() || RHSTy->isConstantMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
@@ -16649,6 +16653,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                     VectorKind::AltiVecBool))
         break;
       else if (resultType->isSveVLSBuiltinType()) // SVE vectors allow + and -
+        break;
+      else if (getLangOpts().HLSL && resultType->isConstantMatrixType())
         break;
       else if (getLangOpts().CPlusPlus && // C++ [expr.unary.op]p6
                Opc == UO_Plus && resultType->isPointerType())
