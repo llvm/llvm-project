@@ -32,6 +32,32 @@ func.func @propagate_through_cast(%arg0: tensor<24xf16>) -> tensor<2x3x4xf32> {
 
 // -----
 
+// CHECK-LABEL: @propagate_scalar_through_cast
+// CHECK: %[[RESHAPE:.*]] = tosa.reshape %arg0{{.*}} -> tensor<1x1xf16>
+// CHECK: %[[CAST:.*]] = tosa.cast %[[RESHAPE]]{{.*}} : (tensor<1x1xf16>) -> tensor<1x1xf32>
+// CHECK: return %[[CAST]]
+func.func @propagate_scalar_through_cast(%arg0: tensor<f16>) -> tensor<1x1xf32> {
+  %cast = tosa.cast %arg0 : (tensor<f16>) -> tensor<f32>
+  %shape = tosa.const_shape values(dense<[1, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %reshape = tosa.reshape %cast, %shape : (tensor<f32>, !tosa.shape<2>) -> tensor<1x1xf32>
+  return %reshape : tensor<1x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @keep_scalar_collapse
+// CHECK: %[[CAST:.*]] = tosa.cast %arg0{{.*}} : (tensor<1x1xf16>) -> tensor<1x1xf32>
+// CHECK: %[[RESHAPE:.*]] = tosa.reshape %[[CAST]]{{.*}} -> tensor<f32>
+// CHECK: return %[[RESHAPE]]
+func.func @keep_scalar_collapse(%arg0: tensor<1x1xf16>) -> tensor<f32> {
+  %cast = tosa.cast %arg0 : (tensor<1x1xf16>) -> tensor<1x1xf32>
+  %shape = tosa.const_shape values(dense<> : tensor<0xindex>) : () -> !tosa.shape<0>
+  %reshape = tosa.reshape %cast, %shape : (tensor<1x1xf32>, !tosa.shape<0>) -> tensor<f32>
+  return %reshape : tensor<f32>
+}
+
+// -----
+
 // CHECK-LABEL: @propagate_through_integer_cast
 // CHECK: %[[RESHAPE:.*]] = tosa.reshape %arg0{{.*}} -> tensor<2x3x4xi8>
 // CHECK: %[[CAST:.*]] = tosa.cast %[[RESHAPE]]{{.*}} : (tensor<2x3x4xi8>) -> tensor<2x3x4xi32>

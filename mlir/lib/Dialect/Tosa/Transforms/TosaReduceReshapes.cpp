@@ -39,6 +39,12 @@ static FailureOr<SmallVector<int64_t>> getExpandedBroadcastShape(
     RankedTensorType operandType, RankedTensorType sourceType,
     RankedTensorType targetType, ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<int64_t> expandedShape;
+  // A scalar has no source dimensions, so the loop below would leave its
+  // operand scalar. Use the target shape to match the replacement op's rank.
+  if (sourceType.getRank() == 0) {
+    return SmallVector<int64_t>(targetType.getShape());
+  }
+
   for (auto [sourceIndex, targetIndices] : llvm::enumerate(reassociation)) {
     if (operandType.getDimSize(sourceIndex) ==
         sourceType.getDimSize(sourceIndex)) {
