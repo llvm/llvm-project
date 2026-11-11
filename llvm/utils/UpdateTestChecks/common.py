@@ -2153,6 +2153,7 @@ def add_checks(
     check_inst_comments=True,
 ):
     # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
+    # Also exclude prefixes that would check this function again in a covered RUN.
     prefix_exclusions = set()
     printed_prefixes = []
     for p in prefix_list:
@@ -2210,6 +2211,11 @@ def add_checks(
 
             vars_seen = {}
             printed_prefixes.append(checkprefix)
+            # Every RUN using this prefix now checks the function. Exclude its other
+            # prefixes to avoid checking the function again in those RUNs.
+            for run in prefix_list:
+                if checkprefix in run[0]:
+                    prefix_exclusions.update(run[0])
             attrs = str(func_dict[checkprefix][func_name].attrs)
             attrs = "" if attrs == "None" else attrs
             if ginfo.get_version() > 1:
