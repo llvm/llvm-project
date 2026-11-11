@@ -9,6 +9,7 @@
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -653,7 +654,8 @@ TEST(DependencyScanningWorkerFilesystem, LocalFSRealPath) {
     llvm::SmallString<128> Result;
     if (DepFS.getRealPath(Path, Result))
       return "<error>";
-    return std::string(Result);
+    // InMemoryFileSystem returns real paths with native separators.
+    return llvm::sys::path::convert_to_slash(Result);
   };
 
   // Populate the shared cache for "/glob.c" from a worker without LocalFS.
