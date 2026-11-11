@@ -7422,10 +7422,9 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   CallExpr *TheCall;
   if (Config) {
-    TheCall = CUDAKernelCallExpr::Create(Context, Fn, cast<CallExpr>(Config),
-                                         Args, ResultTy, VK_PRValue, RParenLoc,
-                                         CurFPFeatureOverrides(), NumParams);
-    TheCall->setADLCallKind(UsesADL);
+    TheCall = CUDAKernelCallExpr::Create(
+        Context, Fn, cast<CallExpr>(Config), Args, ResultTy, VK_PRValue,
+        RParenLoc, CurFPFeatureOverrides(), NumParams, UsesADL);
   } else {
     TheCall =
         CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
