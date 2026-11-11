@@ -28,30 +28,23 @@ getDefIgnoringBitcasts(Register Reg, const MachineRegisterInfo &MRI,
                        bool NoVectors) {
   MachineInstr *DefMI = MRI.getVRegDef(Reg);
   unsigned Opc = DefMI->getOpcode();
-  Register SrcReg;
+  Register DefReg = Reg;
   while (Opc == TargetOpcode::G_BITCAST ||
          isPreISelGenericOptimizationHint(Opc)) {
-    SrcReg = DefMI->getOperand(1).getReg();
+    Register SrcReg = DefMI->getOperand(1).getReg();
     LLT SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid())
       break;
     LLT DstTy = MRI.getType(DefMI->getOperand(0).getReg());
     if (NoVectors && (DstTy.isVector() || SrcTy.isVector()))
       break;
-    DefMI = MRI.getVRegDef(SrcReg);
+    DefReg = SrcReg;
+    DefMI = MRI.getVRegDef(DefReg);
     Opc = DefMI->getOpcode();
   }
-  unsigned RegIdx = 0;
-  if (SrcReg) {
-    for (unsigned I = 0; I < DefMI->getNumOperands(); I++) {
-      if (DefMI->getOperand(I).isReg() &&
-          DefMI->getOperand(I).getReg() == SrcReg) {
-        RegIdx = I;
-        break;
-      }
-    }
-  }
-  return std::make_tuple(DefMI, RegIdx);
+  int RegIdx = DefMI->findRegisterDefOperandIdx(DefReg, /*TRI=*/nullptr);
+  assert(RegIdx >= 0 && "defining register operand not found");
+  return std::make_tuple(DefMI, static_cast<unsigned>(RegIdx));
 }
 
 } // namespace llvm::PISA
