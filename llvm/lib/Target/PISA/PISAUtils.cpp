@@ -28,7 +28,7 @@ getDefIgnoringBitcasts(Register Reg, const MachineRegisterInfo &MRI,
                        bool NoVectors) {
   MachineInstr *DefMI = MRI.getVRegDef(Reg);
   unsigned Opc = DefMI->getOpcode();
-  Register SrcReg = 0;
+  Register SrcReg;
   while (Opc == TargetOpcode::G_BITCAST ||
          isPreISelGenericOptimizationHint(Opc)) {
     SrcReg = DefMI->getOperand(1).getReg();
@@ -42,7 +42,7 @@ getDefIgnoringBitcasts(Register Reg, const MachineRegisterInfo &MRI,
     Opc = DefMI->getOpcode();
   }
   unsigned RegIdx = 0;
-  if (SrcReg != 0) {
+  if (SrcReg) {
     for (unsigned I = 0; I < DefMI->getNumOperands(); I++) {
       if (DefMI->getOperand(I).isReg() &&
           DefMI->getOperand(I).getReg() == SrcReg) {
