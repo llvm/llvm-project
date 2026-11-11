@@ -2,7 +2,7 @@
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema %s | FileCheck --check-prefix=TREE %s
 
 ! Until lowering honors the directive, semantics says that it is ignored.
-! CHECK: warning: {{.*}}!DIR$ ALIGN{{.*}}not yet honored
+! CHECK: warning: {{.*}}!DIR$ ALIGN is not yet implemented and was ignored
 
 ! Both spellings of the alignment directive parse to the same node and are
 ! unparsed in the canonical form.
@@ -29,14 +29,31 @@ subroutine s(n)
   ! CHECK: !DIR$ ALIGN(64) :: f, g
   real :: a(n), b(n), c, d(10), e, f(n), g(n)
   ! A bare ALIGN, or a spelling that merely starts with it, is still an
-  ! unrecognized directive and is passed through unchanged.
+  ! unrecognized directive, not the alignment directive.
   !dir$ align
   ! CHECK: !DIR$ align
-  !dir$ alignfoo
-  ! CHECK: !DIR$ alignfoo
+  !dir$ alignfoo(64) :: a
+  ! CHECK: !DIR$ ALIGNFOO(64) :: A
+  ! TREE: CompilerDirective -> Unrecognized
   ! !DEC$ lines are plain comments: no directive of any kind comes out of
   ! them, under either sentinel.
   !dec$ attributes align : 64 :: a
   ! CHECK-NOT: !DIR$
   ! CHECK: END SUBROUTINE
 end subroutine
+
+! The directive is accepted among the components of a derived type.
+module m
+  type t
+    real :: x(8)
+    !dir$ align(64) :: x
+    ! CHECK: !DIR$ ALIGN(64) :: x
+    ! TREE: ComponentDefStmt -> CompilerDirective -> Align
+    ! TREE-NEXT: uint64_t = '64'
+    ! TREE-NEXT: Name = 'x'
+    !dir$ attributes align : 32 :: y
+    ! CHECK: !DIR$ ALIGN(32) :: y
+    real :: y(4)
+  end type
+  ! CHECK: END TYPE
+end module

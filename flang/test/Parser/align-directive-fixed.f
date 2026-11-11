@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
 
 ! Until lowering honors the directive, semantics says that it is ignored.
-! CHECK: warning: {{.*}}!DIR$ ALIGN{{.*}}not yet honored
+! CHECK: warning: {{.*}}!DIR$ ALIGN is not yet implemented and was ignored
 
 ! Fixed-form source: the directive sentinel may be spelled !DIR$, CDIR$ or
 ! *DIR$ in column 1; both spellings unparse to the canonical form.

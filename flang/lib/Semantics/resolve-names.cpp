@@ -11507,13 +11507,11 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       }
     }
   } else if (std::holds_alternative<parser::CompilerDirective::Align>(x.u)) {
-    // The parser recognizes !DIR$ ALIGN, but nothing acts on it yet. Say so
-    // rather than letting the directive be accepted and silently ignored.
-    // Like the unrecognized-directive case below, the directive may appear
-    // outside any program unit, where there is no scope to look up.
+    // Not context().Warn(): the directive may appear outside any program
+    // unit, where there is no scope to look up.
     if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
       Say(x.source,
-          "!DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored"_warn_en_US)
+          "!DIR$ ALIGN is not yet implemented and was ignored"_warn_en_US)
           .set_usageWarning(common::UsageWarning::IgnoredDirective);
     }
   } else if (const auto *inlineAlways{

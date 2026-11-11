@@ -2,21 +2,21 @@
 ! RUN: %flang_fc1 -fsyntax-only -Werror -Wno-ignored-directive %s
 ! RUN: %flang_fc1 -fsyntax-only -w %s
 ! Until lowering honors !DIR$ ALIGN, every recognized directive gets exactly
-! one "not yet honored" warning, forms the parser does not recognize keep the
+! one "not yet implemented" warning, forms the parser does not recognize keep the
 ! unrecognized-directive warning, nothing is an error, and both warnings
 ! belong to -Wignored-directive. A directive outside any program unit is
 ! handled too (the first and last directives of this file).
 
-!WARNING: !DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored [-Wignored-directive]
+!WARNING: !DIR$ ALIGN is not yet implemented and was ignored [-Wignored-directive]
 !dir$ align(64) :: before_any_unit
 
 subroutine s(n)
   integer :: n
-  !WARNING: !DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN is not yet implemented and was ignored [-Wignored-directive]
   !dir$ align(64) :: a, b
-  !WARNING: !DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN is not yet implemented and was ignored [-Wignored-directive]
   !dir$ attributes align : 32 :: c
-  !WARNING: !DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored [-Wignored-directive]
+  !WARNING: !DIR$ ALIGN is not yet implemented and was ignored [-Wignored-directive]
   !dir$ align(16) d
   ! Forms the parser does not recognize as ALIGN: the COMMON-block forms, an
   ! attribute list, a missing value separator, a named constant, a kind suffix
@@ -41,5 +41,5 @@ subroutine s(n)
   common /cb/ e
 end subroutine
 
-!WARNING: !DIR$ ALIGN is recognized but not yet honored by this compiler; the directive is ignored [-Wignored-directive]
+!WARNING: !DIR$ ALIGN is not yet implemented and was ignored [-Wignored-directive]
 !dir$ align(64) :: after_last_unit
