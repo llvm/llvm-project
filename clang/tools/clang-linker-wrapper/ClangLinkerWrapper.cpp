@@ -1728,12 +1728,16 @@ int main(int Argc, char **Argv) {
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   StringRef Output;
   if (Triple.isOSWindows()) {
-    // As with link.exe, the last of -o and '/out:' in any case names the
-    // output, e.g. for clang-cl '/link /out:'.
+    // On Windows the output can be named with -o, /out: or /OUT:. If several
+    // are given, the last one wins, as in link.exe. For example, clang-cl
+    // passes -o first and then the user's '/link /out:x.obj', so the output is
+    // x.obj.
     for (const opt::Arg *Arg : Args.filtered(OPT_o, OPT_out, OPT_INPUT)) {
       if (!isOutputArg(Arg, Triple))
         continue;
-      // An '/OUT:file' input holds the whole option, -o and /out: the value.
+      // The parser does not know '/OUT:', so for '/OUT:x.obj' the value is the
+      // whole text. Strip '/OUT:' to get the file name. For -o and /out: the
+      // value is already the file name.
       Output = Arg->getOption().matches(OPT_INPUT)
                    ? *getCOFFOptionValue(Arg->getValue(), "out:", Triple)
                    : StringRef(Arg->getValue());
