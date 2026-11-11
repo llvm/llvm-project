@@ -1226,6 +1226,12 @@ def err_pragma_optimize_invalid_argument : Error<
   "expected 'on' or 'off'">;
 def err_pragma_optimize_extra_argument : Error<
   "unexpected extra argument '%0' to '#pragma clang optimize'">;
+// - #pragma clang extend_lifetimes enable/disable
+def err_pragma_extend_lifetimes_invalid_argument : Error<
+  "unexpected argument '%0' to '#pragma clang extend_lifetimes'; "
+  "expected 'enable' or 'disable'">;
+def err_pragma_extend_lifetimes_extra_argument : Error<
+  "unexpected extra argument '%0' to '#pragma clang extend_lifetimes'">;
 // - #pragma clang attribute
 def err_pragma_attribute_expected_push_pop_paren : Error<
   "expected 'push', 'pop', or '(' after '#pragma clang attribute'">;

@@ -1485,6 +1485,9 @@ static bool shouldExtendLifetime(const ASTContext &Context,
   // Do not extend variables in nodebug or optnone functions.
   if (FuncDecl->hasAttr<NoDebugAttr>() || FuncDecl->hasAttr<OptimizeNoneAttr>())
     return false;
+  // pragma clang extend_lifetimes disable has been seen.
+  if (FuncDecl->hasAttr<ExtendLifetimesDisableAttr>())
+    return false;
   return true;
 }
 
