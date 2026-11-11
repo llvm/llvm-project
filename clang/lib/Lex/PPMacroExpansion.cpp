@@ -307,7 +307,7 @@ void Preprocessor::dumpMacroInfo(const IdentifierInfo *II) {
     llvm::errs() << "\n";
     if (auto *MI = MM->getMacroInfo()) {
       llvm::errs() << "  ";
-      MI->dump();
+      MI->dump(&SourceMgr);
       llvm::errs() << "\n";
     }
   }
