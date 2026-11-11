@@ -1680,6 +1680,8 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   // An outer scope may have hoisted one of our selects out of this scope.
   // It can no longer be specialized under this scope's merged branch, and
   // may also be the cached branch insertion point.
+  // TODO: Add inner selects to Unhoistables to avoid hoisting them out of
+  // their scopes and allow those scopes to be transformed.
   for (const RegInfo &RI : Scope->CHRRegions)
     for (SelectInst *SI : RI.Selects)
       if (!Scope->contains(SI))
