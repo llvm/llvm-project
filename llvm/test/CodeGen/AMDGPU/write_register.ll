@@ -118,22 +118,41 @@ define void @write_imm_into_flat_scratch_hi() {
 }
 
 define void @write_imm_into_exec() {
-; CHECK-LABEL: write_imm_into_exec:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mov_b64 s[0:1], exec
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_mov_b64 exec, -1
-; CHECK-NEXT:    s_mov_b64 s[0:1], exec
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; SDAG-LABEL: write_imm_into_exec:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_mov_b64 exec, 0
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
+; SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; SDAG-NEXT:    s_mov_b32 s1, exec_hi
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_mov_b64 exec, -1
+; SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; SDAG-NEXT:    s_mov_b32 s1, exec_hi
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GISEL-LABEL: write_imm_into_exec:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b64 exec, 0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GISEL-NEXT:    s_mov_b64 s[0:1], exec
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_mov_b64 exec, -1
+; GISEL-NEXT:    s_mov_b64 s[0:1], exec
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !1, i64 0)
   %read0 = call i64 @llvm.read_register.i64(metadata !1)
   call void asm sideeffect "; use $0", "s"(i64 %read0)
@@ -144,22 +163,41 @@ define void @write_imm_into_exec() {
 }
 
 define void @write_imm_into_flat_scratch() {
-; CHECK-LABEL: write_imm_into_flat_scratch:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_mov_b64 flat_scratch, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
-; CHECK-NEXT:    s_mov_b64 flat_scratch, -1
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; SDAG-LABEL: write_imm_into_flat_scratch:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_mov_b64 flat_scratch, 0
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_mov_b32 s0, flat_scratch_lo
+; SDAG-NEXT:    s_mov_b32 s1, flat_scratch_hi
+; SDAG-NEXT:    s_mov_b64 flat_scratch, -1
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_mov_b32 s1, flat_scratch_hi
+; SDAG-NEXT:    s_mov_b32 s0, flat_scratch_lo
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GISEL-LABEL: write_imm_into_flat_scratch:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b64 flat_scratch, 0
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; GISEL-NEXT:    s_mov_b64 flat_scratch, -1
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !2, i64 0)
   %read0 = call i64 @llvm.read_register.i64(metadata !2)
   call void asm sideeffect "; use $0", "s"(i64 %read0)
@@ -216,20 +254,38 @@ define void @write_imm_into_src_flat_scratch_base_hi() {
 }
 
 define void @write_imm_into_src_flat_scratch_base() {
-; CHECK-LABEL: write_imm_into_src_flat_scratch_base:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, 0
-; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, -1
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; SDAG-LABEL: write_imm_into_src_flat_scratch_base:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_mov_b32 s0, src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s1, src_flat_scratch_base_hi
+; SDAG-NEXT:    s_mov_b32 s2, src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s3, src_flat_scratch_base_hi
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[2:3]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_mov_b64 src_flat_scratch_base_lo, 0
+; SDAG-NEXT:    s_mov_b64 src_flat_scratch_base_lo, -1
+; SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GISEL-LABEL: write_imm_into_src_flat_scratch_base:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_mov_b64 src_flat_scratch_base_lo, 0
+; GISEL-NEXT:    s_mov_b64 src_flat_scratch_base_lo, -1
+; GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !7, i64 0)
   %read0 = call i64 @llvm.read_register.i64(metadata !7)
   call void asm sideeffect "; use $0", "s"(i64 %read0)
@@ -266,7 +322,8 @@ define void @write_imm_into_exec_and_store(ptr addrspace(1) %out) {
 ; SDAG-NEXT:    v_mov_b64_e32 v[2:3], 0x1cbe991a14
 ; SDAG-NEXT:    s_mov_b64 exec, 0x1cbe991a14
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    s_mov_b64 s[0:1], exec
+; SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; SDAG-NEXT:    s_mov_b32 s1, exec_hi
 ; SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[0:1]
@@ -558,17 +615,30 @@ define void @write_uniform_vgpr_into_flat_scratch_hi(ptr addrspace(3) inreg %ptr
 }
 
 define void @write_sgpr_into_exec(i64 inreg %x) {
-; CHECK-LABEL: write_sgpr_into_exec:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_mov_b64 exec, s[0:1]
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mov_b64 s[0:1], exec
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; SDAG-LABEL: write_sgpr_into_exec:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_mov_b64 exec, s[0:1]
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; SDAG-NEXT:    s_mov_b32 s1, exec_hi
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GISEL-LABEL: write_sgpr_into_exec:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b64 exec, s[0:1]
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_mov_b64 s[0:1], exec
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !1, i64 %x)
   %read = call i64 @llvm.read_register.i64(metadata !1)
   call void asm sideeffect "; use $0", "s"(i64 %read)
@@ -585,7 +655,8 @@ define void @write_vgpr_into_exec(i64 %x) {
 ; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SDAG-NEXT:    s_mov_b64 exec, s[0:1]
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    s_mov_b64 s[0:1], exec
+; SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; SDAG-NEXT:    s_mov_b32 s1, exec_hi
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[0:1]
 ; SDAG-NEXT:    ;;#ASMEND
@@ -623,7 +694,8 @@ define void @write_uniform_vgpr_into_exec(ptr addrspace(3) inreg %ptr) {
 ; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SDAG-NEXT:    s_mov_b64 exec, s[0:1]
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    s_mov_b64 s[0:1], exec
+; SDAG-NEXT:    s_mov_b32 s0, exec_lo
+; SDAG-NEXT:    s_mov_b32 s1, exec_hi
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[0:1]
 ; SDAG-NEXT:    ;;#ASMEND
@@ -653,17 +725,30 @@ define void @write_uniform_vgpr_into_exec(ptr addrspace(3) inreg %ptr) {
 }
 
 define void @write_sgpr_into_flat_scratch(i64 inreg %x) {
-; CHECK-LABEL: write_sgpr_into_flat_scratch:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_mov_b64 flat_scratch, s[0:1]
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; SDAG-LABEL: write_sgpr_into_flat_scratch:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_mov_b64 flat_scratch, s[0:1]
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_mov_b32 s1, flat_scratch_hi
+; SDAG-NEXT:    s_mov_b32 s0, flat_scratch_lo
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GISEL-LABEL: write_sgpr_into_flat_scratch:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b64 flat_scratch, s[0:1]
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !2, i64 %x)
   %read = call i64 @llvm.read_register.i64(metadata !2)
   call void asm sideeffect "; use $0", "s"(i64 %read)
@@ -680,7 +765,8 @@ define void @write_vgpr_into_flat_scratch(i64 %x) {
 ; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SDAG-NEXT:    s_mov_b64 flat_scratch, s[0:1]
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; SDAG-NEXT:    s_mov_b32 s1, flat_scratch_hi
+; SDAG-NEXT:    s_mov_b32 s0, flat_scratch_lo
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[0:1]
 ; SDAG-NEXT:    ;;#ASMEND
@@ -718,7 +804,8 @@ define void @write_uniform_vgpr_into_flat_scratch(ptr addrspace(3) inreg %ptr) {
 ; SDAG-NEXT:    v_readfirstlane_b32 s0, v0
 ; SDAG-NEXT:    s_mov_b64 flat_scratch, s[0:1]
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; SDAG-NEXT:    s_mov_b32 s1, flat_scratch_hi
+; SDAG-NEXT:    s_mov_b32 s0, flat_scratch_lo
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[0:1]
 ; SDAG-NEXT:    ;;#ASMEND
@@ -852,16 +939,28 @@ define void @write_uniform_vgpr_into_src_flat_scratch_base_hi(ptr addrspace(3) i
 }
 
 define void @write_sgpr_into_src_flat_scratch_base(i64 inreg %x) {
-; CHECK-LABEL: write_sgpr_into_src_flat_scratch_base:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[2:3]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_mov_b64 src_flat_scratch_base_lo, s[0:1]
-; CHECK-NEXT:    s_set_pc_i64 s[30:31]
+; SDAG-LABEL: write_sgpr_into_src_flat_scratch_base:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_mov_b32 s2, src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s3, src_flat_scratch_base_hi
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[2:3]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_mov_b64 src_flat_scratch_base_lo, s[0:1]
+; SDAG-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GISEL-LABEL: write_sgpr_into_src_flat_scratch_base:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[2:3]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_mov_b64 src_flat_scratch_base_lo, s[0:1]
+; GISEL-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.write_register.i64(metadata !7, i64 %x)
   %read = call i64 @llvm.read_register.i64(metadata !7)
   call void asm sideeffect "; use $0", "s"(i64 %read)
@@ -875,7 +974,8 @@ define void @write_vgpr_into_src_flat_scratch_base(i64 %x) {
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; SDAG-NEXT:    v_readfirstlane_b32 s2, v0
-; SDAG-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s0, src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s1, src_flat_scratch_base_hi
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[0:1]
 ; SDAG-NEXT:    ;;#ASMEND
@@ -906,7 +1006,8 @@ define void @write_uniform_vgpr_into_src_flat_scratch_base(ptr addrspace(3) inre
 ; SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    s_mov_b64 s[2:3], src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s2, src_flat_scratch_base_lo
+; SDAG-NEXT:    s_mov_b32 s3, src_flat_scratch_base_hi
 ; SDAG-NEXT:    ds_load_b64 v[0:1], v0
 ; SDAG-NEXT:    ;;#ASMSTART
 ; SDAG-NEXT:    ; use s[2:3]
@@ -942,21 +1043,38 @@ define void @write_uniform_vgpr_into_src_flat_scratch_base(ptr addrspace(3) inre
 ; FIXME: Use %val directly once #229778 is fixed. The add avoids the
 ; kernarg load being coalesced into flat_scratch.
 define amdgpu_kernel void @write_kernarg_into_flat_scratch(i64 %val) {
-; CHECK-LABEL: write_kernarg_into_flat_scratch:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; CHECK-NEXT:    s_mov_b64 s[64:65], 0
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_add_nc_u64 flat_scratch, s[0:1], 1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mov_b64 s[0:1], flat_scratch
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_endpgm
+; SDAG-LABEL: write_kernarg_into_flat_scratch:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; SDAG-NEXT:    v_nop
+; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; SDAG-NEXT:    s_wait_kmcnt 0x0
+; SDAG-NEXT:    s_add_nc_u64 flat_scratch, s[0:1], 1
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    s_mov_b32 s0, flat_scratch_lo
+; SDAG-NEXT:    s_mov_b32 s1, flat_scratch_hi
+; SDAG-NEXT:    ;;#ASMSTART
+; SDAG-NEXT:    ; use s[0:1]
+; SDAG-NEXT:    ;;#ASMEND
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: write_kernarg_into_flat_scratch:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_add_nc_u64 flat_scratch, s[0:1], 1
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_mov_b64 s[0:1], flat_scratch
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; use s[0:1]
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_endpgm
   %add = add i64 %val, 1
   call void @llvm.write_register.i64(metadata !2, i64 %add)
   %read = call i64 @llvm.read_register.i64(metadata !2)

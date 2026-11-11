@@ -12894,9 +12894,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_u() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_lshr_b32 s9, s4, 16
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -12911,9 +12911,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_u() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_lshr_b32 s9, s4, 16
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -12928,9 +12928,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_u() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_lshr_b32 s9, s0, 16
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13008,8 +13008,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_u() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_lshr_b32 s9, s5, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s9, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13025,8 +13025,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_u() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_lshr_b32 s9, s5, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s9, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13042,8 +13042,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_u() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_lshr_b32 s9, s1, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s9, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13111,9 +13111,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_u() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_lshr_b32 s9, s4, 16
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13125,9 +13125,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_u() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_lshr_b32 s9, s4, 16
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13139,9 +13139,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_u() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_lshr_b32 s9, s0, 16
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13256,8 +13256,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_0() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13273,8 +13273,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_0() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13290,8 +13290,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_0() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13375,8 +13375,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_2() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13392,8 +13392,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_2() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13409,8 +13409,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_2() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13491,8 +13491,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_4() {
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13505,8 +13505,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_4() {
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13519,8 +13519,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_4() {
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13592,8 +13592,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_6() {
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13606,8 +13606,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_6() {
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13620,8 +13620,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_7_6() {
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13689,8 +13689,8 @@ define void @s_shuffle_v4f16_v4f16__u_0_0_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    s_lshl_b32 s8, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13702,8 +13702,8 @@ define void @s_shuffle_v4f16_v4f16__u_0_0_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    s_lshl_b32 s8, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13715,8 +13715,8 @@ define void @s_shuffle_v4f16_v4f16__u_0_0_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    s_lshl_b32 s8, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -13920,8 +13920,8 @@ define void @s_shuffle_v4f16_v4f16__4_0_0_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    s_lshl_b32 s8, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -13933,8 +13933,8 @@ define void @s_shuffle_v4f16_v4f16__4_0_0_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    s_lshl_b32 s8, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -13946,8 +13946,8 @@ define void @s_shuffle_v4f16_v4f16__4_0_0_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    s_lshl_b32 s8, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -14664,13 +14664,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s5, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX900-NEXT:    s_lshr_b32 s5, s4, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -14682,13 +14682,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s5, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX90A-NEXT:    s_lshr_b32 s5, s4, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -14700,13 +14700,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
+; GFX942-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -14723,14 +14723,14 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_0() {
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[4:5]
-; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:5]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -14740,14 +14740,14 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_0() {
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[4:5]
-; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:5]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -14757,14 +14757,14 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_0() {
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[0:1]
-; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX942-NEXT:    ;;#ASMSTART
+; GFX942-NEXT:    ; def s[0:1]
+; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -14783,13 +14783,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -14801,13 +14801,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -14819,13 +14819,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -14847,9 +14847,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -14864,9 +14864,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -14881,9 +14881,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -14905,10 +14905,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_lshr_b32 s5, s6, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -14923,10 +14923,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_lshr_b32 s5, s6, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -14941,10 +14941,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_lshr_b32 s1, s2, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -14966,9 +14966,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_0() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -14983,9 +14983,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_0() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -15000,9 +15000,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_0() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s3, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -15487,8 +15487,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_1_1() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    s_lshr_b32 s8, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -15504,8 +15504,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_1_1() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    s_lshr_b32 s8, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -15521,8 +15521,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_1_1() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    s_lshr_b32 s8, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -15913,13 +15913,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_1() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -15931,13 +15931,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_1() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -15949,13 +15949,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_1() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -16090,13 +16090,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_1() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -16108,13 +16108,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_1() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -16126,13 +16126,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_1() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -16215,13 +16215,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_1() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -16233,13 +16233,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_1() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -16251,13 +16251,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_1() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -16340,13 +16340,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_1() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -16358,13 +16358,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_1() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -16376,13 +16376,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_1() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s3, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -16401,8 +16401,8 @@ define void @s_shuffle_v4f16_v4f16__u_2_2_2() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX900-NEXT:    s_lshl_b32 s8, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -16414,8 +16414,8 @@ define void @s_shuffle_v4f16_v4f16__u_2_2_2() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX90A-NEXT:    s_lshl_b32 s8, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -16427,8 +16427,8 @@ define void @s_shuffle_v4f16_v4f16__u_2_2_2() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s1
 ; GFX942-NEXT:    s_lshl_b32 s8, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -16632,8 +16632,8 @@ define void @s_shuffle_v4f16_v4f16__4_2_2_2() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX900-NEXT:    s_lshl_b32 s8, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -16645,8 +16645,8 @@ define void @s_shuffle_v4f16_v4f16__4_2_2_2() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX90A-NEXT:    s_lshl_b32 s8, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -16658,8 +16658,8 @@ define void @s_shuffle_v4f16_v4f16__4_2_2_2() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s1
 ; GFX942-NEXT:    s_lshl_b32 s8, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -17374,14 +17374,14 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_2() {
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def s[4:5]
-; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX900-NEXT:    ;;#ASMSTART
+; GFX900-NEXT:    ; def s[4:5]
+; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -17391,14 +17391,14 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_2() {
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s[4:5]
-; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s[4:5]
+; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -17408,14 +17408,14 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_2() {
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    ;;#ASMSTART
-; GFX942-NEXT:    ; def s[0:1]
-; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX942-NEXT:    ;;#ASMSTART
+; GFX942-NEXT:    ; def s[0:1]
+; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -17434,13 +17434,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_2() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -17452,13 +17452,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_2() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -17470,13 +17470,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_2() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -17495,13 +17495,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_2() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -17513,13 +17513,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_2() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -17531,13 +17531,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_2() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -17560,8 +17560,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_2() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -17577,8 +17577,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_2() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -17594,8 +17594,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_2() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -17617,10 +17617,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_2() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s6, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -17635,10 +17635,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_2() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s6, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -17653,10 +17653,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_2() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s2, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -17679,8 +17679,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_2() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s7, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s7, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -17696,8 +17696,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_2() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s7, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s7, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -17713,8 +17713,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_2() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s3, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s3, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -18208,8 +18208,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_3_3() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    s_lshr_b32 s8, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -18225,8 +18225,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_3_3() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    s_lshr_b32 s8, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -18242,8 +18242,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_3_3() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    s_lshr_b32 s8, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -18634,13 +18634,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_3() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -18652,13 +18652,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_3() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -18670,13 +18670,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_3() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -18750,13 +18750,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_3() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -18768,13 +18768,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_3() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -18786,13 +18786,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_3() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -18930,13 +18930,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_3() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -18948,13 +18948,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_3() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -18966,13 +18966,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_3() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -19055,13 +19055,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_3() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -19073,13 +19073,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_3() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s7, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -19091,13 +19091,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_3() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s3, s0
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s3, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -19940,9 +19940,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_4() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -19957,9 +19957,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_4() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -19974,9 +19974,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_4() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s2
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -19995,13 +19995,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_4() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -20013,13 +20013,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_4() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -20031,13 +20031,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_4() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s2
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -20060,8 +20060,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_4() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s6
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -20077,8 +20077,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_4() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s6
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -20094,8 +20094,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_4() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s2
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -20114,13 +20114,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_4() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -20132,13 +20132,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_4() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s6
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -20150,13 +20150,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_4() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s2
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s2
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -20175,10 +20175,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_4() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s6, s4, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX900-NEXT:    s_lshr_b32 s5, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -20190,10 +20190,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_4() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s6, s4, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s6, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX90A-NEXT:    s_lshr_b32 s5, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -20205,10 +20205,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_4() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s2, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
+; GFX942-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -20227,9 +20227,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_4() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -20241,9 +20241,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_4() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -20255,9 +20255,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_4() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -20757,8 +20757,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_5_5() {
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    s_lshr_b32 s8, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -20771,8 +20771,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_5_5() {
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    s_lshr_b32 s8, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -20785,8 +20785,8 @@ define void @s_shuffle_v4f16_v4f16__7_u_5_5() {
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    s_lshr_b32 s8, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -21159,10 +21159,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_5() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -21174,10 +21174,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_5() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
 ; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -21189,10 +21189,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_5() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -21263,10 +21263,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_5() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_lshr_b32 s5, s6, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -21281,10 +21281,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_5() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_lshr_b32 s5, s6, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -21299,10 +21299,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_5() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_lshr_b32 s1, s2, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -21388,10 +21388,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_5() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s6, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -21406,10 +21406,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_5() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s6, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s6, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -21424,10 +21424,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_5() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s2, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -21559,10 +21559,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_5() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s5, 16
 ; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -21574,10 +21574,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_5() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s5, 16
 ; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -21589,10 +21589,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_6_5() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s1, 16
 ; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -21611,8 +21611,8 @@ define void @s_shuffle_v4f16_v4f16__u_6_6_6() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX900-NEXT:    s_lshl_b32 s8, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -21624,8 +21624,8 @@ define void @s_shuffle_v4f16_v4f16__u_6_6_6() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX90A-NEXT:    s_lshl_b32 s8, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -21637,8 +21637,8 @@ define void @s_shuffle_v4f16_v4f16__u_6_6_6() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s1
 ; GFX942-NEXT:    s_lshl_b32 s8, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -22559,9 +22559,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_6() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -22576,9 +22576,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_6() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -22593,9 +22593,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_6() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s3
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -22614,13 +22614,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_6() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
-; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -22632,13 +22632,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_6() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
+; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
-; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -22650,13 +22650,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_1_6() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
+; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s3
-; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -22679,8 +22679,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_6() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s7
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s7
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -22696,8 +22696,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_6() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s7
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s7
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -22713,8 +22713,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_6() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s3
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s3
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -22733,13 +22733,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_6() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -22751,13 +22751,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_6() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s7
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -22769,13 +22769,13 @@ define void @s_shuffle_v4f16_v4f16__7_7_3_6() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s3
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s3
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -22794,9 +22794,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_6() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s5, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -22808,9 +22808,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_6() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s5, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -22822,9 +22822,9 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_6() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s1, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -22843,10 +22843,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_6() {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    s_lshr_b32 s6, s5, 16
 ; GFX900-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX900-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -22858,10 +22858,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_6() {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
+; GFX90A-NEXT:    s_lshr_b32 s6, s5, 16
 ; GFX90A-NEXT:    s_lshr_b32 s4, s4, 16
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s6, s6
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
-; GFX90A-NEXT:    s_lshr_b32 s4, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -22873,10 +22873,10 @@ define void @s_shuffle_v4f16_v4f16__7_7_5_6() {
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_lshr_b32 s2, s1, 16
 ; GFX942-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s2, s2
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
-; GFX942-NEXT:    s_lshr_b32 s0, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -23816,8 +23816,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_7() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s5, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -23833,8 +23833,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_7() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s5, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -23850,8 +23850,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_0_7() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -23935,8 +23935,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_7() {
 ; GFX900-NEXT:    ; def s[6:7]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -23952,8 +23952,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_7() {
 ; GFX90A-NEXT:    ; def s[6:7]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s4, s7, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s4, s4
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s5, s4
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -23969,8 +23969,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_2_7() {
 ; GFX942-NEXT:    ; def s[2:3]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s0, s0
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s1, s0
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND
@@ -24051,8 +24051,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_7() {
 ; GFX900-NEXT:    ; def s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX900-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[8:9]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -24065,8 +24065,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_7() {
 ; GFX90A-NEXT:    ; def s[4:5]
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    s_pack_ll_b32_b16 s8, s5, s5
+; GFX90A-NEXT:    s_pack_ll_b32_b16 s9, s4, s5
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; use s[8:9]
 ; GFX90A-NEXT:    ;;#ASMEND
@@ -24079,8 +24079,8 @@ define void @s_shuffle_v4f16_v4f16__7_7_4_7() {
 ; GFX942-NEXT:    ; def s[0:1]
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    s_pack_ll_b32_b16 s8, s1, s1
+; GFX942-NEXT:    s_pack_ll_b32_b16 s9, s0, s1
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use s[8:9]
 ; GFX942-NEXT:    ;;#ASMEND

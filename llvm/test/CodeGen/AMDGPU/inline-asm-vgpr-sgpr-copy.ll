@@ -13,7 +13,8 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
-; CHECK-NEXT:    s_mov_b64 s[4:5], exec
+; CHECK-NEXT:    s_mov_b32 s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, exec_hi
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
@@ -319,14 +320,14 @@ define amdgpu_kernel void @untied_sgpr_tuple_uniform_vgpr(float %a, float %b, fl
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_sqrt_f32_e32 v0, s0
-; CHECK-NEXT:    v_sqrt_f32_e32 v1, s1
-; CHECK-NEXT:    v_sqrt_f32_e32 v2, s2
-; CHECK-NEXT:    v_sqrt_f32_e32 v3, s3
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s3, v3
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, s3
+; CHECK-NEXT:    v_sqrt_f32_e32 v1, s2
+; CHECK-NEXT:    v_sqrt_f32_e32 v2, s1
+; CHECK-NEXT:    v_sqrt_f32_e32 v3, s0
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -377,14 +378,15 @@ define amdgpu_kernel void @tied_sgpr_tuple_v4i32_constraint(ptr addrspace(1) %ou
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s5, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s7, v3
+; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s5, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; in s[4:7] out s[4:7]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v4
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s4
 ; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
@@ -404,14 +406,14 @@ define amdgpu_kernel void @tied_sgpr_tuple_uniform_vgpr(float %a, float %b, floa
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_sqrt_f32_e32 v0, s0
-; CHECK-NEXT:    v_sqrt_f32_e32 v1, s1
-; CHECK-NEXT:    v_sqrt_f32_e32 v2, s2
-; CHECK-NEXT:    v_sqrt_f32_e32 v3, s3
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
-; CHECK-NEXT:    v_readfirstlane_b32 s3, v3
+; CHECK-NEXT:    v_sqrt_f32_e32 v0, s3
+; CHECK-NEXT:    v_sqrt_f32_e32 v1, s2
+; CHECK-NEXT:    v_sqrt_f32_e32 v2, s1
+; CHECK-NEXT:    v_sqrt_f32_e32 v3, s0
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v2
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; in s[0:3] out s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
