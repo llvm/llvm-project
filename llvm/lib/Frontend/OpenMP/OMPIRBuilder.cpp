@@ -24,9 +24,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -46,7 +44,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ReplaceConstant.h"
@@ -7093,168 +7090,6 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
   DeleteDeadBlocks(BBsToDelete);
 }
 
-/// Freeze trip counts and check whether IV increments can keep nsw.
-/// A freeze fixes a value, but KnownBits can infer its range from the input.
-/// Undef uses can choose different values. PHIs with no incoming values yet
-/// cannot justify proofs about their future inputs.
-/// Share results across counts and propagate failures to dependent
-/// instructions.
-class OpenMPIRBuilder::FreezeInputs {
-  // Defined and Undefined classify whether a node can justify nsw, not whether
-  // the instruction's own result can be undef or poison.
-  enum class State { New, Active, Defined, Undefined };
-
-  /// Recorded users and the result of checking dependencies before keeping nsw.
-  struct Node {
-    SmallVector<Instruction *, 2> Users;
-    State Status = State::New;
-  };
-
-  /// One iterative DFS frame, retaining the next operand across child visits.
-  struct Frame {
-    Instruction *Inst;
-    unsigned NextOperand = 0;
-  };
-
-  DenseMap<Instruction *, Node> Cache;
-  // Undef checks and dependency checks for nsw establish different facts.
-  // Reuse undef results for count freezing and freeze-input checks.
-  SmallDenseMap<Value *, bool, 4> DefinedOperands;
-  // Depth is part of the key because exhausting it makes the result unknown.
-  DenseMap<std::pair<Instruction *, unsigned>, bool> UnfinishedPhis;
-
-  /// Check for PHIs whose incoming values have not been connected yet.
-  /// Fail closed at the depth limit, including when vector queries can skip
-  /// intermediate instructions.
-  bool mayHaveUnfinishedPhi(Value *V, unsigned Depth = 0) {
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst || isa<FreezeInst, LoadInst>(Inst))
-      return false;
-    if (auto *Call = dyn_cast<CallBase>(Inst);
-        Call && (Call->hasRetAttr(Attribute::NoUndef) ||
-                 Call->hasRetAttr(Attribute::Dereferenceable) ||
-                 Call->hasRetAttr(Attribute::DereferenceableOrNull)))
-      return false;
-    if (Depth >= MaxAnalysisRecursionDepth)
-      return true;
-    auto Key = std::make_pair(Inst, Depth);
-    if (auto It = UnfinishedPhis.find(Key); It != UnfinishedPhis.end())
-      return It->second;
-    // TODO: Handle masks, returned arguments and unused vector lanes through
-    // ValueTracking support for unfinished PHIs instead of local special cases.
-    bool MayHavePhi =
-        (isa<PHINode>(Inst) && Inst->getNumOperands() == 0) ||
-        any_of(Inst->operand_values(), [&](Value *Operand) {
-          return Operand != Inst && mayHaveUnfinishedPhi(Operand, Depth + 1);
-        });
-    UnfinishedPhis.try_emplace(Key, MayHavePhi);
-    return MayHavePhi;
-  }
-
-  /// Cache whether V is proven free of undef.
-  bool isDefined(Value *V) {
-    auto [It, Inserted] = DefinedOperands.try_emplace(V, false);
-    if (Inserted)
-      It->second = !mayHaveUnfinishedPhi(V) && isGuaranteedNotToBeUndef(V);
-    return It->second;
-  }
-
-  /// Mark this node and its recorded users as unsafe for retaining nsw.
-  /// Follow user edges so a later failure also invalidates results in SSA
-  /// cycles.
-  void reject(Instruction *Inst) {
-    SmallVector<Instruction *, 8> Worklist{Inst};
-    while (!Worklist.empty()) {
-      Node &N = Cache.find(Worklist.pop_back_val())->second;
-      if (N.Status == State::Undefined)
-        continue;
-      N.Status = State::Undefined;
-      Worklist.append(N.Users);
-    }
-  }
-
-  /// Start a dependency check. ValueTracking may treat a PHI with no inputs as
-  /// nonzero, so even a noundef count can have an invalid range proof.
-  bool enter(Instruction *Inst) {
-    Cache.find(Inst)->second.Status = State::Active;
-    if (isa<PHINode>(Inst) && Inst->getNumOperands() == 0) {
-      reject(Inst);
-      return false;
-    }
-    if (auto *Freeze = dyn_cast<FreezeInst>(Inst)) {
-      Value *Input = Freeze->getOperand(0);
-      if (!isDefined(Input)) {
-        reject(Inst);
-        return false;
-      }
-    }
-    return true;
-  }
-
-public:
-  /// Freeze a count unless it is proven free of undef. Record that the new
-  /// freeze cannot justify retaining nsw.
-  Value *freezeCount(Value *Count, IRBuilder<> &Builder) {
-    if (isDefined(Count))
-      return Count;
-    auto *Frozen = cast<FreezeInst>(
-        Builder.CreateFreeze(Count, "omp_collapsed.tripcount"));
-    Cache.try_emplace(Frozen).first->second.Status = State::Undefined;
-    return Frozen;
-  }
-
-  /// Return whether this count is cached as unsafe for retaining nsw.
-  bool isRejected(Value *Count) const {
-    auto *Inst = dyn_cast<Instruction>(Count);
-    if (!Inst)
-      return false;
-    auto It = Cache.find(Inst);
-    return It != Cache.end() && It->second.Status == State::Undefined;
-  }
-
-  /// Check Count's dependencies before keeping nsw. Reject unfinished PHIs and
-  /// freezes whose inputs may be undef. Complete or reject every visited node.
-  bool check(Value *Count) {
-    auto *Root = dyn_cast<Instruction>(Count);
-    if (!Root)
-      return true;
-    auto [It, Inserted] = Cache.try_emplace(Root);
-    if (!Inserted) {
-      assert(It->second.Status != State::Active && "Unfinished freeze proof");
-      return It->second.Status == State::Defined;
-    }
-    if (!enter(Root))
-      return false;
-    SmallVector<Frame, 8> Stack{{Root}};
-    while (!Stack.empty()) {
-      Frame &Current = Stack.back();
-      Instruction *Inst = Current.Inst;
-      if (Current.NextOperand == Inst->getNumOperands()) {
-        Cache.find(Inst)->second.Status = State::Defined;
-        Stack.pop_back();
-        continue;
-      }
-      auto *Input =
-          dyn_cast<Instruction>(Inst->getOperand(Current.NextOperand++));
-      if (!Input)
-        continue;
-      auto [InputIt, NewInput] = Cache.try_emplace(Input);
-      InputIt->second.Users.push_back(Inst);
-      State InputState = InputIt->second.Status;
-      if (InputState == State::Undefined) {
-        reject(Inst);
-        return false;
-      }
-      if (!NewInput)
-        continue;
-      if (!enter(Input))
-        return false;
-      Stack.push_back({Input});
-    }
-    return true;
-  }
-};
-
 /// Physical handles captured before the source descriptors are invalidated.
 struct OpenMPIRBuilder::VirtualRowPlan {
   SmallVector<PHINode *, 4> IndVars;
@@ -7290,8 +7125,7 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
                                                const VirtualRowPlan &Plan,
                                                ArrayRef<Value *> TripCounts,
                                                Value *Begin, Value *Count,
-                                               BasicBlock *Entry,
-                                               FreezeInputs &Proof) {
+                                               BasicBlock *Entry) {
   DebugLoc DL = Builder.getCurrentDebugLocation();
   BasicBlock *OuterHeader = Plan.IndVars.front()->getParent();
   Type *IVType = Begin->getType();
@@ -7363,22 +7197,11 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   Builder.CreateCondBr(IsFinalRow, Result->getExit(), Latch);
   // Match the retained outer bound to the count used in the total product.
   cast<CmpInst>(&Result->getCond()->front())->setOperand(1, TripCounts.front());
-  SmallDenseMap<Value *, bool, 4> SignedCounts;
-  SimplifyQuery Q = SimplifyQuery(M.getDataLayout()).getWithoutUndef();
-  for (size_t Level = 0; Level < Plan.IndVars.size(); ++Level) {
-    auto *Next = cast<BinaryOperator>(Plan.IndVars[Level]->getIncomingValue(1));
-    if (!Next->hasNoSignedWrap())
-      continue;
-    // Counts are unsigned. Keep nsw only with a signed-range proof that does
-    // not rely on undef uses or unfinished PHI inputs.
-    auto [It, Inserted] = SignedCounts.try_emplace(TripCounts[Level], false);
-    if (Inserted)
-      It->second = !Proof.isRejected(TripCounts[Level]) &&
-                   isKnownNonNegative(TripCounts[Level], Q) &&
-                   Proof.check(TripCounts[Level]);
-    if (!It->second)
-      Next->setHasNoSignedWrap(false);
-  }
+  // Trip counts are unsigned and may exceed the IV's signed range.
+  // FIXME: Preserve nsw when the trip count is known to fit the signed range.
+  for (auto [IV, TripCount] : zip(Plan.IndVars, TripCounts))
+    if (!isa<ConstantInt>(TripCount))
+      cast<BinaryOperator>(IV->getIncomingValue(1))->setHasNoSignedWrap(false);
   Plan.IndVars.front()->setIncomingValue(0, OuterBegin);
   Plan.IndVars.front()->setIncomingBlock(0, Entry);
 }
@@ -7386,7 +7209,7 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
 CanonicalLoopInfo *OpenMPIRBuilder::createVirtualCollapsedLoop(
     DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     const VirtualRowPlan &Plan, ArrayRef<Value *> TripCounts,
-    Value *CollapsedTripCount, FreezeInputs &Proof) {
+    Value *CollapsedTripCount) {
   // Reuse the outer loop's control blocks; the physical nest stays in place.
   LoopInfos.emplace_front();
   CanonicalLoopInfo *Result = &LoopInfos.front();
@@ -7420,8 +7243,7 @@ CanonicalLoopInfo *OpenMPIRBuilder::createVirtualCollapsedLoop(
   // Route the preheader through Init. The executor reconnects the outer IV
   // PHI to the decode block.
   cast<UncondBrInst>(Preheader->getTerminator())->setSuccessor(Init);
-  createVirtualRowExecutor(Result, Plan, TripCounts, Begin, Count, Entry,
-                           Proof);
+  createVirtualRowExecutor(Result, Plan, TripCounts, Begin, Count, Entry);
   // The transformed nest is now represented by Result, not the input loops.
   for (CanonicalLoopInfo *Loop : Loops)
     Loop->invalidate();
@@ -7465,20 +7287,21 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
       Builder.restoreIP(Loops.front()->getPreheaderIP());
     Builder.SetCurrentDebugLocation(DL);
 
-    // Freeze each possibly-undef count once so the product, decoding and
-    // loop bounds all use the same value.
-    FreezeInputs Proof;
+    // Freeze each count once so the product, decoding and bounds agree even
+    // for undef or poison inputs.
     SmallDenseMap<Value *, Value *, 4> Counts;
     for (Value *&TripCount : TripCounts) {
+      if (isa<ConstantInt, FreezeInst>(TripCount))
+        continue;
       auto [It, Inserted] = Counts.try_emplace(TripCount, TripCount);
       if (Inserted)
-        It->second = Proof.freezeCount(TripCount, Builder);
+        It->second = Builder.CreateFreeze(TripCount, "omp_collapsed.tripcount");
       TripCount = It->second;
     }
     Value *CollapsedTripCount =
         Builder.CreateNUWMul(TripCounts.front(), TripCounts.back());
     return createVirtualCollapsedLoop(DL, Loops, Plan, TripCounts,
-                                      CollapsedTripCount, Proof);
+                                      CollapsedTripCount);
   }
 
   CanonicalLoopInfo *Outermost = Loops.front();

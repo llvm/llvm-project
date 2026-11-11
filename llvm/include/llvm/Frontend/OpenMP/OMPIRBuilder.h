@@ -1206,9 +1206,6 @@ private:
   /// Input loop blocks, induction variables, and inner comparison used to
   /// build the Virtual row executor. Collected before modifying the CFG.
   struct VirtualRowPlan;
-
-  /// Freeze trip counts and check when IV increments can keep nsw.
-  class FreezeInputs;
   /// Collect the input loop blocks, induction variables, and inner comparison.
   /// Require direct nesting; reject an indirectbr terminator in the innermost
   /// after block. Report a fatal error before changing IR.
@@ -1219,8 +1216,7 @@ private:
   void createVirtualRowExecutor(CanonicalLoopInfo *Result,
                                 const VirtualRowPlan &Plan,
                                 ArrayRef<Value *> TripCounts, Value *Begin,
-                                Value *Count, BasicBlock *Entry,
-                                FreezeInputs &Proof);
+                                Value *Count, BasicBlock *Entry);
   /// Create a Virtual CanonicalLoopInfo using the outer loop's control blocks.
   /// Initialize Begin/Count for the full nest and skip empty ranges. Build the
   /// executor, then invalidate the input CanonicalLoopInfo objects.
@@ -1228,7 +1224,7 @@ private:
   createVirtualCollapsedLoop(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
                              const VirtualRowPlan &Plan,
                              ArrayRef<Value *> TripCounts,
-                             Value *CollapsedTripCount, FreezeInputs &Proof);
+                             Value *CollapsedTripCount);
   /// Update the Begin and Count copies with the scheduler's range.
   /// Use the scheduler's values unchanged, without validation or clipping.
   void bindCollapsedRange(CanonicalLoopInfo *Loop, Value *Begin, Value *Count);

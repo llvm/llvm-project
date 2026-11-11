@@ -153,7 +153,7 @@ llvm.func @runtime_parallel(%n: i32, %m: i32) {
 
 // Block-argument PHIs get their incoming values after the loop is translated.
 // Reuse one frozen inclusive count in scheduling and the outer comparison.
-// Enable source nsw; retain it only on the constant inner loop.
+// Keep nsw only for the constant inner count.
 // VIRTUAL-LABEL: define void @pending_bound(
 // VIRTUAL: phi i32
 // VIRTUAL: [[RAW_COUNT:%[^ ,]+]] = select i1 {{.*}}, i32 0, i32 {{.*}}

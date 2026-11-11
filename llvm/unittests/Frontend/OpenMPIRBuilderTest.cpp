@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -18,7 +19,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -8895,214 +8895,117 @@ createEmptyNest(OpenMPIRBuilder &OMP, OpenMPIRBuilder::LocationDescription Loc,
   return Loops;
 }
 
-TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
-  IRBuilder<>(BB).CreateRetVoid();
-  enum Input {
-    Raw,
-    Shared,
-    Defined,
-    Frozen,
-    ZeroOuter,
-    ZeroInner,
-    UnitInner,
-    SharedInputs,
-    Cyclic,
-    // All following cases use a block-argument PHI.
-    PendingPhi,
-    DefinedPhi,
-    DefinedReturn,
-    PendingSplat,
-    PendingCall,
-    PendingIntrinsic,
-    FrozenZeroMasked,
-    PendingRange,
-    End
-  };
-  for (unsigned Bits : {8u, 32u, 64u})
-    for (unsigned Kind = Raw; Kind != End; ++Kind) {
-      // Keep 8-bit checks for correlated counts; worksharing uses wider IVs.
-      if (Bits == 8 && Kind != Defined && Kind != Frozen)
-        continue;
-      bool ExplicitIP = Bits == 64;
-      SCOPED_TRACE(testing::Message() << Bits << " input=" << Kind);
-      OpenMPIRBuilder OMP(*M);
-      OMP.Config.IsTargetDevice = false;
-      OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
-      OMP.Config.setNoSignedWrap(true);
-      OMP.initialize();
-      auto *Ty = IntegerType::get(Ctx, Bits);
-      auto *Fn = Function::Create(
-          FunctionType::get(Type::getVoidTy(Ctx), {Ty, Ty, Ty}, false),
-          GlobalValue::ExternalLinkage, "runtime", *M);
-      auto *Entry = BasicBlock::Create(Ctx, "entry", Fn);
-      auto *Nest = BasicBlock::Create(Ctx, "nest", Fn);
-      IRBuilder<> B(Entry);
-      auto *Zero = B.getIntN(Bits, 0);
-      auto *One = B.getIntN(Bits, 1);
-      auto *SignedMax = B.getInt(APInt::getSignedMaxValue(Bits));
-      std::array<Value *, 2> Counts{Fn->getArg(0), Fn->getArg(1)};
-      bool FreezeCounts = true;
-      PHINode *Phi = nullptr;
-      Value *Incoming = Fn->getArg(0), *Backedge = nullptr;
-      if (Kind == Defined || Kind == DefinedPhi || Kind == SharedInputs) {
-        Fn->addParamAttr(0, Attribute::NoUndef);
-        Fn->addParamAttr(1, Attribute::NoUndef);
-        FreezeCounts = false;
-      }
-      if (Kind == Shared)
-        Counts[1] = Counts[0];
-      if (Kind == Raw)
-        Counts[1] = B.CreateAnd(Counts[1], SignedMax);
-      if (Kind == Frozen || Kind == Defined) {
-        // Undef uses may differ, so freezing X & (X + 1) need not yield zero.
-        Value *X = Kind == Defined ? static_cast<Value *>(Fn->getArg(1))
-                                   : Fn->getArg(2);
-        auto *Added = B.Insert(BinaryOperator::CreateAdd(X, One));
-        Value *Count =
-            B.CreateFreeze(B.CreateShl(B.CreateAnd(X, Added), Bits - 1));
-        Counts = {Kind == Defined ? Fn->getArg(0) : Count,
-                  Kind == Defined ? Count : B.CreateOr(Count, Zero)};
-        FreezeCounts = false;
-      }
-      if (Kind == SharedInputs) {
-        // Reject the unsafe graph without discarding its shared safe input.
-        Value *Safe = B.CreateAnd(Counts[0], SignedMax);
-        Value *Unsafe = B.CreateXor(Safe, B.CreateFreeze(Fn->getArg(2)));
-        for (unsigned I = 0; I < 128; ++I) {
-          Safe = B.Insert(new FreezeInst(Safe));
-          Unsafe = B.Insert(new FreezeInst(Unsafe));
-        }
-        Counts = {B.CreateAnd(Unsafe, One), B.CreateAnd(Safe, One)};
-      }
-      if (Kind == ZeroOuter)
-        Counts[0] = Zero;
-      if (Kind == ZeroInner || Kind == UnitInner)
-        Counts[1] = Kind == UnitInner ? One : Zero;
-      if (Kind >= PendingPhi || Kind == Cyclic) {
-        if (Kind == Cyclic)
-          Incoming = B.Insert(new FreezeInst(Fn->getArg(2)));
-        auto *Merge = BasicBlock::Create(Ctx, "merge", Fn, Nest);
-        B.CreateBr(Merge);
-        B.SetInsertPoint(Merge);
-        Phi = B.CreatePHI(Ty, 2);
-        Value *Count = Phi;
-        if (Kind == Cyclic) {
-          Backedge = B.CreateFreeze(Phi);
-          Counts = {B.CreateAnd(Phi, SignedMax),
-                    B.CreateAnd(Backedge, SignedMax)};
-          FreezeCounts = false;
-        } else {
-          if (Kind == DefinedPhi)
-            Phi->addIncoming(Incoming, Entry);
-          if (Kind == PendingSplat) {
-            // ValueTracking can skip vector construction when checking a splat.
-            for (unsigned I = 0; I < 2; ++I)
-              Count = B.CreateExtractElement(B.CreateVectorSplat(2, Count),
-                                             B.getInt32(0));
-          } else if (Kind == DefinedReturn || Kind == PendingCall) {
-            auto *Callee =
-                Function::Create(FunctionType::get(Ty, {Ty}, false),
-                                 GlobalValue::ExternalLinkage, "get_count", *M);
-            if (Kind == DefinedReturn)
-              Callee->addRetAttr(Attribute::NoUndef);
-            else
-              Callee->addFnAttr(Attribute::NoCreateUndefOrPoison);
-            Count = B.CreateCall(Callee, {Phi});
-          } else if (Kind == PendingIntrinsic) {
-            Fn->addParamAttr(1, Attribute::NoUndef);
-            Count = B.CreateBinaryIntrinsic(Intrinsic::sshl_sat, Phi,
-                                            Fn->getArg(1));
-          } else if (Kind == PendingRange) {
-            // An empty PHI can give a noundef count a false range proof.
-            // Connecting zero makes this count exceed signed max.
-            Value *Shift = B.CreateBinaryIntrinsic(Intrinsic::umin, Phi,
-                                                   B.getIntN(Bits, Bits - 1));
-            auto *Result = B.CreateIntrinsicWithoutFolding(
-                Intrinsic::umin, {Ty},
-                {B.CreateLShr(B.getInt(APInt::getSignedMinValue(Bits)), Shift),
-                 B.getInt(APInt::getAllOnes(Bits))});
-            Result->addRetAttr(Attribute::NoUndef);
-            Count = Result;
-            Incoming = Zero;
-          } else if (Kind == FrozenZeroMasked) {
-            // Poison passes through a zero mask; freeze can yield any count.
-            Count = B.CreateFreeze(B.CreateAnd(Phi, Zero));
-            Incoming = PoisonValue::get(Ty);
-          } else {
-            Count = B.CreateAdd(Phi, One);
-          }
-          if (Kind == DefinedPhi || Kind == DefinedReturn)
-            Count = B.CreateAnd(Count, SignedMax);
-          if (Kind == DefinedReturn || Kind == FrozenZeroMasked ||
-              Kind == PendingRange)
-            FreezeCounts = false;
-          Counts = {Count, Count};
-          if (Kind == FrozenZeroMasked || Kind == PendingRange)
-            Counts[0] = One;
-        }
-      }
-      BasicBlock *Compute = B.GetInsertBlock();
-      auto ComputeIP = B.CreateBr(Nest)->getIterator();
-      B.SetInsertPoint(Nest);
-      ASSERT_EXPECTED_INIT(
-          auto, Loops, createEmptyNest(OMP, {B.saveIP(), {}}, Bits, Counts));
-      std::array<PHINode *, 2> IVs{cast<PHINode>(Loops[0]->getIndVar()),
-                                   cast<PHINode>(Loops[1]->getIndVar())};
-      auto *OuterCmp = cast<CmpInst>(&Loops[0]->getCond()->front());
-      BasicBlock *ExpectedCompute =
-          ExplicitIP ? Compute : Loops[0]->getPreheader();
-      B.restoreIP(Loops[0]->getAfterIP());
-      if (Kind == Cyclic) {
-        // Rejecting undef must invalidate the previously checked backedge.
-        Phi->addIncoming(Backedge, B.GetInsertBlock());
-        Phi->addIncoming(Incoming, Entry);
-        auto *Exit = BasicBlock::Create(Ctx, "exit", Fn);
-        B.CreateCondBr(B.CreateICmpNE(Fn->getArg(1), Zero), Compute, Exit);
-        B.SetInsertPoint(Exit);
-      }
-      B.CreateRetVoid();
-      auto *Collapsed = OMP.collapseLoops(
-          {}, Loops, ExplicitIP ? ComputeIP : OpenMPIRBuilder::InsertPointTy());
-      auto *Product = cast<BinaryOperator>(Collapsed->getTripCount());
-      EXPECT_TRUE(Product->hasNoUnsignedWrap());
-      // Nonnegative counts can have a product above signed max.
-      if (Kind == DefinedPhi)
-        EXPECT_FALSE(Product->hasNoSignedWrap());
-      EXPECT_EQ(Product->getParent(), ExpectedCompute);
-      // MLIR connects block-argument inputs after translating the loop.
-      if (Phi && Phi->getNumIncomingValues() == 0)
-        Phi->addIncoming(Incoming, Entry);
-      if (Bits != 8)
-        ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop({}, Collapsed,
-                                                    Entry->begin(), false,
-                                                    omp::OMP_SCHEDULE_Static),
-                             Succeeded());
-      for (unsigned Level = 0; Level < 2; ++Level) {
-        Value *Stable = Product->getOperand(Level);
-        if (FreezeCounts && !isa<ConstantInt>(Counts[Level])) {
-          auto *Freeze = dyn_cast<FreezeInst>(Stable);
-          ASSERT_NE(Freeze, nullptr);
-          EXPECT_EQ(Freeze->getOperand(0), Counts[Level]);
-          EXPECT_EQ(Freeze->getParent(), ExpectedCompute);
-          for (User *U : Counts[Level]->users())
-            EXPECT_EQ(U, Freeze);
-        } else {
-          EXPECT_EQ(Stable, Counts[Level]);
-        }
-        auto *Next = cast<BinaryOperator>(IVs[Level]->getIncomingValue(1));
-        EXPECT_TRUE(Next->hasNoUnsignedWrap());
-        EXPECT_EQ(
-            Next->hasNoSignedWrap(),
-            isa<ConstantInt>(Counts[Level]) || Kind == DefinedPhi ||
-                (Level == 1 && (Kind == Defined || Kind == SharedInputs)));
-      }
-      auto *Div = cast<BinaryOperator>(IVs[0]->getIncomingValue(0));
-      EXPECT_EQ(Div->getOperand(1), Product->getOperand(1));
-      EXPECT_EQ(OuterCmp->getOperand(1), Product->getOperand(0));
-      OMP.finalize();
-      ASSERT_FALSE(verifyFunction(*Fn, &errs()));
+/// Check that worksharing preserves frozen counts and unsigned IV increments.
+static void checkVirtualCollapseCounts(BinaryOperator *Product,
+                                       ArrayRef<Value *> Counts,
+                                       ArrayRef<PHINode *> IVs,
+                                       CmpInst *OuterCmp, BasicBlock *Compute) {
+  ASSERT_NE(Product, nullptr);
+  EXPECT_TRUE(Product->hasNoUnsignedWrap());
+  EXPECT_FALSE(Product->hasNoSignedWrap());
+  EXPECT_EQ(Product->getParent(), Compute);
+  for (unsigned Level = 0; Level < 2; ++Level) {
+    Value *Stable = Product->getOperand(Level);
+    if (isa<ConstantInt, FreezeInst>(Counts[Level])) {
+      EXPECT_EQ(Stable, Counts[Level]);
+    } else {
+      auto *Freeze = dyn_cast<FreezeInst>(Stable);
+      ASSERT_NE(Freeze, nullptr);
+      EXPECT_EQ(Freeze->getOperand(0), Counts[Level]);
+      EXPECT_EQ(Freeze->getParent(), Compute);
+      if (Counts[Level]->hasUseList())
+        EXPECT_TRUE(Counts[Level]->hasOneUse());
     }
-  ASSERT_FALSE(verifyModule(*M, &errs()));
+    auto *Next = cast<BinaryOperator>(IVs[Level]->getIncomingValue(1));
+    EXPECT_TRUE(Next->hasNoUnsignedWrap());
+    EXPECT_EQ(Next->hasNoSignedWrap(), isa<ConstantInt>(Counts[Level]));
+  }
+  EXPECT_EQ(Product->getOperand(0) == Product->getOperand(1),
+            Counts[0] == Counts[1]);
+  auto *Div = cast<BinaryOperator>(IVs[0]->getIncomingValue(0));
+  EXPECT_EQ(Div->getOperand(1), Product->getOperand(1));
+  EXPECT_EQ(OuterCmp->getOperand(1), Product->getOperand(0));
+  // Poison trip counts must not bypass their freeze.
+  for (Instruction &I : instructions(Product->getFunction()))
+    for (Value *Operand : I.operands())
+      if (isa<PoisonValue>(Operand))
+        EXPECT_TRUE(&I == Product->getOperand(0) ||
+                    &I == Product->getOperand(1));
+}
+
+/// Build counts before the source nest and check both worksharing IV widths.
+static void runVirtualCollapseCounts(
+    BasicBlock *BB,
+    function_ref<std::array<Value *, 2>(IRBuilder<> &, Function &)>
+        MakeCounts) {
+  IRBuilder<>(BB).CreateRetVoid();
+  Module &M = *BB->getModule();
+  LLVMContext &Ctx = M.getContext();
+  for (unsigned Bits : {32u, 64u}) {
+    SCOPED_TRACE(Bits);
+    OpenMPIRBuilder OMP(M);
+    OMP.Config.IsTargetDevice = false;
+    OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+    OMP.Config.setNoSignedWrap(true);
+    OMP.initialize();
+    auto *Ty = IntegerType::get(Ctx, Bits);
+    auto *Fn = Function::Create(
+        FunctionType::get(Type::getVoidTy(Ctx), {Ty, Ty}, false),
+        GlobalValue::ExternalLinkage, "runtime", M);
+    // Cover the same freezing policy for defined and possibly-undef counts.
+    Fn->addParamAttr(0, Attribute::NoUndef);
+    auto *Entry = BasicBlock::Create(Ctx, "entry", Fn);
+    IRBuilder<> B(Entry);
+    std::array<Value *, 2> Counts = MakeCounts(B, *Fn);
+    ASSERT_EXPECTED_INIT(auto, Loops,
+                         createEmptyNest(OMP, {B.saveIP(), {}}, Bits, Counts));
+    std::array<PHINode *, 2> IVs{cast<PHINode>(Loops[0]->getIndVar()),
+                                 cast<PHINode>(Loops[1]->getIndVar())};
+    auto *OuterCmp = cast<CmpInst>(&Loops[0]->getCond()->front());
+    BasicBlock *Compute = Bits == 64 ? Entry : Loops[0]->getPreheader();
+    B.restoreIP(Loops[0]->getAfterIP());
+    B.CreateRetVoid();
+    auto *Collapsed =
+        OMP.collapseLoops({}, Loops,
+                          Bits == 64 ? Entry->getTerminator()->getIterator()
+                                     : OpenMPIRBuilder::InsertPointTy());
+    auto *Product = dyn_cast<BinaryOperator>(Collapsed->getTripCount());
+    ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop({}, Collapsed, Entry->begin(),
+                                                false,
+                                                omp::OMP_SCHEDULE_Static),
+                         Succeeded());
+    OMP.finalize();
+    ASSERT_NO_FATAL_FAILURE(
+        checkVirtualCollapseCounts(Product, Counts, IVs, OuterCmp, Compute));
+  }
+  ASSERT_FALSE(verifyModule(M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &, Function &Fn) {
+    return std::array<Value *, 2>{Fn.getArg(0), Fn.getArg(1)};
+  });
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseSharedCount) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &, Function &Fn) {
+    return std::array<Value *, 2>{Fn.getArg(1), Fn.getArg(1)};
+  });
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseFrozenCounts) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &B, Function &Fn) {
+    return std::array<Value *, 2>{B.CreateFreeze(Fn.getArg(1)),
+                                  B.CreateFreeze(Fn.getArg(1))};
+  });
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapsePoisonCount) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &, Function &Fn) {
+    Type *Ty = Fn.getArg(0)->getType();
+    return std::array<Value *, 2>{ConstantInt::get(Ty, 0),
+                                  PoisonValue::get(Ty)};
+  });
 }
 
 // Preserve the outer condition and repeated direct edges through scheduling.
@@ -9174,8 +9077,6 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseGuards) {
   B.restoreIP(Outer->getAfterIP());
   B.CreateRetVoid();
   ASSERT_FALSE(verifyModule(*M, &errs()));
-  EXPECT_DEATH_IF_SUPPORTED(OMP.collapseLoops(DL, {Outer, Inner, Inner}, {}),
-                            "Virtual collapse requires two loops");
   // Isolate both direct-nesting edges using valid CFGs.
   for (BasicBlock *From : {Outer->getBody(), Inner->getAfter()}) {
     auto *Br = cast<UncondBrInst>(From->getTerminator());
@@ -9345,16 +9246,23 @@ TEST_P(OpenMPIRBuilderTestWithIVBits, VirtualCollapseAssertOK) {
   OpenMPIRBuilder OMP(*M);
   OMP.Config.IsTargetDevice = false;
   OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.Config.setNoSignedWrap(true);
   OMP.initialize();
   IRBuilder<> B(BB);
   B.SetCurrentDebugLocation(DL);
   auto *Ty = IntegerType::get(Ctx, Bits);
-  std::array<Value *, 2> Counts{B.CreateZExtOrTrunc(F->getArg(0), Ty),
-                                ConstantInt::get(Ty, 5)};
+  Value *Incoming = B.CreateZExtOrTrunc(F->getArg(0), Ty);
+  auto *Merge = BasicBlock::Create(Ctx, "merge", F);
+  B.CreateBr(Merge);
+  B.SetInsertPoint(Merge);
+  auto *Phi = B.CreatePHI(Ty, 1);
+  std::array<Value *, 2> Counts{Phi, ConstantInt::get(Ty, 5)};
   ASSERT_EXPECTED_INIT(auto, Loops,
                        createEmptyNest(OMP, {B.saveIP(), DL}, Bits, Counts));
   auto [Outer, Inner] = Loops;
-  auto ComputeIP = Outer->getPreheaderIP();
+  auto *OuterNext = cast<BinaryOperator>(&Outer->getLatch()->front());
+  auto *InnerNext = cast<BinaryOperator>(&Inner->getLatch()->front());
+  auto ComputeIP = Merge->getTerminator()->getIterator();
   ComputeIP->setDebugLoc(DL);
   B.restoreIP(Outer->getAfterIP());
   B.CreateRetVoid();
@@ -9364,9 +9272,21 @@ TEST_P(OpenMPIRBuilderTestWithIVBits, VirtualCollapseAssertOK) {
   auto *Collapsed = OMP.collapseLoops(
       CollapseDL, {Outer, Inner},
       Bits == 64 ? ComputeIP : OpenMPIRBuilder::InsertPointTy());
+  // MLIR connects block-argument inputs after translating the loop.
+  Phi->addIncoming(Incoming, BB);
+  EXPECT_FALSE(OuterNext->hasNoSignedWrap());
+  EXPECT_TRUE(InnerNext->hasNoSignedWrap());
+  auto *Product = cast<BinaryOperator>(Collapsed->getTripCount());
+  auto *Frozen = dyn_cast<FreezeInst>(Product->getOperand(0));
+  ASSERT_NE(Frozen, nullptr);
+  EXPECT_EQ(Frozen->getOperand(0), Phi);
+  EXPECT_TRUE(Phi->hasOneUse());
+  EXPECT_EQ(Product->getOperand(1), Counts[1]);
+  EXPECT_EQ(Product->getParent(),
+            Bits == 64 ? Merge : Collapsed->getPreheader());
+  EXPECT_EQ(Frozen->getParent(), Product->getParent());
   EXPECT_EQ(ComputeIP->getDebugLoc(), DL);
-  EXPECT_EQ(cast<Instruction>(Collapsed->getTripCount())->getDebugLoc(),
-            CollapseDL);
+  EXPECT_EQ(Product->getDebugLoc(), CollapseDL);
   unsigned Checked = 0;
   for (Instruction &I : instructions(F))
     if (I.getName().starts_with("omp_collapsed.") ||
