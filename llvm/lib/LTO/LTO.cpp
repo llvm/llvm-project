@@ -734,6 +734,27 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
 
     auto &GlobalRes = (*GlobalResolutions)[SymbolName];
     GlobalRes.UnnamedAddr &= Sym.isUnnamedAddr();
+
+    // In rare occasion, the symbol used to initialize GlobalRes has a different
+    // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
+    // symbol is referenced through its mangled name, say @"\01_symbol" while
+    // the IRName is @symbol (the prefix underscore comes from MachO mangling).
+    // In that case, we have the same actual Symbol that can get two different
+    // GUID, leading to some invalid internalization. Workaround this by marking
+    // the GlobalRes external.
+    // Do this check before the IRName is rewritten below, otherwise it'll miss
+    // the case where a prevailing symbol comes first.
+
+    // FIXME: instead of this check, it would be desirable to compute GUIDs
+    // based on mangled name, but this requires an access to the Target Triple
+    // and would be relatively invasive on the codebase.
+    // FIXME: use the GUID member of GlobalRes.
+    if ((GlobalRes.Prevailing || !GlobalRes.IRName.empty()) &&
+        GlobalRes.IRName != Sym.getIRName()) {
+      GlobalRes.Partition = GlobalResolution::External;
+      GlobalRes.VisibleOutsideSummary = true;
+    }
+
     if (Res.Prevailing) {
       assert(!GlobalRes.Prevailing &&
              "Multiple prevailing defs are not allowed");
@@ -747,23 +768,6 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       // Otherwise, if we haven't seen a prevailing symbol, set the name so that
       // we can later use it to check if there is any prevailing copy in IR.
       GlobalRes.IRName = std::string(Sym.getIRName());
-    }
-
-    // In rare occasion, the symbol used to initialize GlobalRes has a different
-    // IRName from the inspected Symbol. This can happen on macOS + iOS, when a
-    // symbol is referenced through its mangled name, say @"\01_symbol" while
-    // the IRName is @symbol (the prefix underscore comes from MachO mangling).
-    // In that case, we have the same actual Symbol that can get two different
-    // GUID, leading to some invalid internalization. Workaround this by marking
-    // the GlobalRes external.
-
-    // FIXME: instead of this check, it would be desirable to compute GUIDs
-    // based on mangled name, but this requires an access to the Target Triple
-    // and would be relatively invasive on the codebase.
-    // FIXME: use the GUID member of GlobalRes.
-    if (GlobalRes.IRName != Sym.getIRName()) {
-      GlobalRes.Partition = GlobalResolution::External;
-      GlobalRes.VisibleOutsideSummary = true;
     }
 
     bool IsLibcall = Sym.isLibcall(TLI, Libcalls);

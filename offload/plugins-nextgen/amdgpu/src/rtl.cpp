@@ -36,7 +36,6 @@
 #include "OffloadAPI.h"
 #include "PluginInterface.h"
 #include "UtilitiesRTL.h"
-#include "omptarget.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -710,11 +709,11 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, void *HstPtr, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocation callback that will be called by the memory manager.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     return MemoryPool->deallocate(TgtPtr);
   }
 
@@ -2965,26 +2964,27 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+  Expected<void *> allocate(size_t Size, void *, ol_alloc_type_t Kind,
                             size_t Alignment) override;
 
   /// Deallocate memory on the device or related to the device.
-  Error free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, ol_alloc_type_t Kind) override {
     if (TgtPtr == nullptr)
       return Plugin::success();
 
     AMDGPUMemoryPoolTy *MemoryPool = nullptr;
     switch (Kind) {
-    case TARGET_ALLOC_DEFAULT:
-    case TARGET_ALLOC_DEVICE:
+    case OL_ALLOC_TYPE_DEVICE:
       MemoryPool = CoarseGrainedMemoryPools[0];
       break;
-    case TARGET_ALLOC_HOST:
+    case OL_ALLOC_TYPE_HOST:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
-    case TARGET_ALLOC_SHARED:
+    case OL_ALLOC_TYPE_MANAGED:
       MemoryPool = &HostDevice.getFineGrainedMemoryPool();
       break;
+    default:
+      llvm_unreachable("unexpected allocation type");
     }
 
     if (!MemoryPool)
@@ -2993,7 +2993,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // See allocate() for the registration of host / shared memory as pinned
     // memory.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == OL_ALLOC_TYPE_HOST || Kind == OL_ALLOC_TYPE_MANAGED)
       if (auto Err = PinnedAllocs.unregisterHostBuffer(TgtPtr))
         return Err;
 
@@ -4258,7 +4258,7 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   }
 
   void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
-                       TargetAllocTy Kind) override {
+                       ol_alloc_type_t Kind) override {
     std::lock_guard<std::mutex> Lock(AllocationsMutex);
     Allocations[Ptr] = {Kind, &Device};
   }
@@ -4273,9 +4273,9 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
 private:
   // Track each allocation's Kind so we can tell HOST from SHARED — HSA
   // backs both with the same host fine-grained pool.
-  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
+  // TODO: drop once OL_ALLOC_TYPE_MANAGED has its own backing pool.
   struct AllocInfo {
-    TargetAllocTy Kind;
+    ol_alloc_type_t Kind;
     GenericDeviceTy *Device;
   };
   llvm::DenseMap<const void *, AllocInfo> Allocations;
@@ -4813,7 +4813,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 }
 
 Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
-                                                 TargetAllocTy Kind,
+                                                 ol_alloc_type_t Kind,
                                                  size_t Alignment) {
   // Allocate memory from the pool.
   void *Ptr = nullptr;
@@ -4835,7 +4835,7 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
 }
 
 Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
-                                          TargetAllocTy Kind,
+                                          ol_alloc_type_t Kind,
                                           size_t Alignment) {
   if (Size == 0)
     return nullptr;
@@ -4843,16 +4843,17 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
   // Find the correct memory pool.
   AMDGPUMemoryPoolTy *MemoryPool = nullptr;
   switch (Kind) {
-  case TARGET_ALLOC_DEFAULT:
-  case TARGET_ALLOC_DEVICE:
+  case OL_ALLOC_TYPE_DEVICE:
     MemoryPool = CoarseGrainedMemoryPools[0];
     break;
-  case TARGET_ALLOC_HOST:
+  case OL_ALLOC_TYPE_HOST:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
-  case TARGET_ALLOC_SHARED:
+  case OL_ALLOC_TYPE_MANAGED:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
+  default:
+    llvm_unreachable("unexpected allocation type");
   }
 
   if (!MemoryPool)
@@ -4880,7 +4881,7 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 
     // Register host / shared memory as pinned memory, so that transfers reading
     // from it can take a device-accessible path.
-    if (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)
+    if (Kind == OL_ALLOC_TYPE_HOST || Kind == OL_ALLOC_TYPE_MANAGED)
       if (auto Err = PinnedAllocs.registerHostBuffer(Alloc, Alloc, Size))
         return std::move(Err);
   }

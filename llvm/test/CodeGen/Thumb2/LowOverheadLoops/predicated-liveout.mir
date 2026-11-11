@@ -54,7 +54,6 @@
 ---
 name:            predicated_livout
 alignment:       2
-tracksRegLiveness: true
 registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
