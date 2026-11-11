@@ -61,17 +61,19 @@ int addit(float a, float b) {
   v = b + __arithmetic_fence(a*a); // Fence blocks recognition of FMA
   // CHECKPP: fmul
   // CHECKNP: fmul
+  // CHECKFAST-NEXT: call{{.*}} float @llvm.arithmetic.fence.f32
+  // CHECKFAST-NEXT: fadd
 
   b = (a);
   (a) = b;
-  // CHECK-NEXT fptosi
-  // CHECK-NEXT store i32
-  // CHECK-NEXT load float
-  // CHECK-NEXT store float
-  // CHECK-NEXT load float
-  // CHECK-NEXT store float
+  // CHECKFAST-NEXT: fptosi
+  // CHECKFAST-NEXT: store i32
+  // CHECKFAST-NEXT: load float
+  // CHECKFAST-NEXT: store float
+  // CHECKFAST-NEXT: load float
+  // CHECKFAST-NEXT: store float
   return 0;
-  // CHECK-NEXT ret i32 0
+  // CHECKFAST-NEXT: ret i32 0
 }
 int addit1(int a, int b) {
   // CHECK: define {{.*}}@addit1(i32 noundef %a, i32 noundef %b{{.*}}

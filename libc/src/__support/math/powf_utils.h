@@ -21,15 +21,14 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/nearest_integer.h"
-#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
-#include "src/__support/math/common_constants.h"
 
 #if defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) ||                                  \
     !defined(LIBC_MATH_HAS_SMALL_TABLES)
@@ -47,7 +46,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace powf_internal {
 
-using fputil::DoubleDouble;
 using fputil::FloatFloat;
 using fputil::TripleDouble;
 
@@ -326,73 +324,6 @@ constexpr uint32_t Y_UPPER_BOUND = 0x4ecf'f1b4;
 // 0x2f5a740d
 constexpr uint32_t Y_LOWER_BOUND = 0x2f5a'740d;
 
-// Check if x is an odd integer: the lowest set bit must be at the unit
-// position:
-//   x_e + lsb == UNIT_EXPONENT.
-LIBC_INLINE bool is_odd_integer(float x) {
-  using FPBits = fputil::FPBits<float>;
-  FPBits xbits(x);
-  uint32_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb =
-      static_cast<unsigned>(cpp::countr_zero(x_u | FPBits::EXP_MASK));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return (x_e + lsb == UNIT_EXPONENT);
-}
-
-// Check if x is an integer: the lowest set bit must be at or above the unit
-// position:
-//   x_e + lsb >= UNIT_EXPONENT.
-LIBC_INLINE bool is_integer(float x) {
-  if (x == 0.0f)
-    return true;
-  using FPBits = fputil::FPBits<float>;
-  FPBits xbits(x);
-  uint32_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb =
-      static_cast<unsigned>(cpp::countr_zero(x_u | FPBits::EXP_MASK));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return (x_e + lsb >= UNIT_EXPONENT);
-}
-
-LIBC_INLINE float set_overflow(Sign sign = Sign::POS) {
-  fputil::set_errno_if_required(ERANGE);
-  fputil::raise_overflow_except_if_required<float>();
-  using FPBits = fputil::FPBits<float>;
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-  int rounding = fputil::quick_get_round();
-  if (rounding == FE_TOWARDZERO)
-    return FPBits::max_normal(sign).get_val();
-  if (rounding == FE_DOWNWARD)
-    return sign.is_neg() ? FPBits::inf(Sign::NEG).get_val()
-                         : FPBits::max_normal(Sign::POS).get_val();
-  if (rounding == FE_UPWARD)
-    return sign.is_neg() ? FPBits::max_normal(Sign::NEG).get_val()
-                         : FPBits::inf(Sign::POS).get_val();
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-  return sign.is_neg() ? FPBits::inf(Sign::NEG).get_val()
-                       : FPBits::inf(Sign::POS).get_val();
-}
-
-LIBC_INLINE float set_underflow(Sign sign = Sign::POS) {
-  fputil::set_errno_if_required(ERANGE);
-  fputil::raise_underflow_except_if_required<float>();
-
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-  using FPBits = fputil::FPBits<float>;
-  int rounding = fputil::quick_get_round();
-  if (rounding == FE_UPWARD && sign.is_pos())
-    return FPBits::min_subnormal(Sign::POS).get_val();
-  if (rounding == FE_DOWNWARD && sign.is_neg())
-    return FPBits::min_subnormal(Sign::NEG).get_val();
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-
-  return sign.is_neg() ? -0.0f : 0.0f;
-}
-
 // Fast checks for special inputs:
 //   x = 0, +-1, 2^k, 10, +- Inf
 //   y = 0, +-1, 2, 0.5
@@ -420,7 +351,7 @@ LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
       return y;
     if (y_abs.is_inf())
       return y_sign ? FPBits::inf().get_val() : 0.0f;
-    bool out_is_neg = x_sign && is_odd_integer(y);
+    bool out_is_neg = x_sign && fputil::is_odd_integer(y);
     if (y_sign) {
       // pow(0, negative number) = Inf
       fputil::set_errno_if_required(EDOM);
@@ -449,16 +380,17 @@ LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
   uint32_t y_a = y_abs.uintval();
   if (x_abs.is_normal() && xbits.get_mantissa() == 0 && y_a > Y_LOWER_BOUND &&
       y_a < Y_UPPER_BOUND) {
-    if (!x_sign || is_integer(y)) {
-      Sign out_sign = (x_sign && is_odd_integer(y)) ? Sign::NEG : Sign::POS;
+    if (!x_sign || fputil::is_integer(y)) {
+      Sign out_sign =
+          (x_sign && fputil::is_odd_integer(y)) ? Sign::NEG : Sign::POS;
       int e_x = xbits.get_exponent();
       double ey = static_cast<double>(e_x) * static_cast<double>(y);
       double ey_int = fputil::nearest_integer(ey);
       if (ey_int == ey) {
         if (ey > 127.0)
-          return set_overflow(out_sign);
+          return fputil::set_overflow<float>(out_sign);
         if (ey < -149.0)
-          return set_underflow(out_sign);
+          return fputil::set_underflow<float>(out_sign);
         int k = static_cast<int>(ey);
         if (k >= -126)
           return FPBits::create_value(out_sign, static_cast<uint32_t>(k + 127),
@@ -486,9 +418,9 @@ LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
     if (cpp::has_single_bit(abs_e)) {
       float hi = static_cast<float>(e_x) * y;
       if (hi >= 128.0f)
-        return set_overflow();
+        return fputil::set_overflow<float>();
       if (hi < -150.0f)
-        return set_underflow();
+        return fputil::set_underflow<float>();
       if (hi >= -126.0f)
         return math::exp2f(hi);
     }
@@ -540,7 +472,8 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
     if (y_abs.is_inf() || x_a == FloatBits::inf().uintval())
       return is_overflow ? FloatBits::inf().get_val() : 0.0f;
 
-    return is_overflow ? set_overflow() : set_underflow();
+    return is_overflow ? fputil::set_overflow<float>()
+                       : fputil::set_underflow<float>();
   }
 
   // y is finite and non-zero.
@@ -555,8 +488,8 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
   //   in real numbers; raises FE_INVALID, sets errno to EDOM, and returns
   //   quiet NaN.
   if (x_sign) {
-    if (is_integer(y)) {
-      if (is_odd_integer(y)) {
+    if (fputil::is_integer(y)) {
+      if (fputil::is_odd_integer(y)) {
         if constexpr (sizeof(SignType) == 8)
           sign = 0x8000'0000'0000'0000ULL;
         else
@@ -607,6 +540,19 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
   // Normalize denormal inputs.
   if (x_a < FloatBits::min_normal().uintval()) {
     int shift = cpp::countl_zero(x_a) - 8;
+#ifdef LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+    if (!y_sign &&
+        static_cast<double>(y) * static_cast<double>(125 + shift) >= 150.0)
+      return fputil::set_underflow<float>(sign == 0 ? Sign::POS : Sign::NEG);
+#else
+    uint32_t log2_bound = static_cast<uint32_t>(125 + shift);
+    if (!y_sign &&
+        (y_a >= 0x4000'0000U || (y_a >= FloatBits::one().uintval() &&
+                                 (y_a - 0x3f00'0000U) * log2_bound >=
+                                     (150U << FloatBits::FRACTION_LEN))))
+      return fputil::set_underflow<float>(sign == 0 ? Sign::POS : Sign::NEG);
+#endif
+
     ex -= shift;
     x = cpp::bit_cast<float>(x_a << shift);
   }

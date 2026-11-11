@@ -12,7 +12,7 @@ define void @fold_add_zext_to_sext(ptr %dst, i1 %start) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i32 [[START_EXT]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 100, [[TMP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP3]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 range(i64 0, 101) [[TMP3]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START_EXT]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

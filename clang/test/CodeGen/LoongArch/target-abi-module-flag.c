@@ -5,6 +5,11 @@
 // RUN: %clang_cc1 -triple loongarch32 -emit-llvm -o - %s | FileCheck --check-prefix=ILP32D %s
 // RUN: %clang_cc1 -triple loongarch64 -emit-llvm -o - %s | FileCheck --check-prefix=LP64D %s
 
+// The driver's default for a triple without an environment follows the
+// architecture's FPU, which the 32-bit architectures lack.
+// RUN: %clang --target=loongarch32-unknown-none-elf -S -emit-llvm -o - %s | FileCheck --check-prefix=ILP32S %s
+// RUN: %clang --target=loongarch64-unknown-none-elf -S -emit-llvm -o - %s | FileCheck --check-prefix=LP64D %s
+
 // Explicit -target-abi overrides differing from the triple default.
 // RUN: %clang_cc1 -triple loongarch32 -target-abi ilp32f -emit-llvm -o - %s | FileCheck --check-prefix=ILP32F %s
 // RUN: %clang_cc1 -triple loongarch32 -target-abi ilp32s -emit-llvm -o - %s | FileCheck --check-prefix=ILP32S %s

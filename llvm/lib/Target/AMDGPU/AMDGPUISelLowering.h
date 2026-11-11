@@ -45,6 +45,15 @@ public:
   /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
+  /// \returns The known bits of a 24-bit multiply (MUL_U24/MUL_I24) with a
+  /// \p BitWidth wide result, given the known bits of its operands. Only the
+  /// low 24 bits of each operand are used, zero- or sign-extended depending on
+  /// \p IsSigned.
+  static KnownBits computeKnownBitsForMul24(const KnownBits &LHSKnown,
+                                            const KnownBits &RHSKnown,
+                                            unsigned BitWidth, bool IsSigned,
+                                            bool SelfMultiply);
+
 protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -111,7 +120,6 @@ protected:
   /// Check whether value Val can be supported by v_mov_b64, for the current
   /// target.
   bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
-  bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAssertSZExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -229,6 +237,7 @@ public:
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
+  bool shouldCombineMemoryType(EVT VT) const;
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,
                                     unsigned NumElem,

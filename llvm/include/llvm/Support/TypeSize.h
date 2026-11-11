@@ -321,6 +321,10 @@ public:
   constexpr bool isVector() const {
     return (isScalable() && getKnownMinValue() != 0) || getKnownMinValue() > 1;
   }
+  constexpr bool isPowerOf2() const {
+    // VScale is a power of two, which just leaves the known minimum to test.
+    return isPowerOf2_32(getKnownMinValue());
+  }
 };
 
 inline hash_code hash_value(const ElementCount &EC) {
@@ -337,6 +341,10 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
 public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
+
+  // ElementCount is just a TypeSize with reduced range.
+  explicit constexpr TypeSize(const ElementCount &EC)
+      : FixedOrScalableQuantity(EC.getKnownMinValue(), EC.isScalable()) {}
 
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);

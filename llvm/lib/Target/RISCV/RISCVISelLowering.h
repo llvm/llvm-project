@@ -64,6 +64,8 @@ public:
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                              bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, LLT Ty,
+                             bool ForCodeSize) const override;
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 
@@ -242,6 +244,8 @@ public:
   unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const override;
 
   bool preferZeroCompareBranch() const override { return true; }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override;
 
   // Note that one specific case requires fence insertion for an
   // AtomicCmpXchgInst but is handled via the RISCVZacasABIFix pass rather

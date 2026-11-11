@@ -27,7 +27,7 @@ define void @call(ptr %obj) {
   br i1 %p, label %cont, label %trap
 
 cont:
-  ; CHECK: [[GEP:%[^ ]*]] = getelementptr i8, ptr [[VT]], i32 0
+  ; CHECK: [[GEP:%[^ ]*]] = getelementptr i8, ptr [[VT]], i64 0
   ; CHECK: [[LOAD:%[^ ]*]] = load ptr, ptr [[GEP]]
   ; CHECK: call void [[LOAD]]
   %fptr = extractvalue {ptr, i1} %pair, 0
@@ -41,7 +41,7 @@ trap:
 
 ; CHECK: define { ptr, i1 } @ret
 define {ptr, i1} @ret(ptr %vtablei8) {
-  ; CHECK: [[GEP2:%[^ ]*]] = getelementptr i8, ptr [[VT2:%[^,]*]], i32 1
+  ; CHECK: [[GEP2:%[^ ]*]] = getelementptr i8, ptr [[VT2:%[^,]*]], i64 1
   ; CHECK: [[LOAD2:%[^ ]*]] = load ptr, ptr [[GEP2]]
   ; CHECK: [[TT2:%[^ ]*]] = call i1 @llvm.type.test(ptr %vtablei8, metadata !"typeid")
   ; CHECK: [[I1:%[^ ]*]] = insertvalue { ptr, i1 } poison, ptr [[LOAD2]], 0

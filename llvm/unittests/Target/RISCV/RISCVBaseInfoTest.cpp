@@ -49,36 +49,36 @@ std::string computeTargetABIError(StringRef TripleName, StringRef FeatureStr,
 }
 
 TEST(ComputeTargetABI, SelectsExpectedABI) {
-  EXPECT_EQ(computeTargetABI("riscv32", ""), RISCVABI::ABI_ILP32);
-  EXPECT_EQ(computeTargetABI("riscv32", "+f"), RISCVABI::ABI_ILP32F);
-  EXPECT_EQ(computeTargetABI("riscv32", "+f,+d"), RISCVABI::ABI_ILP32D);
-  EXPECT_EQ(computeTargetABI("riscv64", ""), RISCVABI::ABI_LP64);
-  EXPECT_EQ(computeTargetABI("riscv64", "+f"), RISCVABI::ABI_LP64F);
-  EXPECT_EQ(computeTargetABI("riscv64", "+f,+d"), RISCVABI::ABI_LP64D);
+  EXPECT_EQ(computeTargetABI("riscv32", ""), RISCVABI::ABI::ILP32);
+  EXPECT_EQ(computeTargetABI("riscv32", "+f"), RISCVABI::ABI::ILP32F);
+  EXPECT_EQ(computeTargetABI("riscv32", "+f,+d"), RISCVABI::ABI::ILP32D);
+  EXPECT_EQ(computeTargetABI("riscv64", ""), RISCVABI::ABI::LP64);
+  EXPECT_EQ(computeTargetABI("riscv64", "+f"), RISCVABI::ABI::LP64F);
+  EXPECT_EQ(computeTargetABI("riscv64", "+f,+d"), RISCVABI::ABI::LP64D);
 
   // RVY targets default to the capability ABI.
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y"),
-            RISCVABI::ABI_IL32PC64);
+            RISCVABI::ABI::IL32PC64);
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y,+f"),
-            RISCVABI::ABI_IL32PC64F);
+            RISCVABI::ABI::IL32PC64F);
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y,+f,+d"),
-            RISCVABI::ABI_IL32PC64D);
+            RISCVABI::ABI::IL32PC64D);
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y"),
-            RISCVABI::ABI_L64PC128);
+            RISCVABI::ABI::L64PC128);
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f"),
-            RISCVABI::ABI_L64PC128F);
+            RISCVABI::ABI::L64PC128F);
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d"),
-            RISCVABI::ABI_L64PC128D);
+            RISCVABI::ABI::L64PC128D);
 
   // An explicit ABI overrides the default.
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y", /*ABIName=*/"ilp32"),
-            RISCVABI::ABI_ILP32);
+            RISCVABI::ABI::ILP32);
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d",
                              /*ABIName=*/"lp64d"),
-            RISCVABI::ABI_LP64D);
+            RISCVABI::ABI::LP64D);
 
   // CHERIoT always selects the cheriot ABI by default.
-  EXPECT_EQ(computeTargetABI("riscv32", "+xcheriot"), RISCVABI::ABI_CHERIOT);
+  EXPECT_EQ(computeTargetABI("riscv32", "+xcheriot"), RISCVABI::ABI::CHERIOT);
 }
 
 TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {

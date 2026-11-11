@@ -939,12 +939,11 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   addr_t dtv_slot = dtv + metadata.dtv_slot_size * modid;
   addr_t tls_block = ReadPointer(dtv_slot + metadata.tls_offset);
 
-  LLDB_LOGF(log,
-            "DynamicLoaderPOSIXDYLD::Performed TLS lookup: "
-            "module=%s, link_map=0x%" PRIx64 ", tp=0x%" PRIx64
-            ", modid=%" PRId64 ", tls_block=0x%" PRIx64 "\n",
-            module_sp->GetObjectName().AsCString(""), link_map, tp,
-            (int64_t)modid, tls_block);
+  LLDB_LOG(log,
+           "DynamicLoaderPOSIXDYLD::Performed TLS lookup: "
+           "module={0}, link_map=0x{1:x}, tp=0x{2:x}, modid={3}, "
+           "tls_block=0x{4:x}\n",
+           module_sp->GetObjectName(), link_map, tp, (int64_t)modid, tls_block);
 
   if (tls_block == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read tls_block");

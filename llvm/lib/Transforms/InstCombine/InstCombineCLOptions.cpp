@@ -7,10 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineCLOptions.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Option/LibraryOptions.h"
 
 #define OPTIONS_STRUCT_DEFS
 #include "InstCombineCLOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::InstCombineCLOptions>
-    Registration;
+using namespace llvm;
+
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::InstCombineCLOptions)
+
+const InstCombineCLOptions &llvm::getInstCombineCLOptions(const Function &F) {
+  return F.getContext().getLibraryOptions().get<InstCombineCLOptions>();
+}

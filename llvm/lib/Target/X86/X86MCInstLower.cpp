@@ -2794,7 +2794,7 @@ void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
   // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
   // (Don't let the name fool you: Itanium refers to table-based exception
   // handling, not the Itanium architecture.)
-  if (MAI.getExceptionHandlingType() != ExceptionHandling::WinEH ||
+  if (getModuleExceptionModel() != ExceptionHandling::WinEH ||
       MAI.getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
     return;
   }

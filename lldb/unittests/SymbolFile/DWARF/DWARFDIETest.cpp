@@ -200,6 +200,59 @@ DWARF:
   EXPECT_EQ(unit->PeekDIEName(fifth_die_offset), "NameType2");
 }
 
+TEST(DWARFDIETest, UnterminatedStrp) {
+  // .debug_str is "cu\0AAA" with no terminator after "AAA".
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+    Content:         '637500414141'
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x0000000000000003
+        - AbbrCode:        0x00000000
+)";
+
+  YAMLModuleTester t(yamldata);
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_TRUE(unit);
+
+  DWARFDIE cu_die = unit->DIE();
+  EXPECT_STREQ(cu_die.GetName(), "cu");
+
+  DWARFDIE subprogram_die = cu_die.GetFirstChild();
+  ASSERT_TRUE(subprogram_die);
+  EXPECT_EQ(subprogram_die.GetName(), nullptr);
+}
+
 TEST(DWARFDIETest, GetContext) {
   const char *yamldata = R"(
 --- !ELF

@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=mipsel-unknown-linux-gnu -mattr=+micromips -mcpu=mips32r2 \
-# RUN:     -verify-machineinstrs -run-pass micromips-reduce-size \
+# RUN:     -run-pass mips-micromips-reduce-size \
 # RUN:      %s -o - | FileCheck %s
 
 --- |
@@ -24,7 +24,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
@@ -92,7 +91,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
@@ -160,7 +158,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }
@@ -228,7 +225,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$r4', virtual-reg: '' }

@@ -2,6 +2,7 @@
 # RUN: llvm-objdump --offloading %t 2>&1 | FileCheck -DFILENAME=%t %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACE
   cputype:    0x00000007

@@ -905,6 +905,7 @@ bool DeclSpec::SetTypePipe(bool isPipe, SourceLocation Loc,
 
   if (isPipe) {
     TypeSpecPipe = static_cast<unsigned>(TypeSpecifiersPipe::Pipe);
+    TQ_pipeLoc = Loc;
   }
   return false;
 }
@@ -1379,6 +1380,13 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   // _Thread_local can only appear with the 'static' and 'extern' storage class
   // specifiers. We also allow __private_extern__ as an extension.
   if (ThreadStorageClassSpec != TSCS_unspecified) {
+    if (S.getLangOpts().C23 &&
+        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
+    }
+
     switch (StorageClassSpec) {
     case SCS_unspecified:
     case SCS_extern:
@@ -1400,12 +1408,6 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       // Discard the thread storage class specifier to recover.
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
-    }
-    if (S.getLangOpts().C23 &&
-        getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
-      S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
-          << SourceRange(getThreadStorageClassSpecLoc());
     }
   }
 

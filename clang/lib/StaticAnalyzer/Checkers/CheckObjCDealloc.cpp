@@ -739,7 +739,7 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
     return false;
   }
 
-  ExplodedNode *ErrNode = C.generateErrorNode();
+  ExplodedNode *ErrNode = C.addSink();
   if (!ErrNode)
     return false;
 

@@ -26,7 +26,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdint>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -46,7 +45,7 @@ bool PhysicalRegisterUsageInfo::doInitialization(Module &M) {
 }
 
 bool PhysicalRegisterUsageInfo::doFinalization(Module &M) {
-  if (M.getContext().getLibraryOptions().get<CodeGenOptions>().print_regusage)
+  if (getCodeGenOptions(M).print_regusage)
     print(errs());
 
   RegMasks.shrink_and_clear();

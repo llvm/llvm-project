@@ -1484,7 +1484,7 @@ define half @fdiv_pow_shl_cnt_in_bounds(i16 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    shll $10, %edi
 ; CHECK-SSE-NEXT:    movl $28672, %eax # imm = 0x7000
 ; CHECK-SSE-NEXT:    subl %edi, %eax
-; CHECK-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_in_bounds:
@@ -1492,7 +1492,7 @@ define half @fdiv_pow_shl_cnt_in_bounds(i16 %cnt) nounwind {
 ; CHECK-AVX-NEXT:    shll $10, %edi
 ; CHECK-AVX-NEXT:    movl $28672, %eax # imm = 0x7000
 ; CHECK-AVX-NEXT:    subl %edi, %eax
-; CHECK-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i16 1, %cnt
   %conv = uitofp i16 %shl to half
@@ -1506,7 +1506,7 @@ define half @fdiv_pow_shl_cnt_in_bounds2(i16 %cnt) nounwind {
 ; CHECK-SSE-NEXT:    shll $10, %edi
 ; CHECK-SSE-NEXT:    movl $18432, %eax # imm = 0x4800
 ; CHECK-SSE-NEXT:    subl %edi, %eax
-; CHECK-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt_in_bounds2:
@@ -1514,7 +1514,7 @@ define half @fdiv_pow_shl_cnt_in_bounds2(i16 %cnt) nounwind {
 ; CHECK-AVX-NEXT:    shll $10, %edi
 ; CHECK-AVX-NEXT:    movl $18432, %eax # imm = 0x4800
 ; CHECK-AVX-NEXT:    subl %edi, %eax
-; CHECK-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
 ; CHECK-AVX-NEXT:    retq
   %shl = shl nuw i16 1, %cnt
   %conv = uitofp i16 %shl to half

@@ -99,6 +99,11 @@ public:
   MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;
 
+  bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                        const MachineFunction &MF) const override;
+
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
+
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
@@ -121,6 +126,7 @@ public:
                           const AttributeList &FuncAttributes) const override;
   bool isTruncateFree(Type *, Type *) const override;
   bool isTruncateFree(EVT, EVT) const override;
+  bool isTypeDesirableForOp(SDNode *N, EVT VT) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
@@ -353,8 +359,8 @@ private:
   SDValue lowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_LDST_I128(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerATOMIC_LOAD_OP(SDValue Op, SelectionDAG &DAG,
-                              unsigned Opcode) const;
+  void lowerATOMIC_LOAD_OP(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                           SelectionDAG &DAG, unsigned Opcode) const;
   SDValue lowerATOMIC_LOAD_SUB(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
@@ -426,10 +432,6 @@ private:
                                    bool Invert) const;
   MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
                                    bool Unsigned) const;
-  MachineBasicBlock *emitPair128(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
-                                bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode,
@@ -462,7 +464,6 @@ private:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
-  const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
 private:
   bool enableNarrowIntArgsVerification() const;
