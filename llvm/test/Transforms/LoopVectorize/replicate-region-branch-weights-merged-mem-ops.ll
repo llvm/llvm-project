@@ -14,10 +14,10 @@ define void @hoist_loads_no_prof_on_merged_load(ptr %dst, ptr %src, ptr %cond, i
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[COND]], i64 [[TMP3]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -129,10 +129,10 @@ define void @sink_stores_no_prof_on_merged_store(ptr %dst, ptr %src, ptr %cond, 
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[COND]], i64 [[TMP3]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]

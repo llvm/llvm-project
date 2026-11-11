@@ -1032,10 +1032,10 @@ define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonl
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST1]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST2]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST1]], [[TMP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST2]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND010:%.*]] = icmp ult ptr [[DST1]], [[TMP2]]
 ; CHECK-NEXT:    [[BOUND111:%.*]] = icmp ult ptr [[SRC]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT12:%.*]] = and i1 [[BOUND010]], [[BOUND111]]
@@ -1095,10 +1095,10 @@ define void @reduc_mul_add_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonl
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST1]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST2]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST1]], [[TMP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST2]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 4000
 ; CHECK-NEXT:    [[BOUND010:%.*]] = icmp ult ptr [[DST1]], [[TMP2]]
 ; CHECK-NEXT:    [[BOUND111:%.*]] = icmp ult ptr [[SRC]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT12:%.*]] = and i1 [[BOUND010]], [[BOUND111]]

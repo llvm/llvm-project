@@ -241,12 +241,12 @@ define void @geps_feeding_interleave_groups_with_reuse2(ptr %A, ptr %B, i64 %N) 
 ; CHECK-NEXT:    [[SCEVGEP35:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP44]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = add i64 [[TMP43]], 32
 ; CHECK-NEXT:    [[SCEVGEP36:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP45]]
-; CHECK-NEXT:    [[TMP46:%.*]] = shl i64 [[TMP42]], 4
-; CHECK-NEXT:    [[TMP47:%.*]] = add nuw nsw i64 [[TMP46]], 8
-; CHECK-NEXT:    [[SCEVGEP37:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP47]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[B]], [[SCEVGEP36]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP35]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP64:%.*]] = shl i64 [[TMP42]], 4
+; CHECK-NEXT:    [[TMP65:%.*]] = add nuw nsw i64 [[TMP64]], 8
+; CHECK-NEXT:    [[SCEVGEP37:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP65]]
 ; CHECK-NEXT:    [[BOUND139:%.*]] = icmp ult ptr [[A]], [[SCEVGEP37]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT40:%.*]] = and i1 [[BOUND0]], [[BOUND139]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT40]]

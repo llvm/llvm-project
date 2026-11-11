@@ -704,10 +704,10 @@ define void @use_diff_checks_when_retrying_with_rt_checks(i64 %off, ptr %dst, pt
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 8000
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 8000
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 8008
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[CONFLICT_RDX5:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 8008
 ; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[DIFF_CHECK6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]

@@ -625,12 +625,12 @@ define void @trunc_of_iv_plus_const_scalar_use(ptr %dst, ptr %dst2, ptr %src, i6
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST2]], i64 [[N]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[SRC]], i64 5
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[N]], 5
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[TMP8]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST2]], [[TMP7]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[SRC]], i64 5
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[N]], 5
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[DST]], [[TMP11]]
 ; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]

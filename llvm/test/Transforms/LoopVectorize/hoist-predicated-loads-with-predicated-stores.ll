@@ -9,10 +9,10 @@ define void @test_stores_noalias_via_rt_checks_after_loads(ptr %dst, ptr %src, p
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[COND]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -91,10 +91,10 @@ define void @test_aliasing_store(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -211,15 +211,15 @@ define void @test_noalias_store_via_runtime_checks(ptr %dst, ptr %dst.1, ptr %sr
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST_1]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_1]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[DST_1]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[DST_1]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
@@ -322,10 +322,10 @@ define void @test_memory_op_between_loads_alias(ptr %dst, ptr %src, ptr %cond, p
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -425,15 +425,15 @@ define void @test_memory_op_between_loads_no_alias_via_rt_checks(ptr %dst, ptr %
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST_1]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_1]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[DST_1]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[BOUND07:%.*]] = icmp ult ptr [[DST_1]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND18:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT9:%.*]] = and i1 [[BOUND07]], [[BOUND18]]
@@ -539,10 +539,10 @@ define void @test_stores_not_sunk_due_to_aliasing_load(ptr %dst, ptr %alias, ptr
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[COND]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[ALIAS]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[ALIAS]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[ALIAS]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -628,10 +628,10 @@ define void @test_stores_not_sunk_aliasing_load_between(ptr %dst, ptr %mid, ptr 
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[MID]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[MID]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -655,9 +655,9 @@ define void @test_stores_not_sunk_aliasing_load_between(ptr %dst, ptr %mid, ptr 
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
 ; CHECK-NEXT:    store i32 20, ptr [[TMP5]], align 4, !alias.scope [[META71:![0-9]+]], !noalias [[META73:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !alias.scope [[META71]], !noalias [[META73]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP5]], align 4, !alias.scope [[META71]], !noalias [[META73]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[MID]], i32 [[INDEX]]
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4, !alias.scope [[META75:![0-9]+]], !noalias [[META68]]
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP7]], align 4, !alias.scope [[META75:![0-9]+]], !noalias [[META68]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
@@ -665,9 +665,9 @@ define void @test_stores_not_sunk_aliasing_load_between(ptr %dst, ptr %mid, ptr 
 ; CHECK:       [[PRED_STORE_IF10]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP0]]
 ; CHECK-NEXT:    store i32 20, ptr [[TMP9]], align 4, !alias.scope [[META71]], !noalias [[META73]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META71]], !noalias [[META73]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META71]], !noalias [[META73]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[MID]], i32 [[TMP0]]
-; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP11]], align 4, !alias.scope [[META75]], !noalias [[META68]]
+; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP11]], align 4, !alias.scope [[META75]], !noalias [[META68]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE11]]
 ; CHECK:       [[PRED_STORE_CONTINUE11]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
@@ -1194,10 +1194,10 @@ define void @stores_never_sunk_past_alising_loads_or_stores(ptr %dst, ptr %src, 
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -1333,10 +1333,10 @@ define void @loads_never_hoisted_past_alising_stores(ptr %dst, ptr %src, ptr %co
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 400
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 400
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[COND]], i64 400
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[COND]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -1600,10 +1600,10 @@ define void @sink_stores_cse_select_dropping_fmf(ptr %dst, ptr %src, ptr %invar.
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[INVAR_DST]], i64 4
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[INVAR_DST]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
