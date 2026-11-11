@@ -518,26 +518,6 @@ define i32 @sub(i32 %arg) {
   ret i32 undef
 }
 
-declare i64        @llvm.ushl.sat.i64(i64, i64)
-declare <2 x i64>  @llvm.ushl.sat.v2i64(<2 x i64>, <2 x i64>)
-declare <4 x i64>  @llvm.ushl.sat.v4i64(<4 x i64>, <4 x i64>)
-declare <8 x i64>  @llvm.ushl.sat.v8i64(<8 x i64>, <8 x i64>)
-
-declare i32        @llvm.ushl.sat.i32(i32, i32)
-declare <4 x i32>  @llvm.ushl.sat.v4i32(<4 x i32>, <4 x i32>)
-declare <8 x i32>  @llvm.ushl.sat.v8i32(<8 x i32>, <8 x i32>)
-declare <16 x i32> @llvm.ushl.sat.v16i32(<16 x i32>, <16 x i32>)
-
-declare i16        @llvm.ushl.sat.i16(i16, i16)
-declare <8 x i16>  @llvm.ushl.sat.v8i16(<8 x i16>, <8 x i16>)
-declare <16 x i16> @llvm.ushl.sat.v16i16(<16 x i16>, <16 x i16>)
-declare <32 x i16> @llvm.ushl.sat.v32i16(<32 x i16>, <32 x i16>)
-
-declare i8         @llvm.ushl.sat.i8(i8,  i8)
-declare <16 x i8>  @llvm.ushl.sat.v16i8(<16 x i8>, <16 x i8>)
-declare <32 x i8>  @llvm.ushl.sat.v32i8(<32 x i8>, <32 x i8>)
-declare <64 x i8>  @llvm.ushl.sat.v64i8(<64 x i8>, <64 x i8>)
-
 define i32 @shl(i32 %arg) {
 ; SSE2-LABEL: 'shl'
 ; SSE2-NEXT:  Cost Model: Found costs of 4 for: %I64 = call i64 @llvm.ushl.sat.i64(i64 poison, i64 poison)
