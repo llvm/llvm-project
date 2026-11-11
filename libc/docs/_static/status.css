@@ -132,21 +132,38 @@ body[data-theme="dark"] {
   white-space: nowrap;
 }
 
+.hc-c-link,
 .hc-posix-link {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   font-size: 0.76rem;
-  font-weight: 500;
   color: var(--hc-blue-text);
   background: var(--hc-blue-bg);
   border: 1px solid var(--hc-blue-border);
-  padding: 1px 7px;
-  border-radius: 999px;
   text-decoration: none;
   white-space: nowrap;
 }
 
+.hc-c-link {
+  font-family: var(--font-stack--monospace, monospace);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.hc-posix-link {
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.hc-c-link:hover,
 .hc-posix-link:hover {
   text-decoration: underline;
+}
+
+.hc-c-link:focus-visible,
+.hc-posix-link:focus-visible {
+  outline: 2px solid var(--hc-blue-text);
+  outline-offset: 2px;
 }

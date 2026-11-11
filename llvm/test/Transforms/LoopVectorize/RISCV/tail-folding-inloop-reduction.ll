@@ -106,7 +106,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 4
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; IF-EVL-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[WIDE_LOAD2]])
@@ -150,7 +150,7 @@ define i32 @mul(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[WIDE_LOAD]])
@@ -889,7 +889,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi float [ [[START:%.*]], [[ENTRY]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ], [ [[TMP5:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; IF-EVL-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[WIDE_LOAD2]])
@@ -933,7 +933,7 @@ define float @fmul(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi float [ [[START:%.*]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi float [ 1.000000e+00, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[WIDE_LOAD]])
@@ -1169,7 +1169,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
 ; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; IF-EVL-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
 ; IF-EVL-NEXT:    [[TMP3]] = call <8 x float> @llvm.minimum.v8f32(<8 x float> [[VEC_PHI1]], <8 x float> [[WIDE_LOAD2]])
@@ -1214,7 +1214,7 @@ define float @fminimum(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
 ; NO-VP-NEXT:    [[TMP6]] = call <8 x float> @llvm.minimum.v8f32(<8 x float> [[VEC_PHI]], <8 x float> [[WIDE_LOAD]])
@@ -1277,7 +1277,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; IF-EVL-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x float> [ [[BROADCAST_SPLAT]], [[ENTRY]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
+; IF-EVL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
 ; IF-EVL-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; IF-EVL-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
 ; IF-EVL-NEXT:    [[TMP3]] = call <8 x float> @llvm.maximum.v8f32(<8 x float> [[VEC_PHI1]], <8 x float> [[WIDE_LOAD2]])
@@ -1322,7 +1322,7 @@ define float @fmaximum(ptr %a, i64 %n, float %start) {
 ; NO-VP-NEXT:    [[VEC_PHI:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[VEC_PHI1:%.*]] = phi <8 x float> [ [[MINMAX_IDENT_SPLAT]], [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
+; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
 ; NO-VP-NEXT:    [[TMP6]] = call <8 x float> @llvm.maximum.v8f32(<8 x float> [[VEC_PHI]], <8 x float> [[WIDE_LOAD]])

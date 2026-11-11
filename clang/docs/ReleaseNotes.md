@@ -168,6 +168,8 @@ features cannot lower the translation-unit ABI level;
   This affects the ABI of `std::strong_ordering` in some versions of the
   Microsoft STL. (#GH237188)
 
+- On MSP430, `wint_t` is now `unsigned int`, matching msp430-gcc.
+
 ### AST Dumping Potentially Breaking Changes
 
 - The AST printer (`-ast-print`) now prints a floating-point literal as the
@@ -843,6 +845,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
+- Fixed a crash in an implicit assignment operator when a `noreturn` member or base `operator=` is followed by trivially copyable members. (#GH111612)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
@@ -1397,6 +1400,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-mcpu` is present, the ISA will be selected from the host CPU and the tune
   CPU will be selected from `-mcpu`.
 
+- The handling of __int128 arguments with the LP64E ABI now matches gcc.
+
 #### CUDA/HIP Language Changes
 
 - HIP compilations now add the `include/libhipcxx` directory from the selected
@@ -1482,6 +1487,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Extend `IndentAccessModifiers` with `AfterFirstAccessModifier` to indent
   members before the first explicit access modifier by one level. Existing
   configuration values `true` and `false` remain supported.
+- Recognize `.mts` and `.cts` files as TypeScript, including in
+  `git-clang-format` and `clang-format-diff.py`. The latter also now includes
+  `.mjs` and `.cjs` files by default.
 
 ### libclang
 
@@ -1553,6 +1561,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Added the `ompx_fast_fp_atomics` (alias `ompx_unsafe_fp_atomics`) and
+  `ompx_safe_fp_atomics` hints for the `atomic` construct. They override
+  `-f[no-]atomic-ignore-denormal-mode` (`-m[no-]unsafe-fp-atomics`) for a
+  single construct.
 - Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
   semantic checks, which caused spurious `reverse_offload` errors.
 - Fixed a crash on `cancel taskgroup` inside a `masked taskloop` directive. (#GH154552)
@@ -1632,6 +1644,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
   and let an invalid inline asm constraint crash CodeGen. (#GH147515)
+
+- Added support for the combined `#pragma omp target loop` construct, which
+  previously crashed the compiler. It is lowered like `#pragma omp target simd`.
+
 - Fixed variables shared by an enclosing region (e.g. `parallel`) being
   captured by copy when a nested construct has `default(firstprivate)` or
   `default(private)`, which could silently lose writes such as the result of

@@ -1149,7 +1149,15 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
+  if (m_objfile->IsInMemory()) {
+    if (m_objfile->GetDisableMemorySymtabCaching())
+      return;
+    else
+      type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
+  }
+
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return; // Caching is not enabled.
 
@@ -1332,7 +1340,14 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeSymtab;
+  if (m_objfile->IsInMemory()) {
+    if (m_objfile->GetDisableMemorySymtabCaching())
+      return false;
+    else
+      type = Module::LLDBIndexType::eLLDBIndexTypeMemoryModuleSymtab;
+  }
+  DataFileCache *cache = Module::GetIndexCache(type);
   if (!cache)
     return false;
 

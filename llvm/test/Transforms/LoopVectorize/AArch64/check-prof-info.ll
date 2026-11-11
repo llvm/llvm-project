@@ -12,7 +12,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; We expect the branch weight computations after vectorisation to use
 ; vscale=2 for neoverse-v1 and vscale=1 for neoverse-v2.
-define void @foo_i32(i64 %n) {
+define void @foo_i32(i64 %n) vscale_range(1,16) {
 ; CHECK-V1-IC1-LABEL: define void @foo_i32(
 ; CHECK-V1-IC1-SAME: i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-V1-IC1:  [[ENTRY:.*:]]
@@ -114,7 +114,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @foo_i8(i64 %n) {
+define void @foo_i8(i64 %n) vscale_range(1,16) {
 ; CHECK-V1-IC1-LABEL: define void @foo_i8(
 ; CHECK-V1-IC1-SAME: i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-V1-IC1:  [[ITER_CHECK:.*:]]
@@ -236,7 +236,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @foo_i32_no_bw(i64 %n) {
+define void @foo_i32_no_bw(i64 %n) vscale_range(1,16) {
 ; CHECK-V1-IC1-LABEL: define void @foo_i32_no_bw(
 ; CHECK-V1-IC1-SAME: i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-V1-IC1:  [[ENTRY:.*:]]

@@ -24,6 +24,7 @@ include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 
 class EmitC_Attr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<EmitC_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/EmitC/IR/EmitC.h"];
   let mnemonic = attrMnemonic;
 }
 

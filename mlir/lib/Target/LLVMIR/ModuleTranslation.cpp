@@ -1782,6 +1782,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   for (Block *bb : blocks) {
     CapturingIRBuilder builder(*llvmModule,
                                llvm::TargetFolder(llvmModule->getDataLayout()));
+    builder.disableGEPCanonicalization();
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
                                 /*recordInsertions=*/true)))
       return failure();
