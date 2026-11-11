@@ -1622,7 +1622,7 @@ public:
 };
 } // namespace
 
-static void initFeatureMaps(const ASTContext &Ctx,
+static void initFeatureMaps(const CodeGenModule &CGM,
                             llvm::StringMap<bool> &CallerMap,
                             const FunctionDecl *Caller,
                             llvm::StringMap<bool> &CalleeMap,
@@ -1631,8 +1631,8 @@ static void initFeatureMaps(const ASTContext &Ctx,
     // The caller is potentially nullptr in the case where the call isn't in a
     // function.  In this case, the getFunctionFeatureMap ensures we just get
     // the TU level setting (since it cannot be modified by 'target'..
-    Ctx.getFunctionFeatureMap(CallerMap, Caller);
-    Ctx.getFunctionFeatureMap(CalleeMap, Callee);
+    CGM.getFunctionFeatureMap(CallerMap, Caller);
+    CGM.getFunctionFeatureMap(CalleeMap, Callee);
   }
 }
 
@@ -1711,7 +1711,7 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
         CGM.getContext().getTypeSize(Ty) > 256 ? "avx512f" : "avx";
 
     llvm::StringMap<bool> FeatureMap;
-    CGM.getContext().getFunctionFeatureMap(FeatureMap, FD);
+    CGM.getFunctionFeatureMap(FeatureMap, FD);
     if (!FeatureMap.lookup(Feature)) {
       CGM.getDiags().Report(Loc, diag::warn_avx_calling_convention)
           << !IsReturn << Ty << Feature;
@@ -1765,7 +1765,7 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
     // change its ABI with attribute-target after this call.
     if (Arg.getType()->isVectorType() &&
         CGM.getContext().getTypeSize(Arg.getType()) > 128) {
-      initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
+      initFeatureMaps(CGM, CallerMap, Caller, CalleeMap, Callee);
       QualType Ty = Arg.getType();
       // The CallArg seems to have desugared the type already, so for clearer
       // diagnostics, replace it with the type in the FunctionDecl if possible.
@@ -1783,7 +1783,7 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
   // whether this value is used, tail-called, etc.
   if (Callee->getReturnType()->isVectorType() &&
       CGM.getContext().getTypeSize(Callee->getReturnType()) > 128) {
-    initFeatureMaps(CGM.getContext(), CallerMap, Caller, CalleeMap, Callee);
+    initFeatureMaps(CGM, CallerMap, Caller, CalleeMap, Callee);
     checkAVXParam(CGM.getDiags(), CGM.getContext(), CallLoc, *Callee, CallerMap,
                   CalleeMap, Callee->getReturnType(),
                   /*IsArgument*/ false);

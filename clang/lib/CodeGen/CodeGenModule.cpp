@@ -49,11 +49,13 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1358,6 +1360,8 @@ void CodeGenModule::Release() {
     addCompilerUsedGlobal(GV);
   }
   emitLLVMUsed();
+  // This has to know every use of the functions that have been emitted.
+  emitDeferredCallTargetChecks();
   if (SanStats)
     SanStats->finish();
 
@@ -3615,6 +3619,347 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     }
   }
   return AddedAttr;
+}
+
+namespace {
+/// The target CPU and features that the IR attributes of a function give it.
+struct FunctionTargetFeatures {
+  StringRef CPU;
+  std::string Features;
+  llvm::BitVector Enabled;
+  llvm::BitVector Disabled;
+};
+} // namespace
+
+/// Whether \p FD is declared such that it could be compiled with the target
+/// features of its callers. Whether it is also only used in ways that allow
+/// this is not known before the end of the module.
+static bool mayInferTargetFeatures(const FunctionDecl *FD) {
+  FD = FD->getMostRecentDecl();
+  // A flatten function is checked against the features of all of its callees,
+  // which the inference does not model.
+  return FD->hasAttr<AlwaysInlineAttr>() && !FD->getBuiltinID() &&
+         !FD->hasAttr<TargetAttr>() && !FD->hasAttr<TargetVersionAttr>() &&
+         !FD->hasAttr<TargetClonesAttr>() && !FD->hasAttr<CPUSpecificAttr>() &&
+         !FD->hasAttr<CPUDispatchAttr>() && !FD->hasAttr<FlattenAttr>();
+}
+
+bool CodeGenModule::shouldDeferCallTargetChecks(
+    const FunctionDecl *Caller, const FunctionDecl *Callee) const {
+  // HIP stdpar device compilations leave the feature checks to the backend.
+  return Callee && !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice) &&
+         ((Caller && mayInferTargetFeatures(Caller)) ||
+          mayInferTargetFeatures(Callee));
+}
+
+void CodeGenModule::deferCallTargetChecks(
+    SourceLocation Loc, const FunctionDecl *Caller, const FunctionDecl *Callee,
+    llvm::CallBase *Call, const CallArgList &Args, QualType ReturnType,
+    bool CheckFeatures) {
+  DeferredCallTargetChecks.push_back(
+      {Loc, Caller, Callee, Call, ReturnType,
+       static_cast<unsigned>(DeferredCallArgTypes.size()),
+       static_cast<unsigned>(Args.size()), CheckFeatures});
+  for (const CallArg &Arg : Args)
+    DeferredCallArgTypes.push_back(Arg.getType());
+}
+
+void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
+                                          const FunctionDecl *FD) const {
+  auto Inferred = FD ? InferredTargetFeatures.find(FD->getCanonicalDecl())
+                     : InferredTargetFeatures.end();
+  if (Inferred != InferredTargetFeatures.end())
+    FeatureMap = Inferred->second;
+  else
+    Context.getFunctionFeatureMap(FeatureMap, FD);
+}
+
+void CodeGenModule::emitDeferredCallTargetChecks() {
+  // An always_inline function without a target attribute is compiled with the
+  // target features that its callers have in common, provided that nothing but
+  // direct calls from functions of this module can run it. It can then be
+  // inlined into all of its callers, and the always_inline functions that it
+  // calls can be inlined into it as long as each of its callers has the
+  // features that they need. Any other function keeps the features it was
+  // declared with.
+  struct RequiredFeatures {
+    llvm::BitVector Features;
+    /// Those that target attributes name, which diagnostics mention first.
+    SmallVector<unsigned, 4> Named;
+  };
+  struct InferringFunction {
+    llvm::SmallPtrSet<llvm::Function *, 2> Fns;
+    std::optional<FunctionTargetFeatures> Features;
+    /// What the always_inline functions that it calls need.
+    RequiredFeatures Required;
+    bool Valid = true;
+  };
+  llvm::MapVector<const FunctionDecl *, InferringFunction> Inferring;
+  llvm::DenseMap<const llvm::CallBase *, const FunctionDecl *> CalleeOfCall;
+
+  auto LiveCall = [](const DeferredCallTargetCheck &Check) {
+    llvm::Value *Call = Check.Call;
+    return dyn_cast_or_null<llvm::CallBase>(Call);
+  };
+  auto CalledFunction = [](const llvm::CallBase *Call) {
+    return Call ? dyn_cast<llvm::Function>(Call->getCalledOperand()) : nullptr;
+  };
+
+  for (const DeferredCallTargetCheck &Check : DeferredCallTargetChecks) {
+    llvm::CallBase *Call = LiveCall(Check);
+    llvm::Function *Fn = CalledFunction(Call);
+    // Nothing checks the target features of code outside of functions, so a
+    // call from there counts as an unknown use below.
+    if (!Fn || !Check.Caller || !mayInferTargetFeatures(Check.Callee))
+      continue;
+    const FunctionDecl *Callee = Check.Callee->getCanonicalDecl();
+    Inferring[Callee].Fns.insert(Fn);
+    CalleeOfCall[Call] = Callee;
+  }
+
+  llvm::DenseMap<const llvm::Function *, const FunctionDecl *> DeclOfFn;
+  for (auto &Entry : Inferring) {
+    const FunctionDecl *FD = Entry.first;
+    InferringFunction &Callee = Entry.second;
+    const FunctionDecl *Def = FD->getDefinition();
+    // The body of an available_externally function is not the one that runs
+    // when a call to it is not inlined.
+    GVALinkage Linkage =
+        Def ? Context.GetGVALinkageForFunction(Def) : GVA_StrongExternal;
+    Callee.Valid = (Linkage == GVA_Internal || Linkage == GVA_DiscardableODR) &&
+                   llvm::all_of(Callee.Fns, [&](const llvm::Function *Fn) {
+                     return !Fn->isDeclaration() &&
+                            llvm::all_of(Fn->uses(), [&](const llvm::Use &U) {
+                              const auto *Call =
+                                  dyn_cast<llvm::CallBase>(U.getUser());
+                              return Call && Call->isCallee(&U) &&
+                                     CalleeOfCall.lookup(Call) == FD;
+                            });
+                   });
+    if (Callee.Valid)
+      for (const llvm::Function *Fn : Callee.Fns)
+        DeclOfFn[Fn] = FD;
+  }
+  auto FindDecl = [&](const FunctionDecl *FD) -> InferringFunction * {
+    auto It = FD ? Inferring.find(FD->getCanonicalDecl()) : Inferring.end();
+    return It != Inferring.end() && It->second.Valid ? &It->second : nullptr;
+  };
+  auto Find = [&](const llvm::Function *Fn) {
+    return FindDecl(DeclOfFn.lookup(Fn));
+  };
+
+  llvm::StringMap<unsigned> FeatureIDs;
+  SmallVector<StringRef, 0> FeatureNames;
+  auto FeatureID = [&](StringRef Name) {
+    auto [It, Inserted] = FeatureIDs.try_emplace(Name, FeatureNames.size());
+    if (Inserted)
+      FeatureNames.push_back(It->getKey());
+    return It->second;
+  };
+  auto Set = [](llvm::BitVector &Bits, unsigned ID) {
+    if (Bits.size() <= ID)
+      Bits.resize(ID + 1);
+    Bits.set(ID);
+  };
+  auto FeatureString = [&](const FunctionTargetFeatures &Features) {
+    std::vector<std::string> Strings;
+    for (unsigned ID : Features.Enabled.set_bits())
+      Strings.push_back(("+" + FeatureNames[ID]).str());
+    for (unsigned ID : Features.Disabled.set_bits())
+      Strings.push_back(("-" + FeatureNames[ID]).str());
+    llvm::sort(Strings);
+    return llvm::join(Strings, ",");
+  };
+
+  // The IR attributes of the calling functions are what decides whether a call
+  // can be inlined, and unlike the declarations they also cover function
+  // versions and thunks.
+  llvm::DenseMap<std::pair<StringRef, StringRef>, FunctionTargetFeatures>
+      ParsedFeatures;
+  auto FeaturesOf =
+      [&](const llvm::Function *Fn) -> const FunctionTargetFeatures * {
+    if (InferringFunction *Caller = Find(Fn))
+      return Caller->Features ? &*Caller->Features : nullptr;
+    StringRef CPU = Fn->getFnAttribute("target-cpu").getValueAsString();
+    StringRef Features =
+        Fn->getFnAttribute("target-features").getValueAsString();
+    auto [It, Inserted] = ParsedFeatures.try_emplace(std::pair(CPU, Features));
+    if (Inserted) {
+      It->second.CPU = CPU;
+      It->second.Features = Features.str();
+      for (StringRef Feature : llvm::split(Features, ','))
+        if (!Feature.empty())
+          Set(Feature[0] == '+' ? It->second.Enabled : It->second.Disabled,
+              FeatureID(Feature.substr(1)));
+    }
+    return &It->second;
+  };
+
+  for (bool Retry = true; Retry;) {
+    Retry = false;
+    for (auto &Entry : Inferring)
+      Entry.second.Features.reset();
+    for (bool Changed = true; Changed;) {
+      Changed = false;
+      for (const DeferredCallTargetCheck &Check : DeferredCallTargetChecks) {
+        llvm::CallBase *Call = LiveCall(Check);
+        InferringFunction *Callee = Find(CalledFunction(Call));
+        const FunctionTargetFeatures *Caller =
+            Callee ? FeaturesOf(Call->getFunction()) : nullptr;
+        if (!Caller)
+          continue;
+        if (!Callee->Features) {
+          Callee->Features = *Caller;
+          Changed = true;
+        } else if (Callee->Features->CPU != Caller->CPU) {
+          // The features that only the CPUs imply are not known here, so
+          // there is no telling which of them the callers have in common.
+          Callee->Valid = false;
+          Retry = true;
+        } else if (Callee->Features->Enabled.test(Caller->Enabled) ||
+                   Caller->Disabled.test(Callee->Features->Disabled)) {
+          // A feature that only some callers mention is left to the CPU,
+          // which is the same for all of them.
+          Callee->Features->Enabled &= Caller->Enabled;
+          Callee->Features->Disabled |= Caller->Disabled;
+          Callee->Features->Features = FeatureString(*Callee->Features);
+          Changed = true;
+        }
+      }
+    }
+    // Functions that only call each other are not reachable from any function
+    // with known features.
+    for (auto &Entry : Inferring)
+      if (Entry.second.Valid && !Entry.second.Features) {
+        Entry.second.Valid = false;
+        Retry = true;
+      }
+  }
+
+  llvm::DenseMap<const FunctionDecl *, RequiredFeatures> DeclFeatures;
+  auto FeaturesOfDecl =
+      [&](const FunctionDecl *FD) -> const RequiredFeatures & {
+    auto [It, Inserted] = DeclFeatures.try_emplace(FD);
+    if (Inserted) {
+      llvm::StringMap<bool> FeatureMap;
+      Context.getFunctionFeatureMap(FeatureMap, FD);
+      for (const auto &Feature : FeatureMap)
+        if (Feature.getValue())
+          Set(It->second.Features, FeatureID(Feature.getKey()));
+      if (const auto *TD = FD->getAttr<TargetAttr>();
+          TD && !FD->isMultiVersion())
+        for (const std::string &Feature :
+             Context.filterFunctionTargetAttrs(TD).Features)
+          if (Feature[0] == '+' &&
+              FeatureMap.lookup(StringRef(Feature).substr(1)))
+            It->second.Named.push_back(FeatureID(StringRef(Feature).substr(1)));
+    }
+    return It->second;
+  };
+
+  for (bool Changed = true; Changed;) {
+    Changed = false;
+    // Callees are mostly emitted after their callers, so walking backwards
+    // tends to converge in a single pass.
+    for (const DeferredCallTargetCheck &Check :
+         llvm::reverse(DeferredCallTargetChecks)) {
+      llvm::CallBase *Call = LiveCall(Check);
+      InferringFunction *Caller = Call ? Find(Call->getFunction()) : nullptr;
+      if (!Caller || !Check.Callee->hasAttr<AlwaysInlineAttr>())
+        continue;
+      InferringFunction *Callee = Find(CalledFunction(Call));
+      const RequiredFeatures &Required =
+          Callee ? Callee->Required : FeaturesOfDecl(Check.Callee);
+      if (Required.Features.test(Caller->Required.Features)) {
+        Caller->Required.Features |= Required.Features;
+        Changed = true;
+      }
+      for (unsigned ID : Required.Named)
+        if (!llvm::is_contained(Caller->Required.Named, ID)) {
+          Caller->Required.Named.push_back(ID);
+          Changed = true;
+        }
+    }
+  }
+
+  for (auto &Entry : Inferring) {
+    InferringFunction &Callee = Entry.second;
+    if (!Callee.Valid)
+      continue;
+    for (llvm::Function *Fn : Callee.Fns) {
+      if (Fn->getFnAttribute("target-cpu").getValueAsString() ==
+              Callee.Features->CPU &&
+          Fn->getFnAttribute("target-features").getValueAsString() ==
+              Callee.Features->Features)
+        continue;
+      Fn->removeFnAttr("target-cpu");
+      Fn->removeFnAttr("target-features");
+      if (!Callee.Features->CPU.empty())
+        Fn->addFnAttr("target-cpu", Callee.Features->CPU);
+      if (!Callee.Features->Features.empty())
+        Fn->addFnAttr("target-features", Callee.Features->Features);
+      // Other translation units may give their definitions of the function
+      // other features, so the linker must not merge them with this one.
+      if (!Fn->hasLocalLinkage()) {
+        Fn->setComdat(nullptr);
+        Fn->setLinkage(llvm::Function::InternalLinkage);
+      }
+      llvm::StringMap<bool> &FeatureMap = InferredTargetFeatures[Entry.first];
+      for (unsigned ID : Callee.Features->Enabled.set_bits())
+        FeatureMap[FeatureNames[ID]] = true;
+    }
+  }
+
+  for (const DeferredCallTargetCheck &Check : DeferredCallTargetChecks) {
+    llvm::CallBase *Call = LiveCall(Check);
+    InferringFunction *Caller =
+        Call ? Find(Call->getFunction()) : FindDecl(Check.Caller);
+    InferringFunction *Callee =
+        Call ? Find(CalledFunction(Call)) : FindDecl(Check.Callee);
+    // A call that was removed again is neither inlined nor run.
+    if (!Call && (Caller || Callee))
+      continue;
+
+    // What an inferring caller needs is checked where it is called, up to the
+    // first caller that does not infer its features.
+    if (Callee && !Caller) {
+      llvm::BitVector Missing = Callee->Required.Features;
+      Missing.reset(FeaturesOfDecl(Check.Caller).Features);
+      if (Missing.any()) {
+        StringRef Feature;
+        for (unsigned ID : Missing.set_bits())
+          if (Feature.empty() || FeatureNames[ID] < Feature)
+            Feature = FeatureNames[ID];
+        if (const unsigned *Named =
+                llvm::find_if(Callee->Required.Named,
+                              [&](unsigned ID) { return Missing.test(ID); });
+            Named != Callee->Required.Named.end())
+          Feature = FeatureNames[*Named];
+        getDiags().Report(Check.Loc, diag::err_function_needs_feature)
+            << Check.Caller->getDeclName() << Check.Callee->getDeclName()
+            << Feature;
+      }
+    } else if (!Caller && Check.CheckFeatures) {
+      CodeGenUtils::checkTargetFeatures(Context, getDiags(), getLangOpts(),
+                                        Check.Loc, Check.Caller, Check.Callee);
+    }
+
+    // The targets only look at the types of the arguments.
+    CallArgList Args;
+    for (QualType Type : ArrayRef<QualType>(DeferredCallArgTypes)
+                             .slice(Check.FirstArgType, Check.NumArgTypes))
+      Args.add(RValue::get(nullptr), Type);
+    getTargetCodeGenInfo().checkFunctionCallABI(
+        *this, Check.Loc, Check.Caller, Check.Callee, Args, Check.ReturnType);
+  }
+
+  for (const FunctionDecl *FD : DeferredFunctionABIChecks)
+    getTargetCodeGenInfo().checkFunctionABI(*this, FD);
+
+  DeferredCallTargetChecks.clear();
+  DeferredCallArgTypes.clear();
+  DeferredFunctionABIChecks.clear();
+  InferredTargetFeatures.clear();
 }
 
 void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,

@@ -101,6 +101,7 @@ class CGOpenMPRuntime;
 class CGCUDARuntime;
 class CGHLSLRuntime;
 class CGFunctionInfo;
+class CallArgList;
 class CoverageMappingModuleGen;
 class QualTypeMapper;
 class TargetCodeGenInfo;
@@ -424,6 +425,28 @@ private:
     addEmittedDeferredDecl(GD);
   }
 
+  /// A call whose target feature and ABI checks wait for the end of the module.
+  /// See shouldDeferCallTargetChecks.
+  struct DeferredCallTargetCheck {
+    SourceLocation Loc;
+    const FunctionDecl *Caller;
+    const FunctionDecl *Callee;
+    llvm::WeakTrackingVH Call;
+    QualType ReturnType;
+    /// The argument types are a range of DeferredCallArgTypes.
+    unsigned FirstArgType;
+    unsigned NumArgTypes;
+    bool CheckFeatures;
+  };
+  std::vector<DeferredCallTargetCheck> DeferredCallTargetChecks;
+  std::vector<QualType> DeferredCallArgTypes;
+  std::vector<const FunctionDecl *> DeferredFunctionABIChecks;
+
+  /// The target features of the always_inline functions that were given those
+  /// of their callers, keyed by canonical declaration.
+  llvm::DenseMap<const FunctionDecl *, llvm::StringMap<bool>>
+      InferredTargetFeatures;
+
   /// Decls that were DeferredDecls and have now been emitted.
   llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
 
@@ -741,6 +764,26 @@ public:
 
   /// Finalize LLVM code generation.
   void Release();
+
+  /// Whether the target feature and ABI checks of a call, or with a null
+  /// \p Caller those of the definition of \p Callee, have to wait for the end
+  /// of the module. An always_inline function without a target attribute is
+  /// compiled with the target features that its callers have in common, and
+  /// those are only known once every call to it has been emitted.
+  bool shouldDeferCallTargetChecks(const FunctionDecl *Caller,
+                                   const FunctionDecl *Callee) const;
+  void deferCallTargetChecks(SourceLocation Loc, const FunctionDecl *Caller,
+                             const FunctionDecl *Callee, llvm::CallBase *Call,
+                             const CallArgList &Args, QualType ReturnType,
+                             bool CheckFeatures);
+  void deferFunctionABICheck(const FunctionDecl *FD) {
+    DeferredFunctionABIChecks.push_back(FD);
+  }
+
+  /// Like ASTContext::getFunctionFeatureMap, but with the target features that
+  /// an always_inline function was given because its callers have them.
+  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
+                             const FunctionDecl *FD) const;
 
   /// Get the current Atomic options.
   AtomicOptions getAtomicOpts() { return AtomicOpts; }
@@ -2094,6 +2137,11 @@ private:
 
   /// Emit any needed decls for which code generation was deferred.
   void EmitDeferred();
+
+  /// Gives the always_inline functions that allow it the target features of
+  /// their callers, then performs the checks of the calls for which
+  /// shouldDeferCallTargetChecks held.
+  void emitDeferredCallTargetChecks();
 
   /// Try to emit external vtables as available_externally if they have emitted
   /// all inlined virtual functions.  It runs after EmitDeferred() and therefore

@@ -436,6 +436,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Attribute Changes in Clang
 
+- An `always_inline` function without a `target` attribute is now compiled with
+  the target features that its callers have in common, provided that other
+  translation units cannot call it (for example because it is `static`,
+  `inline` or a template) and that its only uses are direct calls. Generic
+  helpers can thus be shared between functions with different `target`
+  attributes and can call target intrinsics without naming the features
+  themselves; previously this was rejected with "always_inline function requires
+  target feature" and "changes the ABI" errors.
+
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
 
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
