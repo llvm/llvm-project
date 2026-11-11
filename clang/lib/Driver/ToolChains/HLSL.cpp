@@ -140,6 +140,9 @@ std::optional<llvm::Triple> tryParseTriple(StringRef Profile) {
   case 9:
     SubArch = llvm::Triple::DXILSubArch_v1_9;
     break;
+  case 10:
+    SubArch = llvm::Triple::DXILSubArch_v1_10;
+    break;
   case OfflineLibMinor:
     // Always consider minor version x as the latest supported DXIL version
     SubArch = llvm::Triple::LatestDXILSubArch;

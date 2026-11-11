@@ -87,7 +87,11 @@ TEST(DxcModeTest, TargetProfileValidation) {
                         InMemoryFileSystem, Diags);
   validateTargetProfile("-Tcs_6_8", "dxilv1.8--shadermodel6.8-compute",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tlib_6_x", "dxilv1.9--shadermodel6.15-library",
+  validateTargetProfile("-Tcs_6_9", "dxilv1.9--shadermodel6.9-compute",
+                        InMemoryFileSystem, Diags);
+  validateTargetProfile("-Tlib_6_10", "dxilv1.10--shadermodel6.10-library",
+                        InMemoryFileSystem, Diags);
+  validateTargetProfile("-Tlib_6_x", "dxilv1.10--shadermodel6.15-library",
                         InMemoryFileSystem, Diags);
 
   // Invalid tests.
