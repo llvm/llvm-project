@@ -2891,6 +2891,19 @@ func.func @argmin_nan_propagate(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) 
 
 // -----
 
+// IGNORE mode must retain the finite ARGMAX seed for a type without NaN.
+// CHECK-LABEL: func.func @argmax_nan_ignore_f4
+// CHECK: [[SEED:%.+]] = arith.constant -6.000000e+00 : f4E2M1FN
+// CHECK: [[FILL:%.+]] = linalg.fill ins([[SEED]] : f4E2M1FN)
+// CHECK: linalg.generic
+// CHECK-SAME: outs({{.*}}, [[FILL]] : tensor<4xi32>, tensor<4xf4E2M1FN>)
+func.func @argmax_nan_ignore_f4(%arg0: tensor<5x4xf4E2M1FN>) -> tensor<4xi32> {
+  %0 = tosa.argmax %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf4E2M1FN>) -> tensor<4xi32>
+  return %0 : tensor<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @argmin_nan_ignore_int
 // CHECK-SAME: ([[INPUT:%[0-9a-zA-Z_]+]]: tensor<5x4xi8>
 func.func @argmin_nan_ignore_int(%arg0: tensor<5x4xi8>, %arg1: tensor<5x4xi8>) -> () {
@@ -2941,6 +2954,19 @@ func.func @argmin_nan_ignore(%arg0: tensor<5x4xf32>, %arg1: tensor<5x4xf32>) -> 
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]] : i32, f32
   %12 = tosa.argmin %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf32>)  -> tensor<4xi32>
   return
+}
+
+// -----
+
+// IGNORE mode must retain the finite ARGMIN seed for a type without NaN.
+// CHECK-LABEL: func.func @argmin_nan_ignore_f4
+// CHECK: [[SEED:%.+]] = arith.constant 6.000000e+00 : f4E2M1FN
+// CHECK: [[FILL:%.+]] = linalg.fill ins([[SEED]] : f4E2M1FN)
+// CHECK: linalg.generic
+// CHECK-SAME: outs({{.*}}, [[FILL]] : tensor<4xi32>, tensor<4xf4E2M1FN>)
+func.func @argmin_nan_ignore_f4(%arg0: tensor<5x4xf4E2M1FN>) -> tensor<4xi32> {
+  %0 = tosa.argmin %arg0 axis(0) nan_mode<IGNORE> : (tensor<5x4xf4E2M1FN>) -> tensor<4xi32>
+  return %0 : tensor<4xi32>
 }
 
 // -----

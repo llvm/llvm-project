@@ -1167,6 +1167,19 @@ static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
   if (isa<tosa::ReduceAnyOp>(op) && elementTy.isInteger(1))
     return rewriter.getIntegerAttr(elementTy, APInt::getZero(1));
 
+  // In IGNORE mode, set initial value to NaN
+  if (auto floatTy = dyn_cast<FloatType>(elementTy);
+      floatTy && isa<tosa::ArgMinOp, tosa::ArgMaxOp>(op)) {
+    auto nanMode = isa<tosa::ArgMinOp>(op)
+                       ? cast<tosa::ArgMinOp>(op).getNanMode()
+                       : cast<tosa::ArgMaxOp>(op).getNanMode();
+
+    if (nanMode == NanPropagationMode::IGNORE &&
+        APFloat::semanticsHasNaN(floatTy.getFloatSemantics()))
+      return rewriter.getFloatAttr(
+          floatTy, APFloat::getQNaN(floatTy.getFloatSemantics()));
+  }
+
   if (isa<tosa::ArgMaxOp>(op) && isa<FloatType>(elementTy))
     return rewriter.getFloatAttr(
         elementTy,
@@ -2773,14 +2786,6 @@ public:
 
     if (!fillValueAttr)
       return rewriter.notifyMatchFailure(argOp, "unsupported element type");
-
-    // In IGNORE mode, use NaN as the initial value so the first non-NaN
-    // input is selected even if it is a finite limit or infinity.
-    if (auto floatTy = dyn_cast<FloatType>(inElementTy);
-        floatTy && argOp.getNanMode() == NanPropagationMode::IGNORE) {
-      fillValueAttr = rewriter.getFloatAttr(
-          floatTy, APFloat::getQNaN(floatTy.getFloatSemantics()));
-    }
 
     auto fillValue = arith::ConstantOp::create(rewriter, loc, fillValueAttr);
     auto filledTensorValue =
