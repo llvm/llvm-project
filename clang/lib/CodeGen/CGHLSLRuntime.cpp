@@ -35,6 +35,7 @@
 #include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
@@ -1000,6 +1001,37 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
+static void addSPIRVQuadAllExecutionModes(llvm::Module &M) {
+  Function *QuadAll =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::spv_quad_all);
+  if (!QuadAll)
+    return;
+
+  SmallVector<Function *, 8> Worklist{QuadAll};
+  SmallPtrSet<Function *, 16> Visited;
+  IRBuilder<> B(M);
+  while (!Worklist.empty()) {
+    Function *F = Worklist.pop_back_val();
+    if (!Visited.insert(F).second)
+      continue;
+
+    if (F->hasFnAttribute("hlsl.numthreads")) {
+      StringRef NumThreads =
+          F->getFnAttribute("hlsl.numthreads").getValueAsString();
+      // DerivativeGroupLinearKHR is 5290; DerivativeGroupQuadsKHR is 5289.
+      unsigned Mode = NumThreads.ends_with(",1,1") ? 5290 : 5289;
+      MDNode *MD = MDNode::get(
+          M.getContext(),
+          {ValueAsMetadata::get(F), ConstantAsMetadata::get(B.getInt32(Mode))});
+      M.getOrInsertNamedMetadata("spirv.ExecutionMode")->addOperand(MD);
+    }
+
+    for (User *U : F->users())
+      if (auto *Call = dyn_cast<CallBase>(U))
+        Worklist.push_back(Call->getFunction());
+  }
+}
+
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
   auto &CodeGenOpts = CGM.getCodeGenOpts();
@@ -1044,6 +1076,8 @@ void CGHLSLRuntime::finishCodeGen() {
   }
 
   generateGlobalCtorDtorCalls();
+  if (T.isSPIRV())
+    addSPIRVQuadAllExecutionModes(M);
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(

@@ -872,12 +872,13 @@ void SPIRV::RequirementHandler::getAndAddRequirements(
     addQuadControlRequirements(*this, ST,
                                getSymbolicOperandMnemonic(Category, i));
   if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
-      i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR &&
+      (i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR ||
+       i == SPIRV::ExecutionMode::DerivativeGroupLinearKHR) &&
       !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
-    report_fatal_error(
-        "DerivativeGroupQuadsKHR requires the following SPIR-V extension: "
-        "SPV_KHR_compute_shader_derivatives",
-        false);
+    report_fatal_error(Twine(getSymbolicOperandMnemonic(Category, i)) +
+                           " requires the following SPIR-V extension: "
+                           "SPV_KHR_compute_shader_derivatives",
+                       false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
