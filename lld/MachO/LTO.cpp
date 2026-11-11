@@ -89,22 +89,22 @@ static lto::Config createConfig() {
 // modification time of the resulting file.
 static uint32_t saveOrHardlinkBuffer(StringRef buffer, StringRef path,
                                      std::optional<StringRef> originalPath) {
-  if (originalPath) {
-    fs::file_status originalStat, pathStat;
-    bool haveOriginal = !fs::status(*originalPath, originalStat);
-    bool havePath = !fs::status(path, pathStat, /*follow=*/false);
-    // A previous link already hardlinked `path` to the same cache entry.
-    if (haveOriginal && havePath && fs::equivalent(originalStat, pathStat))
-      return getModTime(originalStat);
-    // Delete the hardlink if it exists. Otherwise, it is possible for the
-    // create_hard_link to fail (as the hardlink exists already), and when
-    // saveBuffer is subsequently called the hardlink'd file may get truncated
-    // and reading from it causes a crash.
-    if (havePath)
-      fs::remove(path);
-    if (haveOriginal && !fs::create_hard_link(*originalPath, path))
-      return getModTime(path);
-  }
+  fs::file_status originalStat, pathStat;
+  bool haveOriginal = originalPath && !fs::status(*originalPath, originalStat);
+  bool havePath = !fs::status(path, pathStat, /*follow=*/false);
+  // A previous link already hardlinked `path` to the same cache entry.
+  if (haveOriginal && havePath && fs::equivalent(originalStat, pathStat))
+    return getModTime(originalStat);
+  // Delete the hardlink if it exists. Otherwise, it is possible for the
+  // create_hard_link to fail (as the hardlink exists already), and when
+  // saveBuffer is subsequently called the hardlink'd file may get truncated
+  // and reading from it causes a crash. Even without the cache, `path` may be
+  // a hardlink to a cache entry left by an earlier link, and saveBuffer would
+  // overwrite that entry.
+  if (havePath)
+    fs::remove(path);
+  if (haveOriginal && !fs::create_hard_link(*originalPath, path))
+    return getModTime(path);
   saveBuffer(buffer, path);
   return getModTime(path);
 }

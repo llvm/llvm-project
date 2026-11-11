@@ -66,6 +66,13 @@
 ; LARGE: D _dummy_data
 ; MAIN: T _main
 
+;; A link without the cache does not write through hardlinks left in lto-temps
+;; by an earlier link with the cache.
+; RUN: cp -R %t/cache %t/cache-old
+; RUN: sed 's/AAAA/CCCC/' %S/Inputs/large-lto-object.ll | opt -thinlto-bc - -o %t/large.o
+; RUN: %lld %t/large.o %t/test.o -o %t/test -object_path_lto %t/lto-temps --thinlto-jobs=all --lto-O0
+; RUN: diff -r %t/cache %t/cache-old
+
 ; CHECK:             0000000000000000                - 00 0000    SO /tmp/test.cpp
 ; NOOBJPATH-NEXT:    0000000000000000                - 03 0001   OSO /tmp/lto.tmp
 ; NOLTOFILES-NEXT:   0000000000000000                - 03 0001   OSO [[DIR]]/test-obj.o
