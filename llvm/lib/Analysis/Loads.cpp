@@ -388,10 +388,10 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     if (MinAdd->getNumOperands() != 2)
       return false;
 
-    const SCEV *Offset = MinAdd->getOperand(0);
-    const auto *NewBase = dyn_cast<SCEVUnknown>(MinAdd->getOperand(1));
+    const auto *NewBase = dyn_cast<SCEVUnknown>(SE.getPointerBase(MinAdd));
     if (!NewBase)
       return false;
+    const SCEV *Offset = SE.getMinusSCEV(MinAdd, NewBase);
 
     // The following code below assumes the offset is unsigned, but GEP
     // offsets are treated as signed so we can end up with a signed value
