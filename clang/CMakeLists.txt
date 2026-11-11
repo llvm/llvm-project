@@ -858,6 +858,11 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(${CLANG_STAGE}_TABLEGEN
       -DLLVM_TABLEGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-tblgen
       -DCLANG_TABLEGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-tblgen)
+    if(TARGET llvm-ifs)
+      add_dependencies(clang-bootstrap-deps llvm-ifs)
+      set(${CLANG_STAGE}_LLVM_IFS
+        -DLLVM_IFS=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ifs${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
     if(BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Linux")
       if(BOOTSTRAP_LLVM_ENABLE_LLD)
         set(${CLANG_STAGE}_LINKER -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/ld.lld)
@@ -974,6 +979,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
                  -DCLANG_STAGE=${NEXT_CLANG_STAGE}
                 ${COMPILER_OPTIONS}
                 ${${CLANG_STAGE}_TABLEGEN}
+                ${${CLANG_STAGE}_LLVM_IFS}
                 ${LTO_LIBRARY} ${verbose} ${PGO_OPT}
                 ${${CLANG_STAGE}_LINKER}
                 ${${CLANG_STAGE}_AR}

@@ -21,3 +21,5 @@ DEPENDS
 
   GENERATE_DRIVER
   )
+
+setup_host_tool(llvm-ifs LLVM_IFS llvm_ifs_exe llvm_ifs_target)
