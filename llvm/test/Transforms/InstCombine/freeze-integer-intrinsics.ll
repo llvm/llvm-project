@@ -330,9 +330,7 @@ define i32 @ushl_sat_i32_safe_constant(i32 %arg0) {
 
 define i32 @sshl_sat_i32_unsafe_constant(i32 %arg0) {
 ; CHECK-LABEL: @sshl_sat_i32_unsafe_constant(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.sshl.sat.i32(i32 [[ARG0:%.*]], i32 32)
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    ret i32 0
 ;
   %call = call i32 @llvm.sshl.sat.i32(i32 %arg0, i32 32)
   %freeze = freeze i32 %call
@@ -341,9 +339,7 @@ define i32 @sshl_sat_i32_unsafe_constant(i32 %arg0) {
 
 define i32 @ushl_sat_i32_unsafe_constant(i32 %arg0) {
 ; CHECK-LABEL: @ushl_sat_i32_unsafe_constant(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.ushl.sat.i32(i32 [[ARG0:%.*]], i32 32)
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze i32 [[CALL]]
-; CHECK-NEXT:    ret i32 [[FREEZE]]
+; CHECK-NEXT:    ret i32 0
 ;
   %call = call i32 @llvm.ushl.sat.i32(i32 %arg0, i32 32)
   %freeze = freeze i32 %call
@@ -418,8 +414,7 @@ define <2 x i32> @sshl_sat_v2i32_unsafe_oob_vector(<2 x i32> %arg0) {
 
 define <vscale x 2 x i32> @ushl_sat_v2i32_scalable_zeroinitializer(<vscale x 2 x i32> %arg0) {
 ; CHECK-LABEL: @ushl_sat_v2i32_scalable_zeroinitializer(
-; CHECK-NEXT:    [[CALL:%.*]] = call <vscale x 2 x i32> @llvm.ushl.sat.nxv2i32(<vscale x 2 x i32> [[ARG0:%.*]], <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <vscale x 2 x i32> [[CALL]]
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <vscale x 2 x i32> [[ARG0:%.*]]
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[FREEZE]]
 ;
   %call = call <vscale x 2 x i32> @llvm.ushl.sat.nxv2i32(<vscale x 2 x i32> %arg0, <vscale x 2 x i32> zeroinitializer)
@@ -429,8 +424,7 @@ define <vscale x 2 x i32> @ushl_sat_v2i32_scalable_zeroinitializer(<vscale x 2 x
 
 define <vscale x 2 x i32> @sshl_sat_v2i32_scalable_zeroinitializer(<vscale x 2 x i32> %arg0) {
 ; CHECK-LABEL: @sshl_sat_v2i32_scalable_zeroinitializer(
-; CHECK-NEXT:    [[CALL:%.*]] = call <vscale x 2 x i32> @llvm.sshl.sat.nxv2i32(<vscale x 2 x i32> [[ARG0:%.*]], <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <vscale x 2 x i32> [[CALL]]
+; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <vscale x 2 x i32> [[ARG0:%.*]]
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[FREEZE]]
 ;
   %call = call <vscale x 2 x i32> @llvm.sshl.sat.nxv2i32(<vscale x 2 x i32> %arg0, <vscale x 2 x i32> zeroinitializer)

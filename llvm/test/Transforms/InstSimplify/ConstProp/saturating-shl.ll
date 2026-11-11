@@ -3,8 +3,7 @@
 
 define i8 @ushl_no_sat() {
 ; CHECK-LABEL: define i8 @ushl_no_sat() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 10, i8 2)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 40
 ;
   %r = call i8 @llvm.ushl.sat.i8(i8 10, i8 2)
   ret i8 %r
@@ -12,8 +11,7 @@ define i8 @ushl_no_sat() {
 
 define i8 @ushl_sat() {
 ; CHECK-LABEL: define i8 @ushl_sat() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 100, i8 2)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %r = call i8 @llvm.ushl.sat.i8(i8 100, i8 2)
   ret i8 %r
@@ -21,8 +19,7 @@ define i8 @ushl_sat() {
 
 define i8 @ushl_oob() {
 ; CHECK-LABEL: define i8 @ushl_oob() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ushl.sat.i8(i8 1, i8 8)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.ushl.sat.i8(i8 1, i8 8)
   ret i8 %r
@@ -30,8 +27,7 @@ define i8 @ushl_oob() {
 
 define i8 @sshl_no_sat() {
 ; CHECK-LABEL: define i8 @sshl_no_sat() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -10, i8 2)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -40
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 -10, i8 2)
   ret i8 %r
@@ -39,8 +35,7 @@ define i8 @sshl_no_sat() {
 
 define i8 @sshl_sat_pos() {
 ; CHECK-LABEL: define i8 @sshl_sat_pos() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 40, i8 2)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 127
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 40, i8 2)
   ret i8 %r
@@ -48,8 +43,7 @@ define i8 @sshl_sat_pos() {
 
 define i8 @sshl_sat_neg() {
 ; CHECK-LABEL: define i8 @sshl_sat_neg() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 -40, i8 2)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 -40, i8 2)
   ret i8 %r
@@ -57,8 +51,7 @@ define i8 @sshl_sat_neg() {
 
 define i8 @sshl_oob() {
 ; CHECK-LABEL: define i8 @sshl_oob() {
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sshl.sat.i8(i8 1, i8 9)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 poison
 ;
   %r = call i8 @llvm.sshl.sat.i8(i8 1, i8 9)
   ret i8 %r
@@ -66,8 +59,7 @@ define i8 @sshl_oob() {
 
 define <4 x i8> @ushl_vec() {
 ; CHECK-LABEL: define <4 x i8> @ushl_vec() {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i8> @llvm.ushl.sat.v4i8(<4 x i8> <i8 42, i8 1, i8 100, i8 3>, <4 x i8> <i8 0, i8 7, i8 2, i8 8>)
-; CHECK-NEXT:    ret <4 x i8> [[R]]
+; CHECK-NEXT:    ret <4 x i8> <i8 42, i8 -128, i8 -1, i8 poison>
 ;
   %r = call <4 x i8> @llvm.ushl.sat.v4i8(<4 x i8> <i8 42, i8 1, i8 100, i8 3>, <4 x i8> <i8 0, i8 7, i8 2, i8 8>)
   ret <4 x i8> %r
@@ -75,8 +67,7 @@ define <4 x i8> @ushl_vec() {
 
 define <4 x i8> @sshl_vec() {
 ; CHECK-LABEL: define <4 x i8> @sshl_vec() {
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i8> @llvm.sshl.sat.v4i8(<4 x i8> <i8 -42, i8 -1, i8 40, i8 -40>, <4 x i8> <i8 0, i8 7, i8 2, i8 2>)
-; CHECK-NEXT:    ret <4 x i8> [[R]]
+; CHECK-NEXT:    ret <4 x i8> <i8 -42, i8 -128, i8 127, i8 -128>
 ;
   %r = call <4 x i8> @llvm.sshl.sat.v4i8(<4 x i8> <i8 -42, i8 -1, i8 40, i8 -40>, <4 x i8> <i8 0, i8 7, i8 2, i8 2>)
   ret <4 x i8> %r
@@ -84,8 +75,7 @@ define <4 x i8> @sshl_vec() {
 
 define <2 x i8> @ushl_vec_all_oob() {
 ; CHECK-LABEL: define <2 x i8> @ushl_vec_all_oob() {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> splat (i8 10), <2 x i8> <i8 8, i8 -1>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> <i8 10, i8 10>, <2 x i8> <i8 8, i8 -1>)
   ret <2 x i8> %r
@@ -93,8 +83,7 @@ define <2 x i8> @ushl_vec_all_oob() {
 
 define <2 x i8> @ushl_vec_splat() {
 ; CHECK-LABEL: define <2 x i8> @ushl_vec_splat() {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> splat (i8 100), <2 x i8> splat (i8 2))
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
 ;
   %r = call <2 x i8> @llvm.ushl.sat.v2i8(<2 x i8> splat (i8 100), <2 x i8> splat (i8 2))
   ret <2 x i8> %r
@@ -118,8 +107,7 @@ define i8 @sshl_poison_op1() {
 
 define <2 x i8> @sshl_vec_poison_elt() {
 ; CHECK-LABEL: define <2 x i8> @sshl_vec_poison_elt() {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 10>, <2 x i8> <i8 2, i8 1>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 poison, i8 20>
 ;
   %r = call <2 x i8> @llvm.sshl.sat.v2i8(<2 x i8> <i8 poison, i8 10>, <2 x i8> <i8 2, i8 1>)
   ret <2 x i8> %r
