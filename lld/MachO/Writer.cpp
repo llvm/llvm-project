@@ -1340,8 +1340,11 @@ void Writer::buildFixupChains() {
             reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
         entry->next = offset / ChainedFixupsSection::chainStride();
       } else {
-        auto *entry = reinterpret_cast<dyld_chained_ptr_64_bind *>(prev);
-        entry->next = offset / ChainedFixupsSection::chainStride();
+        // These fixups may be only 4-byte aligned.
+        dyld_chained_ptr_64_bind entry;
+        memcpy(&entry, prev, sizeof(entry));
+        entry.next = offset / ChainedFixupsSection::chainStride();
+        memcpy(prev, &entry, sizeof(entry));
       }
       ++i;
     }
