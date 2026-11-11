@@ -9,22 +9,21 @@ body: |
     %f32:_(f32) = G_IMPLICIT_DEF
     %i16:_(i16) = G_IMPLICIT_DEF
     %i32:_(i32) = G_IMPLICIT_DEF
-    # CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
-    # CHECK: - instruction: %ext_from_float:_(i32) = G_ANYEXT %f16:_(f16)
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
+    ; CHECK: - instruction: %ext_from_float:_(i32) = G_ANYEXT %f16:_(f16)
     %ext_from_float:_(i32) = G_ANYEXT %f16
 
-    # CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
-    # CHECK: - instruction: %ext_to_float:_(f32) = G_ANYEXT %i16:_(i16)
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
+    ; CHECK: - instruction: %ext_to_float:_(f32) = G_ANYEXT %i16:_(i16)
     %ext_to_float:_(f32) = G_ANYEXT %i16
 
-    # CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
-    # CHECK: - instruction: %trunc_from_float:_(i16) = G_TRUNC %f32:_(f32)
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
+    ; CHECK: - instruction: %trunc_from_float:_(i16) = G_TRUNC %f32:_(f32)
     %trunc_from_float:_(i16) = G_TRUNC %f32
 
-    # CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
-    # CHECK: - instruction: %trunc_to_float:_(f16) = G_TRUNC %i32:_(i32)
+    ; CHECK: Bad machine code: G_TRUNC/G_ANYEXT doesn't accept scalar float type
+    ; CHECK: - instruction: %trunc_to_float:_(f16) = G_TRUNC %i32:_(i32)
     %trunc_to_float:_(f16) = G_TRUNC %i32
     S_ENDPGM 0
-
-    # CHECK: LLVM ERROR: Found 4 machine code errors.
+    ; CHECK: LLVM ERROR: Found 4 machine code errors.
 ...
