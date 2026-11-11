@@ -371,8 +371,8 @@
 # CHECK-NEXT:  1      6     0.50                        fmul	h18, h4, v7.h[3]
 # CHECK-NEXT:  1      6     0.50                        fmul	v10.4h, v2.4h, v7.h[5]
 # CHECK-NEXT:  1      6     0.50                        fmul	v5.2s, v12.2s, v9.s[0]
-# CHECK-NEXT:  1      6     0.50                        fmul	v15.4s, v30.4s, v2.s[3]
-# CHECK-NEXT:  1      6     0.50                        fmul	v11.2d, v31.2d, v24.d[1]
+# CHECK-NEXT:  1      6     1.00                        fmul	v15.4s, v30.4s, v2.s[3]
+# CHECK-NEXT:  1      6     1.00                        fmul	v11.2d, v31.2d, v24.d[1]
 # CHECK-NEXT:  1      6     0.50                        fmul	h28, h14, h3
 # CHECK-NEXT:  1      6     0.50                        fmul	d0, d1, v0.d[1]
 # CHECK-NEXT:  1      6     0.50                        fmul	s0, s1, v0.s[3]
@@ -388,8 +388,8 @@
 # CHECK-NEXT:  1      6     0.50                        fmulx	v3.2s, v22.2s, v23.s[3]
 # CHECK-NEXT:  1      6     0.50                        fmulx	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  1      6     1.00                        fmulx	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        fmulx	v5.4s, v28.4s, v15.s[3]
-# CHECK-NEXT:  1      6     0.50                        fmulx	v22.2d, v18.2d, v25.d[1]
+# CHECK-NEXT:  1      6     1.00                        fmulx	v5.4s, v28.4s, v15.s[3]
+# CHECK-NEXT:  1      6     1.00                        fmulx	v22.2d, v18.2d, v25.d[1]
 # CHECK-NEXT:  1      6     1.00                        fneg	v0.2d, v0.2d
 # CHECK-NEXT:  1      6     0.50                        fneg	v0.2s, v0.2s
 # CHECK-NEXT:  1      6     0.50                        fneg	v0.4h, v0.4h
@@ -1579,14 +1579,14 @@
 # CHECK-NEXT: [2]   - A53UnitDiv
 # CHECK-NEXT: [3.0] - A53UnitFPALU
 # CHECK-NEXT: [3.1] - A53UnitFPALU
-# CHECK-NEXT: [4.0] - A53UnitFPMDS
-# CHECK-NEXT: [4.1] - A53UnitFPMDS
+# CHECK-NEXT: [4.0] - A53UnitFPDS
+# CHECK-NEXT: [4.1] - A53UnitFPDS
 # CHECK-NEXT: [5]   - A53UnitLdSt
 # CHECK-NEXT: [6]   - A53UnitMAC
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     966.00 966.00 327.50 327.50 466.00  -
+# CHECK-NEXT:  -      -      -      -     981.50 981.50 314.00 314.00 466.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1927,33 +1927,33 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminv	h3, v30.4h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminv	h29, v12.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminv	s16, v19.4s
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmla	d0, d1, v0.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmla	h23, h24, v15.h[4]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmla	s0, s1, v0.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmla	v0.2s, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmla	v29.8h, v15.8h, v10.h[4]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmla	v2.2s, v16.2s, v28.s[0]
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmla	v14.4s, v14.4s, v5.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmla	v1.4s, v24.4s, v12.4s
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmla	v10.2d, v14.2d, v21.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmls	d0, d4, v0.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmls	h8, h14, v7.h[4]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmls	s3, s5, v0.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmls	v0.2s, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmls	v30.8h, v18.8h, v4.h[6]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmls	v10.2s, v27.2s, v0.s[0]
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmls	v27.4s, v7.4s, v24.s[0]
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmls	v10.2d, v22.2d, v29.d[0]
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00    -      -     fmls	v6.8h, v15.8h, v23.8h
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	d0, d1, v0.d[1]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	h23, h24, v15.h[4]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	s0, s1, v0.s[3]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	v0.2s, v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmla	v29.8h, v15.8h, v10.h[4]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmla	v2.2s, v16.2s, v28.s[0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmla	v14.4s, v14.4s, v5.s[3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmla	v1.4s, v24.4s, v12.4s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmla	v10.2d, v14.2d, v21.d[1]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmls	d0, d4, v0.d[1]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmls	h8, h14, v7.h[4]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmls	s3, s5, v0.s[3]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmls	v0.2s, v0.2s, v0.2s
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmls	v30.8h, v18.8h, v4.h[6]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmls	v10.2s, v27.2s, v0.s[0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmls	v27.4s, v7.4s, v24.s[0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmls	v10.2d, v22.2d, v29.d[0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmls	v6.8h, v15.8h, v23.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmov	v0.2d, #-1.25000000
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmov	v0.2s, #13.00000000
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmov	v0.4s, #1.00000000
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	h18, h4, v7.h[3]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v10.4h, v2.4h, v7.h[5]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v5.2s, v12.2s, v9.s[0]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v15.4s, v30.4s, v2.s[3]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v11.2d, v31.2d, v24.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmul	h28, h14, h3
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmul	v15.4s, v30.4s, v2.s[3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmul	v11.2d, v31.2d, v24.d[1]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	h28, h14, h3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	d0, d1, v0.d[1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	s0, s1, v0.s[3]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v0.2s, v0.2s, v0.2s
@@ -1968,8 +1968,8 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmulx	v3.2s, v22.2s, v23.s[3]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmulx	v0.2s, v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmulx	v0.4s, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmulx	v5.4s, v28.4s, v15.s[3]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmulx	v22.2d, v18.2d, v25.d[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmulx	v5.4s, v28.4s, v15.s[3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmulx	v22.2d, v18.2d, v25.d[1]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fneg	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	v0.2s, v0.2s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fneg	v0.4h, v0.4h

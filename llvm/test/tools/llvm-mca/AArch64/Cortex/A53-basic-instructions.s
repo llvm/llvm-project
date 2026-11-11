@@ -1271,14 +1271,14 @@
 # CHECK-NEXT: [2]   - A53UnitDiv
 # CHECK-NEXT: [3.0] - A53UnitFPALU
 # CHECK-NEXT: [3.1] - A53UnitFPALU
-# CHECK-NEXT: [4.0] - A53UnitFPMDS
-# CHECK-NEXT: [4.1] - A53UnitFPMDS
+# CHECK-NEXT: [4.0] - A53UnitFPDS
+# CHECK-NEXT: [4.1] - A53UnitFPDS
 # CHECK-NEXT: [5]   - A53UnitLdSt
 # CHECK-NEXT: [6]   - A53UnitMAC
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT: 249.50 249.50 27.00  4.00   135.00 135.00 167.50 167.50 471.00 50.00
+# CHECK-NEXT: 249.50 249.50 27.00  4.00   143.50 143.50 159.00 159.00 471.00 50.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -1854,7 +1854,7 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     frinti	d24, d25
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	s26, h27
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvt	d28, h29
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmul	s20, s19, s17
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	s20, s19, s17
 # CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fdiv	h1, h26, h23
 # CHECK-NEXT:  -      -      -      -      -      -     14.00  14.00   -      -     fdiv	s1, s2, s3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	h23, h27, h22
@@ -1867,9 +1867,9 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnm	h29, h13, h14
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnm	s16, s17, s18
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnm	s19, s20, s21
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmul	h3, h15, h7
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmul	s22, s23, s2
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmul	d20, d19, d17
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	h3, h15, h7
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	s22, s23, s2
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	d20, d19, d17
 # CHECK-NEXT:  -      -      -      -      -      -     29.00  29.00   -      -     fdiv	d1, d2, d3
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fadd	d4, d5, d6
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fsub	d7, d8, d9
@@ -1879,19 +1879,19 @@
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmaxnm	d16, d17, d18
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnm	d19, d20, d21
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fminnm	h29, h23, h17
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmul	d22, d23, d24
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmadd	h27, h0, h6, h28
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmadd	s3, s5, s6, s31
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmadd	d3, d13, d0, d23
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmsub	h25, h28, h12, h24
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmsub	s3, s5, s6, s31
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fmsub	d3, d13, d0, d23
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmadd	h3, h18, h31, h24
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmadd	s3, s5, s6, s31
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmadd	d3, d13, d0, d23
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmsub	s3, s5, s6, s31
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmsub	d3, d13, d0, d23
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50    -      -     fnmsub	h3, h29, h24, h17
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmul	d22, d23, d24
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmadd	h27, h0, h6, h28
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmadd	s3, s5, s6, s31
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmadd	d3, d13, d0, d23
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmsub	h25, h28, h12, h24
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmsub	s3, s5, s6, s31
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmsub	d3, d13, d0, d23
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmadd	h3, h18, h31, h24
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmadd	s3, s5, s6, s31
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmadd	d3, d13, d0, d23
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmsub	s3, s5, s6, s31
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmsub	d3, d13, d0, d23
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fnmsub	h3, h29, h24, h17
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvtzs	w3, h5, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvtzs	wzr, h20, #13
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fcvtzs	w19, h0, #32

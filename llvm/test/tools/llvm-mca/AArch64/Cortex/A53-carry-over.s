@@ -41,8 +41,8 @@ add  w19, w20, w21
 # CHECK-NEXT: [2]   - A53UnitDiv
 # CHECK-NEXT: [3.0] - A53UnitFPALU
 # CHECK-NEXT: [3.1] - A53UnitFPALU
-# CHECK-NEXT: [4.0] - A53UnitFPMDS
-# CHECK-NEXT: [4.1] - A53UnitFPMDS
+# CHECK-NEXT: [4.0] - A53UnitFPDS
+# CHECK-NEXT: [4.1] - A53UnitFPDS
 # CHECK-NEXT: [5]   - A53UnitLdSt
 # CHECK-NEXT: [6]   - A53UnitMAC
 
