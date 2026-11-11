@@ -14,10 +14,12 @@
 #include "DeviceOffload.h"
 
 #include "clang/Basic/TargetID.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/CommonArgs.h"
+#include "clang/Driver/OffloadBundler.h"
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
@@ -35,6 +37,8 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -254,6 +258,11 @@ llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   if (!HSACO)
     return HSACO.takeError();
 
+  llvm::Expected<llvm::StringRef> Fatbin = GenerateFatbinary(*HSACO);
+  if (!Fatbin)
+    return Fatbin.takeError();
+
+  // FIXME: Embed the fat binary into the host compilation.
   llvm::Expected<llvm::StringRef> Fatbin = GenerateFatbinary(*HSACO);
   if (!Fatbin)
     return Fatbin.takeError();
