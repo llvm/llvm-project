@@ -590,27 +590,6 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
 
     return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
   }
-  case RTLIB::impl___aeabi_idivmod:
-  case RTLIB::impl___aeabi_uidivmod:
-  case RTLIB::impl___aeabi_ldivmod:
-  case RTLIB::impl___aeabi_uldivmod:
-  case RTLIB::impl___rt_sdiv:
-  case RTLIB::impl___rt_udiv:
-  case RTLIB::impl___rt_sdiv64:
-  case RTLIB::impl___rt_udiv64:
-  case RTLIB::impl___divmodqi4:
-  case RTLIB::impl___udivmodqi4:
-  case RTLIB::impl___divmodhi4:
-  case RTLIB::impl___udivmodhi4:
-  case RTLIB::impl_avr___divmodsi4:
-  case RTLIB::impl_avr___udivmodsi4: {
-    auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
-    return {FuncTy, Attrs.addFnAttributes(Ctx, FuncAttrBuilder)};
-  }
   default:
     break;
   }
