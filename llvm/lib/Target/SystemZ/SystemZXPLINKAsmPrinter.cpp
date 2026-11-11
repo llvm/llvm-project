@@ -300,14 +300,15 @@ void SystemZXPLINKAsmPrinter::emitEndOfAsmFile(Module &M) {
 // a weak reference to CELQBST, so without it autocall would not include it.
 void SystemZXPLINKAsmPrinter::emitCELQMAIN(const Function &MainFn) {
   MCSymbol *MainSym = getSymbol(&MainFn);
-  auto ExternalOSSymbol = [&](StringRef Name) {
+  auto ExternalOSSymbol = [&](StringRef Name, bool IsRenameable) {
     MCSymbol *Sym = OutContext.getOrCreateSymbol(Name);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_OSLinkage);
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
+    getTargetStreamer()->emitRenameable(Sym, IsRenameable);
     return Sym;
   };
-  MCSymbol *CELQINPL = ExternalOSSymbol("CELQINPL");
-  MCSymbol *CELQBST = ExternalOSSymbol("CELQBST");
+  MCSymbol *CELQINPL = ExternalOSSymbol("CELQINPL", /*IsRenameable=*/false);
+  MCSymbol *CELQBST = ExternalOSSymbol("CELQBST", /*IsRenameable=*/true);
 
   OutStreamer->pushSection();
   OutStreamer->switchSection(getObjFileLowering().getTextSection());
@@ -701,6 +702,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
   MCSymbol *CELQSTRT = OutContext.getOrCreateSymbol(StartSymbolName);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_OSLinkage);
   OutStreamer->emitSymbolAttribute(CELQSTRT, MCSA_Global);
+  ZOS->emitRenameable(CELQSTRT, /*IsRenamable=*/false);
 
   // Create symbol and assign to streamer field for use in PPA1.
   ZOS->PPA2Sym = OutContext.createTempSymbol("PPA2", false);
