@@ -4462,6 +4462,36 @@ func.func @no_fold_contiguous_gather_tensor(%base: tensor<8xf32>, %mask: vector<
 
 // -----
 
+// CHECK-LABEL: @no_fold_contiguous_gather_non_unit_stride
+//       CHECK:   vector.gather
+//   CHECK-NOT:   vector.maskedload
+func.func @no_fold_contiguous_gather_non_unit_stride(%base: memref<4xf32, strided<[3]>>,
+    %mask: vector<2xi1>, %pass_thru: vector<2xf32>) -> vector<2xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0, 1]> : vector<2xindex>
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru :
+    memref<4xf32, strided<[3]>>, vector<2xindex>, vector<2xi1>, vector<2xf32> into vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @contiguous_gather_1elem_non_unit_stride
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<4xf32, strided<[3]>>, %[[MASK:.*]]: vector<1xi1>, %[[PASSTHRU:.*]]: vector<1xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[R:.*]] = vector.maskedload %[[BASE]][%[[C0]]], %[[MASK]], %[[PASSTHRU]] : memref<4xf32, strided<[3]>>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+//       CHECK:   return %[[R]]
+func.func @contiguous_gather_1elem_non_unit_stride(%base: memref<4xf32, strided<[3]>>,
+    %mask: vector<1xi1>, %pass_thru: vector<1xf32>) -> vector<1xf32> {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0]> : vector<1xindex>
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru :
+    memref<4xf32, strided<[3]>>, vector<1xindex>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %0 : vector<1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @gather_broadcast(
 // TODO: Broadcast is not supported yet
 //       CHECK:   %[[R:.*]] = vector.gather
@@ -4536,6 +4566,20 @@ func.func @no_fold_contiguous_scatter_tensor(%base: tensor<16xf32>,
   %0 = vector.scatter %base[%c0] [%indices], %mask, %value
       : tensor<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<16xf32>
   return %0 : tensor<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_contiguous_scatter_non_unit_stride
+//       CHECK:   vector.scatter
+//   CHECK-NOT:   vector.maskedstore
+func.func @no_fold_contiguous_scatter_non_unit_stride(%base: memref<4xf32, strided<[3]>>,
+    %mask: vector<2xi1>, %value: vector<2xf32>) {
+  %c0 = arith.constant 0 : index
+  %indices = vector.step : vector<2xindex>
+  vector.scatter %base[%c0][%indices], %mask, %value :
+    memref<4xf32, strided<[3]>>, vector<2xindex>, vector<2xi1>, vector<2xf32>
+  return
 }
 
 // -----
