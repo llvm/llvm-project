@@ -4,7 +4,7 @@
 ; This file contains the same function but with different trip-count PGO hints
 
 ; The function is vectorized if there are no trip-count hints
-define i32 @foo_no_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
+define i32 @foo_no_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) vscale_range(1,16) {
 ; CHECK-LABEL: @foo_no_trip_count(
 ; PREDICATED: vector.body
 ; SCALAR: vector.body
@@ -29,7 +29,7 @@ for.end:
 }
 
 ; If trip-count is equal to 4, the function is not vectorised
-define i32 @foo_low_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
+define i32 @foo_low_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) vscale_range(1,16) {
 ; CHECK-LABEL: @foo_low_trip_count(
 ; PREDICATED-NOT: vector.body
 ; SCALAR-NOT: vector.body
@@ -55,7 +55,7 @@ for.end:
 
 ; If trip-count is equal to 10, the function is not vectorised as the runtime
 ; check cost is too high relative to the trip count.
-define i32 @foo_mid_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
+define i32 @foo_mid_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) vscale_range(1,16) {
 ; CHECK-LABEL: @foo_mid_trip_count(
 ; PREDICATED-NOT: vector.body
 ; SCALAR-NOT: vector.body
@@ -82,7 +82,7 @@ for.end:
 ; If trip-count is equal to 12, the function is vectorised, as the cost
 ; model decides whether the required runtime check is worthwhile, instead
 ; of unconditionally rejecting low trip-count loops that need one.
-define i32 @foo_mid_trip_count_12(ptr %a, ptr %b, ptr %c, i32 %bound) {
+define i32 @foo_mid_trip_count_12(ptr %a, ptr %b, ptr %c, i32 %bound) vscale_range(1,16) {
 ; CHECK-LABEL: @foo_mid_trip_count_12(
 ; PREDICATED: vector.body
 ; SCALAR: vector.body
@@ -107,7 +107,7 @@ for.end:                                          ; preds = %for.body
 }
 
 ; If trip-count is equal to 40, the function is always vectorised
-define i32 @foo_high_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
+define i32 @foo_high_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) vscale_range(1,16) {
 ; CHECK-LABEL: @foo_high_trip_count(
 ; PREDICATED: vector.body
 ; SCALAR: vector.body

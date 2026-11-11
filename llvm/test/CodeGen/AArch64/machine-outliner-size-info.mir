@@ -50,7 +50,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 fixedStack:
 body:             |
   bb.0:

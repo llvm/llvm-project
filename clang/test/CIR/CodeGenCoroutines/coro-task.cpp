@@ -2,8 +2,10 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: cir-opt --cir-flatten-cfg %t.cir -o %t.flat.cir
 // RUN: FileCheck --input-file=%t.flat.cir %s -check-prefix=CIR-FLAT --implicit-check-not=cir.coroutine --implicit-check-not=cir.await --implicit-check-not=cir.co_return --implicit-check-not=cir.coro.exit --implicit-check-not=cir.coro.suspend_point --implicit-check-not=cir.coro.cleanup
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm  -disable-llvm-passes %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=OGCG
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm  -disable-llvm-passes %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm  -disable-llvm-passes %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 #include "Inputs/coroutine.h"
 
@@ -24,6 +26,10 @@
 // CIR: module {{.*}} {
 // CIR-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !rec_folly3A3Acoro3A3Aco_invoke_fn
 
+// LLVM-DAG: %[[VoidTask:"struct.folly::coro::Task<void>"]] = type { i8 }
+// LLVM-DAG: %[[VoidPromisse:"struct.folly::coro::Task<void>::promise_type"]] = type { i8 }
+// LLVM-DAG: %[[SuspendAlways:"struct.std::suspend_always"]] = type { i8 }
+
 using VoidTask = folly::coro::Task<void>;
 
 VoidTask silly_task() {
@@ -38,6 +44,13 @@ VoidTask silly_task() {
 // CIR-NEXT: %[[CoroHandleVoidAddr:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<![[CoroHandleVoid]]>
 // CIR-NEXT: %[[CoroHandlePromiseAddr:.*]] = cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<![[CoroHandlePromiseVoid]]>
 
+// LLVM: define dso_local void @_Z10silly_taskv() #[[CoroAttrs:[0-9]+]] {
+// LLVM:   %[[VoidTaskAddr:.*]] = alloca %[[VoidTask]], align 1
+// LLVM:   %[[SavedFrameAddr:.*]] = alloca ptr, align 8
+// LLVM:   %[[VoidPromisseAddr:.*]] = alloca %[[VoidPromisse]], align 1
+// LLVM:   %[[SuspendAlwaysAddr:.*]] = alloca %[[SuspendAlways]], align 1
+
+// OGCG: define dso_local void @_Z10silly_taskv() #[[CoroAttrs:[0-9]+]] {
 // OGCG: %[[VoidPromisseAddr:.*]] = alloca %[[VoidPromisse]], align 1
 // OGCG: %[[VoidTaskAddr:.*]] = alloca %[[VoidTask]], align 1
 // OGCG: %[[SuspendAlwaysAddr:.*]] = alloca %[[SuspendAlways]], align 1
@@ -48,6 +61,7 @@ VoidTask silly_task() {
 // CIR-NEXT: %[[Align:.*]] = cir.const #cir.int<16> : !u32i
 // CIR-NEXT: %[[PromiseVoidPtr:.*]] = cir.cast bitcast %[[VoidPromisseAddr]] : !cir.ptr<![[VoidPromisse]]> -> !cir.ptr<!void>
 // CIR-NEXT: %[[CoroId:.*]] = cir.coro.intrinsic.id(%[[Align]], %[[PromiseVoidPtr]], %[[NullPtr]], %[[NullPtr]]) : (!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> token
+// LLVM: %[[CoroId:.*]] = call token @llvm.coro.id(i32 16, ptr %[[VoidPromisseAddr]], ptr null, ptr null)
 // OGCG: %[[CoroId:.*]] = call token @llvm.coro.id(i32 16, ptr %[[VoidPromisseAddr]], ptr null, ptr null)
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
@@ -62,6 +76,20 @@ VoidTask silly_task() {
 // CIR-NEXT: }
 // CIR-NEXT: %[[Load0:.*]] = cir.load{{.*}} %[[SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR-NEXT: %[[CoroFrameAddr:.*]] = cir.coro.intrinsic.begin(%[[CoroId]], %[[Load0]]) : (token, !cir.ptr<!void>) -> !cir.ptr<!void>
+
+// LLVM:   %[[ShouldAlloc:.*]] = call i1 @llvm.coro.alloc(token %[[CoroId]])
+// LLVM:   store ptr null, ptr %[[SavedFrameAddr]]
+// LLVM:   br i1 %[[ShouldAlloc]], label %[[CoroAlloc:[0-9]+]], label %[[CoroInit:[0-9]+]]
+
+// LLVM: [[CoroAlloc]]:
+// LLVM:   %[[CoroSize:.*]] = call i64 @llvm.coro.size.i64()
+// LLVM:   %[[AllocFrame:.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[CoroSize]])
+// LLVM:   store ptr %[[AllocFrame]], ptr %[[SavedFrameAddr]]
+// LLVM:   br label %[[CoroInit]]
+
+// LLVM: [[CoroInit]]:
+// LLVM:   %[[FrameMem:.*]] = load ptr, ptr %[[SavedFrameAddr]]
+// LLVM:   %[[CoroFrameAddr:.*]] = call ptr @llvm.coro.begin(token %[[CoroId]], ptr %[[FrameMem]])
 
 // OGCG: %[[ShouldAlloc:.*]]  = call i1 @llvm.coro.alloc(token %[[CoroId]])
 // OGCG: br i1 %[[ShouldAlloc]], label %coro.alloc, label %coro.init
@@ -86,6 +114,9 @@ VoidTask silly_task() {
 // CIR:   %[[RetObj:.*]] = cir.const #cir.poison : ![[VoidTask]]
 // CIR:   cir.store{{.*}} %[[RetObj]], %[[VoidTaskAddr]] : ![[VoidTask]]
 
+// LLVM: call void @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
+// LLVM: store %[[VoidTask]] poison, ptr %[[VoidTaskAddr]]
+
 // OGCG: call void @llvm.lifetime.start.p0(ptr %[[VoidPromisseAddr]])
 // OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
 // OGCG: call void @llvm.lifetime.start.p0(ptr %[[SuspendAlwaysAddr]])
@@ -100,6 +131,9 @@ VoidTask silly_task() {
 // CIR:   %[[Tmp0:.*]] = cir.const #cir.poison : ![[SuspendAlways]]
 // CIR:   cir.store{{.*}} %[[Tmp0]], %[[SuspendAlwaysAddr]]
 
+// LLVM: call void @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
+// LLVM: store %[[SuspendAlways]] poison, ptr %[[SuspendAlwaysAddr]]
+
 // OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
 
 //
@@ -111,6 +145,9 @@ VoidTask silly_task() {
 // CIR-NEXT:   cir.await(init, ready : {
 // CIR-NEXT:     %[[ReadyVeto:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SuspendAlwaysAddr]])
 // CIR-NEXT:     cir.condition(%[[ReadyVeto]])
+
+// LLVM: %[[Ready:.*]] = call noundef zeroext i1 @_ZNSt14suspend_always11await_readyEv(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]])
+// LLVM: br i1 %[[Ready]], label %[[InitReady:[0-9]+]], label %[[InitSuspend:[0-9]+]]
 
 // OGCG: %[[Tmp0:.*]] = call noundef zeroext i1 @_ZNSt14suspend_always11await_readyEv(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]])
 // OGCG: br i1 %[[Tmp0]], label %init.ready, label %init.suspend
@@ -136,6 +173,22 @@ VoidTask silly_task() {
 // CIR-NEXT:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[SuspendAlwaysAddr]])
 // CIR-NEXT:     cir.coro.suspend_point
 
+// LLVM: [[InitSuspend]]:
+// LLVM:   %[[Save:.*]] = call token @llvm.coro.save(ptr null)
+// LLVM:   call void @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(ptr noundef %[[CoroFrameAddr]])
+// LLVM:   call void @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(
+// LLVM:   call void @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]])
+// LLVM:   %[[SuspendRes:.*]] = call i8 @llvm.coro.suspend(token %[[Save]], i1 false)
+// LLVM:   switch i8 %[[SuspendRes]], label %[[InitRet:[0-9]+]] [
+// LLVM:     i8 0, label %[[InitReady]]
+// LLVM:     i8 1, label %[[InitCleanup:[0-9]+]]
+// LLVM:   ]
+
+// LLVM: [[InitCleanup]]:
+// LLVM-NEXT:   br label %[[CoroCleanup:[0-9]+]]
+// LLVM: [[InitRet]]:
+// LLVM-NEXT:   br label %[[CoroRet:[0-9]+]]
+
 // OGCG: init.suspend:
 // OGCG:   %[[Save:.*]] = call token @llvm.coro.save(ptr null)
 // OGCG:   call void @llvm.coro.await.suspend.void(ptr %[[SuspendAlwaysAddr]], ptr %[[CoroFrameAddr]], ptr @_Z10silly_taskv.__await_suspend_wrapper__init)
@@ -152,6 +205,9 @@ VoidTask silly_task() {
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   },)
 // CIR-NEXTY   cir.yield loc(#loc34)
+
+// LLVM: [[InitReady]]:
+// LLVM:   call void @_ZNSt14suspend_always12await_resumeEv(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]])
 
 // OGCG: init.ready:
 // OGCG:   call void @_ZNSt14suspend_always12await_resumeEv(ptr noundef nonnull align 1 dereferenceable(1) %[[SuspendAlwaysAddr]]
@@ -171,6 +227,11 @@ VoidTask silly_task() {
 // CIR:     }, resume : {
 // CIR:     },)
 
+// LLVM: call noundef zeroext i1 @_ZNSt14suspend_always11await_readyEv(
+// LLVM: call token @llvm.coro.save(ptr null)
+// LLVM: call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM: call void @_ZNSt14suspend_always12await_resumeEv(
+
 // OGCG: cleanup.cont
 // OGCG: await.suspend:
 // OGCG: await.ready:
@@ -180,6 +241,8 @@ VoidTask silly_task() {
 // CIR:     cir.co_return
 // CIR:   }, finalSuspend : {
 
+// LLVM: call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
+
 // OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
 
 // The final suspend co_await
@@ -188,6 +251,12 @@ VoidTask silly_task() {
 // CIR:   }, resume : {
 // CIR:   },)
 // CIR-NEXT:   cir.yield
+
+// LLVM: call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM: call noundef zeroext i1 @_ZNSt14suspend_always11await_readyEv(
+// LLVM: call token @llvm.coro.save(ptr null)
+// LLVM: call i8 @llvm.coro.suspend(token %{{.*}}, i1 true)
+// LLVM: call void @_ZNSt14suspend_always12await_resumeEv(
 
 // OGCG: coro.final:
 // OGCG: final.suspend:
@@ -211,6 +280,19 @@ VoidTask silly_task() {
 // CIR-NEXT:   cir.yield
 // CIR-NEXT: }, exit : {
 
+// LLVM: [[CoroCleanup]]:
+// LLVM:   %[[FreeMem:.*]] = call ptr @llvm.coro.free(token %[[CoroId]], ptr %[[CoroFrameAddr]])
+// LLVM:   %[[Cond:.*]] = icmp ne ptr %[[FreeMem]], null
+// LLVM:   br i1 %[[Cond]], label %[[CoroFree:[0-9]+]], label %[[AfterCoroFree:[0-9]+]]
+
+// LLVM: [[CoroFree]]:
+// LLVM:   %[[Size:.*]] = call i64 @llvm.coro.size.i64()
+// LLVM:   call void @_ZdlPvm(ptr noundef %[[FreeMem]], i64 noundef %[[Size]])
+// LLVM:   br label %[[AfterCoroFree]]
+
+// LLVM: [[AfterCoroFree]]:
+// LLVM-NEXT:   br label %[[CoroRet]]
+
 // OGCG: %[[FreeMem:.*]] = call ptr @llvm.coro.free(token %[[CoroId]], ptr %[[CoroFrameAddr]])
 // OGCG: %[[Cond:.*]] = icmp ne ptr %[[FreeMem]], null
 // OGCG: br i1 %[[Cond]], label %coro.free, label %after.coro.free
@@ -231,6 +313,11 @@ VoidTask silly_task() {
 // CIR: %[[Tmp1:.*]] = cir.load{{.*}} %[[VoidTaskAddr]]
 // CIR: cir.return
 // CIR: }
+
+// LLVM: [[CoroRet]]:
+// LLVM-NEXT:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   %{{.*}} = load %[[VoidTask]], ptr %[[VoidTaskAddr]]
+// LLVM-NEXT:   ret void
 
 // OGCG: coro.ret:
 // OGCG:   call void @llvm.coro.end(ptr null, i1 false, token none)
@@ -460,6 +547,17 @@ folly::coro::Task<int> byRef(const std::string& s) {
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT:   cir.return
 
+// LLVM: define {{.*}} void @_Z5byRefRKSt6string(
+// LLVM:   %[[SIZE:.*]] = call noundef i32 @_ZNKSt6string4sizeEv(
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef %[[SIZE]])
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
+
 // OGCG: define {{.*}} void @_Z5byRefRKSt6string(
 // OGCG: cleanup.cont:
 // OGCG:   %[[SIZE:.*]] = call noundef i32 @_ZNKSt6string4sizeEv(
@@ -515,6 +613,19 @@ folly::coro::Task<void> silly_coro() {
 // CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT:   cir.return
+
+// LLVM: define {{.*}} void @_Z10silly_corov()
+// LLVM:   call void @_ZNSt6stringC1EPKc(
+// LLVM:   call void @_Z5byRefRKSt6string(
+// LLVM:   call noundef i32 @_ZN5folly4coro12blockingWaitIiEET_ONS0_4TaskIS2_EE(
+// LLVM:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
 
 // OGCG: define {{.*}} void @_Z10silly_corov()
 // OGCG: cleanup.cont:
@@ -669,6 +780,29 @@ folly::coro::Task<void> yield1() {
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT:   cir.return
 
+// LLVM: define {{.*}} void @_Z6yield1v()
+// LLVM:   call void @_Z5yieldv()
+// LLVM:   call void @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(
+// LLVM:   %[[READY:.*]] = call noundef zeroext i1 @_ZNSt14suspend_always11await_readyEv(
+// LLVM-NEXT:   br i1 %[[READY]], label %[[YIELD_READY:[0-9]+]], label %[[YIELD_SUSPEND:[0-9]+]]
+// LLVM: [[YIELD_SUSPEND]]:
+// LLVM-NEXT:   %[[SAVE:.*]] = call token @llvm.coro.save(ptr null)
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %[[YIELD_READY]]
+// LLVM-NEXT:     i8 1, label %{{.*}}
+// LLVM-NEXT:   ]
+// LLVM: [[YIELD_READY]]:
+// LLVM-NEXT:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
+
 // OGCG: define {{.*}} void @_Z6yield1v()
 // OGCG: cleanup.cont:
 // OGCG:   call void @_Z5yieldv()
@@ -765,6 +899,30 @@ folly::coro::Task<int> go1() {
 // Classic codegen passes the await_resume result straight to return_value
 // (no __coawait_resume_rval spill). After the co_return it jumps to
 // coro.final through the cleanup dispatch (slot 3).
+
+// LLVM: define {{.*}} void @_Z3go1v()
+// LLVM:   store i32 1, ptr %[[REF:.*]], align 4
+// LLVM:   call void @_Z2goRKi(ptr {{.*}} %[[REF]])
+// LLVM:   br i1 %{{.*}}, label %[[READY:[0-9]+]], label %[[SUSPEND:[0-9]+]]
+// LLVM: [[SUSPEND]]:
+// LLVM-NEXT:   %[[SAVE:.*]] = call token @llvm.coro.save(ptr null)
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %[[READY]]
+// LLVM-NEXT:     i8 1, label %{{.*}}
+// LLVM-NEXT:   ]
+// LLVM: [[READY]]:
+// LLVM-NEXT:   %[[RVAL:.*]] = call noundef i32 @_ZN5folly4coro4TaskIiE12await_resumeEv(
+// LLVM-NEXT:   store i32 %[[RVAL]], ptr %[[RVAL_ADDR:.*]], align 4
+// LLVM:   %[[RVAL_RELOAD:.*]] = load i32, ptr %[[RVAL_ADDR]], align 4
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef %[[RVAL_RELOAD]])
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
 
 // OGCG: define {{.*}} void @_Z3go1v()
 // OGCG: cleanup.cont:
@@ -869,6 +1027,29 @@ folly::coro::Task<int> go1_lambda() {
 // CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(%[[PROMISE]])
 // CIR-FLAT:   cir.return
 
+// LLVM: define {{.*}} void @_Z10go1_lambdav()
+// LLVM:   call void @"_ZZ10go1_lambdavENK3$_0clEv"(
+// LLVM:   br i1 %{{.*}}, label %[[READY:[0-9]+]], label %[[SUSPEND:[0-9]+]]
+// LLVM: [[SUSPEND]]:
+// LLVM-NEXT:   %[[SAVE:.*]] = call token @llvm.coro.save(ptr null)
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %[[READY]]
+// LLVM-NEXT:     i8 1, label %{{.*}}
+// LLVM-NEXT:   ]
+// LLVM: [[READY]]:
+// LLVM-NEXT:   %[[RVAL:.*]] = call noundef i32 @_ZN5folly4coro4TaskIiE12await_resumeEv(
+// LLVM-NEXT:   store i32 %[[RVAL]], ptr %[[RVAL_ADDR:.*]], align 4
+// LLVM:   %[[RVAL_RELOAD:.*]] = load i32, ptr %[[RVAL_ADDR]], align 4
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef %[[RVAL_RELOAD]])
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
+
 // OGCG: define {{.*}} void @_Z10go1_lambdav()
 // OGCG: cleanup.cont:
 // OGCG:   call void @"_ZZ10go1_lambdavENK3$_0clEv"(
@@ -895,6 +1076,16 @@ folly::coro::Task<int> go1_lambda() {
 // OGCG: coro.ret:
 // OGCG-NEXT:   call void @llvm.coro.end(ptr null, i1 false, token none)
 // OGCG-NEXT:   ret void
+
+// LLVM: define internal void @"_ZZ10go1_lambdavENK3$_0clEv"({{.*}}) #[[CoroAttrs]]
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef 1)
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
 
 // OGCG: define internal void @"_ZZ10go1_lambdavENK3$_0clEv"(
 // OGCG: cleanup.cont:
@@ -969,6 +1160,33 @@ folly::coro::Task<int> go4() {
 // CIR-FLAT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(%[[PROMISE]])
 // CIR-FLAT:   cir.coro.intrinsic.free
 // CIR-FLAT:   cir.return
+
+// LLVM: define {{.*}} void @_Z3go4v()
+// LLVM:   %[[CONV:.*]] = call noundef ptr @"_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv"(
+// LLVM-NEXT:   store ptr %[[CONV]], ptr %[[FN_ADDR:.*]], align 8
+// LLVM-NEXT:   %[[FN:.*]] = load ptr, ptr %[[FN_ADDR]], align 8
+// LLVM-NEXT:   store i32 3, ptr %[[REF:.*]], align 4
+// LLVM-NEXT:   call void %[[FN]](ptr {{.*}} %[[REF]])
+// LLVM:   br i1 %{{.*}}, label %[[READY:[0-9]+]], label %[[SUSPEND:[0-9]+]]
+// LLVM: [[SUSPEND]]:
+// LLVM-NEXT:   %[[SAVE:.*]] = call token @llvm.coro.save(ptr null)
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %[[SAVE]], i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %[[READY]]
+// LLVM-NEXT:     i8 1, label %{{.*}}
+// LLVM-NEXT:   ]
+// LLVM: [[READY]]:
+// LLVM-NEXT:   %[[RVAL:.*]] = call noundef i32 @_ZN5folly4coro4TaskIiE12await_resumeEv(
+// LLVM-NEXT:   store i32 %[[RVAL]], ptr %[[RVAL_ADDR:.*]], align 4
+// LLVM:   %[[RVAL_RELOAD:.*]] = load i32, ptr %[[RVAL_ADDR]], align 4
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef %[[RVAL_RELOAD]])
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
 
 // OGCG: define {{.*}} void @_Z3go4v()
 // OGCG: cleanup.cont:
@@ -1050,6 +1268,19 @@ folly::coro::Task<int> co_returns(int x) {
 // CIR:  cir.yield
 // CIR: }, destroy : {
 
+
+// All three co_returns branch to the same final suspend block.
+// LLVM: define {{.*}} @_Z10co_returnsi
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef -1)
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef -2)
+// LLVM-NEXT:   br label %[[FINAL]]
+// LLVM:   call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM:   %[[MUL:.*]] = mul nsw i32 %{{.*}}, 2
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef %[[MUL]])
+// LLVM-NEXT:   br label %[[FINAL]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
 
 // OGCG: define {{.*}} @_Z10co_returnsi
 // OGCG: coro.init:
@@ -1149,6 +1380,22 @@ folly::coro::Task<int> implicit_yield_terminator(int x) {
 // CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(%[[PROMISE]])
 // CIR-FLAT:   cir.return
 
+// LLVM: define {{.*}} void @_Z25implicit_yield_terminatori(
+// LLVM:   %[[CMP:.*]] = icmp slt i32 %{{.*}}, 0
+// LLVM-NEXT:   br i1 %[[CMP]], label %[[THEN:[0-9]+]], label %[[ELSE:[0-9]+]]
+// LLVM: [[THEN]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef -1)
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[ELSE]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(ptr {{.*}}, i32 noundef 2)
+// LLVM-NEXT:   br label %[[FINAL]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM:   call ptr @llvm.coro.free(
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   load %{{.*}}, ptr %{{.*}}
+// LLVM-NEXT:   ret void
+
 // OGCG: define {{.*}} void @_Z25implicit_yield_terminatori(
 // OGCG: cleanup.cont:
 // OGCG:   %[[CMP:.*]] = icmp slt i32 %{{.*}}, 0
@@ -1216,6 +1463,30 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // CIR: }, destroy : {
 // CIR:   cir.yield
 // CIR: }
+
+// LLVM: define {{.*}} void @_Z19co_return_with_dtori
+// LLVM:   %[[SLOT:.*]] = alloca i32, align 4
+// LLVM:   %[[LOCAL:.*]] = alloca %struct.HasDtor
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef 1)
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR:[0-9]+]]
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef 2)
+// LLVM-NEXT:   store i32 2, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR]]
+// LLVM: [[DTOR]]:
+// LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
+// LLVM:   %[[DEST:.*]] = load i32, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   switch i32 %[[DEST]], label %{{.*}} [
+// LLVM-NEXT:     i32 0, label %{{.*}}
+// LLVM-NEXT:     i32 1, label %[[RET1:[0-9]+]]
+// LLVM-NEXT:     i32 2, label %[[RET2:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[RET1]]:
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[RET2]]:
+// LLVM-NEXT:   br label %[[FINAL]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
 
 // OGCG: define {{.*}} void @_Z19co_return_with_dtori
 // OGCG:   %[[LOCAL:.*]] = alloca %struct.HasDtor
@@ -1368,6 +1639,43 @@ VoidTask silly_task_with_dtor() {
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT:   cir.return
 
+// LLVM: define {{.*}} void @_Z20silly_task_with_dtorv
+// LLVM:   %[[SLOT:.*]] = alloca i32, align 4
+// LLVM:   %[[LOCAL:.*]] = alloca %struct.HasDtor
+// LLVM:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %[[AWAIT_READY:[0-9]+]]
+// LLVM-NEXT:     i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM-NEXT:   ]
+
+// Slot 0 = normal, slot 1 = destroy. Both reach the ~HasDtor cleanup.
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR:[0-9]+]]
+// LLVM: [[AWAIT_READY]]:
+// LLVM-NEXT:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   store i32 0, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR]]
+// LLVM: [[DTOR]]:
+// LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
+// LLVM:   %[[DEST:.*]] = load i32, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   switch i32 %[[DEST]], label %{{.*}} [
+// LLVM-NEXT:     i32 0, label %[[NORMAL:[0-9]+]]
+// LLVM-NEXT:     i32 1, label %[[DESTROY:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[DESTROY]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+
+// Normal: return_void + final suspend. Destroy: coro.free.
+// LLVM: [[NORMAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
+
 // OGCG: define {{.*}} void @_Z20silly_task_with_dtorv
 // OGCG:   %[[LOCAL:.*]] = alloca %struct.HasDtor
 // OGCG: await.suspend:
@@ -1470,6 +1778,28 @@ VoidTask await_in_loop(int n) {
 // loop cleanup and reaches %coro.cleanup; only the normal case (slot 0)
 // continues to for.inc.
 
+// LLVM: define {{.*}} void @_Z13await_in_loopi(
+// LLVM:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %[[AWAIT_READY:[0-9]+]]
+// LLVM-NEXT:     i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM: [[AWAIT_READY]]:
+// LLVM-NEXT:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   %[[I:.*]] = load i32, ptr %{{.*}}, align 4
+// LLVM-NEXT:   %[[INC:.*]] = add nsw i32 %[[I]], 1
+// LLVM-NEXT:   store i32 %[[INC]], ptr %{{.*}}, align 4
+// LLVM-NEXT:   br label %{{.*}}
+// LLVM:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
+
 // OGCG: define {{.*}} void @_Z13await_in_loopi(
 // OGCG: await.suspend:
 // OGCG:   switch i8 %{{.*}}, label %coro.ret [
@@ -1549,6 +1879,25 @@ VoidTask await_in_if(bool b) {
 // CIR-FLAT-NEXT:   cir.coro.intrinsic.free
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT:   cir.return
+
+// LLVM: define {{.*}} void @_Z11await_in_ifb(
+// LLVM:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   %[[B:.*]] = trunc i8 %{{.*}} to i1
+// LLVM-NEXT:   br i1 %[[B]], label %{{.*}}, label %[[IF_END:[0-9]+]]
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %{{.*}}
+// LLVM-NEXT:     i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM: [[IF_END]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
 
 // OGCG: define {{.*}} void @_Z11await_in_ifb(
 // OGCG: cleanup.cont:
@@ -1666,6 +2015,40 @@ VoidTask await_in_loop_with_dtor(int n) {
 // Classic codegen: after ~HasDtor, only slot 0 continues to for.inc; the
 // destroy case (slot 2) goes through the loop cleanup to %coro.cleanup.
 
+// LLVM: define {{.*}} void @_Z23await_in_loop_with_dtori(
+// LLVM:   %[[SLOT:.*]] = alloca i32, align 4
+// LLVM:   %[[LOCAL:.*]] = alloca %struct.HasDtor
+// LLVM:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %{{.*}}
+// LLVM-NEXT:     i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR:[0-9]+]]
+// LLVM:   store i32 0, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR]]
+// LLVM: [[DTOR]]:
+// LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
+// LLVM:   %[[DEST:.*]] = load i32, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   switch i32 %[[DEST]], label %{{.*}} [
+// LLVM-NEXT:     i32 0, label %{{.*}}
+// LLVM-NEXT:     i32 1, label %[[DESTROY:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[DESTROY]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+
+// Resume continues to the step (++i).
+// LLVM:   %[[I:.*]] = load i32, ptr %{{.*}}, align 4
+// LLVM-NEXT:   %[[INC:.*]] = add nsw i32 %[[I]], 1
+// LLVM:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
+
 // OGCG: define {{.*}} void @_Z23await_in_loop_with_dtori(
 // OGCG:   %[[LOCAL:.*]] = alloca %struct.HasDtor
 // OGCG: await.cleanup:
@@ -1775,6 +2158,36 @@ VoidTask await_in_if_with_dtor(bool b) {
 // CIR-FLAT-NEXT:   cir.coro.intrinsic.free
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT:   cir.return
+
+// LLVM: define {{.*}} void @_Z21await_in_if_with_dtorb(
+// LLVM:   %[[SLOT:.*]] = alloca i32, align 4
+// LLVM:   %[[LOCAL:.*]] = alloca %struct.HasDtor
+// LLVM:   call void @_ZNSt14suspend_always12await_resumeEv(
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %{{.*}}
+// LLVM-NEXT:     i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR:[0-9]+]]
+// LLVM:   store i32 0, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[DTOR]]
+// LLVM: [[DTOR]]:
+// LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
+// LLVM:   %[[DEST:.*]] = load i32, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   switch i32 %[[DEST]], label %{{.*}} [
+// LLVM-NEXT:     i32 0, label %{{.*}}
+// LLVM-NEXT:     i32 1, label %[[DESTROY:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[DESTROY]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM:   call void @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv(
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
 
 // OGCG: define {{.*}} void @_Z21await_in_if_with_dtorb(
 // OGCG:   %[[LOCAL:.*]] = alloca %struct.HasDtor
@@ -1921,6 +2334,69 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // Classic codegen: the co_return (slot 3) and the destroy (slot 2) both run
 // ~inner and ~outer, then go to %coro.final and %coro.cleanup.
 
+// LLVM: define {{.*}} void @_Z17co_return_in_loopi(
+// LLVM:   %[[SLOT:.*]] = alloca i32, align 4
+// LLVM:   %[[OUTER:.*]] = alloca %struct.HasDtor
+// LLVM:   %[[INNER:.*]] = alloca %struct.HasDtor
+
+// co_return i: slot 1.
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[INNER_DTOR:[0-9]+]]
+
+// The user await: destroy uses slot 2, resume slot 0.
+// LLVM:   %[[SUSP:.*]] = call i8 @llvm.coro.suspend(token %{{.*}}, i1 false)
+// LLVM-NEXT:   switch i8 %[[SUSP]], label %{{.*}} [
+// LLVM-NEXT:     i8 0, label %{{.*}}
+// LLVM-NEXT:     i8 1, label %[[AWAIT_CLEANUP:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[AWAIT_CLEANUP]]:
+// LLVM-NEXT:   store i32 2, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[INNER_DTOR]]
+// LLVM:   store i32 0, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[INNER_DTOR]]
+
+// ~inner, then 0 continues the loop; 1 and 2 leave it through ~outer.
+// LLVM: [[INNER_DTOR]]:
+// LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[INNER]])
+// LLVM:   switch i32 %{{.*}}, label %{{.*}} [
+// LLVM-NEXT:     i32 0, label %{{.*}}
+// LLVM-NEXT:     i32 1, label %[[INNER_RET:[0-9]+]]
+// LLVM-NEXT:     i32 2, label %[[INNER_DESTROY:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[INNER_RET]]:
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[OUTER_DTOR:[0-9]+]]
+// LLVM: [[INNER_DESTROY]]:
+// LLVM-NEXT:   store i32 2, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[OUTER_DTOR]]
+
+// co_return -1 after the loop: slot 3.
+// LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef -1)
+// LLVM-NEXT:   store i32 3, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   br label %[[OUTER_DTOR]]
+
+// ~outer, then both co_returns go to the final suspend and the destroy to the
+// coroutine cleanup.
+// LLVM: [[OUTER_DTOR]]:
+// LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[OUTER]])
+// LLVM:   switch i32 %{{.*}}, label %{{.*}} [
+// LLVM-NEXT:     i32 0, label %{{.*}}
+// LLVM-NEXT:     i32 1, label %[[OUTER_RET1:[0-9]+]]
+// LLVM-NEXT:     i32 2, label %[[OUTER_DESTROY:[0-9]+]]
+// LLVM-NEXT:     i32 3, label %[[OUTER_RET3:[0-9]+]]
+// LLVM-NEXT:   ]
+// LLVM: [[OUTER_RET1]]:
+// LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
+// LLVM: [[OUTER_DESTROY]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM: [[OUTER_RET3]]:
+// LLVM-NEXT:   br label %[[FINAL]]
+// LLVM: [[FINAL]]:
+// LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
+
 // OGCG: define {{.*}} void @_Z17co_return_in_loopi(
 // OGCG:   %[[OUTER:.*]] = alloca %struct.HasDtor
 // OGCG:   %[[INNER:.*]] = alloca %struct.HasDtor
@@ -2008,6 +2484,21 @@ folly::coro::Task<int __complex__> complex_co_await() noexcept {
 // CIR-FLAT:   cir.coro.intrinsic.free
 // CIR-FLAT:   cir.return
 
+// LLVM: define dso_local void @_Z16complex_co_awaitv()
+// LLVM:   %[[COERCE:.*]] = alloca i64, align 8
+// LLVM:   %[[RESUME_VAL_ADDR:.*]] = alloca { i32, i32 }
+// LLVM:   %[[RESUME_VAL:.*]] = call noundef i64 @_ZN5folly4coro4TaskICiE12await_resumeEv(ptr noundef nonnull align 1 dereferenceable(1) %{{.*}})
+// LLVM-NEXT:   store i64 %[[RESUME_VAL]], ptr %[[COERCE]], align 8
+// LLVM-NEXT:   %[[COMPLEX:.*]] = load { i32, i32 }, ptr %[[COERCE]], align 4
+// LLVM-NEXT:   store { i32, i32 } %[[COMPLEX]], ptr %[[RESUME_VAL_ADDR]], align 4
+// LLVM:   load { i32, i32 }, ptr %[[RESUME_VAL_ADDR]], align 4
+
+// LLVM-NEXT:   br label %[[BB1:[0-9]+]]
+// LLVM: [[BB1]]:
+// LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
+// LLVM: [[CORO_CLEANUP]]:
+// LLVM-NEXT:   call ptr @llvm.coro.free(
+
 // OGCG: define dso_local void @_Z16complex_co_awaitv()
 
 // OGCG: %[[RESUME_VAL_ADDR:.*]] = alloca { i32, i32 }, align 4
@@ -2051,7 +2542,14 @@ void void_coroutine() {
 // CIR-FLAT:   cir.coro.intrinsic.end
 // CIR-FLAT-NEXT:   cir.return
 
+// LLVM: define {{.*}} void @_Z14void_coroutinev() #[[CoroAttrs]]
+// LLVM:   call void @llvm.coro.end(ptr null, i1 false, token none)
+// LLVM-NEXT:   ret void
+
 // OGCG: define {{.*}} void @_Z14void_coroutinev()
 // OGCG: coro.ret:
 // OGCG-NEXT:   call void @llvm.coro.end
 // OGCG-NEXT:   ret void
+
+// LLVM: attributes #[[CoroAttrs]] = { {{.*}}presplitcoroutine{{.*}} }
+// OGCG: attributes #[[CoroAttrs]] = { {{.*}}presplitcoroutine{{.*}} }

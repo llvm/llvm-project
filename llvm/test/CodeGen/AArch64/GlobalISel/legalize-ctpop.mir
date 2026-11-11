@@ -4,7 +4,6 @@
 ...
 ---
 name:            v8s8_legal
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            v16s8_legal
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -58,7 +56,6 @@ body:             |
 ...
 ---
 name:            s32_lower
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -91,7 +88,6 @@ body:             |
 ...
 ---
 name:            s64_lower
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -124,7 +120,6 @@ body:             |
 ...
 ---
 name:            s128_lower
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -171,7 +166,6 @@ body:             |
 ...
 ---
 name:            widen_s16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -213,7 +207,6 @@ body:             |
 ...
 ---
 name:            widen_s8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -255,7 +248,6 @@ body:             |
 ...
 ---
 name:            widen_s3
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -297,7 +289,6 @@ body:             |
 ...
 ---
 name:            different_sizes
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -338,7 +329,6 @@ body:             |
 ...
 ---
 name:            custom_8x16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -370,7 +360,6 @@ body:             |
 ...
 ---
 name:            custom_4x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -404,7 +393,6 @@ body:             |
 ...
 ---
 name:            custom_2x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -440,7 +428,6 @@ body:             |
 ...
 ---
 name:            custom_4x16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -472,7 +459,6 @@ body:             |
 ...
 ---
 name:            custom_2x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
