@@ -404,6 +404,15 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
 
+  // A call with a ptrauth bundle authenticates its callee, a signed pointer,
+  // before calling it. A direct call cannot have a ptrauth bundle, and the
+  // signed pointer does not compare equal to the address of Callee.
+  if (CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
+    if (FailureReason)
+      *FailureReason = "Call has a ptrauth bundle";
+    return false;
+  }
+
   auto &DL = Callee->getDataLayout();
 
   // Check the return type. The callee's return value type must be bitcast
