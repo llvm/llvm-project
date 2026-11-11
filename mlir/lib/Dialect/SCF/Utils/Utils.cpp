@@ -1016,9 +1016,9 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     }
 
     // Bail out if a loop has a known zero trip count (ub <= lb). The
-    // non positive normalized upper bound would end up in the affine.delinearize_index
-    // basis which the verifier rejects. Also, such a nest would never execute anyway, so
-    // there is no reason to coalesce it.
+    // non positive normalized upper bound would end up in the
+    // affine.delinearize_index basis which the verifier rejects. Also, such a
+    // nest would never execute anyway, so there is no reason to coalesce it.
     std::optional<APInt> tripCount = loop.getStaticTripCount();
     if (tripCount && tripCount->isZero()) {
       return failure();
