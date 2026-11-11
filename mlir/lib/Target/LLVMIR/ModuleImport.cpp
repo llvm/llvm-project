@@ -2999,7 +2999,8 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   llvm::MemoryEffects memEffects = func->getMemoryEffects();
 
   auto othermem = convertModRefInfoFromLLVM(
-      memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+      memEffects.getModRef(llvm::MemoryEffects::Location::Other) |
+      memEffects.getModRef(llvm::MemoryEffects::Location::ThreadIdMem));
   auto argMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
   auto inaccessibleMem = convertModRefInfoFromLLVM(
@@ -3463,7 +3464,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
 
   llvm::MemoryEffects memEffects = inst->getMemoryEffects();
   ModRefInfo othermem = convertModRefInfoFromLLVM(
-      memEffects.getModRef(llvm::MemoryEffects::Location::Other));
+      memEffects.getModRef(llvm::MemoryEffects::Location::Other) |
+      memEffects.getModRef(llvm::MemoryEffects::Location::ThreadIdMem));
   ModRefInfo argMem = convertModRefInfoFromLLVM(
       memEffects.getModRef(llvm::MemoryEffects::Location::ArgMem));
   ModRefInfo inaccessibleMem = convertModRefInfoFromLLVM(

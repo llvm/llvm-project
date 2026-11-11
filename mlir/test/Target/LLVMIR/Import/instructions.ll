@@ -1035,6 +1035,11 @@ define void @call_memory_effects() {
   call void @f() memory(write, argmem: none)
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read, errnoMem = readwrite, targetMem0 = readwrite, targetMem1 = readwrite>}
   call void @f() memory(readwrite, inaccessiblemem: read)
+; The thread identity is not modeled separately and is folded into other memory.
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
+  call void @f() memory(threadid: write)
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = read, inaccessibleMem = read, errnoMem = read, targetMem0 = read, targetMem1 = read>}
+  call void @f() memory(read, threadid: write)
 ; CHECK: llvm.call @f()
 ; CHECK-NOT: #llvm.memory_effects
 ; CHECK-SAME: : () -> ()

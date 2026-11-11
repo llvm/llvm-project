@@ -671,6 +671,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
         break;
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
+      case IRMemLocation::ThreadIdMem:
+        OS << "threadid: ";
+        break;
       case IRMemLocation::TargetMem0:
         OS << "target_mem0: ";
         break;
