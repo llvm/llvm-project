@@ -120,7 +120,7 @@ ssize_t read_n(void *p, size_t size, size_t n) {
   size_t len = n * size;
   if (size && len / size != n)
     return 0;
-  return len ? read(0, p, len) / size : 0; // no-warning
+  return len ? read(0, p, len) / size : 0; // no-warning: size can't be zero, thus no div by zero
 }
 
 } // namespace GH40797
