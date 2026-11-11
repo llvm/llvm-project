@@ -31,14 +31,18 @@ define i16 @umulh_i16(i16 %x, i16 %y) nounwind {
 }
 
 define i32 @umulh_i32(i32 %x, i32 %y) nounwind {
-; CHECK-LABEL: umulh_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    imulq %rcx, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    retq
+; SSE-LABEL: umulh_i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl %edi, %eax
+; SSE-NEXT:    mull %esi
+; SSE-NEXT:    movl %edx, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: umulh_i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl %edi, %edx
+; AVX-NEXT:    mulxl %esi, %eax, %eax
+; AVX-NEXT:    retq
   %r = call i32 @llvm.umulh(i32 %x, i32 %y)
   ret i32 %r
 }

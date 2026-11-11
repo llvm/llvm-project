@@ -35,12 +35,11 @@ define i32 @cdiv(i32 %cond, i32 %num) #0 {
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:  .LBB0_2: ! %select.true.sink
-; SPARC64-NEXT:    sra %o0, 0, %o0
 ; SPARC64-NEXT:    sethi 1398101, %o1
 ; SPARC64-NEXT:    or %o1, 342, %o1
-; SPARC64-NEXT:    mulx %o0, %o1, %o0
-; SPARC64-NEXT:    srlx %o0, 63, %o1
-; SPARC64-NEXT:    srlx %o0, 32, %o0
+; SPARC64-NEXT:    smul %o0, %o1, %o0
+; SPARC64-NEXT:    rd %y, %o0
+; SPARC64-NEXT:    srl %o0, 31, %o1
 ; SPARC64-NEXT:    retl
 ; SPARC64-NEXT:    add %o0, %o1, %o0
 ;
@@ -59,12 +58,11 @@ define i32 @cdiv(i32 %cond, i32 %num) #0 {
 ;
 ; SPARC64-NO-PREDICTOR-LABEL: cdiv:
 ; SPARC64-NO-PREDICTOR:       ! %bb.0: ! %entry
-; SPARC64-NO-PREDICTOR-NEXT:    sra %o1, 0, %o2
-; SPARC64-NO-PREDICTOR-NEXT:    sethi 1398101, %o3
-; SPARC64-NO-PREDICTOR-NEXT:    or %o3, 342, %o3
-; SPARC64-NO-PREDICTOR-NEXT:    mulx %o2, %o3, %o2
-; SPARC64-NO-PREDICTOR-NEXT:    srlx %o2, 63, %o3
-; SPARC64-NO-PREDICTOR-NEXT:    srlx %o2, 32, %o2
+; SPARC64-NO-PREDICTOR-NEXT:    sethi 1398101, %o2
+; SPARC64-NO-PREDICTOR-NEXT:    or %o2, 342, %o2
+; SPARC64-NO-PREDICTOR-NEXT:    smul %o1, %o2, %o2
+; SPARC64-NO-PREDICTOR-NEXT:    rd %y, %o2
+; SPARC64-NO-PREDICTOR-NEXT:    srl %o2, 31, %o3
 ; SPARC64-NO-PREDICTOR-NEXT:    add %o2, %o3, %o2
 ; SPARC64-NO-PREDICTOR-NEXT:    cmp %o0, 0
 ; SPARC64-NO-PREDICTOR-NEXT:    move %icc, %o2, %o1

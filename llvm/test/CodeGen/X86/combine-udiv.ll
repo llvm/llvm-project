@@ -448,11 +448,11 @@ define <4 x i32> @combine_vec_udiv_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
 define i32 @combine_udiv_uniform(i32 %x) {
 ; CHECK-LABEL: combine_udiv_uniform:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    movl $2987803337, %eax # imm = 0xB21642C9
-; CHECK-NEXT:    imulq %rcx, %rax
-; CHECK-NEXT:    shrq $36, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl $-1307163959, %ecx # imm = 0xB21642C9
+; CHECK-NEXT:    mull %ecx
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    shrl $4, %eax
 ; CHECK-NEXT:    retq
   %1 = udiv i32 %x, 23
   ret i32 %1
