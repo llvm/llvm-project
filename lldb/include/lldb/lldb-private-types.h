@@ -13,6 +13,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include <type_traits>
+#include <variant>
 
 namespace llvm {
 namespace sys {
@@ -29,14 +30,20 @@ typedef llvm::SmallString<256> PathSmallString;
 typedef llvm::sys::DynamicLibrary (*LoadPluginCallbackType)(
     const lldb::DebuggerSP &debugger_sp, const FileSpec &spec, Status &error);
 
-/// The value a completed thread plan computed for the function it stepped out
-/// of or called.
-struct ThreadPlanReturnValue {
-  /// What the function returned or, if \c is_thrown_error, the error it
-  /// threw. Null if there is no value.
-  lldb::ValueObjectSP value_sp;
-  bool is_thrown_error = false;
+/// A value a function returned.
+struct ReturnedValue {
+  lldb::ValueObjectSP valobj_sp;
 };
+
+/// An error a function threw instead of returning.
+struct ThrownError {
+  lldb::ValueObjectSP valobj_sp;
+};
+
+/// What a completed thread plan computed for the function it stepped out of or
+/// called: nothing, the value it returned, or the error it threw.
+using ThreadPlanReturnValue =
+    std::variant<std::monostate, ReturnedValue, ThrownError>;
 
 /// A type-erased pair of llvm::dwarf::SourceLanguageName and version.
 struct SourceLanguage {
