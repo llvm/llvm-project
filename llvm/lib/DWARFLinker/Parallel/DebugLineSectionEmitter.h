@@ -13,7 +13,6 @@
 #include "llvm/DWARFLinker/AddressesMap.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
@@ -82,7 +81,6 @@ private:
                                "no register info for target %s",
                                TripleName.c_str());
 
-    MCOptions = mc::InitMCTargetOptionsFromFlags();
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,

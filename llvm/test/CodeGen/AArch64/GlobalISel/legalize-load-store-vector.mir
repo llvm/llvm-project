@@ -9,7 +9,6 @@
 # FIXME: Non-byte-sized vector elements cause fallback in LegalizerHelper::reduceLoadStoreWidth
 ---
 name:            store-narrow-non-byte-sized
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -33,7 +32,6 @@ body:             |
 # FIXME: Vector stores only sometimes act as per-lane truncating stores (see e.g. PR#121169).
 ---
 name:            store-narrow-per-lane-trunc
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -59,7 +57,6 @@ body:             |
 # FIXME: Clarify behavior of stores between scalar and vector types in documentation. Should we consider this malformed?
 ---
 name:            store-narrow-vector-high-bits
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -83,7 +80,6 @@ body:             |
 ...
 ---
 name:            store-narrow-scalar-high-bits
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -108,7 +104,6 @@ body:             |
 # FIXME: Non-byte-sized vector elements cause fallback in LegalizerHelper::reduceLoadStoreWidth
 ---
 name:            load-narrow-non-byte-sized
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -130,7 +125,6 @@ body:             |
 # FIXME: Vector stores sometimes act as per-lane truncating stores (see PR#121169). If we want to keep these semantics we should change the semantics of G_LOAD to behave as a per-lane extending load.
 ---
 name:            load-narrow-per-lane-ext
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -156,7 +150,6 @@ body:             |
 # FIXME: Clarify behavior of loads between scalar and vector types in documentation. Should we consider this malformed?
 ---
 name:            load-narrow-vector-high-bits
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
@@ -180,7 +173,6 @@ body:             |
 ...
 ---
 name:            load-narrow-scalar-high-bits
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x8
