@@ -1297,8 +1297,9 @@ public:
       return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::oeq);
     case BO_NE:
       return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::une);
+    default:
+      llvm_unreachable("unsupported comparison kind");
     }
-    llvm_unreachable("unsupported comparison kind");
   }
 
   mlir::Value emitCmp(const BinaryOperator *e) {
