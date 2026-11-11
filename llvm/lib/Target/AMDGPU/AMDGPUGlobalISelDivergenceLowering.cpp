@@ -62,7 +62,6 @@ public:
 private:
   MachineUniformityInfo *MUI = nullptr;
   MachineIRBuilder B;
-  Register buildRegCopyToLaneMask(Register Reg);
 
 public:
   void markAsLaneMask(Register DstReg) const override;
@@ -73,10 +72,6 @@ public:
       SmallVectorImpl<AMDGPU::Incoming> &Incomings) const override;
   void replaceDstReg(Register NewReg, Register OldReg,
                      MachineBasicBlock *MBB) override;
-  void buildMergeLaneMasks(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator I, const DebugLoc &DL,
-                           Register DstReg, Register PrevReg,
-                           Register CurReg) override;
   void constrainAsLaneMask(AMDGPU::Incoming &In) override;
 
   bool lowerTemporalDivergence();
@@ -123,8 +118,18 @@ void DivergenceLoweringHelper::collectIncomingValuesFromPhi(
     const MachineInstr *MI,
     SmallVectorImpl<AMDGPU::Incoming> &Incomings) const {
   for (unsigned i = 1; i < MI->getNumOperands(); i += 2) {
-    Incomings.emplace_back(MI->getOperand(i).getReg(),
-                           MI->getOperand(i + 1).getMBB(), Register());
+    Register IncomingReg = MI->getOperand(i).getReg();
+    MachineInstr *Def = MRI->getUniqueVRegDef(IncomingReg);
+    if (Def && Def->isCopy() && !Def->getOperand(1).getSubReg()) {
+      IncomingReg = Def->getOperand(1).getReg();
+      Def = MRI->getUniqueVRegDef(IncomingReg);
+    }
+    // Skip undef so the other incoming can be taken as a source (no merge).
+    if (Def && (Def->isImplicitDef() ||
+                Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
+      continue;
+    Incomings.emplace_back(IncomingReg, MI->getOperand(i + 1).getMBB(),
+                           Register());
   }
 }
 
@@ -132,60 +137,6 @@ void DivergenceLoweringHelper::replaceDstReg(Register NewReg, Register OldReg,
                                              MachineBasicBlock *MBB) {
   BuildMI(*MBB, MBB->getFirstNonPHI(), {}, TII->get(AMDGPU::COPY), OldReg)
       .addReg(NewReg);
-}
-
-// Copy Reg to new lane mask register, insert a copy after instruction that
-// defines Reg while skipping phis if needed.
-Register DivergenceLoweringHelper::buildRegCopyToLaneMask(Register Reg) {
-  Register LaneMask = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  MachineInstr *Instr = MRI->getVRegDef(Reg);
-  MachineBasicBlock *MBB = Instr->getParent();
-  B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(Instr->getIterator())));
-  B.buildCopy(LaneMask, Reg);
-  return LaneMask;
-}
-
-// bb.previous
-//   %PrevReg = ...
-//
-// bb.current
-//   %CurReg = ...
-//
-//   %DstReg - not defined
-//
-// -> (wave32 example, new registers have sreg_32 reg class and S1 LLT)
-//
-// bb.previous
-//   %PrevReg = ...
-//   %PrevRegCopy:sreg_32(s1) = COPY %PrevReg
-//
-// bb.current
-//   %CurReg = ...
-//   %CurRegCopy:sreg_32(s1) = COPY %CurReg
-//   ...
-//   %PrevMaskedReg:sreg_32(s1) = ANDN2 %PrevRegCopy, ExecReg - active lanes 0
-//   %CurMaskedReg:sreg_32(s1)  = AND %ExecReg, CurRegCopy - inactive lanes to 0
-//   %DstReg:sreg_32(s1)        = OR %PrevMaskedReg, CurMaskedReg
-//
-// DstReg = for active lanes rewrite bit in PrevReg with bit from CurReg
-void DivergenceLoweringHelper::buildMergeLaneMasks(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, const DebugLoc &DL,
-    Register DstReg, Register PrevReg, Register CurReg) {
-  // DstReg = (PrevReg & !EXEC) | (CurReg & EXEC)
-  // TODO: check if inputs are constants or results of a compare.
-
-  Register PrevRegCopy = buildRegCopyToLaneMask(PrevReg);
-  Register CurRegCopy = buildRegCopyToLaneMask(CurReg);
-  Register PrevMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
-  Register CurMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
-
-  B.setInsertPt(MBB, I);
-  B.buildInstr(LMC->AndN2Opc, {PrevMaskedReg}, {PrevRegCopy, LMC->ExecReg})
-      .setOperandDead(3);
-  B.buildInstr(LMC->AndOpc, {CurMaskedReg}, {LMC->ExecReg, CurRegCopy})
-      .setOperandDead(3);
-  B.buildInstr(LMC->OrOpc, {DstReg}, {PrevMaskedReg, CurMaskedReg})
-      .setOperandDead(3);
 }
 
 // GlobalISel has to constrain S1 incoming taken as-is with lane mask register

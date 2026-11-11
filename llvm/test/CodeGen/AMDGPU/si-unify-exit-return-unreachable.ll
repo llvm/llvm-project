@@ -151,8 +151,8 @@ define void @my_func(i32 %0) {
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:  ; %bb.11: ; %LeafBlock5
-; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[10:11], 2, v0
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:  ; %bb.12: ; %Flow13
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[8:9], s[4:5]
 ; GCN-NEXT:  ; %bb.13: ; %LeafBlock3

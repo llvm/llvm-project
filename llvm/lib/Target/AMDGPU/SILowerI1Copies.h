@@ -64,6 +64,18 @@ public:
   bool lowerPhis();
   bool isConstantLaneMask(Register Reg, bool &Val) const;
 
+  /// Insert at \p I: \p DstReg = (\p PrevReg & ~EXEC) | (\p CurReg & EXEC).
+  /// Constant 0 / all-ones / undef inputs omit the corresponding ANDN2, AND,
+  /// or OR. Non-constant sources are passed through constrainOrCopyToLaneMask.
+  void buildMergeLaneMasks(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator I, const DebugLoc &DL,
+                           Register DstReg, Register PrevReg, Register CurReg);
+
+  /// Return \p Reg if it is already a wave-sized SGPR, a physreg, or SDAG
+  /// vreg_1. Otherwise (GISel generic s1) COPY it into a lane-mask vreg and
+  /// return that.
+  Register constrainOrCopyToLaneMask(Register Reg);
+
   /// Merge the \p Incomings lane masks into \p DstReg, the value owned by \p
   /// MBB. Builds the per-predecessor merges and leaves \p SSAUpdater calculated
   /// so the caller can query the merged value with getValueInMiddleOfBlock. \p
@@ -85,6 +97,10 @@ public:
   }
 
   bool isLaneMaskReg(Register Reg) const {
+    // GISel generic s1 is virtual but has no register class yet.
+    // Physical VCC/EXEC are lane masks and must not use VRegInfo.
+    if (Reg.isVirtual() && !MRI->getRegClassOrNull(Reg))
+      return false;
     return TII->getRegisterInfo().isSGPRReg(*MRI, Reg) &&
            TII->getRegisterInfo().getRegSizeInBits(Reg, *MRI) ==
                ST->getWavefrontSize();
@@ -100,10 +116,6 @@ public:
                                SmallVectorImpl<Incoming> &Incomings) const = 0;
   virtual void replaceDstReg(Register NewReg, Register OldReg,
                              MachineBasicBlock *MBB) = 0;
-  virtual void buildMergeLaneMasks(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, Register DstReg,
-                                   Register PrevReg, Register CurReg) = 0;
   virtual void constrainAsLaneMask(Incoming &In) = 0;
 };
 } // namespace AMDGPU

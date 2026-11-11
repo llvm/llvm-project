@@ -53,10 +53,6 @@ public:
       SmallVectorImpl<AMDGPU::Incoming> &Incomings) const override;
   void replaceDstReg(Register NewReg, Register OldReg,
                      MachineBasicBlock *MBB) override;
-  void buildMergeLaneMasks(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator I, const DebugLoc &DL,
-                           Register DstReg, Register PrevReg,
-                           Register CurReg) override;
   void constrainAsLaneMask(AMDGPU::Incoming &In) override;
 
   bool lowerCopiesFromI1();
@@ -662,28 +658,38 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
 bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
                                                    bool &Val) const {
   const MachineInstr *MI;
+  unsigned Opc;
   for (;;) {
     MI = MRI->getUniqueVRegDef(Reg);
-    if (MI->getOpcode() == AMDGPU::IMPLICIT_DEF)
-      return true;
+    if (!MI)
+      return false;
 
-    if (MI->getOpcode() != AMDGPU::COPY)
+    Opc = MI->getOpcode();
+    // Undef is 0: inactive bits in a merge are don't-care.
+    if (Opc == TargetOpcode::IMPLICIT_DEF ||
+        Opc == TargetOpcode::G_IMPLICIT_DEF) {
+      Val = false;
+      return true;
+    }
+
+    if (!MI->isCopy())
       break;
 
-    Reg = MI->getOperand(1).getReg();
-    if (!Reg.isVirtual())
+    const MachineOperand &Src = MI->getOperand(1);
+    if (!Src.isReg() || Src.getSubReg() || !Src.getReg().isVirtual())
       return false;
-    if (!isLaneMaskReg(Reg))
-      return false;
+    Reg = Src.getReg();
   }
 
-  if (MI->getOpcode() != LMC->MovOpc)
+  int64_t Imm;
+  if (Opc == TargetOpcode::G_CONSTANT && MI->getOperand(1).isCImm())
+    // i1 true sexts to -1, i.e. a full lane mask, not integer 1.
+    Imm = MI->getOperand(1).getCImm()->getSExtValue();
+  else if (Opc == LMC->MovOpc && MI->getOperand(1).isImm())
+    Imm = MI->getOperand(1).getImm();
+  else
     return false;
 
-  if (!MI->getOperand(1).isImm())
-    return false;
-
-  int64_t Imm = MI->getOperand(1).getImm();
   if (Imm == 0) {
     Val = false;
     return true;
@@ -782,11 +788,23 @@ void Vreg1LoweringHelper::replaceDstReg(Register NewReg, Register OldReg,
   MRI->replaceRegWith(NewReg, OldReg);
 }
 
-void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator I,
-                                              const DebugLoc &DL,
-                                              Register DstReg, Register PrevReg,
-                                              Register CurReg) {
+Register AMDGPU::PhiLoweringHelper::constrainOrCopyToLaneMask(Register Reg) {
+  // Physregs (like VCC) and SDAG vreg_1 need no extra COPY. GISel generic s1
+  // does.
+  if (!Reg.isVirtual() || isLaneMaskReg(Reg) || !MRI->getType(Reg).isValid())
+    return Reg;
+  Register LaneMask = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
+  MachineInstr *Def = MRI->getVRegDef(Reg);
+  MachineBasicBlock *MBB = Def->getParent();
+  BuildMI(*MBB, MBB->SkipPHIsAndLabels(std::next(Def->getIterator())),
+          Def->getDebugLoc(), TII->get(AMDGPU::COPY), LaneMask)
+      .addReg(Reg);
+  return LaneMask;
+}
+
+void AMDGPU::PhiLoweringHelper::buildMergeLaneMasks(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, const DebugLoc &DL,
+    Register DstReg, Register PrevReg, Register CurReg) {
   bool PrevVal = false;
   bool PrevConstant = isConstantLaneMask(PrevReg, PrevVal);
   bool CurVal = false;
@@ -794,9 +812,16 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
 
   if (PrevConstant && CurConstant) {
     if (PrevVal == CurVal) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(CurReg);
+      // G_CONSTANT i1 true is a 1-bit 1; materialize a wave-sized mask.
+      if (isLaneMaskReg(CurReg)) {
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(CurReg);
+      } else {
+        BuildMI(MBB, I, DL, TII->get(LMC->MovOpc), DstReg)
+            .addImm(CurVal ? -1 : 0);
+      }
     } else if (CurVal) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(LMC->ExecReg);
+      // Target S_MOV, not COPY: GISel selectCOPY cannot take a physreg source.
+      BuildMI(MBB, I, DL, TII->get(LMC->MovOpc), DstReg).addReg(LMC->ExecReg);
     } else {
       BuildMI(MBB, I, DL, TII->get(LMC->XorOpc), DstReg)
           .addReg(LMC->ExecReg)
@@ -805,6 +830,11 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     }
     return;
   }
+
+  if (!PrevConstant)
+    PrevReg = constrainOrCopyToLaneMask(PrevReg);
+  if (!CurConstant)
+    CurReg = constrainOrCopyToLaneMask(CurReg);
 
   Register PrevMaskedReg;
   Register CurMaskedReg;
