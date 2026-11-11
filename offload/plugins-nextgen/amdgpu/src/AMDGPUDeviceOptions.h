@@ -24,7 +24,11 @@ struct AMDGPUDeviceOptionsTy {
   /// Get the defaults for architectures.
   static AMDGPUDeviceOptionsTy getDeviceDefaults(StringRef Arch, bool IsAPU) {
     AMDGPUDeviceOptionsTy Options;
+
     // Adjust the defaults here for specific architectures.
+    if (Arch == "gfx90a" || Arch == "gfx950" || (Arch == "gfx942" && !IsAPU))
+      Options.UseMultipleSdmaEngines = true;
+
     return Options;
   }
 
