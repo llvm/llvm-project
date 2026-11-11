@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-widen-loads -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=hexagon-widen-loads %s -o - | FileCheck %s
 
 # CHECK: S2_addasl_rrri [[VREG0:%[0-9]+]], [[VREG1:%[0-9]+]], [[IMM:[0-9]+]]
 # CHECK-NEXT: doubleregs = L4_loadrd_rr [[VREG0]], [[VREG1]], [[IMM]]

@@ -18,6 +18,14 @@ CheckOptions:
     value:           lower_case
   - key:             readability-identifier-naming.FunctionIgnoredRegexp
     value:           "_?(_[A-Za-z0-9]+)*"
+  - key:             readability-identifier-naming.MethodCase
+    value:           lower_case
+  - key:             readability-identifier-naming.MethodIgnoredRegexp
+    value:           "(_?(_[A-Za-z0-9]+)*|SetUp|TearDown|MatchAndExplain|DescribeTo|DescribeNegationTo|IsInterested)"
+  - key:             readability-identifier-naming.ConstexprMethodCase
+    value:           lower_case
+  - key:             readability-identifier-naming.ConstexprMethodIgnoredRegexp
+    value:           "(_?(_[A-Za-z0-9]+)*|MatchAndExplain|DescribeTo|DescribeNegationTo|IsInterested)"
   - key:             readability-identifier-naming.GlobalConstantCase
     value:           UPPER_CASE
   - key:             readability-identifier-naming.LocalConstantIgnoredRegexp

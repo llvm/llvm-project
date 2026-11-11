@@ -23,7 +23,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
@@ -115,6 +114,9 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   });
   if (!MO)
+    return true;
+
+  if (MO->getState() == MemoryObjectState::Freed)
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -974,6 +976,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     Consecutive,
     /// \p Ptr holds a separate pointer for each lane.
     PerLane,
+    /// \p Ptr is the base pointer and the offset increases on each active lane.
+    Compressed,
   };
 
   /// Implements the masked intrinsic family. For loads, \p Data holds the
@@ -984,7 +988,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                                         const AnyValue &Mask, AnyValue Data,
                                         MaskedAddrMode Mode) {
     const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
-                         CB.getIntrinsicID() == Intrinsic::masked_scatter;
+                         CB.getIntrinsicID() == Intrinsic::masked_scatter ||
+                         CB.getIntrinsicID() == Intrinsic::masked_compressstore;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
@@ -1003,8 +1008,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     if (Mode != MaskedAddrMode::PerLane)
       LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
-
-    bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
 
     for (auto [I, Lane] : enumerate(Data.asAggregate())) {
       if (Mode == MaskedAddrMode::PerLane)
@@ -1028,8 +1031,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         Flags = GEPNoWrapFlags::inBounds();
       }
 
-      if (Mode == MaskedAddrMode::Consecutive &&
-          (!IsExpandLoad || MaskLane == BooleanKind::True)) {
+      if (Mode == MaskedAddrMode::Consecutive ||
+          (Mode == MaskedAddrMode::Compressed &&
+           MaskLane == BooleanKind::True)) {
         AnyValue AccumulatedOffset = AnyValue::poison();
         LanePtr = Ctx.computePtrAdd(LanePtr, APInt(IndexBW, AccessSize), Flags,
                                     AccumulatedOffset);
@@ -1037,6 +1041,53 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     }
 
     return IsStore ? AnyValue() : Data;
+  }
+
+  /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
+  /// as a <Rows x ElemTy> vector at an inbounds nuw GEP of C * \p Stride
+  /// elements from \p Ptr.
+  AnyValue callMatrixColumnMajorStoreIntrinsic(CallBase &CB,
+                                               const AnyValue &Ptr,
+                                               const AnyValue &Stride,
+                                               const AnyValue &Data) {
+    // TODO: Handle isvolatile argument.
+    StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
+    const unsigned Rows =
+        cast<ConstantInt>(CB.getArgOperand(4))->getZExtValue();
+    const unsigned Cols =
+        cast<ConstantInt>(CB.getArgOperand(5))->getZExtValue();
+    if (Stride.isPoison()) {
+      reportImmediateUB() << IntrinsicName << " with poison stride.";
+      return AnyValue();
+    }
+    const APInt &StrideInt = Stride.asInteger();
+    if (StrideInt.ult(Rows)) {
+      reportImmediateUB() << IntrinsicName << " with stride "
+                          << StrideInt.getZExtValue()
+                          << " less than the number of rows " << Rows << '.';
+      return AnyValue();
+    }
+
+    Type *ElemTy = CB.getArgOperand(0)->getType()->getScalarType();
+    auto *ColTy = FixedVectorType::get(ElemTy, Rows);
+    const unsigned IndexBW =
+        DL.getIndexTypeSizeInBits(CB.getArgOperand(1)->getType());
+    const APInt StrideIdx = StrideInt.zextOrTrunc(IndexBW);
+    const APInt ElemSize(IndexBW, Ctx.getEffectiveTypeAllocSize(ElemTy),
+                         /*isSigned=*/false, /*implicitTrunc=*/true);
+    ArrayRef<AnyValue> Elems = Data.asAggregate();
+    for (unsigned C = 0; C != Cols; ++C) {
+      AnyValue AccumulatedOffset = AnyValue::poison();
+      // C * Stride is part of the nuw GEP index: overflow yields poison.
+      AnyValue ColIdx = mulNoWrap(StrideIdx,
+                                  APInt(IndexBW, C, /*IsSigned=*/false,
+                                        /*ImplicitTrunc=*/true),
+                                  /*HasNSW=*/false, /*HasNUW=*/true);
+      AnyValue ColPtr = Ctx.computeScaledPtrAdd(
+          Ptr, ColIdx, ElemSize, GEPNoWrapFlags::all(), AccumulatedOffset);
+      store(ColPtr, Align(1), Elems.slice(C * Rows, Rows).vec(), ColTy);
+    }
+    return AnyValue();
   }
 
 public:
@@ -1124,7 +1175,12 @@ public:
   void returnFromCallee() {
     if (hasProgramExited())
       return;
+
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    if (CB.doesNotReturn() || (CurrentFrame->ResolvedCallee &&
+                               CurrentFrame->ResolvedCallee->doesNotReturn()))
+      reportImmediateUB() << "Return from a noreturn function/callsite.";
+
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
     if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
       // RetVal is the oracle's result; use it to complete the load.
@@ -1957,7 +2013,6 @@ public:
              "oracle form must be handled earlier");
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::masked_load:
-    case Intrinsic::masked_expandload:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
                                           MaskedAddrMode::Consecutive);
     case Intrinsic::masked_store:
@@ -1969,6 +2024,12 @@ public:
     case Intrinsic::masked_scatter:
       return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
                                           MaskedAddrMode::PerLane);
+    case Intrinsic::masked_expandload:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::Compressed);
+    case Intrinsic::masked_compressstore:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::Compressed);
     case Intrinsic::matrix_transpose: {
       const auto &Vec = Args[0].asAggregate();
       const unsigned Rows =
@@ -1983,6 +2044,8 @@ public:
           Res.push_back(Vec[J * Rows + I]);
       return std::move(Res);
     }
+    case Intrinsic::matrix_column_major_store:
+      return callMatrixColumnMajorStoreIntrinsic(CB, Args[1], Args[2], Args[0]);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();

@@ -10,9 +10,7 @@
 
 #include "PluginInterface.h"
 
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 
 #include "ErrorReporting.h"
 #include "GenericProfiler.h"
@@ -225,13 +223,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin,
       return Err;
   LoadedImages.clear();
 
-  if (RecordReplay) {
-    if (auto Err = RecordReplay->deinit())
-      return Err;
-    delete RecordReplay;
-    RecordReplay = nullptr;
-  }
-
   return deinitImpl();
 }
 Expected<DeviceImageTy *>
@@ -271,9 +262,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin, StringRef InputTgtImage,
   if (!ImageOrErr)
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
-
-  if (identify_magic(InputTgtImage) == file_magic::bitcode)
-    Image->setIRImage(MemoryBuffer::getMemBufferCopy(InputTgtImage));
 
   // Add the image to list.
   LoadedImages.push_back(Image);
@@ -570,16 +558,6 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
   return Plugin::success();
 }
 
-Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "device does not support VA Management");
-}
-
-Error GenericDeviceTy::memoryVAUnMap(void *VAddr, size_t Size) {
-  return Plugin::error(ErrorCode::UNSUPPORTED,
-                       "device does not support VA Management");
-}
-
 Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
   return Plugin::error(
       ErrorCode::UNIMPLEMENTED,
@@ -597,9 +575,6 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   void *Alloc = nullptr;
 
   // TODO Check alignment.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return RecordReplay->allocate(Size);
-
   auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
@@ -677,10 +652,6 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind,
   GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
 
   auto ProfTimer = Profiler.getScopedDataDeleteTimer(this, TgtPtr);
-
-  // Free is a noop when recording or replaying.
-  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
-    return RecordReplay->deallocate(TgtPtr);
 
   if (auto Err = free(TgtPtr, Kind))
     return Err;
@@ -849,12 +820,6 @@ Error ContextAllocatorTy::free(void *TgtPtr, TargetAllocTy Kind) {
 
 MemoryManagerTy *PluginContextTy::getMemoryManagerFor(GenericDeviceTy &Device,
                                                       TargetAllocTy Kind) {
-  // Record-replay hands out interior pointers into a preallocated slab so
-  // recorded kernels can re-execute at their original addresses; the pool must
-  // be bypassed for those allocations to reach the RR bump allocator.
-  if (auto *RR = Device.getRecordReplay(); RR && RR->isRecordingOrReplaying())
-    return nullptr;
-
   return Kind == TARGET_ALLOC_HOST ? getHostMemoryManager()
                                    : getDeviceMemoryManagerFor(Device, Kind);
 }
@@ -1194,89 +1159,4 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
       return HandleError(std::move(Err));
     return *MatchOrErr;
   }
-}
-
-int32_t GenericPluginTy::initialize_record_replay(
-    int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
-    bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
-    const char *OutputDirPath) {
-  GenericDeviceTy &Device = getDevice(DeviceId);
-
-  if (auto Err = Device.initRecordReplay(MemorySize, VAddr, IsRecord, IsNative,
-                                         SaveOutput, EmitReport, ReportFilename,
-                                         OutputDirPath)) {
-    REPORT() << "Failure to initialize RR with " << MemorySize
-             << " bytes on device " << DeviceId << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Create OpenMP interop with the given interop context
-omp_interop_val_t *
-GenericPluginTy::create_interop(int32_t ID, int32_t InteropContext,
-                                interop_spec_t *InteropSpec) {
-  assert(InteropSpec && "Interop spec is null");
-  auto &Device = getDevice(ID);
-  auto InteropOrErr = Device.createInterop(InteropContext, *InteropSpec);
-  if (!InteropOrErr) {
-    REPORT() << "Failure to create interop object for device " << InteropSpec
-             << ": " << toString(InteropOrErr.takeError());
-    return nullptr;
-  }
-  return *InteropOrErr;
-}
-
-/// Release OpenMP interop object
-int32_t GenericPluginTy::release_interop(int32_t ID,
-                                         omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  assert(Interop->device_id == ID && "Interop does not match device id");
-  auto &Device = getDevice(ID);
-  auto Err = Device.releaseInterop(Interop);
-  if (Err) {
-    REPORT() << "Failure to release interop object " << Interop << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Flush the queue associated with the interop object if necessary
-int32_t GenericPluginTy::flush_queue(omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  auto Err = flushQueueImpl(Interop);
-  if (Err) {
-    REPORT() << "Failure to flush interop object " << Interop
-             << " queue: " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Perform a host synchronization with the queue associated with the interop
-/// object and wait for it to complete.
-int32_t GenericPluginTy::sync_barrier(omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  auto Err = syncBarrierImpl(Interop);
-  if (Err) {
-    REPORT() << "Failure to synchronize interop object " << Interop << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-/// Queue an asynchronous barrier in the queue associated with the interop
-/// object and return immediately.
-int32_t GenericPluginTy::async_barrier(omp_interop_val_t *Interop) {
-  assert(Interop && "Interop is null");
-  auto Err = asyncBarrierImpl(Interop);
-  if (Err) {
-    REPORT() << "Failure to queue barrier in interop object " << Interop << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
 }

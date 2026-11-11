@@ -1,0 +1,26 @@
+// RUN: cir-opt %s --cir-lowering-prepare -o %t.once.cir
+// RUN: cir-opt %t.once.cir --cir-lowering-prepare -o %t.twice.cir
+// RUN: diff %t.once.cir %t.twice.cir
+// RUN: FileCheck %s --input-file=%t.once.cir --implicit-check-not=cir.cxx_module_
+
+// LoweringPrepare consumes 'cir.cxx_module_init_fn_name' and
+// 'cir.cxx_module_imported_inits' when it builds the C++20 module initializer,
+// so running it again on its own output builds nothing a second time.
+
+!s32i = !cir.int<s, 32>
+module attributes {cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", loc("use.cpp":1:1)>], cir.cxx_module_init_fn_name = "_ZGIW1m", cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @_ZW1m1g = #cir.int<0> : !s32i ctor {
+    %0 = cir.get_global @_ZW1m1g : !cir.ptr<!s32i>
+    %1 = cir.call @_ZW1m3dynv() : () -> !s32i
+    cir.store align(4) %1, %0 : !s32i, !cir.ptr<!s32i>
+  } align(4)
+  cir.func private @_ZW1m3dynv() -> !s32i
+}
+
+// CHECK: module attributes {cir.global_ctors = [#cir.global_ctor<"_ZGIW1m", 65535>]
+// CHECK: cir.global "private" internal @_ZGIW1m__in_chrg = #cir.int<0> : !s8i
+// CHECK: cir.func private @_ZGIW1a()
+// CHECK: cir.func private @_ZGIW1m()
+// CHECK:   cir.if
+// CHECK:     cir.call @_ZGIW1a()
+// CHECK:     cir.call @__cxx_global_var_init()

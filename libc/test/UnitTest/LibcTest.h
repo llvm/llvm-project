@@ -24,6 +24,7 @@
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
 
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
@@ -43,17 +44,40 @@ namespace testing {
 // conditions for such cases.
 enum class TestCond { EQ, NE, LT, LE, GT, GE };
 
+// Source-compatible with GoogleMock's ::testing::MatchResultListener so custom
+// matchers work unchanged under both LibcTest and GoogleTest.
+class MatchResultListener {
+  TestLogger *logger;
+
+public:
+  LIBC_INLINE explicit MatchResultListener(TestLogger *logger)
+      : logger(logger) {}
+
+  LIBC_INLINE TestLogger *stream() { return logger; }
+  LIBC_INLINE bool IsInterested() const { return logger != nullptr; }
+
+  template <typename T>
+  LIBC_INLINE MatchResultListener &operator<<(const T &val) {
+    if (logger != nullptr)
+      *logger << val;
+    return *this;
+  }
+};
+
 struct MatcherBase {
-  virtual ~MatcherBase() {}
-  virtual void explainError() { tlog << "unknown error\n"; }
-  // Override and return true to skip `explainError` step.
-  virtual bool is_silent() const { return false; }
+  using is_gtest_matcher = void;
+
+  template <typename Stream> LIBC_INLINE void DescribeTo(Stream *os) const {
+    *os << "matches";
+  }
+
+  template <typename Stream>
+  LIBC_INLINE void DescribeNegationTo(Stream *os) const {
+    *os << "does not match";
+  }
 };
 
-template <typename T> struct Matcher : public MatcherBase {
-  bool match(const T &t);
-};
-
+template <typename T> struct Matcher : public MatcherBase {};
 namespace internal {
 
 // A simple location object to allow consistent passing of __FILE__ and
@@ -176,6 +200,20 @@ bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
 bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
 
+void mark_match_failure(const char *lhs_str, const char *rhs_str, Location loc);
+
+template <typename MatcherT, typename ValType>
+LIBC_INLINE bool match_and_explain(MatcherT matcher, const ValType &value,
+                                   const char *matcher_str,
+                                   const char *value_str, Location loc) {
+  MatchResultListener null_listener(nullptr);
+  if (matcher.MatchAndExplain(value, &null_listener))
+    return true;
+  mark_match_failure(value_str, matcher_str, loc);
+  MatchResultListener listener(&tlog);
+  matcher.MatchAndExplain(value, &listener);
+  return false;
+}
 } // namespace internal
 
 struct TestOptions {
@@ -201,26 +239,16 @@ public:
 
   static int runTests(const TestOptions &Options);
 
+  static bool testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
+                               const char *LHSStr, const char *RHSStr,
+                               internal::Location Loc);
+
+  static bool testProcessKilled(cpp::function_ref<void(void)> Func, int Signal,
+                                const char *LHSStr, const char *RHSStr,
+                                internal::Location Loc);
+
 protected:
   static void addTest(Test *T);
-
-  bool testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
-                 const char *RHSStr, internal::Location Loc);
-
-  template <typename MatcherT, typename ValType>
-  bool matchAndExplain(MatcherT &&Matcher, ValType Value,
-                       const char *MatcherStr, const char *ValueStr,
-                       internal::Location Loc) {
-    return testMatch(Matcher.match(Value), Matcher, ValueStr, MatcherStr, Loc);
-  }
-
-  bool testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
-                        const char *LHSStr, const char *RHSStr,
-                        internal::Location Loc);
-
-  bool testProcessKilled(cpp::function_ref<void(void)> Func, int Signal,
-                         const char *LHSStr, const char *RHSStr,
-                         internal::Location Loc);
 
 private:
   virtual void Run() = 0;
@@ -248,23 +276,23 @@ constexpr bool valid_prefix(char const *lhs) {
 }
 
 // 'str' is a null terminated string of the form
-// "const char *LIBC_NAMESPACE::testing::internal::GetTypeName() [ParamType =
+// "const char *LIBC_NAMESPACE::testing::internal::GetTypeName() [TypeParam =
 // XXX]" We return the substring that start at character '[' or a default
 // message.
-constexpr char const *GetPrettyFunctionParamType(char const *str) {
+constexpr char const *GetPrettyFunctionTypeParam(char const *str) {
   for (const char *ptr = str; *ptr != '\0'; ++ptr)
     if (*ptr == '[')
       return ptr;
-  return "UNSET : declare with REGISTER_TYPE_NAME";
+  return "UNSET";
 }
 
-// This function recovers ParamType at compile time by using __PRETTY_FUNCTION__
-// It can be customized by using the REGISTER_TYPE_NAME macro below.
-template <typename ParamType> static constexpr const char *GetTypeName() {
+// This function recovers TypeParam at compile time by using
+// __PRETTY_FUNCTION__.
+template <typename TypeParam> static constexpr const char *GetTypeName() {
 #ifdef LIBC_COMPILER_IS_MSVC
-  return GetPrettyFunctionParamType(__FUNCSIG__);
+  return GetPrettyFunctionTypeParam(__FUNCSIG__);
 #else
-  return GetPrettyFunctionParamType(__PRETTY_FUNCTION__);
+  return GetPrettyFunctionTypeParam(__PRETTY_FUNCTION__);
 #endif // LIBC_COMPILER_IS_MSVC
 }
 
@@ -297,8 +325,8 @@ static inline void GenerateName(char *buffer, int buffer_size,
 }
 
 // TestCreator implements a linear hierarchy of test instances, effectively
-// instanciating all tests with Types in a single object.
-template <template <typename> class TemplatedTestClass, typename... Types>
+// instantiating all tests with Types in a single object.
+template <template <typename> class TemplatedTestClass, typename... Ts>
 struct TestCreator;
 
 template <template <typename> class TemplatedTestClass, typename Head,
@@ -311,74 +339,50 @@ struct TestCreator<TemplatedTestClass, Head, Tail...>
 template <template <typename> class TemplatedTestClass>
 struct TestCreator<TemplatedTestClass> {};
 
-// A type list to declare the set of types to instantiate the tests with.
-template <typename... Types> struct TypeList {
+// A type list to declare the set of types to instantiate the tests with,
+// matching ::testing::Types<...>.
+template <typename... Ts> struct Types {
   template <template <typename> class TemplatedTestClass> struct Tests {
-    using type = TestCreator<TemplatedTestClass, Types...>;
+    using type = TestCreator<TemplatedTestClass, Ts...>;
   };
 };
 
 } // namespace internal
 
-// Make TypeList visible in LIBC_NAMESPACE::testing.
-template <typename... Types> using TypeList = internal::TypeList<Types...>;
+// Make Types visible in LIBC_NAMESPACE::testing.
+using internal::Types;
 
 CString libc_make_test_file_path_func(const char *file_name);
 
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
 
-// For TYPED_TEST and TYPED_TEST_F below we need to display which type was used
-// to run the test. The default will return the fully qualified canonical type
-// but it can be difficult to read. We provide the following macro to allow the
-// client to register the type name as they see it in the code.
-#define REGISTER_TYPE_NAME(TYPE)                                               \
-  template <>                                                                  \
-  constexpr const char *                                                       \
-  LIBC_NAMESPACE::testing::internal::GetTypeName<TYPE>() {                     \
-    return "[ParamType = " #TYPE "]";                                          \
-  }
-
-#define TYPED_TEST(SuiteName, TestName, TypeList)                              \
+#define TYPED_TEST_SUITE(SuiteClass, TypesList)                                \
   static_assert(                                                               \
-      LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),             \
-      "All LLVM-libc TYPED_TEST suite names must start with 'LlvmLibc'.");     \
-  template <typename T>                                                        \
-  class SuiteName##_##TestName : public LIBC_NAMESPACE::testing::Test {        \
-  public:                                                                      \
-    using ParamType = T;                                                       \
-    char name[256];                                                            \
-    SuiteName##_##TestName() {                                                 \
-      addTest(this);                                                           \
-      LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
-          name, sizeof(name), #SuiteName "." #TestName);                       \
-    }                                                                          \
-    void Run() override;                                                       \
-    const char *getName() const override { return name; }                      \
-  };                                                                           \
-  TypeList::Tests<SuiteName##_##TestName>::type                                \
-      SuiteName##_##TestName##_Instance;                                       \
-  template <typename T> void SuiteName##_##TestName<T>::Run()
+      LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteClass),            \
+      "All LLVM-libc TYPED_TEST_SUITE names must start with 'LlvmLibc'.");     \
+  using SuiteClass##_LibcTypedTestTypes = TypesList
 
-#define TYPED_TEST_F(SuiteClass, TestName, TypeList)                           \
-  static_assert(LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteClass),  \
-                "All LLVM-libc TYPED_TEST_F suite class names must start "     \
-                "with 'LlvmLibc'.");                                           \
-  template <typename T> class SuiteClass##_##TestName : public SuiteClass<T> { \
-  public:                                                                      \
-    using ParamType = T;                                                       \
+#define TYPED_TEST(SuiteClass, TestName)                                       \
+  template <typename libc_TypeParam_>                                          \
+  class SuiteClass##_##TestName : public SuiteClass<libc_TypeParam_> {         \
+    using TypeParam = libc_TypeParam_;                                         \
+    using TestFixture = SuiteClass<libc_TypeParam_>;                           \
     char name[256];                                                            \
+                                                                               \
+  public:                                                                      \
     SuiteClass##_##TestName() {                                                \
-      SuiteClass<T>::addTest(this);                                            \
-      LIBC_NAMESPACE::testing::internal::GenerateName<T>(                      \
+      SuiteClass<libc_TypeParam_>::addTest(this);                              \
+      LIBC_NAMESPACE::testing::internal::GenerateName<libc_TypeParam_>(        \
           name, sizeof(name), #SuiteClass "." #TestName);                      \
     }                                                                          \
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
   };                                                                           \
-  TypeList::Tests<SuiteClass##_##TestName>::type                               \
+  SuiteClass##_LibcTypedTestTypes::Tests<SuiteClass##_##TestName>::type        \
       SuiteClass##_##TestName##_Instance;                                      \
-  template <typename T> void SuiteClass##_##TestName<T>::Run()
+  template <typename libc_TypeParam_>                                          \
+  void SuiteClass##_##TestName<libc_TypeParam_>::Run()
 
 #define TEST(SuiteName, TestName)                                              \
   static_assert(LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),   \
@@ -489,11 +493,20 @@ CString libc_make_test_file_path_func(const char *file_name);
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
 
+#define LIBC_TEST_DUMMY_PROCESS_(FUNC, VAL)                                    \
+  do {                                                                         \
+    if constexpr (false) {                                                     \
+      (FUNC)();                                                                \
+      (void)(VAL);                                                             \
+    }                                                                          \
+  } while (false)
+
 #if LIBC_TEST_SUBPROCESS_TESTS
 
 #define LIBC_TEST_PROCESS_(TEST_FUNC, FUNC, VALUE, RET_OR_EMPTY)               \
-  LIBC_TEST_SCAFFOLDING_(                                                      \
-      TEST_FUNC(FUNC, VALUE, #FUNC, #VALUE, LIBC_TEST_LOC_()), RET_OR_EMPTY)
+  LIBC_TEST_SCAFFOLDING_(LIBC_NAMESPACE::testing::Test::TEST_FUNC(             \
+                             FUNC, VALUE, #FUNC, #VALUE, LIBC_TEST_LOC_()),    \
+                         RET_OR_EMPTY)
 
 #define EXPECT_EXITS(FUNC, EXIT)                                               \
   LIBC_TEST_PROCESS_(testProcessExits, FUNC, EXIT, )
@@ -502,8 +515,8 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #ifdef LIBC_TEST_SKIP_DEATH_TESTS
 
-#define EXPECT_DEATH(FUNC, SIG)
-#define ASSERT_DEATH(FUNC, SIG)
+#define EXPECT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
 
 #else
 
@@ -519,10 +532,10 @@ CString libc_make_test_file_path_func(const char *file_name);
 // EXPECT_DEATH can appear in a test of any function, e.g. checking for a crash
 // if passing nullptr to the function. So it must be defined, even if it can't
 // do anything.
-#define EXPECT_EXITS(FUNC, EXIT)
-#define ASSERT_EXITS(FUNC, EXIT)
-#define EXPECT_DEATH(FUNC, SIG)
-#define ASSERT_DEATH(FUNC, SIG)
+#define EXPECT_EXITS(FUNC, EXIT) LIBC_TEST_DUMMY_PROCESS_(FUNC, EXIT)
+#define ASSERT_EXITS(FUNC, EXIT) LIBC_TEST_DUMMY_PROCESS_(FUNC, EXIT)
+#define EXPECT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG) LIBC_TEST_DUMMY_PROCESS_(FUNC, SIG)
 
 #endif // LIBC_TEST_SUBPROCESS_TESTS
 
@@ -530,9 +543,10 @@ CString libc_make_test_file_path_func(const char *file_name);
 // Custom matcher checks.
 
 #define LIBC_TEST_MATCH_(MATCHER, MATCH, MATCHER_STR, MATCH_STR, RET_OR_EMPTY) \
-  LIBC_TEST_SCAFFOLDING_(matchAndExplain(MATCHER, MATCH, MATCHER_STR,          \
-                                         MATCH_STR, LIBC_TEST_LOC_()),         \
-                         RET_OR_EMPTY)
+  LIBC_TEST_SCAFFOLDING_(                                                      \
+      LIBC_NAMESPACE::testing::internal::match_and_explain(                    \
+          MATCHER, MATCH, MATCHER_STR, MATCH_STR, LIBC_TEST_LOC_()),           \
+      RET_OR_EMPTY)
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
   LIBC_TEST_MATCH_(MATCHER, MATCH, #MATCHER, #MATCH, )

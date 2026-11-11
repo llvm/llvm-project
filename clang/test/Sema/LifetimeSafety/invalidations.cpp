@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wlifetime-safety-experimental-destructor-use -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -367,11 +367,11 @@ void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expect
 }
 
 void ParenthesizedContainerInvalidatesIterator() {
-  // FIXME: Support invalidation through non-DRE lvalue expressions.
   std::vector<int> v;
-  auto it = v.begin();
-  (v).push_back(42);
-  use(it);
+  auto it = v.begin(); // expected-warning {{local variable 'v' is later invalidated}} \
+                       // expected-note {{result of call to 'begin' aliases the storage of local variable 'v'}}
+  (v).push_back(42);   // expected-note {{local variable 'v' is invalidated here}}
+  use(it);             // expected-note {{later used here}}
 }
 
 } // namespace InvalidatingThroughContainerAliases
@@ -578,7 +578,7 @@ struct SinkOwnerBorrow {
 struct SinkInteriorBorrow {
   const char *dest_; // expected-note {{this field dangles}}
 
-  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}}
+  SinkInteriorBorrow(std::string *dest, int n) : dest_(dest->data()) { // expected-warning {{parameter 'dest' escapes to the field 'dest_' and is later invalidated}} expected-note {{result of call to 'data' aliases the storage of parameter 'dest' because the implicit object parameter is inferred as lifetimebound}}
     if (n > 0)
       dest->clear(); // expected-note {{parameter 'dest' is invalidated here}}
   }
@@ -627,7 +627,7 @@ struct S {
 
   void InvalidatedFieldDelete() {
     int *p = new int; // expected-warning {{allocated object escapes to the field 'FieldFromNew' and is later invalidated}}
-    FieldFromNew = p;
+    FieldFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
     delete p;         // expected-note {{allocated object is freed here}}
   }
 
@@ -678,7 +678,7 @@ void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{par
 
 void InvalidatedGlobalDelete() {
   int *p = new int;  // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
-  GlobalFromNew = p;
+  GlobalFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
   delete p;          // expected-note {{allocated object is freed here}}
 }
 
@@ -707,6 +707,30 @@ void GlobalReassignedBeforeInvalidation() {
   strings.push_back("1");
 }
 } // namespace InvalidatedGlobal
+
+namespace ownership_functions {
+
+__attribute__((ownership_returns(malloc))) int *myalloc(void);
+__attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
+
+int *g_owned_ptr; // expected-note {{this global dangles}}
+
+void ownership_returns_escape_global() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the global variable 'g_owned_ptr' and is later invalidated}}
+  g_owned_ptr = p;    // expected-note {{local variable 'p' aliases the storage of object allocated by 'myalloc'}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+}
+
+struct OwnershipFieldHolder {
+  int *f; // expected-note {{this field dangles}}
+  void go() {
+    int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the field 'f' and is later invalidated}}
+    this->f = p;        // expected-note {{local variable 'p' aliases the storage of object allocated by 'myalloc'}}
+    myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  }
+};
+
+} // namespace ownership_functions
 
 namespace AssociativeContainers {
 void SetInsertDoesNotInvalidate() {
@@ -1015,3 +1039,80 @@ struct S {
   }            // expected-note {{later used here}}
 };
 } // namespace CapturedByThis
+
+namespace implicit_use_after_free {
+struct [[gsl::Pointer]] Ref {
+  const int *p;
+  Ref &operator=(const int *q [[clang::lifetime_capture_by_this]]);
+  ~Ref();
+};
+void cleanup_ref(Ref *r);
+
+void via_destructor() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;               // expected-note {{local variable 'h' aliases the storage of allocated object}}
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void ownership_free(int *p) __attribute__((ownership_takes(malloc, 1)));
+
+void via_destructor_ownership_takes() {
+  Ref r;
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  r = h;               // expected-note {{local variable 'h' aliases the storage of allocated object}}
+  ownership_free(h);   // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void via_destructor_ownership_takes_param(int *p) { // expected-warning {{parameter 'p' does not live long enough}}
+  Ref r;
+  r = p;
+  ownership_free(p);   // expected-note {{parameter 'p' is freed here}}
+}                      // expected-note {{later used by the destructor of 'r' at scope exit}}
+
+void via_cleanup() {
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  g = h;               // expected-note {{local variable 'h' aliases the storage of allocated object}}
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used by the cleanup function of 'g' at scope exit}}
+
+struct [[gsl::Pointer]] ViewRef {
+  std::string_view sv;
+  ViewRef &operator=(std::string_view s [[clang::lifetime_capture_by_this]]);
+  ~ViewRef();
+};
+void via_destructor_invalidated() {
+  std::string s;
+  ViewRef r;
+  r = s;            // expected-warning {{local variable 's' is later invalidated}}
+  s.push_back('x'); // expected-note {{local variable 's' is invalidated here}}
+}                   // expected-note {{later used by the destructor of 'r' at scope exit}}
+} // namespace implicit_use_after_free
+
+namespace static_member_container {
+struct S {
+  static std::vector<int> v;
+};
+
+void ViaObject(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowQualifiedInvalidateViaObject(S &s) {
+  auto it = S::v.begin(); // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  s.v.push_back(1);       // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+
+void BorrowViaObjectInvalidateQualified(S &s) {
+  auto it = s.v.begin();  // expected-warning {{static variable 'v' is later invalidated}} \
+                          // expected-note {{result of call to 'begin' aliases the storage of static variable 'v'}}
+  S::v.push_back(1);      // expected-note {{static variable 'v' is invalidated here}}
+  use(*it);               // expected-note {{later used here}}
+}
+} // namespace static_member_container

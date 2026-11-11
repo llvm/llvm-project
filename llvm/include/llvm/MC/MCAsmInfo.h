@@ -451,6 +451,8 @@ public:
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
+  unsigned getAsmMacroMaxNestingDepth() const;
+
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
@@ -762,6 +764,14 @@ public:
   }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
+
+  /// True if the instruction is stored in multiple halfwords, with
+  /// the high-order half appearing first in memory regardless of target
+  /// endianness, to distinguish it from instructions occupying only one
+  /// halfword. Examples are the Thumb variant of Arm, microMIPS, and nanoMIPS.
+  virtual bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

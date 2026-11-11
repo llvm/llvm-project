@@ -17,17 +17,14 @@
 #include <limits>
 #include <list>
 #include <map>
+#include <mutex>
 #include <shared_mutex>
 #include <variant>
 #include <vector>
 
 #include "ExclusiveAccess.h"
-#include "OpenMP/InteropAPI.h"
-#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
-#include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
-#include "Shared/Requirements.h"
 #include "Shared/Utils.h"
 
 #include "GenericProfiler.h"
@@ -36,14 +33,9 @@
 #include "MemoryManager.h"
 #include "OffloadError.h"
 #include "RPC.h"
-#include "RecordReplay.h"
 #include "omptarget.h"
 
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StableHashing.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/Allocator.h"
@@ -54,6 +46,27 @@
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm::offload::debug;
+
+/// This struct contains information exchanged between different asynchronous
+/// operations for device-dependent optimization and potential synchronization
+struct __tgt_async_info {
+  // A pointer to a queue-like structure where offloading operations are issued.
+  // We assume to use this structure to do synchronization. In CUDA backend, it
+  // is CUstream.
+  void *Queue = nullptr;
+
+  /// A collection of allocations that are associated with this stream and that
+  /// should be freed after finalization. Also store the type of the allocation.
+  llvm::SmallVector<std::pair<void *, TargetAllocTy>, 2> AssociatedAllocations;
+
+  /// Mutex to guard access to AssociatedAllocations and the Queue.
+  std::mutex Mutex;
+
+  /// Opaque handle for profiler-specific data (e.g., OMPT trace record info).
+  /// Owned by the profiler; the runtime threads this pointer through the plugin
+  /// layer to associate async operations with trace records.
+  void *ProfilerData = nullptr;
+};
 
 namespace llvm {
 namespace omp {
@@ -139,14 +152,6 @@ struct AsyncInfoWrapperTy {
     return static_cast<Ty>(AsyncInfoPtr->Queue);
   }
 
-  /// Set the queue.
-  template <typename Ty> void setQueueAs(Ty Queue) {
-    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
-                  "Queue is not of the same size as target type");
-    assert(!AsyncInfoPtr->Queue && "Overwriting queue");
-    AsyncInfoPtr->Queue = Queue;
-  }
-
   /// Get the queue, using the provided resource manager to initialise it if it
   /// doesn't exist.
   template <typename Ty, typename RMTy>
@@ -168,13 +173,6 @@ struct AsyncInfoWrapperTy {
   /// actually executed. This function must be called before destroying the
   /// object and only once.
   void finalize(Error &Err);
-
-  /// Register \p Ptr as an associated allocation that is freed after
-  /// finalization.
-  void freeAllocationAfterSynchronization(void *Ptr, TargetAllocTy Kind) {
-    std::lock_guard<std::mutex> AllocationGuard(AsyncInfoPtr->Mutex);
-    AsyncInfoPtr->AssociatedAllocations.push_back({Ptr, Kind});
-  }
 
 private:
   GenericDeviceTy &Device;
@@ -312,9 +310,6 @@ class DeviceImageTy {
   /// The managed image data.
   std::unique_ptr<MemoryBuffer> Image;
 
-  /// An optional buffer for an IR image.
-  std::unique_ptr<MemoryBuffer> DeviceIRImage;
-
   /// Reference to the device this image is loaded on.
   GenericDeviceTy &Device;
 
@@ -341,21 +336,6 @@ public:
   MemoryBufferRef getMemoryBuffer() const {
     return MemoryBufferRef(StringRef((const char *)getStart(), getSize()),
                            "Image");
-  }
-
-  /// Get a memory buffer reference to the whole IR image.
-  MemoryBufferRef getIRImageMemoryBuffer() const {
-    if (DeviceIRImage)
-      return MemoryBufferRef(*DeviceIRImage);
-
-    return MemoryBufferRef();
-  }
-
-  bool hasIRImage() const { return DeviceIRImage != nullptr; }
-
-  /// Set the IR image.
-  void setIRImage(std::unique_ptr<MemoryBuffer> ImageBuffer) {
-    DeviceIRImage = std::move(ImageBuffer);
   }
 };
 
@@ -434,19 +414,6 @@ struct GenericKernelTy {
   /// underlying device function may run, as reported by the driver/backend.
   virtual uint32_t getMaxThreads() const {
     return std::numeric_limits<uint32_t>::max();
-  }
-
-  /// Indicate whether an execution mode is valid.
-  static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
-    switch (ExecutionMode) {
-    case OMP_TGT_EXEC_MODE_BARE:
-    case OMP_TGT_EXEC_MODE_SPMD:
-    case OMP_TGT_EXEC_MODE_GENERIC:
-    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
-    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
-      return true;
-    }
-    return false;
   }
 
 protected:
@@ -709,14 +676,6 @@ public:
     return utils::advancePtr(Entry->DevAccessiblePtr,
                              utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
-
-  /// Check whether a buffer belongs to a registered host pinned allocation.
-  bool isHostPinnedBuffer(const void *HstPtr) const {
-    std::shared_lock<std::shared_mutex> Lock(Mutex);
-
-    // Return whether there is an intersecting allocation.
-    return (findIntersecting(const_cast<void *>(HstPtr)) != nullptr);
-  }
 };
 
 /// Description of an allocation: owning device, kind, base address and size.
@@ -957,20 +916,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                bool *IsQueueWorkCompleted) = 0;
 
-  /// Check whether the architecture supports VA management
-  virtual bool supportVAManagement() const { return false; }
-
   /// Get the total device memory size
   virtual Error getDeviceMemorySize(uint64_t &DSize);
-
-  /// Allocates \p RSize bytes (rounded up to page size) and hints the driver to
-  /// map it to \p VAddr. The obtained address is stored in \p Addr. At return
-  /// \p RSize contains the actual size which can be equal or larger than the
-  /// requested size.
-  virtual Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize);
-
-  /// De-allocates device memory and unmaps the virtual address \p VAddr
-  virtual Error memoryVAUnMap(void *VAddr, size_t Size);
 
   /// Allocate data on the device or involving the device.
   Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind,
@@ -1210,27 +1157,18 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                          "%s not supported by platform", __func__);
   }
 
+  /// Return the backend-native handle of the platform this device belongs to,
+  /// reinterpreted as a void pointer.
+  virtual Expected<void *> getNativePlatformHandle() {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "%s not supported by platform", __func__);
+  }
+
   /// Return the backend-native handle of the queue held by \p AsyncInfo,
   /// reinterpreted as a void pointer.
   virtual Expected<void *> getNativeQueueHandle(__tgt_async_info *AsyncInfo) {
     return Plugin::error(error::ErrorCode::UNSUPPORTED,
                          "%s not supported by platform", __func__);
-  }
-
-  virtual Expected<omp_interop_val_t *>
-  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "%s not supported by platform", __func__);
-  }
-
-  virtual Error releaseInterop(omp_interop_val_t *Interop) {
-    return Plugin::success();
-  }
-
-  virtual interop_spec_t selectInteropPreference(int32_t InteropType,
-                                                 int32_t NumPrefers,
-                                                 interop_spec_t *Prefers) {
-    return interop_spec_t{tgt_fr_none, {false, 0}, 0};
   }
 
   /// Allocate and construct a kernel object.
@@ -1279,30 +1217,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return ATI;
   }
 
-  Error initRecordReplay(int64_t Size, void *VAddr, bool IsRecord,
-                         bool IsNative, bool SaveOutput, bool EmitReport,
-                         const char *ReportFilename,
-                         const char *OutputDirPath) {
-    if (RecordReplay)
-      return Plugin::error(error::ErrorCode::INVALID_ARGUMENT,
-                           "RR already initialized");
-    // Other formats could be supported in the future.
-    if (!IsNative)
-      return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                           "non-native RR not available");
-
-    RecordReplayTy::StatusTy Status = IsRecord
-                                          ? RecordReplayTy::StatusTy::Recording
-                                          : RecordReplayTy::StatusTy::Replaying;
-
-    RecordReplay =
-        new NativeRecordReplayTy(Status, OutputDirPath ? OutputDirPath : "",
-                                 SaveOutput, EmitReport, ReportFilename, *this);
-    return RecordReplay->init(Size, VAddr);
-  }
-
-  RecordReplayTy *getRecordReplay() { return RecordReplay; }
-
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
 
@@ -1347,9 +1261,6 @@ private:
   /// Environment variables defined by the LLVM OpenMP implementation.
   UInt64Envar OMPX_TargetStackSize;
   UInt64Envar OMPX_TargetHeapSize;
-
-  /// Record and replay manager.
-  RecordReplayTy *RecordReplay = nullptr;
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
@@ -1502,7 +1413,7 @@ struct GenericPluginTy {
 
   /// Indicate whether data can be exchanged directly between two devices under
   /// this same plugin. If this function returns true, it's safe to call the
-  /// GenericDeviceTy::exchangeData() function on the source device.
+  /// GenericDeviceTy::dataExchange() function on the source device.
   virtual bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) {
     return isValidDeviceId(SrcDeviceId) && isValidDeviceId(DstDeviceId);
   }
@@ -1539,20 +1450,6 @@ struct GenericPluginTy {
     return isImageCompatible(Image);
   }
 
-  virtual Error flushQueueImpl(omp_interop_val_t *Interop) {
-    return Plugin::success();
-  }
-
-  virtual Error syncBarrierImpl(omp_interop_val_t *Interop) {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "sync_barrier not supported");
-  }
-
-  virtual Error asyncBarrierImpl(omp_interop_val_t *Interop) {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "async_barrier not supported");
-  }
-
   /// Create a plugin-side context grouping the given devices.
   virtual Expected<std::unique_ptr<PluginContextTy>>
   createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
@@ -1576,39 +1473,7 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Initializes the record and replay mechanism inside the plugin.
-  int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
-                                   void *VAddr, bool IsRecord, bool IsNative,
-                                   bool SaveOutput, bool EmitReport,
-                                   const char *ReportFilename,
-                                   const char *OutputDirPath);
 
-  /// Return the interop specification that the plugin supports
-  /// It might not be one of the user specified ones.
-  interop_spec_t select_interop_preference(int32_t ID, int32_t InteropType,
-                                           int32_t NumPrefers,
-                                           interop_spec_t *Prefers) {
-    auto &Device = getDevice(ID);
-    return Device.selectInteropPreference(InteropType, NumPrefers, Prefers);
-  }
-
-  /// Create OpenMP interop with the given interop context
-  omp_interop_val_t *create_interop(int32_t ID, int32_t InteropContext,
-                                    interop_spec_t *InteropSpec);
-
-  /// Release OpenMP interop object
-  int32_t release_interop(int32_t ID, omp_interop_val_t *Interop);
-
-  /// Flush the queue associated with the interop object if necessary
-  int32_t flush_queue(omp_interop_val_t *Interop);
-
-  /// Perform a host synchronization with the queue associated with the interop
-  /// object and wait for it to complete.
-  int32_t sync_barrier(omp_interop_val_t *Interop);
-
-  /// Queue an asynchronous barrier in the queue associated with the interop
-  /// object and return immediately.
-  int32_t async_barrier(omp_interop_val_t *Interop);
 
 private:
   /// Indicates if the platform runtime has been fully initialized.

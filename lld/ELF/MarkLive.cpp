@@ -90,24 +90,13 @@ private:
 };
 } // namespace
 
-template <class ELFT>
-static uint64_t getAddend(Ctx &ctx, InputSectionBase &sec,
-                          const typename ELFT::Rel &rel) {
-  return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
-                                       rel.getType(ctx.arg.isMips64EL));
-}
-
-template <class ELFT>
-static uint64_t getAddend(Ctx &, InputSectionBase &sec,
-                          const typename ELFT::Rela &rel) {
-  return rel.r_addend;
-}
-
-// Currently, we assume all input CREL relocations have an explicit addend.
-template <class ELFT>
-static uint64_t getAddend(Ctx &, InputSectionBase &sec,
-                          const typename ELFT::Crel &rel) {
-  return rel.r_addend;
+template <class RelTy>
+static int64_t getAddend(Ctx &ctx, InputSectionBase &sec, const RelTy &rel) {
+  if constexpr (RelTy::HasAddend)
+    return rel.r_addend;
+  else
+    return ctx.target->getImplicitAddend(sec.content().begin() + rel.r_offset,
+                                         rel.getType(ctx.arg.isMips64EL));
 }
 
 template <class ELFT, bool TrackWhyLive>
@@ -143,7 +132,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
       if constexpr (std::is_same_v<RelTy, Relocation>)
         offset += rel.addend;
       else
-        offset += getAddend<ELFT>(ctx, sec, rel);
+        offset += getAddend(ctx, sec, rel);
       // Skip out-of-bounds offsets to avoid an assertion failure in
       // getSectionPiece.
       if (auto *ms = dyn_cast<MergeInputSection>(relSec);
@@ -392,9 +381,9 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     markSymbol(ctx.symtab->find(s), "undefined command line flag");
   for (StringRef s : ctx.script->referencedSymbols)
     markSymbol(ctx.symtab->find(s), "referenced by linker script");
-  for (auto [symName, _] : ctx.symtab->cmseSymMap) {
-    markSymbol(ctx.symtab->cmseSymMap[symName].sym, "ARM CMSE symbol");
-    markSymbol(ctx.symtab->cmseSymMap[symName].acleSeSym, "ARM CMSE symbol");
+  for (auto &[_, entry] : ctx.symtab->cmseSymMap) {
+    markSymbol(entry.sym, "ARM CMSE symbol");
+    markSymbol(entry.acleSeSym, "ARM CMSE symbol");
   }
 
   // Mark .eh_frame sections as live because there are usually no relocations
@@ -464,7 +453,10 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
     }
   }
 
-  mark();
+  if constexpr (TrackWhyLive)
+    mark();
+  else
+    markParallel();
 
   if (TrackWhyLive) {
     const auto handleSym = [&](Symbol *sym) {
@@ -489,10 +481,6 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
 
 template <class ELFT, bool TrackWhyLive>
 void MarkLive<ELFT, TrackWhyLive>::mark() {
-  if constexpr (!TrackWhyLive) {
-    markParallel();
-    return;
-  }
   while (!queue.empty()) {
     InputSectionBase &sec = *queue.pop_back_val();
 
@@ -533,7 +521,7 @@ static void processSectionEdges(
       if (auto *relSec = dyn_cast_or_null<InputSectionBase>(d->section)) {
         uint64_t offset = d->value;
         if (d->isSection()) {
-          offset += getAddend<ELFT>(ctx, sec, rel);
+          offset += getAddend(ctx, sec, rel);
           if (auto *ms = dyn_cast<MergeInputSection>(relSec);
               ms && offset >= ms->content().size())
             return;

@@ -123,6 +123,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  checked_ptr_test
+  SUITE
+    libc-support-tests
+  SRCS
+    checked_ptr_test.cpp
+  DEPENDS
+    libc.src.__support.alloc_checker
+    libc.src.__support.checked_ptr
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
+)
+
+add_libc_test(
   endian_internal_test
   SUITE
     libc-support-tests
@@ -171,7 +185,6 @@ add_libc_test(
     libc.src.__support.str_to_float
     libc.src.__support.uint128
 )
-
 
 add_libc_test(
   str_to_integer_test
@@ -371,6 +384,7 @@ add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
+add_subdirectory(net)
 add_subdirectory(time)
 add_subdirectory(threads)
 add_subdirectory(wchar)

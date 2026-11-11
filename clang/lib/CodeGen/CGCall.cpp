@@ -1147,7 +1147,19 @@ CGFunctionInfo *CodeGenTypes::findOrInsertCGFunctionInfo(
     //
     // For CPU targets, this currently only works for OpenCL.
     assert(CC != llvm::CallingConv::C || getContext().getLangOpts().OpenCL);
-    computeSPIRKernelABIInfo(CGM, *FI);
+    // SPIR-V lowers OpenCL types to target extension types, which the ABI
+    // library cannot tell apart from the kernel pointers it coerces yet, so
+    // such kernels keep Clang's own lowering.
+    auto IsSPIRVOpenCLType = [&](const CGFunctionInfoArgInfo &Arg) {
+      return CGM.getTriple().isSPIRV() &&
+             Arg.type.getTypePtr()->isOpenCLSpecificType();
+    };
+    if (CC == llvm::CallingConv::SPIR_KERNEL &&
+        CGM.shouldUseLLVMABILowering(CC) &&
+        llvm::none_of(FI->arguments(), IsSPIRVOpenCLType))
+      CGM.computeABIInfoUsingLib(*FI);
+    else
+      computeSPIRKernelABIInfo(CGM, *FI);
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else if (CGM.shouldUseLLVMABILowering(CC)) {
@@ -2252,6 +2264,27 @@ static void AddAttributesFromFunctionProtoType(ASTContext &Ctx,
     FuncAttrs.addAttribute("aarch64_out_zt0");
   if (FunctionType::getArmZT0State(SMEBits) == FunctionType::ARM_InOut)
     FuncAttrs.addAttribute("aarch64_inout_zt0");
+
+  unsigned RISCVBits = FPT->getRISCVAttributes();
+  switch (FunctionType::getRISCVXsfmmState(RISCVBits)) {
+  case FunctionType::RISCVNone:
+    break;
+  case FunctionType::RISCVIn:
+    FuncAttrs.addAttribute("riscv_in");
+    break;
+  case FunctionType::RISCVOut:
+    FuncAttrs.addAttribute("riscv_out");
+    break;
+  case FunctionType::RISCVInOut:
+    FuncAttrs.addAttribute("riscv_inout");
+    break;
+  case FunctionType::RISCVPreserves:
+    FuncAttrs.addAttribute("riscv_preserves");
+    break;
+  case FunctionType::RISCVNew:
+    FuncAttrs.addAttribute("riscv_new");
+    break;
+  }
 }
 
 static void AddAttributesFromOMPAssumes(llvm::AttrBuilder &FuncAttrs,
@@ -5809,7 +5842,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // When passing arguments using temporary allocas, we need to add the
   // appropriate lifetime markers. This vector keeps track of all the lifetime
   // markers that need to be ended right after the call.
-  SmallVector<CallLifetimeEnd, 2> CallLifetimeEndAfterCall;
+  SmallVector<llvm::Value *, 2> CallLifetimeEndAfterCall;
 
   // Translate all of the arguments as necessary to match the IR lowering.
   assert(CallInfo.arg_size() == CallArgs.size() &&
@@ -5964,7 +5997,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // Emit lifetime markers for the temporary alloca and add cleanup code to
       // emit the end lifetime marker after the call.
       if (EmitLifetimeStart(AI.getPointer()))
-        CallLifetimeEndAfterCall.emplace_back(AI);
+        CallLifetimeEndAfterCall.push_back(AI.getPointer());
 
       // Generate the copy.
       I->copyInto(*this, AI);
@@ -6846,10 +6879,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AllocAlignAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
   }
 
-  // Explicitly call CallLifetimeEnd::Emit just to re-use the code even though
-  // we can't use the full cleanup mechanism.
-  for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
-    LifetimeEnd.Emit(*this, /*Flags=*/{});
+  // Emit the end lifetime markers for any temporary allocas created for the
+  // call arguments.
+  for (llvm::Value *LifetimeEndAddr : CallLifetimeEndAfterCall)
+    EmitLifetimeEnd(LifetimeEndAddr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)

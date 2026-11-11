@@ -144,7 +144,7 @@ public:
       // obscures the lifetime relationship (e.g., shared_ptr from unique_ptr).
       if (IsMoved)
         return;
-      if (PVD->hasAttr<LifetimeBoundAttr>()) {
+      if (paramIsLifetimeBound(*PVD)) {
         // Track that this lifetimebound parameter correctly escapes
         // (via return or via field assignment in a constructor).
         if (isa<ReturnEscapeFact>(OEF) ||
@@ -303,22 +303,21 @@ public:
       if (const auto *UF = dyn_cast<const UseFact *>(CausingFact)) {
         llvm::SmallVector<const Expr *> ExprChain =
             getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
+        const UseSite &Use = UF->getUseSite();
         if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
-            SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
-                                                   Warning.InvalidatedByExpr,
-                                                   ExprChain);
+            SemaHelper->reportUseAfterInvalidation(
+                IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);
           else if (InvalidatedPVD)
             // Use-after-invalidation of a parameter.
             SemaHelper->reportUseAfterInvalidation(
-                InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr,
-                ExprChain);
+                InvalidatedPVD, Use, Warning.InvalidatedByExpr, ExprChain);
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc, ExprChain);
+          SemaHelper->reportUseAfterScope(IssueExpr, Use, MovedExpr, ExpiryLoc,
+                                          ExprChain);
 
       } else if (const auto *OEF =
                      dyn_cast<const OriginEscapesFact *>(CausingFact)) {
@@ -358,14 +357,13 @@ public:
             // invalidated.
             llvm::SmallVector<const Expr *> ExprChain = getExprChain(
                 LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
+            UseSite Use = UseSite::at(ThisEscape->getLoc());
             if (IssueExpr)
               SemaHelper->reportUseAfterInvalidation(
-                  IssueExpr, ThisEscape->getLoc(), Warning.InvalidatedByExpr,
-                  ExprChain);
+                  IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);
             else if (InvalidatedPVD)
               SemaHelper->reportUseAfterInvalidation(
-                  InvalidatedPVD, ThisEscape->getLoc(),
-                  Warning.InvalidatedByExpr, ExprChain);
+                  InvalidatedPVD, Use, Warning.InvalidatedByExpr, ExprChain);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
@@ -393,7 +391,8 @@ public:
           // scope; reuse the use-after-scope diagnostic at the capturing
           // method.
           SemaHelper->reportUseAfterScope(
-              IssueExpr, ThisEscape->getLoc(), MovedExpr, ExpiryLoc,
+              IssueExpr, UseSite::at(ThisEscape->getLoc()), MovedExpr,
+              ExpiryLoc,
               getExprChain(
                   LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
         else

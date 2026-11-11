@@ -18,8 +18,21 @@ static_assert(alignof(RealValueImpl) == detail::kRealObjectAlign);
 static_assert(sizeof(RealValue) == sizeof(RealValueImpl));
 static_assert(alignof(RealValue) == alignof(RealValueImpl));
 
+#if FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
+static_assert(std::is_trivially_copyable_v<RealValueImpl>);
+#endif
+
+RealValueImpl &RealValue::impl() {
+  return *std::launder(reinterpret_cast<RealValueImpl *>(opaque_));
+}
+
+const RealValueImpl &RealValue::impl() const {
+  return *std::launder(reinterpret_cast<const RealValueImpl *>(opaque_));
+}
+
 RealValue::RealValue() { new (this) RealValueImpl(); }
 
+#if !FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
 RealValue::~RealValue() { impl().~RealValueImpl(); }
 
 RealValue::RealValue(const RealValue &x) { new (this) RealValueImpl(x.impl()); }
@@ -37,6 +50,7 @@ RealValue &RealValue::operator=(RealValue &&x) {
   impl() = std::move(x.impl());
   return *this;
 }
+#endif
 
 RealValue::RealValue(int kind, const Word &w) {
   new (this) RealValueImpl(kind, w);
@@ -143,7 +157,9 @@ ValueWithRealFlags<RealValue> RealValue::KahanSummation(
   return FromImpl(impl().KahanSummation(y.impl(), correction.impl(), rounding));
 }
 
-IntegerValue RealValue::EXPONENT() const { return impl().EXPONENT(); }
+IntegerValue RealValue::EXPONENT(int kind) const {
+  return impl().EXPONENT(kind);
+}
 
 RealValue RealValue::EPSILON(int kind) {
   return FromImpl(RealValueImpl::EPSILON(kind));

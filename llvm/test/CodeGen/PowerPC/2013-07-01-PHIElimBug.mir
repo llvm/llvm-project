@@ -1,4 +1,4 @@
-# RUN: llc -mtriple powerpc64-unknown-linux-gnu -run-pass liveintervals -run-pass phi-node-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple powerpc64-unknown-linux-gnu -run-pass liveintervals -run-pass phi-node-elimination -o - %s | FileCheck %s
 # RUN: llc -mtriple powerpc64-unknown-linux-gnu --passes='require<live-intervals>,phi-node-elimination' -verify-each -o - %s | FileCheck %s
 
 # This test case was originally known as

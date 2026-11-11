@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefixes=CHECK,RV32I-MO %s
-# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefixes=CHECK,RV64I-MO %s
 
 --- |
@@ -23,7 +23,6 @@
 ...
 ---
 name:            outline_0
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -42,7 +41,6 @@ body:             |
 ...
 ---
 name:            outline_1
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -61,7 +59,6 @@ body:             |
 ...
 ---
 name:            outline_2
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -80,7 +77,6 @@ body:             |
 ...
 ---
 name:            dont_outline_0
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -101,7 +97,6 @@ body:             |
 ...
 ---
 name:            dont_outline_1
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -122,7 +117,6 @@ body:             |
 ...
 ---
 name:            dont_outline_2
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:

@@ -106,6 +106,8 @@ defm placeholder_var_definition : CXX26Compat<"placeholder variables are">;
 
 // C++29 compatibility with C++26 and earlier.
 defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
+defm defaulted_postfix_operator : CXX29Compat<
+  "defaulted postfix increment and decrement operators are">;
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
@@ -1275,6 +1277,8 @@ def err_pragma_alloc_text_c_linkage: Error<
   "'#pragma alloc_text' is applicable only to functions with C linkage">;
 def err_pragma_alloc_text_not_function: Error<
   "'#pragma alloc_text' is applicable only to functions">;
+def err_pragma_init_seg_bad_func_type: Error<
+  "'#pragma init_seg' function %0 must have type 'int (*)(void (__cdecl *)(void))'">;
 
 def warn_pragma_unused_undeclared_var : Warning<
   "undeclared variable %0 used as an argument for '#pragma unused'">,
@@ -10610,8 +10614,9 @@ def note_vbase_moved_here : Note<
 def select_defaulted_comparison_kind : TextSubstitution<
   "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
   "operator">;
-def err_defaulted_comparison_template : Error<
-  "comparison operator template cannot be defaulted">;
+def err_defaulted_operator_template : Error<
+  "%select{comparison operator|%sub{select_defaulted_postfix_operator_kind}1}0 "
+  "template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
   "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
   " must have %select{2|1}0 parameters">;
@@ -10660,9 +10665,12 @@ def note_defaulted_comparison_inaccessible : Note<
   "defaulted %0 is implicitly deleted because it would invoke a "
   "%select{private|protected}3 %4%select{ member of %6|"
   " member of %6 to compare member %2| to compare base class %2}1">;
-def note_defaulted_comparison_calls_deleted : Note<
+// Shared by defaulted comparisons and defaulted postfix operators. The first
+// four %select indices of %1 are given by diag::DefaultedPostfixOperatorStep.
+def note_defaulted_function_calls_deleted : Note<
   "defaulted %0 is implicitly deleted because it would invoke a deleted "
-  "comparison function%select{| for member %2| for base class %2}1">;
+  "%select{constructor|destructor|prefix 'operator++'|prefix 'operator--'|"
+  "comparison function}1%select{| for member %3| for base class %3}2">;
 def note_defaulted_comparison_no_viable_function : Note<
   "defaulted %0 is implicitly deleted because there is no viable "
   "%select{three-way comparison function|'operator=='}1 for "
@@ -10709,6 +10717,56 @@ def err_volatile_comparison_operator : Error<
   "defaulted comparison function must not be volatile">;
 def err_ref_qualifier_comparison_operator : Error<
   "ref-qualifier '&&' is not allowed on a defaulted comparison operator">;
+
+// C++2d defaulted postfix increment and decrement operators
+// This corresponds to values of PostfixOperatorKind.
+def select_defaulted_postfix_operator_kind : TextSubstitution<
+  "postfix %select{<ERROR>|increment|decrement}0 operator">;
+def err_defaulted_prefix_operator : Error<
+  "only the postfix form of 'operator%select{++|--}0' can be defaulted">;
+def err_defaulted_postfix_operator_const : Error<
+  "defaulted member %sub{select_defaulted_postfix_operator_kind}0 cannot be "
+  "const-qualified">;
+def err_defaulted_postfix_operator_param : Error<
+  "invalid %select{explicit object|first}1 parameter type for defaulted "
+  "%sub{select_defaulted_postfix_operator_kind}0; found %2, expected %3">;
+def err_defaulted_postfix_operator_return_type : Error<
+  "return type for defaulted %sub{select_defaulted_postfix_operator_kind}0 "
+  "must be %1, not %2">;
+def err_defaulted_postfix_operator_deduced_return_type : Error<
+  "defaulted %sub{select_defaulted_postfix_operator_kind}0 cannot have a "
+  "deduced return type">;
+def err_defaulted_postfix_operator_incomplete : Error<
+  "cannot default %sub{select_defaulted_postfix_operator_kind}0 for "
+  "incomplete type %1">;
+def err_non_first_default_postfix_operator_deletes : Error<
+  "defaulting this %sub{select_defaulted_postfix_operator_kind}0 "
+  "would delete it after its first declaration">;
+def err_non_first_default_postfix_operator_in_class : Error<
+  "defaulting this %sub{select_defaulted_postfix_operator_kind}0 "
+  "is not allowed because it was already declared outside the class">;
+def warn_defaulted_postfix_operator_deleted : Warning<
+  "explicitly defaulted %sub{select_defaulted_postfix_operator_kind}0 is "
+  "implicitly deleted">, InGroup<DefaultedFunctionDeleted>;
+def note_defaulted_postfix_operator_no_viable : Note<
+  "defaulted %0 is implicitly deleted because there is no viable prefix "
+  "%select{'operator++'|'operator--'}1 for an lvalue of type %2">;
+def note_defaulted_postfix_operator_ambiguous : Note<
+  "defaulted %0 is implicitly deleted because prefix "
+  "%select{'operator++'|'operator--'}1 for an lvalue of type %2 is ambiguous">;
+def note_defaulted_postfix_operator_inaccessible : Note<
+  "defaulted %0 is implicitly deleted because it would invoke a "
+  "%select{private|protected}2 %enum_select<DefaultedPostfixOperatorStep>{"
+  "%Constructor{constructor}|%Destructor{destructor}|"
+  "%PrefixIncrement{prefix 'operator++'}|"
+  "%PrefixDecrement{prefix 'operator--'}}1 of %5">;
+def err_ovl_deleted_postfix_operator : Error<
+  "object of type %0 cannot be %select{<ERROR>|incremented|decremented}1 "
+  "because its defaulted %sub{select_defaulted_postfix_operator_kind}1 is "
+  "implicitly deleted">;
+def note_postfix_operator_synthesized_at : Note<
+  "in defaulted %sub{select_defaulted_postfix_operator_kind}0 for %1 "
+  "first required here">;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "
@@ -11110,6 +11168,10 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_used_by_destructor
+    : Note<"later used by the destructor of %0 at scope exit">;
+def note_lifetime_safety_used_by_cleanup
+    : Note<"later used by the cleanup function of %0 at scope exit">;
 def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
 def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
@@ -11172,6 +11234,14 @@ def warn_lifetime_safety_noescape_escapes
 def warn_lifetime_safety_field_origin_escape
     : Warning<"return value depends on the object referenced by %0, not on '*this'">,
       InGroup<LifetimeSafetyFieldOriginEscape>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_scope
+    : Warning<"%0 does not live long enough">,
+      InGroup<LifetimeSafetyDestructorUse>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_invalidation
+    : Warning<"%0 is later invalidated">,
+      InGroup<LifetimeSafetyDestructorUse>,
       DefaultIgnore;
 
 def note_lifetime_safety_owned_field_suggestion
@@ -12869,8 +12939,6 @@ def err_omp_interchange_permutation_value_range : Error<
 def err_omp_interchange_permutation_value_repeated : Error<
   "index %0 must appear exactly once in the permutation clause">;
 def note_omp_directive_here : Note<"'%0' directive found here">;
-def err_omp_instantiation_not_supported
-    : Error<"instantiation of '%0' not supported yet">;
 def err_omp_adjust_arg_multiple_clauses : Error<
   "'adjust_arg' argument %0 used in multiple clauses">;
 def err_omp_adjust_args_invalid_item : Error<
@@ -13612,6 +13680,10 @@ def err_sycl_external_invalid_main : Error<
   "%0 cannot be applied to the 'main' function">;
 def err_sycl_external_invalid_deleted_function : Error<
   "%0 cannot be applied to an explicitly deleted function">;
+def warn_sycl_external_ignored_variadic_function : Warning<
+  "%0 attribute ignored; a variadic function cannot be called from device "
+  "code">,
+  InGroup<IgnoredAttributes>;
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<NonPortableSYCL>;
@@ -13748,6 +13820,15 @@ def warn_riscv_attribute_interrupt_duplicate_type : Warning<
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
+// RISC-V errors
+def err_riscv_call_invalid_features : Error<
+  "call to an attributed function requires %0">;
+def err_missing_riscv_state : Error<"missing state for %0">;
+def err_unknown_riscv_state : Error<"unknown state '%0'">;
+def err_conflicting_attributes_riscv_state : Error<
+  "conflicting attribute. Description: %0">;
+def err_mutually_exclusive_attributes_riscv_state : Error<
+  "mutually exclusive attributes for state '%0'">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
@@ -14016,6 +14097,7 @@ defvar UnsafeBufferOperationMsg =
   "%select{unsafe pointer operation|unsafe pointer arithmetic|"
   "unsafe buffer access|function introduces unsafe buffer manipulation|"
   "unsafe invocation of %1|field %1 prone to unsafe buffer manipulation}0";
+defvar UnsafeBufferLibcCallMsg = "function %0 is unsafe";
 def warn_unsafe_buffer_variable : Warning<UnsafeBufferVariableMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_variable_main_argv : Warning<UnsafeBufferVariableMsg>,
@@ -14024,9 +14106,25 @@ def warn_unsafe_buffer_operation : Warning<UnsafeBufferOperationMsg>,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;
 def warn_unsafe_buffer_operation_main_argv : Warning<UnsafeBufferOperationMsg>,
   InGroup<UnsafeBufferUsageMainArgv>, DefaultIgnore;
-def warn_unsafe_buffer_libc_call : Warning<
-  "function %0 is unsafe">,
+def warn_unsafe_buffer_libc_call : Warning<UnsafeBufferLibcCallMsg>,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_numeric_conversion :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallNumericConversion>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_string_manipulation :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallStringManipulation>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_string_examination :
+  Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallStringExamination>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_memory : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallMemory>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_io : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallIO>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_printf : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallPrintf>, DefaultIgnore;
+def warn_unsafe_buffer_libc_call_scanf : Warning<UnsafeBufferLibcCallMsg>,
+  InGroup<UnsafeBufferUsageInLibcCallScanf>, DefaultIgnore;
 def warn_unsafe_buffer_format_attr_call : Warning<
   "formatting function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInFormatAttrCall>, DefaultIgnore;
@@ -14503,6 +14601,8 @@ def warn_amdgpu_av_requires_atomic : Warning<
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "
             "in return type">;
+def err_amdgcn_prefetch_reserved_th
+    : Error<"cache policy uses the reserved th value 7">;
 
 def warn_amdgpu_s_wait_event_mask_no_effect_target :
   Warning<"event mask has no effect for target">,
