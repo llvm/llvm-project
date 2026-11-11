@@ -214,7 +214,9 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
   StringRef Text = II->getName();
-  if (II->isKeyword(Lang))
+  // Undefining a C keyword, or a keyword that is only enabled by an extension,
+  // is generally harmless and widely used.
+  if (II->isStandardCPlusPlusKeyword(Lang))
     return MD_KeywordUndef;
 
   // [lex.name]/p2: Identifiers with special meaning
@@ -3353,7 +3355,12 @@ void Preprocessor::HandleDefineDirective(
 
   if (MacroShadowsKeyword &&
       !isConfigurationPattern(MacroNameTok, MI, getLangOpts())) {
-    Diag(MacroNameTok, diag::warn_pp_macro_hides_keyword);
+    // [cpp.replace.general]p9: A translation unit shall not #define a macro
+    // name lexically identical to a keyword ([lex.key]). C keywords and
+    // keywords enabled by extensions keep the pedantic warning.
+    Diag(MacroNameTok, II->isStandardCPlusPlusKeyword(getLangOpts())
+                           ? diag::warn_pp_macro_hides_keyword
+                           : diag::ext_pp_macro_hides_keyword);
   }
   // Check that there is no paste (##) operator at the beginning or end of the
   // replacement list.

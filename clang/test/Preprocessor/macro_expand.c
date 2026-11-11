@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -E -Wno-keyword-macro %s | FileCheck --strict-whitespace %s
+// RUN: %clang_cc1 -E %s | FileCheck --strict-whitespace %s
 
 #define X() Y
 #define Y() X

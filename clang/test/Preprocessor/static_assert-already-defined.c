@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -DFIRST_WAY -Wno-keyword-macro -E -dM %s | FileCheck --strict-whitespace %s
-// RUN: %clang_cc1 -DFIRST_WAY -Wno-keyword-macro -fms-compatibility -E -dM %s | FileCheck --strict-whitespace %s
-// RUN: %clang_cc1 -Wno-keyword-macro -E -dM %s | FileCheck --strict-whitespace %s
-// RUN: %clang_cc1 -Wno-keyword-macro -fms-compatibility -E -dM %s | FileCheck --strict-whitespace %s
+// RUN: %clang_cc1 -DFIRST_WAY -E -dM %s | FileCheck --strict-whitespace %s
+// RUN: %clang_cc1 -DFIRST_WAY -fms-compatibility -E -dM %s | FileCheck --strict-whitespace %s
+// RUN: %clang_cc1 -E -dM %s | FileCheck --strict-whitespace %s
+// RUN: %clang_cc1 -fms-compatibility -E -dM %s | FileCheck --strict-whitespace %s
 
 // If the assert macro is defined in MS compatibility mode in C, we
 // automatically inject a macro definition for static_assert. Test that the

@@ -478,6 +478,11 @@ public:
   /// language.
   bool isCPlusPlusKeyword(const LangOptions &LangOpts) const;
 
+  /// Return true if this token is a keyword of standard C++ ([lex.key]) in
+  /// the specified language, as opposed to a keyword that is only enabled by
+  /// an extension (GNU, Microsoft, OpenCL, HLSL, ...).
+  bool isStandardCPlusPlusKeyword(const LangOptions &LangOpts) const;
+
   /// Get and set FETokenInfo. The language front-end is allowed to associate
   /// arbitrary metadata with this token.
   void *getFETokenInfo() const { return FETokenInfo; }
