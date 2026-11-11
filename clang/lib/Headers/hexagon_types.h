@@ -1235,6 +1235,17 @@ private:
 #endif /* defined __HVX__ && (__HVX_LENGTH__ == 128) */
 #endif /* __HVX_ARCH__ >= 65 */
 
+#if __HLX_ARCH__ >= 85
+typedef short HEXAGON_Vect16384 __attribute__((__vector_size__(2048)))
+__attribute__((aligned(2048)));
+
+typedef long HEXAGON_Vect32768 __attribute__((__vector_size__(4096)))
+__attribute__((aligned(2048)));
+
+#define HLX_Vector HEXAGON_Vect16384
+#define HLX_VectorPair HEXAGON_Vect32768
+#endif /* __HLX_ARCH__ >= 85 */
+
 /* Predicates */
 
 typedef int HEXAGON_Pred;
