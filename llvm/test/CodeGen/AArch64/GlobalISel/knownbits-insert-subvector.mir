@@ -3,9 +3,9 @@
 
 ---
 name: no_knownbits
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h1, $s0
   ; CHECK-LABEL: name: @no_knownbits
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -16,9 +16,9 @@ body: |
 ...
 ---
 name: zext_insert_subvector
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h1, $s0
   ; CHECK-LABEL: name: @zext_insert_subvector
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -33,9 +33,9 @@ body: |
 ...
 ---
 name: overwritten_src_ignored
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h0, $h1
   ; CHECK-LABEL: name: @overwritten_src_ignored
   ; CHECK-NEXT: %zero:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
   ; CHECK-NEXT: %bad0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -54,9 +54,9 @@ body: |
 ...
 ---
 name: intersect_src_and_sub
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h0, $h1
   ; CHECK-LABEL: name: @intersect_src_and_sub
   ; CHECK-NEXT: %srcval:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
   ; CHECK-NEXT: %subval:_ KnownBits:0000111111111111 SignBits:4 IsKnownNeverZero:1
@@ -77,7 +77,6 @@ body: |
 ...
 ---
 name: scalable_src_scalable_sub
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @scalable_src_scalable_sub
@@ -94,7 +93,6 @@ body: |
 ...
 ---
 name: scalable_src_fixed_sub
-tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @scalable_src_fixed_sub

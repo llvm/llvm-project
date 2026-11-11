@@ -2,9 +2,9 @@
 # RUN: llc -o - -mtriple=aarch64 -run-pass=legalizer %s | FileCheck %s
 ---
 name:            combine_anyext_s2
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: combine_anyext_s2
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $w1

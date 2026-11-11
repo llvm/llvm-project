@@ -3,9 +3,9 @@
 
 ---
 name:            test_scalar_sub_big
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_sub_big
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -29,9 +29,9 @@ body:             |
 ...
 ---
 name:            test_scalar_sub_big_nonpow2
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_sub_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -58,9 +58,9 @@ body:             |
 ...
 ---
 name:            test_scalar_sub_small
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_sub_small
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -80,9 +80,9 @@ body:             |
 ...
 ---
 name:            test_vector_sub_v16s16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_sub_v16s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -101,9 +101,9 @@ body:             |
 ...
 ---
 name:            test_vector_sub_v32s8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_sub_v32s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1

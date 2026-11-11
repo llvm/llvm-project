@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_scalar_add_big
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_big
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -28,9 +28,9 @@ body:             |
 ...
 ---
 name:            test_scalar_add_big_nonpow2
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -57,9 +57,9 @@ body:             |
 ...
 ---
 name:            test_scalar_add_small
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_add_small
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -79,9 +79,9 @@ body:             |
 ...
 ---
 name:            test_scalar_add_narrowing
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_narrowing
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -108,9 +108,9 @@ body:             |
 ...
 ---
 name:            test_scalar_add_narrowing_s65
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_scalar_add_narrowing_s65
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -137,9 +137,9 @@ body:             |
 ...
 ---
 name:            test_vector_add
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2, $q3
     ; CHECK-LABEL: name: test_vector_add
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
@@ -163,9 +163,9 @@ body:             |
 ...
 ---
 name:            test_vector_add_v16s16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_add_v16s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -184,9 +184,9 @@ body:             |
 ...
 ---
 name:            test_vector_add_v32s8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_add_v32s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
@@ -205,9 +205,9 @@ body:             |
 ...
 ---
 name:            test_vector_add_nonpow2
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1, $q2, $q3
     ; CHECK-LABEL: name: test_vector_add_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1

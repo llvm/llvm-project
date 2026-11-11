@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_modf_f16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $h0
     ; CHECK-LABEL: name: test_modf_f16
     ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[COPY]](f16)
@@ -29,9 +29,9 @@ body:             |
 ...
 ---
 name:            test_modf_f16_only_use_fractional_part
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $h0
     ; CHECK-LABEL: name: test_modf_f16_only_use_fractional_part
     ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[COPY]](f16)
@@ -52,9 +52,9 @@ body:             |
 ...
 ---
 name:            test_modf_v2f16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $d0
     ; CHECK-LABEL: name: test_modf_v2f16
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $d0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f16), [[UV1:%[0-9]+]]:_(f16), [[UV2:%[0-9]+]]:_(f16), [[UV3:%[0-9]+]]:_(f16) = G_UNMERGE_VALUES [[COPY]](<4 x f16>)
@@ -100,9 +100,9 @@ body:             |
 ...
 ---
 name:            test_modf_v3f32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: test_modf_v3f32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x f32>) = G_BITCAST [[COPY]](<2 x f64>)
@@ -153,9 +153,9 @@ body:             |
 ...
 ---
 name:            test_modf_v2f64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: test_modf_v2f64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[COPY]](<2 x f64>)
@@ -188,9 +188,9 @@ body:             |
 ...
 ---
 name:            test_modf_fp128
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: test_modf_fp128
     ; CHECK: [[COPY:%[0-9]+]]:_(f128) = COPY $q0
     ; CHECK-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0

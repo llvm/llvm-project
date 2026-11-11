@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1  %s -o - | FileCheck %s
 ---
 name:            test_scalar_mul_small
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_mul_small
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -24,9 +24,9 @@ body:             |
 ...
 ---
 name:            test_smul_overflow
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_smul_overflow
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -47,9 +47,9 @@ body:             |
 ...
 ---
 name:            test_umul_overflow
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_umul_overflow
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -69,9 +69,9 @@ body:             |
 ...
 ---
 name:            test_smul_overflow_s32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_smul_overflow_s32
     ; CHECK: %lhs:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs:_(i32) = COPY $w1
@@ -99,9 +99,9 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_umul_overflow_s32
     ; CHECK: %lhs:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs:_(i32) = COPY $w1
@@ -128,9 +128,9 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s24
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_umul_overflow_s24
     ; CHECK: %lhs_wide:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs_wide:_(i32) = COPY $w1
@@ -169,7 +169,6 @@ body:             |
 ...
 ---
 name:            vector_mul_scalarize
-tracksRegLiveness: false
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -455,9 +454,9 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v16s16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_mul_v16s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -476,9 +475,9 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v32s8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_mul_v32s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1

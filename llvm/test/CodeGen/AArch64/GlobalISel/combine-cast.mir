@@ -6,9 +6,9 @@
 ---
 name:            test_combine_trunc_select
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-PRE-LABEL: name: test_combine_trunc_select
     ; CHECK-PRE: %cond:_(i32) = COPY $w0
     ; CHECK-PRE-NEXT: %lhs:_(i64) = COPY $x0
@@ -35,9 +35,9 @@ body:             |
 ---
 name:            test_combine_zext_select
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-PRE-LABEL: name: test_combine_zext_select
     ; CHECK-PRE: %cond:_(i32) = COPY $w0
     ; CHECK-PRE-NEXT: %lhs:_(i32) = COPY $w0
@@ -64,9 +64,9 @@ body:             |
 ---
 name:            test_combine_anyzext_select
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-PRE-LABEL: name: test_combine_anyzext_select
     ; CHECK-PRE: %cond:_(i32) = COPY $w0
     ; CHECK-PRE-NEXT: %lhs:_(i32) = COPY $w0
@@ -93,9 +93,9 @@ body:             |
 ---
 name:            test_combine_anyzext_select_multi_use
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_combine_anyzext_select_multi_use
     ; CHECK: %cond:_(i32) = COPY $w0
     ; CHECK-NEXT: %lhs:_(i32) = COPY $w0
@@ -115,9 +115,9 @@ body:             |
 ---
 name:            test_combine_trunc_select_vector_out_of_budget
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_select_vector_out_of_budget
     ; CHECK: %cond:_(<2 x i32>) = COPY $x0
     ; CHECK-NEXT: %arg1:_(i64) = COPY $x0
@@ -139,9 +139,9 @@ body:             |
 ---
 name:            test_combine_trunc_build_vector
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_build_vector
     ; CHECK: %arg1:_(i64) = COPY $x0
     ; CHECK-NEXT: %arg2:_(i64) = COPY $x0
@@ -158,9 +158,9 @@ body:             |
 ---
 name:            test_combine_zext_build_vector
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_combine_zext_build_vector
     ; CHECK: %arg1:_(i32) = COPY $w0
     ; CHECK-NEXT: %arg2:_(i32) = COPY $w0
@@ -176,9 +176,9 @@ body:             |
 ---
 name:            test_combine_anyext_build_vector
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_combine_anyext_build_vector
     ; CHECK: %arg1:_(i32) = COPY $w0
     ; CHECK-NEXT: %arg2:_(i32) = COPY $w0
@@ -194,9 +194,9 @@ body:             |
 ---
 name:            test_combine_sext_build_vector
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_combine_sext_build_vector
     ; CHECK: %arg1:_(i32) = COPY $w0
     ; CHECK-NEXT: %arg2:_(i32) = COPY $w0
@@ -212,9 +212,9 @@ body:             |
 ---
 name:            test_combine_anyext_build_vector_multi_use
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_combine_anyext_build_vector_multi_use
     ; CHECK: %arg1:_(i32) = COPY $w0
     ; CHECK-NEXT: %arg2:_(i32) = COPY $w0
@@ -232,7 +232,6 @@ body:             |
 ---
 name:            test_undef_ptrtoint
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_undef_ptrtoint
@@ -245,7 +244,6 @@ body:             |
 ---
 name:            test_undef_inttoptr
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_undef_inttoptr

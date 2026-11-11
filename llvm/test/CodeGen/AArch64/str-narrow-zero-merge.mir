@@ -4,9 +4,9 @@
 
 ---
 name:  merge_unscaled_str_with_unscaled_str_8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_unscaled_str_8
     ; CHECK: STURHHi $wzr, $x0, 4 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -16,9 +16,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_scaled_str_8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_scaled_str_8
     ; CHECK: STRHHui $wzr, $x0, 2 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -28,9 +28,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_8
     ; CHECK: STRHHui $wzr, $x0, 2 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -40,9 +40,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_8
     ; CHECK: STURHHi $wzr, $x0, 4 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -52,9 +52,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_8_lower_address_second
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_8_lower_address_second
     ; CHECK: STURHHi $wzr, $x0, 0 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -64,9 +64,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_8_lower_address_second
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_8_lower_address_second
     ; CHECK: STRHHui $wzr, $x0, 0 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -76,9 +76,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_8_limits
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_8_limits
     ; CHECK: STURHHi $wzr, $x0, 255 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -88,9 +88,9 @@ body:             |
 ---
 ---
 name:  merge_scaled_str_with_unscaled_8_limits
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_8_limits
     ; CHECK: STRHHui $wzr, $x0, 127 :: (store (s8))
     ; CHECK-NEXT: RET undef $lr
@@ -99,9 +99,9 @@ body:             |
     RET undef $lr
 ---
 name:  merge_unscaled_str_with_unscaled_str_16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_unscaled_str_16
     ; CHECK: STURWi $wzr, $x0, 4 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -111,9 +111,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_scaled_str_16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_scaled_str_16
     ; CHECK: STRWui $wzr, $x0, 2 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -123,9 +123,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_16
     ; CHECK: STRWui $wzr, $x0, 1 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -135,9 +135,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_16
     ; CHECK: STURWi $wzr, $x0, 4 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -147,9 +147,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_16_lower_address_second
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_16_lower_address_second
     ; CHECK: STURWi $wzr, $x0, 2 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -159,9 +159,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_16_lower_address_second
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_16_lower_address_second
     ; CHECK: STRWui $wzr, $x0, 0 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -171,9 +171,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_16_limits
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_16_limits
     ; CHECK: STURWi $wzr, $x0, 254 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -183,9 +183,9 @@ body:             |
 ---
 ---
 name:  merge_scaled_str_with_unscaled_16_limits
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_16_limits
     ; CHECK: STRWui $wzr, $x0, 63 :: (store (s16))
     ; CHECK-NEXT: RET undef $lr
@@ -194,9 +194,9 @@ body:             |
     RET undef $lr
 ---
 name:  merge_unscaled_str_with_unscaled_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_unscaled_32
     ; CHECK: STURXi $xzr, $x0, 4 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -206,9 +206,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_scaled_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_scaled_32
     ; CHECK: STRXui $xzr, $x0, 1 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -218,9 +218,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_32
     ; CHECK: STRXui $xzr, $x0, 1 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -230,9 +230,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_32
     ; CHECK: STURXi $xzr, $x0, 8 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -242,9 +242,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_32_lower_address_second
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_32_lower_address_second
     ; CHECK: STRXui $xzr, $x0, 1 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -254,9 +254,9 @@ body:             |
 ...
 ---
 name:  merge_unscaled_str_with_scaled_32_lower_address_second
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_unscaled_str_with_scaled_32_lower_address_second
     ; CHECK: STURXi $xzr, $x0, 4 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
@@ -266,9 +266,9 @@ body:             |
 ...
 ---
 name:  merge_scaled_str_with_unscaled_32_negative_address
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: merge_scaled_str_with_unscaled_32_negative_address
     ; CHECK: STPWi $wzr, $wzr, $x0, -1 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr

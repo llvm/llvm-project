@@ -6,7 +6,6 @@
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_merge
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge
@@ -26,7 +25,6 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_merge_3ops
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_3ops
@@ -51,7 +49,6 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_build_vector
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_build_vector
@@ -71,7 +68,6 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_buildvector_3ops
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_buildvector_3ops
@@ -94,9 +90,9 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_concat_vectors
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_combine_unmerge_concat_vectors
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i16>) = COPY $w1
@@ -115,7 +111,6 @@ body:             |
 # the destinations of the unmerge.
 ---
 name:            test_combine_unmerge_bitcast_merge
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_bitcast_merge
@@ -136,7 +131,6 @@ body:             |
 # the destinations of the unmerge, since the types don't match.
 ---
 name:            test_combine_unmerge_merge_incompatible_types
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types
@@ -162,9 +156,9 @@ body:             |
 # match.
 ---
 name:            test_combine_unmerge_merge_incompatible_types_but_same_size
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_combine_unmerge_merge_incompatible_types_but_same_size
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i16>) = COPY $w1
@@ -190,7 +184,6 @@ body:             |
 # ...
 ---
 name:            test_combine_unmerge_cst
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_cst
@@ -250,7 +243,6 @@ body:             |
 # Constant is a 3 | 2 | 1 in chunks of 13-bit.
 ---
 name:            test_combine_unmerge_cst_36bit
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_cst_36bit
@@ -273,7 +265,6 @@ body:             |
 # Unmerge floating point constant.
 ---
 name:            test_combine_unmerge_fpcst
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_fpcst
@@ -296,9 +287,9 @@ body:             |
 # Transform unmerge into trunc when only the first definition is live.
 ---
 name:            test_combine_unmerge_dead_to_trunc
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i64)
@@ -311,9 +302,9 @@ body:             |
 # Don't transform unmerge into trunc when middle lanes are live.
 ---
 name:            test_dont_combine_unmerge_dead_to_trunc
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_dont_combine_unmerge_dead_to_trunc
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i16), [[UV1:%[0-9]+]]:_(i16), [[UV2:%[0-9]+]]:_(i16), [[UV3:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[COPY]](i64)
@@ -327,9 +318,9 @@ body:             |
 # if the input and output types are vectors.
 ---
 name:            test_combine_unmerge_dead_to_trunc_vec_in_n_out
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in_n_out
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $x0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<4 x i16>)
@@ -343,9 +334,9 @@ body:             |
 # if the input type is vector.
 ---
 name:            test_combine_unmerge_dead_to_trunc_vec_in
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $x0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i16), [[UV1:%[0-9]+]]:_(i16), [[UV2:%[0-9]+]]:_(i16), [[UV3:%[0-9]+]]:_(i16) = G_UNMERGE_VALUES [[COPY]](<2 x i32>)
@@ -357,9 +348,9 @@ body:             |
 
 ---
 name:            test_combine_unmerge_dead_to_trunc_ptr_out
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $q0
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_ptr_out
     ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY]](i128)
@@ -371,9 +362,9 @@ body:             |
 
 ---
 name:            test_combine_unmerge_dead_to_trunc_ptr_in
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_ptr_in
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](p0)
@@ -389,9 +380,9 @@ body:             |
 # this definition.
 ---
 name:            test_combine_unmerge_zext_to_zext_same_size
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_combine_unmerge_zext_to_zext_same_size
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
@@ -409,9 +400,9 @@ body:             |
 # of the unmerge. Therefore a G_ZEXT is required.
 ---
 name:            test_combine_unmerge_zext_to_zext
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
     ; CHECK-LABEL: name: test_combine_unmerge_zext_to_zext
     ; CHECK: [[COPY:%[0-9]+]]:_(i8) = COPY $b0
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i16) = G_ZEXT [[COPY]](i8)
@@ -434,9 +425,9 @@ body:             |
 # of the zext.
 ---
 name:            test_dont_combine_unmerge_zext_to_zext_src_bigger
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_bigger
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY]](i32)
@@ -458,9 +449,9 @@ body:             |
 # when the input zext deals with a vector type.
 ---
 name:            test_dont_combine_unmerge_zext_to_zext_src_vector
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_dont_combine_unmerge_zext_to_zext_src_vector
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $w0
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(<2 x i32>) = G_ZEXT [[COPY]](<2 x i16>)
@@ -477,9 +468,9 @@ body:             |
 # Check that we unmerge the build vector on the anyext
 ---
 name:            test_anyext_buildvector
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_anyext_buildvector
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
@@ -507,9 +498,9 @@ body:             |
 # Check that we unmerge the build vector on the anyext and undef
 ---
 name:            test_anyext_buildvector_undef
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_anyext_buildvector_undef
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
@@ -533,9 +524,9 @@ body:             |
 # Check that we don't unmerge the build vector on the anyext, multi-use
 ---
 name:            test_anyext_buildvector_multi
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_anyext_buildvector_multi
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
@@ -562,9 +553,9 @@ body:             |
 # Check that we don't unmerge the build vector on the anyext into scalar
 ---
 name:            test_anyext_buildvector_scalar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: test_anyext_buildvector_scalar
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w0
@@ -589,9 +580,9 @@ body:             |
 # Check that we anyext the merge
 ---
 name:            test_merge_undef
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_merge_undef
     ; CHECK: %opaque:_(i64) = COPY $x0
     ; CHECK-NEXT: %me:_(i128) = G_ANYEXT %opaque(i64)
@@ -605,9 +596,9 @@ body:             |
 # Check that we don't anyext the merge, multi-use
 ---
 name:            test_merge_undef_multi_use
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_merge_undef_multi_use
     ; CHECK: %opaque:_(i64) = COPY $x0
     ; CHECK-NEXT: %def:_(i64) = G_IMPLICIT_DEF
@@ -623,9 +614,9 @@ body:             |
 # Check that we zext the merge
 ---
 name:            test_merge_zero
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_merge_zero
     ; CHECK: %opaque:_(i64) = COPY $x0
     ; CHECK-NEXT: %me:_(i128) = G_ZEXT %opaque(i64)
@@ -638,9 +629,9 @@ body:             |
 # Check that we still zext the merge, multi-use
 ---
 name:            test_merge_zero_multi_use
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_merge_zero_multi_use
     ; CHECK: %opaque:_(i64) = COPY $x0
     ; CHECK-NEXT: %def:_(i64) = G_CONSTANT i64 0
@@ -656,9 +647,9 @@ body:             |
 # Check that we don't zext the merge with one
 ---
 name:            test_merge_one
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_merge_one
     ; CHECK: %opaque:_(i64) = COPY $x0
     ; CHECK-NEXT: %def:_(i64) = G_CONSTANT i64 1

@@ -3,9 +3,9 @@
 # REQUIRES: asserts
 ---
 name:            bitmask_overlap1
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap1
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
@@ -23,9 +23,9 @@ body:             |
 ...
 ---
 name:            bitmask_overlap2
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap2
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
@@ -43,9 +43,9 @@ body:             |
 ...
 ---
 name:            bitmask_overlap3
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap3
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
@@ -63,9 +63,9 @@ body:             |
 ...
 ---
 name:            bitmask_overlap4
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: bitmask_overlap4
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 128
@@ -83,9 +83,9 @@ body:             |
 ...
 ---
 name:            bitmask_no_overlap
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0
     ; CHECK-LABEL: name: bitmask_no_overlap
     ; CHECK: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; CHECK-NEXT: $w0 = COPY [[C]](i32)
@@ -101,9 +101,9 @@ body:             |
 ...
 ---
 name:            bitmask_overlap_extrause
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $w0, $x1
     ; CHECK-LABEL: name: bitmask_overlap_extrause
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1

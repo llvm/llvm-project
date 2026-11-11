@@ -3,7 +3,6 @@
 
 ---
 name:            test_merge_s4
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_merge_s4
@@ -24,9 +23,9 @@ body: |
 ...
 ---
 name:            test_merge_s16_s8
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $w0, $w1
 
     ; CHECK-LABEL: name: test_merge_s16_s8
     ; CHECK: %a:_(i32) = COPY $w0

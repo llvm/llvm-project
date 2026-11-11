@@ -6,9 +6,9 @@
 ---
 name:            mask_extract_unsigned_32
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: mask_extract_unsigned_32
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
@@ -24,9 +24,9 @@ body:             |
 ---
 name:            mask_extract_unsigned_64
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0
     ; CHECK-LABEL: name: mask_extract_unsigned_64
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 56
@@ -43,9 +43,9 @@ body:             |
 ---
 name:            no_mask_extract_unsigned_128
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0
     ; CHECK-LABEL: name: no_mask_extract_unsigned_128
     ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i128) = G_CONSTANT i128 1080863910568919040
@@ -63,9 +63,9 @@ body:             |
 ---
 name:            mask_extract_asr
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: mask_extract_asr
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 29
@@ -82,9 +82,9 @@ body:             |
 ---
 name:            no_mask_extract_asr
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: no_mask_extract_asr
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 30
@@ -100,9 +100,9 @@ body:             |
 ---
 name:            mask_extract_signed_nonneg
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: mask_extract_signed_nonneg
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 29
@@ -119,9 +119,9 @@ body:             |
 ---
 name:            no_mask_extract_large_shift
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: no_mask_extract_large_shift
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
@@ -139,9 +139,9 @@ body:             |
 ---
 name:            no_mask_extract_negative_shift
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: no_mask_extract_negative_shift
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 12
@@ -159,9 +159,9 @@ body:             |
 ---
 name:            no_mask_extract_disjoint
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: no_mask_extract_disjoint
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 26
@@ -179,9 +179,9 @@ body:             |
 ---
 name:           no_mask_extract_extra_bits
 legalized: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: no_mask_extract_extra_bits
     ; CHECK: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 25
@@ -199,9 +199,9 @@ body:             |
 ---
 name:          zero_from_large_shift
 legalized: true
-tracksRegLiveness: false
 body:              |
   bb.1.entry:
+    liveins: $w0
     ; CHECK-LABEL: name: zero_from_large_shift
     ; CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: $x0 = COPY [[C]](i64)

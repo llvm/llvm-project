@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_fadd_v2s64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_fadd_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $q1
@@ -18,9 +18,9 @@ body:             |
 ...
 ---
 name:            test_fdiv_v2s32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_fdiv_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $d1
@@ -34,9 +34,9 @@ body:             |
 ...
 ---
 name:            test_fsub_v2s32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_fsub_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $d1
@@ -50,9 +50,9 @@ body:             |
 ...
 ---
 name:            test_fneg_v2s32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $d0
     ; CHECK-LABEL: name: test_fneg_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $d0
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<2 x f32>) = G_FNEG [[COPY]]
@@ -64,9 +64,9 @@ body:             |
 ...
 ---
 name:            test_fmul_v4s32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_fmul_v4s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x f32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x f32>) = COPY $q1
@@ -80,7 +80,6 @@ body:             |
 ...
 ---
 name:            test_fmul_v4s64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fmul_v4s64
@@ -99,7 +98,6 @@ body:             |
 ...
 ---
 name:            test_fmul_v8s32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fmul_v8s32

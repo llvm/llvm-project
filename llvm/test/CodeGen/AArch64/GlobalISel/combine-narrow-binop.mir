@@ -3,9 +3,9 @@
 
 ---
 name:            test_combine_trunc_xor_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_xor_i64
     ; CHECK: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
@@ -20,9 +20,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_add_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_add_i64
     ; CHECK: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
@@ -37,9 +37,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_mul_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_mul_i64
     ; CHECK: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
@@ -54,9 +54,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_and_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_and_i64
     ; CHECK: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
@@ -71,9 +71,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_or_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_or_i64
     ; CHECK: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
@@ -88,9 +88,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_sub_i128
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $q0
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128
     ; CHECK: %lhs:_(i128) = COPY $q0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i128)
@@ -105,9 +105,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_sub_i128_multi_use
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $q0
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128_multi_use
     ; CHECK: %lhs:_(i128) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i128) = G_CONSTANT i128 -5
@@ -124,9 +124,9 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_xor_vector_pattern_did_not_match
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_xor_vector_pattern_did_not_match
     ; CHECK: %arg1:_(i64) = COPY $x0
     ; CHECK-NEXT: %arg2:_(i64) = COPY $x0

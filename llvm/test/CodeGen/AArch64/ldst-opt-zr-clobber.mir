@@ -12,10 +12,9 @@
 # CHECK-LABEL: name: no-clobber-zr
 # CHECK: STPXi $xzr, $xzr, $x0, 0
 name: no-clobber-zr
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x0,  $x1
+    liveins: $lr, $x0, $x1
     STRXui $xzr, $x0, 0 :: (store (s64) into %ir.p)
     dead $xzr = SUBSXri killed $x1, 0, 0, implicit-def $nzcv
     $w8 = CSINCWr $wzr, $wzr, 1, implicit killed $nzcv

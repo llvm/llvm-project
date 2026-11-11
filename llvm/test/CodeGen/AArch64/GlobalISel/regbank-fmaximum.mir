@@ -5,9 +5,9 @@
 name:            direct
 alignment:       4
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $s0, $s1
     ; CHECK-LABEL: name: direct
     ; CHECK: %a:fpr(f32) = COPY $s0
     ; CHECK-NEXT: %b:fpr(f32) = COPY $s1
@@ -25,9 +25,9 @@ body:             |
 name:            fed_by_load
 alignment:       4
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: fed_by_load
     ; CHECK: %ptr_a:gpr(p0) = COPY $x0
     ; CHECK-NEXT: %ptr_b:gpr(p0) = COPY $x1
@@ -49,9 +49,9 @@ body:             |
 name:            create_copy
 alignment:       4
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: create_copy
     ; CHECK: %a:gpr(f32) = COPY $w0
     ; CHECK-NEXT: %b:gpr(f32) = COPY $w1

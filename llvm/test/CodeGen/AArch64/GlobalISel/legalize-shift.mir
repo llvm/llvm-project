@@ -2,9 +2,9 @@
 # RUN: llc -O0 -debugify-and-strip-all-safe -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1 %s -o - | FileCheck %s
 ---
 name:            test_shift
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_shift
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -43,9 +43,9 @@ body:             |
 ...
 ---
 name: test_shl_i64_i32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_shl_i64_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -60,9 +60,9 @@ body:             |
 ...
 ---
 name: test_ashr_i64_i32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_ashr_i64_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -77,9 +77,9 @@ body:             |
 ...
 ---
 name: test_lshr_i64_i32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_lshr_i64_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -95,9 +95,9 @@ body:             |
 
 ---
 name: test_shl_s128_s128
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_shl_s128_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $q1
@@ -128,9 +128,9 @@ body:             |
 
 ---
 name: test_lshr_s128_s128
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_lshr_s128_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $q1
@@ -161,9 +161,9 @@ body:             |
 
 ---
 name: test_ashr_s128_s128
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_s128_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $q1
@@ -196,9 +196,9 @@ body:             |
 
 ---
 name: test_ashr_v2i32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_ashr_v2i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
@@ -212,9 +212,9 @@ body:             |
 ...
 ---
 name: test_ashr_v4i32
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_v4i32
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
@@ -228,7 +228,6 @@ body:             |
 ...
 ---
 name:            shl_cimm_32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -250,7 +249,6 @@ body:             |
 ...
 ---
 name:            lshr_cimm_32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -272,7 +270,6 @@ body:             |
 ...
 ---
 name:            ashr_cimm_32
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $w0
@@ -294,9 +291,9 @@ body:             |
 ...
 ---
 name: test_ashr_v16i8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_v16i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
@@ -309,9 +306,9 @@ body:             |
 ...
 ---
 name: test_ashr_v8i16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_v8i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -324,9 +321,9 @@ body:             |
 ...
 ---
 name: test_shl_v16i8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_shl_v16i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
@@ -339,9 +336,9 @@ body:             |
 ...
 ---
 name: test_shl_v8i16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_shl_v8i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -354,9 +351,9 @@ body:             |
 ...
 ---
 name: test_lshr_v16i8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_lshr_v16i8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
@@ -369,9 +366,9 @@ body:             |
 ...
 ---
 name: test_lshr_v8i16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_lshr_v8i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -384,9 +381,9 @@ body:             |
 ...
 ---
 name: test_shl_v4i16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_shl_v4i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
@@ -399,9 +396,9 @@ body:             |
 ...
 ---
 name: test_lshr_v4i16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_lshr_v4i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
@@ -414,9 +411,9 @@ body:             |
 ...
 ---
 name: test_ashr_v4i16
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_ashr_v4i16
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
@@ -429,7 +426,6 @@ body:             |
 ...
 ---
 name: test_ashr_v8s32
-tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ashr_v8s32
@@ -447,9 +443,9 @@ body:             |
 ...
 ---
 name: test_shl_v8s8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_shl_v8s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i8>) = COPY $d1
@@ -462,9 +458,9 @@ body:             |
 ...
 ---
 name: test_ashr_v8s8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_ashr_v8s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i8>) = COPY $d1
@@ -478,9 +474,9 @@ body:             |
 
 ---
 name: test_lshr_v8s8
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_lshr_v8s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i8>) = COPY $d1
@@ -493,9 +489,9 @@ body:             |
 ...
 ---
 name: test_lshr_nonpow2
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_lshr_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %a:_(i32) = COPY $w1
@@ -526,9 +522,9 @@ body:             |
 ...
 ---
 name: test_lshr_nonpow2_wide
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_lshr_nonpow2_wide
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %a:_(i32) = COPY $w1
@@ -581,7 +577,6 @@ body:             |
 ...
 ---
 name: test_lshr_i48
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -606,7 +601,6 @@ body:             |
 ...
 ---
 name: test_lshr_i512
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8

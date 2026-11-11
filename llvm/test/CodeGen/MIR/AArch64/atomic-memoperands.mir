@@ -3,9 +3,9 @@
 
 ---
 name:            atomic_memoperands
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x0
 
     ; CHECK-LABEL: name: atomic_memoperands
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0

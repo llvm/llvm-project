@@ -136,9 +136,9 @@ body:             |
 
 ---
 name:            test_one_use_copy_multi_use_load
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_one_use_copy_multi_use_load
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
@@ -158,9 +158,9 @@ body:             |
 
 ---
 name:            test_multi_use_load
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
@@ -177,9 +177,9 @@ body:             |
 
 ---
 name:            test_multi_use_load_large_memsize
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_multi_use_load_large_memsize
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1

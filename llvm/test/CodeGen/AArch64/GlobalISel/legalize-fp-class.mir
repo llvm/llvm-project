@@ -3,10 +3,10 @@
 
 ---
 name:            isnan_32
-tracksRegLiveness: false
 liveins:
 body:             |
   bb.0:
+    liveins: $w0
     ; CHECK-LABEL: name: isnan_32
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
@@ -24,10 +24,10 @@ body:             |
 ...
 ---
 name:            isnormal_32
-tracksRegLiveness: false
 liveins:
 body:             |
   bb.0:
+    liveins: $w0
     ; CHECK-LABEL: name: isnormal_32
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
@@ -47,10 +47,10 @@ body:             |
 ...
 ---
 name:            iszero_32
-tracksRegLiveness: false
 liveins:
 body:             |
   bb.0:
+    liveins: $w0
     ; CHECK-LABEL: name: iszero_32
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
@@ -68,10 +68,10 @@ body:             |
 ...
 ---
 name:            iszero_64
-tracksRegLiveness: false
 liveins:
 body:             |
   bb.0:
+    liveins: $x0
     ; CHECK-LABEL: name: iszero_64
     ; CHECK: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)

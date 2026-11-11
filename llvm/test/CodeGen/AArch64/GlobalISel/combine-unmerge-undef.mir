@@ -3,7 +3,6 @@
 ---
 name:            non-vector-src
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0
@@ -32,10 +31,9 @@ body:             |
 ---
 name:            v2-src
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $q0
+    liveins: $q0, $x0
 
     ; CHECK-LABEL: name: v2-src
     ; CHECK: liveins: $q0
@@ -53,10 +51,9 @@ body:             |
 ---
 name:            v4-src
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $q0
+    liveins: $q0, $x0
 
     ; CHECK-LABEL: name: v4-src
     ; CHECK: liveins: $q0

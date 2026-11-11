@@ -7,9 +7,9 @@ name:            fcmeq
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: fcmeq
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %rhs:fpr128 = COPY $q1
@@ -28,9 +28,9 @@ name:            fcmge
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: fcmge
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %rhs:fpr128 = COPY $q1
@@ -49,9 +49,9 @@ name:            fcmgt
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: fcmgt
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %rhs:fpr128 = COPY $q1
@@ -70,9 +70,9 @@ name:            fcmeqz
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0
     ; CHECK-LABEL: name: fcmeqz
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMEQv2i64rz %lhs, implicit $fpcr
@@ -91,9 +91,9 @@ name:            fcmgez
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0
     ; CHECK-LABEL: name: fcmgez
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMGEv2i64rz %lhs, implicit $fpcr
@@ -112,9 +112,9 @@ name:            fcmgtz
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0
     ; CHECK-LABEL: name: fcmgtz
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMGTv2i64rz %lhs, implicit $fpcr
@@ -133,9 +133,9 @@ name:            fcmlez
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0
     ; CHECK-LABEL: name: fcmlez
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMLEv2i64rz %lhs, implicit $fpcr
@@ -154,9 +154,9 @@ name:            fcmltz
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $q0
     ; CHECK-LABEL: name: fcmltz
     ; CHECK: %lhs:fpr128 = COPY $q0
     ; CHECK-NEXT: %fcmp:fpr128 = nofpexcept FCMLTv2i64rz %lhs, implicit $fpcr

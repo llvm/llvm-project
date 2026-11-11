@@ -3,7 +3,6 @@
 
 ---
 name:            Cst
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -16,7 +15,6 @@ body:             |
 ...
 ---
 name:            CstBig
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstBig
@@ -29,9 +27,9 @@ body:             |
 ...
 ---
 name:            ScalarVar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -42,9 +40,9 @@ body:             |
 ...
 ---
 name:            ScalarCst
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @ScalarCst
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
@@ -55,9 +53,9 @@ body:             |
 ...
 ---
 name:            VectorVar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0, $d1
   ; CHECK-LABEL: name: @VectorVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -68,9 +66,9 @@ body:             |
 ...
 ---
 name:            VectorCst
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorCst
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
@@ -83,9 +81,9 @@ body:             |
 ...
 ---
 name:            VectorCst36
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorCst36
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000011 SignBits:14 IsKnownNeverZero:1
@@ -100,9 +98,9 @@ body:             |
 ...
 ---
 name:            VectorCst3unknown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0
   ; CHECK-LABEL: name: @VectorCst3unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0

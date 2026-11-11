@@ -2,9 +2,9 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_ext
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $s0, $x0
     ; CHECK-LABEL: name: test_ext
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
@@ -109,7 +109,6 @@ body:             |
 ...
 ---
 name:            test_anyext_anyext
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0
@@ -128,7 +127,6 @@ body:             |
 ...
 ---
 name:            test_anyext_sext
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0
@@ -148,7 +146,6 @@ body:             |
 ...
 ---
 name:            test_anyext_zext
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0

@@ -9,9 +9,9 @@
 # CHECK:   - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK:   - { id: 1, class: fpr, preferred-register: '', flags: [  ] }
 name: func
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $d0, $x9
     %0 : gpr(s64) = COPY $x9
     $x9 = COPY %0
 

@@ -3,9 +3,9 @@
 
 ---
 name:            narrow_scalar_ssubo_s128
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: narrow_scalar_ssubo_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -33,9 +33,9 @@ body:             |
 ...
 ---
 name:            narrow_scalar_ssubo_big_nonpow2
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: narrow_scalar_ssubo_big_nonpow2
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -66,9 +66,9 @@ body:             |
 ...
 ---
 name:            test_scalar_ssubo_small
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_scalar_ssubo_small
     ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -96,9 +96,9 @@ body:             |
 ...
 ---
 name:            test_scalar_ssubo_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $w0, $w1
     ; CHECK-LABEL: name: test_scalar_ssubo_32
     ; CHECK: %lhs:_(i32) = COPY $w0
     ; CHECK-NEXT: %rhs:_(i32) = COPY $w1

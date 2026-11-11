@@ -3,10 +3,9 @@
 
 ---
 name:            test_combine_nan_rhs_fminnum_half
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fminnum_half
     ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: $h0 = COPY [[COPY]](f16)
@@ -17,10 +16,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fminnum_float
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fminnum_float
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](f32)
@@ -31,10 +29,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fminnum_double
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fminnum_double
     ; CHECK: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]](f64)
@@ -45,10 +42,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fminnum_half
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fminnum_half
     ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: $h0 = COPY [[COPY]](f16)
@@ -59,10 +55,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fminnum_float
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fminnum_float
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](f32)
@@ -73,10 +68,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fminnum_double
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fminnum_double
     ; CHECK: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]](f64)
@@ -87,10 +81,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fmaxnum_half
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fmaxnum_half
     ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: $h0 = COPY [[COPY]](f16)
@@ -101,10 +94,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fmaxnum_float
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fmaxnum_float
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](f32)
@@ -115,10 +107,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_rhs_fmaxnum_double
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_rhs_fmaxnum_double
     ; CHECK: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]](f64)
@@ -129,10 +120,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fmaxnum_half
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $h0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fmaxnum_half
     ; CHECK: [[COPY:%[0-9]+]]:_(f16) = COPY $h0
     ; CHECK-NEXT: $h0 = COPY [[COPY]](f16)
@@ -143,10 +133,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fmaxnum_float
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $w0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fmaxnum_float
     ; CHECK: [[COPY:%[0-9]+]]:_(f32) = COPY $w0
     ; CHECK-NEXT: $w0 = COPY [[COPY]](f32)
@@ -157,10 +146,9 @@ body:             |
 ...
 ---
 name:            test_combine_nan_lhs_fmaxnum_double
-tracksRegLiveness: false
 body:             |
   bb.1:
-  liveins:
+  liveins: $x0
     ; CHECK-LABEL: name: test_combine_nan_lhs_fmaxnum_double
     ; CHECK: [[COPY:%[0-9]+]]:_(f64) = COPY $x0
     ; CHECK-NEXT: $x0 = COPY [[COPY]](f64)

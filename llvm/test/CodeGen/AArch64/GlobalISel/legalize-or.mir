@@ -3,7 +3,6 @@
 
 ---
 name:            test_scalar_or_small
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -28,7 +27,6 @@ body: |
 
 ---
 name:            test_big_scalar_power_of_2
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -106,9 +104,9 @@ body:             |
 ...
 ---
 name:            test_vector_or_v16s16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_or_v16s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
@@ -127,9 +125,9 @@ body:             |
 ...
 ---
 name:            test_vector_or_v32s8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_or_v32s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1

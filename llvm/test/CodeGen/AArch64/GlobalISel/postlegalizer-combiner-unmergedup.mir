@@ -4,9 +4,9 @@
 ---
 name:            unmerge_dup8
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
+    liveins: $q0, $x0
     ; CHECK-LABEL: name: unmerge_dup8
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -27,9 +27,9 @@ body:             |
 ---
 name:            unmerge_dup16
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
+    liveins: $q0, $x0
     ; CHECK-LABEL: name: unmerge_dup16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -50,9 +50,9 @@ body:             |
 ---
 name:            unmerge_dup32
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
+    liveins: $q0, $x0
     ; CHECK-LABEL: name: unmerge_dup32
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
@@ -73,9 +73,9 @@ body:             |
 ---
 name:            unmerge_dup64
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
+    liveins: $q0, $x0
     ; CHECK-LABEL: name: unmerge_dup64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1

@@ -29,9 +29,9 @@
 
 ---
 name:            test_vaarg
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x0
     ; CHECK-LABEL: name: test_vaarg
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[COPY]](p0), debug-location !DILocation(line: 4, column: 3, scope: {{.*}}) :: (load (p0))
