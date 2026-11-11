@@ -33,7 +33,7 @@
 # V1: error: {{.*}}v1.{{.*}} has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # KERNEL: error: {{.*}}kernel.{{.*}} has architecture arm64e.kernel which is incompatible with target architecture arm64e
 # KERNEL-V1: error: {{.*}}kernel-v1.o has architecture arm64e.kernel.v1 which is incompatible with target architecture arm64e
-# UNKNOWN: error: {{.*}}v2.o has architecture unknown which is incompatible with target architecture arm64e
+# UNKNOWN: error: {{.*}}v2.{{.*}} has architecture unknown which is incompatible with target architecture arm64e
 
 ## Without -arch_errors_fatal, the object is ignored with a warning.
 # RUN: not %no-arg-lld -arch arm64e -platform_version ios 17.0 17.0 %t/main.o %t/v1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
@@ -47,6 +47,67 @@
 # RUN: not %no-arg-lld -arch arm64e -arch_errors_fatal -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/v1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=V1
 # RUN: not %no-arg-lld -arch arm64e -arch_errors_fatal -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/kernel-v1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
 # RUN: not %no-arg-lld -arch arm64e -arch_errors_fatal -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/v2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+
+## Dylibs and bundle loaders are checked too, but more loosely. Like ld64, an
+## arm64e link also takes those marked version 1, as macOS executables are, and
+## arm64e.x1 dylibs marked version 0. An arm64 link takes any arm64e dylib, and
+## an arm64e link any arm64-only TBD.
+# RUN: yaml2obj -DSUBTYPE=0x80000002 %t/libhelper.yaml -o %t/libv0.dylib
+# RUN: yaml2obj -DSUBTYPE=0x81000002 %t/libhelper.yaml -o %t/libv1.dylib
+# RUN: yaml2obj -DSUBTYPE=0x8000000C %t/libhelper.yaml -o %t/libx1.dylib
+# RUN: yaml2obj -DSUBTYPE=0x0 %t/libhelper.yaml -o %t/libarm64.dylib
+# RUN: yaml2obj -DSUBTYPE=0x2 %t/libhelper.yaml -o %t/libold.dylib
+# RUN: yaml2obj -DSUBTYPE=0xC0000002 %t/libhelper.yaml -o %t/libkernel.dylib
+# RUN: yaml2obj -DSUBTYPE=0x82000002 %t/libhelper.yaml -o %t/libv2.dylib
+# RUN: llvm-lipo -create %t/libarm64.dylib %t/libkernel.dylib -output %t/libfat-kernel.dylib
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/main.s -o %t/main-arm64.o
+# RUN: %lld -arch arm64e %t/main.o %t/libv0.dylib -o %t/dylib
+# RUN: %lld -arch arm64e %t/main.o %t/libv1.dylib -o %t/dylib
+# RUN: %lld -arch arm64e %t/main.o %t/libx1.dylib -o %t/dylib
+# RUN: %lld -arch arm64 %t/main-arm64.o %t/libkernel.dylib -o %t/dylib
+# RUN: %lld -arch arm64e %t/main.o %t/libhelper.tbd -o %t/dylib
+# RUN: %no-arg-lld -arch arm64e -platform_version macos 14.0 14.0 -e _helper %t/helper.o -o %t/loader
+# RUN: %no-arg-lld -arch arm64e -platform_version macos 14.0 14.0 -bundle -bundle_loader %t/loader %t/main.o -o %t/bundle
+
+## Other dylibs are ignored as another architecture, including the arm64e slice
+## of a fat dylib, and get no load command.
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.o %t/libarm64.dylib -o /dev/null 2>&1 | FileCheck %s --check-prefix=DYLIB-ARM64
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.o %t/libold.dylib -o /dev/null 2>&1 | FileCheck %s --check-prefix=OLD
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.o %t/libkernel.dylib -o /dev/null 2>&1 | FileCheck %s --check-prefix=KERNEL
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.o %t/libv2.dylib -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.o %t/libfat-kernel.dylib -o /dev/null 2>&1 | FileCheck %s --check-prefix=KERNEL
+# RUN: %no-fatal-warnings-lld -arch arm64e %t/main.o %t/helper.o %t/libarm64.dylib -o %t/ignored 2>&1 | FileCheck %s --check-prefix=WARN-DYLIB
+# RUN: llvm-otool -L %t/ignored | FileCheck %s --check-prefix=NO-LOAD
+
+# DYLIB-ARM64: error: {{.*}}libarm64.dylib has architecture arm64 which is incompatible with target architecture arm64e
+# WARN-DYLIB: warning: {{.*}}libarm64.dylib has architecture arm64 which is incompatible with target architecture arm64e
+# NO-LOAD: ignored:
+# NO-LOAD-NOT: libhelper.dylib
+
+## Bitcode is checked by its target triple, in either input order. LTO would
+## otherwise compile arm64 bitcode into an arm64e image without pointer
+## authentication, or fail.
+# RUN: llvm-as %t/main.ll -o %t/main.bc
+# RUN: llvm-as %t/helper.ll -o %t/helper.bc
+# RUN: opt -mtriple=arm64-apple-darwin %t/helper.ll -o %t/helper-arm64.bc
+# RUN: llvm-ar rcs %t/helper-arm64.a %t/helper-arm64.bc
+# RUN: %lld -arch arm64e %t/main.bc %t/helper.bc -o %t/lto
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.bc %t/helper-arm64.bc -o /dev/null 2>&1 | FileCheck %s --check-prefix=BITCODE
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/helper-arm64.bc %t/main.bc -o /dev/null 2>&1 | FileCheck %s --check-prefix=BITCODE
+# RUN: not %lld -arch arm64e -arch_errors_fatal %t/main.bc %t/helper-arm64.a -o /dev/null 2>&1 | FileCheck %s --check-prefix=BITCODE
+# RUN: not %lld -arch arm64 -arch_errors_fatal %t/main-arm64.o %t/helper.bc -o /dev/null 2>&1 | FileCheck %s --check-prefix=BITCODE-ARM64E
+# RUN: not %no-fatal-warnings-lld -arch arm64e %t/main.bc %t/helper-arm64.bc -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN-BITCODE
+
+# BITCODE: error: {{.*}}helper-arm64.{{.*}} has architecture arm64 which is incompatible with target architecture arm64e
+# BITCODE-ARM64E: error: {{.*}}helper.bc has architecture arm64e which is incompatible with target architecture arm64
+# WARN-BITCODE: warning: {{.*}}helper-arm64.bc has architecture arm64 which is incompatible with target architecture arm64e
+# WARN-BITCODE: error: undefined symbol: _helper
+
+## -ObjC does not load an ignored lazy file with an ObjC category either.
+# RUN: opt -mtriple=arm64-apple-darwin %t/objc.ll -o %t/objc-arm64.bc
+# RUN: not %no-fatal-warnings-lld -arch arm64e -ObjC %t/main.o --start-lib %t/objc-arm64.bc --end-lib -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN-OBJC
+# WARN-OBJC: warning: {{.*}}objc-arm64.bc has architecture arm64 which is incompatible with target architecture arm64e
+# WARN-OBJC: error: undefined symbol: _helper
 
 #--- main.s
 .globl _main
@@ -138,3 +199,89 @@ LinkEditData:
     - ltmp0
     - ''
 ...
+
+#--- libhelper.yaml
+## A dylib exporting _helper; SUBTYPE varies its CPU subtype.
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      [[SUBTYPE]]
+  filetype:        0x6
+  ncmds:           2
+  sizeofcmds:      64
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@rpath/libhelper.dylib'
+    ZeroPadBytes:    2
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         96
+    datasize:        17
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    4
+        NodeOffset:      11
+        Name:            _helper
+        Flags:           0x0
+        Address:         0x4000
+        Other:           0x0
+        ImportName:      ''
+...
+
+#--- libhelper.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-macos ]
+install-name:    '@rpath/libhelper.dylib'
+exports:
+  - targets:         [ arm64-macos ]
+    symbols:         [ _helper ]
+...
+
+#--- main.ll
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64e-apple-darwin"
+
+declare void @helper()
+
+define void @main() {
+  call void @helper()
+  ret void
+}
+
+#--- helper.ll
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64e-apple-darwin"
+
+define void @helper() {
+  ret void
+}
+
+#--- objc.ll
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64e-apple-darwin"
+
+@category = private global i8 0
+@catlist = private global [1 x ptr] [ptr @category], section "__DATA,__objc_catlist,regular,no_dead_strip"
+
+define void @helper() {
+  ret void
+}
