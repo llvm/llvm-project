@@ -14,6 +14,7 @@
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/c_string.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/copy_file_range.h"
@@ -35,8 +36,8 @@ protected:
   static constexpr const char TEST_DATA[] = "0123456789ABCDEF";
   static constexpr size_t TEST_SIZE = sizeof(TEST_DATA) - 1;
 
-  const char *in_path = nullptr;
-  const char *out_path = nullptr;
+  LIBC_NAMESPACE::CString in_path;
+  LIBC_NAMESPACE::CString out_path;
   int in_fd = -1;
   int out_fd = -1;
 
@@ -71,9 +72,9 @@ protected:
       LIBC_NAMESPACE::close(out_fd);
       out_fd = -1;
     }
-    if (in_path)
+    if (in_path.c_str()[0] != '\0')
       LIBC_NAMESPACE::unlink(in_path);
-    if (out_path)
+    if (out_path.c_str()[0] != '\0')
       LIBC_NAMESPACE::unlink(out_path);
   }
 };
