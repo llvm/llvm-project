@@ -124,12 +124,12 @@ protected:
   unsigned HasSanitizerMetadata : 1;
 
 private:
-  /// True if a constant that can be destroyed when it becomes unused (any
-  /// constant with operands other than a GlobalValue) may use this global.
-  /// Set when such a constant takes this global as an operand, and cleared by
-  /// removeDeadConstantUsers once it finds no such users. While it is false,
-  /// removeDeadConstantUsers does not need to walk the use list, which for a
-  /// function is mostly call sites.
+  /// Optimization hint for removeDeadConstantUsers. This bit is set to true
+  /// when non-GlobalValue Constants set this GlobalValue as an operand, and it
+  /// is cleared by removeDeadConstantUsers when no such Constant users remain.
+  /// While it is false, removeDeadConstantUsers does not need to walk the use
+  /// list (O(uses)), which is often long and cold for Functions with many
+  /// callers.
   unsigned MayHaveConstantUsers : 1;
 
   // Give subclasses access to what otherwise would be wasted padding.
