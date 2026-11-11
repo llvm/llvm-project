@@ -1253,9 +1253,9 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     const ConstantExpr *ce = cast<ConstantExpr>(e);
     if (mlir::Attribute result =
             ConstantEmitter(*this).tryEmitConstantExpr(ce)) {
-      mlir::Value val =
-          builder.getConstant(getLoc(e->getSourceRange()), result);
-      return makeNaturalAlignAddrLValue(val, ce->getType());
+      mlir::Value val = builder.getConstant(
+          getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      return makeNaturalAlignPointeeAddrLValue(val, ce->getType());
     }
     return emitLValue(ce->getSubExpr());
   }

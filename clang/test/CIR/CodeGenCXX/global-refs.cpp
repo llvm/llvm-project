@@ -138,10 +138,6 @@ static constexpr int val = 10;
 // CIR: cir.global "private" constant internal {{.*}}@_ZL3val = #cir.int<10> : !s32i align(4)
 // LLVM: @_ZL3val = internal constant i32 10, align 4
 
-consteval const int &get_ref(const int &x) {
-  return x;
-}
-
 void use() {
   // CIR-LABEL: cir.func{{.*}}use
 
@@ -150,13 +146,6 @@ void use() {
   // CIR-NEXT: %[[EXT_REF:.*]] = cir.get_global @ExternRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF_LOAD:.*]] = cir.load %[[EXT_REF]] : !cir.ptr<!cir.ptr<!rec_WithCtor>>, !cir.ptr<!rec_WithCtor>
   // CIR-NEXT: cir.store{{.*}}%[[EXT_REF_LOAD]], %[[LOCAL]]
-}
-
-const int &test_return() {
-  // CIR-LABEL: cir.func {{.*}} @_Z11test_returnv
-  // CIR: %[[VAL_ADDR:.*]] = cir.const #cir.global_view<@_ZL3val> : !cir.ptr<!s32i>
-  // CIR: cir.store{{.*}} %[[VAL_ADDR]], %[[RET_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
-  return get_ref(val);
 }
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
@@ -183,10 +172,20 @@ const int &test_return() {
 // LLVM-NEXT: %[[EXT_REF:.*]] = load ptr, ptr @ExternRef
 // LLVM-NEXT: store ptr %[[EXT_REF]], ptr %[[LOCAL]]
 
-// LLVM-LABEL: define {{.*}} @_Z11test_returnv
-// LLVMCIR: store ptr @_ZL3val
-// LLVMCIR: ret ptr
-// OGCG: ret ptr @_ZL3val
+consteval const int &get_ref(const int &x) {
+  return x;
+}
+
+const int &test_return() {
+  // CIR-LABEL: cir.func {{.*}} @_Z11test_returnv
+  // CIR: %[[VAL_ADDR:.*]] = cir.const #cir.global_view<@_ZL3val> : !cir.ptr<!s32i>
+  // CIR: cir.store{{.*}} %[[VAL_ADDR]], %[[RET_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // LLVM-LABEL: define {{.*}} @_Z11test_returnv
+  // LLVMCIR: store ptr @_ZL3val
+  // LLVMCIR: ret ptr
+  // OGCG: ret ptr @_ZL3val
+  return get_ref(val);
+}
 
 // TODO(cir): Once we get destructors for temporaries done, we should test them
 // here, same as the 'const-WithCtor' examples, except with the 'withCtorDtor'
