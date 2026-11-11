@@ -9,25 +9,21 @@
 ## Verify whether validateTargetOperandClass or custom operand parsing mutates
 ## parsed register operands across match table rows.
 
-## TODO: validateTargetOperandClass should not mutate v0 into V0M2 (356) or v3
-## into noreg (0) when SMT_VMADOT1 fails to match.
 # VMADOT:      Trying to match opcode SMT_VMADOT1
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using target matcher
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using generic matcher
 # VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 0
 # VMADOT:      Trying to match opcode SMT_VMADOT1vtype
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (356)>): match success using generic matcher
-# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: noreg (0)>): operand match failed, recording near-miss with diag code 0
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 1 (<reg: v0 (35)>): match success using generic matcher
+# VMADOT-NEXT:   Matching formal operand class MCK_VRM2 against actual operand at index 2 (<reg: v3 (38)>): operand match failed, recording near-miss with diag code 0
 smt.vmadot1 v0, v3, v4
 
-## TODO: validateTargetOperandClass should not mutate a0/a1 from GPR (77/78)
-## into YGPR (302/303) when YADD fails to match.
 # YADD:      Trying to match opcode YADD
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 (77)>): match success using target matcher
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (78)>): match success using target matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (78)>): match success using generic matcher
 # YADD-NEXT:   Matching formal operand class MCK_GPRNoX0 against actual operand at index 3 (<reg: zero (67)>): operand match failed, recording near-miss
 # YADD:      Trying to match opcode YADDI
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 (302)>): match success using generic matcher
-# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (303)>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 1 (<reg: a0 (77)>): match success using generic matcher
+# YADD-NEXT:   Matching formal operand class MCK_YGPR against actual operand at index 2 (<reg: a1 (78)>): match success using generic matcher
 yadd a0, a1, x0
 
 ## TODO: parseGPRPair should not mutate a0 from GPR (77) into GPRPair (388)
