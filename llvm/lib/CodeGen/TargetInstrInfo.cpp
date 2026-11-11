@@ -677,8 +677,7 @@ static void foldInlineAsmMemOperands(MachineInstr &MI,
   while (!Offsets[First])
     ++First;
 
-  SmallVector<MachineOperand, 16> Tail(MI.operands_begin() + First,
-                                       MI.operands_end());
+  SmallVector<MachineOperand, 16> Tail(drop_begin(MI.operands(), First));
   while (MI.getNumOperands() > First)
     MI.removeOperand(MI.getNumOperands() - 1);
 
