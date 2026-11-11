@@ -37,8 +37,8 @@ Task test_await_assign() {
   // CIR:   %[[READY:.*]] = cir.call @_ZN7Awaiter11await_readyEv(%{{.*}}) : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.bool{{.*}})
   // CIR:   cir.condition(%[[READY]])
   // CIR: }, suspend : {
-  // CIR:   cir.call @_ZN7Awaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
-  // CIR:   cir.coro.suspend_point
+  // CIR:   cir.coro.intrinsic.await.suspend.void
+  // CIR-NEXT:   cir.coro.suspend_point
   // CIR: }, resume : {
   // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) nothrow : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -68,8 +68,8 @@ Task test_await_ref() {
   // CIR:   %[[READY:.*]] = cir.call @_ZN7Awaiter11await_readyEv(%{{.*}}) : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.bool{{.*}})
   // CIR:   cir.condition(%[[READY]])
   // CIR: }, suspend : {
-  // CIR:   cir.call @_ZN7Awaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
-  // CIR:   cir.coro.suspend_point
+  // CIR:   cir.coro.intrinsic.await.suspend.void
+  // CIR-NEXT:   cir.coro.suspend_point
   // CIR: }, resume : {
   // CIR:   %[[RES:.*]] = cir.call @_ZN7Awaiter12await_resumeEv(%{{.*}}) nothrow : (!cir.ptr<!rec_Awaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

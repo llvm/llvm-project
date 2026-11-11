@@ -1179,13 +1179,17 @@ struct ReadySuspendArgs {
 // RESUME-EH: } cleanup all {
 // RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[READY]])
 // RESUME: }, suspend : {
+// RESUME: %[[SUSPEND_WRAPPER:.*]] = cir.get_global @ready_suspend_in_conditional.__await_suspend_wrapper__await :
+// RESUME-NEXT: cir.coro.intrinsic.await.suspend.void({{.*}}, {{.*}}, %[[SUSPEND_WRAPPER]])
+// RESUME-NEXT: cir.coro.suspend_point
+// RESUME: }, resume : {
+// RESUME: cir.call @_ZN16ReadySuspendArgs12await_resumeEv(
+
+extern "C" Task ready_suspend_in_conditional(bool b) { resume_use(b ? co_await ReadySuspendArgs{} : 0); }
+
+// RESUME-LABEL: cir.func {{.*}} @ready_suspend_in_conditional.__await_suspend_wrapper__await(
 // RESUME: cir.call @_ZN1SC1Ei(%[[SUSPEND:[^,]+]],
 // RESUME: cir.call @_ZN16ReadySuspendArgs13await_suspendESt16coroutine_handleIvERK1S(
 // RESUME-NOEH: } cleanup normal {
 // RESUME-EH: } cleanup all {
 // RESUME-NEXT: cir.call @_ZN1SD1Ev(%[[SUSPEND]])
-// RESUME: cir.coro.suspend_point
-// RESUME: }, resume : {
-// RESUME: cir.call @_ZN16ReadySuspendArgs12await_resumeEv(
-
-extern "C" Task ready_suspend_in_conditional(bool b) { resume_use(b ? co_await ReadySuspendArgs{} : 0); }

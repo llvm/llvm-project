@@ -5388,8 +5388,28 @@ def CIR_CoroSuspendOp : CIR_CoroIntrinsicOp<"suspend",
 }
 
 //===----------------------------------------------------------------------===//
-// Coroutine intrinsic AwaitSuspendHandleOp
+// Coroutine intrinsic AwaitSuspendOp
 //===----------------------------------------------------------------------===//
+
+def CIR_CoroAwaitSuspendVoidOp :
+    CIR_CoroIntrinsicOp<"await.suspend.void",
+      (ins CIR_AnyPtrType:$awaiter,
+           CIR_VoidPtrType:$frame,
+           CIR_PtrToFunc:$wrapper),
+      (outs)> {
+  let summary = "Represents llvm.coro.await.suspend.void";
+  let llvmOp = "CoroAwaitSuspendVoidOp";
+}
+
+def CIR_CoroAwaitSuspendBoolOp :
+    CIR_CoroIntrinsicOp<"await.suspend.bool",
+      (ins CIR_AnyPtrType:$awaiter,
+           CIR_VoidPtrType:$frame,
+           CIR_PtrToFunc:$wrapper),
+      (outs CIR_BoolType:$result)> {
+  let summary = "Represents llvm.coro.await.suspend.bool";
+  let llvmOp = "CoroAwaitSuspendBoolOp";
+}
 
 def CIR_CoroAwaitSuspendHandleOp :
     CIR_CoroIntrinsicOp<"await.suspend.handle",
