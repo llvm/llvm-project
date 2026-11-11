@@ -5798,3 +5798,208 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
 
   return loopOp;
 }
+
+namespace {
+/// Collects the variables that are referenced outside of the DO constructs and
+/// I/O implied DOs that they control.
+class DoVariableReferenceVisitor {
+public:
+  using SymbolSet = llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *>;
+  DoVariableReferenceVisitor(SymbolSet &variables, bool isProcedure)
+      : variables{variables}, skipDeclarations{isProcedure} {}
+
+  template <typename A>
+  bool Pre(const A &) {
+    return true;
+  }
+  template <typename A>
+  void Post(const A &) {}
+
+  // The declarations of the procedure do not read its variables, except for
+  // the statement functions.
+  bool Pre(const Fortran::parser::SpecificationPart &x) {
+    if (skipDeclarations && !declarations) {
+      declarations = &x;
+      inDeclarations = true;
+    }
+    return true;
+  }
+  void Post(const Fortran::parser::SpecificationPart &x) {
+    if (&x == declarations)
+      inDeclarations = false;
+  }
+  bool Pre(const Fortran::parser::StmtFunctionStmt &) {
+    ++stmtFunctionDepth;
+    return true;
+  }
+  void Post(const Fortran::parser::StmtFunctionStmt &) { --stmtFunctionDepth; }
+
+  // A private clause does not read the variable.
+  bool Pre(const Fortran::parser::AccClause::Private &) { return false; }
+
+  bool Pre(const Fortran::parser::DoConstruct &doConstruct) {
+    if (!doConstruct.IsDoNormal())
+      return true;
+    walkLoop(std::get<Fortran::parser::LoopControl::Bounds>(
+                 doConstruct.GetLoopControl()->u),
+             std::get<Fortran::parser::Block>(doConstruct.t));
+    return false;
+  }
+  bool Pre(const Fortran::parser::InputImpliedDo &impliedDo) {
+    walkLoop(std::get<Fortran::parser::IoImpliedDoControl>(impliedDo.t),
+             std::get<std::list<Fortran::parser::InputItem>>(impliedDo.t));
+    return false;
+  }
+  bool Pre(const Fortran::parser::OutputImpliedDo &impliedDo) {
+    walkLoop(std::get<Fortran::parser::IoImpliedDoControl>(impliedDo.t),
+             std::get<std::list<Fortran::parser::OutputItem>>(impliedDo.t));
+    return false;
+  }
+
+  bool Pre(const Fortran::parser::Name &name) {
+    if (!name.symbol || (inDeclarations && stmtFunctionDepth == 0))
+      return false;
+    const Fortran::semantics::Symbol &sym = name.symbol->GetUltimate();
+    if (!llvm::is_contained(loopVariables, &sym))
+      variables.insert(&sym);
+    return false;
+  }
+
+private:
+  static const Fortran::parser::Name &
+  getName(const Fortran::parser::ScalarName &name) {
+    return name.thing;
+  }
+  static const Fortran::parser::Name &
+  getName(const Fortran::parser::DoVariable &name) {
+    return name.thing.thing;
+  }
+
+  // The bounds are evaluated before the loop gives the variable its values.
+  template <typename Bounds, typename Body>
+  void walkLoop(const Bounds &bounds, const Body &body) {
+    Fortran::parser::Walk(bounds.Lower(), *this);
+    Fortran::parser::Walk(bounds.Upper(), *this);
+    Fortran::parser::Walk(bounds.Step(), *this);
+    loopVariables.push_back(&getName(bounds.Name()).symbol->GetUltimate());
+    Fortran::parser::Walk(body, *this);
+    loopVariables.pop_back();
+  }
+
+  SymbolSet &variables;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> loopVariables;
+  bool skipDeclarations;
+  const Fortran::parser::SpecificationPart *declarations = nullptr;
+  bool inDeclarations = false;
+  unsigned stmtFunctionDepth = 0;
+};
+} // namespace
+
+/// Returns the compute construct that contains \p eval, if any.
+static const Fortran::parser::OpenACCConstruct *
+getEnclosingComputeConstruct(const Fortran::lower::pft::Evaluation &eval) {
+  for (const Fortran::lower::pft::Evaluation *parent = eval.parentConstruct;
+       parent; parent = parent->parentConstruct) {
+    const auto *construct = parent->getIf<Fortran::parser::OpenACCConstruct>();
+    if (!construct)
+      continue;
+    if (std::holds_alternative<Fortran::parser::OpenACCCombinedConstruct>(
+            construct->u))
+      return construct;
+    if (const auto *block = std::get_if<Fortran::parser::OpenACCBlockConstruct>(
+            &construct->u)) {
+      const auto &directive = std::get<Fortran::parser::AccBlockDirective>(
+          std::get<Fortran::parser::AccBeginBlockDirective>(block->t).t);
+      if (directive.v == llvm::acc::ACCD_parallel ||
+          directive.v == llvm::acc::ACCD_serial ||
+          directive.v == llvm::acc::ACCD_kernels)
+        return construct;
+    }
+  }
+  return nullptr;
+}
+
+/// The variables that are referenced in `doVariableReferencesScope`, a compute
+/// construct or a procedure, outside of the loops they control.
+static const void *doVariableReferencesScope;
+static llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
+    doVariableReferences;
+
+/// Returns true if the value that the loop of \p eval leaves in its DO
+/// variable \p sym may be used.
+static bool
+isDoVariableUsedAfterLoop(Fortran::lower::AbstractConverter &converter,
+                          const Fortran::lower::pft::Evaluation &eval,
+                          const Fortran::semantics::Symbol &sym) {
+  // An alias reads the value without a reference to the variable.
+  if (Fortran::semantics::FindEquivalenceSet(sym) ||
+      sym.test(Fortran::semantics::Symbol::Flag::InNamelist))
+    return true;
+
+  // In a compute construct, the variable is private to the thread that
+  // executes the loop: only the construct can use the value.
+  const Fortran::parser::OpenACCConstruct *construct =
+      getEnclosingComputeConstruct(eval);
+  const Fortran::lower::pft::FunctionLikeUnit *funit =
+      converter.getCurrentFunctionUnit();
+  if (!construct) {
+    // The caller reads a dummy argument and the function result.
+    if (!funit || Fortran::semantics::IsDummy(sym) ||
+        Fortran::semantics::IsFunctionResult(sym))
+      return true;
+  }
+  const void *scope = construct ? static_cast<const void *>(construct) : funit;
+  if (scope != doVariableReferencesScope) {
+    doVariableReferencesScope = scope;
+    doVariableReferences.clear();
+    DoVariableReferenceVisitor visitor{doVariableReferences,
+                                       /*isProcedure=*/!construct};
+    if (construct)
+      Fortran::parser::Walk(*construct, visitor);
+    else
+      funit->visit(
+          [&](const auto &node) { Fortran::parser::Walk(node, visitor); });
+  }
+  return doVariableReferences.contains(&sym);
+}
+
+void Fortran::lower::genOpenACCDoVariableFinalValue(
+    AbstractConverter &converter, mlir::Operation *loopOp,
+    const Fortran::parser::DoConstruct &doConstruct, pft::Evaluation &eval) {
+  auto accLoop = mlir::cast<mlir::acc::LoopOp>(loopOp);
+  // The index variables of DO CONCURRENT do not exist after the loop.
+  if (!doConstruct.IsDoNormal() || accLoop.getLowerbound().size() != 1)
+    return;
+  const auto &bounds = std::get<Fortran::parser::LoopControl::Bounds>(
+      doConstruct.GetLoopControl()->u);
+  const Fortran::semantics::Symbol &sym =
+      bounds.Name().thing.symbol->GetUltimate();
+
+  // The assignment writes a variable that is not private to the loop, so it
+  // is only generated when the value may be used.
+  if (!isDoVariableUsedAfterLoop(converter, eval, sym))
+    return;
+  mlir::Value var = converter.getSymbolAddress(sym);
+  if (!var || !fir::isa_integer(fir::unwrapRefType(var.getType())))
+    return;
+
+  // The variable is incremented once per iteration. The bounds are converted
+  // to its kind and the value is computed in the index type, as for a DO loop
+  // outside of OpenACC.
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Location loc = converter.getCurrentLocation();
+  mlir::Type varTy = fir::unwrapRefType(var.getType());
+  mlir::Type idxTy = builder.getIndexType();
+  auto convertBound = [&](mlir::Value bound) {
+    return builder.createConvert(loc, idxTy,
+                                 builder.createConvert(loc, varTy, bound));
+  };
+  mlir::Value lb = convertBound(accLoop.getLowerbound().front());
+  mlir::Value ub = convertBound(accLoop.getUpperbound().front());
+  mlir::Value step = convertBound(accLoop.getStep().front());
+  mlir::Value count = builder.genExtentFromTriplet(loc, lb, ub, step, idxTy);
+  mlir::Value last = mlir::arith::AddIOp::create(
+      builder, loc, lb, mlir::arith::MulIOp::create(builder, loc, count, step));
+  fir::StoreOp::create(builder, loc, builder.createConvert(loc, varTy, last),
+                       var);
+}
