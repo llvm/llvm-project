@@ -8,7 +8,6 @@
 ///
 /// \file
 /// This file provides a LoopVectorizationPlanner class.
-/// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// LoopVectorizationPlanner - drives the vectorization process after having
 /// passed Legality checks.
 /// The planner builds and optimizes the Vectorization Plans which record the
@@ -979,7 +978,8 @@ public:
                                  InstructionCost LoopCost);
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
-  /// according to the best selected \p VF and  \p UF.
+  /// according to the best selected \p VF and \p UF. \p HasRuntimeChecks is
+  /// used to decide whether runtime unrolling of the scalar loop is disabled.
   ///
   /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
@@ -997,7 +997,7 @@ public:
   };
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-              InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool HasRuntimeChecks,
               EpilogueVectorizationKind EpilogueVecKind =
                   EpilogueVectorizationKind::None,
               MutableArrayRef<VPBasicBlock *> TrackedBlocks = {});

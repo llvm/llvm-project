@@ -77,10 +77,10 @@ define  void @vscale_mul_8(ptr noalias noundef readonly captures(none) %a, ptr n
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[MUL1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[B]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
@@ -209,11 +209,11 @@ define void @vscale_mul_31(ptr noalias noundef readonly captures(none) %a, ptr n
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP4]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP4]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP6]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
@@ -280,11 +280,11 @@ define void @vscale_mul_64(ptr noalias noundef readonly captures(none) %a, ptr n
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP4]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP4]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP6]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
@@ -355,11 +355,11 @@ define void @trip_count_with_overflow(ptr noalias noundef readonly captures(none
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP6]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP8]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
@@ -428,11 +428,11 @@ define void @trip_count_too_big_for_element_count(ptr noalias noundef readonly c
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP5]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP5]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP7]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP7]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 4 x float>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <vscale x 4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
