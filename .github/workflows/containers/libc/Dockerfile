@@ -108,7 +108,7 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 # so also symlink them under their canonical names.
 # llvm-link is required to build bitcode library for GPU targets
 RUN apt-get install -y llvm-${LLVM_VERSION_MAJOR}-tools llvm-${LLVM_VERSION_MAJOR} && \
-    ln -s -t /usr/bin $(dpkg -L llvm-${LLVM_VERSION_MAJOR}-tools | grep '^/usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/') && \
+    ln -s -t /usr/bin $(dpkg -L llvm-${LLVM_VERSION_MAJOR}-tools | grep "^/usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/") && \
     ln -s /usr/lib/llvm-${LLVM_VERSION_MAJOR}/bin/llvm-link /usr/bin/llvm-link
 
 # Install gmp and mpfr for cross compilation
