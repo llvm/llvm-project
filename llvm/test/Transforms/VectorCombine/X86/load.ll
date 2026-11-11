@@ -601,7 +601,7 @@ define <2 x i64> @PR30986(ptr %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP0:%.*]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> undef, i64 [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds <2 x i64>, ptr [[TMP0]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = tail call i64 @llvm.ctpop.i64(i64 [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[TMP7]], i32 1

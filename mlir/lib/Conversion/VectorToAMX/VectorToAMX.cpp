@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -361,16 +362,14 @@ static TypedValue<VectorType> storeTile(PatternRewriter &rewriter,
   return vector::TransferReadOp::create(rewriter, loc, vecTy, buf, indices, {});
 }
 
-struct ContractionToAMX : public OpRewritePattern<vector::ContractionOp> {
+struct ContractionToAMX : public vector::AddContractionOpRewritePattern {
   using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
     Location loc = contractOp.getLoc();
 
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind");
     if (failed(validateOperands(rewriter, contractOp)))
       return failure();
 

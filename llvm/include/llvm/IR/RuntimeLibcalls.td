@@ -249,6 +249,8 @@ foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
   def UREM_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type]>;
 }
 
+defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
+
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def MULO_#IntTy.Suffix
@@ -259,14 +261,24 @@ foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,
                  TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
                  TypeSuffix<"I128", Int128>] in {
   def SDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [TypeSuffix<"I8", UInt8>, TypeSuffix<"I16", UInt16>,
                  TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
                  TypeSuffix<"I128", UInt128>] in {
   def UDIVREM_#IntTy.Suffix
-      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]>;
+      : RuntimeLibcall<IntTy.Type, [IntTy.Type, IntTy.Type, Ptr]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ArgMemWriteOnly;
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, IntTy.Type];
+  }
 }
 
 foreach IntTy = [Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64] in {
@@ -281,6 +293,9 @@ class DivRemPairImpl<RuntimeLibcall P, string Name = NAME>
   defvar IntTy = P.ReturnType;
   let ReturnType = !cast<FuncArgType>(!cast<string>(IntTy) # "Pair");
   let ArgumentTypes = [IntTy, IntTy];
+  let Memory = NoMemory;
+  let ParamAttrs = [];
+  let ParamPointeeTypes = [];
 }
 
 foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
@@ -300,6 +315,17 @@ def F80 : TypeSuffix<"F80", X86FP80>;
 def F128 : TypeSuffix<"F128", FP128>;
 def PPCF128 : TypeSuffix<"PPCF128", PPCFP128>;
 
+foreach FPTy = [F32, F64] in {
+  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]> {
+    let FnAttrs = MathFnAttrs;
+    let Memory = ErrnoMemWriteOnly;
+    let RetAttrs = [NoFPClassAttr<"fcNegInf | fcNegSubnormal | fcNegNormal">];
+  }
+}
+
+foreach FPTy = [F80, F128, PPCF128] in
+  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def FAST_ADD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -318,7 +344,6 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
       : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, FPTy.Type]>;
   def POWI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
 
-  def SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def FAST_SQRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
 
   def CBRT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
@@ -344,8 +369,15 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
-  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
-  def REMQUO_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]>;
+  def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
+  }
+  def REMQUO_#FPTy.Suffix
+      : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], [], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, NoneType, Int];
+  }
   def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
@@ -379,9 +411,18 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def LRINT_#FPTy.Suffix : RuntimeLibcall<Long, [FPTy.Type]>;
   def LLRINT_#FPTy.Suffix : RuntimeLibcall<LLong, [FPTy.Type]>;
   def LDEXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Int]>;
-  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
-  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
-  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]>;
+  def FREXP_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, Int];
+  }
+  def SINCOSPI_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs, OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type, FPTy.Type];
+  }
+  def MODF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, Ptr]> {
+    let ParamAttrs = [[], OutPtrAttrs];
+    let ParamPointeeTypes = [NoneType, FPTy.Type];
+  }
   def NAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [Ptr]>;
   def NEXTTOWARD_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, LDbl]>;
   def REMAINDER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
@@ -451,8 +492,6 @@ def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
 
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
-
-defvar OutPtrAttrs = [NoAlias, WriteOnly, NonNull];
 
 foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   defvar VT = !cast<VectorFuncArgType>(S);
@@ -674,9 +713,30 @@ def MEMMOVE : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]>;
 def MEMMOVE_CHK : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT, SizeT]>;
 def MEMSET : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]>;
 def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]>;
-def MALLOC : RuntimeLibcall<Ptr, [SizeT]>;
-def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]>;
-def FREE : RuntimeLibcall<Void, [Ptr]>;
+def MallocFamily : AllocFamilyAttr<"malloc">;
+
+def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
+                 AllocSizeAttr<0>, MallocFamily];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef]];
+}
+
+def CALLOC : RuntimeLibcall<Ptr, [SizeT, SizeT]> {
+  let FnAttrs = [NoFree, NoUnwind, WillReturn,
+                 AllocKindAttr<"AllocFnKind::Alloc">, AllocSizeAttr<0, "1">,
+                 MallocFamily];
+  let RetAttrs = [NoAlias, NoUndef];
+  let ParamAttrs = [[NoUndef], [NoUndef]];
+}
+
+def FREE : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoUnwind, WillReturn, AllocKindAttr<"AllocFnKind::Free">,
+                 MallocFamily];
+  let ParamAttrs = [[AllocatedPointer, NoUndef, CapturesNone]];
+}
+
 def BZERO : RuntimeLibcall<Void, [Ptr, SizeT]>;
 def STRLEN : RuntimeLibcall<SizeT, [Ptr]>;
 
@@ -814,8 +874,12 @@ defset list<RuntimeLibcall> LibCalls__OutOfLineAtomic = {
 }
 
 // Stack Protector Fail
-def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []>;
-def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr, Int]>;
+def STACKPROTECTOR_CHECK_FAIL : RuntimeLibcall<Void, []> {
+  let FnAttrs = [NoReturn, NoUnwind, NoFree];
+}
+def STACK_SMASH_HANDLER : RuntimeLibcall<Void, [Ptr]> {
+  let FnAttrs = [NoReturn, NoUnwind, NoFree];
+}
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall<Ptr, []>;

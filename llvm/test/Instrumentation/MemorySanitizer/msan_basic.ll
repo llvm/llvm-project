@@ -2772,7 +2772,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[TMP27]] to i64
 ; CHECK-NEXT:    [[TMP29:%.*]] = xor i64 [[TMP28]], 87960930222080
 ; CHECK-NEXT:    [[TMP30:%.*]] = inttoptr i64 [[TMP29]] to ptr
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP30]], ptr align 16 [[TMP31]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -2844,9 +2844,9 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; ORIGIN-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
 ; ORIGIN-NEXT:    [[TMP47:%.*]] = add i64 [[TMP45]], 17592186044416
 ; ORIGIN-NEXT:    [[TMP48:%.*]] = inttoptr i64 [[TMP47]] to ptr
-; ORIGIN-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; ORIGIN-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP46]], ptr align 16 [[TMP49]], i64 [[TMP0]], i1 false)
-; ORIGIN-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[TMP4]], i32 176
+; ORIGIN-NEXT:    [[TMP50:%.*]] = getelementptr i8, ptr [[TMP4]], i64 176
 ; ORIGIN-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP48]], ptr align 16 [[TMP50]], i64 [[TMP0]], i1 false)
 ; ORIGIN-NEXT:    ret void
 ;
@@ -2913,9 +2913,9 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CALLS-NEXT:    [[TMP44:%.*]] = inttoptr i64 [[TMP43]] to ptr
 ; CALLS-NEXT:    [[TMP45:%.*]] = add i64 [[TMP43]], 17592186044416
 ; CALLS-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CALLS-NEXT:    [[TMP47:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CALLS-NEXT:    [[TMP47:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CALLS-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP44]], ptr align 16 [[TMP47]], i64 [[TMP0]], i1 false)
-; CALLS-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[TMP4]], i32 176
+; CALLS-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[TMP4]], i64 176
 ; CALLS-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP46]], ptr align 16 [[TMP48]], i64 [[TMP0]], i1 false)
 ; CALLS-NEXT:    ret void
 ;

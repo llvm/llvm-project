@@ -18,6 +18,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
@@ -39,7 +40,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 // Return true if value represents a zero constant.
 static bool isZeroConstant(Value val) {
   auto constant = val.getDefiningOp<arith::ConstantOp>();
@@ -1371,16 +1371,13 @@ getRowMajorMatmulBatchRank(ArrayAttr indexingMaps) {
   return batchRank;
 }
 
-struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
+struct ContractionLowering : public vector::AddContractionOpRewritePattern {
   using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
     Location loc = contractOp.getLoc();
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind");
 
     TypedValue<VectorType> lhs = contractOp.getLhs();
     TypedValue<VectorType> rhs = contractOp.getRhs();
@@ -1534,6 +1531,84 @@ struct UnflattenGatherScatter : public OpRewritePattern<OpTy> {
   }
 };
 
+// Rewrite a broadcast that is immediately transposed into a shape_cast that
+// inserts the new dims where they finally belong, followed by a broadcast that
+// stretches them in place.
+//
+// This lets layout propagation give %v the slice dim of the row reduction
+// that typically produces it (dims = [1] below, not [0]):
+//   #row = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+//   #col = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1],
+//                        order = [0, 1]>
+//
+// Before:
+//   // %v : #xegpu.slice<#col, dims = [0]>
+//   %b = vector.broadcast %v : vector<16xf32> to vector<64x16xf32>  // #col
+//   %t = vector.transpose %b, [1, 0]
+//          : vector<64x16xf32> to vector<16x64xf32>                // #row
+//
+// After:
+//   // %v : #xegpu.slice<#row, dims = [1]>
+//   %c = vector.shape_cast %v : vector<16xf32> to vector<16x1xf32>  // #row
+//   %t = vector.broadcast %c
+//          : vector<16x1xf32> to vector<16x64xf32>                 // #row
+struct TransposedBroadcastToStretch
+    : public OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    auto bcast = op.getVector().getDefiningOp<vector::BroadcastOp>();
+    if (!bcast)
+      return rewriter.notifyMatchFailure(op, "not transposing a broadcast");
+
+    // Scalar sources are left to FoldTransposeBroadcast.
+    auto srcTy = dyn_cast<VectorType>(bcast.getSourceType());
+    if (!srcTy || srcTy.getRank() < 1)
+      return rewriter.notifyMatchFailure(op,
+                                         "broadcast source is not a vector");
+
+    VectorType bcastTy = bcast.getResultVectorType();
+    if (srcTy.isScalable() || bcastTy.isScalable())
+      return rewriter.notifyMatchFailure(op, "scalable vectors");
+
+    int64_t srcRank = srcTy.getRank();
+    int64_t numNewDims = bcastTy.getRank() - srcRank;
+    if (numNewDims < 1)
+      return rewriter.notifyMatchFailure(op, "broadcast adds no dims");
+
+    // Only a pure prepend; no source dim may be stretched.
+    if (srcTy.getShape() != bcastTy.getShape().take_back(srcRank))
+      return rewriter.notifyMatchFailure(op,
+                                         "broadcast stretches a source dim");
+
+    // Source dims must move to the front and new dims to the back, both in
+    // order.
+    ArrayRef<int64_t> perm = op.getPermutation();
+    for (int64_t i = 0; i < srcRank; ++i)
+      if (perm[i] != numNewDims + i)
+        return rewriter.notifyMatchFailure(
+            op, "source dims do not move to the front in order");
+    for (int64_t i = 0; i < numNewDims; ++i)
+      if (perm[srcRank + i] != i)
+        return rewriter.notifyMatchFailure(
+            op, "broadcast dims do not stay trailing in order");
+
+    // Source shape followed by one unit dim per new dim.
+    SmallVector<int64_t> castShape(srcTy.getShape());
+    castShape.append(numNewDims, 1);
+    auto castTy = VectorType::get(castShape, srcTy.getElementType());
+
+    DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+    auto cast = vector::ShapeCastOp::create(rewriter, op.getLoc(), castTy,
+                                            bcast.getSource());
+    auto stretch = rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        op, op.getResultVectorType(), cast);
+    stretch->setDiscardableAttrs(attrs);
+    return success();
+  }
+};
+
 // Bring the vector ops into a form the conversion patterns lower directly (see
 // populateVectorToXeGPULegalizationPatterns).
 static LogicalResult legalizeForVectorToXeGPU(Operation *root) {
@@ -1635,7 +1710,6 @@ struct ConvertVectorToXeGPUPass
       return signalPassFailure();
   }
 };
-
 } // namespace
 
 void mlir::populateVectorToXeGPUConversionPatterns(
@@ -1658,7 +1732,8 @@ void mlir::populateVectorToXeGPULegalizationPatterns(
   // the N-D shape of the accessed data. The shape_cast canonicalizations clean
   // up the casts the un-flattening leaves behind.
   patterns.add<UnflattenGatherScatter<vector::GatherOp>,
-               UnflattenGatherScatter<vector::ScatterOp>>(ctx);
+               UnflattenGatherScatter<vector::ScatterOp>,
+               TransposedBroadcastToStretch>(ctx);
   vector::ShapeCastOp::getCanonicalizationPatterns(patterns, ctx);
   // Rewrite transfer_reads with a broadcast permutation map into a transfer of
   // the data plus the vector ops that expand it.

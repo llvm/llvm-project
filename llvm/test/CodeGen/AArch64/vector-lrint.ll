@@ -658,170 +658,146 @@ define <32 x iXLen> @lrint_v32f16(<32 x half> %x) nounwind {
 ;
 ; CHECK-i64-SD-LABEL: lrint_v32f16:
 ; CHECK-i64-SD:       // %bb.0:
+; CHECK-i64-SD-NEXT:    mov h5, v0.h[1]
 ; CHECK-i64-SD-NEXT:    mov d4, v1.d[1]
-; CHECK-i64-SD-NEXT:    mov d5, v2.d[1]
-; CHECK-i64-SD-NEXT:    mov d6, v3.d[1]
-; CHECK-i64-SD-NEXT:    mov d7, v0.d[1]
-; CHECK-i64-SD-NEXT:    mov h19, v0.h[1]
-; CHECK-i64-SD-NEXT:    fcvt s21, h0
-; CHECK-i64-SD-NEXT:    mov h23, v1.h[2]
-; CHECK-i64-SD-NEXT:    fcvt s22, h1
-; CHECK-i64-SD-NEXT:    fcvt s26, h2
-; CHECK-i64-SD-NEXT:    mov h27, v2.h[1]
-; CHECK-i64-SD-NEXT:    mov h28, v2.h[2]
-; CHECK-i64-SD-NEXT:    mov h16, v4.h[2]
-; CHECK-i64-SD-NEXT:    fcvt s17, h5
-; CHECK-i64-SD-NEXT:    mov h18, v5.h[2]
-; CHECK-i64-SD-NEXT:    mov h20, v6.h[2]
-; CHECK-i64-SD-NEXT:    fcvt s24, h7
-; CHECK-i64-SD-NEXT:    fcvt s25, h6
-; CHECK-i64-SD-NEXT:    fcvt s19, h19
-; CHECK-i64-SD-NEXT:    frintx s22, s22
+; CHECK-i64-SD-NEXT:    mov h6, v1.h[1]
+; CHECK-i64-SD-NEXT:    mov h7, v0.h[3]
+; CHECK-i64-SD-NEXT:    mov h16, v0.h[2]
+; CHECK-i64-SD-NEXT:    fcvt s17, h0
+; CHECK-i64-SD-NEXT:    mov h19, v1.h[3]
+; CHECK-i64-SD-NEXT:    mov h20, v1.h[2]
+; CHECK-i64-SD-NEXT:    fcvt s1, h1
+; CHECK-i64-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-i64-SD-NEXT:    fcvt s5, h5
+; CHECK-i64-SD-NEXT:    mov h18, v4.h[3]
+; CHECK-i64-SD-NEXT:    fcvt s6, h6
+; CHECK-i64-SD-NEXT:    fcvt s7, h7
 ; CHECK-i64-SD-NEXT:    fcvt s16, h16
 ; CHECK-i64-SD-NEXT:    frintx s17, s17
+; CHECK-i64-SD-NEXT:    frintx s1, s1
+; CHECK-i64-SD-NEXT:    frintx s5, s5
 ; CHECK-i64-SD-NEXT:    fcvt s18, h18
-; CHECK-i64-SD-NEXT:    fcvt s20, h20
+; CHECK-i64-SD-NEXT:    frintx s6, s6
+; CHECK-i64-SD-NEXT:    frintx s7, s7
 ; CHECK-i64-SD-NEXT:    frintx s16, s16
-; CHECK-i64-SD-NEXT:    fcvtzs x12, s17
-; CHECK-i64-SD-NEXT:    frintx s17, s18
-; CHECK-i64-SD-NEXT:    frintx s18, s21
-; CHECK-i64-SD-NEXT:    fcvt s21, h23
-; CHECK-i64-SD-NEXT:    frintx s23, s24
-; CHECK-i64-SD-NEXT:    frintx s24, s25
-; CHECK-i64-SD-NEXT:    frintx s25, s19
-; CHECK-i64-SD-NEXT:    mov h19, v7.h[1]
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s17
+; CHECK-i64-SD-NEXT:    fcvt s17, h19
+; CHECK-i64-SD-NEXT:    fcvtzs x9, s5
+; CHECK-i64-SD-NEXT:    mov h5, v2.h[1]
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s6
+; CHECK-i64-SD-NEXT:    frintx s6, s18
+; CHECK-i64-SD-NEXT:    fcvt s18, h20
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s7
+; CHECK-i64-SD-NEXT:    mov h7, v2.h[3]
 ; CHECK-i64-SD-NEXT:    fcvtzs x13, s16
-; CHECK-i64-SD-NEXT:    frintx s16, s20
-; CHECK-i64-SD-NEXT:    frintx s20, s26
-; CHECK-i64-SD-NEXT:    fcvtzs x9, s23
-; CHECK-i64-SD-NEXT:    mov h23, v3.h[2]
-; CHECK-i64-SD-NEXT:    fcvt s26, h27
-; CHECK-i64-SD-NEXT:    fcvtzs x15, s24
-; CHECK-i64-SD-NEXT:    fcvtzs x10, s25
-; CHECK-i64-SD-NEXT:    fcvt s24, h28
-; CHECK-i64-SD-NEXT:    mov h25, v3.h[3]
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s17
-; CHECK-i64-SD-NEXT:    frintx s21, s21
-; CHECK-i64-SD-NEXT:    fmov d17, x12
-; CHECK-i64-SD-NEXT:    fcvtzs x12, s16
-; CHECK-i64-SD-NEXT:    fmov d16, x13
-; CHECK-i64-SD-NEXT:    fcvtzs x13, s22
-; CHECK-i64-SD-NEXT:    fcvt s22, h3
-; CHECK-i64-SD-NEXT:    mov h3, v3.h[1]
-; CHECK-i64-SD-NEXT:    mov h27, v0.h[2]
-; CHECK-i64-SD-NEXT:    mov h28, v2.h[3]
-; CHECK-i64-SD-NEXT:    fcvt s23, h23
-; CHECK-i64-SD-NEXT:    frintx s26, s26
-; CHECK-i64-SD-NEXT:    fcvtzs x16, s20
-; CHECK-i64-SD-NEXT:    frintx s20, s24
-; CHECK-i64-SD-NEXT:    fcvt s24, h25
+; CHECK-i64-SD-NEXT:    mov h16, v2.h[2]
+; CHECK-i64-SD-NEXT:    frintx s17, s17
+; CHECK-i64-SD-NEXT:    stp x10, x9, [x8]
+; CHECK-i64-SD-NEXT:    fcvt s5, h5
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s1
+; CHECK-i64-SD-NEXT:    fcvtzs x9, s6
+; CHECK-i64-SD-NEXT:    fcvt s6, h2
+; CHECK-i64-SD-NEXT:    frintx s18, s18
+; CHECK-i64-SD-NEXT:    stp x13, x12, [x8, #16]
+; CHECK-i64-SD-NEXT:    mov h1, v3.h[1]
+; CHECK-i64-SD-NEXT:    fcvt s7, h7
+; CHECK-i64-SD-NEXT:    fcvt s16, h16
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s17
+; CHECK-i64-SD-NEXT:    mov h17, v3.h[3]
+; CHECK-i64-SD-NEXT:    stp x10, x11, [x8, #64]
+; CHECK-i64-SD-NEXT:    frintx s5, s5
+; CHECK-i64-SD-NEXT:    mov d2, v2.d[1]
+; CHECK-i64-SD-NEXT:    frintx s6, s6
 ; CHECK-i64-SD-NEXT:    fcvtzs x11, s18
-; CHECK-i64-SD-NEXT:    fmov d18, x14
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s21
-; CHECK-i64-SD-NEXT:    frintx s22, s22
-; CHECK-i64-SD-NEXT:    fcvt s3, h3
-; CHECK-i64-SD-NEXT:    fcvt s25, h27
-; CHECK-i64-SD-NEXT:    fcvt s27, h28
-; CHECK-i64-SD-NEXT:    frintx s23, s23
-; CHECK-i64-SD-NEXT:    mov h21, v1.h[3]
-; CHECK-i64-SD-NEXT:    fmov d2, x15
-; CHECK-i64-SD-NEXT:    fcvtzs x15, s26
-; CHECK-i64-SD-NEXT:    fmov d26, x13
-; CHECK-i64-SD-NEXT:    mov h1, v1.h[1]
-; CHECK-i64-SD-NEXT:    fcvtzs x13, s20
-; CHECK-i64-SD-NEXT:    frintx s20, s24
-; CHECK-i64-SD-NEXT:    fmov d24, x14
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s22
-; CHECK-i64-SD-NEXT:    frintx s3, s3
-; CHECK-i64-SD-NEXT:    fmov d22, x16
-; CHECK-i64-SD-NEXT:    frintx s27, s27
-; CHECK-i64-SD-NEXT:    fcvtzs x16, s23
-; CHECK-i64-SD-NEXT:    fcvt s21, h21
-; CHECK-i64-SD-NEXT:    frintx s25, s25
+; CHECK-i64-SD-NEXT:    mov h18, v3.h[2]
 ; CHECK-i64-SD-NEXT:    fcvt s1, h1
-; CHECK-i64-SD-NEXT:    mov h0, v0.h[3]
-; CHECK-i64-SD-NEXT:    mov h23, v7.h[2]
-; CHECK-i64-SD-NEXT:    mov v22.d[1], x15
-; CHECK-i64-SD-NEXT:    fcvtzs x15, s20
-; CHECK-i64-SD-NEXT:    fmov d20, x13
-; CHECK-i64-SD-NEXT:    fcvtzs x13, s3
-; CHECK-i64-SD-NEXT:    fmov d3, x14
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s27
-; CHECK-i64-SD-NEXT:    fmov d27, x16
-; CHECK-i64-SD-NEXT:    frintx s21, s21
-; CHECK-i64-SD-NEXT:    mov h7, v7.h[3]
+; CHECK-i64-SD-NEXT:    frintx s7, s7
+; CHECK-i64-SD-NEXT:    frintx s16, s16
+; CHECK-i64-SD-NEXT:    fcvt s17, h17
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s5
+; CHECK-i64-SD-NEXT:    fcvt s5, h3
+; CHECK-i64-SD-NEXT:    mov d3, v3.d[1]
+; CHECK-i64-SD-NEXT:    stp x11, x12, [x8, #80]
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s6
+; CHECK-i64-SD-NEXT:    mov h6, v0.h[1]
+; CHECK-i64-SD-NEXT:    frintx s1, s1
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s7
+; CHECK-i64-SD-NEXT:    mov h7, v0.h[3]
+; CHECK-i64-SD-NEXT:    fcvt s18, h18
+; CHECK-i64-SD-NEXT:    frintx s17, s17
+; CHECK-i64-SD-NEXT:    frintx s5, s5
+; CHECK-i64-SD-NEXT:    stp x12, x10, [x8, #128]
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s16
+; CHECK-i64-SD-NEXT:    mov h16, v4.h[1]
+; CHECK-i64-SD-NEXT:    fcvt s6, h6
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s1
+; CHECK-i64-SD-NEXT:    fcvt s1, h0
+; CHECK-i64-SD-NEXT:    mov h0, v0.h[2]
+; CHECK-i64-SD-NEXT:    frintx s18, s18
+; CHECK-i64-SD-NEXT:    stp x10, x11, [x8, #144]
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s5
+; CHECK-i64-SD-NEXT:    fcvt s5, h7
+; CHECK-i64-SD-NEXT:    frintx s6, s6
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s17
+; CHECK-i64-SD-NEXT:    fcvt s16, h16
 ; CHECK-i64-SD-NEXT:    frintx s1, s1
 ; CHECK-i64-SD-NEXT:    fcvt s0, h0
-; CHECK-i64-SD-NEXT:    fcvt s23, h23
-; CHECK-i64-SD-NEXT:    fcvt s19, h19
-; CHECK-i64-SD-NEXT:    mov v27.d[1], x15
-; CHECK-i64-SD-NEXT:    fcvtzs x15, s25
-; CHECK-i64-SD-NEXT:    mov h25, v6.h[3]
-; CHECK-i64-SD-NEXT:    mov h6, v6.h[1]
-; CHECK-i64-SD-NEXT:    mov v3.d[1], x13
-; CHECK-i64-SD-NEXT:    fcvtzs x13, s21
-; CHECK-i64-SD-NEXT:    mov h21, v5.h[1]
-; CHECK-i64-SD-NEXT:    mov h5, v5.h[3]
-; CHECK-i64-SD-NEXT:    mov v20.d[1], x14
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s1
-; CHECK-i64-SD-NEXT:    mov h1, v4.h[1]
-; CHECK-i64-SD-NEXT:    frintx s0, s0
-; CHECK-i64-SD-NEXT:    fcvt s25, h25
-; CHECK-i64-SD-NEXT:    fcvt s7, h7
-; CHECK-i64-SD-NEXT:    stp q3, q27, [x8, #192]
-; CHECK-i64-SD-NEXT:    fcvt s6, h6
-; CHECK-i64-SD-NEXT:    mov h3, v4.h[3]
-; CHECK-i64-SD-NEXT:    stp q22, q20, [x8, #128]
-; CHECK-i64-SD-NEXT:    fcvt s21, h21
-; CHECK-i64-SD-NEXT:    fcvt s5, h5
-; CHECK-i64-SD-NEXT:    mov v24.d[1], x13
-; CHECK-i64-SD-NEXT:    mov v26.d[1], x14
+; CHECK-i64-SD-NEXT:    mov h17, v4.h[2]
 ; CHECK-i64-SD-NEXT:    fcvt s4, h4
-; CHECK-i64-SD-NEXT:    frintx s22, s25
-; CHECK-i64-SD-NEXT:    fmov d20, x12
+; CHECK-i64-SD-NEXT:    mov h7, v3.h[1]
+; CHECK-i64-SD-NEXT:    stp x11, x12, [x8, #192]
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s18
+; CHECK-i64-SD-NEXT:    frintx s5, s5
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s6
+; CHECK-i64-SD-NEXT:    mov h6, v2.h[1]
+; CHECK-i64-SD-NEXT:    frintx s16, s16
+; CHECK-i64-SD-NEXT:    frintx s0, s0
+; CHECK-i64-SD-NEXT:    fcvt s17, h17
+; CHECK-i64-SD-NEXT:    frintx s4, s4
+; CHECK-i64-SD-NEXT:    fcvt s7, h7
+; CHECK-i64-SD-NEXT:    stp x12, x10, [x8, #208]
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s1
+; CHECK-i64-SD-NEXT:    mov h1, v2.h[3]
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s5
+; CHECK-i64-SD-NEXT:    mov h5, v2.h[2]
+; CHECK-i64-SD-NEXT:    fcvt s2, h2
+; CHECK-i64-SD-NEXT:    fcvt s6, h6
+; CHECK-i64-SD-NEXT:    frintx s17, s17
+; CHECK-i64-SD-NEXT:    stp x10, x11, [x8, #32]
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s16
+; CHECK-i64-SD-NEXT:    mov h16, v3.h[3]
 ; CHECK-i64-SD-NEXT:    fcvt s1, h1
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s0
+; CHECK-i64-SD-NEXT:    mov h0, v3.h[2]
+; CHECK-i64-SD-NEXT:    fcvt s5, h5
 ; CHECK-i64-SD-NEXT:    frintx s6, s6
 ; CHECK-i64-SD-NEXT:    fcvt s3, h3
-; CHECK-i64-SD-NEXT:    fcvtzs x12, s0
-; CHECK-i64-SD-NEXT:    frintx s5, s5
-; CHECK-i64-SD-NEXT:    frintx s21, s21
-; CHECK-i64-SD-NEXT:    fmov d0, x11
-; CHECK-i64-SD-NEXT:    stp q26, q24, [x8, #64]
-; CHECK-i64-SD-NEXT:    fmov d24, x15
-; CHECK-i64-SD-NEXT:    frintx s4, s4
-; CHECK-i64-SD-NEXT:    fcvtzs x11, s22
-; CHECK-i64-SD-NEXT:    frintx s22, s23
+; CHECK-i64-SD-NEXT:    frintx s2, s2
+; CHECK-i64-SD-NEXT:    stp x11, x12, [x8, #48]
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s4
+; CHECK-i64-SD-NEXT:    fcvt s4, h16
 ; CHECK-i64-SD-NEXT:    frintx s1, s1
-; CHECK-i64-SD-NEXT:    fcvtzs x13, s6
-; CHECK-i64-SD-NEXT:    frintx s3, s3
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s17
+; CHECK-i64-SD-NEXT:    fcvt s0, h0
+; CHECK-i64-SD-NEXT:    frintx s5, s5
+; CHECK-i64-SD-NEXT:    stp x12, x10, [x8, #96]
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s6
 ; CHECK-i64-SD-NEXT:    frintx s6, s7
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s5
-; CHECK-i64-SD-NEXT:    mov v24.d[1], x12
-; CHECK-i64-SD-NEXT:    frintx s5, s19
-; CHECK-i64-SD-NEXT:    fcvtzs x12, s21
-; CHECK-i64-SD-NEXT:    mov v0.d[1], x10
-; CHECK-i64-SD-NEXT:    fcvtzs x10, s4
-; CHECK-i64-SD-NEXT:    mov v20.d[1], x11
-; CHECK-i64-SD-NEXT:    fcvtzs x11, s22
-; CHECK-i64-SD-NEXT:    mov v2.d[1], x13
-; CHECK-i64-SD-NEXT:    fcvtzs x15, s3
-; CHECK-i64-SD-NEXT:    fcvtzs x13, s1
-; CHECK-i64-SD-NEXT:    mov v18.d[1], x14
-; CHECK-i64-SD-NEXT:    fcvtzs x14, s6
-; CHECK-i64-SD-NEXT:    stp q0, q24, [x8]
-; CHECK-i64-SD-NEXT:    mov v17.d[1], x12
-; CHECK-i64-SD-NEXT:    fcvtzs x12, s5
-; CHECK-i64-SD-NEXT:    fmov d0, x10
-; CHECK-i64-SD-NEXT:    fmov d1, x11
-; CHECK-i64-SD-NEXT:    stp q2, q20, [x8, #224]
-; CHECK-i64-SD-NEXT:    fmov d2, x9
-; CHECK-i64-SD-NEXT:    mov v16.d[1], x15
-; CHECK-i64-SD-NEXT:    stp q17, q18, [x8, #160]
-; CHECK-i64-SD-NEXT:    mov v0.d[1], x13
-; CHECK-i64-SD-NEXT:    mov v1.d[1], x14
-; CHECK-i64-SD-NEXT:    mov v2.d[1], x12
-; CHECK-i64-SD-NEXT:    stp q0, q16, [x8, #96]
-; CHECK-i64-SD-NEXT:    stp q2, q1, [x8, #32]
+; CHECK-i64-SD-NEXT:    stp x11, x9, [x8, #112]
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s2
+; CHECK-i64-SD-NEXT:    frintx s2, s3
+; CHECK-i64-SD-NEXT:    frintx s3, s4
+; CHECK-i64-SD-NEXT:    fcvtzs x9, s1
+; CHECK-i64-SD-NEXT:    frintx s0, s0
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s5
+; CHECK-i64-SD-NEXT:    stp x12, x10, [x8, #160]
+; CHECK-i64-SD-NEXT:    fcvtzs x10, s6
+; CHECK-i64-SD-NEXT:    fcvtzs x12, s2
+; CHECK-i64-SD-NEXT:    stp x11, x9, [x8, #176]
+; CHECK-i64-SD-NEXT:    fcvtzs x9, s3
+; CHECK-i64-SD-NEXT:    fcvtzs x11, s0
+; CHECK-i64-SD-NEXT:    stp x12, x10, [x8, #224]
+; CHECK-i64-SD-NEXT:    stp x11, x9, [x8, #240]
 ; CHECK-i64-SD-NEXT:    ret
 ;
 ; CHECK-i32-GI-LABEL: lrint_v32f16:

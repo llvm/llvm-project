@@ -22546,10 +22546,13 @@ the range:
 Note that for {ref}`scalable vector types <t_vector>` `W` is the runtime
 length of the vector.
 
-The VP intrinsic has undefined behavior if `%evl > W`.  The explicit vector
-length (%evl) creates a mask, %EVLmask, with all elements `0 <= i < %evl` set
-to True, and all other lanes `%evl <= i < W` to False.  A new mask %M is
-calculated with an element-wise AND from %mask and %EVLmask:
+If `%evl > W`, VP intrinsics which access memory have undefined
+behavior. For all other VP intrinsics the result is poison.
+
+The explicit vector length (%evl) creates a mask, %EVLmask, with all
+elements `0 <= i < %evl` set to True, and all other lanes `%evl <= i <
+W` to False.  A new mask %M is calculated with an element-wise AND
+from %mask and %EVLmask:
 
 ```
 M = %mask AND %EVLmask
@@ -22558,8 +22561,8 @@ M = %mask AND %EVLmask
 A vector operation `<opcode>` on vectors `A` and `B` calculates:
 
 ```
-A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True, and
-                {  undef otherwise
+A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True
+                {  poison               M[i] = False or poison
 ```
 
 #### Optimization Hint
@@ -22650,8 +22653,8 @@ operation.
 ##### Semantics:
 
 The '`llvm.vp.sdiv`' intrinsic performs signed division ({ref}`sdiv <i_sdiv>`)
-of the first and second vector arguments on each enabled lane.  The result on
-disabled lanes is a {ref}`poison value <poisonvalues>`.
+of the first and second vector arguments on each enabled or poison lane. The
+result on disabled and poison lanes is a {ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22692,7 +22695,8 @@ operation.
 
 The '`llvm.vp.udiv`' intrinsic performs unsigned division
 ({ref}`udiv <i_udiv>`) of the first and second vector arguments on each enabled
-lane. The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22733,7 +22737,8 @@ operation.
 
 The '`llvm.vp.srem`' intrinsic computes the remainder of the signed division
 ({ref}`srem <i_srem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -22774,7 +22779,8 @@ operation.
 
 The '`llvm.vp.urem`' intrinsic computes the remainder of the unsigned division
 ({ref}`urem <i_urem>`) of the first and second vector arguments on each enabled
-lane.  The result on disabled lanes is a {ref}`poison value <poisonvalues>`.
+or poison lane. The result on disabled and poison lanes is a
+{ref}`poison value <poisonvalues>`.
 
 ##### Examples:
 
@@ -23611,7 +23617,7 @@ and `evl2` are unsigned integers indicating the explicit vector lengths of
 `vec1` and `vec2` respectively.  `imm`, `evl1` and `evl2` should
 respect the following constraints: `-evl1 <= imm < evl1`, `0 <= evl1 <= VL`
 and `0 <= evl2 <= VL`, where `VL` is the runtime vector factor. If these
-constraints are not satisfied the intrinsic has undefined behavior.
+constraints are not satisfied the result is poison.
 
 ##### Semantics:
 
@@ -23619,13 +23625,13 @@ Effectively, this intrinsic concatenates `vec1[0..evl1-1]` and
 `vec2[0..evl2-1]` and creates the result vector by selecting the elements in a
 window of size `evl2`, starting at index `imm` (for a positive immediate) of
 the concatenated vector. Elements in the result vector beyond `evl2` are
-`undef`.  If `imm` is negative the starting index is `evl1 + imm`.  The result
+`poison`.  If `imm` is negative the starting index is `evl1 + imm`.  The result
 vector of active vector length `evl2` contains `evl1 - imm` (`-imm` for
 negative `imm`) elements from indices `[imm..evl1 - 1]`
 (`[evl1 + imm..evl1 -1]` for negative `imm`) of `vec1` followed by the
 first `evl2 - (evl1 - imm)` (`evl2 + imm` for negative `imm`) elements of
 `vec2`. If `evl1 - imm` (`-imm`) >= `evl2`, only the first `evl2`
-elements are considered and the remaining are `undef`.  The lanes in the result
+elements are considered and the remaining are `poison`.  The lanes in the result
 vector disabled by `mask` are `poison`.
 
 ##### Examples:
