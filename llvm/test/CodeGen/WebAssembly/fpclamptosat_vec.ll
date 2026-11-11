@@ -367,8 +367,10 @@ define <4 x i16> @stest_f32i16(<4 x float> %x) {
 ; CHECK-NEXT:    i32x4.min_s
 ; CHECK-NEXT:    v128.const -32768, -32768, -32768, -32768
 ; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -389,7 +391,7 @@ define <4 x i16> @utest_f32i16(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
 ; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <4 x float> %x to <4 x i32>
@@ -410,7 +412,7 @@ define <4 x i16> @ustest_f32i16(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -1735,8 +1737,10 @@ define <4 x i16> @stest_f32i16_mm(<4 x float> %x) {
 ; CHECK-NEXT:    i32x4.min_s
 ; CHECK-NEXT:    v128.const -32768, -32768, -32768, -32768
 ; CHECK-NEXT:    i32x4.max_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
@@ -1755,7 +1759,7 @@ define <4 x i16> @utest_f32i16_mm(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
 ; CHECK-NEXT:    i32x4.min_u
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptoui <4 x float> %x to <4 x i32>
@@ -1775,7 +1779,7 @@ define <4 x i16> @ustest_f32i16_mm(<4 x float> %x) {
 ; CHECK-NEXT:    v128.const 0, 0, 0, 0
 ; CHECK-NEXT:    i32x4.max_s
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>

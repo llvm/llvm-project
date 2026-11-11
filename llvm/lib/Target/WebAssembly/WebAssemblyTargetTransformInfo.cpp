@@ -184,9 +184,13 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i16, 3},
       // 2x narrow, 2x and
       {ISD::TRUNCATE, MVT::v8i8, MVT::v8i32, 4},
+      // 2x narrow, 4x and
+      {ISD::TRUNCATE, MVT::v16i16, MVT::v16i32, 6},
       // 3x narrow, 4x and
       {ISD::TRUNCATE, MVT::v8i16, MVT::v8i64, 7},
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 7},
+      // 6x narrow, 8x and
+      {ISD::TRUNCATE, MVT::v16i16, MVT::v16i64, 14},
       // 7x narrow, 8x and
       {ISD::TRUNCATE, MVT::v16i8, MVT::v16i64, 15},
       // convert_i32x4

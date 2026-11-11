@@ -3364,6 +3364,13 @@ static SDValue truncateVectorWithNARROW(EVT DstVT, SDValue In, const SDLoc &DL,
     return truncateVectorWithNARROW(DstVT, Extract, DL, DAG);
   }
 
+  if (SrcVT == MVT::v4i32 && DstVT == MVT::v4i16) {
+    SDValue Poison = DAG.getPOISON(SrcVT);
+    SDValue Narrow =
+        DAG.getNode(WebAssemblyISD::NARROW_U, DL, MVT::v8i16, In, Poison);
+    return extractSubVector(Narrow, 0, DAG, DL, 64);
+  }
+
   if (SrcVT == MVT::v4i16 && DstVT == MVT::v4i8) {
     In = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16,
                      {In, DAG.getPOISON(SrcVT)});
@@ -3421,8 +3428,8 @@ static SDValue performTruncateCombine(SDNode *N,
   if (!OutVT.isVector())
     return SDValue();
 
-  if (OutVT != MVT::v16i8 && OutVT != MVT::v8i16 && OutVT != MVT::v8i8 &&
-      OutVT != MVT::v4i8)
+  if (OutVT != MVT::v16i16 && OutVT != MVT::v16i8 && OutVT != MVT::v8i16 &&
+      OutVT != MVT::v8i8 && OutVT != MVT::v4i16 && OutVT != MVT::v4i8)
     return SDValue();
 
   SDLoc DL(N);

@@ -75,6 +75,36 @@ entry:
   ret <16 x i8> %0
 }
 
+define <16 x i16>  @trunc16i32_16i16(<16 x i32> %a) {
+; CHECK-LABEL: trunc16i32_16i16:
+; CHECK:         .functype trunc16i32_16i16 (i32, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %0 = trunc <16 x i32> %a to <16 x i16>
+  ret <16 x i16> %0
+}
+
 define <16 x i8>  @trunc16i16_16i8(<16 x i16> %a) {
 ; CHECK-LABEL: trunc16i16_16i8:
 ; CHECK:         .functype trunc16i16_16i8 (v128, v128) -> (v128)
@@ -157,6 +187,52 @@ entry:
   ret <8 x i16> %0
 }
 
+define <16 x i16> @trunc16i64_16i16(<16 x i64> %a) {
+; CHECK-LABEL: trunc16i64_16i16:
+; CHECK:         .functype trunc16i64_16i16 (i32, v128, v128, v128, v128, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    v128.const 65535, 65535
+; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %0 = trunc <16 x i64> %a to <16 x i16>
+  ret <16 x i16> %0
+}
+
 define <8 x i16> @trunc8i32_8i16(<8 x i32> %a) {
 ; CHECK-LABEL: trunc8i32_8i16:
 ; CHECK:         .functype trunc8i32_8i16 (v128, v128) -> (v128)
@@ -181,8 +257,10 @@ define <4 x i16> @trunc4i32_4i16(<4 x i32> %a) {
 ; CHECK:         .functype trunc4i32_4i16 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 4, 5, 8, 9, 12, 13, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
 ; CHECK-NEXT:    # fallthrough-return
 entry:
   %0 = trunc <4 x i32> %a to <4 x i16>
