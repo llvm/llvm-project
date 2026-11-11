@@ -10,14 +10,14 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK: @vt = internal constant [1 x ptr] [ptr @vfunc]
 ; CHECK-NOT: vcall_visibility
 ; CLEANUP: @vt = internal constant [1 x ptr] [ptr @vfunc]
-; CLEANUP-SAME: !vcall_visibility
-; FATLTO: @vt = internal constant [1 x ptr] zeroinitializer
-; FATLTO-SAME: !vcall_visibility
+; CLEANUP-NOT: vcall_visibility
+; FATLTO: @vt = internal constant [1 x ptr] [ptr @vfunc]
+; FATLTO-NOT: vcall_visibility
 @vt = internal constant [1 x ptr] [ptr @vfunc], !type !0, !vcall_visibility !1
 
 ; CHECK: define internal void @vfunc()
 ; CLEANUP: define internal void @vfunc()
-; FATLTO-NOT: define internal void @vfunc()
+; FATLTO: define internal void @vfunc()
 define internal void @vfunc() {
   ret void
 }
