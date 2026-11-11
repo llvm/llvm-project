@@ -237,8 +237,9 @@ public:
   ///
   /// \p Phase indicates the current ThinLTO phase.
   ///
-  /// \p ImportSummary is the summary index of a ThinLTO backend compile, if
-  /// any. It is only meaningful in the ThinLTO post link phase.
+  /// \p ImportSummary is the summary index of a ThinLTO backend compile. When
+  /// present, the type identifier resolutions used by CFI are lowered as part
+  /// of this pipeline, right after profile-guided indirect call promotion.
   LLVM_ABI ModulePassManager buildModuleSimplificationPipeline(
       OptimizationLevel Level, ThinOrFullLTOPhase Phase,
       const ModuleSummaryIndex *ImportSummary = nullptr);

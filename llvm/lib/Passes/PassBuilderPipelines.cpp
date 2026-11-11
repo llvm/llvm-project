@@ -1098,11 +1098,16 @@ ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
   else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
     MPM.addPass(AttributorLightPass());
 
-  // Lower type metadata and the type.test intrinsic in the ThinLTO
-  // post link pipeline after ICP. This is to enable usage of the type
-  // tests in ICP sequences.
-  if (isThinLTOPostLink(Phase))
+  // Lower type metadata and the type.test intrinsic in the ThinLTO post link
+  // pipeline after ICP. This is to enable usage of the type tests in ICP
+  // sequences. It also lets ICP (including the ICP performed by the sample
+  // profile loader) see the original names of the CFI functions it wants to
+  // promote to, which LowerTypeTests renames to <name>.cfi.
+  if (isThinLTOPostLink(Phase)) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     MPM.addPass(DropTypeTestsPass());
+  }
 
   invokePipelineEarlySimplificationEPCallbacks(MPM, Level, Phase);
 
@@ -1852,6 +1857,12 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   if (!ImportSummary || !ImportSummary->withSupportsHotColdNew())
     MPM.addPass(MemProfRemoveInfo());
 
+  // The core simplification pipeline lowers the CFI type identifier
+  // resolutions itself, after indirect call promotion (see
+  // buildModuleSimplificationPipeline). Everywhere else, lower them early.
+  const bool LowerTypeTestsInSimplification =
+      Level != OptimizationLevel::O0 && UseCtxProfile.empty();
+
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
@@ -1875,7 +1886,14 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
-    MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
+    // LowerTypeTests, however, must run after profile-guided indirect call
+    // promotion: ICP needs to see the llvm.type.test intrinsics and the
+    // original names of the CFI functions it promotes to, whose bodies
+    // LowerTypeTests renames to <name>.cfi. The simplification pipeline runs
+    // it at the right point; the passes before that point do not disturb the
+    // type test patterns.
+    if (!LowerTypeTestsInSimplification)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
   if (Level == OptimizationLevel::O0) {
