@@ -63,53 +63,52 @@ LIBC_INLINE ErrorOr<int> exec_with_arg_list(const char *arg0, va_list *args,
   return exec(argv);
 }
 
-LIBC_INLINE ErrorOr<int> execve_with_shell_fallback(const char *path,
-                                                    char *const argv[],
-                                                    char *const envp[]) {
-  auto ret = linux_syscalls::execve(path, argv, envp);
-  if (!ret && ret.error() == ENOEXEC) {
-    size_t argc = 0;
-    if (argv != nullptr) {
-      while (argv[argc] != nullptr)
-        ++argc;
-    }
-    size_t count = (argc > 0) ? argc : 1;
+LIBC_INLINE ErrorOr<int> execve_shell_fallback(const char *path,
+                                               char *const argv[],
+                                               char *const envp[]) {
+  size_t argc = 0;
+  if (argv != nullptr) {
+    while (argv[argc] != nullptr)
+      ++argc;
+  }
+  size_t count = (argc > 0) ? argc : 1;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvla"
 #if __has_warning("-Wvla-cxx-extension")
 #pragma GCC diagnostic ignored "-Wvla-cxx-extension"
 #endif
-    char *new_argv[count + 2];
+  char *new_argv[count + 2];
 #pragma GCC diagnostic pop
-    new_argv[0] = const_cast<char *>("sh");
-    new_argv[1] = const_cast<char *>(path);
-    if (argv != nullptr && argc > 1) {
-      for (size_t i = 1; i < argc; ++i)
-        new_argv[i + 1] = argv[i];
-    }
-    new_argv[count + 1] = nullptr;
-
-    constexpr const char *DEFAULT_BSHELL = "/bin/sh";
-    return linux_syscalls::execve(DEFAULT_BSHELL, new_argv, envp);
+  new_argv[0] = const_cast<char *>("sh");
+  new_argv[1] = const_cast<char *>(path);
+  if (argv != nullptr && argc > 1) {
+    for (size_t i = 1; i < argc; ++i)
+      new_argv[i + 1] = argv[i];
   }
+  new_argv[count + 1] = nullptr;
+
+  constexpr const char *DEFAULT_BSHELL = "/bin/sh";
+  return linux_syscalls::execve(DEFAULT_BSHELL, new_argv, envp);
+}
+
+LIBC_INLINE ErrorOr<int> execve_with_shell_fallback(const char *path,
+                                                    char *const argv[],
+                                                    char *const envp[]) {
+  auto ret = linux_syscalls::execve(path, argv, envp);
+  if (!ret && ret.error() == ENOEXEC)
+    return execve_shell_fallback(path, argv, envp);
   return ret;
 }
 
-LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
+LIBC_INLINE ErrorOr<int> execvpe(const char *file, char *const argv[],
                                  char *const envp[]) {
-  if (file.empty())
+  cpp::string_view file_view(file);
+  if (file_view.empty())
     return Error(ENOENT);
 
-  char buf[PATH_MAX];
-
   // If there's a / in file, treat it as a path.
-  if (file.find_first_of('/') != cpp::string_view::npos) {
-    if (file.size() >= PATH_MAX)
-      return Error(ENAMETOOLONG);
-    inline_memcpy(buf, file.data(), file.size());
-    buf[file.size()] = '\0';
-    return execve_with_shell_fallback(buf, argv, envp);
-  }
+  if (file_view.find_first_of('/') != cpp::string_view::npos)
+    return execve_with_shell_fallback(file, argv, envp);
 
   // Otherwise treat file as the name of a file in a directory, search the
   // directories listed in PATH.
@@ -123,6 +122,7 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
   cpp::string_view path_env =
       env_path != nullptr ? cpp::string_view(env_path) : DEFAULT_PATH;
 
+  char buf[PATH_MAX];
   bool seen_eacces = false;
   int last_error = ENOENT;
 
@@ -133,15 +133,15 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
     if (dir.empty())
       dir = ".";
 
-    if (dir.size() + 1 + file.size() >= PATH_MAX) {
+    if (dir.size() + 1 + file_view.size() >= PATH_MAX) {
       last_error = ENAMETOOLONG;
       continue;
     }
 
     inline_memcpy(buf, dir.data(), dir.size());
     buf[dir.size()] = '/';
-    inline_memcpy(buf + dir.size() + 1, file.data(), file.size());
-    buf[dir.size() + 1 + file.size()] = '\0';
+    inline_memcpy(buf + dir.size() + 1, file_view.data(), file_view.size());
+    buf[dir.size() + 1 + file_view.size()] = '\0';
 
     auto ret = linux_syscalls::execve(buf, argv, envp);
     if (ret)
@@ -156,7 +156,7 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
       last_error = err;
       break;
     case ENOEXEC:
-      return execve_with_shell_fallback(buf, argv, envp);
+      return execve_shell_fallback(buf, argv, envp);
     default:
       return Error(err);
     }
