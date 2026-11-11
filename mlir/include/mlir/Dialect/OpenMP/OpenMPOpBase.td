@@ -25,6 +25,7 @@ include "mlir/IR/OpBase.td"
 
 class OpenMP_Type<string name, string typeMnemonic> :
       TypeDef<OpenMP_Dialect, name> {
+  let cppIncludes = ["mlir/Dialect/OpenMP/OpenMPDialect.h"];
   let mnemonic = typeMnemonic;
 }
 

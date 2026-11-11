@@ -125,24 +125,21 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
 
-class LLVM_PowFI<string func> :
-    LLVM_OneResultIntrOp<func, [], [0,1],
-        [Pure], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
+def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
+def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
+def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
+def LLVM_LoadExpOp : LLVM_OneResultIntrOp<"ldexp", [], [0,1],
+    [Pure, SameOperandsShape], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
         /*requiresFastmath=*/1> {
     let arguments =
         (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-            AnySignlessInteger:$power,
+            LLVM_ScalarOrVectorOf<AnySignlessInteger>:$exp,
             DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
     let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
             "attr-dict `:` "
             "functional-type(operands, results)";
 }
-
-def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
-def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
-def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
-def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
-def LLVM_LoadExpOp : LLVM_PowFI<"ldexp">;
 def LLVM_FractionExpOp : LLVM_TwoResultIntrOp<"frexp", [0, 1], [],
     [Pure], /*requiresFastmath=*/1> {
     let arguments =
@@ -172,7 +169,17 @@ def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
-def LLVM_PowIOp : LLVM_PowFI<"powi">;
+def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
+    [Pure], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+            /*requiresFastmath=*/1> {
+    let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+           AnySignlessInteger:$power,
+           DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
+        "attr-dict `:` "
+        "functional-type(operands, results)";
+}
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
 def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
 class LLVM_IntRoundIntrOpBase<string func, Type element = LLVM_AnyFloat> :

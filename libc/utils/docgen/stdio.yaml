@@ -1,3 +1,46 @@
+standard: c23
+posix: posix-2024
+c-reference-root: io
+types:
+  FILE:
+    c-definition: 7.23.1
+    c-reference: io/FILE
+    in-latest-posix: ''
+  cookie_io_functions_t:
+    extension: gnu
+  errno_t:
+    c-definition: K.3.5
+    c-reference: error
+  fpos_t:
+    c-definition: 7.23.1
+    c-reference: io/fpos_t
+    in-latest-posix: ''
+  off_t:
+    in-latest-posix: ''
+  rsize_t:
+    c-definition: K.3.5
+    c-reference: error
+  size_t:
+    c-definition: 7.23.1
+    c-reference: types/size_t
+    in-latest-posix: ''
+  ssize_t:
+    in-latest-posix: ''
+  va_list:
+    in-latest-posix: ''
+objects:
+  stderr:
+    c-definition: 7.23.1
+    c-reference: io/std_streams
+    in-latest-posix: ''
+  stdin:
+    c-definition: 7.23.1
+    c-reference: io/std_streams
+    in-latest-posix: ''
+  stdout:
+    c-definition: 7.23.1
+    c-reference: io/std_streams
+    in-latest-posix: ''
 macros:
   __STDC_VERSION_STDIO_H__:
     c-definition: '7.23.1'
@@ -31,24 +74,34 @@ macros:
     in-latest-posix: ''
   SEEK_CUR:
     c-definition: '7.23.1'
+    c-reference: io/fseek
     in-latest-posix: ''
   SEEK_END:
     c-definition: '7.23.1'
+    c-reference: io/fseek
     in-latest-posix: ''
   SEEK_SET:
     c-definition: '7.23.1'
+    c-reference: io/fseek
     in-latest-posix: ''
   TMP_MAX:
     c-definition: '7.23.1'
     in-latest-posix: ''
   stderr:
     c-definition: '7.23.1'
+    c-reference: io/std_streams
     in-latest-posix: ''
   stdin:
     c-definition: '7.23.1'
+    c-reference: io/std_streams
     in-latest-posix: ''
   stdout:
     c-definition: '7.23.1'
+    c-reference: io/std_streams
+    in-latest-posix: ''
+  'NULL':
+    c-definition: 7.23.1
+    c-reference: types/NULL
     in-latest-posix: ''
 functions:
   remove:
@@ -89,18 +142,23 @@ functions:
     in-latest-posix: ''
   printf:
     c-definition: '7.23.6.3'
+    c-reference: io/fprintf
     in-latest-posix: ''
   scanf:
     c-definition: '7.23.6.4'
+    c-reference: io/fscanf
     in-latest-posix: ''
   snprintf:
     c-definition: '7.23.6.5'
+    c-reference: io/fprintf
     in-latest-posix: ''
   sprintf:
     c-definition: '7.23.6.6'
+    c-reference: io/fprintf
     in-latest-posix: ''
   sscanf:
     c-definition: '7.23.6.7'
+    c-reference: io/fscanf
     in-latest-posix: ''
   vfprintf:
     c-definition: '7.23.6.8'
@@ -110,18 +168,23 @@ functions:
     in-latest-posix: ''
   vprintf:
     c-definition: '7.23.6.10'
+    c-reference: io/vfprintf
     in-latest-posix: ''
   vscanf:
     c-definition: '7.23.6.11'
+    c-reference: io/vfscanf
     in-latest-posix: ''
   vsnprintf:
     c-definition: '7.23.6.12'
+    c-reference: io/vfprintf
     in-latest-posix: ''
   vsprintf:
     c-definition: '7.23.6.13'
+    c-reference: io/vfprintf
     in-latest-posix: ''
   vsscanf:
     c-definition: '7.23.6.14'
+    c-reference: io/vfscanf
     in-latest-posix: ''
   fgetc:
     c-definition: '7.23.7.1'
@@ -137,12 +200,14 @@ functions:
     in-latest-posix: ''
   getc:
     c-definition: '7.23.7.5'
+    c-reference: io/fgetc
     in-latest-posix: ''
   getchar:
     c-definition: '7.23.7.6'
     in-latest-posix: ''
   putc:
     c-definition: '7.23.7.7'
+    c-reference: io/fputc
     in-latest-posix: ''
   putchar:
     c-definition: '7.23.7.8'
@@ -223,4 +288,28 @@ functions:
   renameat:
     in-latest-posix: ''
   vdprintf:
+    in-latest-posix: ''
+  asprintf:
+    in-latest-posix: ''
+  clearerr_unlocked:
+    extension: gnu
+  feof_unlocked:
+    extension: gnu
+  ferror_unlocked:
+    extension: gnu
+  fgetc_unlocked:
+    extension: gnu
+  fopencookie:
+    extension: gnu
+  fread_unlocked:
+    extension: gnu
+  fwrite_unlocked:
+    extension: gnu
+  getc_unlocked:
+    in-latest-posix: ''
+  getchar_unlocked:
+    in-latest-posix: ''
+  tempnam:
+    removed-in-posix-2024: ''
+  vasprintf:
     in-latest-posix: ''

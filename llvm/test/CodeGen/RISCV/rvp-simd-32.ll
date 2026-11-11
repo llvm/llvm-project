@@ -4385,3 +4385,27 @@ define i32 @test_pm2adda_v2i16_i32_shared(i32 %rd, <2 x i16> %a, <2 x i16> %b, p
   %r = add i32 %rd, %mul
   ret i32 %r
 }
+
+define <4 x i8> @merge_v4i8(<4 x i8> %m, <4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: merge_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %n = xor <4 x i8> %m, splat (i8 -1)
+  %x = and <4 x i8> %m, %b
+  %y = and <4 x i8> %n, %a
+  %r = or <4 x i8> %x, %y
+  ret <4 x i8> %r
+}
+
+define <2 x i16> @merge_v2i16(<2 x i16> %m, <2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: merge_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    ret
+  %n = xor <2 x i16> %m, splat (i16 -1)
+  %x = and <2 x i16> %m, %b
+  %y = and <2 x i16> %n, %a
+  %r = or <2 x i16> %x, %y
+  ret <2 x i16> %r
+}
