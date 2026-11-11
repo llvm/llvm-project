@@ -6949,7 +6949,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case AMDGPU::SI_LO16_TO_VGPR32: {
     Register Dst = MI.getOperand(0).getReg();
-    MachineOperand Src = MI.getOperand(1);
+    const MachineOperand Src = MI.getOperand(1);
     const TargetRegisterClass *SrcRC = TRI->getSubRegisterClass(
         MRI.getRegClass(Src.getReg()), Src.getSubReg());
     if (AMDGPU::VGPR_16RegClass.hasSubClassEq(SrcRC)) {

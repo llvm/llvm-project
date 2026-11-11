@@ -2511,7 +2511,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign fp16vt:$src0, f32:$src1),
   (EXTRACT_SUBREG (f32 (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-             (lo16_to_vgpr32 $src0),
+             (i32 (SI_LO16_TO_VGPR32 $src0)),
              (V_LSHRREV_B32_e64 (i32 16), $src1))), lo16)
 >;
 
@@ -2525,7 +2525,7 @@ def : GCNPat <
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (EXTRACT_SUBREG (f32 (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
-             (lo16_to_vgpr32 $src0),
+             (i32 (SI_LO16_TO_VGPR32 $src0)),
              (V_LSHRREV_B32_e64 (i32 16), (i32 (EXTRACT_SUBREG $src1, sub1))))), lo16)
 >;
 }
