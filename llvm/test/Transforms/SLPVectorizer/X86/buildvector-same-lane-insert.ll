@@ -72,3 +72,27 @@ define void @test1() {
   ret void
 }
 
+define <5 x i32> @undef_base_lane(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; CHECK-LABEL: @undef_base_lane(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[X0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[X2:%.*]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 4, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <5 x i32> <i32 0, i32 1, i32 2, i32 4, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <5 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <5 x i32> [[TMP6]], <5 x i32> [[TMP8]], <5 x i32> <i32 0, i32 6, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    ret <5 x i32> [[TMP7]]
+;
+  %b0 = add nsw i32 %x0, 1
+  %b1 = add nsw i32 %x1, 2
+  %b2 = add nsw i32 %x2, 3
+  %b3 = add nsw i32 %x3, 4
+  %v0 = insertelement <5 x i32> undef, i32 %b0, i64 0
+  %v1 = insertelement <5 x i32> %v0, i32 %b1, i64 1
+  %v2 = insertelement <5 x i32> %v1, i32 %b2, i64 4
+  %v3 = insertelement <5 x i32> %v2, i32 %b3, i64 2
+  %v4 = insertelement <5 x i32> %v3, i32 %b1, i64 1
+  ret <5 x i32> %v4
+}
+

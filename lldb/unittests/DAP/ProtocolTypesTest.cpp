@@ -1326,6 +1326,23 @@ TEST(ProtocolTypesTest, StackFrame) {
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
 
+  frame.languageSpecificData = json::Object{{"Objective-C runtime version", 2}};
+  expected_frame = parse(R"({
+    "id": 1,
+    "name": "test",
+    "source": {
+      "name": "test.cpp",
+      "sourceReference": 23
+    },
+    "line": 10,
+    "column": 1,
+    "$__lldb_languageSpecificData": {"Objective-C runtime version": 2},
+    "presentationHint": "normal"
+  })");
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+  frame.languageSpecificData.reset();
+
   frame.id = 2;
   frame.canRestart = true;
   frame.source = std::nullopt;
@@ -1351,13 +1368,15 @@ TEST(ProtocolTypesTest, StackFrame) {
   frame.presentationHint = StackFrame::ePresentationHintNone;
   frame.moduleId = "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F";
   frame.compileUnitId = 7;
+  frame.isOptimized = true;
   expected_frame = parse(R"({
     "id": 3,
     "name": "foo",
     "line": 0,
     "column": 0,
     "moduleId": "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F",
-    "compileUnitId": 7
+    "$__lldb_compileUnitId": 7,
+    "$__lldb_isOptimized": true
   })");
 
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());

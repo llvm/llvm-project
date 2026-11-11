@@ -34,6 +34,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -464,7 +465,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
     OS << "\n  Secondary Entry Points : ";
     ListSeparator LS;
     for (const auto &KV : SecondaryEntryPoints)
-      OS << LS << KV.second->getName();
+      OS << LS << KV.second.Symbol->getName();
   }
   if (FrameInstructions.size())
     OS << "\n  CFI Instrs  : " << FrameInstructions.size();
@@ -1600,7 +1601,12 @@ bool BinaryFunction::scanExternalRefs() {
   assert(FunctionData.size() == getMaxSize() &&
          "function size does not match raw data size");
 
-  BC.SymbolicDisAsm->setSymbolizer(
+  // Ignoring a referenced function can recursively scan its external
+  // references. Give each scan its own disassembler so a nested scan cannot
+  // replace or clear the symbolizer that the outer scan still needs.
+  std::unique_ptr<MCDisassembler> DisAsm(
+      BC.TheTarget->createMCDisassembler(*BC.STI, *BC.Ctx));
+  DisAsm->setSymbolizer(
       BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
 
   // A list of patches for this function.
@@ -1621,9 +1627,8 @@ bool BinaryFunction::scanExternalRefs() {
 
     const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
     PrevInstruction = Instruction;
-    if (!BC.SymbolicDisAsm->getInstruction(Instruction, Size,
-                                           FunctionData.slice(Offset),
-                                           AbsoluteInstrAddr, nulls())) {
+    if (!DisAsm->getInstruction(Instruction, Size, FunctionData.slice(Offset),
+                                AbsoluteInstrAddr, nulls())) {
       if (opts::Verbosity >= 1 && !isZeroPaddingAt(Offset)) {
         BC.errs()
             << "BOLT-WARNING: unable to disassemble instruction at offset 0x"
@@ -1668,6 +1673,7 @@ bool BinaryFunction::scanExternalRefs() {
     // Handle calls and branches separately as symbolization doesn't work for
     // them yet.
     MCSymbol *BranchTargetSymbol = nullptr;
+    SmallVector<const MCSymbol *, 1> RefSymbols;
     if (BC.MIB->isCall(Instruction) || BC.MIB->isBranch(Instruction)) {
       uint64_t TargetAddress = 0;
       BC.MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
@@ -1700,12 +1706,17 @@ bool BinaryFunction::scanExternalRefs() {
                                   Emitter.LocalCtx.get());
     } else {
       analyzeInstructionForFuncReference(Instruction);
-      const bool NeedsPatch = llvm::any_of(
-          MCPlus::primeOperands(Instruction), [&](const MCOperand &Op) {
-            return Op.isExpr() &&
-                   !ignoreReference(BC.MIB->getTargetSymbol(Op.getExpr()));
-          });
-      if (!NeedsPatch)
+      // Symbols referenced by this instruction that belong to functions we are
+      // going to move. Note that AArch64 instructions have at most one such
+      // operand, but the code below does not rely on it.
+      for (const MCOperand &Op : MCPlus::primeOperands(Instruction)) {
+        if (!Op.isExpr())
+          continue;
+        const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Op.getExpr());
+        if (!ignoreReference(Symbol))
+          RefSymbols.push_back(Symbol);
+      }
+      if (RefSymbols.empty())
         continue;
     }
 
@@ -1748,19 +1759,6 @@ bool BinaryFunction::scanExternalRefs() {
         continue;
       }
 
-      // If ADR was emitted by the compiler/assembler to reference a nearby
-      // local function, we cannot move away that function due to ADR address
-      // span limitation. Hence, we skip the optimization.
-      if (BC.MIB->isADR(Instruction) &&
-          Rel->Type == ELF::R_AARCH64_ADR_PREL_LO21) {
-        BC.errs() << "BOLT-WARNING: unable to convert ADR that references "
-                  << Rel->Symbol->getName()
-                  << ". Will not optimize the target\n";
-        if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol))
-          TargetBF->setIgnored();
-        continue;
-      }
-
       // In the case of GOT load, ADRP+LDR can also be converted into ADRP+ADD.
       // When this happens, it's not always possible to properly symbolize ADRP
       // operand and we might have to adjust the operand based on the next
@@ -1797,6 +1795,34 @@ bool BinaryFunction::scanExternalRefs() {
     // exception for branch instructions since they require optional
     // relocations.
     if (BC.isAArch64() && !BranchTargetSymbol) {
+      // A bare PC-relative reference, such as ADR or LDR (literal), reaches
+      // only +/-1MB, while the target is likely to end up much further away
+      // once it is moved. Such an instruction cannot be patched in place, and
+      // cannot be relaxed into an ADRP form either since that requires an
+      // extra instruction slot (see AArch64RelaxationPass, which does exactly
+      // that for emitted code, relying on a NOP left by the linker). Hence we
+      // keep the target in place instead. Note that ADRP is excluded by
+      // hasPCRelOperand(), and that linker-relaxed sequences have already
+      // been handled above.
+      //
+      // Symbols without a function, such as __hot_start or _end, cannot be
+      // kept in place. Patch the instruction for them as usual: the patch is
+      // correct if the new value is in range, and fails loudly otherwise.
+      if (BC.MIB->hasPCRelOperand(Instruction) &&
+          llvm::all_of(RefSymbols, [&](const MCSymbol *Symbol) {
+            return BC.getFunctionForSymbol(Symbol);
+          })) {
+        for (const MCSymbol *Symbol : RefSymbols) {
+          BC.errs()
+              << "BOLT-WARNING: unable to update PC-relative reference to "
+              << Symbol->getName() << " at 0x"
+              << Twine::utohexstr(AbsoluteInstrAddr)
+              << ". Will not optimize the target\n";
+          BC.getFunctionForSymbol(Symbol)->setIgnored();
+        }
+        continue;
+      }
+
       LLVM_DEBUG(BC.printInstruction(dbgs(), Instruction, AbsoluteInstrAddr));
       InstructionPatches.push_back({AbsoluteInstrAddr, Instruction});
       continue;
@@ -1846,9 +1872,6 @@ bool BinaryFunction::scanExternalRefs() {
     if (!Success)
       break;
   }
-
-  // Reset symbolizer for the disassembler.
-  BC.SymbolicDisAsm->setSymbolizer(nullptr);
 
   // Add relocations unless disassembly failed for this function.
   if (!DisassemblyFailed)
@@ -3828,8 +3851,10 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
   MCSymbol *LocalSymbol = getOrCreateLocalLabel(EntryPointAddress);
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(LocalSymbol);
-  if (EntrySymbol)
+  if (EntrySymbol) {
+    ++SecondaryEntryPoints[LocalSymbol].RefCount;
     return EntrySymbol;
+  }
 
   assert(CurrentState == State::Empty || CurrentState == State::Disassembled);
 
@@ -3839,7 +3864,7 @@ MCSymbol *BinaryFunction::addEntryPointAtOffset(uint64_t Offset) {
     EntrySymbol = BC.getOrCreateGlobalSymbol(
         EntryPointAddress, Twine("__ENTRY_") + getOneName() + "@");
   }
-  SecondaryEntryPoints[LocalSymbol] = EntrySymbol;
+  SecondaryEntryPoints[LocalSymbol] = {EntrySymbol, 1};
 
   BC.setSymbolToFunctionMap(EntrySymbol, this);
 
@@ -3854,17 +3879,27 @@ MCSymbol *BinaryFunction::addEntryPoint(const BinaryBasicBlock &BB) {
     return getSymbol();
 
   MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(BB);
-  if (EntrySymbol)
+  if (EntrySymbol) {
+    ++SecondaryEntryPoints[BB.getLabel()].RefCount;
     return EntrySymbol;
+  }
 
   EntrySymbol =
       BC.Ctx->getOrCreateSymbol("__ENTRY_" + BB.getLabel()->getName());
 
-  SecondaryEntryPoints[BB.getLabel()] = EntrySymbol;
+  SecondaryEntryPoints[BB.getLabel()] = {EntrySymbol, 1};
 
   BC.setSymbolToFunctionMap(EntrySymbol, this);
 
   return EntrySymbol;
+}
+
+void BinaryFunction::releaseEntryPoint(const BinaryBasicBlock &BB) {
+  auto It = SecondaryEntryPoints.find(BB.getLabel());
+  assert(It != SecondaryEntryPoints.end() &&
+         "releasing an entry point that was never requested");
+  if (!--It->second.RefCount)
+    SecondaryEntryPoints.erase(It);
 }
 
 MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {

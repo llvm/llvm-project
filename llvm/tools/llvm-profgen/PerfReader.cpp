@@ -10,7 +10,6 @@
 #include "Options.h"
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ETMTraceDecoder.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"

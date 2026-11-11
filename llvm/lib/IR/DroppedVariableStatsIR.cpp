@@ -50,19 +50,17 @@ void DroppedVariableStatsIR::runAfterPassModule(StringRef PassID,
 void DroppedVariableStatsIR::runOnFunction(StringRef PassID, const Function *F,
                                            bool Before) {
   auto &DebugVariables = DebugVariablesStack.back()[F];
-  auto FuncName = F->getName();
   Func = F;
-  run(DebugVariables, FuncName, Before);
+  run(DebugVariables, Before);
 }
 
 void DroppedVariableStatsIR::calculateDroppedVarStatsOnFunction(
     const Function *F, StringRef PassID, StringRef FuncOrModName,
     StringRef PassLevel) {
   Func = F;
-  StringRef FuncName = F->getName();
   DebugVariables &DbgVariables = DebugVariablesStack.back()[F];
-  calculateDroppedStatsAndPrint(DbgVariables, FuncName, PassID, FuncOrModName,
-                                PassLevel, Func);
+  calculateDroppedStatsAndPrint(DbgVariables, PassID, FuncOrModName, PassLevel,
+                                Func);
 }
 
 void DroppedVariableStatsIR::runOnModule(StringRef PassID, const Module *M,
@@ -95,31 +93,24 @@ void DroppedVariableStatsIR::registerCallbacks(
       [this](StringRef P, const PreservedAnalyses &PA) { return cleanup(); });
 }
 
-void DroppedVariableStatsIR::visitEveryInstruction(
-    unsigned &DroppedCount, DenseMap<VarID, DILocation *> &InlinedAtsMap,
-    VarID Var) {
-  const DIScope *DbgValScope = std::get<0>(Var);
+void DroppedVariableStatsIR::visitEveryInstruction(unsigned &DroppedCount,
+                                                   VarID Var) {
   for (const auto &I : instructions(Func)) {
     auto *DbgLoc = I.getDebugLoc().get();
     if (!DbgLoc)
       continue;
-    if (updateDroppedCount(DbgLoc, DbgLoc->getScope(), DbgValScope,
-                           InlinedAtsMap, Var, DroppedCount))
+    if (updateDroppedCount(DbgLoc, Var, DroppedCount))
       break;
   }
 }
 
-void DroppedVariableStatsIR::visitEveryDebugRecord(
-    DenseSet<VarID> &VarIDSet,
-    DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
-    StringRef FuncName, bool Before) {
+void DroppedVariableStatsIR::visitEveryDebugRecord(DenseSet<VarID> &VarIDSet) {
   for (const auto &I : instructions(Func)) {
     for (DbgRecord &DR : I.getDbgRecordRange()) {
       if (auto *Dbg = dyn_cast<DbgVariableRecord>(&DR)) {
         auto *DbgVar = Dbg->getVariable();
         auto DbgLoc = DR.getDebugLoc();
-        populateVarIDSetAndInlinedMap(DbgVar, DbgLoc, VarIDSet, InlinedAtsMap,
-                                      FuncName, Before);
+        populateVarIDSet(DbgVar, DbgLoc, VarIDSet);
       }
     }
   }

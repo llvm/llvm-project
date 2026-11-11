@@ -177,6 +177,7 @@ public:
   bool isMinusOne() const { return Signed && getValue().isAllOnes(); }
 
   unsigned countLeadingZeros() const { return getValue().countl_zero(); }
+  unsigned getActiveBits() const { return getValue().getActiveBits(); }
 
   void print(llvm::raw_ostream &OS) const { getValue().print(OS, Signed); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

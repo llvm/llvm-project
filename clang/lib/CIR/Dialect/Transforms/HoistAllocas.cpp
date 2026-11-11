@@ -108,7 +108,6 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
 
 void HoistAllocasPass::runOnOperation() {
   llvm::TimeTraceScope scope("Hoist Allocas");
-  llvm::SmallVector<Operation *, 16> ops;
 
   Operation *op = getOperation();
   auto mod = mlir::dyn_cast<mlir::ModuleOp>(op);

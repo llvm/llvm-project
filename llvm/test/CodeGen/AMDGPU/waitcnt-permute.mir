@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu8.03 -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu8.03 -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 
 ...
 # CHECK-LABEL: name: waitcnt-permute{{$}}

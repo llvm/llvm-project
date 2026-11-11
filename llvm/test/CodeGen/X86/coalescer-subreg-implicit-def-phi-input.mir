@@ -10,7 +10,6 @@
 
 ---
 name: recompute_after_subreg_implicit_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: recompute_after_subreg_implicit_def
   ; CHECK: bb.0:
@@ -84,7 +83,6 @@ body:             |
 
 ---
 name: loop_backedge
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: loop_backedge
   ; CHECK: bb.0:

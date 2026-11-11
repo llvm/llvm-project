@@ -338,6 +338,20 @@ static uint32_t calcArraySize(const DICompositeType *CTy, uint32_t StartDim) {
   return DimSize;
 }
 
+/// Return the number of innermost elements in \p Ty, looking through array
+/// element types such as Row in typedef struct S Row[3]. \p Ty is updated to
+/// the innermost element type.
+static uint32_t calcElementCount(DIType *&Ty) {
+  uint32_t Count = 1;
+  for (;;) {
+    auto *Array = dyn_cast<DICompositeType>(stripQualifiers(Ty));
+    if (!Array || Array->getTag() != dwarf::DW_TAG_array_type)
+      return Count;
+    Count *= calcArraySize(Array, 0);
+    Ty = Array->getBaseType();
+  }
+}
+
 static Type *getBaseElementType(const CallInst *Call) {
   // Element type is stored in an elementtype() attribute on the first param.
   return Call->getParamElementType(0);
@@ -555,9 +569,12 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
          CTyTag == dwarf::DW_TAG_structure_type ||
          CTyTag == dwarf::DW_TAG_union_type);
 
-  // Multi dimensional arrays, base element should be the same
-  if (PTyTag == dwarf::DW_TAG_array_type && PTyTag == CTyTag)
-    return PTy->getBaseType() == CTy->getBaseType();
+  // Multi dimensional arrays, base element should be the same. Otherwise the
+  // child may still be the element type, e.g. Row in Row a[2] with
+  // typedef struct S Row[3].
+  if (PTyTag == dwarf::DW_TAG_array_type && PTyTag == CTyTag &&
+      PTy->getBaseType() == CTy->getBaseType())
+    return true;
 
   DIType *Ty;
   if (PTyTag == dwarf::DW_TAG_array_type)
@@ -851,62 +868,55 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
 std::optional<BPFAbstractMemberAccess::AccessRoot>
 BPFAbstractMemberAccess::consumeAccessRoot(
     SmallVectorImpl<CallInfo> &CallStack) {
+  // Fold the leading array accesses into one index, counted in units of the
+  // innermost element, such as struct S in Row a[2] with
+  // typedef struct S Row[3].
   uint32_t FirstIndex = 0;
-  for (;;) {
+  DIType *ElementTy = nullptr;
+  while (!CallStack.empty() && CallStack.back().Kind == BPFPreserveArrayAI) {
     const CallInfo &CInfo = CallStack.back();
-    auto *Metadata = cast<DIType>(CInfo.Metadata);
-    switch (CInfo.Kind) {
-    case BPFPreserveStructAI:
-    case BPFPreserveUnionAI:
-      // A typedef may be the only name the loader can match for this record.
-      return AccessRoot{stripQualifiers(Metadata, /*skipTypedef=*/false),
-                        FirstIndex};
-    case BPFPreserveArrayAI:
-      break;
-    default:
-      llvm_unreachable("Expected an array, struct, or union access");
-    }
-
-    const uint32_t Index = CInfo.AccessIndex;
-    CallStack.pop_back();
-    auto *Ty = stripQualifiers(Metadata);
-    DIType *ElementTy;
+    auto *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata));
+    uint32_t Stride;
     switch (Ty->getTag()) {
     case dwarf::DW_TAG_array_type: {
       auto *Array = cast<DICompositeType>(Ty);
-      FirstIndex += Index * calcArraySize(Array, 1);
-      if (Array->getElements().size() != 1 && !CallStack.empty())
-        continue;
-      ElementTy = stripQualifiers(Array->getBaseType());
+      ElementTy = Array->getBaseType();
+      Stride = calcArraySize(Array, 1) * calcElementCount(ElementTy);
       break;
     }
-    case dwarf::DW_TAG_pointer_type: {
-      auto *Pointee = stripQualifiers(cast<DIDerivedType>(Ty)->getBaseType());
-      if (Pointee->getTag() != dwarf::DW_TAG_array_type) {
-        FirstIndex += Index;
-        ElementTy = Pointee;
-        break;
-      }
-      auto *Array = cast<DICompositeType>(Pointee);
-      FirstIndex += Index * calcArraySize(Array, 0);
-      if (!CallStack.empty())
-        continue;
-      ElementTy = stripQualifiers(Array->getBaseType());
+    case dwarf::DW_TAG_pointer_type:
+      ElementTy = cast<DIDerivedType>(Ty)->getBaseType();
+      Stride = calcElementCount(ElementTy);
       break;
-    }
     default:
       llvm_unreachable("Expected an array or pointer type");
     }
+    FirstIndex += CInfo.AccessIndex * Stride;
+    CallStack.pop_back();
+  }
 
-    // A chain ending at a subarray already has its index in units of the
-    // innermost element, which can supply the relocation root.
-    switch (ElementTy->getTag()) {
-    case dwarf::DW_TAG_structure_type:
-    case dwarf::DW_TAG_union_type:
-      return AccessRoot{ElementTy, FirstIndex};
-    default:
-      return std::nullopt;
-    }
+  if (!ElementTy) {
+    // A typedef may be the only name the loader can match for this record.
+    const CallInfo &CInfo = CallStack.back();
+    assert(CInfo.Kind == BPFPreserveStructAI ||
+           CInfo.Kind == BPFPreserveUnionAI);
+    return AccessRoot{
+        stripQualifiers(cast<DIType>(CInfo.Metadata), /*skipTypedef=*/false),
+        0};
+  }
+
+  // The innermost element supplies the relocation root.
+  auto *Record = stripQualifiers(ElementTy);
+  switch (Record->getTag()) {
+  case dwarf::DW_TAG_structure_type:
+  case dwarf::DW_TAG_union_type:
+    // An anonymous record can only be matched by its typedef name.
+    return AccessRoot{Record->getName().empty()
+                          ? stripQualifiers(ElementTy, /*skipTypedef=*/false)
+                          : Record,
+                      FirstIndex};
+  default:
+    return std::nullopt;
   }
 }
 
@@ -921,14 +931,17 @@ Value *BPFAbstractMemberAccess::computeFieldAccess(CallInst *Call,
                                                    std::string &RelocSuffix,
                                                    DIType *&RootType) {
   // Put the access chain into a stack with the top as the head of the chain.
-  SmallVector<CallInfo, 4> CallStack{Terminal};
+  // A terminal preserve_field_info call is not part of the chain.
+  const bool IsFieldInfo = Terminal.Kind == BPFPreserveFieldInfoAI;
+  SmallVector<CallInfo, 4> CallStack;
+  if (!IsFieldInfo)
+    CallStack.push_back(Terminal);
   for (auto It = AIChain.find(Call); It != AIChain.end();
        It = AIChain.find(It->second.first))
     CallStack.push_back(It->second.second);
 
   Value *const Base = CallStack.back().Base;
   const auto Root = consumeAccessRoot(CallStack);
-  const bool IsFieldInfo = Terminal.Kind == BPFPreserveFieldInfoAI;
   if (!Root) {
     if (IsFieldInfo)
       report_fatal_error(
@@ -947,8 +960,6 @@ Value *BPFAbstractMemberAccess::computeFieldAccess(CallInst *Call,
   // Build the access string and compute the local byte offset or requested
   // field property while each access still has its debug type.
   ArrayRef<CallInfo> Fields = CallStack;
-  if (IsFieldInfo)
-    Fields = Fields.drop_front();
   while (!Fields.empty()) {
     const CallInfo &CInfo = Fields.back();
     Fields = Fields.drop_back();

@@ -513,6 +513,7 @@ cc_test(
     ),
     deps = [
         "//llvm:Core",
+        "//llvm:FrontendDirective",
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenACC",

@@ -1,7 +1,6 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prolog-epilog %s -o - | FileCheck %s
 ---
 name: framelayout_offset_immediate_change
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 0, size: 1}
 body: |

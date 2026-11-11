@@ -2,6 +2,10 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 --mattr=+lasx < %s | FileCheck %s
 
+declare <4 x double> @llvm.trunc.v4f64(<4 x double>)
+
+declare <8 x float> @llvm.trunc.v8f32(<8 x float>)
+
 define void @fptoui_v8f32_v8i32(ptr %res, ptr %in){
 ; CHECK-LABEL: fptoui_v8f32_v8i32:
 ; CHECK:       # %bb.0:
@@ -75,5 +79,33 @@ define void @fptoui_v4f32_v4i64(ptr %res, ptr %in){
   %v0 = load <4 x float>, ptr %in
   %v1 = fptoui <4 x float> %v0 to <4 x i64>
   store <4 x i64> %v1, ptr %res
+  ret void
+}
+
+define void @fptoui_trunc_v8f32_v8i32(ptr %res, ptr %in) {
+; CHECK-LABEL: fptoui_trunc_v8f32_v8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrz.wu.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x float>, ptr %in
+  %v1 = call <8 x float> @llvm.trunc.v8f32(<8 x float> %v0)
+  %v2 = fptoui <8 x float> %v1 to <8 x i32>
+  store <8 x i32> %v2, ptr %res
+  ret void
+}
+
+define void @fptoui_trunc_v4f64_v4i64(ptr %res, ptr %in) {
+; CHECK-LABEL: fptoui_trunc_v4f64_v4i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvftintrz.lu.d $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x double>, ptr %in
+  %v1 = call <4 x double> @llvm.trunc.v4f64(<4 x double> %v0)
+  %v2 = fptoui <4 x double> %v1 to <4 x i64>
+  store <4 x i64> %v2, ptr %res
   ret void
 }

@@ -26,6 +26,7 @@
 #include <functional>
 #include <ranges>
 
+#include "../heap_helpers.h"
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 
@@ -81,6 +82,9 @@ constexpr void test_one(std::array<int, N> input, std::size_t until_index) {
   { // (iterator, sentinel) overload.
     std::same_as<Iter> decltype(auto) result = std::ranges::is_heap_until(begin, end);
     assert(base(result) == input.data() + until_index);
+    assert(satisfies_heap_property(input.data(), input.data() + until_index));
+    if (until_index < N)
+      assert(!satisfies_heap_property(input.data(), input.data() + until_index + 1));
   }
 
   { // (range) overload.
@@ -144,6 +148,10 @@ constexpr bool test() {
       assert(result_default_comp == in.begin() + 1);
       auto result_custom_comp = std::ranges::is_heap_until(in.begin(), in.end(), gt);
       assert(result_custom_comp == in.end());
+
+      assert(satisfies_heap_property(in.begin(), in.begin() + 1, ls));
+      assert(!satisfies_heap_property(in.begin(), in.begin() + 2, ls));
+      assert(satisfies_heap_property(in.begin(), in.end(), gt));
     }
 
     { // (range) overload.
@@ -168,6 +176,12 @@ constexpr bool test() {
       assert(result_default_comp == in.begin() + 1);
       auto result_custom_comp = std::ranges::is_heap_until(in.begin(), in.end(), {}, negate);
       assert(result_custom_comp == in.end());
+
+      std::ranges::less ls;
+      auto projected = [&](const A& x, const A& y) { return ls(negate(x), negate(y)); };
+      assert(satisfies_heap_property(in.begin(), in.begin() + 1, ls));
+      assert(!satisfies_heap_property(in.begin(), in.begin() + 2, ls));
+      assert(satisfies_heap_property(in.begin(), in.end(), projected));
     }
 
     { // (range) overload.

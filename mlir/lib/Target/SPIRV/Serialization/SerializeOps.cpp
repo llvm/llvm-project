@@ -432,6 +432,8 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   functions.append(functionBody.begin(), functionBody.end());
   functionHeader.clear();
   functionBody.clear();
+  valueIDMap.clear();
+  blockIDMap.clear();
 
   return success();
 }

@@ -306,6 +306,43 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
   ];
 }
 
+def TBAAStructOpInterface : OpInterface<"TBAAStructOpInterface"> {
+  let description = [{
+    An interface for memory operations that can carry tbaa.struct metadata.
+    It provides setters and getters for the operation's tbaa.struct
+    attribute. The default implementations of the interface methods expect
+    the operation to have an attribute of type ArrayAttr named tbaa_struct.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyTBAAStructOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the tbaa.struct attribute or nullptr",
+      /*returnType=*/  "::mlir::ArrayAttr",
+      /*methodName=*/  "getTBAAStructOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getTbaaStructAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the tbaa.struct attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setTBAAStruct",
+      /*args=*/        (ins "const ::mlir::ArrayAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setTbaaStructAttr(attr);
+      }]
+      >,
+  ];
+}
+
 def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
   let description = [{
     An interface for memory operations that can carry dereferenceable metadata.
