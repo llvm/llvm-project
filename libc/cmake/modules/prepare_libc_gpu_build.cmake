@@ -6,7 +6,7 @@ endif()
 # Ensure the compiler is a valid clang when building the GPU target.
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
-  ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
+    ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
   message(WARNING "libc for GPU requires an up-to-date clang. CMake compiler "
     "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
     " is not 'Clang ${req_ver}'.")
@@ -43,7 +43,7 @@ endif()
 
 set(gpu_test_architecture "")
 if(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_AMDGPU
-  AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+    AND NOT "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(LIBC_GPU_TESTS_DISABLED TRUE)
   message(STATUS "AMDGPU backend is not available, tests will not be built")
 elseif(DEFINED LLVM_TARGETS_TO_BUILD AND LIBC_TARGET_ARCHITECTURE_IS_NVPTX

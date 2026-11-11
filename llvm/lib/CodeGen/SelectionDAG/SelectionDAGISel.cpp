@@ -667,12 +667,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     if (From.isVirtual() && To.isVirtual())
       MRI.constrainRegClass(To, MRI.getRegClass(From));
     // Replace it.
-
-    // Replacing one register with another won't touch the kill flags.
-    // We need to conservatively clear the kill flags as a kill on the old
-    // register might dominate existing uses of the new register.
-    if (!MRI.use_empty(To))
-      MRI.clearKillFlags(From);
     MRI.replaceRegWith(From, To);
   }
 
@@ -4596,6 +4590,39 @@ bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
     return (Off >= 0) && (((A.value() - 1) & Off) == unsigned(Off));
   }
   return false;
+}
+
+bool SelectionDAGISel::selectShiftAmountMask(SDValue N, unsigned ShiftWidth,
+                                             SDValue &ShAmt) const {
+  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  unsigned ShiftBits = Log2_32(ShiftWidth);
+
+  // A truncation that keeps the low ShiftBits bits doesn't change the bits the
+  // shift reads.
+  if (N.getOpcode() == ISD::TRUNCATE &&
+      N.getScalarValueSizeInBits() >= ShiftBits)
+    N = N.getOperand(0);
+
+  if (N.getOpcode() != ISD::AND || !isa<ConstantSDNode>(N.getOperand(1)))
+    return false;
+
+  const APInt &AndMask = N.getConstantOperandAPInt(1);
+  if (AndMask.getBitWidth() < ShiftBits)
+    return false;
+
+  // Since the max shift amount is a power of 2 we can subtract 1 to make a
+  // mask that covers the bits needed to represent all shift amounts.
+  APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+  if (!ShMask.isSubsetOf(AndMask)) {
+    // SimplifyDemandedBits may have optimized the mask so try restoring any
+    // bits that are known zero.
+    KnownBits Known = CurDAG->computeKnownBits(N.getOperand(0));
+    if (!ShMask.isSubsetOf(AndMask | Known.Zero))
+      return false;
+  }
+
+  ShAmt = N.getOperand(0);
+  return true;
 }
 
 void SelectionDAGISel::CannotYetSelect(SDNode *N) {

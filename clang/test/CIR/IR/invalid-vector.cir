@@ -196,3 +196,27 @@ module  {
 cir.global external @vec_a = #cir.zero : !cir.vector<0 x !s32i>
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @ldexp_vector_length_mismatch(%a: !cir.vector<4 x !cir.float>, %e: !cir.vector<8 x !s32i>) {
+    // expected-error @below {{exponent must have the same number of elements as the value}}
+    %0 = cir.ldexp %a, %e : !cir.vector<4 x !cir.float>, !cir.vector<8 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @ldexp_vector_scalar_mismatch(%a: !cir.vector<4 x !cir.float>, %e: !s32i) {
+    // expected-error @below {{exponent must have the same number of elements as the value}}
+    %0 = cir.ldexp %a, %e : !cir.vector<4 x !cir.float>, !s32i
+    cir.return
+  }
+}

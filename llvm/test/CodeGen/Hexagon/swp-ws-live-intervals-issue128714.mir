@@ -41,7 +41,6 @@
 ...
 ---
 name:            test_swp_ws_live_intervals
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_swp_ws_live_intervals
   ; CHECK: bb.0.entry:
