@@ -38,7 +38,9 @@ static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
     LLT Ty = Handler.MRI.getType(ValVReg);
     if (Ty.isFloat()) {
-      Register R1 = Handler.MIRBuilder.buildBitcast(LLT::integer(Ty.getSizeInBits()), ValVReg).getReg(0);
+      Register R1 = Handler.MIRBuilder
+                        .buildBitcast(LLT::integer(Ty.getSizeInBits()), ValVReg)
+                        .getReg(0);
       return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), R1).getReg(0);
     }
     return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), ValVReg).getReg(0);
