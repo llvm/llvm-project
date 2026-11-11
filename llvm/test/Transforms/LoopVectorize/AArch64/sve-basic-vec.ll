@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @cmpsel_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
@@ -36,7 +36,7 @@ for.end:
   ret void
 }
 
-define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @cmpsel_f32(
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
@@ -64,7 +64,7 @@ for.end:
   ret void
 }
 
-define void @fneg_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define void @fneg_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fneg_f32(
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:

@@ -4,7 +4,6 @@
 ...
 ---
 name:            can_fold_i8
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: can_fold_i8
   ; CHECK: bb.0.entry:
@@ -58,7 +57,6 @@ body:             |
 ...
 ---
 name:            can_fold_i16_1_result_used_by_zext
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: can_fold_i16_1_result_used_by_zext
   ; CHECK: bb.0:
@@ -112,7 +110,6 @@ body:             |
 ...
 ---
 name:            can_fold_i16_2_result_used_by_multiple_calls
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: can_fold_i16_2_result_used_by_multiple_calls
   ; CHECK: bb.0:
@@ -184,7 +181,6 @@ body:             |
 ...
 ---
 name:            can_fold_i16_3_result_used_by_anyext
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: can_fold_i16_3_result_used_by_anyext
   ; CHECK: bb.0:
@@ -238,7 +234,6 @@ body:             |
 ...
 ---
 name:            can_fold_i16_4_cond_dbg_user
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: can_fold_i16_4_cond_dbg_user
   ; CHECK: bb.0:
@@ -294,7 +289,6 @@ body:             |
 ...
 ---
 name:            can_fold_i16_5_result_dbg_user
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: can_fold_i16_5_result_dbg_user
   ; CHECK: bb.0:
@@ -350,7 +344,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_1_result_used_before_branch
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_1_result_used_before_branch
   ; CHECK: bb.0:
@@ -425,7 +418,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_2_result_used_in_fail_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_2_result_used_in_fail_block
   ; CHECK: bb.0:
@@ -483,7 +475,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_3_result_used_in_successor_before_fail_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_3_result_used_in_successor_before_fail_block
   ; CHECK: bb.0:
@@ -554,7 +545,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_i8_trunc_i
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_i8_trunc_i
   ; CHECK: bb.0:
@@ -611,7 +601,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_i8_trunc_b
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_i8_trunc_b
   ; CHECK: bb.0:
@@ -668,7 +657,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_i8_trunc_both
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_i8_trunc_both
   ; CHECK: bb.0:
@@ -727,7 +715,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_overflow_status_used_in_select
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1
@@ -763,7 +750,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_i16_inputs_not_assert_zext
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_i16_inputs_not_assert_zext
   ; CHECK: bb.0:
@@ -814,7 +800,6 @@ body:             |
 ...
 ---
 name:            cannot_fold_branch_to_use_on_overflow
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cannot_fold_branch_to_use_on_overflow
   ; CHECK: bb.0:

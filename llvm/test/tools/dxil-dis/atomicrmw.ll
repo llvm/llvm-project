@@ -1,4 +1,4 @@
-; RUN: llc --filetype=obj %s --stop-after=dxil-write-bitcode -o %t.bc
+; RUN: llc --filetype=obj %s --stop-after=dxil-writer -o %t.bc
 ; RUN: dxil-dis %t.bc -o - | FileCheck %s
 
 ; Verify that the DXIL reader supports the atomicrmw and the cmpxchg records.

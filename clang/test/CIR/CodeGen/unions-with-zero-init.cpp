@@ -75,7 +75,7 @@ union outer_aggregate{int S::*m; int i; } outer_a1 = { p };
 // CIR-BEFORE:   }
 
 // CIR-AFTER-LABEL: cir.global external @outer_a1 = #cir.const_record<{#cir.int<-1> : !s64i}> : !rec_outer_aggregate
-// CIR-AFTER-LABEL: cir.func internal private @__cxx_global_var_init() {
+// CIR-AFTER-LABEL: cir.func internal private @__cxx_global_var_init(){{.*}} {
 // CIR-AFTER:   %[[GET_GLOB:.*]] = cir.get_global @outer_a1 : !cir.ptr<!rec_outer_aggregate>
 // CIR-AFTER:   %[[GET_MEM:.*]] = cir.get_member %[[GET_GLOB]][0] {name = "m"} : !cir.ptr<!rec_outer_aggregate> -> !cir.ptr<!s64i>
 // CIR-AFTER:   %[[GET_P:.*]] = cir.get_global @p : !cir.ptr<!s64i>

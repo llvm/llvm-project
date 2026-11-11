@@ -186,7 +186,6 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-
 add_libc_test(
   str_to_integer_test
   SUITE

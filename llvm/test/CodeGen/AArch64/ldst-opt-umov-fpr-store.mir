@@ -8,7 +8,6 @@
 # UMOVvi16_idx0 + STRHHui → STRHui, with intervening ST1i8 that kills the
 # vector register.
 name:            umov_i16_to_fpr_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $x1
@@ -27,7 +26,6 @@ body:             |
 ---
 # UMOVvi8_idx0 + STRBBui → STRBui
 name:            umov_i8_to_fpr_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -44,7 +42,6 @@ body:             |
 ---
 # UMOVvi32_idx0 + STRWui → STRSui
 name:            umov_i32_to_fpr_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -61,7 +58,6 @@ body:             |
 ---
 # UMOVvi64_idx0 + STRXui → STRDui
 name:            umov_i64_to_fpr_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -78,7 +74,6 @@ body:             |
 ---
 # Negative: UMOV result is modified before the store.
 name:            umov_i16_used_before_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $w9
@@ -98,7 +93,6 @@ body:             |
 ---
 # Negative: The vector register is clobbered between UMOV and store.
 name:            umov_i16_vec_clobbered
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0
@@ -118,7 +112,6 @@ body:             |
 ---
 # Negative: volatile store must not be folded.
 name:            umov_i16_volatile_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -137,7 +130,6 @@ body:             |
 # Negative: A sub-register of the value register ($w8) is redefined between
 # UMOV and store, clobbering $x8 via zero-extension.
 name:            umov_i64_subreg_clobber
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $w9
@@ -157,7 +149,6 @@ body:             |
 ---
 # Negative: The GPR result is not killed at the store (has a later use).
 name:            umov_i16_not_killed
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $x1
@@ -178,7 +169,6 @@ body:             |
 # Multiple folds in one block: two independent UMOV+store pairs using
 # different vector registers and different element sizes.
 name:            umov_multiple_folds
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $q1, $x0, $x1, $x2
@@ -203,7 +193,6 @@ body:             |
 # Vector register still live after the store (used via $s0 alias).
 # The fold should happen but the FPR sub-register must NOT be killed.
 name:            umov_i16_vec_live_after_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $x1
@@ -224,7 +213,6 @@ body:             |
 ---
 # Unscaled immediate: STURWi → STURSi
 name:            umov_i32_unscaled
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -241,7 +229,6 @@ body:             |
 ---
 # Unscaled immediate: STURHHi → STURHi
 name:            umov_i16_unscaled
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -258,7 +245,6 @@ body:             |
 ---
 # Register offset (X): STRWroX → STRSroX
 name:            umov_i32_reg_offset
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $x1
@@ -277,7 +263,6 @@ body:             |
 # (str w8, [x8, #0]).  The fold must not fire because the GPR is also used
 # as the base address.
 name:            umov_i32_val_is_base
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -298,7 +283,6 @@ body:             |
 # Negative: the store's index register overlaps with the value register
 # (strh w8, [x0, w8, sxtw]).
 name:            umov_i16_val_is_index
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
@@ -316,7 +300,6 @@ body:             |
 ---
 # Register offset (W): STRHHroW → STRHroW
 name:            umov_i16_reg_offset_w
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0, $w1
@@ -333,7 +316,6 @@ body:             |
 ---
 # UMOVvi8_idx0 + STRWui != STRBui
 name:            umov_i8_to_i32_fpr_store
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0, $x0
