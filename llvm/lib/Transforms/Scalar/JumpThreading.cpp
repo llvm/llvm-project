@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -2040,6 +2041,14 @@ static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
 
+void JumpThreadingPass::registerClonedAssume(Instruction *New) {
+  auto *Assume = dyn_cast<AssumeInst>(New);
+  if (!Assume || !FAM)
+    return;
+  if (auto *AC = FAM->getCachedResult<AssumptionAnalysis>(*F))
+    AC->registerAssumption(Assume);
+}
+
 void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
                                           BasicBlock::iterator BI,
                                           BasicBlock::iterator BE,
@@ -2115,6 +2124,7 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
         if (I != ValueMapping.end())
           New->setOperand(i, I->second);
       }
+    registerClonedAssume(New);
   }
 
   // There may be DbgVariableRecords on the terminator, clone directly from
@@ -2749,6 +2759,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     if (New) {
       // Otherwise, insert the new instruction into the block.
       New->setName(BI->getName());
+      registerClonedAssume(New);
       // Clone across any debug-info attached to the old instruction.
       New->cloneDebugInfoFrom(&*BI);
       // Update Dominance from simplified New instruction operands.
