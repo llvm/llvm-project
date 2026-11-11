@@ -316,7 +316,8 @@ class MapInfoFinalizationPass
         /*mapperId=*/mlir::FlatSymbolRefAttr(),
         builder.getStringAttr(op.getNameAttr().strref() + "." + memberName +
                               ".implicit_map"),
-        /*partial_map=*/builder.getBoolAttr(false));
+        /*partial_map=*/builder.getBoolAttr(false),
+        /*has_attach_ptr=*/builder.getBoolAttr(false));
 
     newMapOpsForFields.emplace_back(fieldMapOp);
     newMemberIndexPaths.emplace_back(indexPath.begin(), indexPath.end());
@@ -381,6 +382,95 @@ class MapInfoFinalizationPass
                     [](mlir::Attribute value) {
                       return mlir::cast<mlir::IntegerAttr>(value).getInt();
                     });
+  }
+
+  static bool isStrictPrefix(llvm::ArrayRef<int64_t> prefix,
+                             llvm::ArrayRef<int64_t> path) {
+    return prefix.size() < path.size() &&
+           std::equal(prefix.begin(), prefix.end(), path.begin());
+  }
+
+  bool isAttachMap(mlir::omp::MapInfoOp mapOp) {
+    return bitEnumContainsAll(mapOp.getMapType(),
+                              mlir::omp::ClauseMapFlags::attach);
+  }
+
+  bool shouldSkipHasAttachPtrMarking(mlir::omp::MapInfoOp mapOp) {
+    return mapOp.getHasAttachPtr() || isAttachMap(mapOp);
+  }
+
+  void markHasAttachPtr(mlir::omp::MapInfoOp mapOp,
+                        fir::FirOpBuilder &builder) {
+    if (!shouldSkipHasAttachPtrMarking(mapOp))
+      mapOp.setHasAttachPtrAttr(builder.getBoolAttr(true));
+  }
+
+  /// Mark member MapInfoOps whose members_index path is structurally below
+  /// \p pointeeBlockIndexPath. These entries describe storage inside the
+  /// pointee block reached through an attach pointer, so they must carry
+  /// has_attach_ptr. The attach entry itself is left unmarked.
+  void
+  markMembersWithAttachPtrUnder(mlir::omp::MapInfoOp parentOp,
+                                llvm::ArrayRef<int64_t> pointeeBlockIndexPath,
+                                fir::FirOpBuilder &builder) {
+    mlir::ArrayAttr memberIndicesAttr = parentOp.getMembersIndexAttr();
+    if (!memberIndicesAttr)
+      return;
+
+    for (auto [memberIdx, memberIndexAttr] :
+         llvm::enumerate(memberIndicesAttr)) {
+      llvm::SmallVector<int64_t> memberIndexPath;
+      getAsIntegers(mlir::cast<mlir::ArrayAttr>(memberIndexAttr).getValue(),
+                    memberIndexPath);
+      if (!isStrictPrefix(pointeeBlockIndexPath, memberIndexPath))
+        continue;
+
+      auto memberOp = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+          parentOp.getMembers()[memberIdx].getDefiningOp());
+      if (!memberOp)
+        continue;
+
+      markHasAttachPtr(memberOp, builder);
+    }
+  }
+
+  bool isPointeeStorageRoot(mlir::omp::MapInfoOp mapOp) {
+    if (isAttachMap(mapOp))
+      return false;
+    return mapOp.getHasAttachPtr();
+  }
+
+  void propagateHasAttachPtrToNestedMembers(mlir::omp::MapInfoOp parentOp,
+                                            fir::FirOpBuilder &builder) {
+    mlir::ArrayAttr memberIndicesAttr = parentOp.getMembersIndexAttr();
+    if (!memberIndicesAttr)
+      return;
+
+    // If the parent itself is a pointee-storage root, all entries in its member
+    // list describe storage inside that pointee.
+    if (isPointeeStorageRoot(parentOp)) {
+      markMembersWithAttachPtrUnder(parentOp, {}, builder);
+      return;
+    }
+
+    // For each member entry that is itself a pointee-storage root, mark all
+    // descendants whose index path has that member’s path as a strict prefix.
+    for (auto [memberIdx, memberIndexAttr] :
+         llvm::enumerate(memberIndicesAttr)) {
+      auto memberOp = mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+          parentOp.getMembers()[memberIdx].getDefiningOp());
+      if (!memberOp)
+        continue;
+
+      if (!isPointeeStorageRoot(memberOp))
+        continue;
+
+      llvm::SmallVector<int64_t> indexPath;
+      getAsIntegers(mlir::cast<mlir::ArrayAttr>(memberIndexAttr).getValue(),
+                    indexPath);
+
+      markMembersWithAttachPtrUnder(parentOp, indexPath, builder);
+    }
   }
 
   /// This function will expand a MapInfoOp's member indices back into a vector
@@ -591,7 +681,8 @@ class MapInfoFinalizationPass
         parentOp.getBounds(),
         /*mapperId=*/mapperId,
         /*name=*/parentOp.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
+        /*partial_map=*/builder.getBoolAttr(false),
+        /*has_attach_ptr=*/builder.getBoolAttr(true));
   }
 
   /// This function adjusts the member indices vector to include a new
@@ -1024,7 +1115,8 @@ class MapInfoFinalizationPass
         /*membersIndex=*/mlir::ArrayAttr{},
         /*bounds=*/descMapOp.getBounds(),
         /*mapperId*/ mlir::FlatSymbolRefAttr(), descMapOp.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
+        /*partial_map=*/builder.getBoolAttr(false),
+        /*has_attach_ptr=*/builder.getBoolAttr(false));
 
     // Has to be added to the target immediately, as we expect all maps
     // processed by this pass to have a user that is a target.
@@ -1113,7 +1205,8 @@ class MapInfoFinalizationPass
         op.getMembersIndexAttr(),
         /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
+        /*partial_map=*/builder.getBoolAttr(false),
+        /*has_attach_ptr=*/builder.getBoolAttr(false));
 
     if (!isAttachNever)
       genImplicitAttachMap(op, descriptor, mapMemberUsers, target, builder,
@@ -1225,7 +1318,8 @@ class MapInfoFinalizationPass
         newMembers, newMembersAttr,
         /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
+        /*partial_map=*/builder.getBoolAttr(false),
+        /*has_attach_ptr=*/builder.getBoolAttr(false));
 
     mlir::Operation *attachMap = nullptr;
     if (!isAttachNever && !mapOnlyDescriptor) {
@@ -1549,7 +1643,8 @@ class MapInfoFinalizationPass
         /*varPtrPtrType=*/mlir::TypeAttr{}, members, membersAttr,
         baseAddr.getBounds(),
         /*mapperId*/ mlir::FlatSymbolRefAttr(), mapOp.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
+        /*partial_map=*/builder.getBoolAttr(false),
+        /*has_attach_ptr=*/builder.getBoolAttr(true));
     mapOp.replaceAllUsesWith(newBaseAddrMapOp.getResult());
     mapOp->erase();
 
@@ -1831,6 +1926,10 @@ class MapInfoFinalizationPass
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
+      });
+
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        propagateHasAttachPtrToNestedMembers(op, builder);
       });
     });
   }

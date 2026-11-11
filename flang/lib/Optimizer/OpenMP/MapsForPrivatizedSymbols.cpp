@@ -169,7 +169,8 @@ class MapsForPrivatizedSymbolsPass
         /*members=*/SmallVector<Value>{},
         /*member_index=*/mlir::ArrayAttr{},
         /*bounds=*/boundsOps,
-        /*mapperId=*/mapperId, /*name=*/mapName, builder.getBoolAttr(false));
+        /*mapperId=*/mapperId, /*name=*/mapName, builder.getBoolAttr(false),
+        builder.getBoolAttr(false));
   }
   void addMapInfoOp(omp::TargetOp targetOp, omp::MapInfoOp mapInfoOp) {
     auto argIface = llvm::cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
