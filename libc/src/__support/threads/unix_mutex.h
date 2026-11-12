@@ -73,10 +73,10 @@ public:
         error_checking(is_error_checking), owner(0), lock_count(0) {}
 
   LIBC_INLINE static MutexError destroy(Mutex *lock) {
-    // Best effort, as POSIX leaves it: glibc says EBUSY and leaves a locked
-    // mutex as it was, except a robust one, whose owner may have exited. The
-    // owner and the lock count are only set while the futex word is held, so
-    // the word alone tells a locked mutex.
+    // Best effort, as POSIX leaves it: other implementations say EBUSY and
+    // leave a locked mutex as it was, except a robust one, whose owner may have
+    // exited. The owner and the lock count are only set while the futex word is
+    // held, so the word alone tells a locked mutex.
     if (!lock->robust && lock->futex.load(cpp::MemoryOrder::RELAXED) != 0)
       return MutexError::BUSY;
     RawMutex::destroy(lock);
