@@ -6,7 +6,6 @@
 # with $d7. $d7 itself is not live out of bb.0, so it can be renamed.
 ---
 name:            rename_reg_sharing_tuple_with_livein
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: rename_reg_sharing_tuple_with_livein
   ; CHECK: bb.0:
