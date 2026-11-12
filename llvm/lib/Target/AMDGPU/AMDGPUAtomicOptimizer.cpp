@@ -69,6 +69,7 @@ class AMDGPUAtomicOptimizerImpl
 private:
   Function &F;
   SmallVector<ReplacementInfo, 8> ToReplace;
+  SmallVector<AtomicRMWInst *, 4> ToReplaceWithDSAppendConsume;
   const UniformityInfo &UA;
   const DataLayout &DL;
   DomTreeUpdater &DTU;
@@ -87,6 +88,10 @@ private:
 
   void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
                       bool ValDivergent, bool IsLDS) const;
+
+  bool isDSAppendConsumeCandidate(const AtomicRMWInst &I) const;
+
+  void replaceWithDSAppendConsume(AtomicRMWInst &I) const;
 
 public:
   AMDGPUAtomicOptimizerImpl() = delete;
@@ -157,8 +162,11 @@ bool AMDGPUAtomicOptimizerImpl::run() {
     return false;
 
   visit(F);
-  if (ToReplace.empty())
+  if (ToReplace.empty() && ToReplaceWithDSAppendConsume.empty())
     return false;
+
+  for (AtomicRMWInst *I : ToReplaceWithDSAppendConsume)
+    replaceWithDSAppendConsume(*I);
 
   for (auto &[I, Op, ValIdx, ValDivergent, IsLDS] : ToReplace)
     optimizeAtomic(*I, Op, ValIdx, ValDivergent, IsLDS);
@@ -180,9 +188,54 @@ static bool isLegalCrossLaneType(Type *Ty) {
   }
 }
 
+bool AMDGPUAtomicOptimizerImpl::isDSAppendConsumeCandidate(
+    const AtomicRMWInst &I) const {
+  if (!I.use_empty())
+    return false;
+
+  // ds_append and ds_consume add 1 or -1 per active lane to a 32 bit value.
+  const auto *Val = dyn_cast<ConstantInt>(I.getValOperand());
+  if (I.getOperation() != AtomicRMWInst::Add || !I.getType()->isIntegerTy(32) ||
+      !Val || !(Val->isOne() || Val->isMinusOne()))
+    return false;
+
+  // This pass runs before AtomicExpand, so the intrinsic must be 4 byte
+  // aligned. The intrinsic also carries no memory ordering.
+  if (I.getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS ||
+      I.getAlign() < Align(4) || I.getOrdering() != AtomicOrdering::Monotonic)
+    return false;
+
+  // M0 holds a single address for the whole wave.
+  return !UA.isDivergentAtUse(
+      I.getOperandUse(AtomicRMWInst::getPointerOperandIndex()));
+}
+
+void AMDGPUAtomicOptimizerImpl::replaceWithDSAppendConsume(
+    AtomicRMWInst &I) const {
+  IRBuilder<> B(&I);
+  // Helper lanes are in EXEC under WQM and must not be counted.
+  if (IsPixelShader) {
+    Value *Live = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {});
+    B.SetInsertPoint(SplitBlockAndInsertIfThen(Live, &I, /*Unreachable=*/false,
+                                               /*BranchWeights=*/nullptr,
+                                               &DTU));
+  }
+  Intrinsic::ID ID = cast<ConstantInt>(I.getValOperand())->isOne()
+                         ? Intrinsic::amdgcn_ds_append
+                         : Intrinsic::amdgcn_ds_consume;
+  Value *Ptr = I.getPointerOperand();
+  B.CreateIntrinsic(ID, Ptr->getType(), {Ptr, B.getFalse()});
+  I.eraseFromParent();
+}
+
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   if (I.getType()->isVectorTy() || I.isVolatile())
     return;
+
+  if (isDSAppendConsumeCandidate(I)) {
+    ToReplaceWithDSAppendConsume.push_back(&I);
+    return;
+  }
 
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
