@@ -1033,7 +1033,6 @@ StmtResult BuildUnresolvedSYCLKernelCallStmt(
     Sema &SemaRef, CompoundStmt *Body,
     const SemaSYCL::SYCLKernelCallStmtASTFragments &ASTFragments) {
   return UnresolvedSYCLKernelCallStmt::Create(SemaRef.getASTContext(), Body,
-                                              ASTFragments.KernelInfoType,
                                               ASTFragments.KernelLaunchIdExpr);
 }
 

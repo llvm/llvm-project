@@ -3044,7 +3044,6 @@ DEF_TRAVERSE_STMT(SYCLUniqueStableNameExpr, {
 DEF_TRAVERSE_STMT(UnresolvedSYCLKernelCallStmt, {
   if (getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseStmt(S->getOriginalStmt()));
-    TRY_TO(TraverseType(S->getKernelInfoType()));
     TRY_TO(TraverseStmt(S->getKernelLaunchIdExpr()));
     ShouldVisitChildren = false;
   }
