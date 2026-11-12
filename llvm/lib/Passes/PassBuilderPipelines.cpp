@@ -1857,12 +1857,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   if (!ImportSummary || !ImportSummary->withSupportsHotColdNew())
     MPM.addPass(MemProfRemoveInfo());
 
-  // The core simplification pipeline lowers the CFI type identifier
-  // resolutions itself, after indirect call promotion (see
-  // buildModuleSimplificationPipeline). Everywhere else, lower them early.
-  const bool LowerTypeTestsInSimplification =
-      Level != OptimizationLevel::O0 && UseCtxProfile.empty();
-
   if (ImportSummary) {
     // For ThinLTO we must apply the context disambiguation decisions early, to
     // ensure we can correctly match the callsites to summary data.
@@ -1886,17 +1880,14 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type
     // metadata and intrinsics.
     MPM.addPass(WholeProgramDevirtPass(nullptr, ImportSummary));
-    // LowerTypeTests, however, must run after profile-guided indirect call
-    // promotion: ICP needs to see the llvm.type.test intrinsics and the
-    // original names of the CFI functions it promotes to, whose bodies
-    // LowerTypeTests renames to <name>.cfi. The simplification pipeline runs
-    // it at the right point; the passes before that point do not disturb the
-    // type test patterns.
-    if (!LowerTypeTestsInSimplification)
-      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
   }
 
+  // LowerTypeTests renames CFI functions to <name>.cfi, so with optimization
+  // it runs in buildModuleSimplificationPipeline after ICP. Otherwise, lower
+  // type tests here.
   if (Level == OptimizationLevel::O0) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     // Run a second time to clean up any type tests left behind by WPD for use
     // in ICP.
     MPM.addPass(DropTypeTestsPass());
@@ -1917,6 +1908,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
+    if (ImportSummary)
+      MPM.addPass(LowerTypeTestsPass(nullptr, ImportSummary));
     MPM.addPass(
         buildModuleInlinerPipeline(Level, ThinOrFullLTOPhase::ThinLTOPostLink));
   } else {
