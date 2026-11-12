@@ -31,7 +31,6 @@
 ...
 ---
 name:            debug_leader
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: debug_leader
   ; CHECK: bb.0:

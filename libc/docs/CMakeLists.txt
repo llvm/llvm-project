@@ -15,6 +15,7 @@ if(LLVM_ENABLE_SPHINX)
         arpa/inet
         assert
         byteswap
+        complex
         cpio
         ctype
         dirent
@@ -28,6 +29,7 @@ if(LLVM_ENABLE_SPHINX)
         inttypes
         libgen
         locale
+        math
         nl_types
         net/if
         netinet/in
@@ -36,10 +38,12 @@ if(LLVM_ENABLE_SPHINX)
         pthread
         pwd
         sched
+        search
         setjmp
         signal
         spawn
         stdbit
+        stdfix
         stdio
         stdlib
         string

@@ -11,7 +11,7 @@ define void @memset.pattern(ptr %a, i128 %value, i64 %x) nounwind {
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOADSTORELOOP:.*]], label %[[SPLIT:.*]]
 ; CHECK:       [[LOADSTORELOOP]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[LOADSTORELOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i128, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    store i128 [[VALUE]], ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], [[X]]

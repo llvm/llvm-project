@@ -10,7 +10,7 @@
 // a ProxySpec for the lookup operation, plus a factory that constructs a
 // generator from the lookup function's address.
 //
-// The spec pairs InstanceSymbolGenerator's proxy with its controller-interface
+// The spec is built from the lookup operation's controller-interface
 // descriptor in Shared/SPSCI/SessionSPSCI.h, which supplies the wrapper name
 // and wire signature.
 //
@@ -29,8 +29,7 @@
 namespace llvm::orc::sps {
 
 using SessionLookupInstanceSymbolsProxySpec =
-    ProxySpec<InstanceSymbolGenerator::LookupProxy,
-              rt::sps_ci::SessionLookupInstanceSymbols>;
+    ProxySpec<rt::sps_ci::SessionLookupInstanceSymbols>;
 
 /// Create an InstanceSymbolGenerator that calls the ORC runtime's SPS
 /// instance-symbol lookup function at the given address.

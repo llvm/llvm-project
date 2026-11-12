@@ -96,7 +96,7 @@ struct TestOneShotModuleBufferizePass
         };
     opt.unknownTypeConverterFn =
         [&](bufferization::TensorLikeType tensor, Attribute memSpace,
-            const bufferization::BufferizationOptions &) {
+            const bufferization::BufferizationOptions &options) {
           return llvm::TypeSwitch<bufferization::TensorLikeType,
                                   bufferization::BufferLikeType>(tensor)
               .Case([&](UnrankedTensorType unrankedTensorType) {
@@ -134,6 +134,11 @@ struct TestOneShotModuleBufferizePass
                 return test::TestMemrefType::get(
                     testTensorType.getContext(), testTensorType.getShape(),
                     testTensorType.getElementType(), /*layout=*/nullptr);
+              })
+              .Case([&](test::TestTensorLikeWrapperType wrapper) {
+                return options.unknownTypeConverterFn(
+                    cast<bufferization::TensorLikeType>(wrapper.getInner()),
+                    memSpace, options);
               })
               .Default([&](bufferization::TensorLikeType tensor) {
                 llvm_unreachable("unexpected tensor type");

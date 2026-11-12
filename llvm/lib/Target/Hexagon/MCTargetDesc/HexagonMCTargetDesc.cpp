@@ -134,6 +134,7 @@ static cl::opt<bool>
                     cl::desc("Enable HVX IEEE floating point extensions"));
 static cl::opt<bool> EnableHexagonCabac
   ("mcabac", cl::desc("tbd"), cl::init(false));
+static cl::opt<bool> EnableHLX("mhlx", cl::desc("Enable Hexagon HLX"));
 
 static constexpr StringRef DefaultArch = "hexagonv68";
 
@@ -527,6 +528,8 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
     Result.push_back("+hvx-ieee-fp");
   if (EnableHexagonCabac)
     Result.push_back("+cabac");
+  if (EnableHLX)
+    Result.push_back("+hlx");
 
   return join(Result.begin(), Result.end(), ",");
 }

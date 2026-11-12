@@ -528,10 +528,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
   }
 
-  // Analyze operands of the call, assigning locations to each operand.
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, Info.IsVarArg, MF, ArgLocs, Ctx);
-
   MIRBuilder.insertInstr(CallInst);
 
   if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
