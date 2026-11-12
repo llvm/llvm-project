@@ -150,20 +150,10 @@ void MSP430Subtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
       {RTLIB::SINTTOFP_I64_F32, RTLIB::impl___mspabi_fltllif},
       {RTLIB::UINTTOFP_I32_F32, RTLIB::impl___mspabi_fltulf},
       {RTLIB::UINTTOFP_I64_F32, RTLIB::impl___mspabi_fltullf},
-      // Floating point comparisons - EABI Table 7. A single three-way compare
-      // symbol serves every predicate.
-      {RTLIB::FCMP3_PRED_OEQ_F64, RTLIB::impl___mspabi_cmpd},
-      {RTLIB::FCMP3_PRED_UNE_F64, RTLIB::impl___mspabi_cmpd},
-      {RTLIB::FCMP3_PRED_OGE_F64, RTLIB::impl___mspabi_cmpd},
-      {RTLIB::FCMP3_PRED_OLT_F64, RTLIB::impl___mspabi_cmpd},
-      {RTLIB::FCMP3_PRED_OLE_F64, RTLIB::impl___mspabi_cmpd},
-      {RTLIB::FCMP3_PRED_OGT_F64, RTLIB::impl___mspabi_cmpd},
-      {RTLIB::FCMP3_PRED_OEQ_F32, RTLIB::impl___mspabi_cmpf},
-      {RTLIB::FCMP3_PRED_UNE_F32, RTLIB::impl___mspabi_cmpf},
-      {RTLIB::FCMP3_PRED_OGE_F32, RTLIB::impl___mspabi_cmpf},
-      {RTLIB::FCMP3_PRED_OLT_F32, RTLIB::impl___mspabi_cmpf},
-      {RTLIB::FCMP3_PRED_OLE_F32, RTLIB::impl___mspabi_cmpf},
-      {RTLIB::FCMP3_PRED_OGT_F32, RTLIB::impl___mspabi_cmpf},
+      // Floating point comparisons - EABI Table 7 are not used: the result of
+      // __mspabi_cmpd and __mspabi_cmpf for a NaN is undefined, so no result
+      // of theirs is right for every predicate. The generic routines, such as
+      // __ltsf2 and __gtsf2, give the result each predicate needs for a NaN.
       // Floating point arithmetic - EABI Table 8.
       {RTLIB::ADD_F64, RTLIB::impl___mspabi_addd},
       {RTLIB::SUB_F64, RTLIB::impl___mspabi_subd},

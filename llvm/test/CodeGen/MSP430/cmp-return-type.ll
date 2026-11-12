@@ -6,17 +6,17 @@ target triple = "msp430"
 define i16 @f(float %a, float %b) optsize {
   %cmp = fcmp une float %a, %b
   %conv = zext i1 %cmp to i16
-; CHECK-LABEL: call #__mspabi_cmpf
+; CHECK-LABEL: call #__nesf2
 ; CHECK-NOT:   r13
 ; CHECK-LABEL: mov r2
 
 ; This is quite fragile attempt to detect the return type:
 ; Correct:
-;        call    #__mspabi_cmpf
+;        call    #__nesf2
 ;        tst     r12
 ;        mov     r2, r13
 ; Incorrect:
-;        call    #__mspabi_cmpf
+;        call    #__nesf2
 ;        bis     r12, r13        <-- checking (R12:R13)
 ;        tst     r13
 ;        mov     r2, r13

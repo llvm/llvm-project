@@ -211,7 +211,7 @@ define i1 @cmpd_oeq() #0 {
 entry:
 ; CHECK: cmpd_oeq:
 
-; CHECK: call #__mspabi_cmpd
+; CHECK: call #__eqdf2
   %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp oeq double %0, 123.0
 
@@ -222,7 +222,7 @@ define i1 @cmpd_une() #0 {
 entry:
 ; CHECK: cmpd_une:
 
-; CHECK: call #__mspabi_cmpd
+; CHECK: call #__nedf2
   %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp une double %0, 123.0
 
@@ -233,7 +233,7 @@ define i1 @cmpd_oge() #0 {
 entry:
 ; CHECK: cmpd_oge:
 
-; CHECK: call #__mspabi_cmpd
+; CHECK: call #__gedf2
   %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp oge double %0, 123.0
 
@@ -244,7 +244,7 @@ define i1 @cmpd_olt() #0 {
 entry:
 ; CHECK: cmpd_olt:
 
-; CHECK: call #__mspabi_cmpd
+; CHECK: call #__ltdf2
   %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp olt double %0, 123.0
 
@@ -255,7 +255,7 @@ define i1 @cmpd_ole() #0 {
 entry:
 ; CHECK: cmpd_ole:
 
-; CHECK: call #__mspabi_cmpd
+; CHECK: call #__ledf2
   %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp ole double %0, 123.0
 
@@ -266,7 +266,7 @@ define i1 @cmpd_ogt() #0 {
 entry:
 ; CHECK: cmpd_ogt:
 
-; CHECK: call #__mspabi_cmpd
+; CHECK: call #__gtdf2
   %0 = load volatile double, ptr @g_double, align 8
   %1 = fcmp ogt double %0, 123.0
 
@@ -277,7 +277,7 @@ define i1 @cmpf_oeq() #0 {
 entry:
 ; CHECK: cmpf_oeq:
 
-; CHECK: call #__mspabi_cmpf
+; CHECK: call #__eqsf2
   %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp oeq float %0, 123.0
 
@@ -288,7 +288,7 @@ define i1 @cmpf_une() #0 {
 entry:
 ; CHECK: cmpf_une:
 
-; CHECK: call #__mspabi_cmpf
+; CHECK: call #__nesf2
   %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp une float %0, 123.0
 
@@ -299,7 +299,7 @@ define i1 @cmpf_oge() #0 {
 entry:
 ; CHECK: cmpf_oge:
 
-; CHECK: call #__mspabi_cmpf
+; CHECK: call #__gesf2
   %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp oge float %0, 123.0
 
@@ -310,7 +310,7 @@ define i1 @cmpf_olt() #0 {
 entry:
 ; CHECK: cmpf_olt:
 
-; CHECK: call #__mspabi_cmpf
+; CHECK: call #__ltsf2
   %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp olt float %0, 123.0
 
@@ -321,7 +321,7 @@ define i1 @cmpf_ole() #0 {
 entry:
 ; CHECK: cmpf_ole:
 
-; CHECK: call #__mspabi_cmpf
+; CHECK: call #__lesf2
   %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp ole float %0, 123.0
 
@@ -332,7 +332,7 @@ define i1 @cmpf_ogt() #0 {
 entry:
 ; CHECK: cmpf_ogt:
 
-; CHECK: call #__mspabi_cmpf
+; CHECK: call #__gtsf2
   %0 = load volatile float, ptr @g_float, align 8
   %1 = fcmp ogt float %0, 123.0
 
