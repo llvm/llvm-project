@@ -5591,10 +5591,9 @@ class FunctionProtoType final
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeExtraAttributeInfo,
-          FunctionType::FunctionTypeArmAttributes,
-          FunctionType::ExceptionType, Expr *, FunctionDecl *,
-          FunctionType::ExtParameterInfo, Qualifiers, FunctionEffect,
-          EffectConditionExpr> {
+          FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
+          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
+          FunctionEffect, EffectConditionExpr> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 

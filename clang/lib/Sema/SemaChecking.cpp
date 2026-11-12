@@ -4844,8 +4844,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       if (CallerFD) {
         QualType CallerType = CallerFD->getType();
         if (!CallerType.isNull()) {
-          if (const auto *CallerFPT =
-                  CallerType->getAs<FunctionProtoType>())
+          if (const auto *CallerFPT = CallerType->getAs<FunctionProtoType>())
             CallerRISCVState = FunctionType::getRISCVXsfmmState(
                 CallerFPT->getRISCVAttributes());
 

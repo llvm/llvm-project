@@ -1639,8 +1639,7 @@ void SemaRISCV::checkConflictingStateAttributes(
   // tuple(CallerAttr, CalleeAttr, required feature)
   const std::tuple<FunctionType::RISCVStateValue, FunctionType::RISCVStateValue,
                    StringRef>
-      RISCVStateInfo[] = {
-          {CallerState, CalleeState, "xsfmmbase"}};
+      RISCVStateInfo[] = {{CallerState, CalleeState, "xsfmmbase"}};
   for (auto [CallerAttr, CalleeAttr, RequiredFeature] : RISCVStateInfo) {
     // If both caller and callee are not attributed, then we're fine.
     if (CallerAttr == FunctionType::RISCVNone &&

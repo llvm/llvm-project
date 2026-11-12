@@ -5233,8 +5233,8 @@ QualType ASTContext::getFunctionTypeInternal(
       FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeExtraAttributeInfo(),
-      EPI.requiresFunctionProtoTypeArmAttributes(),
-      ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
+      EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
+      ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
       EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0, EPI.FunctionEffects.size(),
       EPI.FunctionEffects.conditions().size());
