@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUBufferUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
@@ -2189,6 +2190,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         II.getAttributes().removeParamAttributes(II.getContext(), 2));
     NewCall->takeName(&II);
     return IC.replaceInstUsesWith(II, NewCall);
+  }
+  case Intrinsic::amdgcn_raw_ptr_buffer_load: {
+    if (!AMDGPU::isRawBufferAccessDefinitelyOOB(
+            *ST, II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(2),
+            II.getArgOperand(3), /*Payload=*/1, IC.getDataLayout()))
+      break;
+    return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+  }
+  case Intrinsic::amdgcn_raw_ptr_buffer_store: {
+    if (!AMDGPU::isRawBufferAccessDefinitelyOOB(
+            *ST, II.getArgOperand(1), II.getArgOperand(2), II.getArgOperand(3),
+            II.getArgOperand(4), /*Payload=*/1, IC.getDataLayout()))
+      break;
+    return IC.eraseInstFromFunction(II);
   }
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_raw_ptr_buffer_store_format:

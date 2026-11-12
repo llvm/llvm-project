@@ -1659,6 +1659,25 @@ class FeatureNumRecordsBufferResource<int width> : SubtargetFeature<
 def Feature32BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<32>;
 def Feature45BitNumRecordsBufferResource : FeatureNumRecordsBufferResource<45>;
 
+// The out-of-bounds (OOB) model of the buffer resource (V#). It has no
+// OOB_SELECT field on gfx9, a 2-bit one on gfx10-gfx12 and a 1-bit one on
+// gfx1250+. The OOB range-check equations differ between these models.
+class FeatureBufferOOBModel<string name, int value, string desc> :
+  SubtargetFeature<"buffer-oob-"#name, "BufferOOBModel", !cast<string>(value),
+                   desc>;
+
+def FeatureBufferOOBNoSelect : FeatureBufferOOBModel<"no-select", 1,
+  "The buffer resource (V#) has no OOB_SELECT"
+>;
+
+def FeatureBufferOOBSelect2Bit : FeatureBufferOOBModel<"select-2bit", 2,
+  "The buffer resource (V#) has a 2-bit OOB_SELECT"
+>;
+
+def FeatureBufferOOBSelect1Bit : FeatureBufferOOBModel<"select-1bit", 3,
+  "The buffer resource (V#) has a 1-bit OOB_SELECT"
+>;
+
 defm Clusters : AMDGPUSubtargetFeature<"clusters",
   "Has clusters of workgroups support",
   /*GenPredicate=*/0
@@ -1809,7 +1828,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource, FeatureBufferOOBNoSelect
   ]
 >;
 
@@ -1844,7 +1863,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource, FeatureBufferOOBSelect2Bit
   ]
 >;
 
@@ -1878,7 +1897,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource,
+   Feature32BitNumRecordsBufferResource, FeatureBufferOOBSelect2Bit,
    FeatureMaxWavesPerEU16
   ]
 >;
@@ -1942,7 +1961,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature45BitNumRecordsBufferResource,
+   Feature45BitNumRecordsBufferResource, FeatureBufferOOBSelect1Bit,
    FeatureMaxWavesPerEU16, FeatureCacheFillSize
   ]
 >;
@@ -2427,7 +2446,7 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
-   Feature32BitNumRecordsBufferResource,
+   Feature32BitNumRecordsBufferResource, FeatureBufferOOBSelect2Bit,
    FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
@@ -2578,6 +2597,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
+   FeatureBufferOOBSelect1Bit,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,

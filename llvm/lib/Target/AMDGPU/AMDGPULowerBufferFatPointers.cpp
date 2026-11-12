@@ -219,6 +219,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUBufferUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
@@ -1875,6 +1876,24 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
   IRB.SetInsertPoint(I);
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
+
+  uint32_t Aux = 0;
+  if (IsVolatile)
+    Aux |= AMDGPU::CPol::VOLATILE;
+
+  // Don't emit a provably out of bounds non-atomic load or store: the load
+  // reads zero and the store is dropped.
+  if ((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+      Order == AtomicOrdering::NotAtomic &&
+      AMDGPU::isRawBufferAccessDefinitelyOOB(*ST, Rsrc, Off, IRB.getInt32(0),
+                                             IRB.getInt32(Aux), /*Payload=*/1,
+                                             I->getDataLayout())) {
+    SplitUsers.insert(I);
+    if (!I->getType()->isVoidTy())
+      I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
+    return nullptr;
+  }
+
   SmallVector<Value *, 5> Args;
   if (Arg)
     Args.push_back(Arg);
@@ -1885,10 +1904,6 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
   // part of bounds checking and we don't know which parts of the GEPs is
   // uniform.
   Args.push_back(IRB.getInt32(0));
-
-  uint32_t Aux = 0;
-  if (IsVolatile)
-    Aux |= AMDGPU::CPol::VOLATILE;
   Args.push_back(IRB.getInt32(Aux));
 
   Intrinsic::ID IID = Intrinsic::not_intrinsic;

@@ -740,16 +740,8 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i6
 define amdgpu_ps float @read_buffer_fat_ptr_p0(ptr inreg %p) {
   ; CHECK-LABEL: name: read_buffer_fat_ptr_p0
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
   ; CHECK45-LABEL: name: read_buffer_fat_ptr_p0
@@ -774,16 +766,8 @@ define amdgpu_ps float @read_buffer_fat_ptr_p0(ptr inreg %p) {
 define amdgpu_ps float @read_buffer_fat_ptr_p1(ptr addrspace(1) inreg %p) {
   ; CHECK-LABEL: name: read_buffer_fat_ptr_p1
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], [[S_MOV_B32_]], implicit-def dead $scc
-  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_1]], %subreg.sub2, [[S_MOV_B32_1]], %subreg.sub3
-  ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_1]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.ptr, align 1, addrspace 8)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
   ; CHECK45-LABEL: name: read_buffer_fat_ptr_p1
