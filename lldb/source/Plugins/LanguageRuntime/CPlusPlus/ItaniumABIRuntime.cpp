@@ -203,7 +203,7 @@ bool ItaniumABIRuntime::GetDynamicTypeAndAddress(
   if (!type)
     return true;
 
-  if (TypeSystemClang::AreTypesSame(in_value.GetCompilerType(), type)) {
+  if (in_value.GetCompilerType().CompareTypes(type)) {
     // The dynamic type we found was the same type, so we don't have a
     // dynamic type here...
     return false;
