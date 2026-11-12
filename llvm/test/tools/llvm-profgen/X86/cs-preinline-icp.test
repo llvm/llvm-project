@@ -69,3 +69,21 @@
 ; CHECK-ZEROMAP-NEXT:  1: 1000
 ; CHECK-ZEROMAP-NEXT:  2: t1:19100
 ; CHECK-ZEROMAP:      !Attributes: 2
+
+; The profiles above use functions that are not in the binary, so there is no
+; call probe to check and the number of targets decides whether a call is
+; indirect. Here quick_sort is in the binary: its probe 4 is an indirect call
+; and its probe 5 is a direct call. The probe type wins over the number of
+; targets. The single target at the indirect call is not hot enough for ICP, so
+; it is not pre-inlined. The direct call site is not subject to ICP, so all its
+; targets are pre-inlined.
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%S/Inputs/cs-preinline-icp-probe-type.prof --binary=%S/Inputs/fs-discriminator-probe.perfbin --csspgo-preinliner=1 --gen-cs-nested-profile=0 --use-context-cost-for-preinliner=0 --sample-profile-hot-inline-threshold=3000 --output=%t7
+; RUN: FileCheck %s --input-file %t7 --check-prefix=CHECK-PROBETYPE
+
+; CHECK-PROBETYPE-DAG: [t1]:19100:100
+; CHECK-PROBETYPE-DAG: [quick_sort:5 @ t2]:6000:600
+; CHECK-PROBETYPE-DAG: [quick_sort:5 @ t3]:2000:200
+; CHECK-PROBETYPE-DAG: [quick_sort:5 @ t4]:2000:200
+; CHECK-PROBETYPE-NOT: [quick_sort:4 @ t1]
+; CHECK-PROBETYPE-NOT: [t3]:
+; CHECK-PROBETYPE-NOT: [t4]:

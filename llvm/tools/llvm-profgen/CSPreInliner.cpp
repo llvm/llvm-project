@@ -180,8 +180,13 @@ CSPreInliner::getICPRejectedCallees(ContextTrieNode *CallerNode,
         T.CallTargetCount = It->second;
       }
     }
-    // A direct call site has a single target and is not subject to ICP.
-    if (NumTargets < 2)
+    // Only indirect calls are subject to ICP. If the binary has a probe for
+    // this call, use its type: it comes from the source call, so it stays
+    // indirect after ICP. Otherwise (e.g. the call was inlined everywhere),
+    // treat a site with a single target as a direct call.
+    std::optional<bool> IsIndirect = Binary.isIndirectCallProbe(
+        CallerNode->getFuncName().getHashCode(), CallSite.LineOffset);
+    if (IsIndirect ? !*IsIndirect : NumTargets < 2)
       continue;
 
     llvm::sort(Callees, [](const Target &L, const Target &R) {

@@ -492,6 +492,21 @@ bool ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj,
   return false;
 }
 
+std::optional<bool> ProfiledBinary::isIndirectCallProbe(uint64_t GUID,
+                                                        uint32_t Index) {
+  if (!CallProbeIsIndirectBuilt) {
+    CallProbeIsIndirectBuilt = true;
+    for (const MCDecodedPseudoProbe &Probe : getAddress2ProbesMap())
+      if (Probe.isCall())
+        CallProbeIsIndirect[{Probe.getGuid(), Probe.getIndex()}] |=
+            Probe.isIndirectCall();
+  }
+  auto It = CallProbeIsIndirect.find({GUID, Index});
+  if (It == CallProbeIsIndirect.end())
+    return std::nullopt;
+  return It->second;
+}
+
 void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
   if (!usePseudoProbes())
     return;
