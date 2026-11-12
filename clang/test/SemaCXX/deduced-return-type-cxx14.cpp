@@ -359,7 +359,10 @@ namespace NoReturn {
   auto *g() {} // expected-error {{cannot deduce return type 'auto *' for function with no return statements}}
 
   auto h() = delete; // expected-note {{explicitly deleted}}
+  // expected-note@-1 {{'h' declared here}}
+
   auto x = h(); // expected-error {{call to deleted}}
+  // expected-error@-1 {{function 'h' with deduced return type cannot be used before it is defined}}
 }
 
 namespace UseBeforeComplete {
