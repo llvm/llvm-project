@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
@@ -1083,7 +1084,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
-      cgm.errorNYI(fd->getSourceRange(), "this return");
+      retTy = md->getThisType();
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "most derived return");
     cgm.getCXXABI().buildThisParam(*this, args);
@@ -1249,9 +1250,16 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return LValue();
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
-  case Expr::ConstantExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
-    return LValue();
+  case Expr::ConstantExprClass: {
+    const ConstantExpr *ce = cast<ConstantExpr>(e);
+    if (mlir::Attribute result =
+            ConstantEmitter(*this).tryEmitConstantExpr(ce)) {
+      mlir::Value val = builder.getConstant(
+          getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      return makeNaturalAlignPointeeAddrLValue(val, ce->getType());
+    }
+    return emitLValue(ce->getSubExpr());
+  }
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::GenericSelectionExprClass:

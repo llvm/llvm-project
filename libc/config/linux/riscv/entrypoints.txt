@@ -652,6 +652,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 if(LLVM_LIBC_INCLUDE_SCUDO)
   list(APPEND TARGET_LIBC_ENTRYPOINTS
     # malloc.h external entrypoints
+    libc.src.stdlib.mallinfo2
     libc.src.stdlib.mallopt
   )
 endif()
