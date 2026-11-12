@@ -139,24 +139,24 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
 //                              ISD Namespace
 //===----------------------------------------------------------------------===//
 
-bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
-  if (N->getOpcode() == ISD::SPLAT_VECTOR) {
-    if (auto OptAPInt = N->getOperand(0)->bitcastToAPInt()) {
+bool ISD::isConstantSplatVector(const SDValue V, APInt &SplatVal) {
+  if (V.getOpcode() == ISD::SPLAT_VECTOR) {
+    if (auto OptAPInt = V.getOperand(0)->bitcastToAPInt()) {
       unsigned EltSize =
-          N->getValueType(0).getVectorElementType().getSizeInBits();
+          V.getValueType().getVectorElementType().getSizeInBits();
       SplatVal = OptAPInt->trunc(EltSize);
       return true;
     }
   }
 
-  auto *BV = dyn_cast<BuildVectorSDNode>(N);
+  auto *BV = dyn_cast<BuildVectorSDNode>(V);
   if (!BV)
     return false;
 
   APInt SplatUndef;
   unsigned SplatBitSize;
   bool HasUndefs;
-  unsigned EltSize = N->getValueType(0).getVectorElementType().getSizeInBits();
+  unsigned EltSize = V.getValueType().getVectorElementType().getSizeInBits();
   // Endianness does not matter here. We are checking for a splat given the
   // element size of the vector, and if we find such a splat for little endian
   // layout, then that should be valid also for big endian (as the full vector
@@ -170,22 +170,23 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
 // FIXME: AllOnes and AllZeros duplicate a lot of code. Could these be
 // specializations of the more general isConstantSplatVector()?
 
-bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
+bool ISD::isConstantSplatVectorAllOnes(const SDValue V, bool BuildVectorOnly) {
   // Look through a bit convert.
-  while (N->getOpcode() == ISD::BITCAST)
-    N = N->getOperand(0).getNode();
+  const SDValue *Current = &V;
+  while (Current->getOpcode() == ISD::BITCAST)
+    Current = &Current->getOperand(0);
 
-  if (!BuildVectorOnly && N->getOpcode() == ISD::SPLAT_VECTOR) {
+  if (!BuildVectorOnly && Current->getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
-    return isConstantSplatVector(N, SplatVal) && SplatVal.isAllOnes();
+    return isConstantSplatVector(*Current, SplatVal) && SplatVal.isAllOnes();
   }
 
-  if (N->getOpcode() != ISD::BUILD_VECTOR) return false;
+  if (Current->getOpcode() != ISD::BUILD_VECTOR) return false;
 
-  unsigned i = 0, e = N->getNumOperands();
+  unsigned i = 0, e = Current->getNumOperands();
 
   // Skip over all of the undef values.
-  while (i != e && N->getOperand(i).isUndef())
+  while (i != e && Current->getOperand(i).isUndef())
     ++i;
 
   // Do not accept an all-undef vector.
@@ -199,9 +200,9 @@ bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
   // We only want to check enough bits to cover the vector elements, because
   // we care if the resultant vector is all ones, not whether the individual
   // constants are.
-  SDValue NotZero = N->getOperand(i);
+  SDValue NotZero = Current->getOperand(i);
   if (auto OptAPInt = NotZero->bitcastToAPInt()) {
-    unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
+    unsigned EltSize = Current->getValueType().getScalarSizeInBits();
     if (OptAPInt->countr_one() < EltSize)
       return false;
   } else
@@ -211,25 +212,26 @@ bool ISD::isConstantSplatVectorAllOnes(const SDNode *N, bool BuildVectorOnly) {
   // undefs. Even with the above element type twiddling, this should be OK, as
   // the same type legalization should have applied to all the elements.
   for (++i; i != e; ++i)
-    if (N->getOperand(i) != NotZero && !N->getOperand(i).isUndef())
+    if (Current->getOperand(i) != NotZero && !Current->getOperand(i).isUndef())
       return false;
   return true;
 }
 
-bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
+bool ISD::isConstantSplatVectorAllZeros(const SDValue V, bool BuildVectorOnly) {
   // Look through a bit convert.
-  while (N->getOpcode() == ISD::BITCAST)
-    N = N->getOperand(0).getNode();
+  const SDValue *Current = &V;
+  while (Current->getOpcode() == ISD::BITCAST)
+    Current = &Current->getOperand(0);
 
-  if (!BuildVectorOnly && N->getOpcode() == ISD::SPLAT_VECTOR) {
+  if (!BuildVectorOnly && Current->getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
-    return isConstantSplatVector(N, SplatVal) && SplatVal.isZero();
+    return isConstantSplatVector(*Current, SplatVal) && SplatVal.isZero();
   }
 
-  if (N->getOpcode() != ISD::BUILD_VECTOR) return false;
+  if (Current->getOpcode() != ISD::BUILD_VECTOR) return false;
 
   bool IsAllUndef = true;
-  for (const SDValue &Op : N->op_values()) {
+  for (const SDValue &Op : Current->getNode()->op_values()) {
     if (Op.isUndef())
       continue;
     IsAllUndef = false;
@@ -242,7 +244,7 @@ bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
     // we care if the resultant vector is all zeros, not whether the individual
     // constants are.
     if (auto OptAPInt = Op->bitcastToAPInt()) {
-      unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
+      unsigned EltSize = Current->getValueType().getScalarSizeInBits();
       if (OptAPInt->countr_zero() < EltSize)
         return false;
     } else
@@ -255,19 +257,19 @@ bool ISD::isConstantSplatVectorAllZeros(const SDNode *N, bool BuildVectorOnly) {
   return true;
 }
 
-bool ISD::isBuildVectorAllOnes(const SDNode *N) {
-  return isConstantSplatVectorAllOnes(N, /*BuildVectorOnly*/ true);
+bool ISD::isBuildVectorAllOnes(const SDValue V) {
+  return isConstantSplatVectorAllOnes(V, /*BuildVectorOnly*/ true);
 }
 
-bool ISD::isBuildVectorAllZeros(const SDNode *N) {
-  return isConstantSplatVectorAllZeros(N, /*BuildVectorOnly*/ true);
+bool ISD::isBuildVectorAllZeros(const SDValue V) {
+  return isConstantSplatVectorAllZeros(V, /*BuildVectorOnly*/ true);
 }
 
-bool ISD::isBuildVectorOfConstantSDNodes(const SDNode *N) {
-  if (N->getOpcode() != ISD::BUILD_VECTOR)
+bool ISD::isBuildVectorOfConstantSDNodes(const SDValue V) {
+  if (V.getOpcode() != ISD::BUILD_VECTOR)
     return false;
 
-  for (const SDValue &Op : N->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (Op.isUndef())
       continue;
     if (!isa<ConstantSDNode>(Op))
@@ -276,11 +278,11 @@ bool ISD::isBuildVectorOfConstantSDNodes(const SDNode *N) {
   return true;
 }
 
-bool ISD::isBuildVectorOfConstantFPSDNodes(const SDNode *N) {
-  if (N->getOpcode() != ISD::BUILD_VECTOR)
+bool ISD::isBuildVectorOfConstantFPSDNodes(const SDValue V) {
+  if (V.getOpcode() != ISD::BUILD_VECTOR)
     return false;
 
-  for (const SDValue &Op : N->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (Op.isUndef())
       continue;
     if (!isa<ConstantFPSDNode>(Op))
@@ -289,28 +291,28 @@ bool ISD::isBuildVectorOfConstantFPSDNodes(const SDNode *N) {
   return true;
 }
 
-bool ISD::isVectorShrinkable(const SDNode *N, unsigned NewEltSize,
+bool ISD::isVectorShrinkable(const SDValue V, unsigned NewEltSize,
                              bool Signed) {
-  assert(N->getValueType(0).isVector() && "Expected a vector!");
+  assert(V.getValueType().isVector() && "Expected a vector!");
 
-  unsigned EltSize = N->getValueType(0).getScalarSizeInBits();
+  unsigned EltSize = V.getValueType().getScalarSizeInBits();
   if (EltSize <= NewEltSize)
     return false;
 
-  if (N->getOpcode() == ISD::ZERO_EXTEND) {
-    return (N->getOperand(0).getValueType().getScalarSizeInBits() <=
+  if (V.getOpcode() == ISD::ZERO_EXTEND) {
+    return (V.getOperand(0).getValueType().getScalarSizeInBits() <=
             NewEltSize) &&
            !Signed;
   }
-  if (N->getOpcode() == ISD::SIGN_EXTEND) {
-    return (N->getOperand(0).getValueType().getScalarSizeInBits() <=
+  if (V.getOpcode() == ISD::SIGN_EXTEND) {
+    return (V.getOperand(0).getValueType().getScalarSizeInBits() <=
             NewEltSize) &&
            Signed;
   }
-  if (N->getOpcode() != ISD::BUILD_VECTOR)
+  if (V.getOpcode() != ISD::BUILD_VECTOR)
     return false;
 
-  for (const SDValue &Op : N->op_values()) {
+  for (const SDValue &Op : V->op_values()) {
     if (Op.isUndef())
       continue;
     if (!isa<ConstantSDNode>(Op))
@@ -326,17 +328,17 @@ bool ISD::isVectorShrinkable(const SDNode *N, unsigned NewEltSize,
   return true;
 }
 
-bool ISD::allOperandsUndef(const SDNode *N) {
+bool ISD::allOperandsUndef(const SDValue V) {
   // Return false if the node has no operands.
   // This is "logically inconsistent" with the definition of "all" but
   // is probably the desired behavior.
-  if (N->getNumOperands() == 0)
+  if (V.getNumOperands() == 0)
     return false;
-  return all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); });
+  return all_of(V->op_values(), [](SDValue Op) { return Op.isUndef(); });
 }
 
-bool ISD::isFreezeUndef(const SDNode *N) {
-  return N->getOpcode() == ISD::FREEZE && N->getOperand(0).isUndef();
+bool ISD::isFreezeUndef(const SDValue V) {
+  return V.getOpcode() == ISD::FREEZE && V.getOperand(0).isUndef();
 }
 
 template <typename ConstNodeType>
@@ -7750,7 +7752,7 @@ bool SelectionDAG::isUndef(unsigned Opcode, ArrayRef<SDValue> Ops) {
     if (Divisor.isUndef() || isNullConstant(Divisor))
       return true;
 
-    return ISD::isBuildVectorOfConstantSDNodes(Divisor.getNode()) &&
+    return ISD::isBuildVectorOfConstantSDNodes(Divisor) &&
            llvm::any_of(Divisor->op_values(),
                         [](SDValue V) { return V.isUndef() ||
                                         isNullConstant(V); });
@@ -7966,7 +7968,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
          Opcode == ISD::VECREDUCE_UMIN || Opcode == ISD::VECREDUCE_MUL ||
          Opcode == ISD::VECREDUCE_OR || Opcode == ISD::VECREDUCE_XOR ||
          Opcode == ISD::VECREDUCE_AND) &&
-        ISD::isBuildVectorOfConstantSDNodes(N1.getNode())) {
+        ISD::isBuildVectorOfConstantSDNodes(N1)) {
       unsigned EltBits = N1.getValueType().getScalarSizeInBits();
       unsigned BaseOpcode = ISD::getVecReduceBaseOpcode(Opcode);
       APInt Acc = getIntegerIdentity(BaseOpcode, EltBits);
@@ -8031,7 +8033,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         return SignExtendInReg(Val, VT);
       }
 
-      if (ISD::isBuildVectorOfConstantSDNodes(Ops[0].getNode())) {
+      if (ISD::isBuildVectorOfConstantSDNodes(Ops[0])) {
         SmallVector<SDValue, 8> ScalarOps;
         llvm::EVT OpVT = Ops[0].getOperand(0).getValueType();
         for (int I = 0, E = VT.getVectorNumElements(); I != E; ++I) {
@@ -8107,7 +8109,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     // These nodes have no scalar form, so unsupported cases must not fall
     // through to generic per-lane vector folding.
     if (!llvm::all_of(Ops, [](SDValue Op) {
-          return ISD::isBuildVectorOfConstantSDNodes(Op.getNode());
+          return ISD::isBuildVectorOfConstantSDNodes(Op);
         }))
       return SDValue();
 
@@ -8244,7 +8246,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   if ((Opcode == ISD::MUL || Opcode == ISD::SHL) &&
       Ops[0].getOpcode() == ISD::STEP_VECTOR) {
     APInt RHSVal;
-    if (ISD::isConstantSplatVector(Ops[1].getNode(), RHSVal)) {
+    if (ISD::isConstantSplatVector(Ops[1], RHSVal)) {
       APInt NewStep = Opcode == ISD::MUL
                           ? Ops[0].getConstantOperandAPInt(0) * RHSVal
                           : Ops[0].getConstantOperandAPInt(0) << RHSVal;
@@ -15251,7 +15253,7 @@ bool SelectionDAG::isConstantIntBuildVectorOrConstantInt(
   if (auto *C = dyn_cast<ConstantSDNode>(N))
     return AllowOpaques || !C->isOpaque();
 
-  if (ISD::isBuildVectorOfConstantSDNodes(N.getNode()))
+  if (ISD::isBuildVectorOfConstantSDNodes(N))
     return true;
 
   // Treat a GlobalAddress supporting constant offset folding as a
@@ -15272,7 +15274,7 @@ bool SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) const {
   if (isa<ConstantFPSDNode>(N))
     return true;
 
-  if (ISD::isBuildVectorOfConstantFPSDNodes(N.getNode()))
+  if (ISD::isBuildVectorOfConstantFPSDNodes(N))
     return true;
 
   if ((N.getOpcode() == ISD::SPLAT_VECTOR) &&

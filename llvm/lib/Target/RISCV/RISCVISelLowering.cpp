@@ -4416,7 +4416,7 @@ static SDValue lowerBuildVectorViaDominantValues(SDValue Op, SelectionDAG &DAG,
   // Don't perform this optimization when optimizing for size, since
   // materializing elements and inserting them tends to cause code bloat.
   if (!DAG.shouldOptForSize() && NumScalarLoads < NumElts &&
-      (NumElts != 2 || ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) &&
+      (NumElts != 2 || ISD::isBuildVectorOfConstantSDNodes(Op)) &&
       ((MostCommonCount > DominantValueCountThreshold) ||
        (ValueCounts.size() <= Log2_32(NumDefElts)))) {
     // Start by splatting the most common element.
@@ -4484,12 +4484,12 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = Op.getNumOperands();
 
   if (VT.getVectorElementType() == MVT::i1) {
-    if (ISD::isBuildVectorAllZeros(Op.getNode())) {
+    if (ISD::isBuildVectorAllZeros(Op)) {
       SDValue VMClr = DAG.getNode(RISCVISD::VMCLR_VL, DL, ContainerVT, VL);
       return convertFromScalableVector(VT, VMClr, DAG, Subtarget);
     }
 
-    if (ISD::isBuildVectorAllOnes(Op.getNode())) {
+    if (ISD::isBuildVectorAllOnes(Op)) {
       SDValue VMSet = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
       return convertFromScalableVector(VT, VMSet, DAG, Subtarget);
     }
@@ -4579,7 +4579,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // TODO: Base this on constant rematerialization cost, not size.
   const unsigned EltBitSize = VT.getScalarSizeInBits();
   if (VT.getSizeInBits() <= 32 &&
-      ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+      ISD::isBuildVectorOfConstantSDNodes(Op)) {
     MVT ViaIntVT = MVT::getIntegerVT(VT.getSizeInBits());
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32) &&
            "Unexpected sequence type");
@@ -4625,7 +4625,7 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   SmallVector<SDValue> Sequence;
   const auto *BV = cast<BuildVectorSDNode>(Op);
   if (VT.isInteger() && EltBitSize < Subtarget.getELen() &&
-      ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
+      ISD::isBuildVectorOfConstantSDNodes(Op) &&
       BV->getRepeatedSequence(Sequence) &&
       (Sequence.size() * EltBitSize) <= Subtarget.getELen()) {
     unsigned SeqLen = Sequence.size();
@@ -4910,8 +4910,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return DAG.getBitcast(VT, Res);
   }
 
-  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
-      ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()))
+  if (ISD::isBuildVectorOfConstantSDNodes(Op) ||
+      ISD::isBuildVectorOfConstantFPSDNodes(Op))
     return lowerBuildVectorOfConstants(Op, DAG, Subtarget);
 
   MVT ContainerVT = getContainerForFixedLengthVector(VT, Subtarget);
@@ -7707,7 +7707,7 @@ SDValue RISCVTargetLowering::expandUnalignedVPLoad(SDValue Op,
   SDValue Mask = Load->getMask();
 
   // FIXME: Handled masked loads somehow.
-  if (!ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+  if (!ISD::isConstantSplatVectorAllOnes(Mask))
     return SDValue();
 
   SDLoc DL(Op);
@@ -7750,7 +7750,7 @@ SDValue RISCVTargetLowering::expandUnalignedVPStore(SDValue Op,
   SDValue Mask = Store->getMask();
 
   // FIXME: Handled masked stores somehow.
-  if (!ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+  if (!ISD::isConstantSplatVectorAllOnes(Mask))
     return SDValue();
 
   SDLoc DL(Op);
@@ -9517,7 +9517,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDLoc DL(Op);
       if (CCVal == ISD::SETNE) {
         // Convert setne X, 0 to setult 0, X.
-        if (ISD::isConstantSplatVectorAllZeros(RHS.getNode())) {
+        if (ISD::isConstantSplatVectorAllZeros(RHS)) {
           return DAG.getSetCC(DL, VT, RHS, LHS, ISD::SETULT);
         }
 
@@ -9527,7 +9527,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       }
 
       if (CCVal == ISD::SETGT) {
-        if (ISD::isConstantSplatVectorAllOnes(RHS.getNode())) {
+        if (ISD::isConstantSplatVectorAllOnes(RHS)) {
           SDValue SetCC =
               DAG.getSetCC(DL, VT, LHS, DAG.getConstant(0, DL, VT), ISD::SETLT);
           return DAG.getLogicalNOT(DL, SetCC, VT);
@@ -11324,11 +11324,11 @@ SDValue RISCVTargetLowering::lowerVectorMaskSplat(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDValue SplatVal = Op.getOperand(0);
   // All-zeros or all-ones splats are handled specially.
-  if (ISD::isConstantSplatVectorAllOnes(Op.getNode())) {
+  if (ISD::isConstantSplatVectorAllOnes(Op)) {
     SDValue VL = getDefaultScalableVLOps(VT, DL, DAG, Subtarget).second;
     return DAG.getNode(RISCVISD::VMSET_VL, DL, VT, VL);
   }
-  if (ISD::isConstantSplatVectorAllZeros(Op.getNode())) {
+  if (ISD::isConstantSplatVectorAllZeros(Op)) {
     SDValue VL = getDefaultScalableVLOps(VT, DL, DAG, Subtarget).second;
     return DAG.getNode(RISCVISD::VMCLR_VL, DL, VT, VL);
   }
@@ -11387,7 +11387,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
     SDValue SplatZero = DAG.getConstant(0, DL, VecVT);
     SDValue SplatTrueVal = DAG.getSignedConstant(ExtTrueVal, DL, VecVT);
     if (Src.getOpcode() == ISD::XOR &&
-        ISD::isConstantSplatVectorAllOnes(Src.getOperand(1).getNode()))
+        ISD::isConstantSplatVectorAllOnes(Src.getOperand(1)))
       return DAG.getNode(ISD::VSELECT, DL, VecVT, Src.getOperand(0), SplatZero,
                          SplatTrueVal);
     return DAG.getNode(ISD::VSELECT, DL, VecVT, Src, SplatTrueVal, SplatZero);
@@ -11412,7 +11412,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
       if (ScalableOnes.getOpcode() == ISD::INSERT_SUBVECTOR &&
           ScalableOnes.getOperand(0).isUndef() &&
           ISD::isConstantSplatVectorAllOnes(
-              ScalableOnes.getOperand(1).getNode())) {
+              ScalableOnes.getOperand(1))) {
         CC = Xor.getOperand(0);
         std::swap(SplatZero, SplatTrueVal);
       }
@@ -16026,7 +16026,7 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
     IsExpandingLoad = MLoad->isExpandingLoad();
   }
 
-  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask);
 
   MVT XLenVT = Subtarget.getXLenVT();
 
@@ -16175,7 +16175,7 @@ SDValue RISCVTargetLowering::lowerMaskedStore(SDValue Op,
   }
 
   bool IsUnmasked =
-      ISD::isConstantSplatVectorAllOnes(Mask.getNode()) || IsCompressingStore;
+      ISD::isConstantSplatVectorAllOnes(Mask) || IsCompressingStore;
 
   MVT VT = Val.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
@@ -16794,7 +16794,7 @@ SDValue RISCVTargetLowering::lowerVPStridedLoad(SDValue Op,
   auto *VPNode = cast<VPStridedLoadSDNode>(Op);
   // Check if the mask is known to be all ones
   SDValue Mask = VPNode->getMask();
-  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask);
 
   SDValue IntID = DAG.getTargetConstant(IsUnmasked ? Intrinsic::riscv_vlse
                                                    : Intrinsic::riscv_vlse_mask,
@@ -16843,7 +16843,7 @@ SDValue RISCVTargetLowering::lowerVPStridedStore(SDValue Op,
 
   // Check if the mask is known to be all ones
   SDValue Mask = VPNode->getMask();
-  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask);
 
   SDValue IntID = DAG.getTargetConstant(IsUnmasked ? Intrinsic::riscv_vsse
                                                    : Intrinsic::riscv_vsse_mask,
@@ -16912,7 +16912,7 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
-  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask);
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
@@ -17010,7 +17010,7 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
 
   // If the mask is known to be all ones, optimize to an unmasked intrinsic;
   // the selection of the masked intrinsics doesn't do this for us.
-  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
+  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask);
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
@@ -21339,9 +21339,9 @@ static SDValue combineVectorMulToSraBitcast(SDNode *N, SelectionDAG &DAG) {
   SDValue Srl = And.getOperand(0);
 
   APInt V1, V2, V3;
-  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), V1) ||
-      !ISD::isConstantSplatVector(And.getOperand(1).getNode(), V2) ||
-      !ISD::isConstantSplatVector(Srl.getOperand(1).getNode(), V3))
+  if (!ISD::isConstantSplatVector(N->getOperand(1), V1) ||
+      !ISD::isConstantSplatVector(And.getOperand(1), V2) ||
+      !ISD::isConstantSplatVector(Srl.getOperand(1), V3))
     return SDValue();
 
   unsigned HalfSize = VT.getScalarSizeInBits() / 2;
@@ -21491,7 +21491,7 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   // Narrow a buildvector to the narrowest element type.  This requires less
   // work and less register pressure at high LMUL, and creates smaller constants
   // which may be cheaper to materialize.
-  if (ISD::isBuildVectorOfConstantSDNodes(N.getNode())) {
+  if (ISD::isBuildVectorOfConstantSDNodes(N)) {
     KnownBits Known = DAG.computeKnownBits(N);
     unsigned ActiveBits = std::max(8u, Known.countMaxActiveBits());
     LLVMContext &C = *DAG.getContext();
@@ -21516,7 +21516,7 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
 
   APInt ShAmt;
   SDValue N1 = N.getOperand(1);
-  if (!ISD::isConstantSplatVector(N1.getNode(), ShAmt))
+  if (!ISD::isConstantSplatVector(N1, ShAmt))
     return false;
 
   SDValue Src = N0.getOperand(0);
@@ -22771,11 +22771,11 @@ static SDValue simplifyOp_VL(SDNode *N) {
     // TODO:This could be a vmerge instead
     return SDValue();
   ;
-  if (ISD::isConstantSplatVectorAllZeros(B.getNode()))
+  if (ISD::isConstantSplatVectorAllZeros(B))
     return A;
   // Peek through fixed to scalable
   if (B.getOpcode() == ISD::INSERT_SUBVECTOR && B.getOperand(0).isUndef() &&
-      ISD::isConstantSplatVectorAllZeros(B.getOperand(1).getNode()))
+      ISD::isConstantSplatVectorAllZeros(B.getOperand(1)))
     return A;
   return SDValue();
 }
@@ -22944,7 +22944,7 @@ static SDValue combineVWADDSUBWSelect(SDNode *N, SelectionDAG &DAG) {
       (isNullOrNullSplat(Z.getOperand(0)) || Z.getOperand(0).isUndef()))
     Z = Z.getOperand(1);
 
-  if (!ISD::isConstantSplatVectorAllZeros(Z.getNode()))
+  if (!ISD::isConstantSplatVectorAllZeros(Z))
     return SDValue();
 
   return DAG.getNode(Opc, SDLoc(N), N->getValueType(0),
@@ -23540,7 +23540,7 @@ static SDValue performP_BITCASTCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(N0.getNode(), SplatVal))
+  if (!ISD::isConstantSplatVector(N0, SplatVal))
     return SDValue();
   return DAG.getConstant(APInt::getSplat(VT.getSizeInBits(), SplatVal),
                          SDLoc(N), VT);
@@ -24826,7 +24826,7 @@ static SDValue performINSERT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
     SDValue InValLHS = InVal->getOperand(0);
     SDValue InValRHS = InVal->getOperand(1);
 
-    if (!ISD::isBuildVectorOfConstantSDNodes(InVecRHS.getNode()))
+    if (!ISD::isBuildVectorOfConstantSDNodes(InVecRHS))
       return SDValue();
     if (!isa<ConstantSDNode>(InValRHS) && !isa<ConstantFPSDNode>(InValRHS))
       return SDValue();
@@ -25229,9 +25229,9 @@ legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
 /// a unit strided access and shuffle is legal.
 static bool matchIndexAsShuffle(EVT VT, SDValue Index, SDValue Mask,
                                 SmallVector<int> &ShuffleMask) {
-  if (!ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+  if (!ISD::isConstantSplatVectorAllOnes(Mask))
     return false;
-  if (!ISD::isBuildVectorOfConstantSDNodes(Index.getNode()))
+  if (!ISD::isBuildVectorOfConstantSDNodes(Index))
     return false;
 
   const unsigned ElementSize = VT.getScalarStoreSize();
@@ -25264,9 +25264,9 @@ static bool matchIndexAsShuffle(EVT VT, SDValue Index, SDValue Mask,
 /// come out ahead.
 static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
                                 Align BaseAlign, const RISCVSubtarget &ST) {
-  if (!ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+  if (!ISD::isConstantSplatVectorAllOnes(Mask))
     return false;
-  if (!ISD::isBuildVectorOfConstantSDNodes(Index.getNode()))
+  if (!ISD::isBuildVectorOfConstantSDNodes(Index))
     return false;
 
   // Attempt a doubling.  If we can use a element type 4x or 8x in
@@ -25465,7 +25465,7 @@ static SDValue performSHLCombine(SDNode *N,
   SDValue RHS = N->getOperand(1);
   APInt ShAmt;
   uint64_t ShAmtInt;
-  if (ISD::isConstantSplatVector(RHS.getNode(), ShAmt))
+  if (ISD::isConstantSplatVector(RHS, ShAmt))
     ShAmtInt = ShAmt.getZExtValue();
   else if (RHS.getOpcode() == RISCVISD::VMV_V_X_VL &&
            RHS.getOperand(1).getOpcode() == ISD::Constant)
@@ -26691,7 +26691,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     //   li     a1, 1028
     //   sh     a1, 0(a0)
     if (DCI.isBeforeLegalize() && IsScalarizable &&
-        ISD::isBuildVectorOfConstantSDNodes(Val.getNode())) {
+        ISD::isBuildVectorOfConstantSDNodes(Val)) {
       // Get the constant vector bits
       APInt NewC(Val.getValueSizeInBits(), 0);
       uint64_t EltSize = Val.getScalarValueSizeInBits();

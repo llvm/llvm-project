@@ -1179,9 +1179,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op1 = N->getOperand(1);
     SDValue NotOp;
 
-    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
+    if (ISD::isBuildVectorAllOnes(Op0))
       NotOp = Op1;
-    else if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+    else if (ISD::isBuildVectorAllOnes(Op1))
       NotOp = Op0;
     else
       return SDValue();
