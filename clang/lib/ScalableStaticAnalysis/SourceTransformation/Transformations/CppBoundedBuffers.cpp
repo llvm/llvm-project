@@ -593,13 +593,13 @@ classifyDeclType(QualType T, const llvm::SmallSet<unsigned, 4> &ReachableLevels,
 }
 
 void CppBoundedBuffers::HandleTranslationUnit(ASTContext &Ctx) {
-  auto Reachable = Suite.get<UnsafeBufferReachableAnalysisResult>();
+  auto Reachable = AnalysisRes.get<UnsafeBufferReachableAnalysisResult>();
   if (!Reachable) {
     llvm::consumeError(Reachable.takeError());
     return;
   }
 
-  ReachabilityMap Reach(Suite, Reachable->Reachables);
+  ReachabilityMap Reach(AnalysisRes, Reachable->Reachables);
   NestedBuildNamespace TUNamespace =
       NestedBuildNamespace::makeCompilationUnit(Opts.CompilationUnitId);
   NestedBuildNamespace LUNamespace =
