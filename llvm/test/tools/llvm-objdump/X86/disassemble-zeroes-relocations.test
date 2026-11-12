@@ -1,0 +1,79 @@
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
+
+## Check we do not skip zeroes blocks if have relocations pointed to these places.
+# RUN: llvm-objdump -D --reloc -j .rodata %t | FileCheck %s
+# RUN: llvm-objdump -D --reloc -j .rodata --disassemble-symbols=rodata3 %t | FileCheck %s --check-prefix=CHECK2
+
+# CHECK:      0000000000000000 <rodata1>:
+# CHECK-NEXT:        0:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:                 0000000000000000:  R_X86_64_64  x0
+# CHECK-NEXT:        2:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        4:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        6:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:        8:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:                 0000000000000008:  R_X86_64_64  x1
+# CHECK-NEXT:                 ...
+# CHECK-NEXT:       16:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:       18:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:                 0000000000000018:  R_X86_64_64  x2
+# CHECK-NEXT:       1a:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:       1c:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:       1e:       00 00   addb    %al, (%rax)
+# CHECK-EMPTY:
+# CHECK-NEXT: 000000000000001f <rodata2>:
+# CHECK-NEXT:                 ...
+# CHECK-EMPTY:
+# CHECK-NEXT: 0000000000000037 <rodata3>:
+# CHECK-NEXT:                 ...
+# CHECK-NEXT:       3f:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:                 000000000000003f:  R_X86_64_64  x3
+# CHECK-NEXT:       41:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:       43:       00 00   addb    %al, (%rax)
+# CHECK-NEXT:       45:       00 00   addb    %al, (%rax)
+
+# CHECK2:      Disassembly of section .rodata:
+# CHECK2-EMPTY:
+# CHECK2-NEXT: 0000000000000037 <rodata3>:
+# CHECK2-NEXT:                 ...
+# CHECK2-NEXT:      3f:       00 00   addb    %al, (%rax)
+# CHECK2-NEXT:                000000000000003f:  R_X86_64_64  x3
+# CHECK2-NEXT:      41:       00 00   addb    %al, (%rax)
+# CHECK2-NEXT:      43:       00 00   addb    %al, (%rax)
+# CHECK2-NEXT:      45:       00 00   addb    %al, (%rax)
+# CHECK2-NOT:  {{.}}
+
+## Check that without -reloc all zeroes would be omitted.
+# RUN: llvm-objdump -D %t | FileCheck %s --check-prefix=SKIP
+
+# SKIP:       Disassembly of section .rodata:
+# SKIP-EMPTY:
+# SKIP-NEXT:  0000000000000000 <rodata1>:
+# SKIP-NEXT:                  ...
+# SKIP-NEXT:        1c:       00 00   addb    %al, (%rax)
+# SKIP-NEXT:        1e:       00 00   addb    %al, (%rax)
+# SKIP-EMPTY:
+# SKIP-NEXT:  000000000000001f <rodata2>:
+# SKIP-NEXT:                  ...
+# SKIP-EMPTY:
+# SKIP-NEXT:  0000000000000037 <rodata3>:
+# SKIP-NEXT:                  ...
+# SKIP-EMPTY:
+# SKIP-NEXT:  Disassembly of section .rela.rodata:
+
+.rodata
+.globl rodata1, rodata2
+rodata1:
+  .reloc ., BFD_RELOC_64, x0
+  .space 8
+  .reloc ., BFD_RELOC_64, x1
+  .space 16
+  .reloc ., BFD_RELOC_64, x2
+  .space 7
+
+rodata2:
+  .space 24
+
+rodata3:
+  .space 8
+  .reloc ., BFD_RELOC_64, x3
+  .space 8

@@ -1,0 +1,506 @@
+//===-- TypeSynthetic.cpp -------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-public.h"
+
+#include "lldb/Core/Debugger.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/Interfaces/ScriptedSyntheticChildrenInterface.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/StreamString.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
+#include <cstdint>
+
+using namespace lldb;
+using namespace lldb_private;
+
+static std::string NormalizeExpressionPath(llvm::StringRef path) {
+  if (!path.starts_with('.') && !path.starts_with("->") &&
+      !path.starts_with('['))
+    return std::string(".") + path.str();
+
+  return path.str();
+}
+
+llvm::StringRef TypeFilterImpl::GetExpressionPathAtIndex(size_t i) const {
+  if (i >= GetCount())
+    return llvm::StringRef();
+
+  return m_expression_paths[i];
+}
+
+void TypeFilterImpl::AddExpressionPath(llvm::StringRef path) {
+  m_expression_paths.push_back(NormalizeExpressionPath(path));
+}
+
+bool TypeFilterImpl::SetExpressionPathAtIndex(size_t i, llvm::StringRef path) {
+  if (i >= GetCount())
+    return false;
+
+  m_expression_paths[i] = NormalizeExpressionPath(path);
+  return true;
+}
+
+llvm::Expected<size_t>
+TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(llvm::StringRef name) {
+  if (!name.empty()) {
+    for (size_t i = 0; i < filter->GetCount(); i++) {
+      llvm::StringRef expr_path = filter->GetExpressionPathAtIndex(i);
+      if (!expr_path.empty()) {
+        if (expr_path.starts_with('.'))
+          expr_path = expr_path.drop_front();
+        else if (expr_path.starts_with("->"))
+          expr_path = expr_path.drop_front(2);
+
+        if (name == expr_path)
+          return i;
+      }
+    }
+  }
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
+}
+
+std::string TypeFilterImpl::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s {\n", Cascades() ? "" : " (not cascading)",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "");
+
+  for (size_t i = 0; i < GetCount(); i++) {
+    sstr.Format("    {0}\n", GetExpressionPathAtIndex(i));
+  }
+
+  sstr.PutCString("}");
+  return std::string(sstr.GetString());
+}
+
+SyntheticChildren::SyntheticChildren(const Flags &flags) : m_flags(flags) {}
+
+SyntheticChildren::~SyntheticChildren() = default;
+
+CXXSyntheticChildren::CXXSyntheticChildren(
+    const SyntheticChildren::Flags &flags, const char *description,
+    CreateFrontEndCallback callback)
+    : SyntheticChildren(flags), m_create_callback(std::move(callback)),
+      m_description(description ? description : "") {}
+
+CXXSyntheticChildren::~CXXSyntheticChildren() = default;
+
+bool SyntheticChildren::IsScripted() { return false; }
+
+std::string SyntheticChildren::GetDescription() { return ""; }
+
+SyntheticChildrenFrontEnd::UniquePointer
+SyntheticChildren::GetFrontEnd(ValueObject &backend) {
+  return nullptr;
+}
+
+std::string CXXSyntheticChildren::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s %s", Cascades() ? "" : " (not cascading)",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "",
+              m_description.c_str());
+
+  return std::string(sstr.GetString());
+}
+
+uint32_t
+SyntheticChildrenFrontEnd::CalculateNumChildrenIgnoringErrors(uint32_t max) {
+  auto value_or_err = CalculateNumChildren(max);
+  if (value_or_err)
+    return *value_or_err;
+  LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), value_or_err.takeError(),
+                  "{0}");
+  return 0;
+}
+
+lldb::ValueObjectSP
+SyntheticChildrenFrontEnd::CreateChildValueObjectFromExpression(
+    llvm::StringRef name, llvm::StringRef expression,
+    const ExecutionContext &exe_ctx) {
+  EvaluateExpressionOptions options;
+  ValueObjectSP valobj_sp = m_backend.CreateChildValueObjectFromExpression(
+      name, expression, exe_ctx, options);
+  if (valobj_sp)
+    valobj_sp->SetSyntheticChildrenGenerated(true);
+  return valobj_sp;
+}
+
+lldb::ValueObjectSP
+SyntheticChildrenFrontEnd::CreateChildValueObjectFromAddress(
+    llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
+    CompilerType type, bool do_deref) {
+  ValueObjectSP valobj_sp = m_backend.CreateChildValueObjectFromAddress(
+      name, address, exe_ctx, type, do_deref);
+  if (valobj_sp)
+    valobj_sp->SetSyntheticChildrenGenerated(true);
+  return valobj_sp;
+}
+
+lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateChildValueObjectFromData(
+    llvm::StringRef name, const DataExtractor &data,
+    const ExecutionContext &exe_ctx, CompilerType type) {
+  ValueObjectSP valobj_sp =
+      m_backend.CreateChildValueObjectFromData(name, data, exe_ctx, type);
+  if (valobj_sp)
+    valobj_sp->SetSyntheticChildrenGenerated(true);
+  return valobj_sp;
+}
+
+ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
+                                              ValueObject &backend)
+    : SyntheticChildrenFrontEnd(backend), m_python_class(pclass) {
+  if (backend.GetID() == LLDB_INVALID_UID)
+    return;
+
+  TargetSP target_sp = backend.GetTargetSP();
+
+  if (!target_sp)
+    return;
+
+  ScriptInterpreter *interpreter =
+      target_sp->GetDebugger().GetScriptInterpreter();
+
+  if (!interpreter)
+    return;
+
+  m_interface_sp = interpreter->CreateScriptedSyntheticChildrenInterface();
+  if (!m_interface_sp)
+    return;
+
+  auto obj_or_err = m_interface_sp->CreatePluginObject(m_python_class, backend);
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    m_interface_sp.reset();
+  }
+}
+
+ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
+
+lldb::ValueObjectSP
+ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (!m_interface_sp)
+    return lldb::ValueObjectSP();
+
+  return m_interface_sp->GetChildAtIndex(idx);
+}
+
+bool ScriptedSyntheticChildren::FrontEnd::IsValid() {
+  return m_interface_sp != nullptr;
+}
+
+llvm::Expected<uint32_t>
+ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren() {
+  if (!m_interface_sp)
+    return 0;
+  return m_interface_sp->CalculateNumChildren(UINT32_MAX);
+}
+
+llvm::Expected<uint32_t>
+ScriptedSyntheticChildren::FrontEnd::CalculateNumChildren(uint32_t max) {
+  if (!m_interface_sp)
+    return 0;
+  return m_interface_sp->CalculateNumChildren(max);
+}
+
+lldb::ChildCacheState ScriptedSyntheticChildren::FrontEnd::Update() {
+  if (!m_interface_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  return m_interface_sp->Update();
+}
+
+bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
+  if (!m_interface_sp)
+    return false;
+
+  return m_interface_sp->MightHaveChildren();
+}
+
+llvm::Expected<size_t>
+ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
+  if (!m_interface_sp)
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  return m_interface_sp->GetIndexOfChildWithName(name);
+}
+
+lldb::ValueObjectSP ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
+  if (!m_interface_sp)
+    return nullptr;
+
+  return m_interface_sp->GetSyntheticValue();
+}
+
+std::string ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
+  if (!m_interface_sp)
+    return std::string();
+
+  return m_interface_sp->GetSyntheticTypeName();
+}
+
+void *ScriptedSyntheticChildren::FrontEnd::GetImplementation() {
+  if (!m_interface_sp)
+    return nullptr;
+
+  StructuredData::GenericSP obj = m_interface_sp->GetScriptObjectInstance();
+  if (!obj)
+    return nullptr;
+
+  return obj->GetValue();
+}
+
+std::string ScriptedSyntheticChildren::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s Python class %s", Cascades() ? "" : " (not cascading)",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "",
+              m_python_class.c_str());
+
+  return std::string(sstr.GetString());
+}
+
+BytecodeSyntheticChildren::FrontEnd::FrontEnd(
+    ValueObject &backend, SyntheticBytecodeImplementation &impl)
+    : SyntheticChildrenFrontEnd(backend), m_impl(impl) {
+  FormatterBytecode::DataStack data;
+
+  FormatterBytecode::DictionarySP self_sp;
+  // Version 2: `self` is a Dictionary and passed to each method.
+  if (m_impl.version >= 2) {
+    self_sp = std::make_shared<FormatterBytecode::Dictionary>();
+    data.Push(self_sp);
+  }
+
+  // Pass the "valobj" argument.
+  data.Push(backend.GetSP());
+
+  if (!m_impl.init) {
+    if (m_impl.version >= 2) {
+      // Without @init, store the Object in `self` for the other methods.
+      (*self_sp)["valobj"] = backend.GetSP();
+      m_init_results.assign({self_sp});
+    } else {
+      m_init_results = std::move(data);
+    }
+    return;
+  }
+
+  FormatterBytecode::ControlStack control = {m_impl.init->getBuffer()};
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_init, m_impl.version);
+  if (error) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
+                   "@init failed: {0}");
+    return;
+  }
+
+  if (m_impl.version >= 2)
+    m_init_results.assign({self_sp});
+  else if (data.size() > 0)
+    m_init_results = std::move(data);
+}
+
+lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
+  if (!m_impl.update) {
+    m_self = m_init_results;
+    return ChildCacheState::eReuse;
+  }
+
+  FormatterBytecode::ControlStack control = {m_impl.update->getBuffer()};
+  FormatterBytecode::DataStack data = m_init_results;
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_update, m_impl.version);
+  if (error) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
+                   "@update failed: {0}");
+    return ChildCacheState::eRefetch;
+  }
+
+  // Version 2: @update mutates `self` in place, and returns an int representing
+  // the ChildCacheState return value.
+  if (m_impl.version >= 2) {
+    m_self = m_init_results;
+    auto *reply =
+        data.empty() ? nullptr : std::get_if<llvm::APSInt>(&data.back());
+    if (!reply || !(*reply == 0 || *reply == 1)) {
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "@update did not reply with an Integer of 0 or 1, as required "
+               "of version 2 formatters (type: `{0}`, name: `{1}`)",
+               m_backend.GetDisplayTypeName(), m_backend.GetName());
+      return ChildCacheState::eRefetch;
+    }
+    return static_cast<ChildCacheState>(reply->getExtValue());
+  }
+
+  std::optional<ChildCacheState> can_reuse = std::nullopt;
+  if (!data.empty()) {
+    const FormatterBytecode::DataStackElement &top = data.back();
+    if (auto *u = std::get_if<uint64_t>(&top))
+      if (*u == 0 || *u == 1)
+        can_reuse = static_cast<ChildCacheState>(*u);
+    if (auto *i = std::get_if<int64_t>(&top))
+      if (*i == 0 || *i == 1)
+        can_reuse = static_cast<ChildCacheState>(*i);
+    if (auto *ap = std::get_if<llvm::APSInt>(&top))
+      if (*ap == 0 || *ap == 1)
+        can_reuse = static_cast<ChildCacheState>(ap->getExtValue());
+  }
+
+  if (can_reuse) {
+    data.pop_back();
+    LLDB_LOG(
+        GetLog(LLDBLog::DataFormatters),
+        "Bytecode formatter can reuse @update: {0} (type: `{1}`, name: `{2}`)",
+        can_reuse ? "true" : "false", m_backend.GetDisplayTypeName(),
+        m_backend.GetName());
+  } else {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "Bytecode formatter did not return a valid reuse response from "
+             "@update (type: `{}`, name: `{}`)",
+             m_backend.GetDisplayTypeName(), m_backend.GetName());
+  }
+
+  if (data.size() > 0)
+    m_self = std::move(data);
+
+  return can_reuse.value_or(ChildCacheState::eRefetch);
+}
+
+llvm::Expected<uint32_t>
+BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
+  if (!m_impl.num_children)
+    return 0;
+
+  FormatterBytecode::ControlStack control = {m_impl.num_children->getBuffer()};
+  FormatterBytecode::DataStack data = m_self;
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_get_num_children, m_impl.version);
+  if (error)
+    return error;
+
+  if (data.size() == 0) {
+    char message[] = "@get_num_children returned empty data stack";
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
+    return llvm::createStringError(message);
+  }
+
+  const FormatterBytecode::DataStackElement &top = data.back();
+  if (auto *u = std::get_if<uint64_t>(&top))
+    if (*u <= UINT32_MAX)
+      return *u;
+  if (auto *i = std::get_if<int64_t>(&top)) {
+    if (*i >= 0 && *i <= UINT32_MAX)
+      return *i;
+    return UINT32_MAX;
+  }
+  if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
+    if (ap->isRepresentableByInt64()) {
+      int64_t v = ap->getExtValue();
+      if (v >= 0 && v <= UINT32_MAX)
+        return static_cast<uint32_t>(v);
+    }
+    return UINT32_MAX;
+  }
+
+  return llvm::createStringError("@get_num_children returned invalid value");
+}
+
+lldb::ValueObjectSP
+BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (!m_impl.get_child_at_index)
+    return {};
+
+  FormatterBytecode::ControlStack control = {
+      m_impl.get_child_at_index->getBuffer()};
+  FormatterBytecode::DataStack data = m_self;
+  if (m_impl.version >= 2)
+    data.Push(llvm::APSInt::get(idx));
+  else
+    data.emplace_back((uint64_t)idx);
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_get_child_at_index, m_impl.version);
+  if (error) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
+                   "@get_child_at_index failed: {0}");
+    return {};
+  }
+
+  if (data.size() == 0) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "@get_child_at_index returned empty data stack");
+    return {};
+  }
+
+  const FormatterBytecode::DataStackElement &top = data.back();
+  if (auto *child = std::get_if<ValueObjectSP>(&top))
+    return *child;
+
+  return {};
+}
+
+llvm::Expected<size_t>
+BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
+  if (!m_impl.get_child_index)
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+
+  FormatterBytecode::ControlStack control = {
+      m_impl.get_child_index->getBuffer()};
+  FormatterBytecode::DataStack data = m_self;
+  data.emplace_back(name.str());
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_get_child_index, m_impl.version);
+  if (error)
+    return error;
+
+  if (data.size() == 0) {
+    char message[] = "@get_child_index returned empty data stack";
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), "{0}", message);
+    return llvm::createStringError(message);
+  }
+
+  const FormatterBytecode::DataStackElement &top = data.back();
+  if (auto *u = std::get_if<uint64_t>(&top))
+    if (*u <= SIZE_MAX)
+      return *u;
+  if (auto *i = std::get_if<int64_t>(&top)) {
+    if (*i >= 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
+      return *i;
+    return SIZE_MAX;
+  }
+  if (auto *ap = std::get_if<llvm::APSInt>(&top)) {
+    if (ap->isRepresentableByInt64()) {
+      int64_t v = ap->getExtValue();
+      if (v >= 0 && static_cast<uint64_t>(v) <= SIZE_MAX)
+        return static_cast<size_t>(v);
+    }
+    return SIZE_MAX;
+  }
+
+  return llvm::createStringError("@get_child_index returned invalid value");
+}
+
+std::string BytecodeSyntheticChildren::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s Bytecode synthetic", Cascades() ? "" : " (not cascading)",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "");
+
+  return std::string(sstr.GetString());
+}

@@ -1,0 +1,24 @@
+executable("clang-repl") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Interpreter",
+    "//clang/lib/Tooling",
+    "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/IR",
+    "//llvm/lib/LineEditor",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  sources = [ "ClangRepl.cpp" ]
+
+  # Support "plugins" (the JIT dlsym()'ing the main executable).
+  # FIXME: Disable dead stripping once other binaries are dead-stripped.
+  if (host_os != "mac" && host_os != "win") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
+}

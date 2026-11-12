@@ -1,0 +1,24 @@
+module ALIAS1 {
+  header "alias1.h"
+  module ALIAS2 {
+    header "alias2.h"
+  }
+}
+module VAR1 {
+  header "var1.h"
+  module VAR2 {
+    header "var2.h"
+  }
+}
+module FUNC1 {
+  header "func1.h"
+  module FUNC2 {
+    header "func2.h"
+  }
+}
+module STRCT1 {
+  header "strct1.h"
+  module STRCT2 {
+    header "strct2.h"
+  }
+}

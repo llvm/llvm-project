@@ -1,0 +1,16 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("DebugInfoCodeViewTests") {
+  deps = [
+    "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "FieldListVisitorTest.cpp",
+    "GUIDFormatTest.cpp",
+    "RandomAccessVisitorTest.cpp",
+    "TypeHashingTest.cpp",
+    "TypeIndexDiscoveryTest.cpp",
+    "TypeRecordMappingTest.cpp",
+  ]
+}

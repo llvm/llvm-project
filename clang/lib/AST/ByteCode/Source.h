@@ -1,0 +1,148 @@
+//===--- Source.h - Source location provider for the VM  --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines a program which organises and links multiple bytecode functions.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_AST_INTERP_SOURCE_H
+#define LLVM_CLANG_AST_INTERP_SOURCE_H
+
+#include "PrimType.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/Stmt.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Endian.h"
+
+namespace clang {
+class Expr;
+class SourceLocation;
+class SourceRange;
+namespace interp {
+class Function;
+
+/// Pointer into the code segment.
+class CodePtr final {
+public:
+  CodePtr() = default;
+
+  CodePtr &operator+=(int32_t Offset) {
+    Ptr += Offset;
+    return *this;
+  }
+
+  CodePtr operator+(int32_t Offset) { return CodePtr(Ptr + Offset); }
+
+  int32_t operator-(const CodePtr &RHS) const {
+    assert(Ptr != nullptr && RHS.Ptr != nullptr && "Invalid code pointer");
+    return Ptr - RHS.Ptr;
+  }
+
+  CodePtr operator-(size_t RHS) const {
+    assert(Ptr != nullptr && "Invalid code pointer");
+    return CodePtr(Ptr - RHS);
+  }
+
+  bool operator!=(const CodePtr &RHS) const { return Ptr != RHS.Ptr; }
+  const std::byte *operator*() const { return Ptr; }
+  explicit operator bool() const { return Ptr; }
+  bool operator<=(const CodePtr &RHS) const { return Ptr <= RHS.Ptr; }
+  bool operator>=(const CodePtr &RHS) const { return Ptr >= RHS.Ptr; }
+  bool operator==(const CodePtr RHS) const { return Ptr == RHS.Ptr; }
+
+  /// Reads data and advances the pointer.
+  template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {
+    assert(aligned(Ptr));
+    using namespace llvm::support;
+    T Value = endian::read<T, llvm::endianness::native>(Ptr);
+    Ptr += align(sizeof(T));
+    return Value;
+  }
+
+private:
+  friend class Function;
+  /// Constructor used by Function to generate pointers.
+  CodePtr(const std::byte *Ptr) : Ptr(Ptr) {}
+  /// Pointer into the code owned by a function.
+  const std::byte *Ptr = nullptr;
+};
+
+/// Describes the statement/declaration an opcode was generated from.
+class SourceInfo final {
+public:
+  SourceInfo() : Source(nullptr) {}
+  SourceInfo(const Stmt *E) : Source(E) {}
+  SourceInfo(const Decl *D) : Source(D) {}
+
+  SourceLocation getLoc() const;
+  SourceRange getRange() const;
+
+  const Stmt *asStmt() const {
+    return dyn_cast_if_present<const Stmt *>(Source);
+  }
+  const Decl *asDecl() const {
+    return dyn_cast_if_present<const Decl *>(Source);
+  }
+  const Expr *asExpr() const { return dyn_cast_if_present<Expr>(asStmt()); }
+
+  explicit operator bool() const { return !Source.isNull(); }
+
+  bool operator!=(SourceInfo O) { return Source != O.Source; }
+
+private:
+  llvm::PointerUnion<const Decl *, const Stmt *> Source;
+};
+static_assert(sizeof(SourceInfo) == sizeof(void *));
+
+// A map from byte code offset to source information.
+// This is used to get the location in the input source file for diagnostics.
+class SourceMap final {
+private:
+  llvm::SmallVector<uint32_t> Offsets;
+  llvm::SmallVector<SourceInfo> Infos;
+
+public:
+  SourceMap() = default;
+  void push(uint32_t Offset, SourceInfo Info) {
+    Offsets.push_back(Offset);
+    Infos.push_back(Info);
+  }
+
+  bool empty() const { return Offsets.empty(); }
+  SourceInfo back() const { return Infos.back(); }
+
+  SourceInfo findSourceForOffset(uint32_t Offset) const {
+    assert(!Offsets.empty());
+    assert(Offsets.size() == Infos.size());
+#ifndef NDEBUG
+    assert(llvm::is_sorted(Offsets));
+#endif
+
+    // Find the last offset <= Offset.
+    auto *It = llvm::upper_bound(Offsets, Offset);
+    if (It == Offsets.begin())
+      return Infos[0];
+
+    --It;
+    return Infos[It - Offsets.begin()];
+  }
+};
+
+/// Interface for classes which map locations to sources.
+class SourceMapper {
+public:
+  virtual ~SourceMapper() {}
+  /// Returns source information for a given PC in a function.
+  virtual SourceInfo getSource(CodePtr PC) const = 0;
+};
+
+} // namespace interp
+} // namespace clang
+
+#endif

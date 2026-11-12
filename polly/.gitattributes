@@ -1,0 +1,4 @@
+# Auto detect text files and perform LF normalization
+* text eol=lf
+*.png -text
+*.pdf -text

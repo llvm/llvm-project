@@ -1,0 +1,8 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+--- !unsupported-tag
+DummyData:
+  foo:           0
+...
+
+# CHECK: error: YAML Object File unsupported document type tag '!unsupported-tag'!

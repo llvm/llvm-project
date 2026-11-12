@@ -1,0 +1,4 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 2>&1 | grep "invalid instruction encoding"
+
+# This instruction would decode as movmskps if the vvvv field in the VEX prefix was all 1s.
+0xc5 0xf0 0x50 0xc0

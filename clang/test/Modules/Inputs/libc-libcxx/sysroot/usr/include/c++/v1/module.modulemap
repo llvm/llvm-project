@@ -1,0 +1,12 @@
+module "libc++" {
+  module math { header "math.h" export * }
+  module stdlib { header "stdlib.h" export * }
+  module stddef { header "stddef.h" export * }
+  module stdio { textual header "stdio.h" export * }
+  // FIXME: remove "textual" from stdint module below once the issue
+  // between umbrella headers and builtins is resolved.
+  module stdint { textual header "stdint.h" export * }
+  module type_traits { header "type_traits" export * }
+  module cstddef { header "cstddef" export * }
+  module __config { header "__config" export * }
+}

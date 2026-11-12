@@ -1,0 +1,32 @@
+include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
+include_directories(${LLVM_BINARY_DIR}/tools/mlir/include)
+
+add_clang_tool(cir-translate
+  cir-translate.cpp
+)
+
+target_link_libraries(cir-translate
+  PRIVATE
+  CIRRegisterAllDialects
+  clangCIR
+  clangCIRLoweringDirectToLLVM
+  MLIRAnalysis
+  MLIRBuiltinToLLVMIRTranslation
+  MLIRCIR
+  MLIRCIRTransforms
+  MLIRDialect
+  MLIRDLTIDialect
+  MLIRFuncDialect
+  MLIRIR
+  MLIRLLVMDialect
+  MLIRLLVMToLLVMIRTranslation
+  MLIROpenMPToLLVMIRTranslation
+  MLIROptLib
+  MLIRParser
+  MLIRPass
+  MLIRSupport
+  MLIRTargetLLVMIRExport
+  MLIRTransforms
+  MLIRTransformUtils
+  MLIRTranslateLib
+)

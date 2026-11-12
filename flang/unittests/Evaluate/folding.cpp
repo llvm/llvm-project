@@ -1,0 +1,102 @@
+//===-- unittests/Evaluate/folding.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "../../lib/Evaluate/host.h"
+#include "flang/Common/type-kinds.h"
+#include "flang/Evaluate/call.h"
+#include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/intrinsics-library.h"
+#include "flang/Evaluate/intrinsics.h"
+#include "flang/Evaluate/target.h"
+#include "flang/Evaluate/tools.h"
+#include "flang/Testing/testing.h"
+#include <tuple>
+
+using namespace Fortran::evaluate;
+
+// helper to call functions on all types from tuple
+template <typename... T> struct RunOnTypes {};
+template <typename Test, typename... T>
+struct RunOnTypes<Test, std::tuple<T...>> {
+  template <typename U> static void RunOnKinds() {
+    for (int kind : Fortran::common::KindsByType<U::category>::kinds) {
+      Test::template Run<U>(kind);
+    }
+  }
+
+  static void Run() { (..., RunOnKinds<T>()); }
+};
+
+// test for fold.h GetScalarConstantValue function
+struct TestGetScalarConstantValue {
+  template <typename T> static void Run(int kind) {
+    Expr<T> exprFullyTyped{MakeZeroExpr<T>(kind)};
+    Expr<SomeType> exprSomeType{exprFullyTyped};
+    TEST(GetScalarConstantValue<T>(exprFullyTyped).has_value());
+    TEST(GetScalarConstantValue<T>(exprSomeType).has_value());
+  }
+};
+
+template <typename T>
+Scalar<T> CallHostRt(
+    HostRuntimeWrapper func, FoldingContext &context, Scalar<T> x) {
+  const int kind{x.kind()};
+  return GetScalarConstantValue<T>(
+      func(context, {AsGenericExpr(Constant<T>{kind, x})}))
+      .value();
+}
+
+void TestHostRuntimeSubnormalFlushing() {
+  using R4 = TypeKind<TypeCategory::Real, 4>;
+  using FR4 = R4::FortranType;
+  if constexpr (std::is_same_v<host::HostType<R4>, float>) {
+    Fortran::parser::CharBlock src;
+    Fortran::parser::ContextualMessages messages{src, nullptr};
+    Fortran::common::IntrinsicTypeDefaultKinds defaults;
+    auto intrinsics{Fortran::evaluate::IntrinsicProcTable::Configure(defaults)};
+    TargetCharacteristics flushingTargetCharacteristics;
+    flushingTargetCharacteristics.set_areSubnormalsFlushedToZero(true);
+    TargetCharacteristics noFlushingTargetCharacteristics;
+    noFlushingTargetCharacteristics.set_areSubnormalsFlushedToZero(false);
+    Fortran::common::LanguageFeatureControl languageFeatures;
+    std::set<std::string> tempNames;
+    FoldingContext flushingContext{messages, defaults, intrinsics,
+        flushingTargetCharacteristics, languageFeatures, tempNames};
+    FoldingContext noFlushingContext{messages, defaults, intrinsics,
+        noFlushingTargetCharacteristics, languageFeatures, tempNames};
+
+    DynamicType r4{R4::GetType()};
+    // Test subnormal argument flushing
+    if (auto callable{GetHostRuntimeWrapper("log", r4, {r4})}) {
+      // Biggest IEEE 32bits subnormal power of two
+      const Scalar<FR4> x1{4, Scalar<FR4>::Word{4, 0x00400000}};
+      Scalar<FR4> y1Flushing{CallHostRt<FR4>(*callable, flushingContext, x1)};
+      Scalar<FR4> y1NoFlushing{
+          CallHostRt<FR4>(*callable, noFlushingContext, x1)};
+      // We would expect y1Flushing to be NaN, but some libc logf implementation
+      // "workaround" subnormal flushing by returning a constant negative
+      // results for all subnormal values (-1.03972076416015625e2_4). In case of
+      // flushing, the result should still be different than -88 +/- 2%.
+      TEST(y1Flushing.IsInfinite() ||
+          std::abs(host::CastFortranToHost<R4>(y1Flushing) + 88.) > 2);
+      TEST(!y1NoFlushing.IsInfinite() &&
+          std::abs(host::CastFortranToHost<R4>(y1NoFlushing) + 88.) < 2);
+    } else {
+      TEST(false);
+    }
+  } else {
+    TEST(false); // Cannot run this test on the host
+  }
+}
+
+int main() {
+  RunOnTypes<TestGetScalarConstantValue, AllIntrinsicTypes>::Run();
+  TestHostRuntimeSubnormalFlushing();
+  return testing::Complete();
+}

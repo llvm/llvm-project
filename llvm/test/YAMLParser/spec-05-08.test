@@ -1,0 +1,4 @@
+# RUN: yaml-bench -canonical %s
+
+single: 'text'
+double: "text"

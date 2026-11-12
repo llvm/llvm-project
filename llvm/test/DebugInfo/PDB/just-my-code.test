@@ -1,0 +1,20 @@
+; RUN: llvm-pdbutil dump -modules %p/Inputs/big-read.pdb | FileCheck --check-prefix=ALL %s
+; RUN: llvm-pdbutil dump -modules -jmc %p/Inputs/big-read.pdb | FileCheck --check-prefix=JMC %s
+
+ALL:       Mod 0000 |
+ALL:       Mod 0001 |
+ALL:       Mod 0002 |
+ALL:       Mod 0003 |
+ALL:       Mod 0004 |
+ALL:       Mod 0005 |
+ALL:       Mod 0006 |
+ALL:       Mod 0047 |
+
+JMC:       Mod 0000
+JMC-NOT:   Mod 0001
+JMC-NOT:   Mod 0002
+JMC-NOT:   Mod 0003
+JMC-NOT:   Mod 0004
+JMC-NOT:   Mod 0005
+JMC-NOT:   Mod 0006
+JMC-NOT:   Mod 0047

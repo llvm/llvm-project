@@ -1,0 +1,3 @@
+# RUN: modularize %s -x c++
+
+Inputs/IsDependent.h: Inputs/SomeTypes.h Inputs/SomeOtherTypes.h

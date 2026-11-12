@@ -1,0 +1,28 @@
+// Flags set on the first stringtable of a bundle gets set
+STRINGTABLE IMPURE {
+  0 "a"
+}
+
+// and end up in effect over whatever data is added here.
+STRINGTABLE
+{
+  1 "b"
+}
+
+STRINGTABLE
+LANGUAGE 4, 7 {
+  2 "c"
+}
+
+// Flags set on a later stringtable as part of an earlier bundle
+// have no effect.
+STRINGTABLE FIXED PRELOAD
+LANGUAGE 4, 7 {
+  3 "d"
+}
+
+// While the same flag on a new bundle does have effect.
+STRINGTABLE FIXED PRELOAD
+LANGUAGE 4, 8 {
+  4 "e"
+}

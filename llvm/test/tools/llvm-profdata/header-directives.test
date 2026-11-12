@@ -1,0 +1,10 @@
+RUN: llvm-profdata show %p/Inputs/header-directives-1.proftext -o - | FileCheck %s --check-prefixes=ENTRYFIRST,CHECK
+RUN: llvm-profdata show %p/Inputs/header-directives-2.proftext -o - | FileCheck %s --check-prefixes=NOTENTRYFIRST,CHECK
+RUN: llvm-profdata show %p/Inputs/header-directives-3.proftext -o - | FileCheck %s --check-prefixes=ENTRYFIRST,CHECK
+
+ENTRYFIRST: Instrumentation level: IR  entry_first = 1
+NOTENTRYFIRST: Instrumentation level: IR  entry_first = 0
+CHECK: Total functions: 1
+CHECK: Maximum function count: 100
+CHECK: Maximum internal block count: 90
+

@@ -1,0 +1,16 @@
+
+*** Dumping AST Record Layout
+Type: struct S
+
+Layout: <ASTRecordLayout
+  Size:64
+  Alignment:32
+  FieldOffsets: [0, 32, 32]>
+
+*** Dumping AST Record Layout
+Type: union U
+
+Layout: <ASTRecordLayout
+  Size:96
+  Alignment:32
+  FieldOffsets: [0, 0, 32, 64, 68, 73]>

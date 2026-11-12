@@ -1,0 +1,2 @@
+module a { textual header "a.h" }
+module b { header "a.h" header "b.h" }

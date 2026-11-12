@@ -1,0 +1,4 @@
+explicit module NoUmbrella.Private {
+  umbrella "PrivateHeaders"
+  explicit module * { }
+}

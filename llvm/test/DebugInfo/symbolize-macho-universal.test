@@ -1,0 +1,7 @@
+RUN: llvm-symbolizer --no-demangle --default-arch=i386 --obj=%p/Inputs/macho-universal 0x1f84 | FileCheck %s --check-prefix=DEFAULT
+RUN: llvm-symbolizer --no-demangle --obj=%p/Inputs/macho-universal:i386 0x1f67 | FileCheck %s --check-prefix=I386
+RUN: llvm-symbolizer --no-demangle --obj=%p/Inputs/macho-universal:x86_64 0x100000f05 | FileCheck %s --check-prefix=X86-64
+
+DEFAULT: main
+I386:    _Z3inci
+X86-64:  _Z3inci

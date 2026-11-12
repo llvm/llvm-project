@@ -1,0 +1,87 @@
+# RUN: llvm-mc --disassemble %s -triple=i386-unknown-unknown | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=i386-unknown-unknown --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:        vsm3msg1 %xmm4, %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmm4
+0xc4,0xe2,0x60,0xda,0xd4
+
+# ATT:        vsm3msg1  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x60,0xda,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:        vsm3msg1  291(%edi,%eax,4), %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmmword ptr [edi + 4*eax + 291]
+0xc4,0xe2,0x60,0xda,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:        vsm3msg1  (%eax), %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmmword ptr [eax]
+0xc4,0xe2,0x60,0xda,0x10
+
+# ATT:        vsm3msg1  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x60,0xda,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:        vsm3msg1  2032(%ecx), %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmmword ptr [ecx + 2032]
+0xc4,0xe2,0x60,0xda,0x91,0xf0,0x07,0x00,0x00
+
+# ATT:        vsm3msg1  -2048(%edx), %xmm3, %xmm2
+# INTEL:      vsm3msg1 xmm2, xmm3, xmmword ptr [edx - 2048]
+0xc4,0xe2,0x60,0xda,0x92,0x00,0xf8,0xff,0xff
+
+# ATT:        vsm3msg2 %xmm4, %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmm4
+0xc4,0xe2,0x61,0xda,0xd4
+
+# ATT:        vsm3msg2  268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456]
+0xc4,0xe2,0x61,0xda,0x94,0xf4,0x00,0x00,0x00,0x10
+
+# ATT:        vsm3msg2  291(%edi,%eax,4), %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmmword ptr [edi + 4*eax + 291]
+0xc4,0xe2,0x61,0xda,0x94,0x87,0x23,0x01,0x00,0x00
+
+# ATT:        vsm3msg2  (%eax), %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmmword ptr [eax]
+0xc4,0xe2,0x61,0xda,0x10
+
+# ATT:        vsm3msg2  -512(,%ebp,2), %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmmword ptr [2*ebp - 512]
+0xc4,0xe2,0x61,0xda,0x14,0x6d,0x00,0xfe,0xff,0xff
+
+# ATT:        vsm3msg2  2032(%ecx), %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmmword ptr [ecx + 2032]
+0xc4,0xe2,0x61,0xda,0x91,0xf0,0x07,0x00,0x00
+
+# ATT:        vsm3msg2  -2048(%edx), %xmm3, %xmm2
+# INTEL:      vsm3msg2 xmm2, xmm3, xmmword ptr [edx - 2048]
+0xc4,0xe2,0x61,0xda,0x92,0x00,0xf8,0xff,0xff
+
+# ATT:        vsm3rnds2 $123, %xmm4, %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmm4, 123
+0xc4,0xe3,0x61,0xde,0xd4,0x7b
+
+# ATT:        vsm3rnds2  $123, 268435456(%esp,%esi,8), %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmmword ptr [esp + 8*esi + 268435456], 123
+0xc4,0xe3,0x61,0xde,0x94,0xf4,0x00,0x00,0x00,0x10,0x7b
+
+# ATT:        vsm3rnds2  $123, 291(%edi,%eax,4), %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmmword ptr [edi + 4*eax + 291], 123
+0xc4,0xe3,0x61,0xde,0x94,0x87,0x23,0x01,0x00,0x00,0x7b
+
+# ATT:        vsm3rnds2  $123, (%eax), %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmmword ptr [eax], 123
+0xc4,0xe3,0x61,0xde,0x10,0x7b
+
+# ATT:        vsm3rnds2  $123, -512(,%ebp,2), %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmmword ptr [2*ebp - 512], 123
+0xc4,0xe3,0x61,0xde,0x14,0x6d,0x00,0xfe,0xff,0xff,0x7b
+
+# ATT:        vsm3rnds2  $123, 2032(%ecx), %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmmword ptr [ecx + 2032], 123
+0xc4,0xe3,0x61,0xde,0x91,0xf0,0x07,0x00,0x00,0x7b
+
+# ATT:        vsm3rnds2  $123, -2048(%edx), %xmm3, %xmm2
+# INTEL:      vsm3rnds2 xmm2, xmm3, xmmword ptr [edx - 2048], 123
+0xc4,0xe3,0x61,0xde,0x92,0x00,0xf8,0xff,0xff,0x7b
+

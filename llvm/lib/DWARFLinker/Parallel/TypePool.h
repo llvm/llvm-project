@@ -1,0 +1,236 @@
+//===- TypePool.h -----------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_DWARFLINKER_PARALLEL_TYPEPOOL_H
+#define LLVM_DWARFLINKER_PARALLEL_TYPEPOOL_H
+
+#include "ArrayList.h"
+#include "llvm/ADT/ConcurrentHashtable.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/DIE.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Parallel.h"
+#include <atomic>
+#include <limits>
+#include <variant>
+
+namespace llvm {
+namespace dwarf_linker {
+namespace parallel {
+
+class TypePool;
+class CompileUnit;
+class TypeEntryBody;
+
+using TypeEntry = StringMapEntry<std::atomic<TypeEntryBody *>>;
+
+/// A type key is text interleaved with references to other type entries. A
+/// reference stands for the referenced entry's key without copying it. Keys
+/// are interned, so equal references mean equal keys.
+class TypeKey {
+public:
+  /// A maximal run of text, or a reference.
+  using Part = std::variant<StringRef, const TypeEntry *>;
+
+  /// Remove the first part of the non-empty key \p Key and return it.
+  static Part takePart(StringRef &Key);
+
+  /// Compare \p LHS and \p RHS as if every reference were replaced by the key
+  /// it refers to, so the result does not depend on pointer values.
+  static int compare(StringRef LHS, StringRef RHS);
+
+  /// \returns \p Key with every reference replaced by the key it refers to.
+  static std::string expand(StringRef Key);
+
+  TypeKey &operator+=(StringRef Text) {
+    assert(!Text.contains(RefMarker) && "text would read as a reference");
+    Bytes += Text;
+    return *this;
+  }
+  TypeKey &operator+=(char C) {
+    assert(C != RefMarker && "text would read as a reference");
+    Bytes += C;
+    return *this;
+  }
+  void appendRef(const TypeEntry *Entry);
+
+  size_t size() const { return Bytes.size(); }
+  void truncate(size_t Size) { Bytes.truncate(Size); }
+  StringRef str() const { return Bytes; }
+
+private:
+  /// DWARF strings cannot contain NUL, so the marker is unambiguous.
+  static constexpr char RefMarker = '\0';
+  static constexpr size_t RefSize = 1 + sizeof(const TypeEntry *);
+
+  SmallString<1000> Bytes;
+};
+
+/// Keeps cloned data for the type DIE.
+class TypeEntryBody {
+public:
+  /// Returns copy of type DIE which should be emitted into resulting file.
+  DIE &getFinalDie() const {
+    if (Die)
+      return *Die;
+
+    assert(DeclarationDie);
+    return *DeclarationDie;
+  }
+
+  /// Returns true if type die entry has only declaration die.
+  bool hasOnlyDeclaration() const { return Die == nullptr; }
+
+  /// Creates type DIE for the specified name.
+  static TypeEntryBody *
+  create(llvm::parallel::PerThreadBumpPtrAllocator &Allocator) {
+    TypeEntryBody *Result = Allocator.Allocate<TypeEntryBody>();
+    new (Result) TypeEntryBody(Allocator);
+    return Result;
+  }
+
+  /// TypeEntryBody keeps partially cloned DIEs corresponding to this type.
+  /// The two kinds of DIE can be kept: declaration and definition.
+  /// If definition DIE was met while parsing input DWARF then this DIE would
+  /// be used as a final DIE for this type. If definition DIE is not met then
+  /// declaration DIE would be used as a final DIE.
+
+  // Keeps definition die.
+  std::atomic<DIE *> Die = {nullptr};
+
+  // Keeps declaration die.
+  std::atomic<DIE *> DeclarationDie = {nullptr};
+
+  // True if the declaration winner's parent is itself a declaration.
+  bool DeclarationParentIsDeclaration = true;
+
+  // Priority of the CU that set Die (lower wins, for deterministic output).
+  // Atomic so it can be read outside the lock for a fast pre-check; the
+  // definitive comparison still happens under the spinlock.
+  std::atomic<uint64_t> DiePriority = {std::numeric_limits<uint64_t>::max()};
+
+  // Priority of the CU that set DeclarationDie (lower wins).
+  uint64_t DeclarationDiePriority = std::numeric_limits<uint64_t>::max();
+
+  // Spinlock for deterministic type DIE allocation.
+  std::atomic_flag Lock = {};
+
+  // Primary key for the comparator: ordinal of this child in its parent's
+  // child list, min-merged across CUs to keep record-like type members in
+  // source order. Sentinel UINT32_MAX sorts after any real observation.
+  // When set, overwrites the default getKey() in TypeComparator.
+  std::atomic<uint32_t> SortKey = {std::numeric_limits<uint32_t>::max()};
+
+  /// Children for current type.
+  ArrayList<TypeEntry *, 5> Children;
+
+protected:
+  TypeEntryBody() = delete;
+  TypeEntryBody(const TypeEntryBody &RHS) = delete;
+  TypeEntryBody(TypeEntryBody &&RHS) = delete;
+  TypeEntryBody &operator=(const TypeEntryBody &RHS) = delete;
+  TypeEntryBody &operator=(const TypeEntryBody &&RHS) = delete;
+
+  TypeEntryBody(llvm::parallel::PerThreadBumpPtrAllocator &Allocator)
+      : Children(&Allocator) {}
+};
+
+/// TypePool keeps type descriptors which contain partially cloned DIE
+/// correspinding to each type. Types are identified by names.
+class TypePool
+    : ConcurrentHashTableByPtr<StringRef, TypeEntry,
+                               llvm::parallel::PerThreadBumpPtrAllocator> {
+public:
+  TypePool()
+      : ConcurrentHashTableByPtr<StringRef, TypeEntry,
+                                 llvm::parallel::PerThreadBumpPtrAllocator>(
+            Allocator) {
+    Root = TypeEntry::create("", Allocator);
+    Root->getValue().store(TypeEntryBody::create(Allocator));
+  }
+
+  TypeEntry *insert(StringRef Name) {
+    return ConcurrentHashTableByPtr<
+               StringRef, TypeEntry,
+               llvm::parallel::PerThreadBumpPtrAllocator>::insert(Name)
+        .first;
+  }
+
+  /// Create or return existing type entry body for the specified \p Entry.
+  /// Link that entry as child for the specified \p ParentEntry.
+  /// The returned body's \c SortKey starts at the sentinel; callers that want
+  /// the entry to participate in source-order sorting must min-merge their
+  /// per-CU observation into it.
+  /// \returns The existing or created type entry body.
+  TypeEntryBody *getOrCreateTypeEntryBody(TypeEntry *Entry,
+                                          TypeEntry *ParentEntry) {
+    TypeEntryBody *DIE = Entry->getValue().load();
+    if (DIE)
+      return DIE;
+
+    TypeEntryBody *NewDIE = TypeEntryBody::create(Allocator);
+    if (Entry->getValue().compare_exchange_strong(DIE, NewDIE)) {
+      ParentEntry->getValue().load()->Children.add(Entry);
+      return NewDIE;
+    }
+
+    return DIE;
+  }
+
+  /// Sort children for each kept type entry.
+  void sortTypes() {
+    SmallVector<TypeEntry *> Entries;
+    SmallVector<TypeEntry *> Worklist = {getRoot()};
+    while (!Worklist.empty()) {
+      TypeEntry *Entry = Worklist.pop_back_val();
+      Entries.push_back(Entry);
+      Entry->getValue().load()->Children.forEach(
+          [&](TypeEntry *Child) { Worklist.push_back(Child); });
+    }
+
+    // The comparator is a total order, so the result does not depend on
+    // scheduling.
+    parallelForEach(Entries, [&](TypeEntry *Entry) {
+      Entry->getValue().load()->Children.sort(TypesComparator,
+                                              /*Parallel=*/true);
+    });
+  }
+
+  /// Return root for all type entries.
+  TypeEntry *getRoot() const { return Root; }
+
+  /// Return thread local allocator used by pool.
+  BumpPtrAllocator &getThreadLocalAllocator() {
+    return Allocator.getThreadLocalAllocator();
+  }
+
+protected:
+  std::function<bool(const TypeEntry *LHS, const TypeEntry *RHS)>
+      TypesComparator = [](const TypeEntry *LHS, const TypeEntry *RHS) -> bool {
+    uint32_t LK =
+        LHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
+    uint32_t RK =
+        RHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
+    if (LK != RK)
+      return LK < RK;
+    return TypeKey::compare(LHS->getKey(), RHS->getKey()) < 0;
+  };
+
+  // Root of all type entries.
+  TypeEntry *Root = nullptr;
+
+private:
+  llvm::parallel::PerThreadBumpPtrAllocator Allocator;
+};
+
+} // end of namespace parallel
+} // end of namespace dwarf_linker
+} // end of namespace llvm
+
+#endif // LLVM_DWARFLINKER_PARALLEL_TYPEPOOL_H

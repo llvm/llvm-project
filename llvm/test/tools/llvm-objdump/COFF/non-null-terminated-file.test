@@ -1,0 +1,5 @@
+RUN: yaml2obj %p/Inputs/file-aux-record.yaml | llvm-objdump -t - | FileCheck %s
+
+CHECK: .file
+CHECK: AUX eighteen-chars.obj{{$}}
+

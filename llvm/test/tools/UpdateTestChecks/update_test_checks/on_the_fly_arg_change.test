@@ -1,0 +1,16 @@
+# RUN: cp -f %S/Inputs/on_the_fly_arg_change.ll %t.ll
+# RUN: %update_test_checks %t.ll --function-signature --scrub-attributes
+# RUN: diff -u %t.ll %S/Inputs/on_the_fly_arg_change.ll.expected
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/on_the_fly_arg_change.ll.expected
+## Check that the --disable flag is added to the initial UTC_ARGS:
+# RUN: cp -f %S/Inputs/on_the_fly_arg_change.ll %t.ll
+# RUN: %update_test_checks --function-signature --scrub-attributes --disable %t.ll
+# RUN: diff -u %t.ll %S/Inputs/on_the_fly_arg_change.ll.initially_disabled.expected
+## Check that the --disable flag from UTC_ARGS is used:
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/on_the_fly_arg_change.ll.initially_disabled.expected
+## Check that UTC_ARGS: is parsed after the real command line arguments:
+# RUN: %update_test_checks --enable %t.ll
+# RUN: diff -u %t.ll %S/Inputs/on_the_fly_arg_change.ll.initially_disabled.expected

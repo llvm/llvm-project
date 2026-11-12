@@ -1,0 +1,4 @@
+must_dependence: "{  }"
+may_dependence: "{ [S_1[] -> __pet_ref_2[]] -> [[S_2[] -> __pet_ref_4[]] -> a[]]; [S_1[] -> __pet_ref_1[]] -> [[S_2[] -> __pet_ref_4[]] -> a[]] }"
+must_no_source: "{  }"
+may_no_source: "{  }"

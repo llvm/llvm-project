@@ -1,0 +1,68 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// <chrono>
+// class month;
+
+// constexpr month operator+(const month& x, const months& y) noexcept;
+//   Returns: month(int{x} + y.count()).
+//
+// constexpr month operator+(const months& x, const month& y) noexcept;
+//   Returns:
+//     month{modulo(static_cast<long long>(int{x}) + (y.count() - 1), 12) + 1}
+//   where modulo(n, 12) computes the remainder of n divided by 12 using Euclidean division.
+//   [Note: Given a divisor of 12, Euclidean division truncates towards negative infinity
+//   and always produces a remainder in the range of [0, 11].
+//   Assuming no overflow in the signed summation, this operation results in a month
+//   holding a value in the range [1, 12] even if !x.ok(). -end note]
+//   [Example: February + months{11} == January. -end example]
+
+#include <chrono>
+#include <cassert>
+#include <type_traits>
+#include <utility>
+
+#include "test_macros.h"
+
+constexpr bool test() {
+  using month  = std::chrono::month;
+  using months = std::chrono::months;
+
+  month my{2};
+  for (unsigned i = 0; i <= 15; ++i) {
+    month m1 = my + months{i};
+    month m2 = months{i} + my;
+    assert(m1.ok());
+    assert(m2.ok());
+    assert(m1 == m2);
+    unsigned exp = i + 2;
+    while (exp > 12)
+      exp -= 12;
+    assert(static_cast<unsigned>(m1) == exp);
+    assert(static_cast<unsigned>(m2) == exp);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  using month  = std::chrono::month;
+  using months = std::chrono::months;
+
+  ASSERT_NOEXCEPT(std::declval<month>() + std::declval<months>());
+  ASSERT_NOEXCEPT(std::declval<months>() + std::declval<month>());
+
+  ASSERT_SAME_TYPE(month, decltype(std::declval<month>() + std::declval<months>()));
+  ASSERT_SAME_TYPE(month, decltype(std::declval<months>() + std::declval<month>()));
+
+  test();
+  static_assert(test());
+
+  return 0;
+}

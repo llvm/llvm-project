@@ -1,0 +1,22 @@
+; This should fold the "vcmpbfp." and "vcmpbfp" instructions into a single
+; "vcmpbfp.".
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 | grep vcmpbfp | count 1
+
+
+define void @test(ptr %x, ptr %y, ptr %P) {
+entry:
+	%tmp = load <4 x float>, ptr %x		; <<4 x float>> [#uses=1]
+	%tmp2 = load <4 x float>, ptr %y		; <<4 x float>> [#uses=1]
+	%tmp.upgrd.1 = call i32 @llvm.ppc.altivec.vcmpbfp.p( i32 1, <4 x float> %tmp, <4 x float> %tmp2 )		; <i32> [#uses=1]
+	%tmp4 = load <4 x float>, ptr %x		; <<4 x float>> [#uses=1]
+	%tmp6 = load <4 x float>, ptr %y		; <<4 x float>> [#uses=1]
+	%tmp.upgrd.2 = call <4 x i32> @llvm.ppc.altivec.vcmpbfp( <4 x float> %tmp4, <4 x float> %tmp6 )		; <<4 x i32>> [#uses=1]
+	%tmp7 = bitcast <4 x i32> %tmp.upgrd.2 to <4 x float>		; <<4 x float>> [#uses=1]
+	store <4 x float> %tmp7, ptr %x
+	store i32 %tmp.upgrd.1, ptr %P
+	ret void
+}
+
+declare i32 @llvm.ppc.altivec.vcmpbfp.p(i32, <4 x float>, <4 x float>)
+
+declare <4 x i32> @llvm.ppc.altivec.vcmpbfp(<4 x float>, <4 x float>)

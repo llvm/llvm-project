@@ -1,0 +1,9 @@
+// RUN: rm -f %t.c
+// RUN: touch %t.c
+// RUN: c-index-test -write-pch %t.pch %t.c
+// RUN: cp %s %t.c
+// RUN: not c-index-test -test-load-tu %t.pch local 2>&1 | FileCheck %s
+
+// Unfortunately this would crash reliably only via valgrind.
+
+// CHECK: Unable to load translation unit

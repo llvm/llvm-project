@@ -1,0 +1,109 @@
+## Compiled and stripped-down version of:
+## (riscv64-linux-gnu-gcc -nostdlib -static -Wl,-q cie-gnu.s)
+#     .text
+#     .globl _start
+#     .type _start, @function
+# _start:
+#     .cfi_startproc
+#     beq a0, a1, 1f
+#     ret
+# 1:
+#     .cfi_undefined t0 # Arbitrary cfi command to force a new state
+#     ret
+#     .cfi_endproc
+#     .size _start, .-_start
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+  Flags:           [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_DOUBLE ]
+  Entry:           0x10144
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .eh_frame
+    VAddr:           0x10000
+    Align:           0x1000
+    Offset:          0x0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10144
+    AddressAlign:    0x2
+    Offset:          0x144
+    Content:         6303B50082808280
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10150
+    AddressAlign:    0x8
+    Content:         1000000000000000037A5200017C01011B0D02001000000018000000D8FFFFFF0800000000460705
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x10144
+        Symbol:          ".L1\x021"
+        Type:            R_RISCV_BRANCH
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x1016C
+        Symbol:          '.L0 '
+        Type:            R_RISCV_32_PCREL
+      - Offset:          0x10170
+        Symbol:          '.L0  (1)'
+        Type:            R_RISCV_ADD32
+      - Offset:          0x10170
+        Symbol:          '.L0 '
+        Type:            R_RISCV_SUB32
+      - Offset:          0x10175
+        Symbol:          '.L0  (2)'
+        Type:            R_RISCV_SET6
+      - Offset:          0x10175
+        Symbol:          '.L0 '
+        Type:            R_RISCV_SUB6
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            '$x'
+    Section:         .text
+    Value:           0x10144
+  - Name:            ".L1\x021"
+    Section:         .text
+    Value:           0x1014A
+  - Name:            '.L0 '
+    Section:         .text
+    Value:           0x10144
+  - Name:            '.L0  (1)'
+    Section:         .text
+    Value:           0x1014C
+  - Name:            '.L0  (2)'
+    Section:         .text
+    Value:           0x1014A
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10144
+    Size:            0x8
+...

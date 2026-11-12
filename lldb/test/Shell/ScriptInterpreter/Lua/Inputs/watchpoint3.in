@@ -1,0 +1,8 @@
+breakpoint set -p "Break here"
+r
+watchpoint set expr 0x00
+watchpoint command add -s lua
+print("never triggers")
+quit
+c
+# CHECK-NOT: never triggers

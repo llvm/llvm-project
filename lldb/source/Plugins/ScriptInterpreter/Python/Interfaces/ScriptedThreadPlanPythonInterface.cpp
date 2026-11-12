@@ -1,0 +1,128 @@
+//===-- ScriptedThreadPlanPythonInterface.cpp -----------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "../lldb-python.h"
+
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
+
+#include "../SWIGPythonBridge.h"
+#include "../ScriptInterpreterPythonImpl.h"
+#include "ScriptedThreadPlanPythonInterface.h"
+
+using namespace lldb;
+using namespace lldb_private;
+using namespace lldb_private::python;
+
+ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
+    ScriptInterpreterPythonImpl &interpreter)
+    : ScriptedThreadPlanInterface(), ScriptedPythonInterface(interpreter) {}
+
+llvm::Expected<StructuredData::GenericSP>
+ScriptedThreadPlanPythonInterface::CreatePluginObject(
+    const ScriptedMetadata &scripted_metadata,
+    lldb::ThreadPlanSP thread_plan_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
+                                                     thread_plan_sp, args_sp);
+}
+
+llvm::Expected<bool>
+ScriptedThreadPlanPythonInterface::ExplainsStop(Event *event) {
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("explains_stop", event);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  // Absent or None: the plan doesn't claim to explain the stop.
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return false;
+
+  return obj->GetBooleanValue();
+}
+
+llvm::Expected<bool>
+ScriptedThreadPlanPythonInterface::ShouldStop(Event *event) {
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("should_stop", event);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  // Absent or None: the plan doesn't ask to stop.
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return false;
+
+  return obj->GetBooleanValue();
+}
+
+llvm::Expected<bool> ScriptedThreadPlanPythonInterface::IsStale() {
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("is_stale");
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  // Absent or None: assume the plan is still fresh.
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return false;
+
+  return obj->GetBooleanValue();
+}
+
+llvm::Expected<lldb::StateType>
+ScriptedThreadPlanPythonInterface::GetRunState() {
+  llvm::Expected<std::optional<StructuredData::ObjectSP>> obj_or_err =
+      DispatchToOptional("should_step");
+  if (!obj_or_err)
+    return obj_or_err.takeError();
+
+  StructuredData::ObjectSP obj = obj_or_err->value_or(nullptr);
+  if (!obj || !obj->IsValid())
+    return lldb::eStateStepping;
+
+  // A thread plan's run state can formally be eStateSuspended, but that state
+  // is decided by the thread plan negotiation, not by the plan itself.  So a
+  // scripted plan's contract is only running or stepping: a bool.
+  if (StructuredData::Boolean *should_step = obj->GetAsBoolean())
+    return should_step->GetValue() ? lldb::eStateStepping : lldb::eStateRunning;
+
+  if (Log *log = GetLog(LLDBLog::Script)) {
+    StreamString reply;
+    obj->Dump(reply, /*pretty_print=*/false);
+    LLDB_LOG(log, "should_step returned {0}, not a bool; stepping.",
+             reply.GetData());
+  }
+  return lldb::eStateStepping;
+}
+
+llvm::Error
+ScriptedThreadPlanPythonInterface::GetStopDescription(lldb::StreamSP &stream) {
+  return DispatchToOptional("stop_description", stream).takeError();
+}
+
+void ScriptedThreadPlanPythonInterface::Initialize() {
+  const std::vector<llvm::StringRef> ci_usages = {
+      "thread step-scripted -C <script-name> [-k key -v value ...]"};
+  const std::vector<llvm::StringRef> api_usages = {
+      "SBThread.StepUsingScriptedThreadPlan"};
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(),
+      llvm::StringRef("Alter thread stepping logic and stop reason"),
+      CreateInstance, eScriptedExtensionScriptedThreadPlan,
+      eScriptLanguagePython, {ci_usages, api_usages});
+}
+
+void ScriptedThreadPlanPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}

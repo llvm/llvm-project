@@ -1,0 +1,70 @@
+# RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=+micromips %s -o - \
+# RUN:     -start-after=block-placement | FileCheck %s
+
+# Test that the micromips jal instruction is correctly handled by the delay slot
+# filler by converting it to a short delay slot for the li instruction.
+
+# CHECK-LABEL: caller13
+# CHECK:      jals callee13
+# CHECK-NEXT: li16
+
+--- |
+  declare i32 @callee13(i32, i32)
+
+  define i32 @caller13() {
+  entry:
+    %call = tail call i32 (i32, i32) @callee13(i32 1, i32 2)
+    ret i32 %call
+  }
+
+...
+---
+name:            caller13
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+registers:
+liveins:
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       24
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  savePoint:       []
+  restorePoint:    []
+fixedStack:
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '$r31', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $r31
+
+    $r29 = ADDiu $r29, -24
+    CFI_INSTRUCTION def_cfa_offset 24
+    SW killed $r31, $r29, 20 :: (store (s32) into %stack.0)
+    CFI_INSTRUCTION offset $r31_64, -4
+    $r4 = LI16_MM 1
+    $r5 = LI16_MM 2
+    JAL_MM @callee13, csr_o32, implicit-def dead $r31, implicit killed $r4, implicit killed $r5, implicit-def $r29, implicit-def $r2
+    $r31 = LW $r29, 20 :: (load (s32) from %stack.0)
+    $r29 = ADDiu $r29, 24
+    PseudoReturn undef $r31, implicit $r2
+
+
+...

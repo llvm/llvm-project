@@ -1,0 +1,3 @@
+RUN: llvm-cat -o %t.o
+RUN: not llvm-lto2 run -o %t2 %t.o 2>&1 | FileCheck %s
+CHECK: Bitcode file does not contain any modules

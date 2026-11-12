@@ -1,0 +1,4 @@
+{
+  'version': 0,
+  'roots': [ { 'name' : 'foo', 'external-contents': 'bar' } ]
+}

@@ -1,0 +1,304 @@
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=EndAfterEnd
+; RUN: FileCheck -input-file %s %s -check-prefix=EndAfterEnd
+
+new match end after old match end
+
+__EndAfterEnd
+(abc<mno>xyz)
+(abc<mno>xyz)
+(abc<mno>xyz  >xyz)
+(abc<mno>xyz  no>xyz)
+(abc<mno>xyz  <mno>xyz)
+(abc<mno>xyz  c<mno>xyz)
+(abc<mno>xyz  abc<mno>xyz)
+__EndAfterEnd
+
+; EndAfterEnd:      __EndAfterEnd
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  yz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  xyz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  >xyz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  no>xyz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  <mno>xyz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  c<mno>xyz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      {{^}}(
+; EndAfterEnd-DAG:  <mno>
+; EndAfterEnd-DAG:  abc<mno>xyz
+; EndAfterEnd-NOT:  {{.}}
+; EndAfterEnd-SAME: ){{$}}
+
+; EndAfterEnd:      __EndAfterEnd
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=EndRightAfterEnd
+; RUN: FileCheck -input-file %s %s -check-prefix=EndRightAfterEnd
+
+new match end right after old match end
+
+__EndRightAfterEnd
+(abc<mno>xyz)
+(abc<mno>xyz  >x)
+(abc<mno>xyz  no>x)
+(abc<mno>xyz  <mno>x)
+(abc<mno>xyz  c<mno>x)
+(abc<mno>xyz  abc<mno>x)
+__EndRightAfterEnd
+
+; EndRightAfterEnd:      __EndRightAfterEnd
+
+; EndRightAfterEnd:      {{^}}(
+; EndRightAfterEnd-DAG:  <mno>
+; EndRightAfterEnd-DAG:  x
+; EndRightAfterEnd-NOT:  {{.}}
+; EndRightAfterEnd-SAME: yz){{$}}
+
+; EndRightAfterEnd:      {{^}}(
+; EndRightAfterEnd-DAG:  <mno>
+; EndRightAfterEnd-DAG:  >x
+; EndRightAfterEnd-NOT:  {{.}}
+; EndRightAfterEnd-SAME: ){{$}}
+
+; EndRightAfterEnd:      {{^}}(
+; EndRightAfterEnd-DAG:  <mno>
+; EndRightAfterEnd-DAG:  no>x
+; EndRightAfterEnd-NOT:  {{.}}
+; EndRightAfterEnd-SAME: ){{$}}
+
+; EndRightAfterEnd:      {{^}}(
+; EndRightAfterEnd-DAG:  <mno>
+; EndRightAfterEnd-DAG:  <mno>x
+; EndRightAfterEnd-NOT:  {{.}}
+; EndRightAfterEnd-SAME: ){{$}}
+
+; EndRightAfterEnd:      {{^}}(
+; EndRightAfterEnd-DAG:  <mno>
+; EndRightAfterEnd-DAG:  c<mno>x
+; EndRightAfterEnd-NOT:  {{.}}
+; EndRightAfterEnd-SAME: ){{$}}
+
+; EndRightAfterEnd:      {{^}}(
+; EndRightAfterEnd-DAG:  <mno>
+; EndRightAfterEnd-DAG:  abc<mno>x
+; EndRightAfterEnd-NOT:  {{.}}
+; EndRightAfterEnd-SAME: ){{$}}
+
+; EndRightAfterEnd:      __EndRightAfterEnd
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=EndAtEnd
+; RUN: FileCheck -input-file %s %s -check-prefix=EndAtEnd
+
+new match end at old match end
+
+__EndAtEnd
+(abc<mno>xyz  >)
+(abc<mno>xyz  no>)
+(abc<mno>xyz  <mno>)
+(abc<mno>xyz  c<mno>)
+(abc<mno>xyz  abc<mno>)
+__EndAtEnd
+
+; EndAtEnd:      __EndAtEnd
+
+; EndAtEnd:      {{^}}(
+; EndAtEnd-DAG:  <mno>
+; EndAtEnd-DAG:  >
+; EndAtEnd-NOT:  {{.}}
+; EndAtEnd-SAME: ){{$}}
+
+; EndAtEnd:      {{^}}(
+; EndAtEnd-DAG:  <mno>
+; EndAtEnd-DAG:  no>
+; EndAtEnd-NOT:  {{.}}
+; EndAtEnd-SAME: ){{$}}
+
+; EndAtEnd:      {{^}}(
+; EndAtEnd-DAG:  <mno>
+; EndAtEnd-DAG:  <mno>
+; EndAtEnd-NOT:  {{.}}
+; EndAtEnd-SAME: ){{$}}
+
+; EndAtEnd:      {{^}}(
+; EndAtEnd-DAG:  <mno>
+; EndAtEnd-DAG:  c<mno>
+; EndAtEnd-NOT:  {{.}}
+; EndAtEnd-SAME: ){{$}}
+
+; EndAtEnd:      {{^}}(
+; EndAtEnd-DAG:  <mno>
+; EndAtEnd-DAG:  abc<mno>
+; EndAtEnd-NOT:  {{.}}
+; EndAtEnd-SAME: ){{$}}
+
+; EndAtEnd:      __EndAtEnd
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=EndWithin
+; RUN: FileCheck -input-file %s %s -check-prefix=EndWithin
+
+new match end within old match
+
+__EndWithin
+(abc<mno>xyz  m)
+(abc<mno>xyz  <m)
+(abc<mno>xyz  c<m)
+(abc<mno>xyz  abc<m)
+__EndWithin
+
+; EndWithin:      __EndWithin
+
+; EndWithin:      {{^}}(
+; EndWithin-DAG:  <mno>
+; EndWithin-DAG:  m
+; EndWithin-NOT:  {{.}}
+; EndWithin-SAME: ){{$}}
+
+; EndWithin:      {{^}}(
+; EndWithin-DAG:  <mno>
+; EndWithin-DAG:  <m
+; EndWithin-NOT:  {{.}}
+; EndWithin-SAME: ){{$}}
+
+; EndWithin:      {{^}}(
+; EndWithin-DAG:  <mno>
+; EndWithin-DAG:  c<m
+; EndWithin-NOT:  {{.}}
+; EndWithin-SAME: ){{$}}
+
+; EndWithin:      {{^}}(
+; EndWithin-DAG:  <mno>
+; EndWithin-DAG:  abc<m
+; EndWithin-NOT:  {{.}}
+; EndWithin-SAME: ){{$}}
+
+; EndWithin:      __EndWithin
+
+;---------------------------------------------------------------------
+; RUN: not FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:               -check-prefix=EndRightAfterStart
+; RUN: FileCheck -input-file %s %s -check-prefix=EndRightAfterStart
+
+new match end right after old match start
+
+__EndRightAfterStart
+(abc<mno>xyz  <)
+(abc<mno>xyz  c<)
+(abc<mno>xyz  abc<)
+__EndRightAfterStart
+
+; EndRightAfterStart:      __EndRightAfterStart
+
+; EndRightAfterStart:      {{^}}(
+; EndRightAfterStart-DAG:  <mno>
+; EndRightAfterStart-DAG:  <
+; EndRightAfterStart-NOT:  {{.}}
+; EndRightAfterStart-SAME: ){{$}}
+
+; EndRightAfterStart:      {{^}}(
+; EndRightAfterStart-DAG:  <mno>
+; EndRightAfterStart-DAG:  c<
+; EndRightAfterStart-NOT:  {{.}}
+; EndRightAfterStart-SAME: ){{$}}
+
+; EndRightAfterStart:      {{^}}(
+; EndRightAfterStart-DAG:  <mno>
+; EndRightAfterStart-DAG:  abc<
+; EndRightAfterStart-NOT:  {{.}}
+; EndRightAfterStart-SAME: ){{$}}
+
+; EndRightAfterStart:      __EndRightAfterStart
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:           -check-prefix=EndAtStart
+; RUN: FileCheck -input-file %s %s -check-prefix=EndAtStart
+
+new match end at old match start
+
+__EndAtStart
+(abc<mno>xyz)
+(abc<mno>xyz)
+__EndAtStart
+
+; EndAtStart:      __EndAtStart
+
+; EndAtStart:      {{^}}(
+; EndAtStart-DAG:  <mno>
+; EndAtStart-DAG:  c
+; EndAtStart-DAG:  xyz
+; EndAtStart-NOT:  {{.}}
+; EndAtStart-SAME: ){{$}}
+
+; EndAtStart:      {{^}}(
+; EndAtStart-DAG:  <mno>
+; EndAtStart-DAG:  abc
+; EndAtStart-DAG:  xyz
+; EndAtStart-NOT:  {{.}}
+; EndAtStart-SAME: ){{$}}
+
+; EndAtStart:      __EndAtStart
+
+;---------------------------------------------------------------------
+; RUN: FileCheck -allow-deprecated-dag-overlap -input-file %s %s \
+; RUN:           -check-prefix=EndBeforeStart
+; RUN: FileCheck -input-file %s %s -check-prefix=EndBeforeStart
+
+new match end before old match start
+
+__EndBeforeStart
+(abc<mno>xyz)
+(abc<mno>xyz)
+__EndBeforeStart
+
+; EndBeforeStart:      __EndBeforeStart
+
+; EndBeforeStart:      {{^}}(
+; EndBeforeStart-DAG:  <mno>
+; EndBeforeStart-DAG:  b
+; EndBeforeStart-DAG:  xyz
+; EndBeforeStart-NOT:  {{.}}
+; EndBeforeStart-SAME: ){{$}}
+
+; EndBeforeStart:      {{^}}(
+; EndBeforeStart-DAG:  <mno>
+; EndBeforeStart-DAG:  ab
+; EndBeforeStart-DAG:  xyz
+; EndBeforeStart-NOT:  {{.}}
+; EndBeforeStart-SAME: ){{$}}
+
+; EndBeforeStart:      __EndBeforeStart

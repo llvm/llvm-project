@@ -1,0 +1,648 @@
+## Test that yaml2obj emits .debug_addr section.
+
+## a) Generate and verify a little endian DWARF32 .debug_addr section in a 64-bit object file.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t1.dwarf32.le.o
+# RUN: llvm-readobj --sections --section-data %t1.dwarf32.le.o | \
+# RUN:   FileCheck %s -DSIZE=264 -DADDRALIGN=1 --check-prefixes=SHDR,DWARF32-LE
+
+#            SHDR: Index: 1
+#       SHDR-NEXT: Name: .debug_addr (1)
+#       SHDR-NEXT: Type: SHT_PROGBITS (0x1)
+#       SHDR-NEXT: Flags [ (0x0)
+#       SHDR-NEXT: ]
+#       SHDR-NEXT: Address: 0x0
+#       SHDR-NEXT: Offset: 0x40
+#       SHDR-NEXT: Size: [[SIZE]]
+#       SHDR-NEXT: Link: 0
+#       SHDR-NEXT: Info: 0
+#       SHDR-NEXT: AddressAlignment: [[ADDRALIGN]]
+#       SHDR-NEXT: EntrySize: 0
+# DWARF32-LE-NEXT: SectionData (
+# DWARF32-LE-NEXT:   0000: 0C000000 05000400 34120000 78560000
+##                         |        |   | |  |        |
+##                         |        |   | |  |        +------- address (4-byte)
+##                         |        |   | |  +------- address (4-byte)
+##                         |        |   | +- segment_selector_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 1) unit_length (4-byte)
+##
+# DWARF32-LE-NEXT:   0010: 14000000 05000800 21430000 00000000
+##                         |        |   | |  |
+##                         |        |   | |  +---------------- address (8-byte)
+##                         |        |   | +- segment_selector_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 2) unit_length (4-byte)
+##
+# DWARF32-LE-NEXT:   0020: 65870000 00000000 0C000000 05000004
+##                         |                 |        |   | |
+##                         |                 |        |   | +- segment_selector_size (1-byte)
+##                         |                 |        |   +- address_size (1-byte)
+##                         |                 |        +--- version (2-byte)
+##                         |                 +------- 3) unit_length (4-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-LE-NEXT:   0030: 34120000 78560000 14000000 05000008
+##                         |        |        |        |   | |
+##                         |        |        |        |   | +- segment_selector_size (1-byte)
+##                         |        |        |        |   +- address_size (1-byte)
+##                         |        |        |        +--- version (2-byte)
+##                         |        |        +------- 4) unit_length (4-byte)
+##                         |        +------- segment (4-byte)
+##                         +------- segment (4-byte)
+##
+# DWARF32-LE-NEXT:   0040: 21430000 00000000 65870000 00000000
+##                         |                 |
+##                         |                 +---------------- segment (8-byte)
+##                         +---------------- segment (8-byte)
+##
+# DWARF32-LE-NEXT:   0050: 1C000000 05000404 34120000 78560000
+##                         |        |   | |  |        |
+##                         |        |   | |  |        +------- address (4-byte)
+##                         |        |   | |  +------- segment (4-byte)
+##                         |        |   | +- segment_selector_size (4-byte)
+##                         |        |   +- address_size (4-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 5) unit_length (4-byte)
+##
+# DWARF32-LE-NEXT:   0060: 21430000 00000000 00000000 21430000
+##                         |        |        |        |
+##                         |        |        |        +------- address (4-byte)
+##                         |        |        +------- segment (4-byte)
+##                         |        +------- address (4-byte)
+##                         +------- segment (4-byte)
+##
+# DWARF32-LE-NEXT:   0070: 34000000 05000808 34120000 00000000
+##                         |        |   | |  |
+##                         |        |   | |  +---------------- segment (8-byte)
+##                         |        |   | +- segment_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 6) unit_length (4-byte)
+##
+# DWARF32-LE-NEXT:   0080: 78560000 00000000 21430000 00000000
+##                         |                 |
+##                         |                 +---------------- segment (8-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-LE-NEXT:   0090: 00000000 00000000 00000000 00000000
+##                         |                 +---------------- segment (8-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-LE-NEXT:   00A0: 21430000 00000000 28000000 05000408
+##                         |                 |        |   | |
+##                         |                 |        |   | +- segment_size (1-byte)
+##                         |                 |        |   +- address_size (1-byte)
+##                         |                 |        +--- version (2-byte)
+##                         |                 +------- 7) unit_length (4-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-LE-NEXT:   00B0: 34120000 00000000 78560000 21430000
+##                         |                 |        |
+##                         |                 |        +------- segment (8-byte)
+##                         |                 +------- address (4-byte)
+##                         +---------------- segment (8-byte)
+##
+# DWARF32-LE-NEXT:   00C0: 00000000 00000000 00000000 00000000
+##                         |        |        +---------------- segment (8-byte)
+##                         |        +------- address (4-btye)
+##                         +------- higher 4-byte of segment
+##
+# DWARF32-LE-NEXT:   00D0: 21430000 28000000 05000804 34120000
+##                         |        |        |   | |  +------- segment (4-byte)
+##                         |        |        |   | +- segment_size (1-byte)
+##                         |        |        |   +- address_size (1-byte)
+##                         |        |        +--- version (2-byte)
+##                         |        +------- 8) unit_length (4-byte)
+##                         +------- address (4-byte)
+##
+# DWARF32-LE-NEXT:   00E0: 78560000 00000000 21430000 00000000
+##                         |                 |        |
+##                         |                 |        +------- address (8-byte)
+##                         |                 +------- segment (4-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-LE-NEXT:   00F0: 00000000 00000000 21430000 00000000
+##                         |        |        |
+##                         |        |        +---------------- address (8-byte)
+##                         |        +------- segment (4-byte)
+##                         +------- higher 4-byte of address
+##
+# DWARF32-LE-NEXT:   0100: 34120000 02000400
+##                         |        |   | |
+##                         |        |   | +- segment_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 9) unit_length (4-byte)
+# DWARF32-LE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
+DWARF:
+  debug_addr:
+    ## 1) Only address (4-byte) exists.
+    - Version:     5
+      AddressSize: 0x04
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+    ## 2) Only address (8-byte) exists (AddressSize is derived from FileHeader).
+    - Version: 5
+      Entries:
+        - Address: 0x4321
+        - Address: 0x8765
+    ## 3) Only segment (4-byte) exists.
+    - Version:             5
+      AddressSize:         0x00
+      SegmentSelectorSize: 0x04
+      Entries:
+        - Segment: 0x1234
+        - Segment: 0x5678
+    ## 4) Only segment (8-byte) exists.
+    - Version:             5
+      AddressSize:         0x00
+      SegmentSelectorSize: 0x08
+      Entries:
+        - Segment: 0x4321
+        - Segment: 0x8765
+    ## 5) Both address (4-byte) and segment (4-byte) exist.
+    - Version:             5
+      AddressSize:         0x04
+      SegmentSelectorSize: 0x04
+      Entries:
+        - Segment: 0x1234
+          Address: 0x5678
+        - Segment: 0x4321
+          ## Segment exists, while address takes the default value 0x00.
+        - Address: 0x4321
+          ## Address exists, while segment takes the default value 0x00.
+    ## 6) Both address (8-byte) and segment (8-byte) exist (AddressSize is derived from FileHeader).
+    - Version:             5
+      SegmentSelectorSize: 0x08
+      Entries:
+        - Segment: 0x1234
+          Address: 0x5678
+        - Segment: 0x4321
+          ## Segment exists, while address takes the default value 0x00.
+        - Address: 0x4321
+          ## Address exists, while segment takes the default value 0x00.
+    ## 7) Both address (4-byte) and segment (8-byte) exist.
+    - Version:             5
+      AddressSize:         0x04
+      SegmentSelectorSize: 0x08
+      Entries:
+        - Segment: 0x1234
+          Address: 0x5678
+        - Segment: 0x4321
+          ## Segment exists, while address takes the default value 0x00.
+        - Address: 0x4321
+          ## Address exists, while segment takes the default value 0x00.
+    ## 8) Both address (8-byte) and segment (4-byte) exist (AddressSize is derived from FileHeader).
+    - Version:             5
+      SegmentSelectorSize: 0x04
+      Entries:
+        - Segment: 0x1234
+          Address: 0x5678
+        - Segment: 0x4321
+          ## Segment exists, while address takes the default value 0x00.
+        - Address: 0x4321
+          ## Address exists, while segment takes the default value 0x00.
+    ## 9) Explicitly assign a value to 'Length'.
+    - Length:              0x1234
+      Version:             0x02
+      AddressSize:         0x04
+      SegmentSelectorSize: 0x00
+      Entries:             []
+
+## b) Generate and verify a big endian DWARF32 .debug_addr section.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t1.dwarf32.be.o
+# RUN: llvm-readobj --sections --section-data %t1.dwarf32.be.o | \
+# RUN:   FileCheck %s -DSIZE=264 -DADDRALIGN=1 --check-prefixes=SHDR,DWARF32-BE
+
+# DWARF32-BE-NEXT: SectionData (
+# DWARF32-BE-NEXT:   0000: 0000000C 00050400 00001234 00005678
+##                         |        |   | |  |        |
+##                         |        |   | |  |        +------- address (4-byte)
+##                         |        |   | |  +------- address (4-byte)
+##                         |        |   | +- segment_selector_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 1) unit_length (4-byte)
+##
+# DWARF32-BE-NEXT:   0010: 00000014 00050800 00000000 00004321
+##                         |        |   | |  |
+##                         |        |   | |  +---------------- address (8-byte)
+##                         |        |   | +- segment_selector_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 2) unit_length (4-byte)
+##
+# DWARF32-BE-NEXT:   0020: 00000000 00008765 0000000C 00050004
+##                         |                 |        |   | |
+##                         |                 |        |   | +- segment_selector_size (1-byte)
+##                         |                 |        |   +- address_size (1-byte)
+##                         |                 |        +--- version (2-byte)
+##                         |                 +------- 3) unit_length (4-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-BE-NEXT:   0030: 00001234 00005678 00000014 00050008
+##                         |        |        |        |   | |
+##                         |        |        |        |   | +- segment_selector_size (1-byte)
+##                         |        |        |        |   +- address_size (1-byte)
+##                         |        |        |        +--- version (2-byte)
+##                         |        |        +------- 4) unit_length (4-byte)
+##                         |        +------- segment (4-byte)
+##                         +------- segment (4-byte)
+##
+# DWARF32-BE-NEXT:   0040: 00000000 00004321 00000000 00008765
+##                         |                 |
+##                         |                 +---------------- segment (8-byte)
+##                         +---------------- segment (8-byte)
+##
+# DWARF32-BE-NEXT:   0050: 0000001C 00050404 00001234 00005678
+##                         |        |   | |  |        |
+##                         |        |   | |  |        +------- address (4-byte)
+##                         |        |   | |  +------- segment (4-byte)
+##                         |        |   | +- segment_selector_size (4-byte)
+##                         |        |   +- address_size (4-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 5) unit_length (4-byte)
+##
+# DWARF32-BE-NEXT:   0060: 00004321 00000000 00000000 00004321
+##                         |        |        |        |
+##                         |        |        |        +------- address (4-byte)
+##                         |        |        +------- segment (4-byte)
+##                         |        +------- address (4-byte)
+##                         +------- segment (4-byte)
+##
+# DWARF32-BE-NEXT:   0070: 00000034 00050808 00000000 00001234
+##                         |        |   | |  |
+##                         |        |   | |  +---------------- segment (8-byte)
+##                         |        |   | +- segment_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 6) unit_length (4-byte)
+##
+# DWARF32-BE-NEXT:   0080: 00000000 00005678 00000000 00004321
+##                         |                 |
+##                         |                 +---------------- segment (8-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-BE-NEXT:   0090: 00000000 00000000 00000000 00000000
+##                         |                 |
+##                         |                 +---------------- segment (8-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-BE-NEXT:   00A0: 00000000 00004321 00000028 00050408
+##                         |                 |        |   | |
+##                         |                 |        |   | +- segment_size (1-byte)
+##                         |                 |        |   +- address_size (1-byte)
+##                         |                 |        +--- version (2-byte)
+##                         |                 +------- 7) unit_length (4-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-BE-NEXT:   00B0: 00000000 00001234 00005678 00000000
+##                         |                 |        |
+##                         |                 |        +------- segment (8-byte)
+##                         |                 +------- address (4-byte)
+##                         +---------------- segment (8-byte)
+##
+# DWARF32-BE-NEXT:   00C0: 00004321 00000000 00000000 00000000
+##                         |        |        |
+##                         |        |        +---------------- segment (8-byte)
+##                         |        +------- address (4-btye)
+##                         +------- lower 4-byte of segment
+##
+# DWARF32-BE-NEXT:   00D0: 00004321 00000028 00050804 00001234
+##                         |        |        |   | |  |
+##                         |        |        |   | |  +------- segment (4-byte)
+##                         |        |        |   | +- segment_size (1-byte)
+##                         |        |        |   +- address_size (1-byte)
+##                         |        |        +--- version (2-byte)
+##                         |        +------- 8) unit_length (4-byte)
+##                         +------- address (4-byte)
+##
+# DWARF32-BE-NEXT:   00E0: 00000000 00005678 00004321 00000000
+##                         |                 |        |
+##                         |                 |        +------- address (8-byte)
+##                         |                 +------- segment (4-byte)
+##                         +---------------- address (8-byte)
+##
+# DWARF32-BE-NEXT:   00F0: 00000000 00000000 00000000 00004321
+##                         |        |        |
+##                         |        |        +---------------- address (8-byte)
+##                         |        +------- segment (4-byte)
+##                         +------- lower 4-byte of address
+##
+# DWARF32-BE-NEXT:   0100: 00001234 00020400
+##                         |        |   | |
+##                         |        |   | +- segment_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- 9) unit_length (4-byte)
+# DWARF32-BE-NEXT: )
+
+## c) Generate and verify a little endian DWARF64 .debug_addr section.
+
+# RUN: yaml2obj --docnum=2 -DENDIAN=ELFDATA2LSB %s -o %t2.dwarf64.le.o
+# RUN: llvm-readobj --sections --section-data %t2.dwarf64.le.o | \
+# RUN:   FileCheck %s -DSIZE=56 -DADDRALIGN=1 --check-prefixes=SHDR,DWARF64-LE
+
+# DWARF64-LE-NEXT: SectionData (
+# DWARF64-LE-NEXT:   0000: FFFFFFFF 0C000000 00000000 05000400
+##                         |                          |   | |
+##                         |                          |   | +- segment_selector_size (1-byte)
+##                         |                          |   +- address_size (1-byte)
+##                         |                          +--- version (2-byte)
+##                         +------------------------- unit_length (12-byte)
+##
+# DWARF64-LE-NEXT:   0010: 34120000 78560000 FFFFFFFF 14000000
+##                         |        |        |
+##                         |        |        +---------------- unit_length (12-byte)
+##                         |        +------- address (4-byte)
+##                         +------- address (4-byte)
+##
+# DWARF64-LE-NEXT:   0020: 00000000 05000800 21430000 00000000
+##                         |        |   | |  |
+##                         |        |   | |  +---------------- address (8-byte)
+##                         |        |   | +- segment_selector_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- last 4-byte of unit_length
+##
+# DWARF64-LE-NEXT:   0030: 65870000 00000000
+##                         |
+##                         +---------------- address (8-byte)
+# DWARF64-LE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
+DWARF:
+  debug_addr:
+    - Format:      DWARF64
+      Version:     5
+      AddressSize: 0x04
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+    - Format:   DWARF64
+      Version:  5
+      Entries:
+        - Address: 0x4321
+        - Address: 0x8765
+
+## d) Generate and verify a big endian DWARF64 .debug_addr section.
+
+# RUN: yaml2obj --docnum=2 -DENDIAN=ELFDATA2MSB %s -o %t2.dwarf64.be.o
+# RUN: llvm-readobj --sections --section-data %t2.dwarf64.be.o | \
+# RUN:   FileCheck %s -DSIZE=56 -DADDRALIGN=1 --check-prefixes=SHDR,DWARF64-BE
+
+# DWARF64-BE-NEXT: SectionData (
+# DWARF64-BE-NEXT:   0000: FFFFFFFF 00000000 0000000C 00050400
+##                         |                          |   | |
+##                         |                          |   | +- segment_selector_size (1-byte)
+##                         |                          |   +- address_size (1-byte)
+##                         |                          +--- version (2-byte)
+##                         +------------------------- unit_length (12-byte)
+##
+# DWARF64-BE-NEXT:   0010: 00001234 00005678 FFFFFFFF 00000000
+##                         |        |        |
+##                         |        |        +---------------- unit_length (12-byte)
+##                         |        +------- address (4-byte)
+##                         +------- address (4-byte)
+##
+# DWARF64-BE-NEXT:   0020: 00000014 00050800 00000000 00004321
+##                         |        |   | |  |
+##                         |        |   | |  +---------------- address (8-byte)
+##                         |        |   | +- segment_selector_size (1-byte)
+##                         |        |   +- address_size (1-byte)
+##                         |        +--- version (2-byte)
+##                         +------- last 4-byte of unit_length
+##
+# DWARF64-BE-NEXT:   0030: 00000000 00008765
+##                         |
+##                         +---------------- address (8-byte)
+# DWARF64-BE-NEXT: )
+
+## e) Test that yaml2obj emits an error message if the 'Version' fields is missing.
+
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=MISSING-VERSION
+
+# MISSING-VERSION: error: missing required key 'Version'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_addr:
+    - Entries: []
+
+## f) Generate the .debug_addr section from raw section content.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4.o
+# RUN: llvm-readobj --sections --section-data %t4.o | \
+# RUN:   FileCheck %s -DADDRALIGN=0 -DSIZE=3 --check-prefixes=SHDR,ARBITRARY-CONTENT
+
+#      ARBITRARY-CONTENT: SectionData (
+# ARBITRARY-CONTENT-NEXT:   0000: 112233
+# ARBITRARY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_addr
+    Type:    SHT_PROGBITS
+    Content: "112233"
+
+## g) Generate the .debug_addr section when the "Size" is specified.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5.o
+# RUN: llvm-readelf --hex-dump=.debug_addr %t5.o | FileCheck %s --check-prefix=SIZE
+
+#       SIZE: Hex dump of section '.debug_addr':
+#  SIZE-NEXT: 0x00000000 00000000 00000000 00000000 00000000 ................
+# SIZE-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .debug_addr
+    Type: SHT_PROGBITS
+    Size: 0x10
+
+## h) Test that yaml2obj emits an error message when both the "Size" and the
+## "debug_addr" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: yaml2obj: error: cannot specify section '.debug_addr' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .debug_addr
+    Type: SHT_PROGBITS
+    Size: 0x10
+DWARF:
+  debug_addr:
+    - Version: 5
+      Entries: []
+
+## i) Test that yaml2obj emits an error message when both the "Content" and the
+## "debug_addr" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_addr
+    Type:    SHT_PROGBITS
+    Content: "00"
+DWARF:
+  debug_addr:
+    - Version: 5
+      Entries: []
+
+## j) Test that all the properties can be overridden by the section header when
+## the "debug_addr" entry doesn't exist.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8.o
+# RUN: llvm-readelf --sections %t8.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+#      OVERRIDDEN: [Nr] Name        Type   Address          Off    Size   ES Flg Lk Inf Al
+#      OVERRIDDEN: [ 1] .debug_addr STRTAB 0000000000002020 000050 000008 01   A  2   1  2
+# OVERRIDDEN-NEXT: [ 2] .sec        STRTAB 0000000000000000 000058 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_addr
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 0 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+    Size:         0x08        ## Set the "Size" so that we can reuse the check tag "OVERRIDDEN".
+  - Name:         .sec        ## Linked by .debug_addr.
+    Type:         SHT_STRTAB
+
+## k) Test that all the properties can be overridden by the section header when
+## the "debug_addr" entry exists.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9.o
+# RUN: llvm-readelf --sections %t9.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_addr
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 1 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+  - Name:         .sec        ## Linked by .debug_addr.
+    Type:         SHT_STRTAB
+DWARF:
+  debug_addr:
+    - Version: 5
+      Entries: []
+
+## l) Test that yaml2obj still generates a .debug_addr section if we assign an invalid value
+## to 'AddressSize' or 'SegmentSelectorSize' when the 'Entries' list is empty.
+
+# RUN: yaml2obj --docnum=10 -DSIZENAME=AddressSize %s -o %t10.addr.o
+# RUN: llvm-readelf --hex-dump=.debug_addr %t10.addr.o | \
+# RUN:   FileCheck -DADDRSIZE=03 -DSEGSIZE=00 %s --check-prefix=ADDR-SEG-SIZE
+
+# RUN: yaml2obj --docnum=10 -DSIZENAME=SegmentSelectorSize %s -o %t10.seg.o
+# RUN: llvm-readelf --hex-dump=.debug_addr %t10.seg.o | \
+# RUN:   FileCheck -DADDRSIZE=08 -DSEGSIZE=03 %s --check-prefix=ADDR-SEG-SIZE
+
+#      ADDR-SEG-SIZE: Hex dump of section '.debug_addr':
+# ADDR-SEG-SIZE-NEXT: 0x00000000 04000000 0500[[ADDRSIZE]][[SEGSIZE]]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_addr:
+    - Version:      5
+      [[SIZENAME]]: 3
+      Entries:      []
+
+## m) Test that yaml2obj emits an error message if we try to assign an invalid value to
+## 'AddressSize' or 'SegmentSelectorSize' when the 'Entries' list isn't empty.
+
+# RUN: not yaml2obj --docnum=11 -DSIZENAME=AddressSize %s 2>&1 | \
+# RUN:   FileCheck -DFIELD=address %s --check-prefix=INVALID-SIZE
+
+# RUN: not yaml2obj --docnum=11 -DSIZENAME=SegmentSelectorSize %s 2>&1 | \
+# RUN:   FileCheck -DFIELD=segment %s --check-prefix=INVALID-SIZE
+
+# INVALID-SIZE: yaml2obj: error: unable to write debug_addr [[FIELD]]: invalid integer write size: 3
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_addr:
+    - Version:      5
+      [[SIZENAME]]: 3
+      Entries:
+        - Address: 0x1234
+
+## n) Test that the .debug_addr section header is emitted if the "debug_addr"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readobj --sections %t12.o | \
+# RUN:   FileCheck %s -DSIZE=0 -DADDRALIGN=1 --check-prefix=SHDR
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_addr: []

@@ -1,0 +1,38 @@
+# RUN: llc -o - -mtriple=x86_64-- -run-pass=regallocfast %s | FileCheck %s
+# RUN: llc -o - -mtriple=x86_64-- -passes=regallocfast %s | FileCheck %s
+# Fast regalloc used to not collect physical register definitions
+# before walking and assigning the virtual definition.
+# Therefore it was possible for a virtual definition to end up
+# using the same register as a later (in terms of operand list) physical
+# register.
+# Check this does not happen.
+#
+# PR41790
+---
+name: instruction_with_1virtreg_1physreg_defs
+body: |
+  bb.0:
+    ; CHECK-NOT: $rax = KILL implicit-def dead $rax
+    %0:gr64 = KILL implicit-def dead $rax
+    KILL %0
+    RET 0
+...
+---
+# Live-through defs are assigned before the other defs. The partial def of %0
+# goes first and takes its hint $rax; %1 then takes $ecx.
+# Assigning %1 first would put it in $eax and leave %0 a copy out of $rax.
+name: partial_def_before_other_defs
+body: |
+  bb.0:
+    liveins: $rax, $edx, $ecx
+    ; CHECK-LABEL: name: partial_def_before_other_defs
+    ; CHECK-NOT: COPY
+    ; CHECK: renamable $eax, renamable $ecx = MULX32rr killed $ecx, implicit killed $edx
+    %0:gr64_with_sub_8bit = COPY $rax
+    %0.sub_32bit, %1:gr32 = MULX32rr $ecx, implicit $edx
+    JMP_1 %bb.1
+  bb.1:
+    $rax = COPY %0
+    $ecx = COPY %1
+    RET64 implicit $rax, implicit $ecx
+...

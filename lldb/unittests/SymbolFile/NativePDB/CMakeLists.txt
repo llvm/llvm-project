@@ -1,0 +1,19 @@
+add_lldb_unittest(SymbolFileNativePDBTests
+  PDBFactoryTests.cpp
+  PdbFPOProgramToDWARFExpressionTests.cpp
+  UdtRecordCompleterTests.cpp
+
+  LINK_COMPONENTS
+    Support
+    DebugInfoPDB
+  LINK_LIBS
+    lldbCore
+    lldbHost
+    lldbSymbol
+    lldbPluginObjectFileELF
+    lldbPluginObjectFilePECOFF
+    lldbPluginSymbolFileNativePDB
+    lldbPluginSymbolFilePDB
+    lldbUtilityHelpers
+    LLVMTestingSupport
+  )

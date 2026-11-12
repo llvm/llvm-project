@@ -1,0 +1,268 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "EnumInitialValueCheck.h"
+#include "../utils/LexerUtils.h"
+#include "clang/AST/Decl.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::readability {
+
+/// Check if \p ECD is initialized by referencing another enumerator in the
+/// same enum (e.g., `last = first`).
+static bool isSelfReference(const EnumConstantDecl *ECD) {
+  const auto *CE = dyn_cast_if_present<ConstantExpr>(ECD->getInitExpr());
+  const auto *DRE =
+      dyn_cast_if_present<DeclRefExpr>(CE ? CE->getSubExpr() : nullptr);
+  const auto *RefECD =
+      dyn_cast_if_present<EnumConstantDecl>(DRE ? DRE->getDecl() : nullptr);
+  return RefECD && RefECD->getDeclContext() == ECD->getDeclContext();
+}
+
+static bool isAllowedSelfReference(const EnumConstantDecl *ECD,
+                                   bool AllowSelfRefs) {
+  return AllowSelfRefs && isSelfReference(ECD);
+}
+
+static bool isNoneEnumeratorsInitialized(const EnumDecl &Node,
+                                         bool AllowSelfRefs) {
+  return llvm::all_of(Node.enumerators(),
+                      [AllowSelfRefs](const EnumConstantDecl *ECD) {
+                        return isAllowedSelfReference(ECD, AllowSelfRefs) ||
+                               ECD->getInitExpr() == nullptr;
+                      });
+}
+
+static bool isOnlyFirstEnumeratorInitialized(const EnumDecl &Node,
+                                             bool AllowSelfRefs) {
+  bool IsFirst = true;
+  for (const EnumConstantDecl *ECD : Node.enumerators()) {
+    if (isAllowedSelfReference(ECD, AllowSelfRefs))
+      continue;
+    if ((IsFirst && ECD->getInitExpr() == nullptr) ||
+        (!IsFirst && ECD->getInitExpr() != nullptr))
+      return false;
+    IsFirst = false;
+  }
+  return !IsFirst;
+}
+
+static bool areAllEnumeratorsInitialized(const EnumDecl &Node) {
+  return llvm::all_of(Node.enumerators(), [](const EnumConstantDecl *ECD) {
+    return ECD->getInitExpr() != nullptr;
+  });
+}
+
+/// Check if \p Enumerator is initialized with a (potentially negated) \c
+/// IntegerLiteral.
+static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
+  const Expr *const Init = Enumerator->getInitExpr();
+  if (!Init)
+    return false;
+  return Init->isIntegerConstantExpr(Enumerator->getASTContext());
+}
+
+static void cleanInitialValue(const DiagnosticBuilder &Diag,
+                              const EnumConstantDecl *ECD,
+                              const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  const SourceRange InitExprRange = ECD->getInitExpr()->getSourceRange();
+  if (InitExprRange.isInvalid() || InitExprRange.getBegin().isMacroID() ||
+      InitExprRange.getEnd().isMacroID())
+    return;
+  std::optional<Token> EqualToken = utils::lexer::findNextTokenSkippingComments(
+      ECD->getLocation(), SM, LangOpts);
+  if (!EqualToken.has_value() ||
+      EqualToken.value().getKind() != tok::TokenKind::equal)
+    return;
+  const SourceLocation EqualLoc{EqualToken->getLocation()};
+  if (EqualLoc.isInvalid() || EqualLoc.isMacroID())
+    return;
+  Diag << FixItHint::CreateRemoval(EqualLoc)
+       << FixItHint::CreateRemoval(InitExprRange);
+}
+
+namespace {
+
+AST_MATCHER(EnumDecl, isMacro) {
+  const SourceLocation Loc = Node.getBeginLoc();
+  return Loc.isMacroID();
+}
+
+AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs) {
+  return isNoneEnumeratorsInitialized(Node, AllowSelfRefs) ||
+         isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) ||
+         areAllEnumeratorsInitialized(Node);
+}
+
+AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
+              AllowSelfRefs) {
+  const EnumDecl::enumerator_range Enumerators = Node.enumerators();
+  if (Enumerators.empty())
+    return false;
+  const EnumConstantDecl *ECD = *Enumerators.begin();
+  return isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) &&
+         isInitializedByLiteral(ECD) && ECD->getInitVal().isZero();
+}
+
+/// Excludes bitfields because enumerators initialized with the result of a
+/// bitwise operator on enumeration values or any other expr that is not a
+/// potentially negative integer literal.
+/// Enumerations where it is not directly clear if they are used with
+/// bitmask, evident when enumerators are only initialized with (potentially
+/// negative) integer literals, are ignored. This is also the case when all
+/// enumerators are powers of two (e.g., 0, 1, 2).
+AST_MATCHER_P(EnumDecl, hasSequentialInitialValues, bool, AllowSelfRefs) {
+  const EnumDecl::enumerator_range Enumerators = Node.enumerators();
+  if (Enumerators.empty())
+    return false;
+  const EnumConstantDecl *const FirstEnumerator = *Node.enumerator_begin();
+  llvm::APSInt PrevValue = FirstEnumerator->getInitVal();
+  if (!isInitializedByLiteral(FirstEnumerator))
+    return false;
+  bool AllEnumeratorsArePowersOfTwo = true;
+  for (const EnumConstantDecl *Enumerator : llvm::drop_begin(Enumerators)) {
+    if (isAllowedSelfReference(Enumerator, AllowSelfRefs))
+      continue;
+    const llvm::APSInt NewValue = Enumerator->getInitVal();
+    if (NewValue != ++PrevValue)
+      return false;
+    if (!isInitializedByLiteral(Enumerator))
+      return false;
+    PrevValue = NewValue;
+    AllEnumeratorsArePowersOfTwo &= NewValue.isPowerOf2();
+  }
+  return !AllEnumeratorsArePowersOfTwo;
+}
+
+} // namespace
+
+static std::string getName(const EnumDecl *Decl) {
+  if (!Decl->getDeclName())
+    return "<unnamed>";
+
+  return Decl->getQualifiedNameAsString();
+}
+
+EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowExplicitZeroFirstInitialValue(
+          Options.get("AllowExplicitZeroFirstInitialValue", true)),
+      AllowExplicitSequentialInitialValues(
+          Options.get("AllowExplicitSequentialInitialValues", true)),
+      AllowReferencedInitialValues(
+          Options.get("AllowReferencedInitialValues", false)) {}
+
+void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
+                AllowExplicitZeroFirstInitialValue);
+  Options.store(Opts, "AllowExplicitSequentialInitialValues",
+                AllowExplicitSequentialInitialValues);
+  Options.store(Opts, "AllowReferencedInitialValues",
+                AllowReferencedInitialValues);
+}
+
+void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
+  const bool AllowSelfRefs = AllowReferencedInitialValues;
+  Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
+                              unless(hasConsistentInitialValues(AllowSelfRefs)))
+                         .bind("inconsistent"),
+                     this);
+  if (!AllowExplicitZeroFirstInitialValue)
+    Finder->addMatcher(
+        enumDecl(isDefinition(),
+                 hasZeroInitialValueForFirstEnumerator(AllowSelfRefs))
+            .bind("zero_first"),
+        this);
+  if (!AllowExplicitSequentialInitialValues)
+    Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
+                                hasSequentialInitialValues(AllowSelfRefs))
+                           .bind("sequential"),
+                       this);
+}
+
+void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
+  if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("inconsistent")) {
+    // Emit warning first (DiagnosticBuilder emits on destruction), then notes.
+    // Notes must follow the primary diagnostic or they may be dropped.
+    {
+      const DiagnosticBuilder Diag =
+          diag(Enum->getBeginLoc(), "initial values in enum '%0' are not "
+                                    "consistent, consider explicit "
+                                    "initialization of all, none or only the "
+                                    "first enumerator")
+          << getName(Enum);
+
+      for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+        if (ECD->getInitExpr() == nullptr) {
+          const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+              ECD->getLocation(), 0, *Result.SourceManager, getLangOpts());
+          if (EndLoc.isMacroID())
+            continue;
+          SmallString<8> Str{" = "};
+          ECD->getInitVal().toString(Str);
+          Diag << FixItHint::CreateInsertion(EndLoc, Str);
+        }
+      }
+    }
+
+    for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+      if (ECD->getInitExpr() == nullptr) {
+        diag(ECD->getLocation(), "uninitialized enumerator '%0' defined here",
+             DiagnosticIDs::Note)
+            << ECD->getName();
+      }
+    }
+    return;
+  }
+
+  if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("zero_first")) {
+    const EnumConstantDecl *ECD = *Enum->enumerator_begin();
+    const SourceLocation Loc = ECD->getLocation();
+    if (Loc.isInvalid() || Loc.isMacroID())
+      return;
+    const DiagnosticBuilder Diag =
+        diag(Loc, "zero initial value for the first "
+                  "enumerator in '%0' can be disregarded")
+        << getName(Enum);
+    cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
+    return;
+  }
+  if (const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("sequential")) {
+    const DiagnosticBuilder Diag =
+        diag(Enum->getBeginLoc(),
+             "sequential initial value in '%0' can be ignored")
+        << getName(Enum);
+    // Only remove the explicit value of an enumerator when the preceding
+    // declared enumerator equals `current - 1`, so the implicit value stays
+    // the same. An interleaved self-reference can break this, in which case
+    // the value must be kept.
+    const EnumConstantDecl *PrevECD = nullptr;
+    for (const EnumConstantDecl *ECD : Enum->enumerators()) {
+      if (PrevECD != nullptr &&
+          !isAllowedSelfReference(ECD, AllowReferencedInitialValues)) {
+        llvm::APSInt Expected = PrevECD->getInitVal();
+        ++Expected;
+        if (llvm::APSInt::isSameValue(Expected, ECD->getInitVal()))
+          cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
+      }
+      PrevECD = ECD;
+    }
+    return;
+  }
+}
+
+} // namespace clang::tidy::readability

@@ -1,0 +1,91 @@
+## Report errors when specified file offsets are invalid.
+
+# RUN: not yaml2obj %s -DTEXTRAWDATAOFFSET=0xFFFFFFF0 -o %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR1
+# ERROR1: current file offset (4294967288) is bigger than the specified FileOffsetToData for the .data section (108)
+
+# RUN: not yaml2obj %s -DDATARAWDATAOFFSET=0xFFFFFFF0 -o %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR2
+# ERROR2: current file offset (4294967284) is bigger than the specified FileOffsetToRelocations for the .text section (112)
+
+# RUN: not yaml2obj %s -DRELOCOFFSET=0xFFFFFFF0 -o %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR3
+# ERROR3: current file offset (4294967290) is bigger than the specified SymbolTableOffset (122)
+
+# RUN: not yaml2obj %s -DSYMTABOFFSET=0x100000000 -o %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR4
+# ERROR4: maximum object size of 4294967295 exceeded when writing symbols
+
+# RUN: not yaml2obj %s -DRELOCOFFSET=0x100000000 -o %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR5
+# ERROR5: maximum object size (4294967295) exceeded when writing relocation data for section .text
+
+# RUN: not yaml2obj %s -DDATARAWDATAOFFSET=0x100000000 -o %t 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERROR6
+# ERROR6: maximum object size (4294967295) exceeded when writing data for section 2 (.data)
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1DF
+  NumberOfSections: 2
+  OffsetToSymbolTable: [[SYMTABOFFSET=0x7A]]
+  EntriesInSymbolTable: 6
+  AuxiliaryHeaderSize: 0
+  Flags:           0x0
+Sections:
+  - Name:            .text
+    Address:         0x0
+    Size:            0x8
+    FileOffsetToData: [[TEXTRAWDATAOFFSET=0x64]]
+    FileOffsetToRelocations: [[RELOCOFFSET=0x70]]
+    NumberOfRelocations: 0x1
+    Flags:           [ STYP_TEXT ]
+    SectionData:     386000004BFFFFFC
+    Relocations:
+      - Address:         0x4
+        Symbol:          0x2
+        Info:            0x99
+        Type:            0x1A
+  - Name:            .data
+    Address:         0x0
+    Size:            0x4
+    FileOffsetToData: [[DATARAWDATAOFFSET=0x6C]]
+    FileOffsetToRelocations: 0
+    Flags:           [ STYP_DATA ]
+    SectionData:     3210ABCD
+Symbols:
+  - Name:            .bar
+    Value:           0x0
+    Section:         N_UNDEF
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        SymbolAlignmentAndType: 0
+        StorageMappingClass: XMC_PR
+        SectionOrLength: 0
+  - Name:            ''
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_HIDEXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        SymbolAlignmentAndType: 17
+        StorageMappingClass: XMC_PR
+        SectionOrLength: 8
+  - Name:            .foo
+    Value:           0x0
+    Section:         .text
+    Type:            0x0
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:            AUX_CSECT
+        SymbolAlignmentAndType: 2
+        StorageMappingClass: XMC_PR
+        SectionOrLength: 2
+StringTable:     {}
+...

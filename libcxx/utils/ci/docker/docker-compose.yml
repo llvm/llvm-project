@@ -1,0 +1,29 @@
+#
+# This docker compose file allows building the various Docker images we use for
+# libc++'s CI. It encodes the versions of various tools included in these images.
+#
+# Images can be built with:
+#
+#   $ docker compose --file libcxx/utils/ci/docker/docker-compose.yml build <image-name>
+#
+
+services:
+  libcxx-linux-builder:
+    image: ghcr.io/llvm/libcxx-linux-builder:${TAG:-latest}
+    build:
+      context: ../../../.. # monorepo root
+      dockerfile: libcxx/utils/ci/docker/linux-builder.dockerfile
+      args:
+        GCC_HEAD_VERSION: 17
+        LLVM_HEAD_VERSION: 24
+
+  libcxx-android-builder:
+    image: ghcr.io/llvm/libcxx-android-builder:${TAG:-latest}
+    build:
+      context: ../../../.. # monorepo root
+      dockerfile: libcxx/utils/ci/docker/android-builder.dockerfile
+      args:
+        BASE_IMAGE_VERSION: 5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
+        ANDROID_CLANG_VERSION: r596125
+        ANDROID_CLANG_PREBUILTS_COMMIT: c757e540eeaac1661fd7495764aec83254ef81fe
+        ANDROID_SYSROOT_COMMIT: d3a4496257f6e19fe25dd960a8ceee1d848a31a8

@@ -1,0 +1,43 @@
+# Check that we can remove the redundant save of constant registers such as $zero
+# RUN: llc -mtriple=mips64-unknown-freebsd %s -start-before=machine-cp -o - | FileCheck %s --check-prefix ASM
+# RUN: llc -mtriple=mips64-unknown-freebsd %s -run-pass=machine-cp -o - | FileCheck %s
+--- |
+  target triple = "mips64-unknown-freebsd"
+  define i32 @a() nounwind {
+  ; ASM-LABEL: a:
+  ; ASM:       # %bb.0:
+  ; ASM-NEXT:    daddiu $sp, $sp, -16
+  ; ASM-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+  ; ASM-NEXT:    jalr $25
+  ; ASM-NEXT:    move $4, $zero
+  ; ASM-NEXT:    move $4, $zero
+  ; ASM-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+  ; ASM-NEXT:    jr $ra
+  ; ASM-NEXT:    daddiu $sp, $sp, 16
+    ret i32 0
+  }
+...
+---
+name:            a
+frameInfo:
+  adjustsStack:    true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $r4_64, $r25_64, $r31_64, $r30_64, $r28_64
+    ; CHECK-LABEL: name: a
+    ; CHECK: liveins: $r4_64, $r25_64, $r31_64, $r30_64, $r28_64
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
+    ; CHECK-NEXT: $r4_64 = COPY $r0_64
+    ; CHECK-NEXT: JALR64Pseudo $r25_64, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit $r28_64, implicit-def $r29, implicit-def $r2
+    ; CHECK-NEXT: ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
+    ; CHECK-NEXT: $r4_64 = COPY $r0_64
+    ; CHECK-NEXT: PseudoReturn64 undef $r31_64, implicit $r2_64, implicit killed $r4_64
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
+    renamable $r16_64 = COPY $r0_64
+    $r4_64 = COPY renamable $r16_64
+    JALR64Pseudo $r25_64, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit $r28_64, implicit-def $r29, implicit-def $r2
+    ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
+    $r4_64 = COPY killed renamable $r16_64
+    PseudoReturn64 undef $r31_64, implicit $r2_64, implicit killed $r4_64
+...

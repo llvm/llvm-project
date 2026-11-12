@@ -1,0 +1,68 @@
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
+! OpenMP Version 5.0
+! 2.17.11 Depend Clause
+! List items used in depend clauses cannot be zero-length array sections.
+
+program omp_depend
+  integer :: a(10) , b(10,10)
+  integer :: x(0)
+  a = 10
+  b = 20
+
+  !$omp parallel
+  !$omp single
+
+  !ERROR: 'a' in DEPEND clause is a zero size array section
+  !ERROR: 'b' in DEPEND clause is a zero size array section
+  !$omp task shared(a,b) depend(out: a(2:1), b(3:1, 1:-1))
+  a(2:1) = b(2, 2)
+  !$omp end task
+
+  !ERROR: 'a' in DEPEND clause must not specify a stride
+  !ERROR: 'b' in DEPEND clause must not specify a stride
+  !$omp task shared(x) depend(in: a(10:5:-1)) depend(in: b(5:10:-1, 2))
+  print *, a(5:10), b
+  !$omp end task
+
+  !ERROR: 'a' in DEPEND clause must not specify a stride
+  !$omp task shared(x) depend(in: a(5:1:10))
+  print *, a(5:10), b
+  !$omp end task
+
+  !ERROR: 'a' in DEPEND clause must not specify a stride
+  !ERROR: Stride of triplet must not be zero
+  !$omp task shared(a) depend(in: a(1:10:0))
+  print *, a(1:10)
+  !$omp end task
+
+  !ERROR: 'a' in DEPEND clause must not specify a stride
+  !$omp task depend(in: a(2:2:1))
+  !$omp end task
+
+  !ERROR: 'x' in DEPEND clause must not specify a stride
+  !$omp task depend(in: x(::1))
+  !$omp end task
+
+  !$omp task depend(in: a(:))
+  !$omp end task
+
+  !ERROR: 'x' in DEPEND clause is a zero size array section
+  !$omp task depend(in: x(:))
+  !$omp end task
+
+  !ERROR: 'x' in DEPEND clause is a zero size array section
+  !$omp task depend(out: x(:))
+  !$omp end task
+
+  !ERROR: 'x' in DEPEND clause is a zero size array section
+  !$omp task depend(inout: x(:))
+  !$omp end task
+
+  !ERROR: 'x' in DEPEND clause is a zero size array section
+  !$omp task depend(mutexinoutset: x(:))
+  !$omp end task
+
+  !$omp end single
+  !$omp end parallel
+
+end program omp_depend

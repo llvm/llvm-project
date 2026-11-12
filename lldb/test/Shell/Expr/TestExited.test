@@ -1,0 +1,3 @@
+# RUN: %clangxx_host %p/Inputs/call-function.cpp -g -o %t
+# RUN: %lldb %t -o 'r' -o 'expr strlen("")' 2>&1 | FileCheck %s
+# CHECK: error: unable to evaluate expression while the process is exited: the process must be stopped because the expression might require allocating memory.

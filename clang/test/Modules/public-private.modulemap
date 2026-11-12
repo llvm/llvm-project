@@ -1,0 +1,11 @@
+// RUN: rm -rf %t.modules
+// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t.modules -fmodule-map-file=%s -I%S -include "Inputs/empty.h" /dev/null
+// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t.modules -fmodule-map-file=%s -I%S -include "Inputs/dummy.h" /dev/null
+module A {
+  header "Inputs/empty.h"
+  private header "Inputs/empty.h"
+}
+module B {
+  private header "Inputs/dummy.h"
+  header "Inputs/dummy.h"
+}

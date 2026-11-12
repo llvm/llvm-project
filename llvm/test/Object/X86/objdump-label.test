@@ -1,0 +1,10 @@
+RUN: llvm-objdump -d %p/../Inputs/trivial-label-test.elf-x86-64 \
+RUN:              | FileCheck %s -check-prefix ELF-x86-64
+
+ELF-x86-64: file format elf64-x86-64
+ELF-x86-64: Disassembly of section .text:
+ELF-x86-64: <foo>:
+ELF-x86-64:        0:	90                                           	nop
+ELF-x86-64: <bum>:
+ELF-x86-64:        1:	90                                           	nop
+

@@ -1,0 +1,23 @@
+# RUN: llvm-objdump --macho --exports-trie --arch x86_64 \
+# RUN:   %p/Inputs/exports-trie.macho-x86_64 2>/dev/null | FileCheck %s --match-full-lines --strict-whitespace
+# RUN: llvm-objdump --macho --exports-trie --arch x86_64 \
+# RUN:   %p/Inputs/weak-bind.macho-x86_64 2>/dev/null | FileCheck --check-prefix=EXE %s
+
+#      CHECK:{{.*}}exports-trie.macho-x86_64:
+#CHECK-EMPTY:
+# CHECK-NEXT:Exports trie:
+# CHECK-NEXT:[re-export] _malloc (from libSystem)
+# CHECK-NEXT:[re-export] _myfree (_free from libSystem)
+# CHECK-NEXT:0x00000F70  _myWeak [weak_def]
+# CHECK-NEXT:0x00001018  _myTLV [per-thread]
+# CHECK-NEXT:0x12345678  _myAbs [absolute]
+# CHECK-NEXT:0x00000F60  _foo
+
+
+# EXE: 0x100000000  __mh_execute_header
+# EXE: 0x100000ED0  __Znwm
+# EXE: 0x100000F30  __ZdlPv
+# EXE: 0x100000F40  _main
+# EXE: 0x100001018  _p1
+# EXE: 0x100001020  _p2
+# EXE: 0x100001028  _p3

@@ -1,0 +1,76 @@
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "processId": 123,
+    "rootPath": "clangd",
+    "capabilities": { "window": { "workDoneProgress": true, "implicitWorkDoneProgressCreate": true} },
+    "trace": "off"
+  }
+}
+---
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didOpen",
+  "params": {
+    "textDocument": {
+      "uri": "file://DIRECTORY/bar.cpp",
+      "languageId": "cpp",
+      "version": 1,
+      "text": "#include \"sub_dir/foo.h\"\nint main(){\nreturn foo();\n}"
+    }
+  }
+}
+# BUILD:      "method": "$/progress"
+# BUILD-NEXT: "params": {
+# BUILD-NEXT:   "token": "backgroundIndexProgress",
+# BUILD-NEXT:   "value": {
+# BUILD-NEXT:     "kind": "begin",
+# BUILD-NEXT:     "percentage": 0,
+# BUILD-NEXT:     "title": "indexing"
+# BUILD-NEXT:   }
+# BUILD-NEXT: }
+# BUILD:      "method": "$/progress"
+# BUILD-NEXT: "params": {
+# BUILD-NEXT:   "token": "backgroundIndexProgress",
+# BUILD-NEXT:   "value": {
+# BUILD-NEXT:     "kind": "report",
+# BUILD-NEXT:     "message": "0/1",
+# BUILD-NEXT:     "percentage": 0
+# BUILD-NEXT:   }
+# BUILD-NEXT: }
+#    later...
+# BUILD:          "message": "1/2",
+# BUILD-NEXT:     "percentage": 50
+#    finally...
+# BUILD:          "kind": "end"
+# when using the index, we spawn one task to read it, but not more.
+# USE-NOT:        "message": "1/2",
+---
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "sync",
+  "params": null
+}
+---
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "textDocument/definition",
+  "params": {
+    "textDocument": {
+      "uri": "file://DIRECTORY/bar.cpp"
+    },
+    "position": {
+      "line": 2,
+      "character": 8
+    }
+  }
+}
+# CHECK: "uri": "file://{{.*}}/foo.cpp"
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

@@ -1,0 +1,23 @@
+# XFAIL: system-windows
+# REQUIRES: native && (target-x86 || target-x86_64)
+# RUN: %clangxx_host %p/Inputs/x86-multithread-read.cpp -o %t -pthread
+# RUN: %lldb -b -s %s %t | FileCheck %s
+
+process launch
+# CHECK: Process {{[0-9]+}} stopped
+
+register read --all
+# CHECK-DAG: eax = 0x05060708
+# CHECK-DAG: ebx = 0x15161718
+# CHECK-DAG: st{{(mm)?}}0 = {0x10 0x20 0x30 0x40 0x50 0x60 0x70 0x80 0x00 0x40}
+
+process continue
+# CHECK: Process {{[0-9]+}} stopped
+
+register read --all
+# CHECK-DAG: eax = 0x25262728
+# CHECK-DAG: ebx = 0x35363738
+# CHECK-DAG: st{{(mm)?}}0 = {0x11 0x21 0x31 0x41 0x51 0x61 0x71 0x81 0x00 0xc0}
+
+process continue
+# CHECK: Process {{[0-9]+}} exited with status = 0

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Function>
+<Name>aaa</Name>
+<Abstract><Para>Aaa.</Para></Abstract>
+<Parameters>
+  <Parameter>
+    <Term>x1</Term>
+  </Parameter>
+</Parameters>
+</Function>

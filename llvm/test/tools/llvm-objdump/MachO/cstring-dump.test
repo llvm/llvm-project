@@ -1,0 +1,18 @@
+RUN: llvm-objdump --macho --section __TEXT,__cstring %p/Inputs/hello.obj.macho-x86_64 2>&1 | FileCheck %s --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring --no-leading-addr %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NO_ADDR --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring --no-leading-headers %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NO_HEADERS --implicit-check-not="warning:"
+RUN: llvm-objdump --macho --section __TEXT,__cstring --non-verbose %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s --check-prefix=NON_VERBOSE --implicit-check-not="warning:"
+
+CHECK: Contents of (__TEXT,__cstring) section
+CHECK-NEXT: 000000000000003b  Hello world\n
+
+NO_ADDR: Contents of (__TEXT,__cstring) section
+NO_ADDR: Hello world\n
+NO_ADDR-NOT: 000000000000003b
+
+NO_HEADERS-NOT: Inputs/hello.obj.macho-x86_64:
+NO_HEADERS-NOT: Contents of (__TEXT,__cstring) section
+NO_HEADERS: 000000000000003b	Hello world\n
+
+NON_VERBOSE: Contents of (__TEXT,__cstring) section
+NON_VERBOSE: 000000000000003b	48 65 6c 6c 6f 20 77 6f 72 6c 64 0a 00

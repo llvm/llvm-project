@@ -1,0 +1,71 @@
+add_libc_testsuite(libc-inttypes-tests)
+
+add_libc_test(
+  strtoimax_test
+  SUITE
+    libc-inttypes-tests
+  SRCS
+    strtoimax_test.cpp
+  DEPENDS
+    libc.src.inttypes.strtoimax
+    libc.test.src.stdlib.strtol_test_support
+)
+
+add_libc_test(
+  strtoumax_test
+  SUITE
+    libc-inttypes-tests
+  SRCS
+    strtoumax_test.cpp
+  DEPENDS
+    libc.src.inttypes.strtoumax
+    libc.test.src.stdlib.strtol_test_support
+)
+
+add_libc_test(
+  imaxdiv_test
+  SUITE
+    libc-inttypes-tests
+  SRCS
+    imaxdiv_test.cpp
+  HDRS
+    ../stdlib/DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.inttypes.imaxdiv
+)
+
+add_libc_test(
+  imaxabs_test
+  SUITE
+    libc-inttypes-tests
+  SRCS
+    imaxabs_test.cpp
+  HDRS
+    ../stdlib/DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.inttypes.imaxabs
+)
+
+add_libc_test(
+  wcstoimax_test
+  SUITE
+    libc-inttypes-tests
+  SRCS
+    wcstoimax_test.cpp
+  DEPENDS
+    libc.src.inttypes.wcstoimax
+    libc.test.src.wchar.wcstol_test_support
+)
+
+add_libc_test(
+  wcstoumax_test
+  SUITE
+    libc-inttypes-tests
+  SRCS
+    wcstoumax_test.cpp
+  DEPENDS
+    libc.src.inttypes.wcstoumax
+    libc.test.src.wchar.wcstol_test_support
+)

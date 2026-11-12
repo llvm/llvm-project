@@ -1,0 +1,62 @@
+# REQUIRES: python, system-windows
+# RUN: %python %s lldb-dap > %t.out 2>&1
+# RUN: FileCheck %s --check-prefix=ERROR --allow-empty < %t.out
+
+# ERROR-NOT: DAP session error:
+
+# Test that we can successfully start the dap server from the console on Windows.
+
+import sys
+import subprocess
+import os
+
+lldb_dap_path = sys.argv[1]
+if lldb_dap_path.startswith('%'):
+    lldb_dap_path = lldb_dap_path[1:]
+lldb_dap_path = os.path.normpath(lldb_dap_path)
+
+import ctypes
+from ctypes import wintypes
+import msvcrt
+
+GENERIC_READ = 0x80000000
+GENERIC_WRITE = 0x40000000
+OPEN_EXISTING = 3
+FILE_SHARE_READ = 0x00000001
+FILE_SHARE_WRITE = 0x00000002
+
+kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+
+conin_handle = kernel32.CreateFileW(
+    "CONIN$",
+    GENERIC_READ | GENERIC_WRITE,
+    FILE_SHARE_READ | FILE_SHARE_WRITE,
+    None,
+    OPEN_EXISTING,
+    0,
+    None
+)
+
+if conin_handle == -1:
+    print("Failed to open CONIN$", file=sys.stderr)
+    sys.exit(1)
+
+conin_fd = msvcrt.open_osfhandle(conin_handle, os.O_RDONLY)
+
+proc = subprocess.Popen(
+    [lldb_dap_path],
+    stdin=conin_fd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT
+)
+
+os.close(conin_fd)
+
+try:
+    output, _ = proc.communicate(timeout=2)
+except subprocess.TimeoutExpired:
+    proc.kill()
+    output, _ = proc.communicate()
+
+sys.stdout.buffer.write(output)
+sys.stdout.flush()

@@ -1,0 +1,184 @@
+## Test that we are able to print dynamic relocations with --dyn-relocations.
+
+## Check what we print when there are no dynamic relocations in an object.
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --dyn-relocations %t1 2>&1 | FileCheck %s --check-prefix=LLVM-NONE
+# RUN: llvm-readelf --dyn-relocations %t1 2>&1 | FileCheck %s --implicit-check-not={{.}} --allow-empty
+
+# LLVM-NONE:      Dynamic Relocations {
+# LLVM-NONE-NEXT: }
+# LLVM-NONE-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+
+## Check that we dump all possbile dynamic relocation sections.
+# RUN: yaml2obj --docnum=2 %s -o %t2.1
+# RUN: llvm-readobj --dyn-relocations %t2.1 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix=LLVM-RELOCS
+# RUN: llvm-readelf --dyn-relocations %t2.1 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --strict-whitespace \
+# RUN:     --match-full-lines --check-prefixes=GNU-RELOCS,GNU-PLTREL
+
+## 7 == DT_RELA.
+# RUN: yaml2obj --docnum=2 %s -DDTPLTREL=7 -DPLTTYPE=SHT_RELA -DPLTRELSZ=0x18 -o %t2.2
+# RUN: llvm-readobj --dyn-relocations %t2.2 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix=LLVM-RELOCS
+# RUN: llvm-readelf --dyn-relocations %t2.2 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --strict-whitespace \
+# RUN:     --match-full-lines --check-prefixes=GNU-RELOCS,GNU-PLTRELA
+
+# LLVM-RELOCS:      Dynamic Relocations {
+# LLVM-RELOCS-NEXT:   0x8 R_X86_64_64 foo 0x0
+# LLVM-RELOCS-NEXT:   0x1 R_X86_64_NONE foo 0x0
+# LLVM-RELOCS-NEXT:   0x2 R_X86_64_NONE foo
+# LLVM-RELOCS-NEXT:   0x4 R_X86_64_RELATIVE -
+# LLVM-RELOCS-NEXT:   0x8 R_X86_64_NONE foo
+# LLVM-RELOCS-NEXT: }
+
+#       GNU-RELOCS:'CREL' relocation section at offset 0xa8:
+#  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+#  GNU-RELOCS-NEXT:0000000000000008  0000000100000001 R_X86_64_64            0000000000000000 foo + 0
+# GNU-RELOCS-EMPTY:
+#       GNU-RELOCS:'RELA' relocation section at offset 0x78 contains 24 bytes:
+#  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+#  GNU-RELOCS-NEXT:0000000000000001  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
+# GNU-RELOCS-EMPTY:
+#  GNU-RELOCS-NEXT:'REL' relocation section at offset 0x90 contains 16 bytes:
+#  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+#  GNU-RELOCS-NEXT:0000000000000002  0000000100000000 R_X86_64_NONE          0000000000000000 foo
+# GNU-RELOCS-EMPTY:
+#  GNU-RELOCS-NEXT:'RELR' relocation section at offset 0xa0 contains 8 bytes:
+#  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+#  GNU-RELOCS-NEXT:0000000000000004  0000000000000008 R_X86_64_RELATIVE                 {{$}}
+# GNU-RELOCS-EMPTY:
+#  GNU-PLTREL-NEXT:'PLT' relocation section at offset 0xac contains 16 bytes:
+#  GNU-PLTREL-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+#  GNU-PLTREL-NEXT:0000000000000008  0000000100000000 R_X86_64_NONE          0000000000000000 foo
+# GNU-PLTRELA-NEXT:'PLT' relocation section at offset 0xac contains 24 bytes:
+# GNU-PLTRELA-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# GNU-PLTRELA-NEXT:0000000000000008  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
+# GNU-RELOCS-EMPTY:
+#   GNU-RELOCS-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.dyn
+    Type: SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x1
+        Symbol: foo
+  - Name: .rel.dyn
+    Type: SHT_REL
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x2
+        Symbol: foo
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0x0000000000000004 ]
+  - Name:    .crel.dyn
+    Type:    SHT_CREL
+    Relocations:
+      - Type:   R_X86_64_64
+        Offset: 0x8
+        Symbol: foo
+  - Name:    .plt
+    Type:    [[PLTTYPE=SHT_REL]]
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Offset: 0x8
+        Symbol: foo
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x0
+      - Tag:   DT_RELASZ
+        Value: 0x18
+      - Tag:   DT_RELAENT
+        Value: 0x18
+## 0x18 == offset of .rel.dyn in the segment.
+      - Tag:   DT_REL
+        Value: 0x18
+      - Tag:   DT_RELSZ
+        Value: 0x10
+      - Tag:   DT_RELENT
+        Value: 0x10
+## 0x28 == offset of .relr.dyn section in the segment.
+      - Tag:   DT_RELR
+        Value: 0x28
+      - Tag:   DT_RELRSZ
+        Value: 0x8
+      - Tag:   DT_RELRENT
+        Value: 0x8
+## 0x30 == offset of .crel.dyn section in the segment.
+      - Tag:   DT_CREL
+        Value: 0x30
+## 0x34 == offset of .plt section in the segment.
+      - Tag:   DT_JMPREL
+        Value: 0x34
+      - Tag:   DT_PLTREL
+        Value: [[DTPLTREL=17]] ## 17 == DT_REL
+      - Tag:   DT_PLTRELSZ
+        Value: [[PLTRELSZ=0x10]]
+      - Tag:   DT_NULL
+        Value: 0x0
+Symbols:
+  - Name: foo
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
+
+## Check we report a warning when the value of the DT_PLTREL dynamic tag is invalid.
+## We currently accept DT_RELA(7) and DT_REL(17) values. This test case uses 0xff.
+
+# RUN: yaml2obj --docnum=2 %s -DDTPLTREL=0xFF -o %t3
+# RUN: llvm-readobj --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --implicit-check-not=warning: --check-prefix=PLTRELUNKNOWN-LLVM
+# RUN: llvm-readelf --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --implicit-check-not=warning: --check-prefix=PLTRELUNKNOWN-GNU
+
+# PLTRELUNKNOWN-LLVM:      warning: '[[FILE]]': unknown DT_PLTREL value of 255
+# PLTRELUNKNOWN-LLVM:      Dynamic Relocations {
+# PLTRELUNKNOWN-LLVM-NEXT:   0x8 R_X86_64_64 foo 0x0
+# PLTRELUNKNOWN-LLVM-NEXT:   0x1 R_X86_64_NONE foo 0x0
+# PLTRELUNKNOWN-LLVM-NEXT:   0x2 R_X86_64_NONE foo{{$}}
+# PLTRELUNKNOWN-LLVM-NEXT:   0x4 R_X86_64_RELATIVE -{{$}}
+# PLTRELUNKNOWN-LLVM-NEXT: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0x10) or PLTREL entry size (0x0)
+# PLTRELUNKNOWN-LLVM-NEXT: }
+
+# PLTRELUNKNOWN-GNU:        warning: '[[FILE]]': unknown DT_PLTREL value of 255
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'CREL' relocation section at offset 0xa8:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000008  0000000100000001 R_X86_64_64            0000000000000000 foo + 0
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'RELA' relocation section at offset 0x78 contains 24 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000001  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'REL' relocation section at offset 0x90 contains 16 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000002  0000000100000000 R_X86_64_NONE          0000000000000000 foo
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'RELR' relocation section at offset 0xa0 contains 8 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000004  0000000000000008 R_X86_64_RELATIVE
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'PLT' relocation section at offset 0xac contains 16 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   warning: '[[FILE]]': invalid DT_PLTRELSZ value (0x10) or PLTREL entry size (0x0)

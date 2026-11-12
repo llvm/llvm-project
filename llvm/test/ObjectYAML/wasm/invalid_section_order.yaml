@@ -1,0 +1,20 @@
+# RUN: not yaml2obj %s -o /dev/null 2>&1 | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+  # CHECK: yaml2obj: error: out of order section type: FUNCTION
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+...

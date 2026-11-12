@@ -1,0 +1,155 @@
+//===- MCAsmInfo.cpp - Asm Info -------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines target asm properties related what form asm statements
+// should take.
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/MC/MCAsmInfo.h"
+#include "MCCLOptions.h"
+#include "llvm/ADT/Enum.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
+
+using namespace llvm;
+
+MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
+  const MCCLOptions &CLOpts = getMCCLOptions(Options);
+  SupportsExtendedDwarfLocDirective =
+      valueOr(CLOpts.dwarf_extended_loc, SupportsExtendedDwarfLocDirective);
+  HasLEB128Directives =
+      valueOr(CLOpts.use_leb128_directives, HasLEB128Directives);
+  if (Options.BinutilsVersion.first > 0)
+    BinutilsVersion = Options.BinutilsVersion;
+}
+
+MCAsmInfo::~MCAsmInfo() = default;
+
+unsigned MCAsmInfo::getAsmMacroMaxNestingDepth() const {
+  return getMCCLOptions(TargetOptions).asm_macro_max_nesting_depth;
+}
+
+void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
+  InitialFrameState.push_back(Inst);
+}
+
+const MCExpr *
+MCAsmInfo::getExprForPersonalitySymbol(const MCSymbol *Sym,
+                                       unsigned Encoding,
+                                       MCStreamer &Streamer) const {
+  return getExprForFDESymbol(Sym, Encoding, Streamer);
+}
+
+const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
+                                             unsigned Encoding,
+                                             MCStreamer &Streamer) const {
+  MCContext &Context = Streamer.getContext();
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, Context);
+
+  if (!(Encoding & dwarf::DW_EH_PE_pcrel))
+    return Res;
+  if (DwarfFDERelSymbolSpec) {
+    assert(Encoding & dwarf::DW_EH_PE_sdata4 && "Unexpected encoding");
+    return MCSpecifierExpr::create(Res, DwarfFDERelSymbolSpec, Context);
+  }
+
+  MCSymbol *PCSym = Context.createTempSymbol();
+  Streamer.emitLabel(PCSym);
+  const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
+  return MCBinaryExpr::createSub(Res, PC, Context);
+}
+
+bool MCAsmInfo::isAcceptableChar(char C) const {
+  // For AIX assembler, symbols may consist of numeric digits, underscores,
+  // periods, uppercase or lowercase letters, orany combination of these.
+  // QualName is allowed for a MCSymbolXCOFF, and QualName contains '[' and ']'.
+  //
+  // Others also allow '$'. HLASM (SystemZ) also allows '#'.
+
+  if (isAlnum(C) || C == '_' || C == '.')
+    return true;
+  if (C == '[' || C == ']')
+    return isAIX();
+  if (C == '@')
+    return doesAllowAtInName();
+  if (C == '$')
+    return !isAIX();
+  if (C == '#')
+    return isHLASM();
+  return false;
+}
+
+bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
+  if (Name.empty())
+    return false;
+
+  // If any of the characters in the string is an unacceptable character, force
+  // quotes.
+  for (char C : Name) {
+    if (!isAcceptableChar(C))
+      return false;
+  }
+
+  return !getReservedIdentifiers().contains(CachedHashStringRef(Name.lower()));
+}
+
+bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
+  // FIXME: Does .section .bss/.data/.text work everywhere??
+  return SectionName == ".text" || SectionName == ".data" ||
+        (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
+}
+
+void MCAsmInfo::initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1> Descs) {
+  assert(AtSpecifierToName.empty() && "cannot initialize twice");
+  UseAtForSpecifier = true;
+  for (const auto &Desc : Descs) {
+    [[maybe_unused]] auto It =
+        AtSpecifierToName.try_emplace(Desc.value(), Desc.name());
+    assert(It.second && "duplicate Kind");
+    [[maybe_unused]] auto It2 =
+        NameToAtSpecifier.try_emplace(Desc.name().lower(), Desc.value());
+    assert(It2.second);
+  }
+}
+
+StringRef MCAsmInfo::getSpecifierName(uint32_t S) const {
+  auto It = AtSpecifierToName.find(S);
+  assert(It != AtSpecifierToName.end() &&
+         "ensure the specifier is set in initializeVariantKinds");
+  return It->second;
+}
+
+std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
+  auto It = NameToAtSpecifier.find(Name.lower());
+  if (It != NameToAtSpecifier.end())
+    return It->second;
+  return {};
+}
+
+void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
+  if (auto *SE = dyn_cast<MCSpecifierExpr>(&Expr))
+    printSpecifierExpr(OS, *SE);
+  else
+    Expr.print(OS, this);
+}
+
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,
+                                          MCValue &Res,
+                                          const MCAssembler *Asm) const {
+  if (!E.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(E.getSpecifier());
+  return !Res.getSubSym();
+}

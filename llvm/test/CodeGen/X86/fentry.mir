@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=x86_64-- -passes=fentry-insert %s -o - | FileCheck %s
+
+--- |
+  target triple = "x86_64--"
+  define i32 @with_fentry() #1 {
+  entry:
+    ret i32 0
+  }
+
+  attributes #1 = { "fentry-call"="true" }
+...
+
+---
+name: with_fentry
+body: |
+  bb.0:
+   ; CHECK-LABEL: name: with_fentry
+   ; CHECK: FENTRY_CALL
+   ; CHECK-NEXT: RET 0
+    RET 0
+...

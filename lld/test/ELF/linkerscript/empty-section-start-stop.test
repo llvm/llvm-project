@@ -1,0 +1,36 @@
+# REQUIRES: x86
+## __start/__stop symbols retain the associated empty sections with C identifier names.
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/test.s -o %t.o
+# RUN: ld.lld -T %t/ldscript -o %t.out %t.o -z start-stop-visibility=default
+# RUN: llvm-objdump -h -t %t.out | FileCheck %s
+
+# CHECK:      .text
+# CHECK-NEXT: empty1
+# CHECK-NEXT: empty2
+# CHECK-NEXT: empty3
+
+# CHECK:      [[#%x,ADDR:]]       l       empty1 0000000000000000 .hidden __start_empty1
+# CHECK-NEXT: {{0*}}[[#ADDR]]     g       empty2 0000000000000000 .protected __stop_empty2
+# CHECK-NEXT: {{0*}}[[#ADDR]]     g       empty3 0000000000000000 __stop_empty3
+
+#--- ldscript
+SECTIONS {
+  .text : { *(.text .text.*) }
+  empty0 : { *(empty0) }
+  empty1 : { *(empty1) }
+  empty2 : { *(empty2) }
+  empty3 : { *(empty3) }
+}
+
+#--- test.s
+.weak __start_empty1, __stop_empty2, __stop_empty3
+.hidden __start_empty1
+.protected __stop_empty2
+
+.globl _start
+_start:
+  movq __start_empty1@GOTPCREL(%rip),%rax
+  movq __stop_empty2@GOTPCREL(%rip),%rax
+  movq __stop_empty3@GOTPCREL(%rip),%rax

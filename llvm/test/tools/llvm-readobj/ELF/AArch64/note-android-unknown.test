@@ -1,0 +1,39 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --notes %t | FileCheck %s --check-prefixes=GNU
+# RUN: llvm-readobj --notes %t | FileCheck %s --check-prefixes=LLVM
+
+# GNU:      Displaying notes found in: .note.android.unknown
+# GNU-NEXT: Owner    Data size	 Description
+# GNU-NEXT: Android  0x00000005  Unknown note type: (0x00001337)
+# GNU-NEXT: description data: 01 23 45 67 89
+
+# LLVM:      NoteSections [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.android.unknown
+# LLVM-NEXT:     Offset: 0x40
+# LLVM-NEXT:     Size: 0x1C
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:     {
+# LLVM-NEXT:       Owner: Android
+# LLVM-NEXT:       Data size: 0x5
+# LLVM-NEXT:       Type: Unknown (0x00001337)
+# LLVM-NEXT:       Description data (
+# LLVM-NEXT:         0000: 01234567 89
+# LLVM-NEXT:       )
+# LLVM-NEXT:     }
+# LLVM-NEXT:    ]
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .note.android.unknown
+    Type: SHT_NOTE
+    Notes:
+      - Name: Android
+        Type: 0x1337
+        Desc: 0123456789

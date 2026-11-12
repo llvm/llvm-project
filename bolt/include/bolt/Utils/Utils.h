@@ -1,0 +1,100 @@
+//===- bolt/Utils/Utils.h - Common helper functions -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Common helper functions.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef BOLT_UTILS_UTILS_H
+#define BOLT_UTILS_UTILS_H
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
+
+namespace llvm {
+class MCCFIInstruction;
+namespace bolt {
+
+/// Free memory allocated for \p List.
+template <typename T> void clearList(T &List) {
+  T TempList;
+  TempList.swap(List);
+}
+
+void report_error(StringRef Message, std::error_code EC);
+
+void report_error(StringRef Message, Error E);
+
+void check_error(std::error_code EC, StringRef Message);
+
+void check_error(Error E, Twine Message);
+
+/// Return the name with escaped whitespace and backslash characters
+std::string getEscapedName(const StringRef &Name);
+
+/// Return the unescaped name
+std::string getUnescapedName(const StringRef &Name);
+
+/// Return a common part for a given \p Name wrt a given \p Suffixes list.
+/// Preserve the suffix if \p KeepSuffix is set, only dropping characters
+/// following it, otherwise drop the suffix as well.
+std::optional<StringRef> getCommonName(const StringRef Name, bool KeepSuffix,
+                                       ArrayRef<StringRef> Suffixes);
+/// LTO-generated function names take a form:
+///
+///   <function_name>.lto_priv.<decimal_number>/...
+///     or
+///   <function_name>.constprop.<decimal_number>/...
+///
+/// they can also be:
+///
+///   <function_name>.lto_priv.<decimal_number1>.lto_priv.<decimal_number2>/...
+///
+/// The <decimal_number> is a global counter used for the whole program. As a
+/// result, a tiny change in a program may affect the naming of many LTO
+/// functions. For us this means that if we do a precise name matching, then
+/// a large set of functions could be left without a profile.
+///
+/// To solve this issue, we try to match a function to any profile:
+///
+///   <function_name>.(lto_priv|consprop).*
+///
+/// The name before an asterisk above represents a common LTO name for a family
+/// of functions. Later, out of all matching profiles we pick the one with the
+/// best match.
+///
+/// Return a common part of LTO name for a given \p Name.
+std::optional<StringRef> getLTOCommonName(const StringRef Name);
+
+// Determines which register a given DWARF expression is being assigned to.
+// If the expression is defining the CFA, return std::nullopt.
+std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes);
+
+void safePWrite(raw_fd_ostream &OS, const char *Src, size_t Size,
+                uint64_t Offset);
+
+/// Ask the OS to reclaim the pages backing the mapped range starting at
+/// \p Addr and spanning \p Size bytes. Intended for data read in a streaming
+/// fashion, where keeping the pages resident only adds memory pressure. The
+/// range is trimmed to whole pages, and the request is silently ignored if
+/// \p Addr is not page-aligned. No-op on platforms without MADV_PAGEOUT.
+void pageOutMemory(const void *Addr, size_t Size);
+
+/// Evict any page-cache pages still held for the file at \p Path. Only takes
+/// effect once every mapping of the file is gone. No-op on non-Linux platforms.
+void dropFileFromPageCache(StringRef Path);
+
+} // namespace bolt
+
+bool operator==(const llvm::MCCFIInstruction &L,
+                const llvm::MCCFIInstruction &R);
+
+} // namespace llvm
+
+#endif

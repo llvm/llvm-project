@@ -1,0 +1,41 @@
+!RUN: %flang_fc1 -fdebug-unparse -I%S/Inputs %s | FileCheck %s
+program main
+  use comporder2
+  type, extends(intermediate) :: last
+    integer c3
+  end type
+  !CHECK:PRINT *, last(c1=1_4,c2=2_4,c3=3_4)
+  print *, last(1,2,3)
+  !CHECK:PRINT *, last(c1=11_4,c2=12_4,c3=13_4)
+  print *, last(c3=13,c2=12,c1=11)
+  !CHECK:PRINT *, last(c1=21_4,c2=22_4,c3=23_4)
+  print *, last(c3=23,c1=21,c2=22)
+  !CHECK:PRINT *, last(c1=31_4,c2=32_4,c3=33_4)
+  print *, last(c2=32,c3=33,c1=31)
+  !CHECK:PRINT *, last(c1=41_4,c2=42_4,c3=43_4)
+  print *, last(c2=42,c1=41,c3=43)
+  !CHECK:PRINT *, last(c1=51_4,c2=52_4,c3=53_4)
+  print *, last(c1=51,c3=53,c2=52)
+  !CHECK:PRINT *, last(c1=61_4,c2=62_4,c3=63_4)
+  print *, last(c1=61,c2=62,c3=63)
+  !CHECK:PRINT *, last(intermediate=intermediate(c1=71_4,c2=72_4),c3=73_4)
+  print *, last(c3=73,intermediate=intermediate(c2=72,c1=71))
+  !CHECK:PRINT *, last(intermediate=intermediate(c1=81_4,c2=82_4),c3=83_4)
+  print *, last(c3=83,intermediate=intermediate(c1=81,c2=82))
+  !CHECK:PRINT *, last(intermediate=intermediate(c1=91_4,c2=92_4),c3=93_4)
+  print *, last(intermediate(c2=92,c1=91),c3=93)
+  !CHECK:PRINT *, last(intermediate=intermediate(c1=101_4,c2=102_4),c3=103_4)
+  print *, last(intermediate(c1=101,c2=102),c3=103)
+  !CHECK:PRINT *, last(intermediate=intermediate(base=base(c1=111_4),c2=112_4),c3=113_4)
+  print *, last(c3=113,intermediate=intermediate(c2=112,base=base(c1=111)))
+  !CHECK:PRINT *, last(intermediate=intermediate(base=base(c1=121_4),c2=122_4),c3=123_4)
+  print *, last(c3=123,intermediate=intermediate(base(c1=121),c2=122))
+  !CHECK:PRINT *, last(intermediate=intermediate(base=base(c1=131_4),c2=132_4),c3=133_4)
+  print *, last(intermediate(c2=132,base=base(c1=131)),c3=133)
+  !CHECK:PRINT *, last(intermediate=intermediate(base=base(c1=141_4),c2=142_4),c3=143_4)
+  print *, last(intermediate(base(c1=141),c2=142),c3=143)
+  !CHECK:PRINT *, last(base=base(c1=151_4),c2=152_4,c3=153_4)
+  print *, last(base(151),c3=153,c2=152)
+  !CHECK:PRINT *, last(base=base(c1=161_4),c2=162_4,c3=163_4)
+  print *, last(base(161),c2=162,c3=163)
+end

@@ -1,0 +1,241 @@
+add_libc_testsuite(libc-sys-mman-tests)
+
+add_libc_test(
+  mmap_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    mmap_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.src.__support.CPP.scope
+    libc.src.sys.mman.memfd_create
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  mremap_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    mremap_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.mremap
+    libc.src.sys.mman.munmap
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  mprotect_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    mprotect_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.signal
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.mprotect
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  madvise_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    madvise_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  pkey_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    pkey_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.pkey_alloc
+    libc.src.sys.mman.pkey_free
+    libc.src.sys.mman.pkey_get
+    libc.src.sys.mman.pkey_mprotect
+    libc.src.sys.mman.pkey_set
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  posix_madvise_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    posix_madvise_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.posix_madvise
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  mincore_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    mincore_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.munlock
+    libc.src.unistd.getpagesize
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  mlock_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    mlock_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.madvise
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.mlock2
+    libc.src.sys.mman.munlock
+    libc.src.sys.mman.mlockall
+    libc.src.sys.mman.munlockall
+    libc.hdr.sys_resource_macros
+    libc.src.sys.resource.getrlimit
+    libc.src.unistd.getpagesize
+    libc.src.__support.OSUtil.osutil
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  msync_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    msync_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.include.unistd
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.msync
+    libc.src.sys.mman.mincore
+    libc.src.sys.mman.mlock
+    libc.src.sys.mman.munlock
+    libc.src.unistd.getpagesize
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+if(CMAKE_CROSSCOMPILING_EMULATOR)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "Skipping remap_file_pages_test under emulator.")
+  endif()
+else()
+  add_libc_test(
+    remap_file_pages_test
+    SUITE
+      libc-sys-mman-tests
+    SRCS
+      remap_file_pages_test.cpp
+    DEPENDS
+      libc.hdr.sys_mman_macros
+      libc.hdr.sys_stat_macros
+      libc.test.UnitTest.ErrnoCheckingTest
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.src.sys.mman.remap_file_pages
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.fcntl.open
+      libc.src.unistd.close
+      libc.src.unistd.getpagesize
+  )
+endif()
+
+add_libc_test(
+  shm_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    shm_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.fcntl.fcntl
+    libc.src.sys.mman.shm_open
+    libc.src.sys.mman.shm_unlink
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.ftruncate
+    libc.src.unistd.close
+    libc.src.__support.OSUtil.osutil
+    libc.hdr.fcntl_macros
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  memfd_create_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    memfd_create_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_mman_macros
+    libc.include.llvm-libc-macros.file_seek_macros
+    libc.include.sys_mman
+    libc.src.__support.CPP.scope
+    libc.src.fcntl.fcntl
+    libc.src.sys.mman.memfd_create
+    libc.src.unistd.close
+    libc.src.unistd.lseek
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

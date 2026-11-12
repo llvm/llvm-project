@@ -1,0 +1,1672 @@
+//===--- ExtractFunction.cpp -------------------------------------*- C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Extracts statements to a new function and replaces the statements with a
+// call to the new function.
+// Before:
+//   void f(int a) {
+//     [[if(a < 5)
+//       a = 5;]]
+//   }
+// After:
+//   void extracted(int &a) {
+//     if(a < 5)
+//       a = 5;
+//   }
+//   void f(int a) {
+//     extracted(a);
+//   }
+//
+// - Only extract statements
+// - Extracts from non-templated free functions only.
+// - Parameters that are never (conservatively) mutated in the extracted
+//   code become const references, except scalars (arithmetic, pointer,
+//   enumeration, ...), which are passed by value instead.
+// - Otherwise passed by non-const reference
+// - In C, which has no references, a parameter that would otherwise need
+//   one becomes a real pointer instead (except array types, which decay to
+//   a pointer on their own): the call site takes its address, and every
+//   use inside the extracted body is rewritten into a dereference.
+// - Void return type
+// - Cannot extract declarations that will be needed in the original function
+//   after extraction.
+// - Checks for broken control flow (break/continue without loop/switch)
+//
+// 1. ExtractFunction is the tweak subclass
+//    - Prepare does basic analysis of the selection and is therefore fast.
+//      Successful prepare doesn't always mean we can apply the tweak.
+//    - Apply does a more detailed analysis and can be slower. In case of
+//      failure, we let the user know that we are unable to perform extraction.
+// 2. ExtractionZone store information about the range being extracted and the
+//    enclosing function.
+// 3. NewFunction stores properties of the extracted function and provides
+//    methods for rendering it.
+// 4. CapturedZoneInfo uses a RecursiveASTVisitor to capture information about
+//    the extraction like declarations, existing return statements, etc.
+// 5. getExtractedFunction is responsible for analyzing the CapturedZoneInfo and
+//    creating a NewFunction.
+//===----------------------------------------------------------------------===//
+
+#include "AST.h"
+#include "FindTarget.h"
+#include "ParsedAST.h"
+#include "Selection.h"
+#include "SourceCode.h"
+#include "refactor/Tweak.h"
+#include "support/Logger.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Refactoring/Extract/SourceExtraction.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
+#include <optional>
+
+namespace clang {
+namespace clangd {
+namespace {
+
+using Node = SelectionTree::Node;
+
+// ExtractionZone is the part of code that is being extracted.
+// EnclosingFunction is the function/method inside which the zone lies.
+// We split the file into 4 parts relative to extraction zone.
+enum class ZoneRelative {
+  Before,     // Before Zone and inside EnclosingFunction.
+  Inside,     // Inside Zone.
+  After,      // After Zone and inside EnclosingFunction.
+  OutsideFunc // Outside EnclosingFunction.
+};
+
+enum FunctionDeclKind {
+  InlineDefinition,
+  ForwardDeclaration,
+  OutOfLineDefinition
+};
+
+// How a captured variable is passed to the extracted function.
+enum class ParamPassKind {
+  Value,     // A plain copy: `T name`. Also used for a C array, which
+             // decays to a pointer on its own wherever it's used.
+  Reference, // C++ only: `T &name`.
+  Pointer,   // C only (no references there): a real pointer, `T *name`,
+             // with the call site taking the address of the original
+             // variable and every use inside the extracted body rewritten
+             // into a dereference (see createParameters and getFuncBody).
+};
+
+// Whether N, despite being Unselected, may still be a single RootStmt: a
+// DeclStmt can be unselected since VarDecls claim the entire selection range
+// in the selection tree. Similarly, a CXXOperatorCallExpr of a binary
+// operation can be unselected because its children (the operands) claim the
+// entire selection range in the selection tree (e.g. <<).
+bool isUnselectedRootStmtCandidate(const Node *N) {
+  return N->ASTNode.get<DeclStmt>() || N->ASTNode.get<CXXOperatorCallExpr>();
+}
+
+// Whether Child is the condition (or condition-variable declaration) of a
+// control-flow Parent, or the range-expression of a range-based for. These
+// are the only slots whose *value* is actually consumed by the construct
+// itself -- to decide whether to keep looping/branching, or to build the
+// hidden begin/end iterators -- so replacing them with a call to a
+// void-returning extracted function would not compile. Other slots, like a
+// loop's init-statement or increment expression, have their value discarded
+// just like an ordinary expression-statement (and any hazard from
+// extracting a declaration that's used later is already caught by
+// ExtractionZone::requiresHoisting), so they remain extractable.
+//
+// For CXXForRangeStmt, only RangeInit is ever reachable here: clangd's
+// SelectionTree has a custom traversal for range-based for loops (see
+// TraverseCXXForRangeStmt in Selection.cpp) that visits only the
+// init-statement, loop variable, range-expression, and body -- the
+// compiler-synthesized condition/increment/begin/end never become
+// SelectionTree nodes at all.
+bool isConditionClause(const Stmt *Parent, const Stmt *Child) {
+  if (const auto *If = llvm::dyn_cast<IfStmt>(Parent))
+    return Child == If->getCond() ||
+           Child == If->getConditionVariableDeclStmt();
+  if (const auto *For = llvm::dyn_cast<ForStmt>(Parent))
+    return Child == For->getCond() ||
+           Child == For->getConditionVariableDeclStmt();
+  if (const auto *While = llvm::dyn_cast<WhileStmt>(Parent))
+    return Child == While->getCond() ||
+           Child == While->getConditionVariableDeclStmt();
+  if (const auto *Do = llvm::dyn_cast<DoStmt>(Parent))
+    return Child == Do->getCond();
+  if (const auto *Switch = llvm::dyn_cast<SwitchStmt>(Parent))
+    return Child == Switch->getCond() ||
+           Child == Switch->getConditionVariableDeclStmt();
+  if (const auto *ForRange = llvm::dyn_cast<CXXForRangeStmt>(Parent))
+    return Child == ForRange->getRangeInit();
+  return false;
+}
+
+// A RootStmt is a statement that's fully selected including all its children
+// and its parent is unselected.
+// Check if a node is a root statement.
+bool isRootStmt(const Node *N) {
+  const Stmt *S = N->ASTNode.get<Stmt>();
+  if (!S)
+    return false;
+  // Root statement cannot be partially selected.
+  if (N->Selected == SelectionTree::Partial)
+    return false;
+  if (N->Selected == SelectionTree::Unselected &&
+      !isUnselectedRootStmtCandidate(N))
+    return false;
+  if (const Stmt *Parent = N->Parent ? N->Parent->ASTNode.get<Stmt>() : nullptr)
+    if (isConditionClause(Parent, S))
+      return false;
+  return true;
+}
+
+// Given a Child that is itself a single RootStmt (either because it's
+// completely selected, or because it's an isUnselectedRootStmtCandidate),
+// returns Child's enclosing statement, which is where we'll look for
+// Child's RootStmt siblings.
+//
+// If parent is a DeclStmt, even though it's unselected, we consider it a
+// root statement and return its parent instead. This is done because the
+// VarDecls claim the entire selection range of the Declaration and DeclStmt
+// is always unselected.
+//
+// Returns null if the (possibly DeclStmt-adjusted) parent isn't a "plain"
+// Stmt, or is an Expr: this means Child is merely a subexpression of a
+// larger expression or declaration rather than a genuine standalone
+// statement, and extracting it would produce broken code. This covers two
+// distinct cases:
+//  - Parent is an Expr, e.g. selecting just the "3" in `stream << 3;`
+//    (Child is a subexpression of a larger expression).
+//  - Parent isn't a Stmt at all, e.g. selecting just the "func()" in
+//    `auto A = func();` (Child is a VarDecl's initializer, so Parent is
+//    that VarDecl -- a Decl, not a Stmt).
+const Node *getEnclosingStmt(const Node *Child) {
+  const Node *Parent = Child->Parent;
+  if (Parent->ASTNode.get<DeclStmt>())
+    Parent = Parent->Parent;
+  if (!Parent->ASTNode.get<Stmt>() || Parent->ASTNode.get<Expr>())
+    return nullptr;
+  return Parent;
+}
+
+// Returns the (unselected) parent of all RootStmts given the commonAncestor.
+// Returns null if:
+// 1. any node is partially selected
+// 2. If all completely selected nodes don't have the same common parent
+// 3. Any child of Parent isn't a RootStmt.
+// Returns null if any child is not a RootStmt.
+// We only support extraction of RootStmts since it allows us to extract without
+// having to change the selection range. Also, this means that any scope that
+// begins in selection range, ends in selection range and any scope that begins
+// outside the selection range, ends outside as well.
+const Node *getParentOfRootStmts(const Node *CommonAnc) {
+  if (!CommonAnc)
+    return nullptr;
+  const Node *Parent = nullptr;
+  switch (CommonAnc->Selected) {
+  case SelectionTree::Selection::Unselected:
+    // Typically a block, with the { and } unselected, could also be ForStmt
+    // etc. However, CommonAnc may instead be a single statement that is
+    // itself Unselected only because all of its own tokens are claimed by
+    // its children (see isUnselectedRootStmtCandidate); in that case it's a
+    // root statement in its own right, and we need its actual parent, same
+    // as in the Complete case below.
+    if (isUnselectedRootStmtCandidate(CommonAnc)) {
+      Parent = getEnclosingStmt(CommonAnc);
+      break;
+    }
+    // Ensure all Children are RootStmts.
+    Parent = CommonAnc;
+    break;
+  case SelectionTree::Selection::Partial:
+    // Only a fully-selected single statement can be selected.
+    return nullptr;
+  case SelectionTree::Selection::Complete:
+    Parent = getEnclosingStmt(CommonAnc);
+    break;
+  }
+  if (!Parent)
+    return nullptr;
+  // Ensure all Children are RootStmts.
+  return llvm::all_of(Parent->Children, isRootStmt) ? Parent : nullptr;
+}
+
+// The ExtractionZone class forms a view of the code wrt Zone.
+struct ExtractionZone {
+  // Parent of RootStatements being extracted.
+  const Node *Parent = nullptr;
+  // The half-open file range of the code being extracted.
+  SourceRange ZoneRange;
+  // The function inside which our zone resides.
+  const FunctionDecl *EnclosingFunction = nullptr;
+  // The half-open file range of the enclosing function.
+  SourceRange EnclosingFuncRange;
+  // Set of statements that form the ExtractionZone.
+  llvm::DenseSet<const Stmt *> RootStmts;
+
+  SourceLocation getInsertionPoint() const {
+    return EnclosingFuncRange.getBegin();
+  }
+  bool isRootStmt(const Stmt *S) const;
+  // The last root statement is important to decide where we need to insert a
+  // semicolon after the extraction.
+  const Node *getLastRootStmt() const { return Parent->Children.back(); }
+
+  // Checks if declarations inside extraction zone are accessed afterwards.
+  //
+  // This performs a partial AST traversal proportional to the size of the
+  // enclosing function, so it is possibly expensive.
+  bool requiresHoisting(const SourceManager &SM,
+                        const HeuristicResolver *Resolver) const {
+    // First find all the declarations that happened inside extraction zone.
+    llvm::SmallPtrSet<const Decl *, 1> DeclsInExtZone;
+    for (auto *RootStmt : RootStmts) {
+      findExplicitReferences(
+          RootStmt,
+          [&DeclsInExtZone](const ReferenceLoc &Loc) {
+            if (!Loc.IsDecl)
+              return;
+            DeclsInExtZone.insert(Loc.Targets.front());
+          },
+          Resolver);
+    }
+    // Early exit without performing expensive traversal below.
+    if (DeclsInExtZone.empty())
+      return false;
+    // Then make sure they are not used outside the zone.
+    for (const auto *S : EnclosingFunction->getBody()->children()) {
+      if (SM.isBeforeInTranslationUnit(S->getSourceRange().getEnd(),
+                                       ZoneRange.getEnd()))
+        continue;
+      bool HasPostUse = false;
+      findExplicitReferences(
+          S,
+          [&](const ReferenceLoc &Loc) {
+            if (HasPostUse ||
+                SM.isBeforeInTranslationUnit(Loc.NameLoc, ZoneRange.getEnd()))
+              return;
+            HasPostUse = llvm::any_of(Loc.Targets,
+                                      [&DeclsInExtZone](const Decl *Target) {
+                                        return DeclsInExtZone.contains(Target);
+                                      });
+          },
+          Resolver);
+      if (HasPostUse)
+        return true;
+    }
+    return false;
+  }
+};
+
+// Whether the code in the extraction zone is guaranteed to return, assuming
+// no broken control flow (unbound break/continue).
+// This is a very naive check (does it end with a return stmt).
+// Doing some rudimentary control flow analysis would cover more cases.
+bool alwaysReturns(const ExtractionZone &EZ) {
+  const Stmt *Last = EZ.getLastRootStmt()->ASTNode.get<Stmt>();
+  // Unwrap enclosing (unconditional) compound statement.
+  while (const auto *CS = llvm::dyn_cast<CompoundStmt>(Last)) {
+    if (CS->body_empty())
+      return false;
+    Last = CS->body_back();
+  }
+  return llvm::isa<ReturnStmt>(Last);
+}
+
+bool ExtractionZone::isRootStmt(const Stmt *S) const {
+  return RootStmts.contains(S);
+}
+
+// Finds the function in which the zone lies.
+const FunctionDecl *findEnclosingFunction(const Node *CommonAnc) {
+  // Walk up the SelectionTree until we find a function Decl
+  for (const Node *CurNode = CommonAnc; CurNode; CurNode = CurNode->Parent) {
+    // Don't extract from lambdas
+    if (CurNode->ASTNode.get<LambdaExpr>())
+      return nullptr;
+    if (const FunctionDecl *Func = CurNode->ASTNode.get<FunctionDecl>()) {
+      // FIXME: Support extraction from templated functions.
+      if (Func->isTemplated())
+        return nullptr;
+      if (!Func->getBody())
+        return nullptr;
+      for (const auto *S : Func->getBody()->children()) {
+        // During apply phase, we perform semantic analysis (e.g. figure out
+        // what variables requires hoisting). We cannot perform those when the
+        // body has invalid statements, so fail up front.
+        if (!S)
+          return nullptr;
+      }
+      return Func;
+    }
+  }
+  return nullptr;
+}
+
+// Zone Range is the union of SourceRanges of all child Nodes in Parent since
+// all child Nodes are RootStmts
+std::optional<SourceRange> findZoneRange(const Node *Parent,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  SourceRange SR;
+  if (auto BeginFileRange = toHalfOpenFileRange(
+          SM, LangOpts, Parent->Children.front()->ASTNode.getSourceRange()))
+    SR.setBegin(BeginFileRange->getBegin());
+  else
+    return std::nullopt;
+  if (auto EndFileRange = toHalfOpenFileRange(
+          SM, LangOpts, Parent->Children.back()->ASTNode.getSourceRange()))
+    SR.setEnd(EndFileRange->getEnd());
+  else
+    return std::nullopt;
+  return SR;
+}
+
+// Compute the range spanned by the enclosing function.
+// FIXME: check if EnclosingFunction has any attributes as the AST doesn't
+// always store the source range of the attributes and thus we end up extracting
+// between the attributes and the EnclosingFunction.
+std::optional<SourceRange>
+computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
+                          const SourceManager &SM,
+                          const LangOptions &LangOpts) {
+  return toHalfOpenFileRange(SM, LangOpts, EnclosingFunction->getSourceRange());
+}
+
+// Whether D would need to become a forwarded parameter of the extracted
+// function if referenced from inside the extraction zone: a name (a
+// parameter, local variable, or structured-binding) declared inside the
+// enclosing function. Such a name is only visible within that function,
+// regardless of storage duration -- unlike hasLocalStorage(), this is
+// also true of a function-scope `static` or `thread_local` variable,
+// which (unlike a namespace-scope global or a static data member, both
+// reachable via a qualified name from anywhere) isn't visible wherever
+// the extracted function ends up.
+bool mustBeForwarded(const Decl *D) {
+  if (!isa<VarDecl, BindingDecl>(D))
+    return false;
+  return D->getDeclContext()->isFunctionOrMethod();
+}
+
+// Whether E, as an operand of a call being considered by isTrivialExtraction,
+// is a bare (parenthesized/implicitly cast) reference to a Decl that would
+// need to become a parameter, forwarded unchanged -- and if so, that Decl.
+// Returns null otherwise: a literal, a reference to an already-visible
+// global, or any non-bare expression all mean this operand alone justifies
+// offering the extraction, since it hardcodes or computes something a
+// plain rename wouldn't.
+const Decl *bareForwardedDecl(const Expr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts());
+  if (!DRE || !mustBeForwarded(DRE->getDecl()))
+    return nullptr;
+  return DRE->getDecl();
+}
+
+// The operands of Call relevant to isTrivialExtraction: the receiver of
+// a method call, a non-method callee that isn't a plain reference to a
+// fixed function (e.g. a function-pointer variable instead), and every
+// explicit argument. An operator call's operands are already included in
+// its own arguments() (clang models e.g. `a + b` as `operator+(a, b)`),
+// so its callee -- always a reference to the operator function/overload
+// itself, never itself customizable -- is always excluded.
+llvm::SmallVector<const Expr *, 4> relevantCallOperands(const CallExpr *Call) {
+  llvm::SmallVector<const Expr *, 4> Operands;
+  if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call)) {
+    // getImplicitObjectArgument() can itself be null (its FIXME notes
+    // this isn't fully handled for all cases); other clang analyses
+    // (e.g. LiveVariables, dataflow's Environment::pushCall) guard it
+    // the same way rather than assume it's always present.
+    if (const Expr *ImplicitObject = MCE->getImplicitObjectArgument()) {
+      // `this` (implicit or explicit) always refers to the same object
+      // -- the extracted function becomes a sibling member itself, so
+      // `this` stays implicit there too, never becoming a parameter --
+      // so, like an ordinary function name, it's excluded rather than
+      // required to be "bare".
+      if (!isa<CXXThisExpr>(ImplicitObject->IgnoreParenImpCasts()))
+        Operands.push_back(ImplicitObject);
+    }
+    // A pointer-to-member call (`(s.*pmf)(x)`) has no statically known
+    // method to exclude the way an ordinary method call's name is
+    // excluded below: which member is invoked is itself a real,
+    // customizable operand here (e.g. the `pmf` it's called through),
+    // not inherent to what the wrapper does.
+    if (!MCE->getMethodDecl())
+      Operands.push_back(MCE->getCallee());
+  } else if (!isa<CXXOperatorCallExpr>(Call)) {
+    const Expr *Callee = Call->getCallee()->IgnoreParenImpCasts();
+    if (!(isa<DeclRefExpr>(Callee) &&
+          isa<FunctionDecl>(cast<DeclRefExpr>(Callee)->getDecl())))
+      Operands.push_back(Call->getCallee());
+  }
+  // An omitted argument filled in from the callee's own default isn't
+  // something this call site wrote or hardcoded: it's inherent to
+  // calling the function at all, same as the function's name, so it's
+  // excluded rather than required to be "bare". Default arguments are
+  // always trailing, so the first one found marks the end of the
+  // explicitly-written ones.
+  auto Args = Call->arguments();
+  auto FirstDefault = llvm::find_if(
+      Args, [](const Expr *Arg) { return isa<CXXDefaultArgExpr>(Arg); });
+  Operands.append(Args.begin(), FirstDefault);
+  return Operands;
+}
+
+// Whether extracting S on its own, as a single root statement, would add
+// no real abstraction over leaving it where it is:
+// - A value-less `return;` has nothing to abstract over at all.
+// - A call (to a function, method, or operator), or a return of one, is
+//   a pure 1:1 forwarding wrapper if every relevant operand (see
+//   relevantCallOperands) is already exactly the parameter value it
+//   would become, unchanged (or there are none). Extracting e.g.
+//   `foo();`, `foo(x)` (x a local), or `return foo(x);` this way would
+//   just rename the call; `foo(100)`, `foo(globalVar)`, or `foo(x + y)`
+//   would not, since each does something a plain rename wouldn't
+//   (hardcode a value/global, or compute one). For the return case, the
+//   returned value may be parenthesized and/or need an implicit
+//   conversion to the enclosing function's own return type (e.g. foo
+//   returns int, the enclosing function long); IgnoreParenImpCasts()
+//   looks through both -- neither changes the verdict, since the
+//   extracted function would perform the exact same conversion
+//   internally.
+// - Using the same captured Decl in more than one operand (e.g.
+//   `foo(A, A)`) is, despite every individual operand being bare,
+//   *not* pure forwarding: it constrains a relationship (both slots
+//   must hold the same value) that a plain rename wouldn't, the same
+//   kind of real specialization as hardcoding a literal.
+// - createParameters orders the extracted function's own parameters by
+//   each captured Decl's declaration order in the *enclosing* function,
+//   not by how they're used in this call. So if a later operand here
+//   refers to a Decl declared *earlier* than an operand before it (e.g.
+//   `foo(B, A)` inside `bar(int A, int B)`), the parameters end up
+//   reordered relative to this call: `extracted(int A, int B) { foo(B,
+//   A); }`. That's not a transparent pass-through either, even though
+//   this one call site still behaves the same after the compensating
+//   reorder at the call site (`extracted(A, B)`) -- `extracted`'s own
+//   signature no longer predicts its behavior the way a plain rename's
+//   would, since it silently permutes its own parameters internally.
+bool isTrivialExtraction(const Stmt *S, const SourceManager &SM) {
+  if (const auto *RS = dyn_cast<ReturnStmt>(S)) {
+    if (!RS->getRetValue())
+      return true;
+    S = RS->getRetValue()->IgnoreParenImpCasts();
+  }
+  const auto *Call = dyn_cast<CallExpr>(S);
+  if (!Call)
+    return false;
+  llvm::SmallPtrSet<const Decl *, 4> SeenDecls;
+  SourceLocation LastDeclLoc;
+  for (const Expr *Operand : relevantCallOperands(Call)) {
+    const Decl *D = bareForwardedDecl(Operand);
+    if (!D || !SeenDecls.insert(D).second)
+      return false;
+    SourceLocation DeclLoc = D->getLocation();
+    if (LastDeclLoc.isValid() &&
+        !SM.isBeforeInTranslationUnit(LastDeclLoc, DeclLoc))
+      return false;
+    LastDeclLoc = DeclLoc;
+  }
+  return true;
+}
+
+// returns true if Child can be a single RootStmt being extracted from
+// EnclosingFunc.
+bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc,
+                      const SourceManager &SM) {
+  // Extracting the body of EnclosingFunc would remove it's definition.
+  assert(EnclosingFunc->hasBody() &&
+         "We should always be extracting from a function body.");
+  const Stmt *S = Child->ASTNode.get<Stmt>();
+  if (S == EnclosingFunc->getBody())
+    return false;
+  if (isTrivialExtraction(S, SM))
+    return false;
+  return true;
+}
+
+std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
+                                                 const SourceManager &SM,
+                                                 const LangOptions &LangOpts) {
+  ExtractionZone ExtZone;
+  ExtZone.Parent = getParentOfRootStmts(CommonAnc);
+  if (!ExtZone.Parent || ExtZone.Parent->Children.empty())
+    return std::nullopt;
+  ExtZone.EnclosingFunction = findEnclosingFunction(ExtZone.Parent);
+  if (!ExtZone.EnclosingFunction)
+    return std::nullopt;
+  // When there is a single RootStmt, we must check if it's valid for
+  // extraction.
+  if (ExtZone.Parent->Children.size() == 1 &&
+      !validSingleChild(ExtZone.getLastRootStmt(), ExtZone.EnclosingFunction,
+                        SM))
+    return std::nullopt;
+  if (auto FuncRange =
+          computeEnclosingFuncRange(ExtZone.EnclosingFunction, SM, LangOpts))
+    ExtZone.EnclosingFuncRange = *FuncRange;
+  if (auto ZoneRange = findZoneRange(ExtZone.Parent, SM, LangOpts))
+    ExtZone.ZoneRange = *ZoneRange;
+  if (ExtZone.EnclosingFuncRange.isInvalid() || ExtZone.ZoneRange.isInvalid())
+    return std::nullopt;
+
+  for (const Node *Child : ExtZone.Parent->Children)
+    ExtZone.RootStmts.insert(Child->ASTNode.get<Stmt>());
+
+  return ExtZone;
+}
+
+// Stores information about the extracted function and provides methods for
+// rendering it.
+struct NewFunction {
+  struct Parameter {
+    std::string Name;
+    QualType TypeInfo;
+    ParamPassKind Kind;
+    unsigned OrderPriority; // Lower value parameters are preferred first.
+    std::string render(const DeclContext &Context) const;
+    bool operator<(const Parameter &Other) const {
+      return OrderPriority < Other.OrderPriority;
+    }
+  };
+  std::string Name = "extracted";
+  QualType ReturnType;
+  std::vector<Parameter> Parameters;
+  SourceRange BodyRange;
+  SourceLocation DefinitionPoint;
+  std::optional<SourceLocation> ForwardDeclarationPoint;
+  const CXXRecordDecl *EnclosingClass = nullptr;
+  NestedNameSpecifier DefinitionQualifier = std::nullopt;
+  const DeclContext *SemanticDC = nullptr;
+  const DeclContext *SyntacticDC = nullptr;
+  const DeclContext *ForwardDeclarationSyntacticDC = nullptr;
+  bool CallerReturnsValue = false;
+  bool Static = false;
+  ConstexprSpecKind Constexpr = ConstexprSpecKind::Unspecified;
+  bool Const = false;
+
+  // For C only: describes how to rewrite a single in-body reference to a
+  // parameter that had to become a real pointer instead of a reference (C
+  // has none), because its corresponding Parameter::Kind is Pointer. See
+  // createParameters and getFuncBody.
+  struct PointerRewriteSite {
+    SourceLocation Loc; // Location of the identifier itself.
+    unsigned NameLength;
+    // Set when this occurrence is the base of a non-arrow member access
+    // (`name.member`) immediately following it: that reads more
+    // naturally rewritten as `name->member` than `(*name).member`. Holds
+    // the location of the '.' token to replace with "->"; the identifier
+    // itself is then left untouched. Unset otherwise, in which case the
+    // identifier is instead wrapped in "(*...)".
+    std::optional<SourceLocation> DotLoc;
+  };
+  std::vector<PointerRewriteSite> PointerRewriteSites;
+
+  // Decides whether the extracted function body and the function call need a
+  // semicolon after extraction.
+  tooling::ExtractionSemicolonPolicy SemicolonPolicy;
+  const LangOptions *LangOpts;
+  NewFunction(tooling::ExtractionSemicolonPolicy SemicolonPolicy,
+              const LangOptions *LangOpts)
+      : SemicolonPolicy(SemicolonPolicy), LangOpts(LangOpts) {}
+  // Render the call for this function.
+  std::string renderCall() const;
+  // Render the definition for this function.
+  llvm::Expected<std::string> renderDeclaration(FunctionDeclKind K,
+                                                const DeclContext &SemanticDC,
+                                                const DeclContext &SyntacticDC,
+                                                const SourceManager &SM) const;
+
+private:
+  std::string
+  renderParametersForDeclaration(const DeclContext &Enclosing) const;
+  std::string renderParametersForCall() const;
+  std::string renderSpecifiers(FunctionDeclKind K) const;
+  std::string renderQualifiers() const;
+  std::string renderDeclarationName(FunctionDeclKind K) const;
+  // Generate the function body.
+  llvm::Expected<std::string> getFuncBody(const SourceManager &SM) const;
+};
+
+std::string NewFunction::renderParametersForDeclaration(
+    const DeclContext &Enclosing) const {
+  std::string Result;
+  bool NeedCommaBefore = false;
+  for (const Parameter &P : Parameters) {
+    if (NeedCommaBefore)
+      Result += ", ";
+    NeedCommaBefore = true;
+    Result += P.render(Enclosing);
+  }
+  return Result;
+}
+
+std::string NewFunction::renderParametersForCall() const {
+  std::string Result;
+  bool NeedCommaBefore = false;
+  for (const Parameter &P : Parameters) {
+    if (NeedCommaBefore)
+      Result += ", ";
+    NeedCommaBefore = true;
+    if (P.Kind == ParamPassKind::Pointer)
+      Result += "&";
+    Result += P.Name;
+  }
+  return Result;
+}
+
+std::string NewFunction::renderSpecifiers(FunctionDeclKind K) const {
+  std::string Attributes;
+
+  if (Static && K != FunctionDeclKind::OutOfLineDefinition) {
+    Attributes += "static ";
+  }
+
+  switch (Constexpr) {
+  case ConstexprSpecKind::Unspecified:
+  case ConstexprSpecKind::Constinit:
+    break;
+  case ConstexprSpecKind::Constexpr:
+    Attributes += "constexpr ";
+    break;
+  case ConstexprSpecKind::Consteval:
+    Attributes += "consteval ";
+    break;
+  }
+
+  return Attributes;
+}
+
+std::string NewFunction::renderQualifiers() const {
+  std::string Attributes;
+
+  if (Const) {
+    Attributes += " const";
+  }
+
+  return Attributes;
+}
+
+std::string NewFunction::renderDeclarationName(FunctionDeclKind K) const {
+  if (!DefinitionQualifier || K != OutOfLineDefinition)
+    return Name;
+
+  std::string QualifierName;
+  llvm::raw_string_ostream Oss(QualifierName);
+  DefinitionQualifier.print(Oss, *LangOpts);
+  return llvm::formatv("{0}{1}", QualifierName, Name);
+}
+
+std::string NewFunction::renderCall() const {
+  return std::string(
+      llvm::formatv("{0}{1}({2}){3}", CallerReturnsValue ? "return " : "", Name,
+                    renderParametersForCall(),
+                    (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : "")));
+}
+
+llvm::Expected<std::string> NewFunction::renderDeclaration(
+    FunctionDeclKind K, const DeclContext &SemanticDC,
+    const DeclContext &SyntacticDC, const SourceManager &SM) const {
+  std::string Declaration = std::string(llvm::formatv(
+      "{0}{1} {2}({3}){4}", renderSpecifiers(K),
+      printType(ReturnType, SyntacticDC), renderDeclarationName(K),
+      renderParametersForDeclaration(SemanticDC), renderQualifiers()));
+
+  switch (K) {
+  case ForwardDeclaration:
+    return std::string(llvm::formatv("{0};\n", Declaration));
+  case OutOfLineDefinition:
+  case InlineDefinition: {
+    llvm::Expected<std::string> Body = getFuncBody(SM);
+    if (!Body)
+      return Body.takeError();
+    return std::string(llvm::formatv("{0} {\n{1}\n}\n", Declaration, *Body));
+  }
+  }
+  llvm_unreachable("Unsupported FunctionDeclKind enum");
+}
+
+llvm::Expected<std::string>
+NewFunction::getFuncBody(const SourceManager &SM) const {
+  // FIXME: Generate tooling::Replacements instead of std::string to
+  // - hoist decls
+  // - add return statement
+  // - Add semicolon
+  std::string Body = toSourceCode(SM, BodyRange).str();
+  if (PointerRewriteSites.empty())
+    return Body + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+
+  // Splice in each site's rewrite. These are all independent
+  // insertions/single-token replacements at distinct, non-overlapping
+  // source locations (two DeclRefExprs can't share a location, and a dot
+  // always follows its own identifier), so none of this should actually
+  // be able to fail -- but if that assumption is ever wrong, surface it
+  // as an extraction failure instead of silently emitting broken code.
+  tooling::Replacements Repls;
+  unsigned BodyBeginOffset = SM.getFileOffset(BodyRange.getBegin());
+  for (const auto &Site : PointerRewriteSites) {
+    unsigned SiteOffset = SM.getFileOffset(Site.Loc) - BodyBeginOffset;
+    if (Site.DotLoc) {
+      // Leave the identifier itself untouched; turn the member access
+      // that follows it into "->" instead of wrapping in a dereference.
+      unsigned DotOffset = SM.getFileOffset(*Site.DotLoc) - BodyBeginOffset;
+      if (auto Err = Repls.add(tooling::Replacement("", DotOffset, 1, "->")))
+        return std::move(Err);
+    } else {
+      if (auto Err = Repls.add(tooling::Replacement("", SiteOffset, 0, "(*")))
+        return std::move(Err);
+      if (auto Err = Repls.add(
+              tooling::Replacement("", SiteOffset + Site.NameLength, 0, ")")))
+        return std::move(Err);
+    }
+  }
+  llvm::Expected<std::string> NewBody =
+      tooling::applyAllReplacements(Body, Repls);
+  if (!NewBody)
+    return NewBody.takeError();
+  return *NewBody + (SemicolonPolicy.isNeededInExtractedFunction() ? ";" : "");
+}
+
+std::string NewFunction::Parameter::render(const DeclContext &Context) const {
+  // Passing Name as printType()'s declarator placeholder (rather than just
+  // appending it after the printed type) lets clang's own type printer
+  // place it correctly for declarator syntax that doesn't simply put the
+  // name after the type, e.g. a function pointer (`void (*name)(int)`, not
+  // `void (*)(int) name`). This only threads correctly through an outer
+  // pointer or reference, though, not through a bare array type on its
+  // own (confirmed empirically: it prints as `int[5] name`, not the
+  // intended `int name[5]`) -- harmless here, since createParameters
+  // never leaves TypeInfo as a bare array: it's always either decayed
+  // to a pointer (in C) or wrapped in the reference built just below
+  // (in C++). For that reference case, building the actual reference
+  // QualType (rather than just prepending "&" to the placeholder
+  // string) is what lets the printer correctly parenthesize a
+  // reference-to-array (`int (&name)[5]`, not the invalid
+  // `int &name[5]`).
+  QualType RenderedType =
+      Kind == ParamPassKind::Reference
+          ? Context.getParentASTContext().getLValueReferenceType(TypeInfo)
+          : TypeInfo;
+  return printType(RenderedType, Context, Name);
+}
+
+// Stores captured information about Extraction Zone.
+struct CapturedZoneInfo {
+  struct DeclInformation {
+    const Decl *TheDecl;
+    ZoneRelative DeclaredIn;
+    // index of the declaration or first reference.
+    unsigned DeclIndex;
+    bool IsReferencedInZone = false;
+    bool IsReferencedInPostZone = false;
+    // Conservatively: could this Decl be mutated somewhere in the zone? See
+    // ExtractionZoneVisitor::markPossiblyMutated() for what "conservatively"
+    // means here.
+    bool IsPossiblyMutated = false;
+    // Describes one reference to this Decl inside the zone (not
+    // before/after it). Used to rewrite each use if this ends up becoming
+    // a C pointer-adapter parameter (see createParameters): C has no
+    // references, so a parameter that needs reference semantics there
+    // becomes a real pointer instead, and every use of it in the
+    // copied-out body must be adjusted accordingly.
+    struct Occurrence {
+      SourceLocation Loc; // Location of the identifier itself.
+      // Set when this occurrence is the base of a non-arrow member access
+      // (`name.member`) immediately following it: holds the location of
+      // the '.' token, so it can be turned into "->" instead of wrapping
+      // the identifier in a dereference. See
+      // NewFunction::PointerRewriteSite.
+      std::optional<SourceLocation> DotLoc;
+    };
+    llvm::SmallVector<Occurrence, 1> ZoneOccurrences;
+    // Whether this Decl is ever the direct operand of a trait that
+    // depends on its exact, undecayed type: `sizeof`/`alignof`/`typeof`
+    // and their spelling variants (e.g. `sizeof arr`/`sizeof(arr)`, as
+    // opposed to `sizeof(T)`, which doesn't reference arr's Decl at all).
+    // If this Decl is an array and ends up decaying to a pointer for a C
+    // pointer-adapter parameter (see createParameters), such a use would
+    // silently start reporting the pointer's properties instead of the
+    // array's (e.g. 8 instead of 20 for `sizeof` on a 5-element `int`
+    // array on a 64-bit target), so that decay is refused whenever this
+    // is set.
+    bool HasUnsafeTypeQueryUseInZone = false;
+    DeclInformation(const Decl *TheDecl, ZoneRelative DeclaredIn,
+                    unsigned DeclIndex)
+        : TheDecl(TheDecl), DeclaredIn(DeclaredIn), DeclIndex(DeclIndex){};
+    // Marks the occurence of a reference for this declaration
+    void markOccurence(ZoneRelative ReferenceLoc);
+  };
+  // Maps Decls to their DeclInfo
+  llvm::DenseMap<const Decl *, DeclInformation> DeclInfoMap;
+  bool HasReturnStmt = false; // Are there any return statements in the zone?
+  bool AlwaysReturns = false; // Does the zone always return?
+  // Control flow is broken if we are extracting a break/continue without a
+  // corresponding parent loop/switch
+  bool BrokenControlFlow = false;
+  // FIXME: capture TypeAliasDecl and UsingDirectiveDecl
+  // FIXME: Capture type information as well.
+  DeclInformation *createDeclInfo(const Decl *D, ZoneRelative RelativeLoc);
+  DeclInformation *getDeclInfoFor(const Decl *D);
+};
+
+CapturedZoneInfo::DeclInformation *
+CapturedZoneInfo::createDeclInfo(const Decl *D, ZoneRelative RelativeLoc) {
+  // The new Decl's index is the size of the map so far.
+  auto InsertionResult = DeclInfoMap.insert(
+      {D, DeclInformation(D, RelativeLoc, DeclInfoMap.size())});
+  // Return the newly created DeclInfo
+  return &InsertionResult.first->second;
+}
+
+CapturedZoneInfo::DeclInformation *
+CapturedZoneInfo::getDeclInfoFor(const Decl *D) {
+  // If the Decl doesn't exist, we
+  auto Iter = DeclInfoMap.find(D);
+  if (Iter == DeclInfoMap.end())
+    return nullptr;
+  return &Iter->second;
+}
+
+void CapturedZoneInfo::DeclInformation::markOccurence(
+    ZoneRelative ReferenceLoc) {
+  switch (ReferenceLoc) {
+  case ZoneRelative::Inside:
+    IsReferencedInZone = true;
+    break;
+  case ZoneRelative::After:
+    IsReferencedInPostZone = true;
+    break;
+  default:
+    break;
+  }
+}
+
+bool isLoop(const Stmt *S) {
+  return isa<ForStmt>(S) || isa<DoStmt>(S) || isa<WhileStmt>(S) ||
+         isa<CXXForRangeStmt>(S);
+}
+
+// Strips E down to the Decl(s) whose storage it ultimately refers to,
+// chaining through parens, casts, and member/array-element access (e.g.
+// `a.b[i]` resolves to `a`), but only when that access reaches through
+// value semantics: mutating `a.b` mutates `a`'s own storage, so we keep
+// chaining. We deliberately stop at a pointer-typed base (e.g. `p->b`,
+// `p[i]`, `p->*pmf`): that only mutates `*p`, never `p`'s own binding, so
+// chaining through it would incorrectly require `p` to stay non-const. For
+// the same reason, a dereference (`*p = 1`) is intentionally not handled
+// at all: it only ever mutates the pointee, never the pointer itself.
+//
+// A genuine array subscript (`arr[i]` where `arr` is an array, not a
+// pointer) also stops here: the base is always wrapped in an
+// ArrayToPointerDecay cast, indistinguishable at this point from
+// subscripting a real pointer. That's fine because createParameters()
+// never makes an array-typed capture const in the first place, regardless
+// of what we compute here.
+//
+// A conditional expression (e.g. `(cond ? a : b).m`) could resolve to
+// either branch at runtime, so both are collected -- this can only grow
+// the result, never replace it, which is why this appends to Decls rather
+// than returning a single Decl the way the rest of this function might
+// suggest. This has to be handled at every level of the chain, not just
+// the top: `(cond ? a : b).m = 1` reaches the conditional through a
+// MemberExpr base, not directly.
+//
+// Appends nothing if E isn't ultimately grounded in a variable this way
+// (e.g. it's a temporary, a call result, or reached through a pointer).
+void collectUnderlyingDecls(const Expr *E,
+                            llvm::SmallVectorImpl<const Decl *> &Decls) {
+  if (!E)
+    return;
+  E = E->IgnoreParenCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    Decls.push_back(DRE->getDecl());
+    return;
+  }
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (!ME->getBase()->getType()->isPointerType())
+      collectUnderlyingDecls(ME->getBase(), Decls);
+    return;
+  }
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    if (!ASE->getBase()->getType()->isPointerType())
+      collectUnderlyingDecls(ASE->getBase(), Decls);
+    return;
+  }
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    // Only BO_PtrMemD (`.*`) is handled: its LHS is always an object, by
+    // grammar, so the chain always continues (matching MemberExpr's `.`
+    // above). BO_PtrMemI (`->*`) is excluded: its LHS is always a pointer,
+    // by grammar, so the chain should never continue (matching
+    // MemberExpr's `->` above).
+    if (BO->getOpcode() == BO_PtrMemD)
+      collectUnderlyingDecls(BO->getLHS(), Decls);
+    return;
+  }
+  if (const auto *CO = dyn_cast<AbstractConditionalOperator>(E)) {
+    collectUnderlyingDecls(CO->getTrueExpr(), Decls);
+    collectUnderlyingDecls(CO->getFalseExpr(), Decls);
+  }
+}
+
+// Captures information from Extraction Zone
+CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
+  // We use the ASTVisitor instead of using the selection tree since we need to
+  // find references in the PostZone as well.
+  // FIXME: Check which statements we don't allow to extract.
+  class ExtractionZoneVisitor
+      : public clang::RecursiveASTVisitor<ExtractionZoneVisitor> {
+  public:
+    ExtractionZoneVisitor(const ExtractionZone &ExtZone) : ExtZone(ExtZone) {
+      TraverseDecl(const_cast<FunctionDecl *>(ExtZone.EnclosingFunction));
+    }
+
+    bool TraverseStmt(Stmt *S) {
+      if (!S)
+        return true;
+      bool IsRootStmt = ExtZone.isRootStmt(const_cast<const Stmt *>(S));
+      // If we are starting traversal of a RootStmt, we are somewhere inside
+      // ExtractionZone
+      if (IsRootStmt)
+        CurrentLocation = ZoneRelative::Inside;
+      addToLoopSwitchCounters(S, 1);
+      // Traverse using base class's TraverseStmt
+      RecursiveASTVisitor::TraverseStmt(S);
+      addToLoopSwitchCounters(S, -1);
+      // We set the current location as after since next stmt will either be a
+      // RootStmt (handled at the beginning) or after extractionZone
+      if (IsRootStmt)
+        CurrentLocation = ZoneRelative::After;
+      return true;
+    }
+
+    // Add Increment to CurNumberOf{Loops,Switch} if statement is
+    // {Loop,Switch} and inside Extraction Zone.
+    void addToLoopSwitchCounters(Stmt *S, int Increment) {
+      if (CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (isLoop(S))
+        CurNumberOfNestedLoops += Increment;
+      else if (isa<SwitchStmt>(S))
+        CurNumberOfSwitch += Increment;
+    }
+
+    bool VisitDecl(Decl *D) {
+      Info.createDeclInfo(D, CurrentLocation);
+      return true;
+    }
+
+    // Set by VisitMemberExpr right before traversing into a non-arrow
+    // MemberExpr's base, when that base is (possibly parenthesized)
+    // exactly a DeclRefExpr: since that base is always traversed
+    // immediately afterwards (it's the MemberExpr's only child),
+    // VisitDeclRefExpr can rely on this still describing itself, and
+    // must always consume (reset) it, matched or not, so it never leaks
+    // into an unrelated, later DeclRefExpr.
+    std::optional<SourceLocation> PendingMemberDotLoc;
+
+    bool VisitMemberExpr(MemberExpr *ME) {
+      if (!ME->isArrow() && isa<DeclRefExpr>(ME->getBase()->IgnoreParens()))
+        PendingMemberDotLoc = ME->getOperatorLoc();
+      return true;
+    }
+
+    // Marks D as having an unsafe, type-dependent use in the zone (see
+    // DeclInformation::HasUnsafeTypeQueryUseInZone) if it's reached
+    // through a plain (possibly parenthesized) DeclRefExpr -- e.g. not
+    // through a cast, which would already observe the decayed type rather
+    // than the Decl's own declared type.
+    void markUnsafeTypeQueryOperand(const Expr *E) {
+      if (CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens()))
+        if (auto *DeclInfo = Info.getDeclInfoFor(DRE->getDecl()))
+          DeclInfo->HasUnsafeTypeQueryUseInZone = true;
+    }
+
+    // Covers sizeof/alignof/__alignof/_Countof and their variants: all
+    // share this one node type, distinguished only by getKind().
+    bool VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
+      if (!E->isArgumentType())
+        markUnsafeTypeQueryOperand(E->getArgumentExpr());
+      return true;
+    }
+
+    // Covers typeof/typeof_unqual/__typeof__ (decltype itself is C++
+    // only, so can't appear in the C code this matters for, but is
+    // included for completeness/robustness).
+    bool VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
+      markUnsafeTypeQueryOperand(TL.getUnderlyingExpr());
+      return true;
+    }
+    bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+      markUnsafeTypeQueryOperand(TL.getUnderlyingExpr());
+      return true;
+    }
+
+    bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+      // Find the corresponding Decl and mark it's occurrence.
+      const Decl *D = DRE->getDecl();
+      auto *DeclInfo = Info.getDeclInfoFor(D);
+      // If no Decl was found, the Decl must be outside the enclosingFunc.
+      if (!DeclInfo)
+        DeclInfo = Info.createDeclInfo(D, ZoneRelative::OutsideFunc);
+      DeclInfo->markOccurence(CurrentLocation);
+      if (CurrentLocation == ZoneRelative::Inside)
+        DeclInfo->ZoneOccurrences.push_back(
+            {DRE->getLocation(), PendingMemberDotLoc});
+      PendingMemberDotLoc.reset();
+      return true;
+    }
+
+    // Conservatively marks D as possibly mutated: used both for actual
+    // direct mutations (assignment, increment/decrement, ...) and for
+    // constructs that alias D in a way we don't want to trace further (a
+    // reference bound to D, D's address taken, D captured by reference in a
+    // lambda, ...). We never try to determine whether such an alias is
+    // itself later mutated -- that would require searching beyond this one
+    // occurrence, which is exactly the cost this design avoids (and what
+    // makes ExprMutationAnalyzer prohibitively slow). The price is
+    // that we sometimes keep a parameter non-const where a full alias
+    // analysis could prove it safe to const; we never get this wrong in the
+    // other, unsafe direction.
+    void markPossiblyMutated(const Decl *D) {
+      if (!D || CurrentLocation != ZoneRelative::Inside)
+        return;
+      if (auto *DeclInfo = Info.getDeclInfoFor(D))
+        DeclInfo->IsPossiblyMutated = true;
+    }
+    void markPossiblyMutated(const Expr *E) {
+      llvm::SmallVector<const Decl *, 2> Decls;
+      collectUnderlyingDecls(E, Decls);
+      for (const Decl *D : Decls)
+        markPossiblyMutated(D);
+    }
+
+    bool VisitBinaryOperator(BinaryOperator *BO) {
+      if (BO->isAssignmentOp())
+        markPossiblyMutated(BO->getLHS());
+      return true;
+    }
+
+    bool VisitUnaryOperator(UnaryOperator *UO) {
+      // FIXME: Try to track where the result of the address operator
+      // ends up. If it's a const pointer, this is not a mutating access.
+      if (UO->isIncrementDecrementOp() || UO->getOpcode() == UO_AddrOf)
+        markPossiblyMutated(UO->getSubExpr());
+      return true;
+    }
+
+    bool VisitExplicitCastExpr(ExplicitCastExpr *ECE) {
+      // An explicit cast to a non-const reference type allows mutating the
+      // result as if it were a plain non-const reference.
+      if (ECE->getType()->isReferenceType() &&
+          !ECE->getType()->getPointeeType().isConstQualified())
+        markPossiblyMutated(ECE->getSubExpr());
+      return true;
+    }
+
+    // Marks the object a non-const member function is (or may be) called
+    // on, whether through `.`, `->`, or an overloaded operator. A static
+    // method (possible since C++23 for operator() and operator[]) has no
+    // `this` at all, so it never touches Object regardless of constness.
+    void markPossiblyMutatedCallee(const Expr *Object,
+                                   const CXXMethodDecl *Method) {
+      if (Method && !Method->isStatic() && !Method->isConst())
+        markPossiblyMutated(Object);
+    }
+
+    // Marks the arguments of a call that bind to a non-const reference
+    // parameter of Callee (a FunctionDecl or CXXConstructorDecl). If Callee
+    // is null (e.g. a call through a function pointer), conservatively marks
+    // every argument, since we don't know the parameter types.
+    void markPossiblyMutatedArgs(ArrayRef<const Expr *> Args,
+                                 const FunctionDecl *Callee) {
+      for (unsigned I = 0; I < Args.size(); ++I) {
+        if (!Callee || I >= Callee->getNumParams() ||
+            (Callee->getParamDecl(I)->getType()->isReferenceType() &&
+             !Callee->getParamDecl(I)
+                  ->getType()
+                  ->getPointeeType()
+                  .isConstQualified()))
+          markPossiblyMutated(Args[I]);
+      }
+    }
+
+    bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) {
+      markPossiblyMutatedCallee(MCE->getImplicitObjectArgument(),
+                                MCE->getMethodDecl());
+      // getArgs() here is just the explicit argument list, without the
+      // implicit object handled above, so it aligns directly with the
+      // method's own parameters.
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(MCE->getArgs(), MCE->getNumArgs()),
+          MCE->getMethodDecl());
+      return true;
+    }
+
+    bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
+      // Unlike CXXMemberCallExpr, a member operator's implicit object is
+      // args[0], not split out separately; args[1:] are the real
+      // parameters. A non-member (free function) operator overload has no
+      // implicit object at all, so all args align directly with params.
+      // Every operator has at least one operand, but guard anyway since
+      // the arithmetic below would underflow on an empty argument list.
+      if (OCE->getNumArgs() == 0)
+        return true;
+      const auto *Method =
+          dyn_cast_or_null<CXXMethodDecl>(OCE->getCalleeDecl());
+      if (Method) {
+        markPossiblyMutatedCallee(OCE->getArg(0), Method);
+        markPossiblyMutatedArgs(llvm::ArrayRef<const Expr *>(
+                                    OCE->getArgs() + 1, OCE->getNumArgs() - 1),
+                                Method);
+      } else {
+        markPossiblyMutatedArgs(
+            llvm::ArrayRef<const Expr *>(OCE->getArgs(), OCE->getNumArgs()),
+            OCE->getDirectCallee());
+      }
+      return true;
+    }
+
+    bool VisitCallExpr(CallExpr *CE) {
+      // Both are already fully handled by their own visitors above,
+      // including their arguments: skip CXXMemberCallExpr here to avoid
+      // redundant work (its getArgs()/getDirectCallee() would otherwise
+      // align fine on their own), and skip CXXOperatorCallExpr because its
+      // getArgs() includes the implicit object as args[0], which would
+      // misalign against a member operator's real parameter list if
+      // checked here too.
+      if (isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE))
+        return true;
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(CE->getArgs(), CE->getNumArgs()),
+          CE->getDirectCallee());
+      return true;
+    }
+
+    bool VisitCXXConstructExpr(CXXConstructExpr *CCE) {
+      markPossiblyMutatedArgs(
+          llvm::ArrayRef<const Expr *>(CCE->getArgs(), CCE->getNumArgs()),
+          CCE->getConstructor());
+      return true;
+    }
+
+    bool VisitVarDecl(VarDecl *VD) {
+      // A non-const reference bound to a captured Decl aliases it: treat any
+      // such binding as a possible mutation, without checking whether the
+      // reference itself is later mutated (see markPossiblyMutated). This
+      // also covers reference structured bindings (DecompositionDecl is a
+      // VarDecl), since binding `auto &[a, b] = x` conservatively counts as
+      // aliasing all of `x`.
+      if (VD->getType()->isReferenceType() &&
+          !VD->getType()->getPointeeType().isConstQualified() && VD->hasInit())
+        markPossiblyMutated(VD->getInit()->IgnoreParens());
+      return true;
+    }
+
+    bool VisitLambdaExpr(LambdaExpr *LE) {
+      // Init-captures (`[r = x]`/`[&r = x]`) are handled by VisitVarDecl
+      // above, since they introduce a real VarDecl visited independently.
+      // This only needs to handle plain captures (`[&x]`/`[&]`), which don't.
+      for (const LambdaCapture &C : LE->captures())
+        if (C.capturesVariable() && C.getCaptureKind() == LCK_ByRef)
+          markPossiblyMutated(C.getCapturedVar());
+      return true;
+    }
+
+    bool VisitCXXForRangeStmt(CXXForRangeStmt *FRS) {
+      // Conservatively: a non-const reference (or pointer) loop variable
+      // could mutate the range expression's elements, which -- like a
+      // member/array-element write -- requires the range expression's own
+      // Decl to be non-const if it's a value type (e.g. a plain array).
+      // We don't check whether the loop variable is actually mutated, and we
+      // don't special-case containers with const-qualified begin()/end():
+      // those are visited like any other (possibly non-const) member call.
+      QualType LoopVarType = FRS->getLoopVariable()->getType();
+      if ((LoopVarType->isReferenceType() &&
+           !LoopVarType->getPointeeType().isConstQualified()) ||
+          (LoopVarType->isPointerType() &&
+           !LoopVarType->getPointeeType().isConstQualified()))
+        if (const Expr *RangeInit = FRS->getRangeInit())
+          markPossiblyMutated(RangeInit);
+      return true;
+    }
+
+    bool VisitReturnStmt(ReturnStmt *Return) {
+      if (CurrentLocation == ZoneRelative::Inside) {
+        Info.HasReturnStmt = true;
+        // Conservatively treat returning a captured Decl as a possible
+        // mutation, regardless of whether the return is actually by value
+        // (safe) or by non-const reference (not safe). Telling these apart
+        // needs the extracted function's return type, which is only
+        // decided later in generateReturnProperties(); duplicating its
+        // logic here would couple two distant functions for little gain,
+        // since directly returning a capture is rare.
+        if (const Expr *RV = Return->getRetValue())
+          markPossiblyMutated(RV);
+      }
+      return true;
+    }
+
+    bool VisitBreakStmt(BreakStmt *Break) {
+      // Control flow is broken if break statement is selected without any
+      // parent loop or switch statement.
+      if (CurrentLocation == ZoneRelative::Inside &&
+          !(CurNumberOfNestedLoops || CurNumberOfSwitch))
+        Info.BrokenControlFlow = true;
+      return true;
+    }
+
+    bool VisitContinueStmt(ContinueStmt *Continue) {
+      // Control flow is broken if Continue statement is selected without any
+      // parent loop
+      if (CurrentLocation == ZoneRelative::Inside && !CurNumberOfNestedLoops)
+        Info.BrokenControlFlow = true;
+      return true;
+    }
+    CapturedZoneInfo Info;
+    const ExtractionZone &ExtZone;
+    ZoneRelative CurrentLocation = ZoneRelative::Before;
+    // Number of {loop,switch} statements that are currently in the traversal
+    // stack inside Extraction Zone. Used to check for broken control flow.
+    unsigned CurNumberOfNestedLoops = 0;
+    unsigned CurNumberOfSwitch = 0;
+  };
+  ExtractionZoneVisitor Visitor(ExtZone);
+  CapturedZoneInfo Result = std::move(Visitor.Info);
+  Result.AlwaysReturns = alwaysReturns(ExtZone);
+  return Result;
+}
+
+// Adds parameters to ExtractedFunc.
+// Returns true if able to find the parameters successfully and no hoisting
+// needed.
+// FIXME: Check if the declaration has a local/anonymous type
+bool createParameters(NewFunction &ExtractedFunc,
+                      const CapturedZoneInfo &CapturedInfo,
+                      const ASTContext &Context, const LangOptions &LangOpts) {
+  for (const auto &KeyVal : CapturedInfo.DeclInfoMap) {
+    const auto &DeclInfo = KeyVal.second;
+    // If a Decl was Declared in zone and referenced in post zone, it
+    // needs to be hoisted (we bail out in that case).
+    // FIXME: Support Decl Hoisting.
+    if (DeclInfo.DeclaredIn == ZoneRelative::Inside &&
+        DeclInfo.IsReferencedInPostZone)
+      return false;
+    if (!DeclInfo.IsReferencedInZone)
+      continue; // no need to pass as parameter, not referenced
+    if (DeclInfo.DeclaredIn == ZoneRelative::Inside ||
+        DeclInfo.DeclaredIn == ZoneRelative::OutsideFunc)
+      continue; // no need to pass as parameter, still accessible.
+    // Parameter specific checks.
+    const ValueDecl *VD = dyn_cast_or_null<ValueDecl>(DeclInfo.TheDecl);
+    // Can't parameterise if the Decl isn't a ValueDecl or is a FunctionDecl
+    // (this includes the case of recursive call to EnclosingFunc in Zone).
+    if (!VD || isa<FunctionDecl>(DeclInfo.TheDecl))
+      return false;
+    // Parameter qualifiers are same as the Decl's qualifiers.
+    QualType FullTypeInfo = VD->getType();
+    QualType TypeInfo = FullTypeInfo.getNonReferenceType();
+
+    // A variably-modified type is rejected outright unless it's a plain
+    // array being extracted in C: a reference's (or any other wrapping,
+    // e.g. a further pointer indirection's) declared type still spells
+    // out the bound at every level, so it keeps mentioning a name
+    // (typically some other variable's) that isn't in scope in the
+    // extracted function's declaration. A plain array in C is the one
+    // case this doesn't apply to as-is, since its outer dimension is
+    // specifically not a problem once decayed to a pointer -- that
+    // gets a narrower, more precise check further down instead.
+    if (TypeInfo->isVariablyModifiedType() &&
+        (LangOpts.CPlusPlus || !TypeInfo->isArrayType()))
+      return false;
+
+    // FIXME: check if parameter will be a non l-value reference.
+    ParamPassKind Kind = ParamPassKind::Reference;
+    if (!DeclInfo.IsPossiblyMutated) {
+      auto WordSize = Context.getTypeSizeInChars(Context.VoidPtrTy);
+      // A scalar (arithmetic, pointer, enumeration, ...) is at least as
+      // cheap to copy as to pass by reference, and less noisy.
+      if (TypeInfo->isScalarType() && !TypeInfo.isVolatileQualified() &&
+          !FullTypeInfo->isReferenceType() &&
+          Context.getTypeSizeInChars(TypeInfo) <= 2 * WordSize) {
+        Kind = ParamPassKind::Value;
+      } else if (!TypeInfo->isArrayType() && !TypeInfo->isFunctionType()) {
+        // Still passed by reference to avoid a copy, but the reference
+        // doesn't need to be mutable. Array types are never made const:
+        // mutating array elements through a non-const-ref loop variable
+        // or a decayed pointer argument is common and easy to miss
+        // conservatively, so we don't try. A (non-pointer) function type
+        // can't be cv-qualified at all -- doing so anyway produces
+        // unparseable output, e.g. `void (const &F)(int)` for a
+        // captured function reference.
+        TypeInfo.addConst();
+      }
+    }
+
+    // C has no references. A parameter that would otherwise need one
+    // becomes a real pointer instead: the call site takes the address of
+    // the original variable explicitly, and every use of it in the
+    // copied-out body is rewritten into a dereference (see
+    // NewFunction::getFuncBody). Array types are the exception: they decay
+    // to a pointer on their own wherever they're used, so no rewriting or
+    // address-of is needed for them at all -- except that TypeInfo itself
+    // must still be decayed explicitly (confirmed empirically): unlike a
+    // pointer or reference, printType()'s declarator placeholder doesn't
+    // thread correctly through a *bare* array type on its own, printing
+    // the uncompilable `int[5] name` instead of `int name[5]`.
+    if (Kind == ParamPassKind::Reference && !LangOpts.CPlusPlus) {
+      if (TypeInfo->isArrayType()) {
+        // A decayed pointer no longer reports the array's own size,
+        // alignment, or type: bail out rather than silently break a
+        // sizeof/alignof/typeof (or similar) on it.
+        if (DeclInfo.HasUnsafeTypeQueryUseInZone)
+          return false;
+        QualType Decayed = Context.getArrayDecayedType(TypeInfo);
+        // The array's own outermost dimension is never a problem, VLA
+        // or not: once decayed, it no longer appears in the type at
+        // all (`int A[N]` decays to plain `int *A`). An inner
+        // dimension that's still variable-length (e.g. the `N` in
+        // `int A[2][N]`, which decays to `int (*A)[N]`) is the actual
+        // hazard: its bound is an arbitrary expression, typically just
+        // some other variable's name, that isn't necessarily (and
+        // often isn't) also a parameter of the extracted function, and
+        // even if it is, a mutated one would itself have been turned
+        // into a pointer, which the bound expression can't account for
+        // either way. Bail out rather than risk printing a parameter
+        // type that references a name meaningless (or absent) in the
+        // new scope.
+        if (Decayed->getPointeeType()->isVariablyModifiedType())
+          return false;
+        TypeInfo = Decayed;
+        Kind = ParamPassKind::Value;
+      } else {
+        // Bail out rather than rewrite a use whose location (or, for a
+        // member-access rewrite, whose dot's location) can't be mapped
+        // back to a single, unambiguous spot in the source (e.g. one
+        // produced by macro expansion) -- the dot can be a macro
+        // expansion even when the identifier itself isn't, e.g.
+        // `#define DOT .` used as `s DOT x`.
+        if (llvm::any_of(
+                DeclInfo.ZoneOccurrences,
+                [](const CapturedZoneInfo::DeclInformation::Occurrence &O) {
+                  return O.Loc.isMacroID() ||
+                         (O.DotLoc && O.DotLoc->isMacroID());
+                }))
+          return false;
+        TypeInfo = Context.getPointerType(TypeInfo);
+        Kind = ParamPassKind::Pointer;
+        unsigned NameLength = VD->getName().size();
+        for (const auto &Occ : DeclInfo.ZoneOccurrences)
+          ExtractedFunc.PointerRewriteSites.push_back(
+              {Occ.Loc, NameLength, Occ.DotLoc});
+      }
+    }
+
+    // We use the index of declaration as the ordering priority for parameters.
+    ExtractedFunc.Parameters.push_back(
+        {std::string(VD->getName()), TypeInfo, Kind, DeclInfo.DeclIndex});
+  }
+  llvm::sort(ExtractedFunc.Parameters);
+  return true;
+}
+
+// Clangd uses open ranges while ExtractionSemicolonPolicy (in Clang Tooling)
+// uses closed ranges. Generates the semicolon policy for the extraction and
+// extends the ZoneRange if necessary.
+tooling::ExtractionSemicolonPolicy
+getSemicolonPolicy(ExtractionZone &ExtZone, const SourceManager &SM,
+                   const LangOptions &LangOpts) {
+  // Get closed ZoneRange.
+  SourceRange FuncBodyRange = {ExtZone.ZoneRange.getBegin(),
+                               ExtZone.ZoneRange.getEnd().getLocWithOffset(-1)};
+  auto SemicolonPolicy = tooling::ExtractionSemicolonPolicy::compute(
+      ExtZone.getLastRootStmt()->ASTNode.get<Stmt>(), FuncBodyRange, SM,
+      LangOpts);
+  // Update ZoneRange.
+  ExtZone.ZoneRange.setEnd(FuncBodyRange.getEnd().getLocWithOffset(1));
+  return SemicolonPolicy;
+}
+
+// Generate return type for ExtractedFunc. Return false if unable to do so.
+bool generateReturnProperties(NewFunction &ExtractedFunc,
+                              const FunctionDecl &EnclosingFunc,
+                              const CapturedZoneInfo &CapturedInfo) {
+  // If the selected code always returns, we preserve those return statements.
+  // The return type should be the same as the enclosing function.
+  // (Others are possible if there are conversions, but this seems clearest).
+  if (CapturedInfo.HasReturnStmt) {
+    // If the return is conditional, neither replacing the code with
+    // `extracted()` nor `return extracted()` is correct.
+    if (!CapturedInfo.AlwaysReturns)
+      return false;
+    QualType Ret = EnclosingFunc.getReturnType();
+    // Once we support members, it'd be nice to support e.g. extracting a method
+    // of Foo<T> that returns T. But it's not clear when that's safe.
+    if (Ret->isDependentType())
+      return false;
+    ExtractedFunc.ReturnType = Ret;
+    return true;
+  }
+  // FIXME: Generate new return statement if needed.
+  ExtractedFunc.ReturnType = EnclosingFunc.getParentASTContext().VoidTy;
+  return true;
+}
+
+void captureMethodInfo(NewFunction &ExtractedFunc,
+                       const CXXMethodDecl *Method) {
+  ExtractedFunc.Static = Method->isStatic();
+  ExtractedFunc.Const = Method->isConst();
+  ExtractedFunc.EnclosingClass = Method->getParent();
+}
+
+// FIXME: add support for adding other function return types besides void.
+// FIXME: assign the value returned by non void extracted function.
+llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
+                                                 const SourceManager &SM,
+                                                 const LangOptions &LangOpts) {
+  CapturedZoneInfo CapturedInfo = captureZoneInfo(ExtZone);
+  // Bail out if any break of continue exists
+  if (CapturedInfo.BrokenControlFlow)
+    return error("Cannot extract break/continue without corresponding "
+                 "loop/switch statement.");
+  NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts),
+                            &LangOpts);
+
+  ExtractedFunc.SyntacticDC =
+      ExtZone.EnclosingFunction->getLexicalDeclContext();
+  ExtractedFunc.SemanticDC = ExtZone.EnclosingFunction->getDeclContext();
+  ExtractedFunc.DefinitionQualifier = ExtZone.EnclosingFunction->getQualifier();
+  ExtractedFunc.Constexpr = ExtZone.EnclosingFunction->getConstexprKind();
+
+  // A free function declared `static` has internal linkage: an extracted
+  // sibling should keep that, or it'd default to external linkage instead.
+  // Checked on the canonical (first) declaration, not this one: a
+  // definition following an earlier `static` forward declaration doesn't
+  // need to (and often doesn't) repeat `static` itself, but is still
+  // static. For a method, this gets overridden just below by the more
+  // precise (and differently-meaning) CXXMethodDecl::isStatic().
+  ExtractedFunc.Static =
+      ExtZone.EnclosingFunction->getCanonicalDecl()->getStorageClass() ==
+      SC_Static;
+  if (const auto *Method =
+          llvm::dyn_cast<CXXMethodDecl>(ExtZone.EnclosingFunction))
+    captureMethodInfo(ExtractedFunc, Method);
+
+  if (ExtZone.EnclosingFunction->isOutOfLine()) {
+    // FIXME: Put the extracted method in a private section if it's a class or
+    // maybe in an anonymous namespace
+    const auto *FirstOriginalDecl =
+        ExtZone.EnclosingFunction->getCanonicalDecl();
+    auto DeclPos =
+        toHalfOpenFileRange(SM, LangOpts, FirstOriginalDecl->getSourceRange());
+    if (!DeclPos)
+      return error("Declaration is inside a macro");
+    ExtractedFunc.ForwardDeclarationPoint = DeclPos->getBegin();
+    ExtractedFunc.ForwardDeclarationSyntacticDC = ExtractedFunc.SemanticDC;
+  }
+
+  ExtractedFunc.BodyRange = ExtZone.ZoneRange;
+  ExtractedFunc.DefinitionPoint = ExtZone.getInsertionPoint();
+
+  ExtractedFunc.CallerReturnsValue = CapturedInfo.AlwaysReturns;
+  if (!createParameters(ExtractedFunc, CapturedInfo,
+                        ExtZone.EnclosingFunction->getASTContext(), LangOpts) ||
+      !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
+                                CapturedInfo))
+    return error("Too complex to extract.");
+  return ExtractedFunc;
+}
+
+class ExtractFunction : public Tweak {
+public:
+  const char *id() const final;
+  bool prepare(const Selection &Inputs) override;
+  Expected<Effect> apply(const Selection &Inputs) override;
+  std::string title() const override { return "Extract to function"; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
+
+private:
+  ExtractionZone ExtZone;
+};
+
+REGISTER_TWEAK(ExtractFunction)
+tooling::Replacement replaceWithFuncCall(const NewFunction &ExtractedFunc,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  std::string FuncCall = ExtractedFunc.renderCall();
+  return tooling::Replacement(
+      SM, CharSourceRange(ExtractedFunc.BodyRange, false), FuncCall, LangOpts);
+}
+
+llvm::Expected<tooling::Replacement>
+createFunctionDefinition(const NewFunction &ExtractedFunc,
+                         const SourceManager &SM) {
+  FunctionDeclKind DeclKind = InlineDefinition;
+  if (ExtractedFunc.ForwardDeclarationPoint)
+    DeclKind = OutOfLineDefinition;
+  llvm::Expected<std::string> FunctionDef = ExtractedFunc.renderDeclaration(
+      DeclKind, *ExtractedFunc.SemanticDC, *ExtractedFunc.SyntacticDC, SM);
+  if (!FunctionDef)
+    return FunctionDef.takeError();
+
+  return tooling::Replacement(SM, ExtractedFunc.DefinitionPoint, 0,
+                              *FunctionDef);
+}
+
+llvm::Expected<tooling::Replacement>
+createForwardDeclaration(const NewFunction &ExtractedFunc,
+                         const SourceManager &SM) {
+  llvm::Expected<std::string> FunctionDecl = ExtractedFunc.renderDeclaration(
+      ForwardDeclaration, *ExtractedFunc.SemanticDC,
+      *ExtractedFunc.ForwardDeclarationSyntacticDC, SM);
+  if (!FunctionDecl)
+    return FunctionDecl.takeError();
+  SourceLocation DeclPoint = *ExtractedFunc.ForwardDeclarationPoint;
+
+  return tooling::Replacement(SM, DeclPoint, 0, *FunctionDecl);
+}
+
+// Returns true if ExtZone contains any ReturnStmts.
+bool hasReturnStmt(const ExtractionZone &ExtZone) {
+  class ReturnStmtVisitor
+      : public clang::RecursiveASTVisitor<ReturnStmtVisitor> {
+  public:
+    bool VisitReturnStmt(ReturnStmt *Return) {
+      Found = true;
+      return false; // We found the answer, abort the scan.
+    }
+    bool Found = false;
+  };
+
+  ReturnStmtVisitor V;
+  for (const Stmt *RootStmt : ExtZone.RootStmts) {
+    V.TraverseStmt(const_cast<Stmt *>(RootStmt));
+    if (V.Found)
+      break;
+  }
+  return V.Found;
+}
+
+bool ExtractFunction::prepare(const Selection &Inputs) {
+  const LangOptions &LangOpts = Inputs.AST->getLangOpts();
+  const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
+  const SourceManager &SM = Inputs.AST->getSourceManager();
+  auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts);
+  if (!MaybeExtZone ||
+      (hasReturnStmt(*MaybeExtZone) && !alwaysReturns(*MaybeExtZone)))
+    return false;
+
+  // FIXME: Get rid of this check once we support hoisting.
+  if (MaybeExtZone->requiresHoisting(SM, Inputs.AST->getHeuristicResolver()))
+    return false;
+
+  ExtZone = std::move(*MaybeExtZone);
+  return true;
+}
+
+Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
+  const SourceManager &SM = Inputs.AST->getSourceManager();
+  const LangOptions &LangOpts = Inputs.AST->getLangOpts();
+  auto ExtractedFunc = getExtractedFunction(ExtZone, SM, LangOpts);
+  // FIXME: Add more types of errors.
+  if (!ExtractedFunc)
+    return ExtractedFunc.takeError();
+  tooling::Replacements Edit;
+  auto FuncDef = createFunctionDefinition(*ExtractedFunc, SM);
+  if (!FuncDef)
+    return FuncDef.takeError();
+  if (auto Err = Edit.add(*FuncDef))
+    return std::move(Err);
+  if (auto Err = Edit.add(replaceWithFuncCall(*ExtractedFunc, SM, LangOpts)))
+    return std::move(Err);
+
+  if (auto FwdLoc = ExtractedFunc->ForwardDeclarationPoint) {
+    // If the fwd-declaration goes in the same file, merge into Replacements.
+    // Otherwise it needs to be a separate file edit.
+    if (SM.isWrittenInSameFile(ExtractedFunc->DefinitionPoint, *FwdLoc)) {
+      auto FwdDecl = createForwardDeclaration(*ExtractedFunc, SM);
+      if (!FwdDecl)
+        return FwdDecl.takeError();
+      if (auto Err = Edit.add(*FwdDecl))
+        return std::move(Err);
+    } else {
+      auto MultiFileEffect = Effect::mainFileEdit(SM, std::move(Edit));
+      if (!MultiFileEffect)
+        return MultiFileEffect.takeError();
+
+      auto FwdDecl = createForwardDeclaration(*ExtractedFunc, SM);
+      if (!FwdDecl)
+        return FwdDecl.takeError();
+      tooling::Replacements OtherEdit(*FwdDecl);
+      if (auto PathAndEdit =
+              Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc), OtherEdit))
+        MultiFileEffect->ApplyEdits.try_emplace(PathAndEdit->first,
+                                                PathAndEdit->second);
+      else
+        return PathAndEdit.takeError();
+      return MultiFileEffect;
+    }
+  }
+  return Effect::mainFileEdit(SM, std::move(Edit));
+}
+
+} // namespace
+} // namespace clangd
+} // namespace clang

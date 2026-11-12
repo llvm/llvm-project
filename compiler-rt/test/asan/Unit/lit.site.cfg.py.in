@@ -1,0 +1,33 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import os
+import platform
+import re
+import shlex
+
+# Load common config for all compiler-rt unit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/unittests/lit.common.unit.configured")
+
+# Setup config name.
+config.name = 'AddressSanitizer-Unit'
+
+# Load target architecture information. Note config.target_triple can be
+# incorrect since it is populated with the default target. This unit test suite
+# may run for multiple targets. The dynamic suite needs the correct target for
+# library path selection.
+config.target_arch = "@arch@"
+
+# Setup test source and exec root. For unit tests, we define
+# it as build directory with ASan unit tests.
+# FIXME: De-hardcode this path.
+if @ASAN_TEST_DYNAMIC@:
+  test_dir = "@CONFIG_NAME_DYNAMIC@"
+else:
+  test_dir = "@CONFIG_NAME@"
+config.test_exec_root = os.path.join("@COMPILER_RT_BINARY_DIR@",
+                                     "lib", "asan", "tests", test_dir)
+
+config.test_source_root = config.test_exec_root
+
+if not config.parallelism_group:
+  config.parallelism_group = 'shadow-memory'

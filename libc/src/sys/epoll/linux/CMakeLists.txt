@@ -1,0 +1,94 @@
+add_entrypoint_object(
+  epoll_create
+  SRCS
+    epoll_create.cpp
+  HDRS
+    ../epoll_create.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_create
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_create1
+  SRCS
+    epoll_create1.cpp
+  HDRS
+    ../epoll_create1.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_create1
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_ctl
+  SRCS
+    epoll_ctl.cpp
+  HDRS
+    ../epoll_ctl.h
+  DEPENDS
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.sys_epoll_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_ctl
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_pwait
+  SRCS
+    epoll_pwait.cpp
+  HDRS
+    ../epoll_pwait.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_pwait
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_pwait2
+  SRCS
+    epoll_pwait2.cpp
+  HDRS
+    ../epoll_pwait2.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_epoll_event
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_pwait2
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  epoll_wait
+  SRCS
+    epoll_wait.cpp
+  HDRS
+    ../epoll_wait.h
+  DEPENDS
+    libc.hdr.types.struct_epoll_event
+    libc.src.__support.OSUtil.linux.syscall_wrappers.epoll_wait
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.sanitizer
+    libc.src.errno.errno
+)

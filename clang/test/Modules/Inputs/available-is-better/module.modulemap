@@ -1,0 +1,17 @@
+// There is some order-dependence to how clang chooses modules, so make
+// sure that both the first and last modules here are ones that would
+// cause a test failure if they were picked.
+
+module unavailable_before {
+  requires nonexistent_feature
+  header "available-is-better.h"
+}
+
+module available {
+  header "available-is-better.h"
+}
+
+module unavailable_after {
+  requires nonexistent_feature
+  header "available-is-better.h"
+}

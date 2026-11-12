@@ -1,0 +1,95 @@
+!COFF
+header: !Header
+  Machine: IMAGE_FILE_MACHINE_I386 # (0x14c)
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+
+sections:
+  - !Section
+    Name: .text
+    Alignment: 16
+    Characteristics: [IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ, ] # 0x60500020
+    SectionData:  !hex "83EC0CC744240800000000C7042400000000E800000000E8000000008B44240883C40CC3" # |....D$.......$...............D$.....|
+
+    Relocations:
+      - !Relocation
+        VirtualAddress: 0xe
+        SymbolName: L_.str
+        Type: IMAGE_REL_I386_DIR32
+
+      - !Relocation
+        VirtualAddress: 0x13
+        SymbolName: _puts
+        Type: IMAGE_REL_I386_REL32
+
+      - !Relocation
+        VirtualAddress: 0x18
+        SymbolName: _SomeOtherFunction
+        Type: IMAGE_REL_I386_REL32
+
+  - !Section
+    Name: .data
+    Alignment: 1
+    Characteristics: [IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE, ] # 0xc0100040
+    SectionData:  !hex "48656C6C6F20576F726C642100" # |Hello World!.|
+
+symbols:
+  - !Symbol
+    Name: .text
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)
+    SectionDefinition:
+      Length:          36
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+
+  - !Symbol
+    Name: .data
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)
+    SectionDefinition:
+      Length:          13
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+
+  - !Symbol
+    Name: _main
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION # (2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+
+  - !Symbol
+    Name: L_.str
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)
+
+  - !Symbol
+    Name: _puts
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+
+  - !Symbol
+    Name: _SomeOtherFunction
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+

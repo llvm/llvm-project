@@ -1,0 +1,186 @@
+## Evaluates the hex writer behavior with empty sections and segments.
+##
+## Show that the presence of an empty section placed at the same address of a
+## filled section doesn't affect the hex output. Also, show that the presence of
+## an empty section placed behind the filled section doesn't affect the hex
+## output. And, show that this happens regardless of the section ordering in the
+## section header table. (Two filled sections, and four empty sections, to
+## realize this test.)
+##
+## Then, show the same kind of behaviors for segments. (One filled section, four
+## empty sections, each in a single segment.)
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy -O ihex %t - | FileCheck %s --implicit-check-not={{.}}
+
+## .data0 address
+# CHECK:         :02000004333394
+## .data0 offset, contents, checksum
+# CHECK-NEXT:    :020000000123DA
+
+## .data1 address
+# CHECK-NEXT:    :02000004444472
+## .data1 offset, contents, checksum
+# CHECK-NEXT:    :02000000456752
+
+## .data2 address
+# CHECK-NEXT:    :0200000477770C
+## .data2 offset, contents, checksum
+# CHECK-NEXT:    :0200000089ABCA
+
+## End of file
+# CHECK-NEXT:    :00000001FF
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+## An empty section that's placed at the same address as a populated section.
+## This won't be in the output. It also won't affect how the subsequent section
+## is written.
+  - Name:          .empty_at_data0
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x33330000
+    Size:          0
+## A section populated with data. This is in the output.
+  - Name:          .data0
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x33330000
+    Content:       "0123"
+## An empty section that's placed at the end of .data0. This won't be in the
+## output.
+  - Name:          .empty_behind_data0
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x33330002
+    Size:          0
+## An empty section declared before .data1, but placed behind .data1. This
+## won't be in the output.
+  - Name:          .empty_behind_data1
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x44440002
+    Size:          0
+## A section populated with data. This is in the output.
+  - Name:          .data1
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x44440000
+    Content:       "4567"
+## An empty section declared after .data1, but placed at the start of .data1.
+## This won't be in the output.
+  - Name:          .empty_at_data1
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x44440000
+    Size:          0
+## An empty section that's isolated (by address) from all others. This won't be
+## in the output.
+  - Name:         .empty_isolated
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x7FFFFFFF
+    AddressAlign: 0x1
+    Size:         0
+## The sections below are placed into segments of varying configurations.
+## Populated section in its own segment. This is in the output.
+  - Name:          .data2
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x77770000
+    Content:       "89AB"
+## Empty section in its own segment. That segment is declared before the .data2
+## segment in the program headers, and placed at an address just behind .data2.
+## This won't be in the output.
+  - Name:          .empty0
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x88880000
+    Size:          0
+## Empty section in its own segment. That segment is declared before the .data2
+## segment in the program headers, and placed at the same address as .data2.
+## This won't be in the output.
+  - Name:          .empty1
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0x99990000
+    Size:          0
+## Empty section in its own segment. That segment is declared after the .data2
+## segment in the program headers, and placed at the same address as .data2.
+## This won't be in the output.
+  - Name:          .empty2
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0xAAAA0000
+    Size:          0
+## Empty section in its own segment. That segment is declared after the .data2
+## segment in the program headers, and placed at an address just behind .data2.
+## This won't be in the output.
+  - Name:          .empty3
+    Type:          SHT_PROGBITS
+    Flags:         [ SHF_ALLOC ]
+    Address:       0xBBBB0000
+    Size:          0
+ProgramHeaders:
+## .data0 sections, with empty bookends.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x33330000
+    VAddr:         0x33330000
+    FirstSec:      .empty_at_data0
+    LastSec:       .empty_behind_data0
+## .data1 sections, with empty bookends.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x44440000
+    VAddr:         0x44440000
+    FirstSec:      .empty_behind_data1
+    LastSec:       .empty_at_data1
+## .empty_isolated section.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x7FFFFFFF
+    VAddr:         0x7FFFFFFF
+    FirstSec:      .empty_isolated
+    LastSec:       .empty_isolated
+## Segments below include a single empty segment, and are positioned around
+## .data2 in various ways.  Declared before, placed behind .data2 segment.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x77770002
+    VAddr:         0x77770002
+    FirstSec:      .empty0
+    LastSec:       .empty0
+## Declared before, placed at .data2 segment.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x77770000
+    VAddr:         0x77770000
+    FirstSec:      .empty1
+    LastSec:       .empty1
+## Segment for .data2.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x77770000
+    VAddr:         0x77770000
+    FirstSec:      .data2
+    LastSec:       .data2
+## Declared after, placed at .data2 segment.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x77770000
+    VAddr:         0x77770000
+    FirstSec:      .empty2
+    LastSec:       .empty2
+## Declared after, placed behind .data2 segment.
+  - Type:          PT_LOAD
+    Flags:         [ PF_R ]
+    PAddr:         0x77770002
+    VAddr:         0x77770002
+    FirstSec:      .empty3
+    LastSec:       .empty3

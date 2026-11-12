@@ -1,0 +1,65 @@
+## Test that only debug sections are kept with --only-keep-debug.
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: llvm-strip --only-keep-debug %t.wasm -o %t2.wasm
+# RUN: obj2yaml %t2.wasm | FileCheck %s -check-prefixes=CHECK,STRIPTYPE,STRIPFOO
+
+## Test that keep-section overrides only-keep-debug.
+# RUN: llvm-strip --only-keep-debug --keep-section=foo %t.wasm -o %t3.wasm
+# RUN: obj2yaml %t3.wasm | FileCheck --implicit-check-not=Name --check-prefixes=CHECK,STRIPTYPE,KEEPFOO %s
+
+## Test that keep-section overrides only-keep-debug, even for known sections.
+# RUN: llvm-strip --only-keep-debug --keep-section=TYPE %t.wasm -o %t4.wasm
+# RUN: obj2yaml %t4.wasm | FileCheck --implicit-check-not=Name --check-prefixes=CHECK,KEEPTYPE,STRIPFOO %s
+
+# CHECK:      Sections:
+# KEEPTYPE:       - Type: TYPE
+# STRIPTYPE-NOT:  - Type: TYPE
+# STRIPTYPE:      - Type: CUSTOM
+# STRIPTYPE-NEXT:   Name: .objcopy.removed
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .debug_info
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .objcopy.removed
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .objcopy.removed
+# CHECK:          - Type: CUSTOM
+# CHECK-NEXT:       Name: .debug_line
+# CHECK:          - Type: CUSTOM
+# KEEPFOO-NEXT:     Name: foo
+# STRIPFOO-NEXT:    Name: .objcopy.removed
+
+## Test that remove-section overrides only-keep-debug.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --only-keep-debug --remove-section=.debug_info %t
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=NOINFO --implicit-check-not=.debug_info
+
+# NOINFO: Name: .debug_line
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - F32
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: CAFE1234
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: .debug_line
+    Payload: DEADBEEF
+  - Type: CUSTOM
+    Name: foo
+    Payload: CAFE

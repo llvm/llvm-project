@@ -1,0 +1,13 @@
+# RUN: yaml-bench -canonical %s
+
+---
+foo
+...
+# Repeated end marker.
+...
+---
+bar
+# No end marker.
+---
+baz
+...

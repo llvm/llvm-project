@@ -1,0 +1,14 @@
+static_library("AsmParser") {
+  output_name = "LLVMAsmParser"
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AsmParserContext.cpp",
+    "LLLexer.cpp",
+    "LLParser.cpp",
+    "Parser.cpp",
+  ]
+}

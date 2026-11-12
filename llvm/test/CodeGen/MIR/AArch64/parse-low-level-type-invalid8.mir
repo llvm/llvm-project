@@ -1,0 +1,10 @@
+# RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# When a low-level type vector has more elements than supported
+---
+name: test_vector_too_many_elements
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:11: invalid number of vector elements
+    %0:_(<65536 x s1>) = G_IMPLICIT_DEF
+...

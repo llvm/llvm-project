@@ -1,0 +1,18 @@
+add_clang_unittest(DynamicASTMatchersTests
+  VariantValueTest.cpp
+  ParserTest.cpp
+  RegistryTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangDynamicASTMatchers
+  clangFrontend
+  clangSerialization
+  clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  )

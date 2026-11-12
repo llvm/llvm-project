@@ -1,0 +1,7 @@
+# REQUIRES: lua || python
+
+# RUN: %build %p/Inputs/dummy-target.c -o %t.out
+# RUN: %lldb %t.out -o 'b main' -o 'break command add 1 -o "script print(\"A R4Nd0m\" + \" Str1ng\")"' -o 'r' | FileCheck %s
+
+# CHECK: A R4Nd0m Str1ng
+# CHECK-NOT: A R4Nd0m Str1ng

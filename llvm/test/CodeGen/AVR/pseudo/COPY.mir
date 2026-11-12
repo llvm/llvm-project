@@ -1,0 +1,47 @@
+# RUN: llc -O0 %s -o - | FileCheck %s
+
+--- |
+  target triple = "avr--"
+
+  define void @test_copy_nonoverlapping() {
+  entry:
+    ret void
+  }
+
+  define void @test_copy_overlapping() {
+  entry:
+    ret void
+  }
+
+  declare void @foo(i16 %0)
+...
+
+---
+name: test_copy_nonoverlapping
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r25r24
+
+    ; CHECK-LABEL: test_copy_nonoverlapping:
+    ; CHECK: mov r22, r24
+    ; CHECK-NEXT: mov r23, r25
+
+    $r23r22 = COPY $r25r24
+    RCALLk @foo, implicit $r24r23
+...
+
+---
+name: test_copy_overlapping
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r24r23
+
+    ; CHECK-LABEL: test_copy_overlapping:
+    ; CHECK: mov r25, r24
+    ; CHECK-NEXT: mov r24, r23
+
+    $r25r24 = COPY $r24r23
+    RCALLk @foo, implicit $r25r24
+...

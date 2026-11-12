@@ -1,0 +1,18 @@
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
+
+define void @test1(ptr %a) {
+entry:
+; CHECK: annotation must have at least one operand
+  %a.addr = alloca ptr, align 8, !annotation !0
+
+; CHECK-NEXT: operands must be a string or a tuple of strings
+  ret void, !annotation !1
+}
+
+!0 = !{}
+!1 = !{i32 10}
+
+; CHECK-NEXT: operands must be a string or a tuple of strings
+define void @func_non_string() !annotation !1 {
+  ret void
+}

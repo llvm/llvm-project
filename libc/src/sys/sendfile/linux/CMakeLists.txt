@@ -1,0 +1,16 @@
+add_entrypoint_object(
+  sendfile
+  SRCS
+    sendfile.cpp
+  HDRS
+    ../sendfile.h
+  DEPENDS
+    libc.hdr.types.off_t
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendfile
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

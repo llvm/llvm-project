@@ -1,0 +1,303 @@
+// RUN: fir-opt %s --split-input-file --pass-pipeline="builtin.module(test-acc-recipe-populate{recipe-type=firstprivate})" | FileCheck %s
+
+// The tests here use a synthetic hlfir.declare in order to ensure that the hlfir dialect is
+// loaded. This is required because the pass used is part of OpenACC test passes outside of
+// flang and the APIs being test may generate hlfir even when it does not appear.
+
+// Test scalar type (f32)
+// CHECK: acc.firstprivate.recipe @firstprivate_scalar : !fir.ref<f32> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<f32>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca f32
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<f32>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<f32>, %[[DST:.*]]: !fir.ref<f32>):
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : f32, !fir.ref<f32>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_scalar() {
+  %0 = fir.alloca f32 {test.var = "scalar"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Test integer scalar
+// CHECK: acc.firstprivate.recipe @firstprivate_int : !fir.ref<i32> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca i32
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<i32>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_int() {
+  %0 = fir.alloca i32 {test.var = "int"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Test logical type
+// CHECK: acc.firstprivate.recipe @firstprivate_logical : !fir.ref<!fir.logical<4>> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.logical<4>>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.logical<4>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.logical<4>>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.logical<4>>, %[[DST:.*]]: !fir.ref<!fir.logical<4>>):
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.logical<4>>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_logical() {
+  %0 = fir.alloca !fir.logical<4> {test.var = "logical"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Test complex type
+// CHECK: acc.firstprivate.recipe @firstprivate_complex : !fir.ref<complex<f32>> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<complex<f32>>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca complex<f32>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<complex<f32>>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<complex<f32>>, %[[DST:.*]]: !fir.ref<complex<f32>>):
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f32>>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : complex<f32>, !fir.ref<complex<f32>>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_complex() {
+  %0 = fir.alloca complex<f32> {test.var = "complex"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Test 1D static array
+// CHECK: acc.firstprivate.recipe @firstprivate_array_1d : !fir.ref<!fir.array<100xf32>> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xf32>>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.array<100xf32>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.array<100xf32>>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<100xf32>>, %[[DST:.*]]: !fir.ref<!fir.array<100xf32>>):
+// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_array_1d() {
+  %0 = fir.alloca !fir.array<100xf32> {test.var = "array_1d"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Test 2D static array
+// CHECK: acc.firstprivate.recipe @firstprivate_array_2d : !fir.ref<!fir.array<10x20xi32>> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x20xi32>>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.array<10x20xi32>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.array<10x20xi32>>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.array<10x20xi32>>, %[[DST:.*]]: !fir.ref<!fir.array<10x20xi32>>):
+// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_array_2d() {
+  %0 = fir.alloca !fir.array<10x20xi32> {test.var = "array_2d"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Test derived type with multiple fields
+// CHECK: acc.firstprivate.recipe @firstprivate_derived : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca !fir.type<_QTpoint{x:f32,y:f32,z:f32}>
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, %[[DST:.*]]: !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>):
+// CHECK:   hlfir.assign %[[SRC]] to %[[DST]] temporary_lhs : !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>, !fir.ref<!fir.type<_QTpoint{x:f32,y:f32,z:f32}>>
+// CHECK:   acc.terminator
+// CHECK: }
+// CHECK-NOT: destroy
+
+func.func @test_derived() {
+  %0 = fir.alloca !fir.type<_QTpoint{x:f32,y:f32,z:f32}> {test.var = "derived"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Recipe generation from an acc.firstprivate result must use the host
+// variable's Fortran properties, not the clause result. The host is not
+// OPTIONAL, so the copy region is a direct load/assign.
+// CHECK: acc.firstprivate.recipe @firstprivate_from_clause : !fir.ref<i32> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca i32
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<i32>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
+// CHECK-NOT: fir.is_present
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_from_clause() {
+  %host = fir.alloca i32
+  %fp = acc.firstprivate varPtr(%host : !fir.ref<i32>) name("x") -> !fir.ref<i32> {test.var = "from_clause"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Bare !fir.ptr values (e.g. a null POINTER address firstprivatized into a
+// region) allocate !fir.ref storage. Convert it back to the recipe type so
+// fir.result in the optional-present branch matches fir.if.
+// CHECK: acc.firstprivate.recipe @firstprivate_optional_ptr_f64 : !fir.ptr<f64> init {
+// CHECK: ^bb0(%[[ARG:.*]]: !fir.ptr<f64>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca f64
+// CHECK:   %[[PRESENT:.*]] = fir.is_present %[[ARG]] : (!fir.ptr<f64>) -> i1
+// CHECK:   %[[RES:.*]] = fir.if %[[PRESENT]] -> (!fir.ptr<f64>) {
+// CHECK:     %[[CVT:.*]] = fir.convert %[[ALLOC]] : (!fir.ref<f64>) -> !fir.ptr<f64>
+// CHECK:     fir.result %[[CVT]] : !fir.ptr<f64>
+// CHECK:   } else {
+// CHECK:     %[[ABSENT:.*]] = fir.absent !fir.ptr<f64>
+// CHECK:     fir.result %[[ABSENT]] : !fir.ptr<f64>
+// CHECK:   }
+// CHECK:   acc.yield %[[RES]] : !fir.ptr<f64>
+// CHECK: }
+
+func.func @test_optional_ptr_f64() {
+  %0 = fir.zero_bits !fir.ptr<f64> {test.var = "optional_ptr_f64"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole scalar POINTER: copy the pointee only when base_addr is non-null.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_ptr_scalar : !fir.ref<!fir.box<!fir.ptr<f64>>> init {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.ptr<f64>>>, %[[DST:.*]]: !fir.ref<!fir.box<!fir.ptr<f64>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.ptr<f64>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<f64>>) -> !fir.ptr<f64>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_ptr_scalar() {
+  %0 = fir.alloca !fir.box<!fir.ptr<f64>> {test.var = "box_ptr_scalar"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole array POINTER: same association guard around the array assignment.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_ptr_array : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> init {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_ptr_array() {
+  %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {test.var = "box_ptr_array"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole scalar ALLOCATABLE: copy only when allocated.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_heap_scalar : !fir.ref<!fir.box<!fir.heap<f64>>> init {
+// CHECK:   fir.if {{.*}} -> (!fir.heap<f64>) {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.heap<f64>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<f64>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.heap<f64>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<f64>>) -> !fir.heap<f64>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_heap_scalar() {
+  %0 = fir.alloca !fir.box<!fir.heap<f64>> {test.var = "box_heap_scalar"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Whole array ALLOCATABLE: same allocation guard around the array assignment.
+// CHECK: acc.firstprivate.recipe @firstprivate_box_heap_array : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> init {
+// CHECK:   fir.if {{.*}} -> (!fir.heap<!fir.array<?xf32>>) {
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>):
+// CHECK:   %[[BOX:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:   %[[ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK-NOT: fir.load %[[ADDR]]
+// CHECK:   %[[COND:.*]] = arith.cmpi ne
+// CHECK:   fir.if %[[COND]] weights([1, 0]) {
+// CHECK:     hlfir.assign {{.*}} temporary_lhs
+// CHECK:   }
+// CHECK-NOT: hlfir.assign
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_box_heap_array() {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {test.var = "box_heap_array"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var uniq_name("load_hlfir") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}

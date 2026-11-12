@@ -1,0 +1,29 @@
+## Ensures that implicitly added sections can be ordered within Sections.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .symtab
+    Type:            SHT_SYMTAB
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_WRITE ]
+  - Name:            .shstrtab
+    Type:            SHT_STRTAB
+  - Name:            .strtab
+    Type:            SHT_STRTAB
+
+# CHECK: Name: .text
+# CHECK: Name: .symtab
+# CHECK: Name: .data
+# CHECK: Name: .shstrtab
+# CHECK: Name: .strtab

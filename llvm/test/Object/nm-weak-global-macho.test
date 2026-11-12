@@ -1,0 +1,3 @@
+RUN: llvm-nm %p/Inputs/weak-global-symbol.macho-i386 | FileCheck %s
+
+CHECK: 00000000 S _a

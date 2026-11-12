@@ -1,0 +1,118 @@
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a             --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ERROR,FP16-ERROR
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a,+fullfp16          --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=FP16,CHECK-ERROR
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a,+fullfp16,-fp16fml --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=FP16,CHECK-ERROR
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a,-fp16fml,+fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=FP16,CHECK-ERROR
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a,+fp16fml,-fullfp16 --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ERROR,FP16-ERROR
+# RUN: not llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.2a,+fp16fml,-neon     --disassemble < %s 2>&1 | FileCheck %s --check-prefixes=FP16,CHECK-ERROR
+
+[0x20,0xec,0x22,0x0e]
+[0x20,0xec,0xa2,0x0e]
+[0x20,0xec,0x22,0x4e]
+[0x20,0xec,0xa2,0x4e]
+[0x20,0xcc,0x22,0x2e]
+[0x20,0xcc,0xa2,0x2e]
+[0x20,0xcc,0x22,0x6e]
+[0x20,0xcc,0xa2,0x6e]
+
+#indexed variants:
+
+[0x20,0x08,0xb2,0x0f]
+[0x20,0x48,0xb2,0x0f]
+[0x20,0x08,0xb2,0x4f]
+[0x20,0x48,0xb2,0x4f]
+[0x20,0x88,0xb2,0x2f]
+[0x20,0xc8,0xb2,0x2f]
+[0x20,0x88,0xb2,0x6f]
+[0x20,0xc8,0xb2,0x6f]
+
+[0x20,0x08,0x92,0x0f]
+[0x20,0x48,0x92,0x0f]
+[0x20,0x08,0x92,0x4f]
+[0x20,0x48,0x92,0x4f]
+[0x20,0x88,0x92,0x2f]
+[0x20,0xc8,0x92,0x2f]
+[0x20,0x88,0x92,0x6f]
+[0x20,0xc8,0x92,0x6f]
+
+#A fullfp16 instruction, for testing the interaction of the features
+[0x41,0x08,0xe3,0x1e]
+
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xec,0x22,0x0e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xec,0xa2,0x0e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xec,0x22,0x4e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xec,0xa2,0x4e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xcc,0x22,0x2e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xcc,0xa2,0x2e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xcc,0x22,0x6e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xcc,0xa2,0x6e]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x08,0xb2,0x0f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x48,0xb2,0x0f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x08,0xb2,0x4f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x48,0xb2,0x4f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x88,0xb2,0x2f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xc8,0xb2,0x2f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x88,0xb2,0x6f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xc8,0xb2,0x6f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x08,0x92,0x0f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x48,0x92,0x0f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x08,0x92,0x4f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x48,0x92,0x4f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x88,0x92,0x2f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xc8,0x92,0x2f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0x88,0x92,0x6f]
+#CHECK-ERROR:  ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: [0x20,0xc8,0x92,0x6f]
+#CHECK-ERROR:  ^
+
+#FP16-ERROR: warning: invalid instruction encoding
+#FP16-ERROR: [0x41,0x08,0xe3,0x1e]
+#FP16-ERROR:  ^
+
+#FP16-NOT: [0x41,0x08,0xe3,0x1e]
+

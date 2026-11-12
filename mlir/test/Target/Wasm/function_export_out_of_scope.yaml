@@ -1,0 +1,13 @@
+# RUN: yaml2obj %s | not mlir-translate --import-wasm -o - 2>&1 | FileCheck %s
+
+# CHECK: trying to export function 42 which is undefined in this scope
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            EXPORT
+    Exports:
+      - Name:            function_export
+        Kind:            FUNCTION
+        Index:           42

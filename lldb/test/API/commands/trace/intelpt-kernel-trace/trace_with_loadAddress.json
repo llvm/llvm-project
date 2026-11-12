@@ -1,0 +1,30 @@
+{
+  "cpus": [
+    {
+      "contextSwitchTrace": "../intelpt-multi-core-trace/cores/45.perf_context_switch_trace",
+      "id": 45,
+      "iptTrace": "../intelpt-multi-core-trace/cores/45.intelpt_trace"
+    },
+    {
+      "contextSwitchTrace": "../intelpt-multi-core-trace/cores/51.perf_context_switch_trace",
+      "id": 51,
+      "iptTrace": "../intelpt-multi-core-trace/cores/51.intelpt_trace"
+    }
+  ],
+  "cpuInfo": {
+    "family": 6,
+    "model": 85,
+    "stepping": 4,
+    "vendor": "GenuineIntel"
+  },
+  "tscPerfZeroConversion": {
+    "timeMult": 1076264588,
+    "timeShift": 31,
+    "timeZero": 18433473881008870804
+  },
+  "kernel": {
+    "file": "../intelpt-multi-core-trace/modules/m.out",
+    "loadAddress": "0x400000"
+  },
+  "type": "intel-pt"
+}

@@ -1,0 +1,86 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the class that aggregates information
+/// specific to device kernels (i.e. information that is uniform between
+/// different submissions of the same kernel).
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
+#define _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP
+
+#include <sycl/__impl/detail/config.hpp>
+
+#include <OffloadAPI.h>
+
+#include <llvm/ADT/Hashing.h>
+
+#include <cstddef>
+#include <mutex>
+#include <string_view>
+#include <unordered_map>
+#include <utility>
+
+_LIBSYCL_BEGIN_NAMESPACE_SYCL
+namespace detail {
+
+class DeviceImageManager;
+class ContextImpl;
+
+// TODO: Pointers to instances of this class are supported to be stored in
+// header function templates as a static variable to avoid repeated runtime
+// lookup overhead.
+class DeviceKernelInfo {
+public:
+  /// Constructs a device kernel info instance.
+  ///
+  /// \param KernelName the name of the kernel.
+  /// \param DeviceImage the device image containing device code of this kernel.
+  DeviceKernelInfo(std::string_view KernelName, DeviceImageManager &DeviceImage)
+      : MName(KernelName), MDeviceImage(DeviceImage) {}
+
+  /// \return the name of this kernel.
+  std::string_view getName() const { return MName; }
+
+  /// \return the device image containing the device code of this kernel.
+  DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
+
+  /// Returns a cache entry for pair key \p Context & \p Device if successful,
+  /// null otherwise
+  ol_symbol_handle_t tryGetCachedKernel(ContextImpl *Context,
+                                        ol_device_handle_t Device);
+
+  /// Adds \p Kernel to the cache by using the pair key \p Context & \p Device
+  void addCachedKernel(ContextImpl *Context, ol_device_handle_t Device,
+                       ol_symbol_handle_t Kernel);
+
+  /// Removes every cache entry keyed by \p Context, regardless of device.
+  /// Called by ContextImpl when it is being destroyed.
+  void removeCachedKernelsFor(ContextImpl *Context);
+
+private:
+  std::string_view MName;
+  DeviceImageManager &MDeviceImage;
+
+  using CacheKeyT = std::pair<ContextImpl *, ol_device_handle_t>;
+  struct CacheKeyHash {
+    std::size_t operator()(const CacheKeyT &Key) const noexcept {
+      return llvm::hash_combine(Key.first, Key.second);
+    }
+  };
+  std::mutex MCacheMutex;
+  std::unordered_map<CacheKeyT, ol_symbol_handle_t, CacheKeyHash> MCache;
+};
+
+} // namespace detail
+
+_LIBSYCL_END_NAMESPACE_SYCL
+
+#endif // _LIBSYCL_SRC_DETAIL_DEVICE_KERNEL_INFO_HPP

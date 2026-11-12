@@ -1,0 +1,203 @@
+## Test how we dump the .debug_addr section.
+
+## a) Dumping address tables from various object files.
+
+## Dumping address tables from a little endian 64-bit object file.
+# RUN: yaml2obj --docnum=1 %s -DADDRESS=0xFFFFFFFFFFFFFFFF \
+# RUN:   -DADDRSIZE=4 | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
+# RUN:     -DLENGTH1=0x14 -DADDRSIZE1=0x8 -DADDR=0xFFFFFFFFFFFFFFFF \
+# RUN:     -DLENGTH2=0xC -DADDRSIZE2=0x4
+
+## Dumping address tables from a big endian 64-bit object file.
+# RUN: yaml2obj --docnum=1 %s -DENDIAN=MSB -DADDRESS=0xFFFFFFFFFFFFFFFF \
+# RUN:   -DADDRSIZE=4 | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
+# RUN:     -DLENGTH1=0x14 -DADDRSIZE1=0x8 -DADDR=0xFFFFFFFFFFFFFFFF \
+# RUN:     -DLENGTH2=0xC -DADDRSIZE2=0x4
+
+## Dumping address tables from a little endian 32-bit object file.
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DADDRESS=0xFFFFFFFF \
+# RUN:   -DADDRSIZE=8 | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
+# RUN:     -DLENGTH1=0xC -DADDRSIZE1=0x4 -DADDR=0xFFFFFFFF \
+# RUN:     -DLENGTH2=0x14 -DADDRSIZE2=0x8
+
+## Dumping address tables from a big endian 32-bit object file.
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DENDIAN=MSB -DADDRESS=0xFFFFFFFF \
+# RUN:   -DADDRSIZE=8 | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections: \
+# RUN:     -DLENGTH1=0xC -DADDRSIZE1=0x4 -DADDR=0xFFFFFFFF \
+# RUN:     -DLENGTH2=0x14 -DADDRSIZE2=0x8
+
+#      BASIC: DWARF:
+# BASIC-NEXT:   debug_addr:
+# BASIC-NEXT:     - Length:      [[LENGTH1]]
+# BASIC-NEXT:       Version:     0x5
+# BASIC-NEXT:       AddressSize: [[ADDRSIZE1]]
+# BASIC-NEXT:       Entries:
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: 0x5678
+# BASIC-NEXT:     - Format:      DWARF64
+# BASIC-NEXT:       Length:      [[LENGTH1]]
+# BASIC-NEXT:       Version:     0x5
+# BASIC-NEXT:       AddressSize: [[ADDRSIZE1]]
+# BASIC-NEXT:       Entries:
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: [[ADDR]]
+# BASIC-NEXT:     - Length:      [[LENGTH2]]
+# BASIC-NEXT:       Version:     0x5
+# BASIC-NEXT:       AddressSize: [[ADDRSIZE2]]
+# BASIC-NEXT:       Entries:
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: 0x5678
+# BASIC-NEXT:     - Format:      DWARF64
+# BASIC-NEXT:       Length:      [[LENGTH2]]
+# BASIC-NEXT:       Version:     0x5
+# BASIC-NEXT:       AddressSize: [[ADDRSIZE2]]
+# BASIC-NEXT:       Entries:
+# BASIC-NEXT:         - Address: 0x1234
+# BASIC-NEXT:         - Address: 0x5678
+# BASIC-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS=64]]
+  Data:  ELFDATA2[[ENDIAN=LSB]]
+  Type:  ET_EXEC
+DWARF:
+  debug_addr:
+    ## A DWARF32 address table.
+    - Version:     5
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+    ## A DWARF64 address table.
+    - Format:      DWARF64
+      Version:     5
+      Entries:
+        - Address: 0x1234
+        - Address: [[ADDRESS]]
+    ## A DWARF32 address table with a mutable address size.
+    - Version:     5
+      AddressSize: [[ADDRSIZE]]
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+    ## A DWARF64 address table with a mutable address size.
+    - Format:      DWARF64
+      Version:     5
+      AddressSize: [[ADDRSIZE]]
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+
+## b) Test dumping a .debug_addr section whose section header properties are
+## overridden.
+
+## Override the sh_type field.
+# RUN: yaml2obj --docnum=2 %s -DTYPE=SHT_STRTAB | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_STRTAB --check-prefix=COMMON
+
+## Override the sh_flags field.
+# RUN: yaml2obj --docnum=2 %s -DFLAGS='[ SHF_ALLOC ]' | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_PROGBITS --check-prefixes=COMMON,FLAGS
+
+## Override the sh_link field.
+# RUN: yaml2obj --docnum=2 %s -DLINK=.sec | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_PROGBITS --check-prefixes=COMMON,LINK
+
+## Override the sh_addr field.
+# RUN: yaml2obj --docnum=2 %s -DADDRESS=0x2020 | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_PROGBITS --check-prefixes=COMMON,ADDR
+
+## Override the sh_addralign field.
+# RUN: yaml2obj --docnum=2 %s -DADDRALIGN=3 | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_PROGBITS --check-prefixes=COMMON,ADDRALIGN
+
+## Override the sh_entsize field.
+# RUN: yaml2obj --docnum=2 %s -DENTSIZE=3 | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_PROGBITS --check-prefixes=COMMON,ENTSIZE
+
+## Override the sh_info field.
+# RUN: yaml2obj --docnum=2 %s -DINFO=3 | obj2yaml | \
+# RUN:   FileCheck %s -DTYPE=SHT_PROGBITS --check-prefixes=COMMON,INFO
+
+#         COMMON: Sections:
+#    COMMON-NEXT:   - Name:         .debug_addr
+#    COMMON-NEXT:     Type:         [[TYPE]]
+#     FLAGS-NEXT:     Flags:        [ SHF_ALLOC ]
+#      LINK-NEXT:     Link:         .sec
+#      ADDR-NEXT:     Address:      0x2020
+# ADDRALIGN-NEXT:     AddressAlign: 0x3
+#   ENTSIZE-NEXT:     EntSize:      0x3
+#      INFO-NEXT:     Info:         0x3
+#    COMMON-NEXT:   - Name:         .sec
+#    COMMON-NEXT:     Type:         SHT_PROGBITS
+#    COMMON-NEXT: DWARF:
+#    COMMON-NEXT:   debug_addr:
+#    COMMON-NEXT:     - Length:      0x14
+#    COMMON-NEXT:       Version:     0x5
+#    COMMON-NEXT:       AddressSize: 0x8
+#    COMMON-NEXT:       Entries:
+#    COMMON-NEXT:         - Address: 0x1234
+#    COMMON-NEXT:         - Address: 0x5678
+#    COMMON-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_addr
+    Type:         [[TYPE=SHT_PROGBITS]]
+    Flags:        [[FLAGS=<none>]]
+    Link:         [[LINK=<none>]]
+    EntSize:      [[ENTSIZE=<none>]]
+    Info:         [[INFO=<none>]]
+    AddressAlign: [[ADDRALIGN=0]]
+    Address:      [[ADDRESS=<none>]]
+  - Name:         .sec
+    Type:         SHT_PROGBITS
+DWARF:
+  debug_addr:
+    - Version: 5
+      Entries:
+        - Address: 0x1234
+        - Address: 0x5678
+
+## c) Test dumping an address table whose version isn't 5.
+## This causes the DWARF parser to fail to parse it and we will dump it as a raw
+## content section.
+
+# RUN: yaml2obj --docnum=3 %s -DCONTENT="AABBCC" | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=RAW --implicit-check-not=DWARF:
+
+#      RAW: Sections:
+# RAW-NEXT:   - Name:         .debug_addr
+# RAW-NEXT:     Type:         SHT_PROGBITS
+# RAW-NEXT:     AddressAlign: 0x1
+# RAW-NEXT:     Content:      AABBCC
+# RAW-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_addr
+    Type:         SHT_PROGBITS
+    AddressAlign: 1
+    Size:         [[SIZE=<none>]]
+    Content:      [[CONTENT=<none>]]
+
+## d) Test dumping an empty .debug_addr section.
+
+# RUN: yaml2obj --docnum=3 %s -DSIZE=0 | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=Sections:
+
+#      EMPTY: DWARF:
+# EMPTY-NEXT:   debug_addr: []
+# EMPTY-NEXT: ...

@@ -1,0 +1,90 @@
+# RUN: llc -mtriple=aarch64 -debug-only=machine-outliner -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK-LABEL: *** Populating mapper ***
+# CHECK-NEXT: MAPPING FUNCTION: block_too_small
+# CHECK-NEXT:   MAPPING MBB: ''
+# CHECK-NEXT:     SKIP: MBB size less than minimum size of 2
+# CHECK-NEXT: MAPPING FUNCTION: no_outline
+# CHECK-NEXT: SKIP: Function has nooutline attribute
+# CHECK-NEXT: MAPPING FUNCTION: returns_twice_fn
+# CHECK-NEXT: SKIP: Function has returnstwice attribute
+# CHECK-NEXT: MAPPING FUNCTION: calls_returns_twice_fn
+# CHECK-NEXT: SKIP: Function calls a function with returnstwice attribute
+# CHECK-NEXT: MAPPING FUNCTION: tailcalls_returns_twice_fn
+# CHECK-NEXT: SKIP: Function has returnstwice attribute
+# CHECK-NEXT: MAPPING FUNCTION: redzone
+# CHECK-NEXT: SKIP: redzone: unsafe to outline from
+# CHECK-NEXT: MAPPING FUNCTION: no_mf
+# CHECK-NEXT: SKIP: Function does not have a MachineFunction
+# CHECK-NEXT: MAPPING FUNCTION: block_addr_fn
+# CHECK-NEXT:   MAPPING MBB: 'label'
+# CHECK-NEXT:     SKIP: MBB's address is taken
+
+--- |
+  define void @block_too_small() noredzone { unreachable }
+  define void @no_outline() noredzone nooutline { unreachable }
+  ; has only returns_twice
+  define i32 @returns_twice_fn(ptr) noredzone returns_twice { unreachable }
+  ; has only exposesReturnsTwice
+  define i32 @calls_returns_twice_fn(ptr) noredzone { unreachable }
+  ; has both returns_twice and exposesReturnsTwice
+  define i32 @tailcalls_returns_twice_fn(ptr) noredzone returns_twice { unreachable }
+  define void @redzone() { unreachable }
+  declare void @no_mf()
+  define void @block_addr_fn() noredzone {
+  entry:
+    br label %label
+  label:
+    call void @block_addr_fn(ptr blockaddress(@block_addr_fn, %label))
+    ret void
+  }
+...
+---
+name:            no_outline
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+...
+---
+name:            returns_twice_fn
+body:             |
+  bb.0:
+    RET undef $lr
+...
+---
+name:            calls_returns_twice_fn
+exposesReturnsTwice: true
+body:             |
+  bb.0:
+  liveins: $x0
+    BL @returns_twice_fn, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
+    RET undef $lr
+...
+---
+name:            tailcalls_returns_twice_fn
+exposesReturnsTwice: true
+body:             |
+  bb.0:
+  liveins: $x0
+    TCRETURNdi @returns_twice_fn, 0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp, implicit-def $w0
+...
+---
+name:            block_too_small
+body:             |
+  bb.0:
+    liveins: $w0, $lr, $w8
+    RET undef $lr
+...
+---
+name:            block_addr_fn
+body:             |
+  bb.0.label (ir-block-address-taken %ir-block.label):
+    liveins: $w0, $lr, $w8
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 4
+    RET undef $lr
+...
+---

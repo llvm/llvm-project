@@ -1,0 +1,18 @@
+; REQUIRES: x86
+; RUN: llvm-as %s -o %t.o
+; RUN: ld.lld %t.o -o %t.so -shared
+; RUN: llvm-readobj --sections %t.so | FileCheck %s
+
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @ctor, ptr null }]
+define void @ctor() {
+  call void asm "nop", ""()
+  ret void
+}
+
+; The llvm.global_ctors should end up producing constructors.
+; On x86-64 (linux) we should always emit .init_array and never .ctors.
+; CHECK: Name: .init_array
+; CHECK-NOT: Name: .ctors

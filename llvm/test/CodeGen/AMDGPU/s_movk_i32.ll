@@ -1,0 +1,133 @@
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI %s
+
+; SI-LABEL: {{^}}s_movk_i32_k0:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k0(i64 %a) {
+  %or = or i64 %a, 4295032831 ; ((1 << 16) - 1) | (1 << 32)
+  call void asm sideeffect "; use $0", "s"(i64 4295032831)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k1:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x7fff, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k1(i64 %a) {
+  %or = or i64 %a, 4295000063 ; ((1 << 15) - 1) | (1 << 32)
+  call void asm sideeffect "; use $0", "s"(i64 4295000063)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k2:
+; SI-DAG: s_movk_i32 [[LO_S_IMM:s[0-9]+]], 0x7fff{{$}}
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x7fff, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 64, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k2(i64 %a) {
+  %or = or i64 %a, 274877939711 ; ((1 << 15) - 1) | (64 << 32)
+  call void asm sideeffect "; use $0", "s"(i64 274877939711)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k3:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x8000, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k3(i64 %a) {
+  %or = or i64 %a, 4295000064 ; (1 << 15) | (1 << 32)
+  call void asm sideeffect "; use $0", "s"(i64 4295000064)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k4:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x20000, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 1, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k4(i64 %a) {
+  %or = or i64 %a, 4295098368 ; (1 << 17) | (1 << 32)
+  call void asm sideeffect "; use $0", "s"(i64 4295098368)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k5:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffffffef, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xff00ffff, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k5(i64 %a) {
+  %or = or i64 %a, 18374967954648334319 ; -17 & 0xff00ffffffffffff
+  call void asm sideeffect "; use $0", "s"(i64 18374967954648334319)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k6:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x41, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 63, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k6(i64 %a) {
+  %or = or i64 %a, 270582939713 ; 65 | (63 << 32)
+  call void asm sideeffect "; use $0", "s"(i64 270582939713)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k7:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x2000, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x4000, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k7(i64 %a) {
+  %or = or i64 %a, 70368744185856; ((1 << 13)) | ((1 << 14) << 32)
+  call void asm sideeffect "; use $0", "s"(i64 70368744185856)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k8:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8000, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k8(i64 %a) {
+  %or = or i64 %a, 1229782942255906816 ; 0x11111111ffff8000
+  call void asm sideeffect "; use $0", "s"(i64 1229782942255906816)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k9:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8001, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k9(i64 %a) {
+  %or = or i64 %a, 1229782942255906817 ; 0x11111111ffff8001
+  call void asm sideeffect "; use $0", "s"(i64 1229782942255906817)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k10:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8888, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k10(i64 %a) {
+  %or = or i64 %a, 1229782942255909000 ; 0x11111111ffff8888
+  call void asm sideeffect "; use $0", "s"(i64 1229782942255909000)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k11:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff8fff, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k11(i64 %a) {
+  %or = or i64 %a, 1229782942255910911 ; 0x11111111ffff8fff
+  call void asm sideeffect "; use $0", "s"(i64 1229782942255910911)
+  ret i64 %or
+}
+
+; SI-LABEL: {{^}}s_movk_i32_k12:
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xffff7001, v0
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x11111111, v1
+; SI: s_setpc_b64
+define i64 @s_movk_i32_k12(i64 %a) {
+  %or = or i64 %a, 1229782942255902721 ; 0x11111111ffff7001
+  call void asm sideeffect "; use $0", "s"(i64 1229782942255902721)
+  ret i64 %or
+}

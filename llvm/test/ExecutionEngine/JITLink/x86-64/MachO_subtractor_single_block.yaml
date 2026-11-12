@@ -1,0 +1,160 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec -phony-externals %t
+#
+# Check that MachO::X86_64_RELOC_SUBTRACTOR relocations work when the fixup
+# location and target are in the same block (in this case in the __eh_frame
+# section).
+
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      384
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          96
+    fileoff:         448
+    filesize:        96
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            3
+        offset:          0x1C0
+        align:           4
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         31C0C3
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x8
+        size:            56
+        offset:          0x1C8
+        align:           3
+        reloff:          0x220
+        nreloc:          4
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         1400000000000000017A520001781001100C0708900100001C00000004000000F8FFFFFFFFFFFFFF03000000000000000000000000000000
+        relocations:
+          - address:         0x1C
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0x1C
+            symbolnum:       1
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x20
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0x20
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x40
+        size:            32
+        offset:          0x200
+        align:           3
+        reloff:          0x240
+        nreloc:          1
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000030000000000000400000000000000000000000000000000'
+        relocations:
+          - address:         0x0
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          584
+    nsyms:           3
+    stroff:          632
+    strsize:         32
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           917504
+    sdk:             0
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         59048448
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         584
+    datasize:        0
+LinkEditData:
+  NameList:
+    - n_strx:          8
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         8
+    - n_strx:          18
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         32
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          32
+      n_value:         0
+  StringTable:
+    - ' '
+    - _main
+    - EH_Frame1
+    - func.eh
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+...

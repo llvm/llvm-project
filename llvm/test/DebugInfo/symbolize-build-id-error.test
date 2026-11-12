@@ -1,0 +1,23 @@
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-symbolizer --debug-file-directory=%p/Inputs --obj=%t 0x20112f | FileCheck %s
+
+# CHECK:      ??
+# CHECK-NEXT: ??:0:0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .note.invalid
+    Type:    SHT_NOTE
+    Flags:   [ SHF_ALLOC ]
+    Content: 0123456789
+ProgramHeaders:
+  - Type:     PT_NOTE
+    Flags:    [ PF_R ]
+    FirstSec: .note.invalid
+    LastSec:  .note.invalid

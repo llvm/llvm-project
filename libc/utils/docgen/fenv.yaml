@@ -1,0 +1,142 @@
+standard: c23
+posix: posix-2024
+c-reference-root: numeric/fenv
+types:
+  fenv_t:
+    c-definition: '7.6'
+    in-latest-posix: ''
+  fexcept_t:
+    c-definition: '7.6'
+    in-latest-posix: ''
+functions:
+  fe_dec_getround:
+    c-definition: 7.6.5.3
+    c-reference: numeric/fenv
+  fe_dec_setround:
+    c-definition: 7.6.5.6
+    c-reference: numeric/fenv
+  feclearexcept:
+    c-definition: 7.6.4.1
+    c-reference: numeric/fenv/feexcept
+    in-latest-posix: ''
+  fegetenv:
+    c-definition: 7.6.6.1
+    c-reference: numeric/fenv/feenv
+    in-latest-posix: ''
+  fegetexceptflag:
+    c-definition: 7.6.4.2
+    c-reference: numeric/fenv/feexcept
+    in-latest-posix: ''
+  fegetmode:
+    c-definition: 7.6.5.1
+    c-reference: numeric/fenv
+  fegetround:
+    c-definition: 7.6.5.2
+    c-reference: numeric/fenv/feround
+    in-latest-posix: ''
+  feholdexcept:
+    c-definition: 7.6.6.2
+    c-reference: numeric/fenv/feenv
+    in-latest-posix: ''
+  feraiseexcept:
+    c-definition: 7.6.4.3
+    c-reference: numeric/fenv/feexcept
+    in-latest-posix: ''
+  fesetenv:
+    c-definition: 7.6.6.3
+    c-reference: numeric/fenv/feenv
+    in-latest-posix: ''
+  fesetexcept:
+    c-definition: 7.6.4.4
+    c-reference: numeric/fenv/feexcept
+  fesetexceptflag:
+    c-definition: 7.6.4.5
+    c-reference: numeric/fenv/feexcept
+    in-latest-posix: ''
+  fesetmode:
+    c-definition: 7.6.5.4
+    c-reference: numeric/fenv
+  fesetround:
+    c-definition: 7.6.5.5
+    c-reference: numeric/fenv/feround
+    in-latest-posix: ''
+  fetestexcept:
+    c-definition: 7.6.4.7
+    c-reference: numeric/fenv/feexcept
+    in-latest-posix: ''
+  fetestexceptflag:
+    c-definition: 7.6.4.6
+    c-reference: numeric/fenv/feexcept
+  feupdateenv:
+    c-definition: 7.6.6.4
+    c-reference: numeric/fenv/feenv
+    in-latest-posix: ''
+  fedisableexcept:
+    extension: gnu
+  feenableexcept:
+    extension: gnu
+  fegetexcept:
+    extension: gnu
+macros:
+  FE_ALL_EXCEPT:
+    c-definition: 7.6.12
+    c-reference: numeric/fenv/FE_exceptions
+    in-latest-posix: ''
+  FE_DEC_DOWNWARD:
+    c-definition: 7.6.14
+  FE_DEC_TONEAREST:
+    c-definition: 7.6.14
+  FE_DEC_TONEARESTFROMZERO:
+    c-definition: 7.6.14
+  FE_DEC_TOWARDZERO:
+    c-definition: 7.6.14
+  FE_DEC_UPWARD:
+    c-definition: 7.6.14
+  FE_DFL_ENV:
+    c-definition: 7.6.17
+    c-reference: numeric/fenv/FE_DFL_ENV
+    in-latest-posix: ''
+  FE_DFL_MODE:
+    c-definition: 7.6.11
+  FE_DIVBYZERO:
+    c-definition: 7.6.9
+    c-reference: numeric/fenv/FE_exceptions
+    in-latest-posix: ''
+  FE_DOWNWARD:
+    c-definition: 7.6.13
+    c-reference: numeric/fenv/FE_round
+    in-latest-posix: ''
+  FE_INEXACT:
+    c-definition: 7.6.9
+    c-reference: numeric/fenv/FE_exceptions
+    in-latest-posix: ''
+  FE_INVALID:
+    c-definition: 7.6.9
+    c-reference: numeric/fenv/FE_exceptions
+    in-latest-posix: ''
+  FE_OVERFLOW:
+    c-definition: 7.6.9
+    c-reference: numeric/fenv/FE_exceptions
+    in-latest-posix: ''
+  FE_TONEAREST:
+    c-definition: 7.6.13
+    c-reference: numeric/fenv/FE_round
+    in-latest-posix: ''
+  FE_TONEARESTFROMZERO:
+    c-definition: 7.6.13
+    c-reference: numeric/fenv/FE_round
+  FE_TOWARDZERO:
+    c-definition: 7.6.13
+    c-reference: numeric/fenv/FE_round
+    in-latest-posix: ''
+  FE_UNDERFLOW:
+    c-definition: 7.6.9
+    c-reference: numeric/fenv/FE_exceptions
+    in-latest-posix: ''
+  FE_UPWARD:
+    c-definition: 7.6.13
+    c-reference: numeric/fenv/FE_round
+    in-latest-posix: ''
+  __STDC_VERSION_FENV_H__:
+    c-definition: 7.6.5
+

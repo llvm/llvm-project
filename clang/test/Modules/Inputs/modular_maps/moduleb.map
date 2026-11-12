@@ -1,0 +1,4 @@
+module B {
+  header "common.h"
+  private header "b.h"
+}

@@ -1,0 +1,8 @@
+# RUN: llvm-mc -disassemble -triple thumbv8-none-eabi -mcpu=cortex-r52 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DFB
+# RUN: llvm-mc -disassemble -triple thumbv8-none-eabi -mcpu=cortex-r52 -mattr=-dfb -show-encoding < %s | FileCheck %s --check-prefix=CHECK-NODFB
+# RUN: llvm-mc -disassemble -triple thumbv8-none-eabi -mcpu=cortex-r52plus -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DFB
+# RUN: llvm-mc -disassemble -triple thumbv8-none-eabi -mcpu=cortex-r52plus -mattr=-dfb -show-encoding < %s | FileCheck %s --check-prefix=CHECK-NODFB
+
+# CHECK-DFB:   dfb                             @ encoding: [0xbf,0xf3,0x4c,0x8f]
+# CHECK-NODFB: dsb     #0xc                    @ encoding: [0xbf,0xf3,0x4c,0x8f]
+[0xbf,0xf3,0x4c,0x8f]

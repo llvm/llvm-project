@@ -1,0 +1,88 @@
+//===--- LowerModule.h - Abstracts CIR's module lowering --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file partially mimics clang/lib/CodeGen/CodeGenModule.h. The queries are
+// adapted to operate on the CIR dialect, however.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERMODULE_H
+#define CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERMODULE_H
+
+#include "CIRCXXABI.h"
+#include "TargetLoweringInfo.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringRef.h"
+#include <memory>
+
+namespace cir {
+
+class LowerModule {
+  mlir::ModuleOp module;
+  const clang::LangOptions langOpts;
+  const std::unique_ptr<clang::TargetInfo> target;
+  std::unique_ptr<TargetLoweringInfo> targetLoweringInfo;
+  std::unique_ptr<CIRCXXABI> abi;
+
+public:
+  LowerModule(clang::LangOptions langOpts, clang::CodeGenOptions codeGenOpts,
+              mlir::ModuleOp &module,
+              std::unique_ptr<clang::TargetInfo> target);
+  ~LowerModule() = default;
+
+  // The lowering-relevant LangOptions, populated by createLowerModule() from
+  // the module's #cir.lowering_options attribute when present (so a
+  // reloaded .cir lowers the same way without a live clang::LangOptions),
+  // otherwise left at their defaults.
+  const clang::LangOptions &getLangOpts() const { return langOpts; }
+
+  clang::TargetCXXABI::Kind getCXXABIKind() const {
+    if (langOpts.CXXABI)
+      return *langOpts.CXXABI;
+    assert(target &&
+           "No C++ ABI kind without a target (missing/unsupported cir.triple)");
+    return target->getCXXABI().getKind();
+  }
+  CIRCXXABI &getCXXABI() const {
+    assert(abi &&
+           "No C++ ABI without a target (missing/unsupported cir.triple)");
+    return *abi;
+  }
+
+  bool hasTarget() const {
+    // Null target means module had no cir.triple, or clang has no TargetInfo
+    // for it; but when cir.triple becomes mandatory we need to figure out how
+    // to handle cir.triple's without a corresponding TargetInfo / potentially
+    // removing this function.
+    assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
+    return target != nullptr;
+  }
+  const clang::TargetInfo &getTarget() const {
+    assert(target &&
+           "LowerModule has no target (missing/unsupported cir.triple)");
+    return *target;
+  }
+
+  // FIXME remove this once all ABIs are supported.
+  bool hasCXXABI() const { return abi != nullptr; }
+
+  mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
+
+  const TargetLoweringInfo &getTargetLoweringInfo();
+};
+
+std::unique_ptr<LowerModule> createLowerModule(mlir::ModuleOp module);
+
+} // namespace cir
+
+#endif // CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERMODULE_H

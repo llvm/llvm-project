@@ -1,0 +1,325 @@
+## Test that note values are interpreted correctly for core files.
+
+## Check NT_PRSTATUS.
+# RUN: yaml2obj %s -DTYPE=0x1 -o %t_nt_prstatus.o
+# RUN: llvm-readelf --notes %t_nt_prstatus.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PRSTATUS (prstatus structure)"
+# RUN: llvm-readobj --notes %t_nt_prstatus.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PRSTATUS (prstatus structure)"
+
+## Check NT_FPREGSET.
+# RUN: yaml2obj %s -DTYPE=0x2 -o %t_nt_fpregset.o
+# RUN: llvm-readelf --notes %t_nt_fpregset.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_FPREGSET (floating point registers)"
+# RUN: llvm-readobj --notes %t_nt_fpregset.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_FPREGSET (floating point registers)"
+
+## Check NT_PRPSINFO.
+# RUN: yaml2obj %s -DTYPE=0x3 -o %t_nt_prpsinfo.o
+# RUN: llvm-readelf --notes %t_nt_prpsinfo.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PRPSINFO (prpsinfo structure)"
+# RUN: llvm-readobj --notes %t_nt_prpsinfo.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PRPSINFO (prpsinfo structure)"
+
+## Check NT_TASKSTRUCT.
+# RUN: yaml2obj %s -DTYPE=0x4 -o %t_nt_taskstruct.o
+# RUN: llvm-readelf --notes %t_nt_taskstruct.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_TASKSTRUCT (task structure)"
+# RUN: llvm-readobj --notes %t_nt_taskstruct.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_TASKSTRUCT (task structure)"
+
+## Check NT_AUXV.
+# RUN: yaml2obj %s -DTYPE=0x6 -o %t_nt_auxv.o
+# RUN: llvm-readelf --notes %t_nt_auxv.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_AUXV (auxiliary vector)"
+# RUN: llvm-readobj --notes %t_nt_auxv.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_AUXV (auxiliary vector)"
+
+## Check NT_PSTATUS.
+# RUN: yaml2obj %s -DTYPE=0xA -o %t_nt_pstatus.o
+# RUN: llvm-readelf --notes %t_nt_pstatus.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PSTATUS (pstatus structure)"
+# RUN: llvm-readobj --notes %t_nt_pstatus.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PSTATUS (pstatus structure)"
+
+## Check NT_FPREGS.
+# RUN: yaml2obj %s -DTYPE=0xC -o %t_nt_fpregs.o
+# RUN: llvm-readelf --notes %t_nt_fpregs.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_FPREGS (floating point registers)"
+# RUN: llvm-readobj --notes %t_nt_fpregs.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_FPREGS (floating point registers)"
+
+## Check NT_PSINFO.
+# RUN: yaml2obj %s -DTYPE=0xD -o %t_nt_psinfo.o
+# RUN: llvm-readelf --notes %t_nt_psinfo.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PSINFO (psinfo structure)"
+# RUN: llvm-readobj --notes %t_nt_psinfo.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PSINFO (psinfo structure)"
+
+## Check NT_LWPSTATUS.
+# RUN: yaml2obj %s -DTYPE=0x10 -o %t_nt_lwpstatus.o
+# RUN: llvm-readelf --notes %t_nt_lwpstatus.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_LWPSTATUS (lwpstatus_t structure)"
+# RUN: llvm-readobj --notes %t_nt_lwpstatus.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_LWPSTATUS (lwpstatus_t structure)"
+
+## Check NT_LWPSINFO.
+# RUN: yaml2obj %s -DTYPE=0x11 -o %t_nt_lwpsinfo.o
+# RUN: llvm-readelf --notes %t_nt_lwpsinfo.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_LWPSINFO (lwpsinfo_t structure)"
+# RUN: llvm-readobj --notes %t_nt_lwpsinfo.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_LWPSINFO (lwpsinfo_t structure)"
+
+## Check NT_WIN32PSTATUS.
+# RUN: yaml2obj %s -DTYPE=0x12 -o %t_nt_win32pstatus.o
+# RUN: llvm-readelf --notes %t_nt_win32pstatus.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_WIN32PSTATUS (win32_pstatus structure)"
+# RUN: llvm-readobj --notes %t_nt_win32pstatus.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_WIN32PSTATUS (win32_pstatus structure)"
+
+## Check ELF::NT_PPC_VMX.
+# RUN: yaml2obj %s -DTYPE=0x100 -o %t_nt_ppc_vmx.o
+# RUN: llvm-readelf --notes %t_nt_ppc_vmx.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_VMX (ppc Altivec registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_vmx.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_VMX (ppc Altivec registers)"
+
+## Check ELF::NT_PPC_VSX.
+# RUN: yaml2obj %s -DTYPE=0x102 -o %t_nt_ppc_vsx.o
+# RUN: llvm-readelf --notes %t_nt_ppc_vsx.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_VSX (ppc VSX registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_vsx.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_VSX (ppc VSX registers)"
+
+## Check ELF::NT_PPC_TAR.
+# RUN: yaml2obj %s -DTYPE=0x103 -o %t_nt_ppc_tar.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tar.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TAR (ppc TAR register)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tar.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TAR (ppc TAR register)"
+
+## Check ELF::NT_PPC_PPR.
+# RUN: yaml2obj %s -DTYPE=0x104 -o %t_nt_ppc_ppr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_ppr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_PPR (ppc PPR register)"
+# RUN: llvm-readobj --notes %t_nt_ppc_ppr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_PPR (ppc PPR register)"
+
+## Check ELF::NT_PPC_DSCR.
+# RUN: yaml2obj %s -DTYPE=0x105 -o %t_nt_ppc_dscr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_dscr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_DSCR (ppc DSCR register)"
+# RUN: llvm-readobj --notes %t_nt_ppc_dscr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_DSCR (ppc DSCR register)"
+
+## Check ELF::NT_PPC_EBB.
+# RUN: yaml2obj %s -DTYPE=0x106 -o %t_nt_ppc_ebb.o
+# RUN: llvm-readelf --notes %t_nt_ppc_ebb.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_EBB (ppc EBB registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_ebb.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_EBB (ppc EBB registers)"
+
+## Check ELF::NT_PPC_PMU.
+# RUN: yaml2obj %s -DTYPE=0x107 -o %t_nt_ppc_pmu.o
+# RUN: llvm-readelf --notes %t_nt_ppc_pmu.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_PMU (ppc PMU registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_pmu.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_PMU (ppc PMU registers)"
+
+## Check ELF::NT_PPC_TM_CGPR.
+# RUN: yaml2obj %s -DTYPE=0x108 -o %t_nt_ppc_tm_cgpr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_cgpr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CGPR (ppc checkpointed GPR registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_cgpr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CGPR (ppc checkpointed GPR registers)"
+
+## Check ELF::NT_PPC_TM_CFPR.
+# RUN: yaml2obj %s -DTYPE=0x109 -o %t_nt_ppc_tm_cfpr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_cfpr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CFPR (ppc checkpointed floating point registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_cfpr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CFPR (ppc checkpointed floating point registers)"
+
+## Check ELF::NT_PPC_TM_CVMX.
+# RUN: yaml2obj %s -DTYPE=0x10a -o %t_nt_ppc_tm_cvmx.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_cvmx.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CVMX (ppc checkpointed Altivec registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_cvmx.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CVMX (ppc checkpointed Altivec registers)"
+
+## Check ELF::NT_PPC_TM_CVSX.
+# RUN: yaml2obj %s -DTYPE=0x10b -o %t_nt_ppc_tm_cvsx.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_cvsx.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CVSX (ppc checkpointed VSX registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_cvsx.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CVSX (ppc checkpointed VSX registers)"
+
+## Check ELF::NT_PPC_TM_SPR.
+# RUN: yaml2obj %s -DTYPE=0x10c -o %t_nt_ppc_tm_spr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_spr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_SPR (ppc TM special purpose registers)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_spr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_SPR (ppc TM special purpose registers)"
+
+## Check ELF::NT_PPC_TM_CTAR.
+# RUN: yaml2obj %s -DTYPE=0x10d -o %t_nt_ppc_tm_ctar.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_ctar.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CTAR (ppc checkpointed TAR register)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_ctar.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CTAR (ppc checkpointed TAR register)"
+
+## Check ELF::NT_PPC_TM_CPPR.
+# RUN: yaml2obj %s -DTYPE=0x10e -o %t_nt_ppc_tm_cppr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_cppr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CPPR (ppc checkpointed PPR register)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_cppr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CPPR (ppc checkpointed PPR register)"
+
+## Check ELF::NT_PPC_TM_CDSCR.
+# RUN: yaml2obj %s -DTYPE=0x10f -o %t_nt_ppc_tm_cdscr.o
+# RUN: llvm-readelf --notes %t_nt_ppc_tm_cdscr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PPC_TM_CDSCR (ppc checkpointed DSCR register)"
+# RUN: llvm-readobj --notes %t_nt_ppc_tm_cdscr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PPC_TM_CDSCR (ppc checkpointed DSCR register)"
+
+## Check ELF::NT_386_TLS.
+# RUN: yaml2obj %s -DTYPE=0x200 -o %t_nt_386_tls.o
+# RUN: llvm-readelf --notes %t_nt_386_tls.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_386_TLS (x86 TLS information)"
+# RUN: llvm-readobj --notes %t_nt_386_tls.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_386_TLS (x86 TLS information)"
+
+## Check ELF::NT_386_IOPERM.
+# RUN: yaml2obj %s -DTYPE=0x201 -o %t_nt_386_ioperm.o
+# RUN: llvm-readelf --notes %t_nt_386_ioperm.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_386_IOPERM (x86 I/O permissions)"
+# RUN: llvm-readobj --notes %t_nt_386_ioperm.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_386_IOPERM (x86 I/O permissions)"
+
+## Check ELF::NT_X86_XSTATE.
+# RUN: yaml2obj %s -DTYPE=0x202 -o %t_nt_x86_xstate.o
+# RUN: llvm-readelf --notes %t_nt_x86_xstate.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_X86_XSTATE (x86 XSAVE extended state)"
+# RUN: llvm-readobj --notes %t_nt_x86_xstate.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_X86_XSTATE (x86 XSAVE extended state)"
+
+## Check ELF::NT_S390_HIGH_GPRS.
+# RUN: yaml2obj %s -DTYPE=0x300 -o %t_nt_s390_high_gprs.o
+# RUN: llvm-readelf --notes %t_nt_s390_high_gprs.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_HIGH_GPRS (s390 upper register halves)"
+# RUN: llvm-readobj --notes %t_nt_s390_high_gprs.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_HIGH_GPRS (s390 upper register halves)"
+
+## Check ELF::NT_S390_TIMER.
+# RUN: yaml2obj %s -DTYPE=0x301 -o %t_nt_s390_timer.o
+# RUN: llvm-readelf --notes %t_nt_s390_timer.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_TIMER (s390 timer register)"
+# RUN: llvm-readobj --notes %t_nt_s390_timer.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_TIMER (s390 timer register)"
+
+## Check ELF::NT_S390_TODCMP.
+# RUN: yaml2obj %s -DTYPE=0x302 -o %t_nt_s390_todcmp.o
+# RUN: llvm-readelf --notes %t_nt_s390_todcmp.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_TODCMP (s390 TOD comparator register)"
+# RUN: llvm-readobj --notes %t_nt_s390_todcmp.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_TODCMP (s390 TOD comparator register)"
+
+## Check ELF::NT_S390_TODPREG.
+# RUN: yaml2obj %s -DTYPE=0x303 -o %t_nt_s390_todpreg.o
+# RUN: llvm-readelf --notes %t_nt_s390_todpreg.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_TODPREG (s390 TOD programmable register)"
+# RUN: llvm-readobj --notes %t_nt_s390_todpreg.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_TODPREG (s390 TOD programmable register)"
+
+## Check ELF::NT_S390_CTRS.
+# RUN: yaml2obj %s -DTYPE=0x304 -o %t_nt_s390_ctrs.o
+# RUN: llvm-readelf --notes %t_nt_s390_ctrs.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_CTRS (s390 control registers)"
+# RUN: llvm-readobj --notes %t_nt_s390_ctrs.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_CTRS (s390 control registers)"
+
+## Check ELF::NT_S390_PREFIX.
+# RUN: yaml2obj %s -DTYPE=0x305 -o %t_nt_s390_prefix.o
+# RUN: llvm-readelf --notes %t_nt_s390_prefix.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_PREFIX (s390 prefix register)"
+# RUN: llvm-readobj --notes %t_nt_s390_prefix.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_PREFIX (s390 prefix register)"
+
+## Check ELF::NT_S390_LAST_BREAK.
+# RUN: yaml2obj %s -DTYPE=0x306 -o %t_nt_s390_last_break.o
+# RUN: llvm-readelf --notes %t_nt_s390_last_break.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_LAST_BREAK (s390 last breaking event address)"
+# RUN: llvm-readobj --notes %t_nt_s390_last_break.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_LAST_BREAK (s390 last breaking event address)"
+
+## Check ELF::NT_S390_SYSTEM_CALL.
+# RUN: yaml2obj %s -DTYPE=0x307 -o %t_nt_s390_system_call.o
+# RUN: llvm-readelf --notes %t_nt_s390_system_call.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_SYSTEM_CALL (s390 system call restart data)"
+# RUN: llvm-readobj --notes %t_nt_s390_system_call.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_SYSTEM_CALL (s390 system call restart data)"
+
+## Check ELF::NT_S390_TDB.
+# RUN: yaml2obj %s -DTYPE=0x308 -o %t_nt_s390_tdb.o
+# RUN: llvm-readelf --notes %t_nt_s390_tdb.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_TDB (s390 transaction diagnostic block)"
+# RUN: llvm-readobj --notes %t_nt_s390_tdb.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_TDB (s390 transaction diagnostic block)"
+
+## Check ELF::NT_S390_VXRS_LOW.
+# RUN: yaml2obj %s -DTYPE=0x309 -o %t_nt_s390_vxrs_low.o
+# RUN: llvm-readelf --notes %t_nt_s390_vxrs_low.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_VXRS_LOW (s390 vector registers 0-15 upper half)"
+# RUN: llvm-readobj --notes %t_nt_s390_vxrs_low.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_VXRS_LOW (s390 vector registers 0-15 upper half)"
+
+## Check ELF::NT_S390_VXRS_HIGH.
+# RUN: yaml2obj %s -DTYPE=0x30a -o %t_nt_s390_vxrs_high.o
+# RUN: llvm-readelf --notes %t_nt_s390_vxrs_high.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_VXRS_HIGH (s390 vector registers 16-31)"
+# RUN: llvm-readobj --notes %t_nt_s390_vxrs_high.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_VXRS_HIGH (s390 vector registers 16-31)"
+
+## Check ELF::NT_S390_GS_CB.
+# RUN: yaml2obj %s -DTYPE=0x30b -o %t_nt_s390_gs_cb.o
+# RUN: llvm-readelf --notes %t_nt_s390_gs_cb.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_GS_CB (s390 guarded-storage registers)"
+# RUN: llvm-readobj --notes %t_nt_s390_gs_cb.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_GS_CB (s390 guarded-storage registers)"
+
+## Check ELF::NT_S390_GS_BC.
+# RUN: yaml2obj %s -DTYPE=0x30c -o %t_nt_s390_gs_bc.o
+# RUN: llvm-readelf --notes %t_nt_s390_gs_bc.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_S390_GS_BC (s390 guarded-storage broadcast control)"
+# RUN: llvm-readobj --notes %t_nt_s390_gs_bc.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_S390_GS_BC (s390 guarded-storage broadcast control)"
+
+## Check ELF::NT_ARM_VFP.
+# RUN: yaml2obj %s -DTYPE=0x400 -o %t_nt_arm_vfp.o
+# RUN: llvm-readelf --notes %t_nt_arm_vfp.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_VFP (arm VFP registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_vfp.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_VFP (arm VFP registers)"
+
+## Check ELF::NT_ARM_TLS.
+# RUN: yaml2obj %s -DTYPE=0x401 -o %t_nt_arm_tls.o
+# RUN: llvm-readelf --notes %t_nt_arm_tls.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_TLS (AArch TLS registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_tls.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_TLS (AArch TLS registers)"
+
+## Check ELF::NT_ARM_HW_BREAK.
+# RUN: yaml2obj %s -DTYPE=0x402 -o %t_nt_arm_hw_break.o
+# RUN: llvm-readelf --notes %t_nt_arm_hw_break.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_hw_break.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"
+
+## Check ELF::NT_ARM_HW_WATCH.
+# RUN: yaml2obj %s -DTYPE=0x403 -o %t_nt_arm_hw_watch.o
+# RUN: llvm-readelf --notes %t_nt_arm_hw_watch.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_hw_watch.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"
+
+## Check ELF::NT_ARM_SVE
+# RUN: yaml2obj %s -DTYPE=0x405 -o %t_nt_arm_sve.o
+# RUN: llvm-readelf --notes %t_nt_arm_sve.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_SVE (AArch64 SVE registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_sve.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_SVE (AArch64 SVE registers)"
+
+## Check ELF::NT_ARM_PAC_MASK
+# RUN: yaml2obj %s -DTYPE=0x406 -o %t_nt_arm_pac_mask.o
+# RUN: llvm-readelf --notes %t_nt_arm_pac_mask.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"
+# RUN: llvm-readobj --notes %t_nt_arm_pac_mask.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"
+
+## Check ELF::NT_ARM_TAGGED_ADDR_CTRL
+# RUN: yaml2obj %s -DTYPE=0x409 -o %t_nt_arm_tagged_addr_ctrl.o
+# RUN: llvm-readelf --notes %t_nt_arm_tagged_addr_ctrl.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_TAGGED_ADDR_CTRL (AArch64 Tagged Address Control)"
+# RUN: llvm-readobj --notes %t_nt_arm_tagged_addr_ctrl.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_TAGGED_ADDR_CTRL (AArch64 Tagged Address Control)"
+
+## Check ELF::NT_ARM_SSVE
+# RUN: yaml2obj %s -DTYPE=0x40b -o %t_nt_arm_ssve.o
+# RUN: llvm-readelf --notes %t_nt_arm_ssve.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_SSVE (AArch64 Streaming SVE registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_ssve.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_SSVE (AArch64 Streaming SVE registers)"
+
+## Check ELF::NT_ARM_ZA
+# RUN: yaml2obj %s -DTYPE=0x40c -o %t_nt_arm_za.o
+# RUN: llvm-readelf --notes %t_nt_arm_za.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZA (AArch64 SME ZA registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_za.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZA (AArch64 SME ZA registers)"
+
+## Check ELF::NT_ARM_ZT
+# RUN: yaml2obj %s -DTYPE=0x40d -o %t_nt_arm_zt.o
+# RUN: llvm-readelf --notes %t_nt_arm_zt.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_zt.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_ZT (AArch64 SME ZT registers)"
+
+## Check ELF::NT_ARM_FPMR
+# RUN: yaml2obj %s -DTYPE=0x40e -o %t_nt_arm_fpmr.o
+# RUN: llvm-readelf --notes %t_nt_arm_fpmr.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_FPMR (AArch64 Floating Point Mode Register)"
+# RUN: llvm-readobj --notes %t_nt_arm_fpmr.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_FPMR (AArch64 Floating Point Mode Register)"
+
+## Check ELF::NT_ARM_POE
+# RUN: yaml2obj %s -DTYPE=0x40f -o %t_nt_arm_poe.o
+# RUN: llvm-readelf --notes %t_nt_arm_poe.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"
+# RUN: llvm-readobj --notes %t_nt_arm_poe.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"
+
+## Check ELF::NT_ARM_GCS
+# RUN: yaml2obj %s -DTYPE=0x410 -o %t_nt_arm_gcs.o
+# RUN: llvm-readelf --notes %t_nt_arm_gcs.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_ARM_GCS (AArch64 Guarded Control Stack state)"
+# RUN: llvm-readobj --notes %t_nt_arm_gcs.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_ARM_GCS (AArch64 Guarded Control Stack state)"
+
+## Check ELF::NT_FILE.
+# RUN: yaml2obj %s -DTYPE=0x46494c45 -o %t_nt_file.o
+# RUN: llvm-readelf --notes %t_nt_file.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_FILE (mapped files)"
+# RUN: llvm-readobj --notes %t_nt_file.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_FILE (mapped files)"
+
+## Check ELF::NT_PRXFPREG.
+# RUN: yaml2obj %s -DTYPE=0x46e62b7f -o %t_nt_prxfpreg.o
+# RUN: llvm-readelf --notes %t_nt_prxfpreg.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_PRXFPREG (user_xfpregs structure)"
+# RUN: llvm-readobj --notes %t_nt_prxfpreg.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_PRXFPREG (user_xfpregs structure)"
+
+## Check ELF::NT_SIGINFO.
+# RUN: yaml2obj %s -DTYPE=0x53494749 -o %t_nt_siginfo.o
+# RUN: llvm-readelf --notes %t_nt_siginfo.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="NT_SIGINFO (siginfo_t data)"
+# RUN: llvm-readobj --notes %t_nt_siginfo.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="NT_SIGINFO (siginfo_t data)"
+
+## Check an arbitrary unknown type.
+# RUN: yaml2obj %s -DTYPE=0x12345678 -o %t_unknown.o
+# RUN: llvm-readelf --notes %t_unknown.o | FileCheck %s --check-prefix=CHECK-GNU  -DDESC="Unknown note type: (0x12345678)"
+# RUN: llvm-readobj --notes %t_unknown.o | FileCheck %s --check-prefix=CHECK-LLVM -DDESC="Unknown (0x12345678)"
+
+# CHECK-GNU:      Owner Data size  Description
+# CHECK-GNU-NEXT: CORE  0x00000000 [[DESC]]
+# CHECK-GNU-EMPTY:
+
+# CHECK-LLVM:       Size: 0x14
+# CHECK-LLVM-NEXT:  Notes [
+# CHECK-LLVM-NEXT:  {
+# CHECK-LLVM-NEXT:   Owner: CORE
+# CHECK-LLVM-NEXT:   Data size: 0x0
+# CHECK-LLVM-NEXT:   Type: [[DESC]]
+# CHECK-LLVM-NEXT:  }
+# CHECK-LLVM-NEXT:  ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Name: CORE
+        Type: [[TYPE]]
+ProgramHeaders:
+  - Type:     PT_NOTE
+    FirstSec: .note.foo
+    LastSec:  .note.foo

@@ -1,0 +1,19 @@
+posix: posix-2024
+types:
+  nl_catd:
+    in-latest-posix: ''
+  nl_item:
+    in-latest-posix: ''
+functions:
+  catclose:
+    in-latest-posix: ""
+  catgets:
+    in-latest-posix: ""
+  catopen:
+    in-latest-posix: ""
+
+macros:
+  NL_CAT_LOCALE:
+    in-latest-posix: ""
+  NL_SETD:
+    in-latest-posix: ""

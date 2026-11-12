@@ -1,0 +1,21 @@
+; RUN: llvm-dlltool -k -m i386 --input-def %s --output-lib %t.a --no-leading-underscore --kill-at
+; RUN: llvm-readobj %t.a | FileCheck %s
+; RUN: llvm-nm %t.a | FileCheck %s -check-prefix=CHECK-NM
+
+LIBRARY test.dll
+EXPORTS
+func
+alias == func
+DecoratedFunction@4
+
+; CHECK:      Name type: name
+; CHECK-NEXT: Export name: func
+; CHECK-NEXT: Symbol: __imp_func
+; CHECK-NEXT: Symbol: func
+; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: DecoratedFunction
+; CHECK-NEXT: Symbol: __imp_DecoratedFunction@4
+; CHECK-NEXT: Symbol: DecoratedFunction@4
+
+; CHECK-NM: W alias
+; CHECK-NM: U func

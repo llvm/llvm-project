@@ -1,0 +1,4 @@
+; RUN: not llvm-xray extract %S/Inputs/empty-file.bin 2>&1 | FileCheck %s
+
+; CHECK: llvm-xray: Cannot extract instrumentation map from '{{.*}}empty-file.bin'.
+; CHECK-NEXT: The file was not recognized as a valid object file

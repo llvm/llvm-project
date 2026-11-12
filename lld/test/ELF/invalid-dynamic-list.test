@@ -1,0 +1,30 @@
+# RUN: echo > %tempty.list
+# RUN: not ld.lld --dynamic-list %tempty.list 2>&1 | FileCheck --check-prefix=EMPTY %s
+# EMPTY: error: {{.*}}.list:1: unexpected EOF
+
+# RUN: echo 'foobar' > %t1
+# RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR1 %s
+# ERR1: {{.*}}:1: { expected, but got foobar
+
+# RUN: echo '{ foobar;' > %t2
+# RUN: not ld.lld --dynamic-list %t2 2>&1 | FileCheck -check-prefix=ERR2 %s
+# ERR2: {{.*}}:1: unexpected EOF
+
+## Missing ';' before '}'
+# RUN: echo '{ foobar }' > %t3
+# RUN: not ld.lld --dynamic-list %t3 2>&1 | FileCheck -check-prefix=ERR3 %s
+# ERR3: {{.*}}:1: ; expected, but got }
+
+## Missing final ';'
+# RUN: echo '{ foobar; }' > %t4
+# RUN: not ld.lld --dynamic-list %t4 2>&1 | FileCheck -check-prefix=ERR4 %s
+# ERR4: {{.*}}:1: unexpected EOF
+
+## Missing " in foobar definition
+# RUN: echo '{ "foobar; };' > %t5
+# RUN: not ld.lld --dynamic-list %t5 2>&1 | FileCheck -check-prefix=ERR5 %s
+# ERR5: {{.*}}:1: unclosed quote
+
+# RUN: echo '{ extern "BOGUS" { test }; };' > %t6
+# RUN: not ld.lld --dynamic-list %t6 2>&1 | FileCheck -check-prefix=ERR6 %s
+# ERR6: {{.*}}:1: Unknown language

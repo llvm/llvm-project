@@ -1,0 +1,66 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld %t.o %t.o -o %t -r
+# RUN: llvm-readobj -S %t | FileCheck %s
+
+# CHECK:     Name: .text.foo
+# CHECK:     Name: .rela.text.foo
+
+## A section group may have any name, even one that lld handles specially for
+## other section types.
+# RUN: yaml2obj -DNAME=.note.GNU-stack %s -o %t1.o
+# RUN: ld.lld %t1.o -o %t1 -r
+# RUN: llvm-readelf -g %t1 | FileCheck %s --check-prefix=NOTE
+
+# NOTE:      COMDAT group section [{{.*}}] `.note.GNU-stack' [foo] contains 3 sections:
+# NOTE-NEXT:    [Index]    Name
+# NOTE-NEXT:    [{{.*}}]   .text.foo
+# NOTE-NEXT:    [{{.*}}]   .text.bar
+# NOTE-NEXT:    [{{.*}}]   .note
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            [[NAME=.group]]
+    Type:            SHT_GROUP
+    Link:            .symtab
+    Info:            foo
+    Members:
+      - SectionOrType:    GRP_COMDAT
+      - SectionOrType:    .text.foo
+      - SectionOrType:    .text.bar
+      - SectionOrType:    .note
+  - Name:            .note
+    Type:            SHT_NOTE
+    Flags:           [ SHF_GROUP ]
+    Content:         ""
+  - Name:            .text.foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name:            .text.bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name:            .rela.text.foo
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK, SHF_GROUP ]
+    Link:            .symtab
+    Info:            .text.foo
+    Relocations:
+      - Symbol:          foo
+        Type:            R_X86_64_64
+  - Name:            .rela.text.bar
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK, SHF_GROUP ]
+    Link:            .symtab
+    Info:            .text.bar
+    Relocations:
+      - Symbol:          bar
+        Type:            R_X86_64_64
+Symbols:
+  - Name:            foo
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Binding:         STB_GLOBAL

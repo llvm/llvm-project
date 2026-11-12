@@ -1,0 +1,78 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+# TODO: this is a shim to provide Features.inc as needed by Feature.h.
+# Replace this with something that parses Features.inc.in.
+write_file(
+    name = "gen_features_inc",
+    out = "Features.inc",
+    content = [
+        "// IWYU pragma: private, include \"Feature.h\"",
+        "#define CLANGD_BUILD_XPC 0",
+        "#define CLANGD_ENABLE_REMOTE 1",
+        "#define ENABLE_GRPC_REFLECTION 0",
+        "#define CLANGD_MALLOC_TRIM 0",
+        "#define CLANGD_TIDY_CHECKS 1",
+        "#define CLANGD_DECISION_FOREST 1",
+        "",
+    ],
+    newline = "unix",
+)
+
+# TODO: Pick up other files for more complete functionality, to match
+# clangd/CMakeLists.txt. This might look something like
+# glob(["*.cpp", "dir/**/*.cpp", ...]).
+cc_library(
+    name = "ClangDaemon",
+    srcs = [
+        "Feature.cpp",
+        "Features.inc",
+        "JSONTransport.cpp",
+        "LSPBinder.cpp",
+        "Protocol.cpp",
+        "URI.cpp",
+        "index/SymbolID.cpp",
+        "support/Cancellation.cpp",
+        "support/Context.cpp",
+        "support/Logger.cpp",
+        "support/MemoryTree.cpp",
+        "support/Shutdown.cpp",
+        "support/ThreadCrashReporter.cpp",
+        "support/Trace.cpp",
+    ],
+    hdrs = [
+        "Feature.h",
+        "LSPBinder.h",
+        "Protocol.h",
+        "Transport.h",
+        "URI.h",
+        "index/SymbolID.h",
+        "support/Cancellation.h",
+        "support/Context.h",
+        "support/Function.h",
+        "support/Logger.h",
+        "support/MemoryTree.h",
+        "support/Shutdown.h",
+        "support/ThreadCrashReporter.h",
+        "support/Trace.h",
+    ],
+    includes = ["."],
+    deps = [
+        "//clang:basic",
+        "//clang:index",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:config",
+    ],
+)

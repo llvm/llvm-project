@@ -1,0 +1,258 @@
+//===--- Target RTLs Implementation ---------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// RTL for SPIR-V/Xe machine.
+//
+//===----------------------------------------------------------------------===//
+
+#include <level_zero/zes_api.h>
+
+#include "L0Context.h"
+#include "L0Device.h"
+#include "L0Kernel.h"
+#include "L0Plugin.h"
+#include "L0Trace.h"
+
+#include "llvm/Object/OffloadBinary.h"
+
+namespace llvm::omp::target::plugin {
+
+using namespace llvm::omp::target;
+using namespace error;
+
+Expected<int32_t> LevelZeroPluginTy::findDevices() {
+  ze_result_t RC;
+  CALL_ZE(RC, zeInit, ZE_INIT_FLAG_GPU_ONLY);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Cannot initialize Level Zero library. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
+
+  uint32_t NumDrivers = 0;
+  CALL_ZE(RC, zeDriverGet, &NumDrivers, nullptr);
+  if (RC != ZE_RESULT_SUCCESS) {
+    ODBG(OLDT_Init) << "Error getting number of drivers. Error: "
+                    << getZeErrorName(RC);
+    return 0;
+  }
+  if (NumDrivers == 0) {
+    ODBG(OLDT_Init) << "Cannot find any drivers.";
+    return 0;
+  }
+
+  // We expect multiple drivers on Windows to support different device types,
+  // so we need to maintain multiple drivers and contexts in general.
+  llvm::SmallVector<ze_driver_handle_t> FoundDrivers(NumDrivers);
+  CALL_ZE_RET_ERROR(zeDriverGet, &NumDrivers, FoundDrivers.data());
+
+  struct RootInfoTy {
+    uint32_t OrderId;
+    ze_device_handle_t ZeDevice;
+    L0DriverTy *Driver;
+    bool IsDiscrete;
+  };
+  llvm::SmallVector<RootInfoTy> RootDevices;
+
+  uint32_t OrderId = 0;
+  for (uint32_t DriverId = 0; DriverId < NumDrivers; DriverId++) {
+    const auto &Driver = FoundDrivers[DriverId];
+    uint32_t DeviceCount = 0;
+    ze_result_t RC;
+    CALL_ZE(RC, zeDeviceGet, Driver, &DeviceCount, nullptr);
+    if (RC != ZE_RESULT_SUCCESS || DeviceCount == 0) {
+      ODBG(OLDT_Init) << "Cannot find any devices from driver " << Driver
+                      << ".";
+      continue;
+    }
+
+    // We have a driver that supports at least one device.
+    DriverList.emplace_back(*this, Driver, DriverId);
+    auto &DrvInfo = DriverList.back();
+    if (auto Err = DrvInfo.init()) {
+      // Remove the partially initialized driver from the list
+      DriverList.pop_back();
+      return std::move(Err);
+    }
+    llvm::SmallVector<ze_device_handle_t> FoundDevices(DeviceCount);
+    CALL_ZE_RET_ERROR(zeDeviceGet, Driver, &DeviceCount, FoundDevices.data());
+
+    for (auto &zeDevice : FoundDevices)
+      RootDevices.push_back(
+          {OrderId++, zeDevice, &DrvInfo, L0DeviceTy::isDiscrete(zeDevice)});
+  }
+
+  // Move discrete devices to the front.
+  std::sort(RootDevices.begin(), RootDevices.end(),
+            [](const RootInfoTy &A, const RootInfoTy &B) {
+              // If both are discrete, order by OrderId.
+              // If both are not discrete, order by OrderId.
+              // Otherwise, discrete goes first.
+
+              if (A.IsDiscrete && B.IsDiscrete)
+                return A.OrderId < B.OrderId;
+              if (!A.IsDiscrete && !B.IsDiscrete)
+                return A.OrderId < B.OrderId;
+              return A.IsDiscrete;
+            });
+
+  for (size_t RootId = 0; RootId < RootDevices.size(); RootId++) {
+    const auto ZeDevice = RootDevices[RootId].ZeDevice;
+    auto *RootDriver = RootDevices[RootId].Driver;
+    DetectedDevices.push_back(DeviceInfoTy{
+        {ZeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
+  }
+  int32_t NumDevices = DetectedDevices.size();
+
+  ODBG_OS(OLDT_Init, [&](llvm::raw_ostream &O) {
+    O << "Found " << NumDevices << " devices.\n"
+      << "List of devices (DeviceID[.SubID[.CCSID]])\n";
+    for (auto &DeviceInfo : DetectedDevices)
+      O << "-- Device " << DeviceInfo.Id.RootId
+        << (DeviceInfo.Id.SubId < 0
+                ? ""
+                : ("." + std::to_string(DeviceInfo.Id.SubId)))
+        << (DeviceInfo.Id.CCSId < 0
+                ? ""
+                : ("." + std::to_string(DeviceInfo.Id.CCSId)))
+        << "\n";
+  });
+  return NumDevices;
+}
+
+Expected<int32_t> LevelZeroPluginTy::initImpl() {
+  ODBG(OLDT_Init) << "Level0 NG plugin initialization";
+  // Process options before anything else.
+  Options.init();
+  return findDevices();
+}
+
+Error LevelZeroPluginTy::deinitImpl() {
+  ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
+  for (auto &Driver : DriverList)
+    if (auto Err = Driver.deinit())
+      return Err;
+  DriverList.clear();
+  ODBG(OLDT_Deinit) << "Level0 plugin deinitialized successfully";
+  return Plugin::success();
+}
+
+GenericDeviceTy *LevelZeroPluginTy::createDevice(GenericPluginTy &Plugin,
+                                                 int32_t DeviceId,
+                                                 int32_t NumDevices) {
+  auto &DeviceInfo = DetectedDevices[DeviceId];
+  auto RootId = DeviceInfo.Id.RootId;
+  auto SubId = DeviceInfo.Id.SubId;
+  auto CCSId = DeviceInfo.Id.CCSId;
+  auto zeDevice = DeviceInfo.Id.zeId;
+  auto *Driver = DeviceInfo.Driver;
+
+  std::string IdStr = std::to_string(RootId) +
+                      (SubId < 0 ? "" : "." + std::to_string(SubId)) +
+                      (CCSId < 0 ? "" : "." + std::to_string(CCSId));
+
+  return new L0DeviceTy(static_cast<LevelZeroPluginTy &>(Plugin), DeviceId,
+                        NumDevices, zeDevice, *Driver, std::move(IdStr),
+                        CCSId < 0 ? 0 : CCSId /* ComputeIndex */);
+}
+
+GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
+  return new L0GlobalHandlerTy();
+}
+
+Expected<bool> LevelZeroPluginTy::isImageCompatible(StringRef Image) const {
+  switch (identify_magic(Image)) {
+  case file_magic::spirv_object:
+    // Handle SPIRV objects directly
+    return true;
+  case file_magic::offload_binary: {
+    // Handle OffloadBinary format
+    MemoryBufferRef Buffer(Image, "offload_binary");
+    auto BinariesOrErr = OffloadBinary::create(Buffer);
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+
+    auto &Binaries = *BinariesOrErr;
+    if (Binaries.size() != 1)
+      return false;
+
+    const OffloadBinary *InnerBinary = Binaries[0].get();
+    ImageKind ImageKind = InnerBinary->getImageKind();
+    llvm::Triple Triple(InnerBinary->getTriple());
+
+    if (Triple.getArch() != getTripleArch())
+      return false;
+
+    if (ImageKind != llvm::object::IMG_SPIRV &&
+        ImageKind != llvm::object::IMG_Object &&
+        ImageKind != llvm::object::IMG_PISA)
+      return false;
+
+    return true;
+  }
+  default:
+    // Unknown format
+    return false;
+  }
+}
+
+Expected<std::unique_ptr<PluginContextTy>>
+LevelZeroPluginTy::createPluginContext(
+    llvm::ArrayRef<GenericDeviceTy *> Devices) {
+  if (Devices.empty())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "createPluginContext called with no devices");
+
+  // All devices must share the same L0 driver, since a ze_context is scoped to
+  // a single driver.
+  auto &First = static_cast<L0DeviceTy &>(*Devices[0]);
+  L0DriverTy &Driver = First.getL0Driver();
+  ze_driver_handle_t ZeDriver = Driver.getZeDriver();
+  for (auto *D : Devices.drop_front()) {
+    auto &L0D = static_cast<L0DeviceTy &>(*D);
+    if (&L0D.getL0Driver() != &Driver)
+      return Plugin::error(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in an L0 context must share the same driver");
+  }
+
+  // When the user requests every device on the driver, share the driver's
+  // default ze_context so we interop cleanly with other L0 clients on the
+  // same driver. Partial device sets get their own fresh context.
+  size_t DriverDeviceCount = 0;
+  for (int32_t I = 0, N = getNumDevices(); I != N; ++I) {
+    auto &L0D = static_cast<const L0DeviceTy &>(getDevice(I));
+    if (&L0D.getL0Driver() == &Driver)
+      ++DriverDeviceCount;
+  }
+  const bool IsFullDriver = (Devices.size() == DriverDeviceCount);
+
+  ze_context_handle_t ZeContext = nullptr;
+  bool OwnsZeContext = false;
+  if (IsFullDriver && Driver.DriverGetDefaultContext.available())
+    ZeContext = Driver.DriverGetDefaultContext(ZeDriver);
+  if (!ZeContext) {
+    ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
+    CALL_ZE_RET_ERROR(zeContextCreate, ZeDriver, &Desc, &ZeContext);
+    OwnsZeContext = true;
+  }
+
+  auto Ctx = std::make_unique<LevelZeroPluginContextTy>(
+      *this, Devices, ZeDriver, ZeContext, OwnsZeContext);
+  if (auto Err = Ctx->initAllocators())
+    return std::move(Err);
+  return Ctx;
+}
+
+} // namespace llvm::omp::target::plugin
+
+extern "C" {
+llvm::omp::target::plugin::GenericPluginTy *createPlugin_level_zero() {
+  return new llvm::omp::target::plugin::LevelZeroPluginTy();
+}
+}

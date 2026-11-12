@@ -1,0 +1,28 @@
+--- !Passed
+Pass:            pass1
+Name:            Remark1
+DebugLoc:        { File: 'path/to/func1.c', Line: 1, Column: 2 }
+Function:        func1
+Args:
+  - String:          ' text'
+  - arg1:            argval1
+...
+--- !Missed
+Pass:            pass2
+Name:            Remark2
+DebugLoc:        { File: 'path/to/func2.c', Line: 1, Column: 2 }
+Function:        func2
+Args:
+  - String:          ' text'
+  - arg2:            argval2
+...
+--- !Analysis
+Pass:            pass3
+Name:            Remark3
+DebugLoc:        { File: 'path/to/func3.c', Line: 1, Column: 2 }
+Function:        func3
+Args:
+  - String:          ' text'
+  - arg3:            argval3
+    DebugLoc:        { File: 'path/to/func3.c', Line: 2, Column: 2 }
+...

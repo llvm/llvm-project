@@ -1,0 +1,266 @@
+//===- ScopedNoAliasAA.cpp - Scoped No-Alias Alias Analysis ---------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the ScopedNoAlias alias-analysis pass, which implements
+// metadata-based scoped no-alias support.
+//
+// Alias-analysis scopes are defined by an id (which can be a string or some
+// other metadata node), a domain node, and an optional descriptive string.
+// A domain is defined by an id (which can be a string or some other metadata
+// node), a flag saying whether its scopes are disjoint, and an optional
+// descriptive string.
+//
+// !dom0 =   metadata !{ metadata !"domain of foo()", i1 false }
+// !scope1 = metadata !{ metadata !scope1, metadata !dom0, metadata !"scope 1" }
+// !scope2 = metadata !{ metadata !scope2, metadata !dom0, metadata !"scope 2" }
+//
+// Loads and stores can be tagged with an alias-analysis scope, and also, with
+// a noalias tag for a specific scope:
+//
+// ... = load %ptr1, !alias.scope !{ !scope1 }
+// ... = load %ptr2, !alias.scope !{ !scope1, !scope2 }, !noalias !{ !scope1 }
+//
+// When evaluating an aliasing query, if one of the instructions
+// has a set of noalias scopes in some domain that is a superset of the alias
+// scopes in that domain of some other instruction, then the two memory
+// accesses are assumed not to alias.
+//
+// If a domain is declared as having disjoint scopes, two memory accesses are
+// assumed not to alias if the they both have entries for that domain in their
+// `alias.scope` list and their `alias.scope` lists have no scopes in common for
+// that domain. Equivalently, an instruction with a set of scopes from a
+// disjoint-scope domain in its `alias.scope` list implicitly has all other
+// scopes in that domain in its `noalias` set. For example,
+//
+// !dom1 =   metadata !{ metadata !dom1, i1 true, metadata !"disjoint domain" }
+// !scope3 = metadata !{ metadata !scope3, metadata !dom1 }
+// !scope4 = metadata !{ metadata !scope4, metadata !dom1 }
+//
+// ... = load %ptr3, !alias.scope !{ !scope3 } ; doesn't alias the load below
+// ... = load %ptr4, !alias.scope !{ !scope4 }
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "AnalysisOptions.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
+
+using namespace llvm;
+
+ScopedNoAliasAAResult::ScopedNoAliasAAResult(const LLVMContext &C)
+    : Opts(getAnalysisOptions(C)) {}
+
+AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
+                                         const MemoryLocation &LocB) {
+  if (!Opts.enable_scoped_noalias)
+    return AliasResult::MayAlias;
+
+  // Get the attached MDNodes.
+  const MDNode *AScopes = LocA.AATags.Scope, *BScopes = LocB.AATags.Scope;
+
+  const MDNode *ANoAlias = LocA.AATags.NoAlias, *BNoAlias = LocB.AATags.NoAlias;
+
+  if (!mayAliasInScopes(AScopes, BNoAlias))
+    return AliasResult::NoAlias;
+
+  if (!mayAliasInScopes(BScopes, ANoAlias))
+    return AliasResult::NoAlias;
+
+  if (!mayAliasInDisjointDomains(AScopes, BScopes))
+    return AliasResult::NoAlias;
+
+  return AliasResult::MayAlias;
+}
+
+AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
+                                         const MemoryLocation &LocB,
+                                         AAQueryInfo &, const Instruction *) {
+  return alias(LocA, LocB);
+}
+
+ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,
+                                                const MemoryLocation &Loc,
+                                                AAQueryInfo &AAQI) {
+  if (!Opts.enable_scoped_noalias)
+    return ModRefInfo::ModRef;
+
+  if (!mayAliasInScopes(Loc.AATags.Scope,
+                        Call->getMetadata(LLVMContext::MD_noalias)))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInScopes(Call->getMetadata(LLVMContext::MD_alias_scope),
+                        Loc.AATags.NoAlias))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInDisjointDomains(
+          Loc.AATags.Scope, Call->getMetadata(LLVMContext::MD_alias_scope)))
+    return ModRefInfo::NoModRef;
+
+  return ModRefInfo::ModRef;
+}
+
+ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const FenceInst *F,
+                                                const MemoryLocation &Loc,
+                                                AAQueryInfo &AAQI) {
+  if (!Opts.enable_scoped_noalias)
+    return ModRefInfo::ModRef;
+
+  if (!mayAliasInScopes(Loc.AATags.Scope,
+                        F->getMetadata(LLVMContext::MD_noalias)))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInScopes(F->getMetadata(LLVMContext::MD_alias_scope),
+                        Loc.AATags.NoAlias))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInDisjointDomains(Loc.AATags.Scope,
+                                 F->getMetadata(LLVMContext::MD_alias_scope)))
+    return ModRefInfo::NoModRef;
+
+  return ModRefInfo::ModRef;
+}
+
+ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call1,
+                                                const CallBase *Call2,
+                                                AAQueryInfo &AAQI) {
+  if (!Opts.enable_scoped_noalias)
+    return ModRefInfo::ModRef;
+
+  if (!mayAliasInScopes(Call1->getMetadata(LLVMContext::MD_alias_scope),
+                        Call2->getMetadata(LLVMContext::MD_noalias)))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInScopes(Call2->getMetadata(LLVMContext::MD_alias_scope),
+                        Call1->getMetadata(LLVMContext::MD_noalias)))
+    return ModRefInfo::NoModRef;
+
+  if (!mayAliasInDisjointDomains(
+          Call1->getMetadata(LLVMContext::MD_alias_scope),
+          Call2->getMetadata(LLVMContext::MD_alias_scope)))
+    return ModRefInfo::NoModRef;
+
+  return ModRefInfo::ModRef;
+}
+
+static void collectMDInDomain(const MDNode *List, const MDNode *Domain,
+                              SmallPtrSetImpl<const MDNode *> &Nodes) {
+  for (const MDOperand &MDOp : List->operands())
+    if (const MDNode *MD = dyn_cast<MDNode>(MDOp))
+      if (AliasScopeNode(MD).getDomain() == Domain)
+        Nodes.insert(MD);
+}
+
+/// Collect the set of scoped domains relevant to the noalias scopes.
+void ScopedNoAliasAAResult::collectScopedDomains(
+    const MDNode *NoAlias, SmallPtrSetImpl<const MDNode *> &Domains,
+    bool DisjointOnly) {
+  if (!NoAlias)
+    return;
+  assert(Domains.empty() && "Domains should be empty");
+  for (const MDOperand &MDOp : NoAlias->operands())
+    if (const MDNode *NAMD = dyn_cast<MDNode>(MDOp))
+      if (const MDNode *Domain = AliasScopeNode(NAMD).getDomain())
+        if (!DisjointOnly || AliasScopeDomainNode(Domain).hasDisjointScopes())
+          Domains.insert(Domain);
+}
+
+bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
+                                             const MDNode *NoAlias) {
+  if (!Scopes || !NoAlias)
+    return true;
+
+  // Collect the set of scope domains relevant to the noalias scopes.
+  SmallPtrSet<const MDNode *, 16> Domains;
+  collectScopedDomains(NoAlias, Domains);
+
+  // We alias unless, for some domain, the set of noalias scopes in that domain
+  // is a superset of the set of alias scopes in that domain.
+  for (const MDNode *Domain : Domains) {
+    SmallPtrSet<const MDNode *, 16> ScopeNodes;
+    collectMDInDomain(Scopes, Domain, ScopeNodes);
+    if (ScopeNodes.empty())
+      continue;
+
+    SmallPtrSet<const MDNode *, 16> NANodes;
+    collectMDInDomain(NoAlias, Domain, NANodes);
+
+    // To not alias, all of the nodes in ScopeNodes must be in NANodes.
+    if (llvm::set_is_subset(ScopeNodes, NANodes))
+      return false;
+  }
+
+  return true;
+}
+
+bool ScopedNoAliasAAResult::mayAliasInDisjointDomains(const MDNode *Scopes1,
+                                                      const MDNode *Scopes2) {
+  if (!Scopes1 || !Scopes2)
+    return true;
+
+  // Collect the domains with disjoint scopes that the first access is in.
+  SmallPtrSet<const MDNode *, 16> Domains;
+  collectScopedDomains(Scopes1, Domains, /*DisjointOnly=*/true);
+
+  // The accesses don't alias if, for some domain, both accesses use at least
+  // one of its scopes and have no scopes in that domain in common.
+  for (const MDNode *Domain : Domains) {
+    SmallPtrSet<const MDNode *, 16> Nodes2;
+    collectMDInDomain(Scopes2, Domain, Nodes2);
+    if (Nodes2.empty())
+      continue;
+
+    SmallPtrSet<const MDNode *, 16> Nodes1;
+    collectMDInDomain(Scopes1, Domain, Nodes1);
+    if (!llvm::set_intersects(Nodes1, Nodes2))
+      return false;
+  }
+
+  return true;
+}
+
+AnalysisKey ScopedNoAliasAA::Key;
+
+ScopedNoAliasAAResult ScopedNoAliasAA::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
+  return ScopedNoAliasAAResult(F.getContext());
+}
+
+char ScopedNoAliasAAWrapperPass::ID = 0;
+
+INITIALIZE_PASS(ScopedNoAliasAAWrapperPass, "scoped-noalias-aa",
+                "Scoped NoAlias Alias Analysis", false, true)
+
+ImmutablePass *llvm::createScopedNoAliasAAWrapperPass() {
+  return new ScopedNoAliasAAWrapperPass();
+}
+
+ScopedNoAliasAAWrapperPass::ScopedNoAliasAAWrapperPass() : ImmutablePass(ID) {}
+
+bool ScopedNoAliasAAWrapperPass::doInitialization(Module &M) {
+  Result.reset(new ScopedNoAliasAAResult(M.getContext()));
+  return false;
+}
+
+bool ScopedNoAliasAAWrapperPass::doFinalization(Module &M) {
+  Result.reset();
+  return false;
+}
+
+void ScopedNoAliasAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+}

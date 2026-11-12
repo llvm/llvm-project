@@ -1,0 +1,75 @@
+standard: c23
+posix: posix-2024
+c-reference-root: locale
+types:
+  locale_t:
+    in-latest-posix: ''
+  struct lconv:
+    c-definition: '7.11'
+    c-reference: locale/lconv
+    in-latest-posix: ''
+functions:
+  duplocale:
+    in-latest-posix: ''
+  freelocale:
+    in-latest-posix: ''
+  getlocalename_l:
+    in-latest-posix: ''
+  localeconv:
+    c-definition: 7.11.2.1
+    in-latest-posix: ''
+  newlocale:
+    in-latest-posix: ''
+  setlocale:
+    c-definition: 7.11.1.1
+    in-latest-posix: ''
+  uselocale:
+    in-latest-posix: ''
+macros:
+  LC_ALL:
+    c-definition: '7.11'
+    c-reference: locale/LC_categories
+    in-latest-posix: ''
+  LC_COLLATE:
+    c-definition: '7.11'
+    c-reference: locale/LC_categories
+    in-latest-posix: ''
+  LC_CTYPE:
+    c-definition: '7.11'
+    c-reference: locale/LC_categories
+    in-latest-posix: ''
+  LC_MONETARY:
+    c-definition: '7.11'
+    c-reference: locale/LC_categories
+    in-latest-posix: ''
+  LC_NUMERIC:
+    c-definition: '7.11'
+    c-reference: locale/LC_categories
+    in-latest-posix: ''
+  LC_TIME:
+    c-definition: '7.11'
+    c-reference: locale/LC_categories
+    in-latest-posix: ''
+
+  LC_ALL_MASK:
+    in-latest-posix: ''
+  LC_COLLATE_MASK:
+    in-latest-posix: ''
+  LC_CTYPE_MASK:
+    in-latest-posix: ''
+  LC_GLOBAL_LOCALE:
+    in-latest-posix: ''
+  LC_MESSAGES:
+    in-latest-posix: ''
+  LC_MESSAGES_MASK:
+    in-latest-posix: ''
+  LC_MONETARY_MASK:
+    in-latest-posix: ''
+  LC_NUMERIC_MASK:
+    in-latest-posix: ''
+  LC_TIME_MASK:
+    in-latest-posix: ''
+  'NULL':
+    c-definition: '7.11'
+    c-reference: types/NULL
+    in-latest-posix: ''

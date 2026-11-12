@@ -1,0 +1,51 @@
+// RUN: rm -rf %t && mkdir -p %t/docs %t/build
+// RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+
+// RUN: clang-doc --format=json --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+
+// JSON-INDEX: async function LoadIndex() {
+// JSON-INDEX-NEXT: return{
+// JSON-INDEX-NEXT:   "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:   "Name": "",
+// JSON-INDEX-NEXT:   "RefType": "default",
+// JSON-INDEX-NEXT:   "Path": "",
+// JSON-INDEX-NEXT:   "Children": [
+// JSON-INDEX-NEXT:     {
+// JSON-INDEX-NEXT:       "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:       "Name": "GlobalNamespace",
+// JSON-INDEX-NEXT:       "RefType": "namespace",
+// JSON-INDEX-NEXT:       "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:       "Children": [
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Calculator",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         },
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Circle",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         },
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Rectangle",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         },
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Shape",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         }
+// JSON-INDEX-NEXT:       ]
+// JSON-INDEX-NEXT:     }
+// JSON-INDEX-NEXT:   ]
+// JSON-INDEX-NEXT: };
+// JSON-INDEX-NEXT: }

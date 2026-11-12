@@ -1,0 +1,73 @@
+{
+    "main_library": {
+        "current_versions": [
+            {
+                "version": "1.2.3"
+            }
+        ],
+        "exported_symbols": [
+            {
+                "data": {
+                    "global": [
+                        "_publicGlobalVariable",
+                        "_extraGlobalAPI1",
+                        "_privateGlobalVariable"
+                    ],
+                    "objc_class": [
+                        "SubClass",
+                        "Basic6",
+                        "Basic1",
+                        "Base",
+                        "Basic3",
+                        "FooClass",
+                        "Basic4",
+                        "ExternalManagedObject"
+                    ],
+                    "objc_eh_type": [
+                        "SubClass",
+                        "Base"
+                    ],
+                    "objc_ivar": [
+                        "Basic4.ivar2",
+                        "Basic4.ivar1",
+                        "Basic4_2.ivar2"
+                    ],
+                    "weak": [
+                        "_weakPrivateGlobalVariable",
+                        "_weakPublicGlobalVariable"
+                    ]
+                }
+            },
+            {
+                "text": {
+                    "global": [
+                        "_publicGlobalFunc"
+                    ]
+                }
+            }
+        ],
+        "flags": [
+            {
+                "attributes": [
+                    "not_app_extension_safe"
+                ]
+            }
+        ],
+        "install_names": [
+            {
+                "name": "/System/Library/Frameworks/Simple.framework/Versions/A/Simple"
+            }
+        ],
+        "target_info": [
+            {
+                "min_deployment": "10.10",
+                "target": "x86_64-macos"
+            },
+            {
+                "min_deployment": "10.10",
+                "target": "arm64-macos"
+            }
+        ]
+    },
+    "tapi_tbd_version": 5
+}

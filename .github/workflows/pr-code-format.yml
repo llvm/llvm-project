@@ -1,0 +1,65 @@
+name: "Check code formatting"
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'users/**'
+
+jobs:
+  code_formatter:
+    runs-on: ubuntu-26.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-26.04-format:latest@sha256:bf8fe9a3eec74b90450335e93b233097c27729f4b1041372e5dd20e6489ded68'
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        with:
+          separator: ","
+          skip_initial_fetch: true
+          base_sha: 'HEAD~1'
+          sha: 'HEAD'
+
+      - name: "Listed files"
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "Formatting files:"
+          echo "$CHANGED_FILES"
+
+      - name: Run code formatter
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        # Create an empty comments file so the pr-write job doesn't fail.
+        run: |
+          echo "[]" > comments &&
+          python ./llvm/utils/git/code-format-helper.py \
+            --write-comment-to-file \
+            --token ${{ secrets.GITHUB_TOKEN }} \
+            --issue-number $GITHUB_PR_NUMBER \
+            --start-rev HEAD~1 \
+            --end-rev HEAD \
+            --changed-files "$CHANGED_FILES"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments

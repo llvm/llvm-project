@@ -1,0 +1,37 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___PSTL_BACKEND_H
+#define _LIBCPP___PSTL_BACKEND_H
+
+#include <__config>
+#include <__pstl/backend_fwd.h>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 17
+
+#  if _LIBCPP_HAS_THREADS
+#    include <__pstl/backends/default.h>
+#    include <__pstl/backends/serial.h>
+#    include <__pstl/backends/statpart.h>
+#  else // ...New vendors can add parallel backends here...
+#    include <__pstl/backends/default.h>
+#    include <__pstl/backends/serial.h>
+#  endif
+
+#endif // _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
+
+#endif // _LIBCPP___PSTL_BACKEND_H

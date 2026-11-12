@@ -1,0 +1,180 @@
+//===--- StringSwitch.h - Switch-on-literal-string Construct --------------===/
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//===----------------------------------------------------------------------===/
+///
+/// \file
+///  This file implements the StringSwitch template, which mimics a switch()
+///  statement whose cases are string literals.
+///
+//===----------------------------------------------------------------------===/
+#ifndef LLVM_ADT_STRINGSWITCH_H
+#define LLVM_ADT_STRINGSWITCH_H
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
+#include <cstring>
+#include <initializer_list>
+#include <optional>
+
+namespace llvm {
+
+/// A switch()-like statement whose cases are string literals.
+///
+/// The StringSwitch class is a simple form of a switch() statement that
+/// determines whether the given string matches one of the given string
+/// literals. The template type parameter \p T is the type of the value that
+/// will be returned from the string-switch expression. For example,
+/// the following code switches on the name of a color in \c argv[i]:
+///
+/// \code
+/// Color color = StringSwitch<Color>(argv[i])
+///   .Case("red", Red)
+///   .Case("orange", Orange)
+///   .Case("yellow", Yellow)
+///   .Case("green", Green)
+///   .Case("blue", Blue)
+///   .Case("indigo", Indigo)
+///   .Cases({"violet", "purple"}, Violet)
+///   .Default(UnknownColor);
+/// \endcode
+///
+/// When multiple matches are found, the value of the first match is returned.
+template<typename T, typename R = T>
+class StringSwitch {
+  /// The string we are matching.
+  const StringRef Str;
+
+  /// The pointer to the result of this switch statement, once known,
+  /// null before that.
+  std::optional<T> Result;
+
+public:
+  explicit StringSwitch(StringRef S)
+  : Str(S), Result() { }
+
+  StringSwitch(StringSwitch &&) = default;
+
+  // StringSwitch is not copyable.
+  StringSwitch(const StringSwitch &) = delete;
+
+  // StringSwitch is not assignable due to 'Str' being 'const'.
+  void operator=(const StringSwitch &) = delete;
+  void operator=(StringSwitch &&) = delete;
+
+  // Case-sensitive case matchers.
+  StringSwitch &Case(StringLiteral S, T Value) {
+    CaseImpl(S, Value);
+    return *this;
+  }
+
+  StringSwitch& EndsWith(StringLiteral S, T Value) {
+    if (!Result && Str.ends_with(S)) {
+      Result = std::move(Value);
+    }
+    return *this;
+  }
+
+  StringSwitch& StartsWith(StringLiteral S, T Value) {
+    if (!Result && Str.starts_with(S)) {
+      Result = std::move(Value);
+    }
+    return *this;
+  }
+
+  StringSwitch &Cases(std::initializer_list<StringLiteral> CaseStrings,
+                      T Value) {
+    // Stop matching after the string is found.
+    for (StringLiteral S : CaseStrings)
+      if (CaseImpl(S, Value))
+        break;
+    return *this;
+  }
+
+  // Case-insensitive case matchers.
+  StringSwitch &CaseLower(StringLiteral S, T Value) {
+    CaseLowerImpl(S, Value);
+    return *this;
+  }
+
+  StringSwitch &EndsWithLower(StringLiteral S, T Value) {
+    if (!Result && Str.ends_with_insensitive(S))
+      Result = std::move(Value);
+
+    return *this;
+  }
+
+  StringSwitch &StartsWithLower(StringLiteral S, T Value) {
+    if (!Result && Str.starts_with_insensitive(S))
+      Result = std::move(Value);
+
+    return *this;
+  }
+
+  StringSwitch &CasesLower(std::initializer_list<StringLiteral> CaseStrings,
+                           T Value) {
+    // Stop matching after the string is found.
+    for (StringLiteral S : CaseStrings)
+      if (CaseLowerImpl(S, Value))
+        break;
+    return *this;
+  }
+
+  // A StringSwitch case that is selected if the specified predicate
+  // returns true for the subject string.
+  StringSwitch &Predicate(function_ref<bool(StringRef)> Pred, T Value) {
+    if (!Result && Pred(Str))
+      Result = std::move(Value);
+    return *this;
+  }
+
+  [[nodiscard]] R Default(T Value) {
+    if (Result)
+      return std::move(*Result);
+    return Value;
+  }
+
+  /// Declare default as unreachable, making sure that all cases were handled.
+  [[nodiscard]] R DefaultUnreachable(
+      const char *Message = "Fell off the end of a string-switch") {
+    if (Result)
+      return std::move(*Result);
+    llvm_unreachable(Message);
+  }
+
+  [[nodiscard]] operator R() { return DefaultUnreachable(); }
+
+private:
+  // Returns true when a match is found. If `Str` matches the `S` argument,
+  // stores the result.
+  bool CaseImpl(StringLiteral S, T &Value) {
+    if (Result)
+      return true;
+
+    if (Str != S)
+      return false;
+
+    Result = std::move(Value);
+    return true;
+  }
+
+  // Returns true when a match is found. If `Str` matches the `S` argument
+  // (case-insensitive), stores the result.
+  bool CaseLowerImpl(StringLiteral S, T &Value) {
+    if (Result)
+      return true;
+
+    if (!Str.equals_insensitive(S))
+      return false;
+
+    Result = std::move(Value);
+    return true;
+  }
+};
+
+} // end namespace llvm
+
+#endif // LLVM_ADT_STRINGSWITCH_H

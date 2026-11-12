@@ -1,0 +1,11 @@
+# :ir is the flag to indicate this is IR level profile.
+:ir
+:entry_first
+test_switch
+536873293052540031
+4
+10
+5
+2
+3
+

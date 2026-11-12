@@ -1,0 +1,84 @@
+if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_OS_IS_GPU)
+  # Not all platforms have a mutex implementation. If mutex is unvailable,
+  # we just skip everything about files. The GPU does not currently support
+  # files as well.
+  return()
+endif()
+
+add_libc_test(
+  file_test
+  SUITE
+    libc-support-tests
+  SRCS
+    file_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.hdr.wchar_macros
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.new
+    libc.src.__support.File.file
+    libc.src.__support.error_or
+    libc.test.UnitTest.MemoryMatcher
+)
+
+add_libc_test(
+  file_mode_test
+  SUITE
+    libc-support-tests
+  SRCS
+    file_mode_test.cpp
+  DEPENDS
+    libc.src.__support.File.file
+)
+
+add_libc_test(
+  platform_file_test
+  SUITE
+    libc-support-tests
+  SRCS
+    platform_file_test.cpp
+  DEPENDS
+    libc.src.__support.error_or
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.include.stdio
+)
+
+add_libc_test(
+  dir_scan_impl_test
+  SUITE
+    libc-support-tests
+  SRCS
+    dir_scan_impl_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_dirent
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.dir_scan_impl
+    libc.src.__support.error_or
+    libc.src.dirent.alphasort
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+set(platform_stream_targets "platform_stdout;platform_stdin;platform_stderr")
+foreach(target IN LISTS platform_file_targets)
+  if(TARGET libc.src.__support.File.${target})
+    add_libc_test(
+      ${target}_test
+      FULL_BUILD_ONLY
+      SUITE
+        libc-support-tests
+      SRCS
+        ${target}_test.cpp
+      DEPENDS
+        libc.src.__support.File.file
+        libc.src.__support.File.${target}
+        libc.include.stdio
+    )
+  endif()
+endforeach()
+
+add_subdirectory(testdata)

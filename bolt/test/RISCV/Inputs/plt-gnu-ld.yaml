@@ -1,0 +1,830 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_RISCV
+  Flags:           [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_DOUBLE ]
+  Entry:           0x5B0
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x40
+    Align:           0x8
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x270
+  - Type:            0x70000003
+    Flags:           [ PF_R ]
+    FirstSec:        .riscv.attributes
+    LastSec:         .riscv.attributes
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .interp
+    LastSec:         .eh_frame
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .preinit_array
+    LastSec:         .bss
+    VAddr:           0x1E08
+    Align:           0x1000
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x1E20
+    Align:           0x8
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x6AC
+    Align:           0x4
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .preinit_array
+    LastSec:         .dynamic
+    VAddr:           0x1E08
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x270
+    AddressAlign:    0x1
+    Content:         2F6C69622F6C642D6C696E75782D726973637636342D6C703634642E736F2E3100
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x300
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3C0
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x480
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x1E08
+        Type:            R_RISCV_RELATIVE
+        Addend:          1498
+      - Offset:          0x1E10
+        Type:            R_RISCV_RELATIVE
+        Addend:          1650
+      - Offset:          0x1E18
+        Type:            R_RISCV_RELATIVE
+        Addend:          1588
+      - Offset:          0x2000
+        Type:            R_RISCV_RELATIVE
+        Addend:          8192
+      - Offset:          0x2038
+        Type:            R_RISCV_RELATIVE
+        Addend:          1658
+      - Offset:          0x2030
+        Symbol:          _ITM_deregisterTMCloneTable
+        Type:            R_RISCV_64
+      - Offset:          0x2040
+        Symbol:          __cxa_finalize
+        Type:            R_RISCV_64
+      - Offset:          0x2048
+        Symbol:          _ITM_registerTMCloneTable
+        Type:            R_RISCV_64
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x540
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got
+    Relocations:
+      - Offset:          0x2018
+        Symbol:          __libc_start_main
+        Type:            R_RISCV_JUMP_SLOT
+      - Offset:          0x2020
+        Symbol:          puts
+        Type:            R_RISCV_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x570
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         972300003303C34103BE83A9130343FD938283A91353130083B2820067000E00172E0000033E8EA867030E0013000000172E0000033E0EA867030E0013000000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x5B0
+    AddressAlign:    0x4
+    Content:         97000000E780A002AA87172500000335E5A782653000137101FF814601470A8897000000E78000FC029097210000938161228280000017250000130525A2972700009387A7A16388A7009727000083B767A391C38287828017250000130505A0972500009385859F898D93D73540FD91BE95858599C59727000083B727A291C382878280411122E017240000130484A18347040006E495E39727000083B7879F91C7172500000335E59A829797000000E780A0F885472300F400A26002644101828017030000670063F9411106E422E00008170500001305650297000000E78060F181473E85A260026441018280
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x6A0
+    AddressAlign:    0x8
+    Content:         '0100020000000000686900'
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x6AC
+    AddressAlign:    0x4
+    Content:         011B033B100000000100000004FFFFFF28000000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x6C0
+    AddressAlign:    0x8
+    Content:         1000000000000000037A5200017C01011B0D02001000000018000000D4FEFFFF2A0000000007010000000000
+  - Name:            .preinit_array
+    Type:            SHT_PREINIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x1E08
+    AddressAlign:    0x1
+    EntSize:         0x8
+    Offset:          0xE08
+    Content:         '0000000000000000'
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x1E10
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '0000000000000000'
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x1E18
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '0000000000000000'
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x1E20
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x27
+      - Tag:             DT_PREINIT_ARRAY
+        Value:           0x1E08
+      - Tag:             DT_PREINIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x1E10
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x1E18
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x2D8
+      - Tag:             DT_STRTAB
+        Value:           0x3C0
+      - Tag:             DT_SYMTAB
+        Value:           0x300
+      - Tag:             DT_STRSZ
+        Value:           0x7D
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x2008
+      - Tag:             DT_PLTRELSZ
+        Value:           0x30
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x540
+      - Tag:             DT_RELA
+        Value:           0x480
+      - Tag:             DT_RELASZ
+        Value:           0xF0
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_FLAGS_1
+        Value:           0x8000000
+      - Tag:             DT_VERNEED
+        Value:           0x450
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x1
+      - Tag:             DT_VERSYM
+        Value:           0x43E
+      - Tag:             DT_RELACOUNT
+        Value:           0x5
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x8
+    Content:         '0000000000000000'
+  - Name:            .tm_clone_table
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2008
+    AddressAlign:    0x8
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2008
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         FFFFFFFFFFFFFFFF000000000000000070050000000000007005000000000000201E0000000000000000000000000000000000000000000000000000000000000000000000000000
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x2050
+    AddressAlign:    0x1
+    Size:            0x8
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    AddressAlign:    0x1
+    Content:         4149000000726973637600013F00000004100572763634693270315F6D3270305F613270315F663270325F643270325F633270305F7A696373723270305F7A6966656E63656932703000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x5B0
+        Type:            R_RISCV_NONE
+        Addend:          2
+      - Offset:          0x5B0
+        Symbol:          load_gp
+        Type:            R_RISCV_CALL
+      - Offset:          0x5B0
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5BA
+        Symbol:          main
+        Type:            R_RISCV_GOT_HI20
+      - Offset:          0x5BE
+        Symbol:          '.L0 '
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x5BE
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5D0
+        Symbol:          '__libc_start_main@GLIBC_2.34'
+        Type:            R_RISCV_CALL_PLT
+      - Offset:          0x5D0
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5DA
+        Symbol:          '__global_pointer$'
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x5DE
+        Symbol:          '.L0  (1)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x5E6
+        Symbol:          __TMC_LIST__
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x5E6
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5EA
+        Symbol:          '.L0  (4)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x5EA
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5EE
+        Symbol:          __TMC_END__
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x5EE
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5F2
+        Symbol:          '.L0  (5)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x5F2
+        Type:            R_RISCV_RELAX
+      - Offset:          0x5F6
+        Symbol:          .L1
+        Type:            R_RISCV_BRANCH
+      - Offset:          0x5FA
+        Symbol:          _ITM_deregisterTMCloneTable
+        Type:            R_RISCV_GOT_HI20
+      - Offset:          0x5FE
+        Symbol:          '.L0  (6)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x5FE
+        Type:            R_RISCV_RELAX
+      - Offset:          0x602
+        Symbol:          .L1
+        Type:            R_RISCV_RVC_BRANCH
+      - Offset:          0x608
+        Symbol:          __TMC_LIST__
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x608
+        Type:            R_RISCV_RELAX
+      - Offset:          0x60C
+        Symbol:          '.L0  (7)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x60C
+        Type:            R_RISCV_RELAX
+      - Offset:          0x610
+        Symbol:          __TMC_END__
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x610
+        Type:            R_RISCV_RELAX
+      - Offset:          0x614
+        Symbol:          '.L0  (8)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x614
+        Type:            R_RISCV_RELAX
+      - Offset:          0x624
+        Symbol:          .L7
+        Type:            R_RISCV_RVC_BRANCH
+      - Offset:          0x626
+        Symbol:          _ITM_registerTMCloneTable
+        Type:            R_RISCV_GOT_HI20
+      - Offset:          0x62A
+        Symbol:          '.L0  (9)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x62A
+        Type:            R_RISCV_RELAX
+      - Offset:          0x62E
+        Symbol:          .L7
+        Type:            R_RISCV_RVC_BRANCH
+      - Offset:          0x638
+        Symbol:          completed.0
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x638
+        Type:            R_RISCV_RELAX
+      - Offset:          0x63C
+        Symbol:          '.L0  (10)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x63C
+        Type:            R_RISCV_RELAX
+      - Offset:          0x646
+        Symbol:          .L15
+        Type:            R_RISCV_RVC_BRANCH
+      - Offset:          0x648
+        Symbol:          '__cxa_finalize@GLIBC_2.27'
+        Type:            R_RISCV_GOT_HI20
+      - Offset:          0x64C
+        Symbol:          '.L0  (11)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x64C
+        Type:            R_RISCV_RELAX
+      - Offset:          0x650
+        Symbol:          .L17
+        Type:            R_RISCV_RVC_BRANCH
+      - Offset:          0x652
+        Symbol:          __dso_handle
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x652
+        Type:            R_RISCV_RELAX
+      - Offset:          0x656
+        Symbol:          '.L0  (12)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x656
+        Type:            R_RISCV_RELAX
+      - Offset:          0x65C
+        Symbol:          deregister_tm_clones
+        Type:            R_RISCV_CALL
+      - Offset:          0x65C
+        Type:            R_RISCV_RELAX
+      - Offset:          0x672
+        Symbol:          register_tm_clones
+        Type:            R_RISCV_CALL
+      - Offset:          0x672
+        Type:            R_RISCV_RELAX
+      - Offset:          0x682
+        Symbol:          .LC0
+        Type:            R_RISCV_PCREL_HI20
+      - Offset:          0x682
+        Type:            R_RISCV_RELAX
+      - Offset:          0x686
+        Symbol:          '.L0  (13)'
+        Type:            R_RISCV_PCREL_LO12_I
+      - Offset:          0x686
+        Type:            R_RISCV_RELAX
+      - Offset:          0x68A
+        Symbol:          'puts@GLIBC_2.27'
+        Type:            R_RISCV_CALL_PLT
+      - Offset:          0x68A
+        Type:            R_RISCV_RELAX
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x6DC
+        Symbol:          '.L0  (2)'
+        Type:            R_RISCV_32_PCREL
+      - Offset:          0x6E0
+        Symbol:          '.L0  (3)'
+        Type:            R_RISCV_ADD32
+      - Offset:          0x6E0
+        Symbol:          '.L0  (2)'
+        Type:            R_RISCV_SUB32
+  - Name:            .rela.preinit_array
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .preinit_array
+    Relocations:
+      - Offset:          0x1E08
+        Symbol:          load_gp
+        Type:            R_RISCV_64
+  - Name:            .rela.init_array
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .init_array
+    Relocations:
+      - Offset:          0x1E10
+        Symbol:          frame_dummy
+        Type:            R_RISCV_64
+  - Name:            .rela.fini_array
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .fini_array
+    Relocations:
+      - Offset:          0x1E18
+        Symbol:          __do_global_dtors_aux
+        Type:            R_RISCV_64
+  - Name:            .rela.data
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .data
+    Relocations:
+      - Offset:          0x2000
+        Symbol:          __dso_handle
+        Type:            R_RISCV_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .interp
+      - Name:            .dynsym
+      - Name:            .dynstr
+      - Name:            .rela.dyn
+      - Name:            .rela.plt
+      - Name:            .plt
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .rodata
+      - Name:            .eh_frame_hdr
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .preinit_array
+      - Name:            .rela.preinit_array
+      - Name:            .init_array
+      - Name:            .rela.init_array
+      - Name:            .fini_array
+      - Name:            .rela.fini_array
+      - Name:            .dynamic
+      - Name:            .data
+      - Name:            .rela.data
+      - Name:            .tm_clone_table
+      - Name:            .got
+      - Name:            .bss
+      - Name:            .riscv.attributes
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x270
+  - Name:            .dynsym
+    Type:            STT_SECTION
+    Section:         .dynsym
+    Value:           0x300
+  - Name:            .dynstr
+    Type:            STT_SECTION
+    Section:         .dynstr
+    Value:           0x3C0
+  - Name:            .rela.dyn
+    Type:            STT_SECTION
+    Section:         .rela.dyn
+    Value:           0x480
+  - Name:            .rela.plt
+    Type:            STT_SECTION
+    Section:         .rela.plt
+    Value:           0x540
+  - Name:            .plt
+    Type:            STT_SECTION
+    Section:         .plt
+    Value:           0x570
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x5B0
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x6A0
+  - Name:            .eh_frame_hdr
+    Type:            STT_SECTION
+    Section:         .eh_frame_hdr
+    Value:           0x6AC
+  - Name:            .eh_frame
+    Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x6C0
+  - Name:            .preinit_array
+    Type:            STT_SECTION
+    Section:         .preinit_array
+    Value:           0x1E08
+  - Name:            .init_array
+    Type:            STT_SECTION
+    Section:         .init_array
+    Value:           0x1E10
+  - Name:            .fini_array
+    Type:            STT_SECTION
+    Section:         .fini_array
+    Value:           0x1E18
+  - Name:            .dynamic
+    Type:            STT_SECTION
+    Section:         .dynamic
+    Value:           0x1E20
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+    Value:           0x2000
+  - Name:            .tm_clone_table
+    Type:            STT_SECTION
+    Section:         .tm_clone_table
+    Value:           0x2008
+  - Name:            .got
+    Type:            STT_SECTION
+    Section:         .got
+    Value:           0x2008
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+    Value:           0x2050
+  - Name:            .riscv.attributes
+    Type:            STT_SECTION
+    Section:         .riscv.attributes
+  - Name:            start.os
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '$x'
+    Section:         .text
+    Value:           0x5B0
+  - Name:            load_gp
+    Section:         .text
+    Value:           0x5DA
+  - Name:            init.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '.L0 '
+    Section:         .text
+    Value:           0x5BA
+  - Name:            '.L0  (1)'
+    Section:         .text
+    Value:           0x5DA
+  - Name:            '.L0  (2)'
+    Section:         .text
+    Value:           0x5B0
+  - Name:            '.L0  (3)'
+    Section:         .text
+    Value:           0x5DA
+  - Name:            crtstuff.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __TMC_LIST__
+    Type:            STT_OBJECT
+    Section:         .tm_clone_table
+    Value:           0x2008
+  - Name:            deregister_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x5E6
+  - Name:            '$x (1)'
+    Section:         .text
+    Value:           0x5E6
+  - Name:            register_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x608
+  - Name:            __do_global_dtors_aux
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x634
+  - Name:            completed.0
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x2050
+    Size:            0x1
+  - Name:            __do_global_dtors_aux_fini_array_entry
+    Type:            STT_OBJECT
+    Section:         .fini_array
+    Value:           0x1E18
+  - Name:            frame_dummy
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x672
+  - Name:            __frame_dummy_init_array_entry
+    Type:            STT_OBJECT
+    Section:         .init_array
+    Value:           0x1E10
+  - Name:            '.L0  (4)'
+    Section:         .text
+    Value:           0x5E6
+  - Name:            '.L0  (5)'
+    Section:         .text
+    Value:           0x5EE
+  - Name:            .L1
+    Section:         .text
+    Value:           0x606
+  - Name:            '.L0  (6)'
+    Section:         .text
+    Value:           0x5FA
+  - Name:            '.L0  (7)'
+    Section:         .text
+    Value:           0x608
+  - Name:            '.L0  (8)'
+    Section:         .text
+    Value:           0x610
+  - Name:            .L7
+    Section:         .text
+    Value:           0x632
+  - Name:            '.L0  (9)'
+    Section:         .text
+    Value:           0x626
+  - Name:            '.L0  (10)'
+    Section:         .text
+    Value:           0x638
+  - Name:            .L15
+    Section:         .text
+    Value:           0x66A
+  - Name:            '.L0  (11)'
+    Section:         .text
+    Value:           0x648
+  - Name:            .L17
+    Section:         .text
+    Value:           0x65C
+  - Name:            '.L0  (12)'
+    Section:         .text
+    Value:           0x652
+  - Name:            test.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '$x (2)'
+    Section:         .text
+    Value:           0x67A
+  - Name:            .LC0
+    Section:         .rodata
+    Value:           0x6A8
+  - Name:            '.L0  (13)'
+    Section:         .text
+    Value:           0x682
+  - Name:            'crtstuff.c (1)'
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __FRAME_END__
+    Type:            STT_OBJECT
+    Section:         .eh_frame
+    Value:           0x6E8
+  - Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            _PROCEDURE_LINKAGE_TABLE_
+    Type:            STT_OBJECT
+    Index:           SHN_ABS
+    Value:           0x570
+  - Name:            _DYNAMIC
+    Type:            STT_OBJECT
+    Index:           SHN_ABS
+    Value:           0x1E20
+  - Name:            __GNU_EH_FRAME_HDR
+    Section:         .eh_frame_hdr
+    Value:           0x6AC
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Index:           SHN_ABS
+    Value:           0x2028
+  - Name:            '__libc_start_main@GLIBC_2.34'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            data_start
+    Section:         .data
+    Binding:         STB_WEAK
+    Value:           0x2000
+  - Name:            __BSS_END__
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x2058
+  - Name:            _edata
+    Section:         .got
+    Binding:         STB_GLOBAL
+    Value:           0x2050
+  - Name:            __SDATA_BEGIN__
+    Section:         .got
+    Binding:         STB_GLOBAL
+    Value:           0x2050
+  - Name:            __DATA_BEGIN__
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x2000
+  - Name:            __data_start
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x2000
+  - Name:            __dso_handle
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x2000
+    Other:           [ STV_HIDDEN ]
+  - Name:            _IO_stdin_used
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Binding:         STB_GLOBAL
+    Value:           0x6A0
+    Size:            0x4
+  - Name:            _end
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x2058
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x5B0
+    Size:            0x2A
+  - Name:            '__global_pointer$'
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0x2800
+  - Name:            'puts@GLIBC_2.27'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __bss_start
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Value:           0x2050
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x67A
+    Size:            0x24
+  - Name:            '__cxa_finalize@GLIBC_2.27'
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+  - Name:            __TMC_END__
+    Type:            STT_OBJECT
+    Section:         .tm_clone_table
+    Binding:         STB_GLOBAL
+    Value:           0x2008
+    Other:           [ STV_HIDDEN ]
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+DynamicSymbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x5B0
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __cxa_finalize
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x67A
+    Size:            0x24
+...

@@ -1,0 +1,176 @@
+// RUN: mlir-lsp-server -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"mlir","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.mlir",
+  "languageId":"mlir",
+  "version":1,
+  "text":"#attr = 42 : f32\n// -----\nfunc.func @foo(%arg: i32) -> i64 {\nreturn %arg : i64\n}\n"
+}}}
+// -----
+{"jsonrpc":"2.0","id":1,"method":"textDocument/codeAction","params":{
+  "textDocument":{
+    "uri":"file:///foo.mlir"
+  },
+  "range":{
+    "start":{"line":0,"character":8}, "end":{"line":0,"character":10}
+  },
+  "context":{
+    "diagnostics":[{
+      "range":{"start":{"line":0,"character":8}, "end":{"line":0,"character":10}},
+      "message":"unexpected decimal integer literal for a floating point value",
+      "severity":1,
+      "relatedInformation":[{
+        "message":"add a trailing dot to make the literal a float",
+        "location":{
+          "uri":"file:///foo.mlir",
+          "range":{"start":{"line":0,"character":8}, "end":{"line":0,"character":10}}
+        }
+      }],
+      "source":"mlir"
+    }],
+    "only":["quickfix"],
+    "triggerKind":1
+  }
+}}
+// CHECK-LABEL: "id": 1
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "diagnostics": [
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "message": "unexpected decimal integer literal for a floating point value",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:            "end": {
+// CHECK-NEXT:              "character": 10,
+// CHECK-NEXT:              "line": 0
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "start": {
+// CHECK-NEXT:              "character": 8,
+// CHECK-NEXT:              "line": 0
+// CHECK-NEXT:            }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "relatedInformation": [
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "location": {
+// CHECK-NEXT:                "range": {
+// CHECK-NEXT:                  "end": {
+// CHECK-NEXT:                    "character": 10,
+// CHECK-NEXT:                    "line": 0
+// CHECK-NEXT:                  },
+// CHECK-NEXT:                  "start": {
+// CHECK-NEXT:                    "character": 8,
+// CHECK-NEXT:                    "line": 0
+// CHECK-NEXT:                  }
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "uri": "file:///foo.mlir"
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "message": "add a trailing dot to make the literal a float"
+// CHECK-NEXT:            }
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "severity": 1,
+// CHECK-NEXT:          "source": "mlir"
+// CHECK-NEXT:        }
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "edit": {
+// CHECK-NEXT:        "changes": {
+// CHECK-NEXT:          "file:///foo.mlir": [
+// CHECK-NEXT:            {
+// CHECK-LITERAL:             "newText": "// expected-error @below {{unexpected decimal integer literal for a floating point value}}\n"
+// CHECK:                     "range": {
+// CHECK-NEXT:                "end": {
+// CHECK-NEXT:                  "character": 0,
+// CHECK-NEXT:                  "line": 0
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "start": {
+// CHECK-NEXT:                  "character": 0,
+// CHECK-NEXT:                  "line": 0
+// CHECK-NEXT:                }
+// CHECK-NEXT:              }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            {
+// CHECK-NEXT-LITERAL:      "newText": "// expected-note @below {{add a trailing dot to make the literal a float}}\n",
+// CHECK:                   "range": {
+// CHECK-NEXT:                "end": {
+// CHECK-NEXT:                  "character": 0,
+// CHECK-NEXT:                  "line": 0
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "start": {
+// CHECK-NEXT:                  "character": 0,
+// CHECK-NEXT:                  "line": 0
+// CHECK-NEXT:                }
+// CHECK-NEXT:              }
+// CHECK-NEXT:            }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "kind": "quickfix",
+// CHECK-NEXT:      "title": "Add expected-* diagnostic checks"
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{
+  "textDocument":{"uri":"file:///foo.mlir"},
+  "range":{"start":{"line":3,"character":9},"end":{"line":3,"character":13}},
+  "context":{
+    "diagnostics":[{
+      "range":{"start":{"line":3,"character":9},"end":{"line":3,"character":13}},
+      "message":"use of value '%arg' expects different type than prior uses: 'i64' vs 'i32'",
+      "severity":1,
+      "relatedInformation":[{
+        "message":"prior use here",
+        "location":{
+          "uri":"file:///foo.mlir",
+          "range":{"start":{"line":2,"character":15},"end":{"line":2,"character":19}}
+        }
+      }],
+      "source":"mlir"
+    }],
+    "only":["quickfix"],
+    "triggerKind":1
+  }
+}}
+// CHECK-LABEL: "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:     {
+// CHECK:            "edit": {
+// CHECK-NEXT:       "changes": {
+// CHECK-NEXT:         "file:///foo.mlir": [
+// CHECK-NEXT:           {
+// CHECK-NEXT-LITERAL:     "newText": "// expected-error @below {{use of value '%arg' expects different type than prior uses: 'i64' vs 'i32'}}\n",
+// CHECK:                  "range": {
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "character": 0,
+// CHECK-NEXT:                 "line": 3
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "character": 0,
+// CHECK-NEXT:                 "line": 3
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT-LITERAL:     "newText": "// expected-note @below {{prior use here}}\n",
+// CHECK:                  "range": {
+// CHECK-NEXT:               "end": {
+// CHECK-NEXT:                 "character": 0,
+// CHECK-NEXT:                 "line": 2
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "start": {
+// CHECK-NEXT:                 "character": 0,
+// CHECK-NEXT:                 "line": 2
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "kind": "quickfix",
+// CHECK-NEXT:     "title": "Add expected-* diagnostic checks"
+// CHECK-NEXT:   }
+// CHECK-NEXT: ]
+// -----
+{"jsonrpc":"2.0","id":10,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

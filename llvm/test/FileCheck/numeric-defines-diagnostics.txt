@@ -1,0 +1,37 @@
+; Test incorrect syntax for -D# option is correctly diagnosed.
+
+; Invalid variable name: starts with a digit.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#10VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix NUMERRCLINAME
+
+NUMERRCLINAME:Global defines:1:46: error: invalid variable name
+NUMERRCLINAME-NEXT:Global define #1: #10VALUE=10 (parsed as: {{\[\[#10VALUE:10\]\]}})
+    NUMERRCLINAME-NEXT:                                             ^
+
+; Invalid definition of pseudo variable.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#@VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix NUMERRCLIPSEUDO
+
+NUMERRCLIPSEUDO:Global defines:1:45: error: definition of pseudo numeric variable unsupported
+NUMERRCLIPSEUDO-NEXT:Global define #1: #@VALUE=10 (parsed as: {{\[\[#@VALUE:10\]\]}})
+    NUMERRCLIPSEUDO-NEXT:                                            ^
+
+; Invalid definition of an expression.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#VALUE+2=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix NUMERRCLITRAIL
+
+NUMERRCLITRAIL:Global defines:1:51: error: unexpected characters after numeric variable name
+NUMERRCLITRAIL-NEXT:Global define #1: #VALUE+2=10 (parsed as: {{\[\[#VALUE\+2:10\]\]}})
+     NUMERRCLITRAIL-NEXT:                                                  ^
+
+; Invalid format for variable.
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -D#,VALUE=10 --input-file %s %s 2>&1 \
+RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix NUMERRCLIFMT
+
+NUMERRCLIFMT:Global defines:1:45: error: invalid matching format specification in expression
+NUMERRCLIFMT-NEXT:Global define #1: #,VALUE=10 (parsed as: {{\[\[#,VALUE:10\]\]}})
+    NUMERRCLIFMT-NEXT:                                            ^

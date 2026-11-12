@@ -1,0 +1,48 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___ITERATOR_DATA_H
+#define _LIBCPP___ITERATOR_DATA_H
+
+#include <__config>
+#include <initializer_list>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Cont>
+[[nodiscard]] constexpr auto data(_Cont& __c) noexcept(noexcept(__c.data())) -> decltype(__c.data()) {
+  return __c.data();
+}
+
+template <class _Cont>
+[[nodiscard]] constexpr auto data(const _Cont& __c) noexcept(noexcept(__c.data())) -> decltype(__c.data()) {
+  return __c.data();
+}
+
+template <class _Tp, size_t _Sz>
+[[nodiscard]] constexpr _Tp* data(_Tp (&__array)[_Sz]) noexcept {
+  return __array;
+}
+
+template <class _Ep>
+[[nodiscard]] constexpr const _Ep* data(initializer_list<_Ep> __il) noexcept {
+  return __il.begin();
+}
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
+
+#endif // _LIBCPP___ITERATOR_DATA_H

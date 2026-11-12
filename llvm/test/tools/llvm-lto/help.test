@@ -1,0 +1,7 @@
+# RUN: llvm-lto --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW: llvm LTO linker
+# HELP: USAGE
+# HELP: Color Options
+# HELP: Generic Options
+# HELP: LTO Options

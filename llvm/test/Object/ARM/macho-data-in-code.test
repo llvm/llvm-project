@@ -1,0 +1,7 @@
+RUN: llvm-objdump --triple=thumbv7-apple-iOS -d %p/../Inputs/macho-data-in-code.macho-thumbv7 --macho | FileCheck %s
+
+CHECK:      12:	80 bd                                        	pop	{r7, pc}
+
+CHECK:      14:	38 00 00 00                                  	.long 56	@ KIND_DATA
+CHECK:      18:	70 47                                        	bx	lr
+

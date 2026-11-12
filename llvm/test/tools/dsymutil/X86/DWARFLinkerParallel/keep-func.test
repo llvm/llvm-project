@@ -1,0 +1,36 @@
+$ cat main.cpp
+#include <stdio.h>
+
+static void Foo(void)
+{
+  typedef struct {
+    int x1;
+    int x2;
+  } FOO_VAR_TYPE;
+  static FOO_VAR_TYPE MyDummyVar __attribute__((aligned(4), used, section("TAD_VIRTUAL, TAD_DUMMY_DATA"), nocommon));
+  printf("Foo called");
+}
+
+int main()
+{
+  Foo();
+  return 1;
+}
+
+$ clang++ -O2 -g main.cpp -c -o main.o
+$ clang++ main.o -o main.out
+
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../../Inputs %p/../../Inputs/private/tmp/keep_func/main.out -o %t.omit.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../../Inputs %p/../../Inputs/private/tmp/keep_func/main.out -o %t.keep.dSYM -keep-function-for-static
+RUN: llvm-dwarfdump %t.omit.dSYM | FileCheck %s --check-prefix OMIT
+RUN: llvm-dwarfdump %t.keep.dSYM | FileCheck %s --check-prefix KEEP
+
+KEEP:     DW_AT_name	("x1")
+KEEP:     DW_AT_name	("x2")
+KEEP:     DW_AT_name    ("FOO_VAR_TYPE")
+KEEP:     DW_AT_name    ("MyDummyVar")
+
+OMIT-NOT: DW_AT_name	("MyDummyVar")
+OMIT-NOT: DW_AT_name	("FOO_VAR_TYPE")
+OMIT-NOT: DW_AT_name	("x1")
+OMIT-NOT: DW_AT_name	("x2")

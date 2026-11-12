@@ -1,0 +1,28 @@
+# REQUIRES: target-windows
+
+## This checks that when starting lldb (or using `target create`) with a
+## program name which is on $PATH, or not specify the .exe suffix of a program
+## in the working directory on Windows, lldb can still detect the target
+## architecture correctly instead of producing an error.
+
+# RUN: mkdir -p "%t.dir"
+# RUN: %clang_host -g0 -O0 %S/Inputs/main.c -o %t.dir/testmain.exe
+
+## Test with full path to exe
+# RUN: %lldb %t.dir/testmain.exe -b | FileCheck %s
+
+## Test with exe on path, with .exe suffix
+# RUN: env PATH="%t.dir%{pathsep}%{PATH}" %lldb testmain.exe -b | FileCheck %s
+
+## Test with exe on path, without .exe suffix
+# RUN: env PATH="%t.dir%{pathsep}%{PATH}" %lldb testmain -b | FileCheck %s
+
+## Test in cwd, with .exe suffix
+# RUN: cd "%t.dir" && %lldb testmain.exe -b | FileCheck %s
+
+## Test in cwd, without .exe suffix
+# RUN: cd "%t.dir" && %lldb testmain -b | FileCheck %s
+
+# CHECK-LABEL: target create
+# CHECK-NEXT: Current executable set to '{{.*[/\\]}}testmain.exe'
+# CHECK-NOT: Error

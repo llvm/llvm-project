@@ -1,0 +1,4 @@
+RUN: llvm-symbolizer --obj=%p/Inputs/fission-ranges.elf-x86_64 0x720 | FileCheck %s
+
+CHECK: main
+CHECK-NEXT: {{.*}}fission-ranges.cc:2

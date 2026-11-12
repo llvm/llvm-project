@@ -1,0 +1,9 @@
+# RUN: llvm-mc -triple=hexagon -disassemble < %s 2>&1 | FileCheck %s
+
+#Invalid immediate extend duplex load/load
+#CHECK: warning: invalid instruction encoding
+0xfe 0x40 0x00 0x00 0x11 0x00 0x00 0x00
+
+#Invalid immediate extend barrier
+#CHECK: warning: invalid instruction encoding
+0xfe 0x40 0x00 0x00 0x00 0xc0 0x00 0xa8

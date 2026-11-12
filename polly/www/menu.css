@@ -1,0 +1,91 @@
+/***************/
+/* page layout */
+/***************/
+
+#menu {
+        line-height: 1.3em;
+	width: 18em;
+        float: left;
+        margin-right: 3em;
+        padding: 1em;
+        background-color: #edf7ff;
+}
+/**************/
+/* menu style */
+/**************/
+
+#menu .submenu {
+	display:block;
+        padding-top: 0.2em;
+        font-bottom: 1.2em;
+}
+
+/*
+ * Color scheme
+ * blue: #556293
+ * red:  #931e24
+ * brown: #937155
+ * green: #24931e
+ */
+
+#menu label {
+	display:block;
+        color: white;
+        margin-bottom: 0.4em;
+        margin-top: 0.4em;
+	font-weight: bold;
+        font-size: 1.1em;
+	text-align: center;
+	background-color: #3b4567;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+        padding-top: 0.2em;
+        padding-bottom: 0.2em;
+}
+
+#menu a {
+	padding:0 .2em;
+        -webkit-border-radius: 5px;
+        -moz-border-radius: 5px;
+        border-radius: 5px;
+	display:block;
+        font-weight: bold;
+	text-decoration: none;
+        color: #3b4567;
+}
+
+a.rss-item {
+        margin-bottom: -1.2em;
+}
+#menu a:visited {
+}
+
+#menu .submenu2 {
+        margin-top: 2em;
+}
+
+#menu .submenu2 label {
+	background-color: #f35555;
+}
+
+.rss-box {
+  padding: 0em;
+}
+
+li.rss-item {
+  padding-bottom: 0em;
+}
+
+.rss_item {
+  padding-top: 0em;
+}
+
+.rss-date {
+  font-size: 0.6em;
+  color: gray;
+}
+.rss-title {
+  font-size: 0.7em;
+  margin: 0px;
+}

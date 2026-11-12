@@ -1,0 +1,36 @@
+foo
+# Func Hash:
+10
+# Num Counters:
+2
+# Counter Values:
+999000
+359800
+
+foo2
+# Func Hash:
+10
+# Num Counters:
+2
+# Counter Values:
+1001000
+360200
+
+main
+# Func Hash:
+16650
+# Num Counters:
+4
+# Counter Values:
+2
+2000
+2000000
+999000
+# NumValueKinds
+1
+# Value Kind IPVK_IndirectCallTarget
+0
+# NumSites
+3
+# Values for each site
+0

@@ -1,0 +1,44 @@
+# REQUIRES: x86
+
+# RUN: split-file %s %ts
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %ts/s -o %t.o
+# RUN: ld.lld -pie -o %t -T %ts/t %t.o
+# RUN: llvm-readelf -l %t | FileCheck %s
+
+## Check that an orphan section '.dynamic' is added to the same segment as
+## its closest-rank section '.data', even though its sort rank is lower.
+## Adding '.dynamic' to the first segment would make the segment writable.
+# CHECK:      Program Headers:
+# CHECK-NEXT:   Type {{.*}} Flg Align
+# CHECK-NEXT:   LOAD {{.*}} R E 0x
+# CHECK-NEXT:   LOAD {{.*}} RW  0x
+# CHECK-NEXT:   LOAD {{.*}} R   0x
+
+# CHECK:      Segment Sections...
+# CHECK-NEXT:   00 .text {{$}}
+# CHECK-NEXT:   01 .data .dynamic {{$}}
+## Check that read-only non-PROGBITS orphan sections are placed after the
+## closest-rank section '.rodata' despite their sort ranks are lower.
+# CHECK-NEXT:   02 .rodata .dynsym .gnu.hash .hash .dynstr {{$}}
+
+#--- s
+  .text
+  nop
+
+  .data
+  .quad 0
+
+  .rodata
+  .quad 0
+
+#--- t
+PHDRS {
+  exec PT_LOAD;
+  rw   PT_LOAD;
+  ro   PT_LOAD;
+}
+SECTIONS {
+  .text : { *(.text) } : exec
+  .data : { *(.data) } : rw
+  .rodata : { *(.rodata) } : ro
+}

@@ -1,0 +1,2 @@
+InheritParentConfig: true
+HeaderFilterRegex: 'subfolder/.*'

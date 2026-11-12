@@ -1,0 +1,236 @@
+## This is a test to test how SHT_RELR sections are dumped.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --relocations %t1 | \
+# RUN:   FileCheck --match-full-lines --check-prefix=LLVM1 %s
+
+# LLVM1:      Section (1) .relr.dyn {
+# LLVM1-NEXT:   0x10D60 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x10D68 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x10DA0 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20000 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20040 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20050 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20080 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20088 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20090 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20098 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20210 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202A8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202D8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202E8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202F8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20308 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20358 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20360 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20368 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20380 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20390 R_X86_64_RELATIVE -
+# LLVM1-NEXT: }
+
+# RUN: llvm-readelf --relocations %t1 | FileCheck --check-prefix=GNU1 --match-full-lines --strict-whitespace %s
+#      GNU1:Relocation section '.relr.dyn' at offset 0x40 contains 21 entries:
+# GNU1-NEXT:Index: Entry            Address           Symbolic Address
+# GNU1-NEXT:0000:  0000000000010d60 0000000000010d60
+# GNU1-NEXT:0001:  0000000000000103 0000000000010d68
+# GNU1-NEXT:                        0000000000010da0  base + 0x30
+# GNU1-NEXT:0002:  0000000000020000 0000000000020000  foo
+# GNU1-NEXT:0003:  00000000000f0501 0000000000020040  foo + 0x40
+# GNU1-NEXT:                        0000000000020050  foo + 0x50
+# GNU1-NEXT:                        0000000000020080  foo + 0x80
+# GNU1-NEXT:                        0000000000020088  foo + 0x88
+# GNU1-NEXT:                        0000000000020090  foo + 0x90
+# GNU1-NEXT:                        0000000000020098  foo + 0x98
+# GNU1-NEXT:0004:  000a700550400009 0000000000020210  bar + 0x10
+# GNU1-NEXT:                        00000000000202a8  bar + 0xa8
+# GNU1-NEXT:                        00000000000202d8  bar + 0xd8
+# GNU1-NEXT:                        00000000000202e8  bar + 0xe8
+# GNU1-NEXT:                        00000000000202f8  bar + 0xf8
+# GNU1-NEXT:                        0000000000020308  bar + 0x108
+# GNU1-NEXT:                        0000000000020358  bar + 0x158
+# GNU1-NEXT:                        0000000000020360  bar + 0x160
+# GNU1-NEXT:                        0000000000020368  bar + 0x168
+# GNU1-NEXT:                        0000000000020380  bar + 0x180
+# GNU1-NEXT:                        0000000000020390  bar + 0x190
+#  GNU1-NOT:{{.}}
+
+## The addresses are not symbolized in the absence of .symtab.
+# RUN: llvm-objcopy --strip-all %t1 %t1.stripped
+# RUN: llvm-readelf --relocations %t1.stripped | FileCheck --check-prefix=GNU1S --match-full-lines --strict-whitespace %s
+#      GNU1S:Relocation section '.relr.dyn' at offset 0x40 contains 21 entries:
+# GNU1S-NEXT:Index: Entry            Address           Symbolic Address
+# GNU1S-NEXT:0000:  0000000000010d60 0000000000010d60
+# GNU1S-NEXT:0001:  0000000000000103 0000000000010d68
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .relr.dyn
+    Type:  SHT_RELR
+    Flags: [ SHF_ALLOC ]
+    Entries: [ 0x0000000000010D60, 0x0000000000000103, 0x0000000000020000,
+               0x00000000000F0501, 0x000A700550400009 ]
+Symbols:
+  - Name:    bar
+    Value:   0x20200
+    Section: .relr.dyn
+  - Name:    foo
+    Value:   0x20000
+    Section: .relr.dyn
+  - Name:    base
+    Value:   0x10d70
+    Section: .relr.dyn
+  - Name:    ignored
+    Value:   0x20210
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --relocations %t2 | \
+# RUN:   FileCheck --match-full-lines --check-prefix=LLVM2 %s
+
+# LLVM2:      Section (1) .relr.dyn {
+# LLVM2-NEXT:   0x10D60 R_386_RELATIVE -
+# LLVM2-NEXT:   0x10D64 R_386_RELATIVE -
+# LLVM2-NEXT:   0x10D80 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20000 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20020 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20028 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20040 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20044 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20048 R_386_RELATIVE -
+# LLVM2-NEXT:   0x2004C R_386_RELATIVE -
+# LLVM2-NEXT:   0x20088 R_386_RELATIVE -
+# LLVM2-NEXT:   0x200D4 R_386_RELATIVE -
+# LLVM2-NEXT:   0x200EC R_386_RELATIVE -
+# LLVM2-NEXT:   0x200F4 R_386_RELATIVE -
+# LLVM2-NEXT: }
+
+# RUN: llvm-readelf --relocations %t2 | FileCheck --check-prefix=GNU2 --match-full-lines --strict-whitespace %s
+#      GNU2:Relocation section '.relr.dyn' at offset 0x34 contains 14 entries:
+# GNU2-NEXT:Index: Entry    Address   Symbolic Address
+# GNU2-NEXT:0000:  00010d60 00010d60  .relr.dyn
+# GNU2-NEXT:0001:  00000103 00010d64  .relr.dyn + 0x4
+# GNU2-NEXT:                00010d80  .relr.dyn + 0x20
+# GNU2-NEXT:0002:  00020000 00020000  .relr.dyn + 0xf2a0
+# GNU2-NEXT:0003:  000f0501 00020020  .relr.dyn + 0xf2c0
+# GNU2-NEXT:                00020028  .relr.dyn + 0xf2c8
+# GNU2-NEXT:                00020040  .relr.dyn + 0xf2e0
+# GNU2-NEXT:                00020044  .relr.dyn + 0xf2e4
+# GNU2-NEXT:                00020048  .relr.dyn + 0xf2e8
+# GNU2-NEXT:                0002004c  .relr.dyn + 0xf2ec
+# GNU2-NEXT:0004:  50400009 00020088  .relr.dyn + 0xf328
+# GNU2-NEXT:                000200d4  .relr.dyn + 0xf374
+# GNU2-NEXT:                000200ec  .relr.dyn + 0xf38c
+# GNU2-NEXT:                000200f4  .relr.dyn + 0xf394
+# GNU2-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0x00010D60, 0x00000103, 0x00020000,
+               0x000F0501, 0x50400009 ]
+    EntSize: [[ENTSIZE=<none>]]
+    ShType:  [[SHTYPE=<none>]]
+    Link:    [[LINK=<none>]]
+Symbols:
+  - Name:    .relr.dyn
+    Type:    STT_SECTION
+    Value:   0x10D60
+    Section: .relr.dyn
+
+## Check we report a warning when we are unable to dump relocations
+## for a SHT_RELR/SHT_ANDROID_RELR/SHT_AARCH64_AUTH_RELR section.
+
+## Case A: check the case when relocations can't be read from an SHT_RELR section.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=1 %s -o %t2.broken
+# RUN: llvm-readobj --relocations %t2.broken 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-LLVM %s -DSECNAME=SHT_RELR
+# RUN: llvm-readelf --relocations %t2.broken 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-GNU %s -DSECNAME=SHT_RELR
+
+# BROKEN-LLVM:      Relocations [
+# BROKEN-LLVM-NEXT:   Section (1) .relr.dyn {
+# BROKEN-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
+# BROKEN-LLVM-NEXT:   }
+# BROKEN-LLVM-NEXT: ]
+
+# BROKEN-GNU:      warning: '[[FILE]]': unable to get the number of relocations in [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
+# BROKEN-GNU:      Relocation section '.relr.dyn' at offset 0x34 contains <?> entries:
+# BROKEN-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
+
+## Case B: check the case when relocations can't be read from an SHT_ANDROID_RELR section.
+##         SHT_ANDROID_RELR = 0x6fffff00.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=1 -DSHTYPE=0x6fffff00 %s -o %t2.broken.android
+# RUN: llvm-readobj --relocations %t2.broken.android 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.android --check-prefix=BROKEN-LLVM %s -DSECNAME=SHT_ANDROID_RELR
+# RUN: llvm-readelf --relocations %t2.broken.android 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.android --check-prefix=BROKEN-GNU %s -DSECNAME=SHT_ANDROID_RELR
+
+## Case C: check the case when we have an SHT_AARCH64_AUTH_RELR section in non-AArch64 ELF.
+##         SHT_AARCH64_AUTH_RELR = 0x70000004.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=1 -DSHTYPE=0x70000004 %s -o %t2.broken.aarch64auth
+# RUN: llvm-readobj --relocations %t2.broken.aarch64auth 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.aarch64auth --check-prefix=WRONGARCH-LLVM-AARCH64-AUTH %s -DSECNAME=SHT_AARCH64_AUTH_RELR
+# RUN: llvm-readelf --relocations %t2.broken.aarch64auth 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.aarch64auth --check-prefix=WRONGARCH-GNU-AARCH64-AUTH %s -DSECNAME=SHT_AARCH64_AUTH_RELR
+
+# WRONGARCH-LLVM-AARCH64-AUTH:      Relocations [
+# WRONGARCH-LLVM-AARCH64-AUTH-NEXT: ]
+
+# WRONGARCH-GNU-AARCH64-AUTH-NOT:  Relocation section
+
+## Check the behavior when the sh_link field of the SHT_RELR/SHT_ANDROID_RELR/SHT_AARCH64_AUTH_RELR section
+## is set to an arbitrary value. Normally, it is set to 0, because such sections contains
+## only relative relocations and do not have an associated symbol table, like other
+## relocation sections.
+
+## Check we do not report warnings when the sh_link field is set to an arbitrary value
+## and the --relocations option is requested.
+# RUN: yaml2obj --docnum=2 -DLINK=0xff %s -o %t2.has.link
+# RUN: llvm-readobj --relocations %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=LLVM2 %s --implicit-check-not=warning:
+# RUN: llvm-readelf --relocations %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=GNU2 %s --implicit-check-not=warning:
+
+## .symtab is invalid. Check we report a warning and print entries without symbolization.
+# RUN: yaml2obj --docnum=3 -DENTSIZE=1 %s -o %t3.err1
+# RUN: llvm-readelf -r %t3.err1 2>&1 | FileCheck -DFILE=%t3.err1 --check-prefixes=GNU3,GNU3-ERR1 --match-full-lines %s
+# RUN: yaml2obj --docnum=3 -DLINK=0xff %s -o %t3.err2
+# RUN: llvm-readelf -r %t3.err2 2>&1 | FileCheck -DFILE=%t3.err2 --check-prefixes=GNU3,GNU3-ERR2 --match-full-lines %s
+
+#      GNU3:Index: Entry            Address           Symbolic Address
+# GNU3-ERR1-NEXT:{{.*}}warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 2] has invalid sh_entsize: expected 24, but got 1
+# GNU3-ERR2-NEXT:{{.*}}warning: '[[FILE]]': unable to get the string table for the SHT_SYMTAB section: invalid section index: 255
+# GNU3-NEXT:0000:  0000000000010d60 0000000000010d60
+# GNU3-NEXT:0001:  0000000000000103 0000000000010d68
+# GNU3-NEXT:                        0000000000010da0
+#  GNU3-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .relr.dyn
+    Type:  SHT_RELR
+    Flags: [ SHF_ALLOC ]
+    Entries: [ 0x0000000000010D60, 0x0000000000000103 ]
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Link:    [[LINK=.strtab]]
+    EntSize: [[ENTSIZE=0x18]]
+Symbols:
+  - Name:  bar
+    Value: 0x10D60

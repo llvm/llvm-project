@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s %}
+
+extern "C" {
+  int __objc_personality_v0();
+}
+
+void *abuse_personality_func() {
+  return (void *)&__objc_personality_v0;
+}
+
+void foo() {
+  try {
+    throw 0;
+  } catch (int e) {
+    return;
+  }
+}
+
+// CHECK: define{{.*}} void @_Z3foov() {{#[0-9]+}} personality ptr @__objc_personality_v0

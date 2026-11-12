@@ -1,0 +1,10 @@
+RUN: rm -rf %t-dir
+RUN: mkdir -p %t-dir/header/Inputs
+RUN: cp %S/Inputs/debug-info-slash.cpp %t-dir/
+RUN: cp %S/Inputs/debug-info-slash.h %t-dir/header/Inputs
+RUN: cd %t-dir
+RUN: %clang -target x86_64-pc-win32 -emit-llvm -S -g  %t-dir/debug-info-slash.cpp -Iheader -o - | FileCheck --check-prefix=WIN %s
+RUN: %clang -target x86_64-linux-gnu -emit-llvm -S -g  %t-dir/debug-info-slash.cpp -Iheader -o - | FileCheck --check-prefix=LINUX %s
+
+WIN:   lambda at header\\Inputs\\debug-info-slash.h
+LINUX: lambda at header/Inputs/debug-info-slash.h

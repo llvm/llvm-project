@@ -1,0 +1,15 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+attributes(global) subroutine sharedmem()
+  real, shared :: s(*)
+  integer :: t
+  t = threadIdx%x
+  s(t) = t
+end subroutine
+
+program test
+  call sharedmem<<<1, 1, 1024, 0>>>()
+end
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: cuf.kernel_launch @_QPsharedmem<<<%c1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c1{{.*}}, %c1024{{.*}}, %{{.*}} : !fir.ref<i64>>>>()

@@ -1,0 +1,10 @@
+REQUIRES: x86, aarch64
+RUN: rm -rf %t; mkdir -p %t
+RUN: echo "" | llvm-mc -filetype=obj -triple=x86_64-apple-macosx -o %t/x86_64-test.o
+RUN: echo "" | llvm-mc -filetype=obj -triple=arm64-apple-iossimulator -o %t/arm64-test.o
+RUN: not %lld -dylib -arch x86_64 %S/Inputs/libincompatible.tbd %t/x86_64-test.o \
+RUN:   -o /dev/null 2>&1 | FileCheck %s --check-prefix=ARCH
+RUN: not %no-arg-lld -dylib -arch arm64 -platform_version ios-simulator 14.0 15.0 %t/arm64-test.o \
+RUN:   %S/Inputs/libincompatible.tbd -o /dev/null 2>&1 | FileCheck %s --check-prefix=PLATFORM
+ARCH:     error: {{.*}}libincompatible.tbd(/usr/lib/libincompatible.dylib) is incompatible with x86_64 (macOS11.0)
+PLATFORM: error: {{.*}}libincompatible.tbd(/usr/lib/libincompatible.dylib) is incompatible with arm64 (iOS Simulator14.0)

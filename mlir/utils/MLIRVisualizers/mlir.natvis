@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="mlir::detail::StorageUserBase&lt;*&gt;">
+    <!--handles mlir::Type-->
+    <DisplayString>{"$T3"}</DisplayString>
+    <Expand>
+      <ExpandedItem>($T3*)impl</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="mlir::Value">
+    <DisplayString>{ownerAndKind}</DisplayString>
+    <Expand>
+      <Item Name="OpResult" Condition=
+            "((ownerAndKind.Value &gt;&gt; ImplType::InfoTy::IntShift) &amp; ImplType::InfoTy::IntMask) &lt; mlir::Value::Kind::TrailingOpResult">
+        (Operation*)(ImplType::InfoTy::PointerBitMask &amp; ownerAndKind.Value)
+      </Item>
+      <Item Name="TrailingOpResult" Condition=
+            "((ownerAndKind.Value &gt;&gt; ImplType::InfoTy::IntShift) &amp; ImplType::InfoTy::IntMask) == mlir::Value::Kind::TrailingOpResult">
+        (detail::TrailingOpResult*)(ImplType::InfoTy::PointerBitMask &amp; ownerAndKind.Value)
+      </Item>
+      <Item Name="BlockArgument" Condition=
+            "((ownerAndKind.Value &gt;&gt; ImplType::InfoTy::IntShift) &amp; ImplType::InfoTy::IntMask) == mlir::Value::Kind::BlockArgument">
+        (detail::BlockArgumentImpl*)(ImplType::InfoTy::PointerBitMask &amp; ownerAndKind.Value)
+      </Item>
+      <Item Name="ownerAndKind">ownerAndKind</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="mlir::Location">
+    <Expand>
+      <ExpandedItem >(LocationAttr)impl</ExpandedItem>
+    </Expand>
+  </Type>
+</AutoVisualizer>
+

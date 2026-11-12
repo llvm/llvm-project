@@ -1,0 +1,482 @@
+
+
+//===- Interfaces.cpp - C Interface for MLIR Interfaces -------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir-c/Interfaces.h"
+
+#include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Interfaces.h"
+#include "mlir/CAPI/Support.h"
+#include "mlir/CAPI/Wrap.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/ScopeExit.h"
+#include <optional>
+
+using namespace mlir;
+
+namespace {
+
+std::optional<RegisteredOperationName>
+getRegisteredOperationName(MlirContext context, MlirStringRef opName) {
+  StringRef name(opName.data, opName.length);
+  std::optional<RegisteredOperationName> info =
+      RegisteredOperationName::lookup(name, unwrap(context));
+  return info;
+}
+
+std::optional<Location> maybeGetLocation(MlirLocation location) {
+  std::optional<Location> maybeLocation;
+  if (!mlirLocationIsNull(location))
+    maybeLocation = unwrap(location);
+  return maybeLocation;
+}
+
+SmallVector<Value> unwrapOperands(intptr_t nOperands, MlirValue *operands) {
+  SmallVector<Value> unwrappedOperands;
+  (void)unwrapList(nOperands, operands, unwrappedOperands);
+  return unwrappedOperands;
+}
+
+DictionaryAttr unwrapAttributes(MlirAttribute attributes) {
+  DictionaryAttr attributeDict;
+  if (!mlirAttributeIsNull(attributes))
+    attributeDict = llvm::cast<DictionaryAttr>(unwrap(attributes));
+  return attributeDict;
+}
+
+SmallVector<std::unique_ptr<Region>> unwrapRegions(intptr_t nRegions,
+                                                   MlirRegion *regions) {
+  // Create a vector of unique pointers to regions and make sure they are not
+  // deleted when exiting the scope. This is a hack caused by C++ API expecting
+  // an list of unique pointers to regions (without ownership transfer
+  // semantics) and C API making ownership transfer explicit.
+  SmallVector<std::unique_ptr<Region>> unwrappedRegions;
+  unwrappedRegions.reserve(nRegions);
+  for (intptr_t i = 0; i < nRegions; ++i)
+    unwrappedRegions.emplace_back(unwrap(*(regions + i)));
+  llvm::scope_exit cleaner([&]() {
+    for (auto &region : unwrappedRegions)
+      region.release();
+  });
+  return unwrappedRegions;
+}
+
+} // namespace
+
+bool mlirOperationImplementsInterface(MlirOperation operation,
+                                      MlirTypeID interfaceTypeID) {
+  std::optional<RegisteredOperationName> info =
+      unwrap(operation)->getRegisteredInfo();
+  return info && info->hasInterface(unwrap(interfaceTypeID));
+}
+
+bool mlirOperationImplementsInterfaceStatic(MlirStringRef operationName,
+                                            MlirContext context,
+                                            MlirTypeID interfaceTypeID) {
+  std::optional<RegisteredOperationName> info = RegisteredOperationName::lookup(
+      StringRef(operationName.data, operationName.length), unwrap(context));
+  return info && info->hasInterface(unwrap(interfaceTypeID));
+}
+
+MlirTypeID mlirInferTypeOpInterfaceTypeID() {
+  return wrap(InferTypeOpInterface::getInterfaceID());
+}
+
+MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
+    MlirStringRef opName, MlirContext context, MlirLocation location,
+    intptr_t nOperands, MlirValue *operands, MlirAttribute attributes,
+    void *properties, intptr_t nRegions, MlirRegion *regions,
+    MlirTypesCallback callback, void *userData) {
+  StringRef name(opName.data, opName.length);
+  std::optional<RegisteredOperationName> info =
+      getRegisteredOperationName(context, opName);
+  if (!info)
+    return mlirLogicalResultFailure();
+
+  std::optional<Location> maybeLocation = maybeGetLocation(location);
+  SmallVector<Value> unwrappedOperands = unwrapOperands(nOperands, operands);
+  DictionaryAttr attributeDict = unwrapAttributes(attributes);
+  SmallVector<std::unique_ptr<Region>> unwrappedRegions =
+      unwrapRegions(nRegions, regions);
+
+  SmallVector<Type> inferredTypes;
+  // The C API passes an opaque void*; we trust the caller to pass the correct
+  // properties type for this operation.
+  // TODO: Create a C API that's more type-safe.
+  PropertyRef propertyRef =
+      properties ? PropertyRef(info->getOpPropertiesTypeID(), properties)
+                 : PropertyRef();
+  if (failed(info->getInterface<InferTypeOpInterface>()->inferReturnTypes(
+          unwrap(context), maybeLocation, unwrappedOperands, attributeDict,
+          propertyRef, unwrappedRegions, inferredTypes)))
+    return mlirLogicalResultFailure();
+
+  SmallVector<MlirType> wrappedInferredTypes;
+  wrappedInferredTypes.reserve(inferredTypes.size());
+  for (Type t : inferredTypes)
+    wrappedInferredTypes.push_back(wrap(t));
+  callback(wrappedInferredTypes.size(), wrappedInferredTypes.data(), userData);
+  return mlirLogicalResultSuccess();
+}
+
+MlirTypeID mlirInferShapedTypeOpInterfaceTypeID() {
+  return wrap(InferShapedTypeOpInterface::getInterfaceID());
+}
+
+MlirLogicalResult mlirInferShapedTypeOpInterfaceInferReturnTypes(
+    MlirStringRef opName, MlirContext context, MlirLocation location,
+    intptr_t nOperands, MlirValue *operands, MlirAttribute attributes,
+    void *properties, intptr_t nRegions, MlirRegion *regions,
+    MlirShapedTypeComponentsCallback callback, void *userData) {
+  std::optional<RegisteredOperationName> info =
+      getRegisteredOperationName(context, opName);
+  if (!info)
+    return mlirLogicalResultFailure();
+
+  std::optional<Location> maybeLocation = maybeGetLocation(location);
+  SmallVector<Value> unwrappedOperands = unwrapOperands(nOperands, operands);
+  DictionaryAttr attributeDict = unwrapAttributes(attributes);
+  SmallVector<std::unique_ptr<Region>> unwrappedRegions =
+      unwrapRegions(nRegions, regions);
+
+  SmallVector<ShapedTypeComponents> inferredTypeComponents;
+  // The C API passes an opaque void*; we trust the caller to pass the correct
+  // properties type for this operation.
+  PropertyRef propertyRef =
+      properties ? PropertyRef(info->getOpPropertiesTypeID(), properties)
+                 : PropertyRef();
+  if (failed(info->getInterface<InferShapedTypeOpInterface>()
+                 ->inferReturnTypeComponents(
+                     unwrap(context), maybeLocation,
+                     mlir::ValueRange(llvm::ArrayRef(unwrappedOperands)),
+                     attributeDict, propertyRef, unwrappedRegions,
+                     inferredTypeComponents)))
+    return mlirLogicalResultFailure();
+
+  bool hasRank;
+  intptr_t rank;
+  const int64_t *shapeData;
+  for (const ShapedTypeComponents &t : inferredTypeComponents) {
+    if (t.hasRank()) {
+      hasRank = true;
+      rank = t.getDims().size();
+      shapeData = t.getDims().data();
+    } else {
+      hasRank = false;
+      rank = 0;
+      shapeData = nullptr;
+    }
+    callback(hasRank, rank, shapeData, wrap(t.getElementType()),
+             wrap(t.getAttribute()), userData);
+  }
+  return mlirLogicalResultSuccess();
+}
+
+//===---------------------------------------------------------------------===//
+// ConditionallySpeculatable
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirConditionallySpeculatableOpInterfaceTypeID() {
+  return wrap(ConditionallySpeculatable::getInterfaceID());
+}
+
+/// Fallback model for the ConditionallySpeculatable interface that uses C API
+/// callbacks.
+class ConditionallySpeculatableOpInterfaceFallbackModel
+    : public mlir::ConditionallySpeculatable::FallbackModel<
+          ConditionallySpeculatableOpInterfaceFallbackModel> {
+public:
+  /// Sets the callbacks that this FallbackModel will use.
+  /// NB: the callbacks can only be set through this method as the
+  /// RegisteredOperationName::attachInterface mechanism default-constructs
+  /// the FallbackModel without being able to provide arguments.
+  void
+  setCallbacks(MlirConditionallySpeculatableOpInterfaceCallbacks callbacks) {
+    this->callbacks = callbacks;
+  }
+
+  ~ConditionallySpeculatableOpInterfaceFallbackModel() {
+    if (callbacks.destruct)
+      callbacks.destruct(callbacks.userData);
+  }
+
+  static TypeID getInterfaceID() {
+    return ConditionallySpeculatable::getInterfaceID();
+  }
+
+  static bool classof(const mlir::ConditionallySpeculatable::Concept *op) {
+    // Enable casting back to the FallbackModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // without being able to pass in the callbacks and returns just the Concept.
+    return true;
+  }
+
+  Speculation::Speculatability getSpeculatability(Operation *op) const {
+    assert(callbacks.getSpeculatability &&
+           "getSpeculatability callback not set");
+
+    switch (callbacks.getSpeculatability(wrap(op), callbacks.userData)) {
+    case MlirSpeculatabilityNotSpeculatable:
+      return Speculation::NotSpeculatable;
+    case MlirSpeculatabilitySpeculatable:
+      return Speculation::Speculatable;
+    case MlirSpeculatabilityRecursivelySpeculatable:
+      return Speculation::RecursivelySpeculatable;
+    }
+    llvm_unreachable("unknown speculatability");
+  }
+
+private:
+  MlirConditionallySpeculatableOpInterfaceCallbacks callbacks;
+};
+
+/// Attach a ConditionallySpeculatable FallbackModel to the given named op.
+/// The FallbackModel uses the provided callbacks to implement the interface.
+void mlirConditionallySpeculatableOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirConditionallySpeculatableOpInterfaceCallbacks callbacks) {
+  // Look up the operation definition in the context.
+  std::optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
+
+  assert(opInfo.has_value() && "operation not found in context");
+
+  // NB: the following default-constructs the FallbackModel _without_ being able
+  // to provide arguments.
+  opInfo->attachInterface<ConditionallySpeculatableOpInterfaceFallbackModel>();
+  // Cast to get the underlying FallbackModel and set the callbacks.
+  auto *model = cast<ConditionallySpeculatableOpInterfaceFallbackModel>(
+      opInfo
+          ->getInterface<ConditionallySpeculatableOpInterfaceFallbackModel>());
+  assert(model &&
+         "Failed to get ConditionallySpeculatableOpInterfaceFallbackModel");
+  model->setCallbacks(callbacks);
+}
+
+MlirSpeculatability mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
+    MlirOperation operation) {
+  auto iface = dyn_cast<ConditionallySpeculatable>(unwrap(operation));
+  assert(iface && "operation does not implement ConditionallySpeculatable");
+
+  switch (iface.getSpeculatability()) {
+  case Speculation::NotSpeculatable:
+    return MlirSpeculatabilityNotSpeculatable;
+  case Speculation::Speculatable:
+    return MlirSpeculatabilitySpeculatable;
+  case Speculation::RecursivelySpeculatable:
+    return MlirSpeculatabilityRecursivelySpeculatable;
+  }
+  llvm_unreachable("unknown speculatability");
+}
+
+//===---------------------------------------------------------------------===//
+// MemoryEffectOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirMemoryEffect mlirMemoryEffectsAllocateGet() {
+  return wrap(
+      static_cast<MemoryEffects::Effect *>(MemoryEffects::Allocate::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsFreeGet() {
+  return wrap(static_cast<MemoryEffects::Effect *>(MemoryEffects::Free::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsReadGet() {
+  return wrap(static_cast<MemoryEffects::Effect *>(MemoryEffects::Read::get()));
+}
+
+MlirMemoryEffect mlirMemoryEffectsWriteGet() {
+  return wrap(
+      static_cast<MemoryEffects::Effect *>(MemoryEffects::Write::get()));
+}
+
+MlirTypeID mlirMemoryEffectGetEffectID(MlirMemoryEffect effect) {
+  return wrap(unwrap(effect)->getEffectID());
+}
+
+MlirSideEffectResource mlirSideEffectsDefaultResourceGet() {
+  return wrap(static_cast<SideEffects::Resource *>(
+      SideEffects::DefaultResource::get()));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreate(
+    MlirMemoryEffect effect, MlirAttribute parameters, int stage,
+    bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), unwrap(parameters), stage, effectOnFullRegion,
+      unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForOpOperand(
+    MlirMemoryEffect effect, MlirOpOperand opOperand, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), unwrap(opOperand), unwrap(parameters), stage,
+      effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForOpResult(
+    MlirMemoryEffect effect, MlirValue result, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<OpResult>(unwrap(result)), unwrap(parameters), stage,
+      effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForBlockArgument(
+    MlirMemoryEffect effect, MlirValue blockArgument, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<BlockArgument>(unwrap(blockArgument)),
+      unwrap(parameters), stage, effectOnFullRegion, unwrap(resource)));
+}
+
+MlirMemoryEffectInstance mlirMemoryEffectInstanceCreateForSymbol(
+    MlirMemoryEffect effect, MlirAttribute symbol, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource) {
+  return wrap(new MemoryEffects::EffectInstance(
+      unwrap(effect), cast<SymbolRefAttr>(unwrap(symbol)), unwrap(parameters),
+      stage, effectOnFullRegion, unwrap(resource)));
+}
+
+void mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance) {
+  delete unwrap(instance);
+}
+
+MlirMemoryEffectInstance
+mlirMemoryEffectInstanceClone(MlirMemoryEffectInstance instance) {
+  return wrap(new MemoryEffects::EffectInstance(*unwrap(instance)));
+}
+
+MlirMemoryEffect
+mlirMemoryEffectInstanceGetEffect(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getEffect());
+}
+
+MlirSideEffectResource
+mlirMemoryEffectInstanceGetResource(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getResource());
+}
+
+int mlirMemoryEffectInstanceGetStage(MlirMemoryEffectInstance instance) {
+  return unwrap(instance)->getStage();
+}
+
+bool mlirMemoryEffectInstanceGetEffectOnFullRegion(
+    MlirMemoryEffectInstance instance) {
+  return unwrap(instance)->getEffectOnFullRegion();
+}
+
+MlirAttribute
+mlirMemoryEffectInstanceGetParameters(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getParameters());
+}
+
+MlirValue mlirMemoryEffectInstanceGetValue(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getValue());
+}
+
+MlirAttribute
+mlirMemoryEffectInstanceGetSymbolRef(MlirMemoryEffectInstance instance) {
+  return wrap(unwrap(instance)->getSymbolRef());
+}
+
+MlirTypeID mlirMemoryEffectsOpInterfaceTypeID() {
+  return wrap(MemoryEffectOpInterface::getInterfaceID());
+}
+
+/// Fallback model for the MemoryEffectsOpInterface that uses C API callbacks.
+class MemoryEffectOpInterfaceFallbackModel
+    : public mlir::MemoryEffectOpInterface::FallbackModel<
+          MemoryEffectOpInterfaceFallbackModel> {
+public:
+  /// Sets the callbacks that this FallbackModel will use.
+  /// NB: the callbacks can only be set through this method as the
+  /// RegisteredOperationName::attachInterface mechanism default-constructs
+  /// the FallbackModel without being able to provide arguments.
+  void setCallbacks(MlirMemoryEffectsOpInterfaceCallbacks callbacks) {
+    this->callbacks = callbacks;
+  }
+
+  ~MemoryEffectOpInterfaceFallbackModel() {
+    if (callbacks.destruct)
+      callbacks.destruct(callbacks.userData);
+  }
+
+  static TypeID getInterfaceID() {
+    return MemoryEffectOpInterface::getInterfaceID();
+  }
+
+  static bool classof(const mlir::MemoryEffectOpInterface::Concept *op) {
+    // Enable casting back to the FallbackModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // without being able to pass in the callbacks and returns just the Concept.
+    return true;
+  }
+
+  void
+  getEffects(Operation *op,
+             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) const {
+    assert(callbacks.getEffects && "getEffects callback not set");
+    callbacks.getEffects(
+        wrap(op),
+        [](intptr_t numEffects, MlirMemoryEffectInstance *effectInstances,
+           void *userData) {
+          auto *unwrappedEffects =
+              static_cast<SmallVectorImpl<MemoryEffects::EffectInstance> *>(
+                  userData);
+          unwrappedEffects->reserve(unwrappedEffects->size() + numEffects);
+          for (intptr_t i = 0; i < numEffects; ++i)
+            unwrappedEffects->push_back(*unwrap(effectInstances[i]));
+        },
+        &effects, callbacks.userData);
+  }
+
+private:
+  MlirMemoryEffectsOpInterfaceCallbacks callbacks;
+};
+
+/// Attach a MemoryEffectsOpInterface FallbackModel to the given named op.
+/// The FallbackModel uses the provided callbacks to implement the interface.
+void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirMemoryEffectsOpInterfaceCallbacks callbacks) {
+  // Look up the operation definition in the context
+  std::optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
+
+  assert(opInfo.has_value() && "operation not found in context");
+
+  // NB: the following default-constructs the FallbackModel _without_ being able
+  // to provide arguments.
+  opInfo->attachInterface<MemoryEffectOpInterfaceFallbackModel>();
+  // Cast to get the underlying FallbackModel and set the callbacks.
+  auto *model = cast<MemoryEffectOpInterfaceFallbackModel>(
+      opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
+  assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
+  model->setCallbacks(callbacks);
+}
+
+void mlirMemoryEffectsOpInterfaceGetEffects(
+    MlirOperation operation, MlirMemoryEffectInstancesCallback callback,
+    void *userData) {
+  auto iface = dyn_cast<MemoryEffectOpInterface>(unwrap(operation));
+  assert(iface && "operation does not implement MemoryEffectOpInterface");
+
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+  SmallVector<MlirMemoryEffectInstance> wrappedEffects;
+  wrappedEffects.reserve(effects.size());
+  for (MemoryEffects::EffectInstance &effect : effects)
+    wrappedEffects.push_back(wrap(&effect));
+  callback(wrappedEffects.size(), wrappedEffects.data(), userData);
+}

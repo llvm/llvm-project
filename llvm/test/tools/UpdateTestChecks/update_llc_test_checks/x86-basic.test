@@ -1,0 +1,5 @@
+# REQUIRES: x86-registered-target
+## Check that functions names with '$' are processed correctly
+
+# RUN: cp -f %S/Inputs/x86-basic.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/x86-basic.ll.expected %t.ll

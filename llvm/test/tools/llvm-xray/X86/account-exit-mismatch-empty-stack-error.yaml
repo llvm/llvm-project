@@ -1,0 +1,29 @@
+#RUN: not llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -d 2>&1 | FileCheck %s
+#RUN: llvm-xray account %s -k -o - -m %S/Inputs/simple-instrmap.yaml -d 2>&1 | FileCheck %s --check-prefix=KEEPGOING
+
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 0
+records:
+# We simulate the case when, for whatever reason, we see that a thread's stack
+# is empty when we see an EXIT record. This can happen for example when an
+# instrumented function does a 'fork()', where the child process will not see
+# the entry record but see the exit record. This is completely valid data,
+# which should be handled with grace (i.e. we treat it as an error, but since
+# the llvm-xray account tool has an option to keep going, gives the user a
+# chance to retry).
+  - { type: 0, func-id: 1, cpu: 1, thread: 1, kind: function-exit, tsc: 10000}
+...
+
+#CHECK:      Error processing record: {{.*}}
+#CHECK-NEXT: Thread ID: 1
+#CHECK-NEXT:   (empty stack)
+#CHECK-NEXT: llvm-xray: Failed accounting function calls in file '{{.*}}'.
+
+#KEEPGOING:      Error processing record: {{.*}}
+#KEEPGOING-NEXT: Thread ID: 1
+#KEEPGOING-NEXT:   (empty stack)

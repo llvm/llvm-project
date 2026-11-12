@@ -1,0 +1,171 @@
+# RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o
+# RUN: llvm-dwarfdump -v %t.o | FileCheck %s
+
+# CHECK:      .debug_info
+# CHECK:       DW_AT_name{{.*}}"stub"
+# CHECK:       DW_AT_location [DW_FORM_sec_offset]   (0x0000000c
+# CHECK-NEXT:    [0x0000000000000010, 0x0000000000000020): DW_OP_breg5 RDI+0
+# CHECK-NEXT:    [0x0000000000000530, 0x0000000000000540): DW_OP_breg6 RBP-8, DW_OP_deref
+# CHECK-NEXT:    [0x0000000000000700, 0x0000000000000710): DW_OP_breg5 RDI+0
+
+# CHECK:      .debug_loclists contents:
+# CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# CHECK-NEXT: 0x0000000c:
+# CHECK-NEXT:   DW_LLE_offset_pair  (0x0000000000000000, 0x0000000000000010): DW_OP_breg5 RDI+0
+# CHECK-NEXT:   DW_LLE_base_address (0x0000000000000500)
+# CHECK-NEXT:   DW_LLE_offset_pair  (0x0000000000000030, 0x0000000000000040)
+# CHECK-NEXT:                   => [0x0000000000000530, 0x0000000000000540): DW_OP_breg6 RBP-8, DW_OP_deref
+# CHECK-NEXT:   DW_LLE_start_length (0x0000000000000700, 0x0000000000000010)
+# CHECK-NEXT:                   => [0x0000000000000700, 0x0000000000000710): DW_OP_breg5 RDI+0
+# CHECK-NEXT:   DW_LLE_end_of_list  ()
+
+.section  .debug_str,"MS",@progbits,1
+  .asciz  "stub"
+
+.section  .debug_str_offsets,"",@progbits
+  .long  68
+  .short  5
+  .short  0
+.Lstr_offsets_base0:
+  .zero 64
+
+.section  .debug_loclists,"",@progbits
+  .long  .Ldebug_loclist_table_end0-.Ldebug_loclist_table_start0
+.Ldebug_loclist_table_start0:
+ .short 5                        # Version.
+ .byte 8                         # Address size.
+ .byte 0                         # Segmen selector size.
+ .long 0                         # Offset entry count.
+.Lloclists_table_base0:
+.Ldebug_loc0:
+  .byte  4                       # DW_LLE_offset_pair
+  .uleb128 0x0                   #   starting offset
+  .uleb128 0x10                  #   ending offset
+  .byte  2                       # Loc expr size
+  .byte  117                     # DW_OP_breg5
+  .byte  0                       # 0
+  
+  .byte  6                       # DW_LLE_base_address
+  .quad  0x500                   # Some address
+  
+  .byte  4                       # DW_LLE_offset_pair
+  .uleb128 0x30                  #   starting offset
+  .uleb128 0x40                  #   ending offset
+  .byte  3                       # Loc expr size
+  .byte  118                     # DW_OP_breg6
+  .byte  120                     # -8
+  .byte  6                       # DW_OP_deref
+
+  .byte  8                       # DW_LLE_start_length
+  .quad  0x700                   # Some address
+  .uleb128 0x10                  #   length
+  .byte  2                       # Loc expr size
+  .byte  117                     # DW_OP_breg5
+  .byte  0                       # 0
+  
+  .byte  0                       # DW_LLE_end_of_list
+
+.Ldebug_loclist_table_end0:
+
+.section  .debug_abbrev,"",@progbits
+  .byte  1                       # Abbreviation Code
+  .byte  17                      # DW_TAG_compile_unit
+  .byte  1                       # DW_CHILDREN_yes
+  .byte  37                      # DW_AT_producer
+  .byte  37                      # DW_FORM_strx1
+  .byte  19                      # DW_AT_language
+  .byte  5                       # DW_FORM_data2
+  .byte  3                       # DW_AT_name
+  .byte  37                      # DW_FORM_strx1
+  .byte  114                     # DW_AT_str_offsets_base
+  .byte  23                      # DW_FORM_sec_offset
+  .byte  16                      # DW_AT_stmt_list
+  .byte  23                      # DW_FORM_sec_offset
+  .byte  27                      # DW_AT_comp_dir
+  .byte  37                      # DW_FORM_strx1
+  .byte  17                      # DW_AT_low_pc
+  .byte  1                       # DW_FORM_addr
+  .byte  18                      # DW_AT_high_pc
+  .byte  6                       # DW_FORM_data4
+  .ascii  "\214\001"             # DW_AT_loclists_base
+  .byte  23                      # DW_FORM_sec_offset
+  .byte  0                       # EOM(1)
+  .byte  0                       # EOM(2)
+  .byte  2                       # Abbreviation Code
+  .byte  46                      # DW_TAG_subprogram
+  .byte  1                       # DW_CHILDREN_yes
+  .byte  17                      # DW_AT_low_pc
+  .byte  1                       # DW_FORM_addr
+  .byte  18                      # DW_AT_high_pc
+  .byte  6                       # DW_FORM_data4
+  .byte  64                      # DW_AT_frame_base
+  .byte  24                      # DW_FORM_exprloc
+  .byte  110                     # DW_AT_linkage_name
+  .byte  37                      # DW_FORM_strx1
+  .byte  3                       # DW_AT_name
+  .byte  37                      # DW_FORM_strx1
+  .byte  58                      # DW_AT_decl_file
+  .byte  11                      # DW_FORM_data1
+  .byte  59                      # DW_AT_decl_line
+  .byte  11                      # DW_FORM_data1
+  .byte  63                      # DW_AT_external
+  .byte  25                      # DW_FORM_flag_present
+  .byte  0                       # EOM(1)
+  .byte  0                       # EOM(2)
+  .byte  3                       # Abbreviation Code
+  .byte  52                      # DW_TAG_variable
+  .byte  0                       # DW_CHILDREN_no
+  .byte  2                       # DW_AT_location
+  .byte  23                      # DW_FORM_sec_offset
+  .byte  3                       # DW_AT_name
+  .byte  37                      # DW_FORM_strx1
+  .byte  58                      # DW_AT_decl_file
+  .byte  11                      # DW_FORM_data1
+  .byte  59                      # DW_AT_decl_line
+  .byte  11                      # DW_FORM_data1
+  .byte  73                      # DW_AT_type
+  .byte  19                      # DW_FORM_ref4
+  .byte  0                       # EOM(1)
+  .byte  0                       # EOM(2)
+  .byte  0                       # EOM(3)
+
+.section  .debug_info,"",@progbits
+.Lcu_begin0:
+  .long  70                      # Length of Unit
+  .short  5                      # DWARF version number
+  .byte  1                       # DWARF Unit Type
+  .byte  8                       # Address Size (in bytes)
+  .long  .debug_abbrev           # Offset Into Abbrev. Section
+  .byte  1                       # Abbrev [1] 0xc:0xef DW_TAG_compile_unit
+  .byte  0                       # DW_AT_producer
+  .short  4                      # DW_AT_language
+  .byte  1                       # DW_AT_name
+  .long  .Lstr_offsets_base0     # DW_AT_str_offsets_base
+  .long  .Lline_table_start0     # DW_AT_stmt_list
+  .byte  2                       # DW_AT_comp_dir
+  .quad  0x10                    # DW_AT_low_pc
+  .long  0                       # DW_AT_high_pc
+  .long  .Lloclists_table_base0  # DW_AT_loclists_base
+  .byte  2                       # Abbrev [2] 0x2a:0x20 DW_TAG_subprogram
+  .quad  0                       # DW_AT_low_pc
+  .long  0                       # DW_AT_high_pc
+  .byte  1                       # DW_AT_frame_base
+  .byte  86
+  .byte  11                      # DW_AT_linkage_name
+  .byte  12                      # DW_AT_name
+  .byte  1                       # DW_AT_decl_file
+  .byte  6                       # DW_AT_decl_line
+                                 # DW_AT_external
+  .byte 3                        # Abbrev [3] 0x40:0xb DW_TAG_variable
+  .long .Ldebug_loc0             # DW_AT_location
+  .byte 7                        # DW_AT_name
+  .byte 1                        # DW_AT_decl_file
+  .byte 6                        # DW_AT_decl_line
+  .long 76                       # DW_AT_type
+  .byte 0                        # End Of Children Mark
+  .byte 0                        # End Of Children Mark
+  .byte  0                       # End Of Children Mark
+
+.section .debug_line,"",@progbits
+.Lline_table_start0:
+

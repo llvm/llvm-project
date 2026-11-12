@@ -1,0 +1,41 @@
+add_lldb_unittest(SymbolTests
+  CallEdgeTest.cpp
+  JSONSymbolTest.cpp
+  LineTableTest.cpp
+  LocateSymbolFileTest.cpp
+  MangledTest.cpp
+  PostfixExpressionTest.cpp
+  SymbolLocatorTest.cpp
+  SymbolFileTest.cpp
+  SymbolTest.cpp
+  SymtabTest.cpp
+  SymStoreTest.cpp
+  TestTypeSystem.cpp
+  TestTypeSystemClang.cpp
+  TestTypeSystemFortran.cpp
+  TestClangASTImporter.cpp
+  TestDWARFCallFrameInfo.cpp
+  TestType.cpp
+  TestLineEntry.cpp
+  UnwindPlanTest.cpp
+
+  LINK_LIBS
+    lldbCore
+    lldbHost
+    lldbSymbol
+    lldbUtilityHelpers
+    lldbPluginCPlusPlusLanguage
+    lldbPluginObjectFileELF
+    lldbPluginObjectFileMachO
+    lldbPluginSymbolFileDWARF
+    lldbPluginSymbolFileSymtab
+    lldbPluginTypeSystemClang
+    lldbPluginTypeSystemFortran
+    lldbPluginSymbolLocatorSymStore
+    LLVMTestingSupport
+  )
+
+set(test_inputs
+  inlined-functions.yaml
+  )
+add_unittest_inputs(SymbolTests "${test_inputs}")

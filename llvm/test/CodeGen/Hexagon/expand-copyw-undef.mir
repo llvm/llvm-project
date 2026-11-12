@@ -1,0 +1,15 @@
+# RUN: llc -mtriple=hexagon -run-pass post-ra-pseudos -run-pass machineverifier -o - %s | FileCheck %s
+
+# Check that v3 is marked as "undef".
+# CHECK: $w0 = V6_vcombine undef $v3, $v2
+
+---
+name: fred
+body: |
+  bb.0:
+    liveins: $w1
+    A2_nop implicit killed $v3
+    $w0 = COPY $w1
+    J2_jumpr $r31, implicit-def $pc
+...
+

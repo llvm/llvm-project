@@ -1,0 +1,50 @@
+## --no-strip-all disables the --strip-all llvm-strip switch.
+## It also disables the default --strip-all behaviour.
+
+# RUN: yaml2obj %s -o %t.o
+
+## Base case: no switches, should strip. Used as a basic correctness check for later test cases.
+# RUN: llvm-strip %t.o -o %t1.o
+# RUN: llvm-readobj --file-headers --sections %t1.o | FileCheck %s --check-prefix=ALL
+
+## --no-strip-all alone disables stripping.
+# RUN: llvm-strip --no-strip-all %t.o -o %t2.o
+# RUN: llvm-readobj --file-headers --sections %t2.o | FileCheck %s --check-prefix=NO-STRIP
+
+## --no-strip-all wins if last.
+# RUN: llvm-strip --strip-all --no-strip-all %t.o -o %t3.o
+# RUN: cmp %t2.o %t3.o
+
+## --strip-all wins if last.
+# RUN: llvm-strip --no-strip-all --strip-all %t.o -o %t4.o
+# RUN: cmp %t1.o %t4.o
+
+## The last instance of --no-strip-all is used in the comparison.
+# RUN: llvm-strip --no-strip-all --strip-all --no-strip-all %t.o -o %t5.o
+# RUN: cmp %t2.o %t5.o
+
+## The last instance of --strip-all is used in the comparison.
+# RUN: llvm-strip --strip-all --no-strip-all --strip-all %t.o -o %t6.o
+# RUN: cmp %t1.o %t6.o
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .alloc
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+Symbols: []
+
+# ALL: SectionHeaderCount: 3
+# ALL: Name: .alloc
+# ALL: Name: .shstrtab
+
+# NO-STRIP: SectionHeaderCount: 5
+# NO-STRIP: Name: .alloc
+# NO-STRIP: Name: .symtab
+# NO-STRIP: Name: .strtab
+# NO-STRIP: Name: .shstrtab

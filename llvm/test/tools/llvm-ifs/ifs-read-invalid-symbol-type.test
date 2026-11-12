@@ -1,0 +1,11 @@
+# RUN: not llvm-ifs --output-ifs=- %s 2>&1 | FileCheck %s
+
+--- !ifs-v1
+SoName: somelib.so
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: Aarch64, Endianness: little, BitWidth: 64 }
+Symbols:
+  - { Name: nor, Type: bogus, Undefined: true }
+...
+
+# CHECK: error: IFS symbol type for symbol 'nor' is unsupported

@@ -1,0 +1,11 @@
+! Test -fcuda option for bbc
+! RUN: bbc -fcuda -o - %s | FileCheck %s
+
+! CHECK-NOT: Unknown command line argument
+
+program main
+#if _CUDA
+  integer :: var = _CUDA
+#endif
+  integer, device :: dvar
+end program

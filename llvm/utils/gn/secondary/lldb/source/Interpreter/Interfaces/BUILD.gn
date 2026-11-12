@@ -1,0 +1,9 @@
+static_library("Interfaces") {
+  output_name = "lldbInterpreterInterfaces"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "ScriptedInterfaceUsages.cpp" ]
+}

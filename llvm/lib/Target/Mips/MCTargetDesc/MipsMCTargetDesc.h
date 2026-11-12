@@ -1,0 +1,113 @@
+//===-- MipsMCTargetDesc.h - Mips Target Descriptions -----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides Mips specific target descriptions.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCTARGETDESC_H
+#define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCTARGETDESC_H
+
+#include "llvm/MC/MCRegister.h"
+#include "llvm/Support/DataTypes.h"
+
+#include <memory>
+
+namespace llvm {
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectTargetWriter;
+class MCObjectWriter;
+class MCRegister;
+class MCRegisterInfo;
+class MCStreamer;
+class MCSubtargetInfo;
+class MCTargetOptions;
+class StringRef;
+class Target;
+class Triple;
+
+MCCodeEmitter *createMipsMCCodeEmitterEB(const MCInstrInfo &MCII,
+                                         MCContext &Ctx);
+MCCodeEmitter *createMipsMCCodeEmitterEL(const MCInstrInfo &MCII,
+                                         MCContext &Ctx);
+
+MCAsmBackend *createMipsAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                   const MCRegisterInfo &MRI,
+                                   const MCTargetOptions &Options);
+
+/// Construct an MIPS Windows COFF machine code streamer which will generate
+/// PE/COFF format object files.
+///
+/// Takes ownership of \p AB and \p CE.
+MCStreamer *createMipsWinCOFFStreamer(MCContext &C,
+                                      std::unique_ptr<MCAsmBackend> &&AB,
+                                      std::unique_ptr<MCObjectWriter> &&OW,
+                                      std::unique_ptr<MCCodeEmitter> &&CE);
+
+/// Construct a Mips ELF object writer.
+std::unique_ptr<MCObjectTargetWriter>
+createMipsELFObjectWriter(const Triple &TT, bool IsN32);
+/// Construct a Mips Win COFF object writer.
+std::unique_ptr<MCObjectTargetWriter> createMipsWinCOFFObjectWriter();
+
+namespace MIPS_MC {
+void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
+
+/// COP0 hardware encodings reserve five bits each for REG and SEL.
+constexpr unsigned encodeCOP0Register(unsigned Reg, unsigned Sel) {
+  return (Reg << 5) | Sel;
+}
+constexpr unsigned getCOP0RegNum(unsigned Encoding) { return Encoding >> 5; }
+constexpr unsigned getCOP0Sel(unsigned Encoding) { return Encoding & 31; }
+MCRegister getCOP0Register(const MCRegisterInfo &MRI, unsigned Encoding);
+
+StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
+
+/// Match a symbolic name in RegClassID, or return an invalid register.
+MCRegister matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
+                             unsigned RegClassID, unsigned AltIdx);
+
+/// Return a GPR name's hardware index, or -1 if unknown.
+int getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
+                        unsigned AltIdx, bool *IsDeprecated = nullptr);
+}
+
+} // End llvm namespace
+
+// Defines symbolic names for Mips registers.  This defines a mapping from
+// register name to register number.
+#define GET_REGINFO_ENUM
+#include "MipsGenRegisterInfo.inc"
+
+namespace llvm {
+namespace Mips {
+// Readable names for the GPRs with a dedicated role. Other GPRs use their R<n>
+// names, or the MipsABIInfo accessors when their role depends on the ABI.
+inline constexpr MCPhysReg GP = R28;
+inline constexpr MCPhysReg SP = R29;
+inline constexpr MCPhysReg FP = R30;
+inline constexpr MCPhysReg RA = R31;
+inline constexpr MCPhysReg GP_64 = R28_64;
+inline constexpr MCPhysReg SP_64 = R29_64;
+inline constexpr MCPhysReg FP_64 = R30_64;
+inline constexpr MCPhysReg RA_64 = R31_64;
+} // namespace Mips
+} // namespace llvm
+
+// Defines symbolic names for the Mips instructions.
+#define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
+#include "MipsGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "MipsGenSubtargetInfo.inc"
+
+#endif

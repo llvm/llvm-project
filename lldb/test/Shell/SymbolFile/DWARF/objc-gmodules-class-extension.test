@@ -1,0 +1,29 @@
+# REQUIRES: system-darwin
+
+# Test that we can set a breakpoint in a method of a class extension.
+# This requires us to parse the method into an AST type, and the context
+# too (which in DWARF is just a forward declaration).
+#
+# RUN: split-file %s %t
+# RUN: %clangxx_host %t/lib.m  -c -g -gmodules -fmodules -o %t/lib.o
+# RUN: %clangxx_host %t/main.m -g -gmodules -fmodules %t/lib.o -o %t/a.out -framework Foundation
+#
+# RUN: %lldb %t/a.out -o "breakpoint set -f lib.m -l 6" -o exit | FileCheck %s
+
+# CHECK: (lldb) breakpoint set -f lib.m -l 6
+# CHECK: Breakpoint 1: where = a.out`-[NSObject(Foo) func]
+
+#--- main.m
+int main() {
+  return 0;
+}
+
+#--- lib.m
+#import <Foundation/Foundation.h>
+
+@implementation NSObject (Foo)
+- (NSError *)func {
+    NSLog(@"Hello, World!");
+    return 0;
+}
+@end

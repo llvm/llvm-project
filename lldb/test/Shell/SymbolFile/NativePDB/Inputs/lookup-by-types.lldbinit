@@ -1,0 +1,4 @@
+image lookup -type A
+image lookup -type B
+
+quit

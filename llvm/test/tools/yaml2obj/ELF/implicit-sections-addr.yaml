@@ -1,0 +1,54 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+
+## Check yaml2obj does not ignore the address of the
+## explicitly listed .dynstr, .dynsym, .strtab
+## and .symtab sections.
+
+# CHECK:      Name: .dynstr
+# CHECK-NEXT: Type: SHT_STRTAB
+# CHECK-NEXT: Flags [
+# CHECK-NEXT:   SHF_ALLOC
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address: 0x1000
+
+# CHECK:      Name: .dynsym
+# CHECK-NEXT:  Type: SHT_DYNSYM
+# CHECK-NEXT:  Flags [
+# CHECK-NEXT:    SHF_ALLOC
+# CHECK-NEXT:  ]
+# CHECK-NEXT:  Address: 0x2000
+
+# CHECK:      Name: .strtab
+# CHECK-NEXT:  Type: SHT_STRTAB
+# CHECK-NEXT:  Flags [
+# CHECK-NEXT:  ]
+# CHECK-NEXT:  Address: 0x3000
+
+# CHECK:      Name: .symtab
+# CHECK-NEXT:  Type: SHT_SYMTAB
+# CHECK-NEXT:  Flags [
+# CHECK-NEXT:  ]
+# CHECK-NEXT:  Address: 0x4000
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2000
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    Address: 0x3000
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Address: 0x4000
+DynamicSymbols: []

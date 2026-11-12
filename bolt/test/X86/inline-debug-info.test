@@ -1,0 +1,20 @@
+## Check that BOLT correctly prints and updates debug info for inlined
+## functions.
+
+# REQUIRES: system-linux
+
+# RUN: %clang %cflags -O1 -g %p/Inputs/inline-main.c %p/Inputs/inline-foo.c \
+# RUN:   -I%p/../Inputs -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe --update-debug-sections --print-debug-info \
+# RUN:   --print-only=main --print-after-lowering --force-inline=foo \
+# RUN:   -o %t.bolt \
+# RUN:   | FileCheck %s
+
+## The call to puts() should come from inline-foo.c:
+# CHECK: callq   {{.*}} # debug line {{.*}}inline-foo.c:4:3
+
+# RUN: llvm-objdump --disassemble-symbols=main -d --line-numbers %t.bolt \
+# RUN:   | FileCheck %s -check-prefix=CHECK-OBJDUMP
+
+## Dump of main() should include debug info from inline-foo.c after inlining:
+# CHECK-OBJDUMP: inline-foo.c:4

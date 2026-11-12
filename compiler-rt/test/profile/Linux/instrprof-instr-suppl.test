@@ -1,0 +1,86 @@
+// This is a regression test for supplementary profiles.
+
+// What the test does:
+// - Generate raw profiles from an executable and convert it to indexed profiles.
+// - Merge indexed profiles with supplementary sample-pgo profiles
+// - Check that the block counters for function foo is scaled up.
+
+// REQUIRES: lld-available
+
+// Building the instrumented binary will fail because lld doesn't support
+// big-endian ELF for PPC (aka ABI 1).
+// ld.lld: error: /lib/../lib64/Scrt1.o: ABI version 1 is not supported
+// UNSUPPORTED: ppc && host-byteorder-big-endian
+
+// This compiler-rt test aims to have test coverage for the IRPGO name format
+// of local-linkage functions during raw profile generation. The C++ functions
+// are simple with little optimization space so test outputs are more stable.
+// On the other hand, LLVM tests (like tools/llvm-profdata/suppl-instr-with-sample-static-func.test
+// or other suppl* test under tools/llvm-profdata dir) are more suitable for
+// more sophisticated cases (e.g., pseudo hot functions or profiles with discriminiators, etc).
+
+// RUN: rm -rf %t && split-file %s %t && cd %t
+
+// Use clangxx_pgogen for IR level instrumentation for C++.
+// The test case is constructed such that `-funique-internal-linkage-names` is
+// not used in instrPGO but used in static function names in SamplePGO.
+// RUN: %clangxx_pgogen -fuse-ld=lld -O2 main.cpp -o main
+// RUN: env LLVM_PROFILE_FILE=main.profraw %run ./main
+// RUN: llvm-profdata merge main.profraw -o main.profdata
+
+// The function counters are not scaled up.
+// RUN: llvm-profdata show -all-functions -counts main.profdata | FileCheck %s --check-prefix=INSTR
+
+// The instrPGO profile counter of function foo should be scaled up. Note the
+// scaling factor of a function is computed based on instrPGO profiles and
+// invariant to samplePGO profile counters.
+// RUN: llvm-profdata merge -supplement-instr-with-sample=sampleprof.proftext \
+// RUN:               -suppl-min-size-threshold=0 -instr-prof-cold-threshold=1 \
+// RUN:               main.profdata -o merge.profdata
+// RUN: llvm-profdata show -all-functions -counts merge.profdata | FileCheck %s --check-prefix=SUPPL
+
+// INSTR: Counters:
+// INSTR:   main:
+// INSTR:     Counters: 1
+// INSTR:     Block counts: [1]
+// INSTR:   _Z3barv:
+// INSTR:     Counters: 1
+// INSTR:     Block counts: [2]
+// INSTR:   main.cpp;_ZL3foov:
+// INSTR:     Counters: 1
+// INSTR:     Block counts: [1]
+
+// INSTR: Functions shown: 3
+// INSTR: Total functions: 3
+
+// SUPPL: Counters:
+// SUPPL:   main:
+// SUPPL:     Counters: 1
+// SUPPL:     Block counts: [1]
+// SUPPL:   _Z3barv:
+// SUPPL:     Counters: 1
+// SUPPL:     Block counts: [2]
+// SUPPL:   main.cpp;_ZL3foov:
+// SUPPL:     Counters: 1
+// SUPPL:     Block counts: [3]
+
+//--- main.cpp
+
+// mark foo and bar as noinline so preinliner won't inlined them into main
+// before the instrumentation pass.
+__attribute__((noinline)) static void foo() {
+}
+
+__attribute__((noinline)) void bar() {
+}
+
+int main() {
+  foo();
+  bar();
+  bar();
+  return 0;
+}
+
+//--- sampleprof.proftext
+_ZL3foov.__uniq.23343505234642233139497840575431302970:5:5
+  1: 5

@@ -1,0 +1,7 @@
+## Show that llvm-strings can consume a response file.
+
+RUN: echo abcd > %t
+RUN: echo --print-file-name %t > %t.rsp
+RUN: llvm-strings --radix=d @%t.rsp | FileCheck %s -DFILE=%t
+
+CHECK: [[FILE]]: 0 abcd

@@ -1,0 +1,27 @@
+--- !Analysis
+Pass:            annotation-remarks
+Name:            AnnotationSummary
+Function:        func1
+Args:
+  - String:          'Annotated '
+  - count:           '1'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Analysis
+Pass:            annotation-remarks
+Name:            AnnotationSummary
+Function:        func2
+Args:
+  - String:          'Annotated '
+  - count:           '2'
+  - String:          ' instructions with '
+  - type:            remark
+--- !Analysis
+Pass:            annotation-remarks
+Name:            AnnotationSummary
+Function:        func3
+Args:
+  - String:          'Annotated '
+  - count:           '3'
+  - String:          ' instructions with '
+  - type:            remark

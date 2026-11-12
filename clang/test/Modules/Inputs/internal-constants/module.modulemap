@@ -1,0 +1,6 @@
+module X {
+  textual header "const.h"
+  module A { header "a.h" export * }
+  module B { header "b.h" export * }
+  module C { header "c.h" export * }
+}

@@ -1,0 +1,36 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("GcovOpts") {
+  visibility = [ ":llvm-cov" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+executable("llvm-cov") {
+  deps = [
+    ":GcovOpts",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Debuginfod",
+    "//llvm/lib/HTTP",
+    "//llvm/lib/IR",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/ProfileData",
+    "//llvm/lib/ProfileData/Coverage",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [
+    "CodeCoverage.cpp",
+    "CoverageExporterJson.cpp",
+    "CoverageExporterLcov.cpp",
+    "CoverageFilters.cpp",
+    "CoverageReport.cpp",
+    "CoverageSummaryInfo.cpp",
+    "SourceCoverageView.cpp",
+    "SourceCoverageViewHTML.cpp",
+    "SourceCoverageViewText.cpp",
+    "TestingSupport.cpp",
+    "gcov.cpp",
+    "llvm-cov.cpp",
+  ]
+}

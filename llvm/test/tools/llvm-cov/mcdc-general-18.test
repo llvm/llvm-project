@@ -1,0 +1,20 @@
+// Test Version11 (clang-18) files.
+// mcdc-general.test is used as test patterns.
+
+// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-general-18.o -instr-profile %S/Inputs/mcdc-general-18.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/mcdc-general.test
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general-18.o -instr-profile %S/Inputs/mcdc-general-18.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %S/mcdc-general.test -check-prefix=REPORT
+
+// Turn off MC/DC visualization.
+// RUN: llvm-cov show %S/Inputs/mcdc-general-18.o -instr-profile %S/Inputs/mcdc-general-18.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/mcdc-general.test -check-prefix=NOMCDC
+
+// Turn off MC/DC summary.
+// RUN: llvm-cov report %S/Inputs/mcdc-general-18.o -instr-profile %S/Inputs/mcdc-general-18.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %S/mcdc-general.test -check-prefix=REPORT_NOMCDC
+
+// Test file-level report.
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general-18.o -instr-profile %S/Inputs/mcdc-general-18.profdata -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %S/mcdc-general.test -check-prefix=FILEREPORT
+
+// Test html output.
+// RUN: rm -rf %t.html.dir
+// RUN: llvm-cov show --show-mcdc-summary --show-mcdc %S/Inputs/mcdc-general-18.o -instr-profile %S/Inputs/mcdc-general-18.profdata -path-equivalence=.,%S/Inputs -format html -o %t.html.dir
+// RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/mcdc-general.cpp.html %S/mcdc-general.test
+// RUN: FileCheck -check-prefix HTML-INDEX -input-file %t.html.dir/index.html %S/mcdc-general.test

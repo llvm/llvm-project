@@ -1,0 +1,40 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I64
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0, 1, 1, 0, 0, 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            410AAC0B
+      - Index:           1
+        Locals:          []
+        Body:            410AAD0B
+      - Index:           2
+        Locals:          []
+        Body:            410AC00B
+      - Index:           3
+        Locals:          []
+        Body:            410AC10B
+      - Index:           4
+        Locals:          []
+        Body:            420AC20B
+      - Index:           5
+        Locals:          []
+        Body:            420AC30B
+      - Index:           6
+        Locals:          []
+        Body:            420AC40B
+...

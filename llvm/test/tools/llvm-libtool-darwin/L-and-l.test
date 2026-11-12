@@ -1,0 +1,160 @@
+## This test checks that -l and -L options work correctly.
+
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t.dir/input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t.dir/input2.o
+
+## Check that the library is recognised when it ends with '.o':
+# RUN: llvm-libtool-darwin -static -o %t.lib -linput1.o -linput2.o -L%t.dir
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS --match-full-lines
+
+# CHECK-NAMES:      input1.o
+# CHECK-NAMES-NEXT: input2.o
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _symbol1 in input1.o
+# CHECK-SYMBOLS-NEXT: _symbol2 in input2.o
+# CHECK-SYMBOLS-EMPTY:
+
+## Check that the library is recognised when prepended with 'lib' and appended with '.a':
+# RUN: rm -rf %t/dirname && mkdir -p %t/dirname
+# RUN: llvm-ar cr %t/dirname/libinput2.a %t.dir/input2.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib -linput2 -L%t/dirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=SINGLE-NAMES --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=SINGLE-SYMBOLS --match-full-lines
+
+# SINGLE-NAMES: input2.o
+
+# SINGLE-SYMBOLS:      Archive map
+# SINGLE-SYMBOLS-NEXT: _symbol2 in input2.o
+# SINGLE-SYMBOLS-EMPTY:
+
+## -l and -L option specified multiple times:
+# RUN: rm -rf %t/otherDirname && mkdir -p %t/otherDirname
+# RUN: llvm-ar cr %t/otherDirname/libinput1.a %t.dir/input1.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib -linput2 -linput1 -L%t/dirname -L%t/otherDirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OTHER-NAMES --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OTHER-SYMBOLS --match-full-lines
+
+## Check it is possible to pass arguments to -l and -L separated from the option
+## and the options specified multiple times:
+# RUN: rm -rf %t/otherDirname && mkdir -p %t/otherDirname
+# RUN: llvm-ar cr %t/otherDirname/libinput1.a %t.dir/input1.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib -l input2 -l input1 -L %t/dirname -L %t/otherDirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OTHER-NAMES --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=OTHER-SYMBOLS --match-full-lines
+
+# OTHER-NAMES:      input2.o
+# OTHER-NAMES-NEXT: input1.o
+
+# OTHER-SYMBOLS:      Archive map
+# OTHER-SYMBOLS-NEXT: _symbol2 in input2.o
+# OTHER-SYMBOLS-NEXT: _symbol1 in input1.o
+# OTHER-SYMBOLS-EMPTY:
+
+## Check that if multiple directories specified with -L have the same named file
+## in them, the file from the first directory is selected.
+# RUN: llvm-ar cr %t/otherDirname/libinput2.a %t.dir/input1.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib -linput2 -L%t/dirname -L%t/otherDirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=SINGLE-NAMES --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=SINGLE-SYMBOLS --match-full-lines
+
+## Check that if two different files with the same names are explicitly
+## specified, the command gives a warning.
+# RUN: cp %t.dir/input2.o %t/dirname
+# RUN: llvm-libtool-darwin -static -o %t.lib \
+# RUN:   %t/dirname/input2.o %t.dir/input2.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-INPUT \
+# RUN:     -DFILE=input2.o \
+# RUN:     -DINPUTA=%t/dirname/input2.o \
+# RUN:     -DINPUTB=%t.dir/input2.o
+
+# DUPLICATE-INPUT:     warning: file '[[FILE]]' was specified multiple times.
+# DUPLICATE-INPUT-DAG: [[INPUTA]]
+# DUPLICATE-INPUT-DAG: [[INPUTB]]
+
+## -l option combined with an input file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t.dir/input1.o -linput2 -L%t/dirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS --match-full-lines
+
+## Specify the same file with a -l option and an input file:
+# RUN: rm -rf %t/copy
+# RUN: mkdir -p %t/copy
+# RUN: cp %t.dir/input1.o %t/copy
+# RUN: llvm-libtool-darwin -static -o %t.lib \
+# RUN:   %t/copy/input1.o -linput1.o -L%t/copy 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-L-INPUT -DFILE=input1.o
+
+## Specify same -l option twice:
+# RUN: llvm-libtool-darwin -static -o %t.lib -linput1.o \
+# RUN:  -linput1.o -L%t/copy 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-L-INPUT \
+# RUN:     -DFILE=input1.o
+
+# DUPLICATE-L-INPUT:     warning: file '[[FILE]]' was specified multiple times.
+
+## Check that an error is thrown when the input library cannot be found:
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lfile-will-not-exist.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=file-will-not-exist.o
+
+# NOT-FOUND: error: cannot locate file '[[FILE]]'
+
+## Check that an error is thrown when the input library cannot be found
+## (for a file prepended with 'lib' and appended with '.a'):
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lfile-will-not-exist 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=libfile-will-not-exist.a
+
+## Check that an error is thrown when the input library cannot be found
+## (since 'lib' and '.a' are added):
+# RUN: llvm-ar cr %t/dirname/file-does-exist %t.dir/input1.o
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lfile-does-exist -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=libfile-does-exist.a
+
+# RUN: llvm-ar cr %t/dirname/libfile-does-exist.a %t.dir/input1.o
+# RUN: not llvm-libtool-darwin -static -o %t.lib -llibfile-does-exist.a -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=liblibfile-does-exist.a.a
+
+## Check that an error is thrown when the input library is not valid:
+# RUN: touch %t/dirname/not-valid.o
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lnot-valid.o -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-VALID -DFILE=not-valid.o
+
+# NOT-VALID: error: '[[FILE]]': The file was not recognized as a valid object file
+
+## Check that an error is thrown when the input library is not valid:
+## (for a file prepended with 'lib' and appended with '.a'):
+# RUN: touch %t/dirname/libnot-valid.a
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lnot-valid -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-VALID -DFILE=libnot-valid.a
+
+## Check that 'lib' and '.a' are not added to a file ending in '.o':
+# RUN: llvm-ar cr %t/dirname/libfoo.o.a %t.dir/input1.o
+# RUN: not llvm-libtool-darwin -static -o %t.lib -lfoo.o -L%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOT-FOUND -DFILE=foo.o
+
+## Check that 'lib' and '.a' are added to a file ending in any other extension
+## beside '.o' (e.g. '.ext'):
+# RUN: llvm-ar cr %t/dirname/libbar.ext.a %t.dir/input2.o
+# RUN: llvm-libtool-darwin -static -o %t.lib -lbar.ext -L%t/dirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=SINGLE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=SINGLE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines

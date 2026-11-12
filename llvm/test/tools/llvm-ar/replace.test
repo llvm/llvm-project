@@ -1,0 +1,187 @@
+## Test the replace command without modifiers replaces the relevant members.
+
+# RUN: rm -rf %t && mkdir -p %t/new/other
+# RUN: yaml2obj %s -o %t/1.o --docnum=1
+# RUN: yaml2obj %s -o %t/2.o --docnum=2
+# RUN: yaml2obj %s -o %t/3.o --docnum=3
+
+# RUN: yaml2obj %s -o %t/new/1.o --docnum=4
+# RUN: yaml2obj %s -o %t/new/3.o --docnum=5
+
+# RUN: yaml2obj %s -o %t/new/other/1.o --docnum=6
+
+## Replace single member:
+# RUN: llvm-ar rc %t/single.a %t/1.o %t/2.o %t/3.o
+# RUN: llvm-ar r %t/single.a %t/new/1.o
+# RUN: llvm-ar t %t/single.a \
+# RUN:   | FileCheck %s --check-prefix=SINGLE --implicit-check-not {{.}}
+
+# SINGLE:      1.o
+# SINGLE-NEXT: 2.o
+# SINGLE-NEXT: 3.o
+
+# RUN: llvm-nm --print-armap %t/single.a \
+# RUN:   | FileCheck %s --check-prefix=SINGLE-SYM
+
+# SINGLE-SYM:      symbolnew1
+# SINGLE-SYM-NEXT: symbol2
+# SINGLE-SYM-NEXT: symbol3
+
+## Replace multiple members:
+# RUN: llvm-ar rc %t/multiple.a %t/1.o %t/2.o %t/3.o
+# RUN: llvm-ar r %t/multiple.a %t/new/1.o %t/new/3.o
+# RUN: llvm-ar t %t/multiple.a \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE --implicit-check-not {{.}}
+
+# MULTIPLE:      1.o
+# MULTIPLE-NEXT: 2.o
+# MULTIPLE-NEXT: 3.o
+
+# RUN: llvm-nm --print-armap %t/multiple.a \
+# RUN:   | FileCheck %s --check-prefix=MULTIPLE-SYM
+
+# MULTIPLE-SYM:      symbolnew1
+# MULTIPLE-SYM-NEXT: symbol2
+# MULTIPLE-SYM-NEXT: symbolnew3
+
+## Replace same member:
+# RUN: llvm-ar rc %t/same.a %t/1.o %t/2.o %t/3.o
+# RUN: llvm-ar r %t/same.a %t/new/1.o %t/new/other/1.o
+# RUN: llvm-ar t %t/same.a \
+# RUN:   | FileCheck %s --check-prefix=SAME  --implicit-check-not {{.}}
+
+# SAME:      1.o
+# SAME-NEXT: 2.o
+# SAME-NEXT: 3.o
+# SAME-NEXT: 1.o
+
+# RUN: llvm-nm --print-armap %t/same.a \
+# RUN:   | FileCheck %s --check-prefix=SAME-SYM
+
+# SAME-SYM:      symbolnew1
+# SAME-SYM-NEXT: symbol2
+# SAME-SYM-NEXT: symbol3
+# SAME-SYM-NEXT: symbolother1
+
+## Replace without member:
+# RUN: llvm-ar rc %t/without.a %t/1.o %t/2.o %t/3.o
+# RUN: llvm-ar r %t/without.a
+# RUN: llvm-ar t %t/without.a \
+# RUN:   | FileCheck %s --check-prefix=WITHOUT --implicit-check-not {{.}}
+
+# WITHOUT:      1.o
+# WITHOUT-NEXT: 2.o
+# WITHOUT-NEXT: 3.o
+
+# RUN: llvm-nm --print-armap %t/without.a \
+# RUN:   | FileCheck %s --check-prefix=WITHOUT-SYM
+
+# WITHOUT-SYM:      symbol1
+# WITHOUT-SYM-NEXT: symbol2
+# WITHOUT-SYM-NEXT: symbol3
+
+## No archive:
+# RUN: not llvm-ar r 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-ARCHIVE
+
+# NO-ARCHIVE: error: an archive name must be specified
+
+## Member does not exist:
+# RUN: llvm-ar rc %t/missing.a %t/1.o %t/2.o %t/3.o
+# RUN: not llvm-ar r %t/missing.a %t/missing.txt 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt -DMSG=%errc_ENOENT
+
+# MISSING-FILE: error: [[FILE]]: [[MSG]]
+
+## Create and Replace member of thin archive:
+# RUN: llvm-ar rcT %t/thin.a %t/1.o %t/2.o %t/3.o
+# RUN: yaml2obj %s -o %t/1.o --docnum=4
+# RUN: llvm-ar rT %t/thin.a %t/1.o
+# RUN: llvm-ar t %t/thin.a | FileCheck %s --check-prefix=SINGLE
+
+# RUN: llvm-nm --print-armap %t/thin.a \
+# RUN:   | FileCheck %s --check-prefix=SINGLE-SYM
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol1
+    Binding: STB_GLOBAL
+    Section: .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol2
+    Binding: STB_GLOBAL
+    Section: .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol3
+    Binding: STB_GLOBAL
+    Section: .text
+    
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbolnew1
+    Binding: STB_GLOBAL
+    Section: .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbolnew3
+    Binding: STB_GLOBAL
+    Section: .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbolother1
+    Binding: STB_GLOBAL
+    Section: .text

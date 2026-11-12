@@ -1,0 +1,43 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <string>
+
+// This test is sensitive what __STDCPP_DEFAULT_NEW_ALIGNMENT__ is set to. Enable aligned-new for GCC so that GCC
+// defines the macro
+// ADDITIONAL_COMPILE_FLAGS(gcc): -faligned-new
+
+// The allocations are done in the dylib, so we need to use an up-to-date one
+// XFAIL: using-built-library-before-llvm-23
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <string>
+
+#include "test_macros.h"
+
+#ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
+static const std::size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+#else
+static const std::size_t alignment = 8;
+#endif
+
+int main(int, char**) {
+  std::string str(64, 'a');
+  const std::size_t expected_align8_size = 71;
+
+  // Demonstrate the lesser capacity/allocation size when the alignment requirement is 8.
+  if (alignment == 8) {
+    assert(str.capacity() == expected_align8_size);
+  } else {
+    assert(str.capacity() == expected_align8_size + 8);
+  }
+
+  return 0;
+}

@@ -1,0 +1,13 @@
+# REQUIRES: amdgpu-registered-target
+
+## Check that --filter works properly.
+# RUN: cp -f %S/Inputs/amdgpu-scattered-filter.mir %t.mir && %update_mir_test_checks --filter="exec_lo|IMPLICIT_DEF" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/amdgpu-scattered-filter.mir.filter.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_mir_test_checks --filter="exec_lo|IMPLICIT_DEF" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/amdgpu-scattered-filter.mir.filter.expected
+
+# RUN: cp -f %S/Inputs/amdgpu-scattered-filter.mir %t.mir && %update_mir_test_checks %t.mir
+# RUN: %update_mir_test_checks --filter="exec_lo|IMPLICIT_DEF" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/amdgpu-scattered-filter.mir.filter.expected

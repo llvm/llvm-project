@@ -1,0 +1,113 @@
+# RUN: not clangd -pretty -sync -enable-test-uri-scheme < %s | FileCheck -strict-whitespace %s
+# RUN: not clangd -pretty -sync -enable-test-uri-scheme < %s 2>&1 | FileCheck -check-prefix=STDERR %s
+# vim: fileformat=dos
+# It is absolutely vital that this file has CRLF line endings.
+#
+# Note that we invert the test because we intent to let clangd exit prematurely.
+#
+# Test protocol parsing
+Content-Length: 125
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+# Test message with Content-Type after Content-Length
+#
+#      CHECK:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+#      CHECK:  }
+Content-Length: 246
+
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"struct fake { int a, bb, ccc; int f(int i, const float f) const; };\nint main() {\n  fake f;\n  f.\n}\n"}}}
+
+Content-Length: 104
+
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"test:///main.cpp"}}}
+
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with Content-Type before Content-Length
+#
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+#      CHECK:        "filterText": "a",
+# CHECK-NEXT:        "insertText": "a",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": " a",
+# CHECK-NEXT:        "score": {{[0-9]+.[0-9]+}},
+# CHECK-NEXT:        "sortText": "{{.*}}"
+#      CHECK:    ]
+# CHECK-NEXT:  }
+
+X-Test: Testing
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 146
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+X-Testing: Test
+
+{"jsonrpc":"2.0","id":2,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
+
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 10
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":3,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with duplicate Content-Length headers
+#
+#      CHECK:  "id": 3,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+#      CHECK:        "filterText": "a",
+# CHECK-NEXT:        "insertText": "a",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": " a",
+# CHECK-NEXT:        "score": {{[0-9]+.[0-9]+}},
+# CHECK-NEXT:        "sortText": "{{.*}}"
+#      CHECK:    ]
+# CHECK-NEXT:  }
+# STDERR: Warning: Duplicate Content-Length header received. The previous value for this message (10) was ignored.
+
+Content-Type: application/vscode-jsonrpc; charset-utf-8
+Content-Length: 10
+
+{"jsonrpc":"2.0","id":4,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with malformed Content-Length
+#
+# STDERR: JSON parse error
+# Ensure we recover by sending another (valid) message
+
+Content-Length: 146
+
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message with Content-Type before Content-Length
+#
+#      CHECK:  "id": 5,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": {
+# CHECK-NEXT:    "isIncomplete": false,
+# CHECK-NEXT:    "items": [
+#      CHECK:        "filterText": "a",
+# CHECK-NEXT:        "insertText": "a",
+# CHECK-NEXT:        "insertTextFormat": 1,
+# CHECK-NEXT:        "kind": 5,
+# CHECK-NEXT:        "label": " a",
+# CHECK-NEXT:        "score": {{[0-9]+.[0-9]+}},
+# CHECK-NEXT:        "sortText": "{{.*}}"
+#      CHECK:    ]
+# CHECK-NEXT:  }
+Content-Length: 1024
+
+{"jsonrpc":"2.0","id":5,"method":"textDocument/completion","params":{"textDocument":{"uri":"test:/main.cpp"},"position":{"line":3,"character":5}}}
+# Test message which reads beyond the end of the stream.
+#
+# Ensure this is the last test in the file!
+# STDERR: Input was aborted. Read only {{[0-9]+}} bytes of expected {{[0-9]+}}.
+

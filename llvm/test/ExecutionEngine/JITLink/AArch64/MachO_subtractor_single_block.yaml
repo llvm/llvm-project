@@ -1,0 +1,307 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-jitlink -noexec -phony-externals %t
+#
+# Check that MachO::ARM64_RELOC_SUBTRACTOR relocations work when the fixup
+# location and target are in the same block (in this case in the __eh_frame
+# section).
+
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           5
+  sizeofcmds:      480
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         392
+    segname:         ''
+    vmaddr:          0
+    vmsize:          200
+    fileoff:         544
+    filesize:        200
+    maxprot:         7
+    initprot:        7
+    nsects:          4
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            72
+        offset:          0x220
+        align:           2
+        reloff:          0x2E8
+        nreloc:          6
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         F44FBEA9FD7B01A9800080520000009448058052080000B901000090210040F9020080D200000094200020D400000094130040B900000094E00313AAFD7B41A9F44FC2A8C0035FD6
+        relocations:
+          - address:         0x34
+            symbolnum:       7
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+          - address:         0x2C
+            symbolnum:       6
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+          - address:         0x24
+            symbolnum:       8
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+          - address:         0x1C
+            symbolnum:       4
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            6
+            scattered:       false
+            value:           0
+          - address:         0x18
+            symbolnum:       4
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0xC
+            symbolnum:       5
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            2
+            scattered:       false
+            value:           0
+      - sectname:        __gcc_except_tab
+        segname:         __TEXT
+        addr:            0x48
+        size:            24
+        offset:          0x268
+        align:           2
+        reloff:          0x318
+        nreloc:          1
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         FF9B15010C0018000018102C012820000001000000000000
+        relocations:
+          - address:         0x14
+            symbolnum:       4
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            7
+            scattered:       false
+            value:           0
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x60
+        size:            72
+        offset:          0x280
+        align:           3
+        reloff:          0x320
+        nreloc:          7
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         1800000000000000017A504C520001781E079B0000000010100C1F002800000004000000F8FFFFFFFFFFFFFF480000000000000008E7FFFFFFFFFFFFFF480E209E019D0293039404
+        relocations:
+          - address:         0x13
+            symbolnum:       9
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            7
+            scattered:       false
+            value:           0
+          - address:         0x20
+            symbolnum:       1
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            1
+            scattered:       false
+            value:           0
+          - address:         0x20
+            symbolnum:       2
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x24
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            1
+            scattered:       false
+            value:           0
+          - address:         0x24
+            symbolnum:       3
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x35
+            symbolnum:       2
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            1
+            scattered:       false
+            value:           0
+          - address:         0x35
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0xA8
+        size:            32
+        offset:          0x2C8
+        align:           3
+        reloff:          0x358
+        nreloc:          2
+        flags:           0x2000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000480000000000000300000000000000000000000000000000'
+        relocations:
+          - address:         0x0
+            symbolnum:       3
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x18
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          880
+    nsyms:           10
+    stroff:          1040
+    strsize:         152
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           917504
+    sdk:             0
+    ntools:          1
+    Tools:
+      - tool:            3
+        version:         59048448
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         872
+    datasize:        0
+  - cmd:             LC_LINKER_OPTIMIZATION_HINT
+    cmdsize:         16
+    dataoff:         872
+    datasize:        8
+LinkEditData:
+  NameList:
+    - n_strx:          112
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          32
+      n_value:         72
+    - n_strx:          130
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         96
+    - n_strx:          140
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         124
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          32
+      n_value:         0
+    - n_strx:          8
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          15
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          41
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          60
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          77
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          90
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ' '
+    - _main
+    - __ZTIi
+    - ___cxa_allocate_exception
+    - ___cxa_begin_catch
+    - ___cxa_end_catch
+    - ___cxa_throw
+    - ___gxx_personality_v0
+    - GCC_except_table0
+    - EH_Frame1
+    - func.eh
+    - ''
+    - ''
+    - ''
+    - ''
+...

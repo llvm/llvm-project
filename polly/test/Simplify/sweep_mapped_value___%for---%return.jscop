@@ -1,0 +1,48 @@
+{
+   "arrays" : [
+      {
+         "name" : "MemRef_A",
+         "sizes" : [ "*" ],
+         "type" : "double"
+      },
+      {
+         "name" : "MemRef_B",
+         "sizes" : [ "*" ],
+         "type" : "double"
+      }
+   ],
+   "context" : "[n] -> {  : -2147483648 <= n <= 2147483647 }",
+   "name" : "%for---%return",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_bodyA[i0] -> MemRef_A[i0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_bodyA[i0] -> MemRef_val[] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_bodyA[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_bodyA",
+         "schedule" : "[n] -> { Stmt_bodyA[i0] -> [i0, 0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[n] -> { Stmt_bodyB[i0] -> MemRef_B[i0] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "[n] -> { Stmt_bodyB[i0] -> MemRef_val[] }"
+            }
+         ],
+         "domain" : "[n] -> { Stmt_bodyB[i0] : 0 <= i0 < n }",
+         "name" : "Stmt_bodyB",
+         "schedule" : "[n] -> { Stmt_bodyB[i0] -> [i0, 1] }"
+      }
+   ]
+}

@@ -1,0 +1,9 @@
+# RUN: env CLANGD_FLAGS=-compile-commands-dir=no-such-dir not clangd -lit-test </dev/null 2>&1 >/dev/null | FileCheck %s
+CHECK: I[{{.*}}]{{.*}} clangd version {{.*}}
+CHECK: Working directory: {{.*}}
+CHECK: argv[0]: {{.*}}clangd
+CHECK: argv[1]: -lit-test
+CHECK: CLANGD_FLAGS: -compile-commands-dir=no-such-dir
+CHECK: E[{{.*}}] Path specified by --compile-commands-dir does not exist.
+CHECK: Starting LSP over stdin/stdout
+

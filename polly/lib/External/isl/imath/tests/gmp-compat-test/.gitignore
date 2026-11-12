@@ -1,0 +1,10 @@
+*.o
+*.so
+*.pyc
+#for now...
+test.list
+gmp_test.c
+imath_test.c
+wrappers.py
+*.tests
+_T*

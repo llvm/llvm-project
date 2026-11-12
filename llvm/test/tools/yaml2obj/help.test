@@ -1,0 +1,8 @@
+## Show that help text is printed correctly when requested.
+
+# RUN: yaml2obj -h | FileCheck %s
+# RUN: yaml2obj --help | FileCheck %s
+
+# CHECK: OVERVIEW: Create an object file from a YAML description
+# CHECK: USAGE: yaml2obj [options] <input file>{{$}}
+# CHECK: OPTIONS:

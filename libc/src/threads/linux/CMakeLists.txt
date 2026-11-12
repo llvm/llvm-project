@@ -1,0 +1,112 @@
+add_header_library(
+  threads_utils
+  HDRS
+    Futex.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.include.threads
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.mutex
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.raw_mutex
+    libc.src.__support.threads.linux.futex_utils
+)
+
+add_entrypoint_object(
+  cnd_init
+  SRCS
+    cnd_init.cpp
+  HDRS
+    ../cnd_init.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.CPP.new
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  cnd_destroy
+  SRCS
+    cnd_destroy.cpp
+  HDRS
+    ../cnd_destroy.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  cnd_wait
+  SRCS
+    cnd_wait.cpp
+  HDRS
+    ../cnd_wait.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  cnd_timedwait
+  SRCS
+    cnd_timedwait.cpp
+  HDRS
+    ../cnd_timedwait.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.CndVar
+    libc.src.__support.time.abs_timeout
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  cnd_signal
+  SRCS
+    cnd_signal.cpp
+  HDRS
+    ../cnd_signal.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  cnd_broadcast
+  SRCS
+    cnd_broadcast.cpp
+  HDRS
+    ../cnd_broadcast.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  thrd_sleep
+  SRCS
+    thrd_sleep.cpp
+  HDRS
+    ../thrd_sleep.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.OSUtil.linux.syscall_wrappers.nanosleep
+)
+
+add_entrypoint_object(
+  thrd_yield
+  SRCS
+    thrd_yield.cpp
+  HDRS
+    ../thrd_yield.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_yield
+)

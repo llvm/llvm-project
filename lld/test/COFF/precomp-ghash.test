@@ -1,0 +1,53 @@
+
+# This test ensures that under /DEBUG:GHASH, IPI records LF_FUNC_ID/LF_MFUNC_ID
+# have properly remapped indices to corresponding TPI records.
+
+RUN: lld-link %p/Inputs/precomp-ghash-precomp.obj \
+RUN:    %p/Inputs/precomp-ghash-obj1.obj\
+RUN:    %p/Inputs/precomp-ghash-obj2.obj /debug:ghash /out:%t.exe /pdb:%t.pdb /nodefaultlib /force
+RUN: llvm-pdbutil dump -types -ids %t.pdb | FileCheck %s
+
+; These object files were generated via the following inputs and commands:
+; ----------------------------------------------
+; // precomp-ghash-obj.h
+; namespace NS {
+;   struct Foo {
+;     explicit Foo(int x) : X(x) {}
+;     int X;
+;   };
+;
+;   int func(const Foo &f);
+; }
+; ----------------------------------------------
+; // precomp-ghash-obj1.cpp
+; #include "precomp-ghash-obj.h"
+;
+; int main(int argc, char **argv) {
+;   NS::Foo f(argc);
+;   return NS::func(f);
+; }
+; ----------------------------------------------
+; // precomp-ghash-obj2.cpp
+; #include "precomp-ghash-obj.h"
+;
+; int NS::func(const Foo &f) {
+;   return 2 * f.X;
+; }
+; ----------------------------------------------
+; // precomp-ghash-precomp.cpp
+; #include "precomp-ghash-obj.h"
+; ----------------------------------------------
+; $ cl /c /Z7 /GS- precomp-ghash-precomp.cpp /Ycprecomp-ghash-obj.h
+; $ cl /c /Z7 /GS- precomp-ghash-obj1.cpp /Yuprecomp-ghash-obj.h
+; $ cl /c /Z7 /GS- precomp-ghash-obj2.cpp /Yuprecomp-ghash-obj.h
+
+CHECK:                           Types (TPI Stream)
+CHECK-NEXT: ============================================================
+CHECK:   0x1003 | LF_MFUNCTION
+CHECK:   0x1377 | LF_PROCEDURE
+CHECK:                     Types (IPI Stream)                     
+CHECK-NEXT: ============================================================
+CHECK:   0x10A5 | LF_FUNC_ID [size = 20]
+CHECK-NEXT:       name = main, type = 0x1377, parent scope = <no type>
+CHECK-NEXT:  0x10A6 | LF_MFUNC_ID [size = 20]
+CHECK-NEXT:           name = {ctor}, type = 0x1003, class type = 0x1000

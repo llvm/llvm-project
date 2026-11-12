@@ -1,0 +1,56 @@
+// Round-trip tests: read an LUSummary JSON input, write it back out, and
+// diff the result against the original.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Round-Trip Tests
+// ============================================================================
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-empty-namespace.json -o %t/rt-empty-namespace.json
+// RUN: diff %S/Inputs/rt-empty-namespace.json %t/rt-empty-namespace.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-empty-namespace.json -o %t/rt-empty-namespace-enc.json
+// RUN: diff %S/Inputs/rt-empty-namespace.json %t/rt-empty-namespace-enc.json
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-single-namespace-element.json -o %t/rt-single-namespace-element.json
+// RUN: diff %S/Inputs/rt-single-namespace-element.json %t/rt-single-namespace-element.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-single-namespace-element.json -o %t/rt-single-namespace-element-enc.json
+// RUN: diff %S/Inputs/rt-single-namespace-element.json %t/rt-single-namespace-element-enc.json
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-multiple-namespace-elements.json -o %t/rt-multiple-namespace-elements.json
+// RUN: diff %S/Inputs/rt-multiple-namespace-elements.json %t/rt-multiple-namespace-elements.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-multiple-namespace-elements.json -o %t/rt-multiple-namespace-elements-enc.json
+// RUN: diff %S/Inputs/rt-multiple-namespace-elements.json %t/rt-multiple-namespace-elements-enc.json
+
+// RUN: %clang-ssaf-format-with-plugin --type lu %S/Inputs/rt-two-summary-types.json -o %t/rt-two-summary-types.json
+// RUN: diff %S/Inputs/rt-two-summary-types.json %t/rt-two-summary-types.json
+// RUN: %clang-ssaf-format-with-plugin --type lu --encoding %S/Inputs/rt-two-summary-types.json -o %t/rt-two-summary-types-enc.json
+// RUN: diff %S/Inputs/rt-two-summary-types.json %t/rt-two-summary-types-enc.json
+
+// RUN: %clang-ssaf-format-with-plugin --type lu %S/Inputs/rt-empty-data-entry.json -o %t/rt-empty-data-entry.json
+// RUN: diff %S/Inputs/rt-empty-data-entry.json %t/rt-empty-data-entry.json
+// RUN: %clang-ssaf-format-with-plugin --type lu --encoding %S/Inputs/rt-empty-data-entry.json -o %t/rt-empty-data-entry-enc.json
+// RUN: diff %S/Inputs/rt-empty-data-entry.json %t/rt-empty-data-entry-enc.json
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-linkage-none.json -o %t/rt-linkage-none.json
+// RUN: diff %S/Inputs/rt-linkage-none.json %t/rt-linkage-none.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-linkage-none.json -o %t/rt-linkage-none-enc.json
+// RUN: diff %S/Inputs/rt-linkage-none.json %t/rt-linkage-none-enc.json
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-linkage-internal.json -o %t/rt-linkage-internal.json
+// RUN: diff %S/Inputs/rt-linkage-internal.json %t/rt-linkage-internal.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-linkage-internal.json -o %t/rt-linkage-internal-enc.json
+// RUN: diff %S/Inputs/rt-linkage-internal.json %t/rt-linkage-internal-enc.json
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-linkage-external.json -o %t/rt-linkage-external.json
+// RUN: diff %S/Inputs/rt-linkage-external.json %t/rt-linkage-external.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-linkage-external.json -o %t/rt-linkage-external-enc.json
+// RUN: diff %S/Inputs/rt-linkage-external.json %t/rt-linkage-external-enc.json
+
+// RUN: clang-ssaf-format --type lu %S/Inputs/rt-linkage-multiple.json -o %t/rt-linkage-multiple.json
+// RUN: diff %S/Inputs/rt-linkage-multiple.json %t/rt-linkage-multiple.json
+// RUN: clang-ssaf-format --type lu --encoding %S/Inputs/rt-linkage-multiple.json -o %t/rt-linkage-multiple-enc.json
+// RUN: diff %S/Inputs/rt-linkage-multiple.json %t/rt-linkage-multiple-enc.json

@@ -1,0 +1,1 @@
+add_compiler_rt_script(hwasan_symbolize hwasan)

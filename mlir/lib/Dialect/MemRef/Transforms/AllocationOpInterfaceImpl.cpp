@@ -1,0 +1,71 @@
+//===- AllocationOpInterfaceImpl.cpp - Impl. of AllocationOpInterface -----===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
+
+#include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/Operation.h"
+
+using namespace mlir;
+
+namespace {
+struct DefaultAllocationInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAllocationInterface, memref::AllocOp> {
+  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
+                                                 Value alloc) {
+    return memref::DeallocOp::create(builder, alloc.getLoc(), alloc)
+        .getOperation();
+  }
+  static std::optional<Value> buildClone(OpBuilder &builder, Value alloc) {
+    return bufferization::CloneOp::create(builder, alloc.getLoc(), alloc)
+        .getResult();
+  }
+  static ::mlir::HoistingKind getHoistingKind() {
+    return HoistingKind::Loop | HoistingKind::Block;
+  }
+  static ::std::optional<::mlir::Operation *>
+  buildPromotedAlloc(OpBuilder &builder, Value alloc) {
+    auto allocOp = cast<memref::AllocOp>(alloc.getDefiningOp());
+    memref::AllocaOp allocaOp = memref::AllocaOp::create(
+        builder, allocOp.getLoc(), allocOp.getType(), allocOp.getDynamicSizes(),
+        allocOp.getSymbolOperands(), allocOp.getAlignmentAttr());
+    allocaOp->setDiscardableAttrs(allocOp->getDiscardableAttrDictionary());
+    return allocaOp.getOperation();
+  }
+};
+
+struct DefaultAutomaticAllocationHoistingInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAutomaticAllocationHoistingInterface, memref::AllocaOp> {
+  static ::mlir::HoistingKind getHoistingKind() { return HoistingKind::Loop; }
+};
+
+struct DefaultReallocationInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultReallocationInterface, memref::ReallocOp> {
+  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
+                                                 Value realloc) {
+    return memref::DeallocOp::create(builder, realloc.getLoc(), realloc)
+        .getOperation();
+  }
+};
+} // namespace
+
+void mlir::memref::registerAllocationOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+    memref::AllocaOp::attachInterface<
+        DefaultAutomaticAllocationHoistingInterface>(*ctx);
+    memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
+  });
+}

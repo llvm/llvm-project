@@ -1,0 +1,344 @@
+## This test checks debug info for the case when one compilation unit
+## contains a definition of a type and another compilation unit
+## contains a definition of the same type. When --garbage-collection
+## is enabled the result should contain the original definition in CU1
+## and the definition from CU2 should have been removed.
+
+# RUN: yaml2obj %s -o %t.o
+
+## Check --odr-deduplication.
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s --check-prefixes=CHECK,CHECK-ODR
+
+## Check --odr alias.
+# RUN: llvm-dwarfutil --odr %t.o %t2
+# RUN: cmp %t1 %t2
+
+## Check --no-odr alias.
+# RUN: llvm-dwarfutil --no-odr %t.o %t3
+# RUN: llvm-dwarfdump -a %t3 | FileCheck %s --check-prefixes=CHECK,CHECK-NOODR
+
+## Check --no-odr-deduplication wins if last.
+# RUN: llvm-dwarfutil --odr-deduplication --no-odr-deduplication %t.o %t4
+# RUN: cmp %t3 %t4
+
+## Check --odr-deduplication wins if last.
+# RUN: llvm-dwarfutil --no-odr-deduplication --odr-deduplication %t.o %t6
+# RUN: cmp %t1 %t6
+
+## CU1:
+##
+## class class1 {
+##   char member1;
+##   float member2;
+## };
+##
+## class1 *var1;
+##
+## CU2:
+##
+## class class1 {
+##   char member1;
+##   float member2;
+## };
+##
+## class1 *var1;
+
+# CHECK: file format elf64-x86-64
+# CHECK: .debug_info contents:
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU1"
+
+# CHECK: 0x[[CU1_CLASS1:[0-9a-f]*]]: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"class1"
+# CHECK: DW_TAG_member
+# CHECK-ODR: DW_AT_type{{.*}}0x00000000[[CU1_CHAR:[0-9a-f]*]] "char"
+# CHECK-NOODR: DW_AT_type{{.*}}0x[[CU1_CHAR:[0-9a-f]*]] "char"
+# CHECK: DW_AT_name{{.*}}"member1"
+
+# CHECK: DW_TAG_member
+# CHECK-ODR: DW_AT_type{{.*}}0x00000000[[CU1_FLOAT:[0-9a-f]*]] "float"
+# CHECK-NOODR: DW_AT_type{{.*}}0x[[CU1_FLOAT:[0-9a-f]*]] "float"
+# CHECK: DW_AT_name{{.*}}"member2"
+
+# CHECK: 0x[[CU1_INT:[0-9a-f]*]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"int"
+
+# CHECK: 0x[[CU1_CHAR]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"char"
+
+# CHECK: 0x[[CU1_FLOAT]]: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"float"
+
+# CHECK-ODR: 0x[[CU1_PTR_CLASS1:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x00000000[[CU1_CLASS1]] "class1"
+# CHECK-NOODR: 0x[[CU1_PTR_CLASS1:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[CU1_CLASS1]] "class1"
+
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"
+# CHECK-ODR: DW_AT_type{{.*}}0x00000000[[CU1_PTR_CLASS1]] "class1 *"
+# CHECK-NOODR: DW_AT_type{{.*}}0x[[CU1_PTR_CLASS1]] "class1 *"
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU2"
+
+# CHECK-ODR-NOT: DW_TAG_class_type
+# CHECK-ODR-NOT: "class1"
+
+# CHECK-ODR: 0x[[CU2_PTR_CLASS1:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x00000000[[CU1_CLASS1]] "class1"
+
+# CHECK-ODR: DW_TAG_variable
+# CHECK-ODR: DW_AT_name{{.*}}"var1"
+# CHECK-ODR: DW_AT_type{{.*}}0x00000000[[CU2_PTR_CLASS1]] "class1 *"
+
+
+# CHECK-NOODR: 0x[[CU2_CLASS1:[0-9a-f]*]]: DW_TAG_class_type{{.*[[:space:]].*}}DW_AT_name{{.*}}"class1"
+# CHECK-NOODR: DW_TAG_member
+# CHECK-NOODR: DW_AT_type{{.*}}0x[[CU2_CHAR:[0-9a-f]*]] "char"
+# CHECK-NOODR: DW_AT_name{{.*}}"member1"
+
+# CHECK-NOODR: DW_TAG_member
+# CHECK-NOODR: DW_AT_type{{.*}}0x[[CU2_FLOAT:[0-9a-f]*]] "float"
+# CHECK-NOODR: DW_AT_name{{.*}}"member2"
+
+# CHECK-NOODR: 0x[[CU2_INT:[0-9a-f]*]]: DW_TAG_base_type
+# CHECK-NOODR: DW_AT_name{{.*}}"int"
+
+# CHECK-NOODR: 0x[[CU2_CHAR]]: DW_TAG_base_type
+# CHECK-NOODR: DW_AT_name{{.*}}"char"
+
+# CHECK-NOODR: 0x[[CU2_FLOAT]]: DW_TAG_base_type
+# CHECK-NOODR: DW_AT_name{{.*}}"float"
+
+# CHECK-NOODR: 0x[[CU2_PTR_CLASS1:[0-9a-f]*]]: DW_TAG_pointer_type{{.*[[:space:]].*}}DW_AT_type{{.*}}0x[[CU2_CLASS1]] "class1"
+
+# CHECK-NOODR: DW_TAG_variable
+# CHECK-NOODR: DW_AT_name{{.*}}"var1"
+# CHECK-NOODR: DW_AT_type{{.*}}0x[[CU2_PTR_CLASS1]] "class1 *"
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    Size:            0x1b
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    Size:            0x1b
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_pointer_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x1000
+            - Value:  0x1b
+        - AbbrCode: 2
+          Values:
+            - CStr: class1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000052
+            - CStr: member1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000058
+            - CStr: member2
+        - AbbrCode: 0
+        - AbbrCode: 7
+          Values:
+            - CStr: int
+        - AbbrCode: 7
+          Values:
+            - CStr: char
+        - AbbrCode: 7
+          Values:
+            - CStr: float
+        - AbbrCode: 8
+          Values:
+            - Value:  0x0000002a
+        - AbbrCode: 9
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x0000005f
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU2
+            - Value:  0x2000
+            - Value:  0x1b
+        - AbbrCode: 2
+          Values:
+            - CStr: class1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000052
+            - CStr: member1
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000058
+            - CStr: member2
+        - AbbrCode: 0
+        - AbbrCode: 7
+          Values:
+            - CStr: int
+        - AbbrCode: 7
+          Values:
+            - CStr: char
+        - AbbrCode: 7
+          Values:
+            - CStr: float
+        - AbbrCode: 8
+          Values:
+            - Value:  0x0000002a
+        - AbbrCode: 9
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x0000005f
+        - AbbrCode: 0
+...

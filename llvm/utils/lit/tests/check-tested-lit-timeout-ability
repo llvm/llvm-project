@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+
+import sys
+from lit.util import killProcessAndChildrenIsSupported
+
+supported, errormsg = killProcessAndChildrenIsSupported()
+
+if not supported:
+    sys.exit(errormsg)
+
+sys.exit()

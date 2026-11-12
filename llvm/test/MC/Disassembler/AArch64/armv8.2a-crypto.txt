@@ -1,0 +1,93 @@
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a,+crypto,+sm4,+sha3 --disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a,-crypto,-sm4,-sha3 --disassemble < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
+0x20,0x80,0x62,0xce
+0x20,0x84,0x62,0xce
+0x8b,0x81,0xc0,0xce
+0xab,0x89,0x6e,0xce
+
+# CHECK:  sha512h   q0, q1, v2.2d
+# CHECK:  sha512h2  q0, q1, v2.2d
+# CHECK:  sha512su0 v11.2d, v12.2d
+# CHECK:  sha512su1 v11.2d, v13.2d, v14.2d
+
+0x99,0x09,0x07,0xce
+0xbe,0x8f,0x7a,0xce
+0xba,0xfe,0x9b,0xce
+0x5f,0x07,0x22,0xce
+0xf4,0x5a,0x55,0xce
+0xf4,0xb2,0x55,0xce
+0xf4,0xb6,0x55,0xce
+0xf4,0xba,0x55,0xce
+0xf4,0xbe,0x55,0xce
+0xbe,0xc3,0x7a,0xce
+0xbe,0xc7,0x7a,0xce
+0x6b,0xc9,0x73,0xce
+0xe2,0x85,0xc0,0xce
+
+# CHECK:  eor3  v25.16b, v12.16b, v7.16b, v2.16b
+# CHECK:  rax1  v30.2d, v29.2d, v26.2d
+# CHECK:  xar v26.2d, v21.2d, v27.2d, #63
+# CHECK:  bcax  v31.16b, v26.16b, v2.16b, v1.16b
+# CHECK:  sm3ss1  v20.4s, v23.4s, v21.4s, v22.4s
+# CHECK:  sm3tt1a v20.4s, v23.4s, v21.s[3]
+# CHECK:  sm3tt1b v20.4s, v23.4s, v21.s[3]
+# CHECK:  sm3tt2a v20.4s, v23.4s, v21.s[3]
+# CHECK:  sm3tt2b v20.4s, v23.4s, v21.s[3]
+# CHECK:  sm3partw1 v30.4s, v29.4s, v26.4s
+# CHECK:  sm3partw2 v30.4s, v29.4s, v26.4s
+# CHECK:  sm4ekey v11.4s, v11.4s, v19.4s
+# CHECK:  sm4e  v2.4s, v15.4s
+
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0x20,0x80,0x62,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0x20,0x84,0x62,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0x8b,0x81,0xc0,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xab,0x89,0x6e,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0x99,0x09,0x07,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xbe,0x8f,0x7a,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xba,0xfe,0x9b,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0x5f,0x07,0x22,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xf4,0x5a,0x55,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xf4,0xb2,0x55,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xf4,0xb6,0x55,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xf4,0xba,0x55,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xf4,0xbe,0x55,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xbe,0xc3,0x7a,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xbe,0xc7,0x7a,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0x6b,0xc9,0x73,0xce
+#CHECK-ERROR: ^
+#CHECK-ERROR: warning: invalid instruction encoding
+#CHECK-ERROR: 0xe2,0x85,0xc0,0xce
+#CHECK-ERROR: ^
+

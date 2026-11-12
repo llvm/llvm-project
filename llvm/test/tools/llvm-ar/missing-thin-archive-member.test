@@ -1,0 +1,17 @@
+## Test llvm-ar errors when thin archive members are missing.
+
+# RUN: rm -rf %t-archive.a
+# RUN: echo contents > %t-temp.txt
+
+## File is not in archive.
+# RUN: llvm-ar qT %t-archive.a
+# RUN: not llvm-ar p %t-archive.a %t-temp.txt 2>&1 | FileCheck %s -DPATH=%t-temp.txt --check-prefix=MISSING
+
+# MISSING: error: '[[PATH]]' was not found
+
+## File has been deleted.
+# RUN: llvm-ar qT %t-archive.a %t-temp.txt
+# RUN: rm %t-temp.txt
+# RUN: not llvm-ar p %t-archive.a 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=DELETED
+
+# DELETED: error: [[MSG]]

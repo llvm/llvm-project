@@ -1,0 +1,2 @@
+template<typename T> struct MergeClassTemplateSpecializations_basic_string {};
+typedef MergeClassTemplateSpecializations_basic_string<char> MergeClassTemplateSpecializations_string;

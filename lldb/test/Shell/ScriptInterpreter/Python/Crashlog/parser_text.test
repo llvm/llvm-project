@@ -1,0 +1,128 @@
+#                                                                 -*- python -*-
+# DEBUG: cd %S/../../../../../examples/python && cat %s | %lldb && false
+# RUN: cd %S/../../../../../examples/python && cat %s | %lldb | FileCheck %s
+# CHECK-LABEL: {{S}}KIP BEYOND CHECKS
+script
+import crashlog
+crash_log_parser = crashlog.TextCrashLogParser
+crash_log = crashlog.CrashLog
+images = [
+"0x10b60b000 - 0x10f707fff com.apple.LLDB.framework (1.1000.11.38.2 - 1000.11.38.2) <96E36F5C-1A83-39A1-8713-5FDD9701C3F1> /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB",
+# CHECK: 0x10b60b000
+# CHECK: 0x10f707fff
+# CHECK: com.apple.LLDB.framework
+# CHECK: 96E36F5C-1A83-39A1-8713-5FDD9701C3F1
+# CHECK: /Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/LLDB
+
+"0x104591000 - 0x1055cfff7 +llvm-dwarfdump (0) <B104CFA1-046A-36A6-8EB4-07DDD7CC2DF3> /Users/USER 1/Documents/*/llvm-dwarfdump",
+# CHECK: 0x104591000
+# CHECK: 0x1055cfff7
+# CHECK: llvm-dwarfdump
+# CHECK: (0)
+# CHECK: B104CFA1-046A-36A6-8EB4-07DDD7CC2DF3
+# CHECK: /Users/USER 1/Documents/*/llvm-dwarfdump
+
+"0x7fff63f20000 - 0x7fff63f77ff7  libc++.1.dylib (400.9.4) <D4AB366F-48A9-3C7D-91BD-41198F69DD57> /usr/lib/libc++.1.dylib",
+# CHECK: 0x7fff63f20000
+# CHECK: 0x7fff63f77ff7
+# CHECK: libc++.1.dylib
+# CHECK: (400.9.4)
+# CHECK: D4AB366F-48A9-3C7D-91BD-41198F69DD57
+# CHECK: /usr/lib/libc++.1.dylib
+
+"0x1111111 - 0x22222 +MyApp Pro arm64  <01234> /tmp/MyApp Pro.app/MyApp Pro",
+# CHECK: 0x1111111
+# CHECK: 0x22222
+# CHECK: MyApp Pro
+# CHECK: arm64
+# CHECK: 01234
+# CHECK: /tmp/MyApp Pro.app/MyApp Pro
+
+"0x1111111 - 0x22222 +MyApp Pro (0) <01234> /tmp/MyApp Pro.app/MyApp Pro",
+# CHECK: 0x1111111
+# CHECK: 0x22222
+# CHECK: MyApp Pro
+# CHECK: (0)
+# CHECK: 01234
+# CHECK: /tmp/MyApp Pro.app/MyApp Pro
+
+"0x1111111 - 0x2222222 MyFramework Plus.dylib (1.11 - MyFramework 1.11) <01234> /tmp/MyFramework Plus.dylib",
+# CHECK: 0x1111111
+# CHECK: 0x2222222
+# CHECK: MyFramework Plus.dylib
+# CHECK: ({{.*}}
+# CHECK: 1.11 - MyFramework 1.11
+# CHECK: 01234
+# CHECK: /tmp/MyFramework Plus.dylib
+
+"0x1111111 - 0x2222222 MyFramework-dev.dylib (1.0.0svn - 1.0.0svn) <01234> /MyFramework-dev.dylib",
+# CHECK: 0x1111111
+# CHECK: 0x2222222
+# CHECK: MyFramework-dev.dylib
+# CHECK: ({{.*}}
+# CHECK: 1.0.0svn - 1.0.0svn
+# CHECK: 01234
+# CHECK: /MyFramework-dev.dylib
+
+"0x7fff63f20000 - 0x7fff63f77ff7  libc++.1.dylib (400.9.4) /usr/lib/libc++.1.dylib",
+# CHECK: 0x7fff63f20000
+# CHECK: 0x7fff63f77ff7
+# CHECK: libc++.1.dylib
+# CHECK: ({{.*}}
+# CHECK: 400.9.4
+# CHECK: None
+# CHECK: /usr/lib/libc++.1.dylib
+
+"0x1047b8000 - 0x10481ffff dyld arm64e  <cfa789d10da63f9a8996daf84ed9d04f> /usr/lib/dyld"
+# CHECK: 0x1047b8000
+# CHECK: 0x10481ffff
+# CHECK: dyld
+# CHECK: {{.*}}
+# CHECK: arm64e
+# CHECK: cfa789d10da63f9a8996daf84ed9d04f
+# CHECK: /usr/lib/dyld
+]
+# CHECK-LABEL: FRAMES
+frames = [
+"0 libsystem_kernel.dylib        	0x00007fff684b78a6 read + 10",
+# CHECK: 0
+# CHECK: libsystem_kernel.dylib
+# CHECK: 0x00007fff684b78a6
+# CHECK: read + 10
+"1   com.apple.LLDB.framework      	0x000000010f7954af lldb_private::HostNativeThreadBase::ThreadCreateTrampoline(void*) + 105",
+# CHECK: 1
+# CHECK: com.apple.LLDB.framework
+# CHECK: 0x000000010f7954af
+# CHECK: lldb_private{{.*}} + 105
+"2   MyApp Pro arm64    	0x000000019b0db3a8 foo + 72",
+# CHECK: 2
+# CHECK: MyApp Pro
+# CHECK: 0x000000019b0db3a8
+# CHECK: foo + 72
+"3   He 0x1    	0x000000019b0db3a8 foo + 72"
+# CHECK: 3
+# CHECK: He 0x1
+# CHECK: 0x000000019b0db3a8
+# CHECK: foo + 72
+]
+
+
+# Avoid matching the text inside the input.
+print("SKIP BEYOND CHECKS")
+for image in images:
+    print('"%s"'%image)
+    print("--------------")
+    match = crash_log_parser.image_regex_uuid.search(image)
+    for group in match.groups():
+        print(group)
+
+print("FRAMES")
+for frame in frames:
+    print('"%s"'%frame)
+    print("--------------")
+    match = crash_log_parser.frame_regex.search(frame)
+    for group in match.groups():
+        print(group)
+
+exit()
+quit

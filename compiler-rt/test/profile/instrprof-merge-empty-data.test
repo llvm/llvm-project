@@ -1,0 +1,14 @@
+// Test online merging with empty data section.
+// RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+// RUN: %clangxx_profgen -fcoverage-mapping -o %t main.c -fprofile-list=funlist
+// RUN: env LLVM_PROFILE_FILE='a%m.profraw' %t
+// RUN: env LLVM_PROFILE_FILE='a%m.profraw' %t 2>&1 | FileCheck %s --allow-empty
+
+// CHECK-NOT: LLVM Profile Error
+
+//--- main.c
+int main() {}
+
+//--- funlist
+[clang]
+default:skip

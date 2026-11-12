@@ -1,0 +1,254 @@
+//===--- SarifDiagnostics.cpp - Sarif Diagnostics for Paths -----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines the SarifDiagnostics object.
+//
+//===----------------------------------------------------------------------===//
+
+#include "SarifDiagnostics.h"
+#include "HTMLDiagnostics.h"
+#include "clang/Analysis/IssueHash.h"
+#include "clang/Analysis/MacroExpansionContext.h"
+#include "clang/Analysis/PathDiagnostic.h"
+#include "clang/Basic/Sarif.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Version.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
+#include <memory>
+
+using namespace llvm;
+using namespace clang;
+using namespace ento;
+
+namespace {
+class SarifDiagnostics : public PathDiagnosticConsumer {
+  std::string OutputFile;
+  const LangOptions &LO;
+  const SourceManager &SM;
+  SarifDocumentWriter SarifWriter;
+
+public:
+  SarifDiagnostics(const std::string &Output, const LangOptions &LO,
+                   const SourceManager &SM)
+      : OutputFile(Output), LO(LO), SM(SM), SarifWriter(SM) {}
+  ~SarifDiagnostics() override = default;
+
+  void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
+                            FilesMade *FM) override;
+
+  StringRef getName() const override { return "SarifDiagnostics"; }
+  PathGenerationScheme getGenerationScheme() const override { return Minimal; }
+  bool supportsLogicalOpControlFlow() const override { return true; }
+  bool supportsCrossFileDiagnostics() const override { return true; }
+
+private:
+  SarifResult createResult(const PathDiagnostic *Diag,
+                           const StringMap<uint32_t> &RuleMapping,
+                           const LangOptions &LO, FilesMade *FM);
+};
+} // end anonymous namespace
+
+void ento::createSarifDiagnosticConsumer(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &Output, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
+
+  createSarifDiagnosticConsumerImpl(DiagOpts, C, Output, PP);
+
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
+                                          CTU, MacroExpansions);
+}
+
+/// Creates and registers a SARIF diagnostic consumer, without any additional
+/// text consumer.
+void ento::createSarifDiagnosticConsumerImpl(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &Output, const Preprocessor &PP) {
+
+  // TODO: Emit an error here.
+  if (Output.empty())
+    return;
+
+  C.push_back(std::make_unique<SarifDiagnostics>(Output, PP.getLangOpts(),
+                                                 PP.getSourceManager()));
+}
+
+static StringRef getRuleDescription(StringRef CheckName) {
+  return llvm::StringSwitch<StringRef>(CheckName)
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
+  .Case(FULLNAME, HELPTEXT)
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+      ;
+}
+
+static StringRef getRuleHelpURIStr(StringRef CheckName) {
+  return llvm::StringSwitch<StringRef>(CheckName)
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \
+  .Case(FULLNAME, DOC_URI)
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+      ;
+}
+
+static ThreadFlowImportance
+calculateImportance(const PathDiagnosticPiece &Piece) {
+  switch (Piece.getKind()) {
+  case PathDiagnosticPiece::Call:
+  case PathDiagnosticPiece::Macro:
+  case PathDiagnosticPiece::Note:
+  case PathDiagnosticPiece::PopUp:
+    // FIXME: What should be reported here?
+    break;
+  case PathDiagnosticPiece::Event:
+    return Piece.getTagStr() == "ConditionBRVisitor"
+               ? ThreadFlowImportance::Important
+               : ThreadFlowImportance::Essential;
+  case PathDiagnosticPiece::ControlFlow:
+    return ThreadFlowImportance::Unimportant;
+  }
+  return ThreadFlowImportance::Unimportant;
+}
+
+/// Returns the character range to report for \p Loc.
+///
+/// A thread flow needs a location for every piece, so an unusable range falls
+/// back to a caret rather than being dropped, which would truncate the path.
+static CharSourceRange getDisplayCharRange(const PathDiagnosticLocation &Loc,
+                                           const LangOptions &LO) {
+  const SourceManager &SM = Loc.getManager();
+  FullSourceLoc Caret = Loc.asLocation().getExpansionLoc();
+  SourceRange Range = Loc.asRange();
+
+  // FIXME: A single-token range is reported as a zero-width region. Widening it
+  // would churn every expected-sarif file, so it is left alone for now.
+  if (Range.getBegin() != Range.getEnd()) {
+    if (std::optional<CharSourceRange> FileRange = getExpansionRangeInFile(
+            CharSourceRange::getTokenRange(Range), Caret.getFileID(), SM))
+      return Lexer::getAsCharRange(*FileRange, SM, LO);
+  }
+
+  return CharSourceRange::getCharRange(Caret, Caret);
+}
+
+static SmallVector<ThreadFlow, 8> createThreadFlows(const PathDiagnostic *Diag,
+                                                    const LangOptions &LO) {
+  SmallVector<ThreadFlow, 8> Flows;
+  const PathPieces &Pieces = Diag->path.flatten(false);
+  for (const auto &Piece : Pieces) {
+    auto Flow = ThreadFlow::create()
+                    .setImportance(calculateImportance(*Piece))
+                    .setRange(getDisplayCharRange(Piece->getLocation(), LO))
+                    .setMessage(Piece->getString());
+    Flows.push_back(Flow);
+  }
+  return Flows;
+}
+
+static StringMap<uint32_t>
+createRuleMapping(const std::vector<const PathDiagnostic *> &Diags,
+                  SarifDocumentWriter &SarifWriter) {
+  StringMap<uint32_t> RuleMapping;
+  llvm::StringSet<> Seen;
+
+  for (const PathDiagnostic *D : Diags) {
+    StringRef CheckName = D->getCheckerName();
+    std::pair<llvm::StringSet<>::iterator, bool> P = Seen.insert(CheckName);
+    if (P.second) {
+      auto Rule = SarifRule::create()
+                      .setName(CheckName)
+                      .setRuleId(CheckName)
+                      .setDescription(getRuleDescription(CheckName))
+                      .setHelpURI(getRuleHelpURIStr(CheckName));
+      size_t RuleIdx = SarifWriter.createRule(Rule);
+      RuleMapping[CheckName] = RuleIdx;
+    }
+  }
+  return RuleMapping;
+}
+
+static const llvm::StringRef IssueHashKey = "clang/issueHash/v1";
+
+SarifResult
+SarifDiagnostics::createResult(const PathDiagnostic *Diag,
+                               const StringMap<uint32_t> &RuleMapping,
+                               const LangOptions &LO, FilesMade *FM) {
+
+  StringRef CheckName = Diag->getCheckerName();
+  uint32_t RuleIdx = RuleMapping.lookup(CheckName);
+  CharSourceRange Range = getDisplayCharRange(Diag->getLocation(), LO);
+
+  SmallVector<ThreadFlow, 8> Flows = createThreadFlows(Diag, LO);
+
+  auto IssueHash = Diag->getIssueHash(SM, LO);
+
+  std::string HtmlReportURL;
+  if (FM && !FM->empty()) {
+    // Find the HTML report that was generated for this issue, if one exists.
+    PDFileEntry::ConsumerFiles *Files = FM->getFiles(*Diag);
+    if (Files) {
+      auto HtmlFile = llvm::find_if(*Files, [](const auto &File) {
+        return File.first == HTML_DIAGNOSTICS_NAME;
+      });
+      if (HtmlFile != Files->end()) {
+        SmallString<128> HtmlReportPath =
+            llvm::sys::path::parent_path(OutputFile);
+        llvm::sys::path::append(HtmlReportPath, HtmlFile->second);
+        HtmlReportURL = SarifDocumentWriter::fileNameToURI(HtmlReportPath);
+      }
+    }
+  }
+
+  auto Result = SarifResult::create(RuleIdx)
+                    .setRuleId(CheckName)
+                    .setDiagnosticMessage(Diag->getVerboseDescription())
+                    .setDiagnosticLevel(SarifResultLevel::Warning)
+                    .addLocations({Range})
+                    .addPartialFingerprint(IssueHashKey, IssueHash)
+                    .setHostedViewerURI(HtmlReportURL)
+                    .setThreadFlows(Flows);
+  return Result;
+}
+
+void SarifDiagnostics::FlushDiagnosticsImpl(
+    std::vector<const PathDiagnostic *> &Diags, FilesMade *FM) {
+  // We currently overwrite the file if it already exists. However, it may be
+  // useful to add a feature someday that allows the user to append a run to an
+  // existing SARIF file. One danger from that approach is that the size of the
+  // file can become large very quickly, so decoding into JSON to append a run
+  // may be an expensive operation.
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
+  if (EC) {
+    llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
+    return;
+  }
+
+  std::string ToolVersion = getClangFullVersion();
+  SarifWriter.createRun("clang", "clang static analyzer", ToolVersion);
+  StringMap<uint32_t> RuleMapping = createRuleMapping(Diags, SarifWriter);
+  for (const PathDiagnostic *D : Diags) {
+    SarifResult Result = createResult(D, RuleMapping, LO, FM);
+    SarifWriter.appendResult(Result);
+  }
+  auto Document = SarifWriter.createDocument();
+  OS << llvm::formatv("{0:2}\n", json::Value(std::move(Document)));
+}

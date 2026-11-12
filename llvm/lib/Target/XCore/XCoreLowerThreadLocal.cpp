@@ -1,0 +1,189 @@
+//===-- XCoreLowerThreadLocal - Lower thread local variables --------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains a pass that lowers thread local variables on the
+///        XCore.
+///
+//===----------------------------------------------------------------------===//
+
+#include "XCore.h"
+#include "XCoreSubtarget.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsXCore.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+#define DEBUG_TYPE "xcore-lower-thread-local"
+
+using namespace llvm;
+
+namespace {
+  /// Lowers thread local variables on the XCore. Each thread local variable is
+  /// expanded to an array of n elements indexed by the thread ID where n is the
+  /// fixed number hardware threads supported by the device.
+struct XCoreLowerThreadLocalLegacy : public ModulePass {
+  static char ID;
+
+  XCoreLowerThreadLocalLegacy() : ModulePass(ID) {}
+
+  bool runOnModule(Module &M) override;
+};
+}
+
+char XCoreLowerThreadLocalLegacy::ID = 0;
+
+INITIALIZE_PASS(XCoreLowerThreadLocalLegacy, "xcore-lower-thread-local",
+                "Lower thread local variables", false, false)
+
+ModulePass *llvm::createXCoreLowerThreadLocalLegacyPass() {
+  return new XCoreLowerThreadLocalLegacy();
+}
+
+static ArrayType *createLoweredType(Type *OriginalType, unsigned MaxThreads) {
+  return ArrayType::get(OriginalType, MaxThreads);
+}
+
+static Constant *
+createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
+  SmallVector<Constant *, 8> Elements(NewType->getNumElements());
+  for (unsigned i = 0; i != NewType->getNumElements(); ++i) {
+    Elements[i] = OriginalInitializer;
+  }
+  return ConstantArray::get(NewType, Elements);
+}
+
+static bool replaceConstantExprOp(ConstantExpr *CE) {
+  do {
+    SmallVector<WeakTrackingVH, 8> WUsers(CE->users());
+    llvm::sort(WUsers);
+    WUsers.erase(llvm::unique(WUsers), WUsers.end());
+    while (!WUsers.empty())
+      if (WeakTrackingVH WU = WUsers.pop_back_val()) {
+        if (PHINode *PN = dyn_cast<PHINode>(WU)) {
+          for (int I = 0, E = PN->getNumIncomingValues(); I < E; ++I)
+            if (PN->getIncomingValue(I) == CE) {
+              BasicBlock *PredBB = PN->getIncomingBlock(I);
+              if (PredBB->getTerminator()->getNumSuccessors() > 1)
+                PredBB = SplitEdge(PredBB, PN->getParent());
+              BasicBlock::iterator InsertPos =
+                  PredBB->getTerminator()->getIterator();
+              Instruction *NewInst = CE->getAsInstruction();
+              NewInst->insertBefore(*PredBB, InsertPos);
+              PN->setOperand(I, NewInst);
+            }
+        } else if (Instruction *Instr = dyn_cast<Instruction>(WU)) {
+          Instruction *NewInst = CE->getAsInstruction();
+          NewInst->insertBefore(*Instr->getParent(), Instr->getIterator());
+          Instr->replaceUsesOfWith(CE, NewInst);
+        } else {
+          ConstantExpr *CExpr = dyn_cast<ConstantExpr>(WU);
+          if (!CExpr || !replaceConstantExprOp(CExpr))
+            return false;
+        }
+      }
+  } while (CE->hasNUsesOrMore(1)); // We need to check because a recursive
+  // sibling may have used 'CE' when getAsInstruction was called.
+  CE->destroyConstant();
+  return true;
+}
+
+static bool rewriteNonInstructionUses(GlobalVariable *GV) {
+  SmallVector<WeakTrackingVH, 8> WUsers;
+  for (User *U : GV->users())
+    if (!isa<Instruction>(U))
+      WUsers.push_back(WeakTrackingVH(U));
+  while (!WUsers.empty())
+    if (WeakTrackingVH WU = WUsers.pop_back_val()) {
+      ConstantExpr *CE = dyn_cast<ConstantExpr>(WU);
+      if (!CE || !replaceConstantExprOp(CE))
+        return false;
+    }
+  return true;
+}
+
+static bool lowerGlobal(GlobalVariable *GV, unsigned MaxThreads) {
+  Module *M = GV->getParent();
+  if (!GV->isThreadLocal())
+    return false;
+
+  if (!rewriteNonInstructionUses(GV))
+    return false;
+
+  // The lowered representation needs an ArrayType of the value type, which
+  // requires a known per-element stride: reject anything that can't provide
+  // one now, with a clear diagnostic, rather than emitting a malformed GEP
+  // that only fails much later (and much less clearly) in instruction
+  // selection.
+  if (!GV->getValueType()->isSized() ||
+      GV->getGlobalSize(M->getDataLayout()) == 0)
+    reportFatalUsageError("Size of thread local object '" + GV->getName() +
+                          "' is unknown");
+
+  // Create replacement global.
+  ArrayType *NewType = createLoweredType(GV->getValueType(), MaxThreads);
+  Constant *NewInitializer = nullptr;
+  if (GV->hasInitializer())
+    NewInitializer = createLoweredInitializer(NewType,
+                                              GV->getInitializer());
+  GlobalVariable *NewGV =
+    new GlobalVariable(*M, NewType, GV->isConstant(), GV->getLinkage(),
+                       NewInitializer, "", nullptr,
+                       GlobalVariable::NotThreadLocal,
+                       GV->getType()->getAddressSpace(),
+                       GV->isExternallyInitialized());
+
+  // Update uses.
+  SmallVector<User *, 16> Users(GV->users());
+  for (User *U : Users) {
+    Instruction *Inst = cast<Instruction>(U);
+    IRBuilder<> Builder(Inst);
+    Value *ThreadID = Builder.CreateIntrinsic(Intrinsic::xcore_getid, {});
+    Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
+                                            {Builder.getInt64(0), ThreadID});
+    U->replaceUsesOfWith(GV, Addr);
+  }
+
+  // Remove old global.
+  NewGV->takeName(GV);
+  GV->eraseFromParent();
+  return true;
+}
+
+static bool lowerGlobalsInModule(Module &M) {
+  unsigned MaxThreads =
+      M.getContext().getLibraryOptions().get<XCoreOptions>().max_threads;
+  // Find thread local globals.
+  bool MadeChange = false;
+  SmallVector<GlobalVariable *, 16> ThreadLocalGlobals;
+  for (GlobalVariable &GV : M.globals())
+    if (GV.isThreadLocal())
+      ThreadLocalGlobals.push_back(&GV);
+  for (GlobalVariable *GV : ThreadLocalGlobals)
+    MadeChange |= lowerGlobal(GV, MaxThreads);
+  return MadeChange;
+}
+
+bool XCoreLowerThreadLocalLegacy::runOnModule(Module &M) {
+  return lowerGlobalsInModule(M);
+}
+
+PreservedAnalyses XCoreLowerThreadLocalPass::run(Module &M,
+                                                 ModuleAnalysisManager &MAM) {
+  return lowerGlobalsInModule(M) ? PreservedAnalyses::none()
+                                 : PreservedAnalyses::all();
+}

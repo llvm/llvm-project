@@ -1,0 +1,41 @@
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefixes=CHECK,NOALL
+# RUN: llvm-objdump --no-print-imm-hex -d --show-all-symbols %t | FileCheck %s --check-prefixes=CHECK,ALL
+
+# CHECK:       Disassembly of section .mysection:
+# CHECK-EMPTY:
+# ALL-NEXT:    <$x>:
+# CHECK-NEXT:  <_start>:
+# CHECK-NEXT:         0:       10000021        adr     x1, 0x4
+# CHECK-EMPTY:
+# ALL-NEXT:    <$d>:
+# CHECK-NEXT:  <msg>:
+# CHECK-NEXT:         4:       48 65 6c 6c     .word
+# CHECK-NEXT:         8:       6f 2c 20 77     .word
+# CHECK-NEXT:         c:       6f 72 6c 64     .word
+# CHECK-NEXT:        10:       0a 00           .short  0x000a
+# CHECK-EMPTY:
+# CHECK-NEXT:  Disassembly of section .myothersection:
+# CHECK-EMPTY:
+# NOALL-NEXT:  <.myothersection>:
+# ALL-NEXT:    <$x>:
+# CHECK-NEXT:         0:       90000001        adrp    x1, 0x0
+# CHECK-EMPTY:
+# ALL-NEXT:    <$d>:
+# CHECK-NEXT:  <mystr>:
+# CHECK-NEXT:         4:       62 6c 61 68     .word
+# CHECK-NEXT:         8:       9a              .byte   0x9a
+
+.section .mysection,"ax",@progbits
+.globl _start
+_start:
+  adr x1,msg
+msg:  .asciz  "Hello, world\n"
+msgend:
+
+.section .myothersection,"ax",@progbits
+  adrp x1,mystr
+mystr:
+  .ascii "blah"
+  .size mystr, 4
+  .byte 0x9a

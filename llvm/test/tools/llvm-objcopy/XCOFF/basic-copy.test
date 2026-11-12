@@ -1,0 +1,31 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t.out
+# RUN: cmp %t %t.out
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+AuxiliaryHeader:
+  Magic: 0x10B
+Sections:
+  - Name:        .text
+    Flags:       [ STYP_TEXT ]
+    SectionData: "123456"
+  - Name:        .data
+    Flags:       [ STYP_DATA ]
+    SectionData: "067891"
+    Relocations:
+      - Address: 0x3A
+        Type:    0x02
+Symbols:
+  - Name:         aux_fcn_csect
+    StorageClass: C_EXT
+    Type:         0x20
+    AuxEntries:
+      - Type: AUX_FCN
+      - Type: AUX_CSECT
+  - Name:         aux_stat
+    StorageClass: C_STAT
+    AuxEntries:
+      - Type: AUX_STAT
+...

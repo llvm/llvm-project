@@ -1,0 +1,12 @@
+## Show that --print-file-name prints just the archive name for an archive and
+## not the member names.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: echo -n abcd > %t/abcd
+RUN: llvm-ar --format=gnu crs %t/archive.a %t/abcd
+RUN: llvm-strings -f %t/archive.a | FileCheck %s
+RUN: llvm-strings --print-file-name %t/archive.a | FileCheck %s
+
+CHECK: archive.a: !<arch>
+CHECK: archive.a: abcd/           0           0     0     644     4         `
+CHECK: archive.a: abcd

@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "DIR",
+    "command": "CLANG -fmodules -gmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -c DIR/tu.c -o DIR/tu.o",
+    "file": "DIR/tu.c"
+  }
+]

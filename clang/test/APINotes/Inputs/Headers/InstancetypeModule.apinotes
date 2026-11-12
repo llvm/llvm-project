@@ -1,0 +1,10 @@
+Name: InstancetypeModule
+Classes:
+- Name: SomeBaseClass
+  Methods:
+  - Selector: instancetypeFactoryMethod
+    MethodKind: Class
+    ResultType: SomeBaseClass * _Nonnull
+  - Selector: staticFactoryMethod
+    MethodKind: Class
+    ResultType: SomeBaseClass * _Nonnull

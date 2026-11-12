@@ -1,0 +1,70 @@
+## Note: ls -l prints the modified timestamp
+
+## Preserve dates when stripping to an output file.
+# RUN: yaml2obj %s -o %t.1.o
+# RUN: touch -m -t 199705050555.55 %t.1.o
+# RUN: llvm-strip -p %t.1.o -o %t-preserved.1.o
+# RUN: ls -l %t-preserved.1.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# Check that the stripped output is in fact a valid object file.
+# RUN: llvm-readobj %t-preserved.1.o
+
+## Preserve dates available via objcopy interface as well.
+# RUN: yaml2obj %s -o %t.2.o
+# RUN: touch -m -t 199705050555.55 %t.2.o
+# RUN: llvm-objcopy -p %t.2.o %t-preserved.2.o
+# RUN: ls -l %t-preserved.2.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t-preserved.2.o
+
+## Preserve dates when stripping in place.
+# RUN: yaml2obj %s -o %t.3.o
+# RUN: touch -m -t 199705050555.55 %t.3.o
+# RUN: llvm-strip -p %t.3.o
+# RUN: ls -l %t.3.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t.3.o
+
+## Without -p set, don't preserve dates.
+# RUN: yaml2obj %s -o %t.4.o
+# RUN: touch -m -t 199705050555.55 %t.4.o
+# RUN: llvm-strip %t.4.o
+# RUN: ls -l %t.4.o | FileCheck %s --check-prefix=CHECK-NO-PRESERVE-MTIME
+# RUN: llvm-readobj %t.4.o
+
+## Preserve dates in archives.
+# RUN: yaml2obj %s -o %t.5.o
+# RUN: rm -f %t.a
+# RUN: llvm-ar cr %t.a %t.5.o
+# RUN: touch -m -t 199705050555.55 %t.a
+# RUN: llvm-strip -p %t.a
+# RUN: ls -l %t.a | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t.a
+
+## Preserve dates in split DWO files.
+# RUN: cp %p/Inputs/dwarf.dwo %t-input.dwo
+# RUN: touch -m -t 199705050555.55 %t-input.dwo
+# RUN: llvm-objcopy -p --split-dwo=%t-dwo %t-input.dwo %t-nondwo
+# RUN: ls -l %t-dwo | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t-dwo
+# RUN: ls -l %t-nondwo | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: llvm-readobj %t-nondwo
+
+## --preserve-dates and -p are aliases.
+# RUN: llvm-strip --preserve-dates %t.1.o -o %t-preserved.1.alias.o
+# RUN: ls -l %t-preserved.1.alias.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: cmp %t-preserved.1.alias.o %t-preserved.1.o
+# RUN: llvm-objcopy --preserve-dates %t.2.o %t-preserved.2.alias.o
+# RUN: ls -l %t-preserved.2.alias.o | FileCheck %s --check-prefix=CHECK-PRESERVE-MTIME
+# RUN: cmp %t-preserved.2.o %t-preserved.2.alias.o
+
+# CHECK-PRESERVE-MTIME:        {{[[:space:]]1997}}
+# CHECK-NO-PRESERVE-MTIME-NOT: {{[[:space:]]1997}}
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]

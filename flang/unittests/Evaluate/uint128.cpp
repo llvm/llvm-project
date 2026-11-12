@@ -1,0 +1,211 @@
+//===-- unittests/Evaluate/uint128.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#define AVOID_NATIVE_UINT128_T 1
+#include "flang/Common/uint128.h"
+#include "flang/Common/numeric-limits.h"
+#include "flang/Testing/testing.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cinttypes>
+#include <type_traits>
+
+#if (defined __GNUC__ || defined __clang__) && defined __SIZEOF_INT128__
+#define HAS_NATIVE_UINT128_T 1
+#else
+#undef HAS_NATIVE_UINT128_T
+#endif
+
+using U128 = Fortran::common::UnsignedInt128;
+
+static void Test(std::uint64_t x) {
+  U128 n{x};
+  MATCH(x, static_cast<std::uint64_t>(n));
+  MATCH(~x, static_cast<std::uint64_t>(~n));
+  MATCH(-x, static_cast<std::uint64_t>(-n));
+  MATCH(!x, static_cast<std::uint64_t>(!n));
+  TEST(n == n);
+  TEST(n + n == n * static_cast<U128>(2));
+  TEST(n - n == static_cast<U128>(0));
+  TEST(n + n == n << static_cast<U128>(1));
+  TEST(n + n == n << static_cast<U128>(1));
+  TEST((n + n) - n == n);
+  TEST(((n + n) >> static_cast<U128>(1)) == n);
+  if (x != 0) {
+    TEST(static_cast<U128>(0) / n == static_cast<U128>(0));
+    TEST(static_cast<U128>(n - 1) / n == static_cast<U128>(0));
+    TEST(static_cast<U128>(n) / n == static_cast<U128>(1));
+    TEST(static_cast<U128>(n + n - 1) / n == static_cast<U128>(1));
+    TEST(static_cast<U128>(n + n) / n == static_cast<U128>(2));
+  }
+}
+
+static void Test(std::uint64_t x, std::uint64_t y) {
+  U128 m{x}, n{y};
+  MATCH(x, static_cast<std::uint64_t>(m));
+  MATCH(y, static_cast<std::uint64_t>(n));
+  MATCH(x & y, static_cast<std::uint64_t>(m & n));
+  MATCH(x | y, static_cast<std::uint64_t>(m | n));
+  MATCH(x ^ y, static_cast<std::uint64_t>(m ^ n));
+  MATCH(x + y, static_cast<std::uint64_t>(m + n));
+  MATCH(x - y, static_cast<std::uint64_t>(m - n));
+  MATCH(x * y, static_cast<std::uint64_t>(m * n));
+  if (n != 0) {
+    MATCH(x / y, static_cast<std::uint64_t>(m / n));
+  }
+}
+
+#if HAS_NATIVE_UINT128_T
+static __uint128_t ToNative(U128 n) {
+  return static_cast<__uint128_t>(static_cast<std::uint64_t>(n >> 64)) << 64 |
+      static_cast<std::uint64_t>(n);
+}
+
+static U128 FromNative(__uint128_t n) {
+  return U128{static_cast<std::uint64_t>(n >> 64)} << 64 |
+      U128{static_cast<std::uint64_t>(n)};
+}
+
+static void TestVsNative(__uint128_t x, __uint128_t y) {
+  U128 m{FromNative(x)}, n{FromNative(y)};
+  TEST(ToNative(m) == x);
+  TEST(ToNative(n) == y);
+  TEST(ToNative(~m) == ~x);
+  TEST(ToNative(-m) == -x);
+  TEST(ToNative(!m) == !x);
+  TEST(ToNative(m < n) == (x < y));
+  TEST(ToNative(m <= n) == (x <= y));
+  TEST(ToNative(m == n) == (x == y));
+  TEST(ToNative(m != n) == (x != y));
+  TEST(ToNative(m >= n) == (x >= y));
+  TEST(ToNative(m > n) == (x > y));
+  TEST(ToNative(m & n) == (x & y));
+  TEST(ToNative(m | n) == (x | y));
+  TEST(ToNative(m ^ n) == (x ^ y));
+  if (y < 128) {
+    TEST(ToNative(m << n) == (x << y));
+    TEST(ToNative(m >> n) == (x >> y));
+  }
+  TEST(ToNative(m + n) == (x + y));
+  TEST(ToNative(m - n) == (x - y));
+  TEST(ToNative(m * n) == (x * y));
+  if (y > 0) {
+    TEST(ToNative(m / n) == (x / y));
+    TEST(ToNative(m % n) == (x % y));
+    TEST(ToNative(m - n * (m / n)) == (x % y));
+  }
+}
+
+static void TestVsNative() {
+  for (int j{0}; j < 128; ++j) {
+    for (int k{0}; k < 128; ++k) {
+      __uint128_t m{1}, n{1};
+      m <<= j, n <<= k;
+      TestVsNative(m, n);
+      TestVsNative(~m, n);
+      TestVsNative(m, ~n);
+      TestVsNative(~m, ~n);
+      TestVsNative(m ^ n, n);
+      TestVsNative(m, m ^ n);
+      TestVsNative(m ^ ~n, n);
+      TestVsNative(m, ~m ^ n);
+      TestVsNative(m ^ ~n, m ^ n);
+      TestVsNative(m ^ n, ~m ^ n);
+      TestVsNative(m ^ ~n, ~m ^ n);
+      Test(m, 10000000000000000); // important case for decimal conversion
+      Test(~m, 10000000000000000);
+    }
+  }
+}
+#endif
+
+/// T is the native __(u)int128_t implementation to compare against. It only
+/// executes on platforms with HAS_NATIVE_UINT128_T enabled.
+template <typename T> static void TestNumericLimitsVsNative() {
+  using Std = std::numeric_limits<T>;
+  using Detail = Fortran::common::detail::numeric_limits<T>;
+  using Common = Fortran::common::numeric_limits<T>;
+
+  // Our implementation in Detail must be equivalent to Std
+  // (if Std supports __(u)int128).
+  if constexpr (Std::is_specialized) {
+    TEST(Detail::is_specialized == Std::is_specialized);
+    TEST(Detail::is_signed == Std::is_signed);
+    TEST(Detail::is_integer == Std::is_integer);
+    TEST(Detail::min() == Std::min());
+    TEST(Detail::max() == Std::max());
+    TEST(Detail::lowest() == Std::lowest());
+  } else {
+    llvm::outs() << "std::numeric_limits is not specialized for this type\n";
+  }
+
+  // Common may refer to either Std or Detail; in either case it must be
+  // identical. This is testing the `using numeric_limits` junction between
+  // `detail::` and `std::`.
+  TEST(Detail::is_specialized == Common::is_specialized);
+  TEST(Detail::is_integer == Common::is_integer);
+  TEST(Detail::is_signed == Common::is_signed);
+  TEST(Detail::min() == Common::min());
+  TEST(Detail::max() == Common::max());
+  TEST(Detail::lowest() == Common::lowest());
+}
+
+template <typename T, typename EXPECTED> static void CheckMakeUnsignedType() {
+  TEST((std::is_same_v<Fortran::common::make_unsigned_t<T>, EXPECTED>));
+}
+
+static void TestMakeUnsigned() {
+  using Fortran::common::SignedInt128;
+  using Fortran::common::UnsignedInt128;
+
+  // Types handled by std::make_unsigned
+  CheckMakeUnsignedType<char, unsigned char>();
+  CheckMakeUnsignedType<signed char, unsigned char>();
+  CheckMakeUnsignedType<int, unsigned>();
+  CheckMakeUnsignedType<const int, const unsigned>();
+  CheckMakeUnsignedType<std::int64_t, std::uint64_t>();
+
+  // Flang's 128-bit emulation classes
+  CheckMakeUnsignedType<SignedInt128, UnsignedInt128>();
+  CheckMakeUnsignedType<UnsignedInt128, UnsignedInt128>();
+  CheckMakeUnsignedType<const SignedInt128, const UnsignedInt128>();
+  CheckMakeUnsignedType<volatile UnsignedInt128, volatile UnsignedInt128>();
+  CheckMakeUnsignedType<const volatile SignedInt128,
+      const volatile UnsignedInt128>();
+
+#if HAS_NATIVE_UINT128_T
+  CheckMakeUnsignedType<__int128_t, __uint128_t>();
+  CheckMakeUnsignedType<__uint128_t, __uint128_t>();
+  CheckMakeUnsignedType<const __int128_t, const __uint128_t>();
+  CheckMakeUnsignedType<volatile __int128_t, volatile __uint128_t>();
+  CheckMakeUnsignedType<const volatile __uint128_t,
+      const volatile __uint128_t>();
+#endif
+}
+
+int main() {
+  for (std::uint64_t j{0}; j < 64; ++j) {
+    Test(j);
+    Test(~j);
+    Test(std::uint64_t(1) << j);
+    for (std::uint64_t k{0}; k < 64; ++k) {
+      Test(j, k);
+    }
+  }
+#if HAS_NATIVE_UINT128_T
+  llvm::outs() << "Environment has native __uint128_t\n";
+  TestVsNative();
+  TestNumericLimitsVsNative<__int128_t>();
+  TestNumericLimitsVsNative<__uint128_t>();
+  TestNumericLimitsVsNative<const __int128_t>();
+  TestNumericLimitsVsNative<const __uint128_t>();
+#else
+  llvm::outs() << "Environment lacks native __uint128_t\n";
+#endif
+  TestMakeUnsigned();
+  return testing::Complete();
+}

@@ -1,0 +1,12 @@
+{
+  'version': 0,
+  'roots': [
+    { 'name': 'INPUT_DIR', 'type': 'directory',
+      'contents': [
+        { 'name': 'a.h', 'type': 'file',
+          'external-contents': 'OUT_DIR/a.h'
+        }
+      ]
+    }
+  ]
+}

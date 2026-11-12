@@ -1,0 +1,87 @@
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+## Check the name (preferring linkage name) of the DW_AT_call_origin DIE
+## reference is printed after the address.
+
+# CHECK: DW_TAG_call_site
+# CHECK-NEXT: DW_AT_call_origin (0x{{[0-9a-f]+}} "_Z2f2v")
+
+# CHECK: DW_TAG_call_site
+# CHECK-NEXT: DW_AT_call_origin (0x{{[0-9a-f]+}} "f1")
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_str:
+    - "_Z2f2v"
+    - "f2"
+    - "f1"
+
+  debug_abbrev:
+    - Table:
+      - Code:            0x0000000000000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_yes
+        Attributes:
+          - Attribute:       DW_AT_low_pc
+            Form:            DW_FORM_addr
+      - Code:            0x0000000000000002
+        Tag:             DW_TAG_subprogram
+        Children:        DW_CHILDREN_yes
+        Attributes:
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_low_pc
+            Form:            DW_FORM_addr
+          - Attribute:       DW_AT_high_pc
+            Form:            DW_FORM_addr
+      - Code:            0x0000000000000003
+        Tag:             DW_TAG_call_site
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:   DW_AT_call_origin
+            Form:        DW_FORM_ref4
+      - Code:            0x0000000000000004
+        Tag:             DW_TAG_subprogram
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_linkage_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_name
+            Form:            DW_FORM_strp
+          - Attribute:       DW_AT_declaration
+            Form:            DW_FORM_flag_present
+  debug_info:
+    - Length:          0x3b
+      Version:         5
+      UnitType:        0x01 # DW_TU_compile
+      AbbrOffset:      0x0000000000000000
+      AddrSize:        8
+      Entries:
+        - AbbrCode:    0x00000001          # start compile unit
+          Values:                          #
+            - Value:   0x0000000000000000  #
+        - AbbrCode:    0x00000002          ## start f1
+          Values:                          ##
+            - Value:   0x000000000000000a  ##
+            - Value:   0x0000000000001000  ##
+            - Value:   0x0000000000002000  ##
+        - AbbrCode:    0x00000003          ### call site
+          Values:                          ###
+            - Value:   0x0000000000000035  ### (f2)
+        - AbbrCode:    0x00000003          ### call site
+          Values:                          ###
+            - Value:   0x0000000000000015  ### (f1)
+        - AbbrCode:    0x00000000          ## end f1
+          Values:      []                  #
+        - AbbrCode:    0x00000004          ## f2
+          Values:                          ##
+            - Value:   0x0000000000000000  ##
+            - Value:   0x0000000000000007  ##
+        - AbbrCode:    0x00000000          # end compile unit
+          Values:      []
+...

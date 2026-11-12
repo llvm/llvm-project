@@ -1,0 +1,16 @@
+# Escape sequences that can appear in python re.sub replacement strings have no
+# special meaning in the value.
+
+# DEFINE: %{escape} = \g<0>\n
+# RUN: echo '%{escape}'
+# CHECK:# | \g<0>\n
+
+# REDEFINE: %{escape} = \n                                                     \
+# REDEFINE:             \g<param>
+# RUN: echo '%{escape}'
+# CHECK:# | \n \g<param>
+
+# RUN: echo '%{global:subst-with-escapes}'
+# CHECK:# | value-with-\g
+
+# CHECK: Passed: 1 {{\([0-9]*.[0-9]*%\)}}

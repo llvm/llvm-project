@@ -1,0 +1,90 @@
+# RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
+# RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
+
+# ATT:   vcvtne2ps2bf16	%zmm28, %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmm28
+0x62,0x02,0x17,0x40,0x72,0xf4
+
+# ATT:   vcvtne2ps2bf16	%zmm28, %zmm29, %zmm30 {%k7}
+# INTEL: vcvtne2ps2bf16	zmm30 {k7}, zmm29, zmm28
+0x62,0x02,0x17,0x47,0x72,0xf4
+
+# ATT:   vcvtne2ps2bf16	%zmm28, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vcvtne2ps2bf16	zmm30 {k7} {z}, zmm29, zmm28
+0x62,0x02,0x17,0xc7,0x72,0xf4
+
+# ATT:   vcvtne2ps2bf16	(%rcx), %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmmword ptr [rcx]
+0x62,0x62,0x17,0x40,0x72,0x31
+
+# ATT:   vcvtne2ps2bf16	291(%rax,%r14,8), %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmmword ptr [rax + 8*r14 + 291]
+0x62,0x22,0x17,0x40,0x72,0xb4,0xf0,0x23,0x01,0x00,0x00
+
+# ATT:   vcvtne2ps2bf16	268435456(%rax,%r14,8), %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmmword ptr [rax + 8*r14 + 268435456]
+0x62,0x22,0x17,0x40,0x72,0xb4,0xf0,0x00,0x00,0x00,0x10
+
+# ATT:   vcvtne2ps2bf16	-64(%rsp), %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmmword ptr [rsp - 64]
+0x62,0x62,0x17,0x40,0x72,0x74,0x24,0xff
+
+# ATT:   vcvtne2ps2bf16	(%rcx){1to16}, %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, dword ptr [rcx]{1to16}
+0x62,0x62,0x17,0x50,0x72,0x31
+
+# ATT:   vcvtne2ps2bf16	8128(%rdx), %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmmword ptr [rdx + 8128]
+0x62,0x62,0x17,0x40,0x72,0x72,0x7f
+
+# ATT:   vcvtne2ps2bf16	-8192(%rdx), %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, zmmword ptr [rdx - 8192]
+0x62,0x62,0x17,0x40,0x72,0x72,0x80
+
+# ATT:   vcvtne2ps2bf16	508(%rdx){1to16}, %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, dword ptr [rdx + 508]{1to16}
+0x62,0x62,0x17,0x50,0x72,0x72,0x7f
+
+# ATT:   vcvtne2ps2bf16	-512(%rdx){1to16}, %zmm29, %zmm30
+# INTEL: vcvtne2ps2bf16	zmm30, zmm29, dword ptr [rdx - 512]{1to16}
+0x62,0x62,0x17,0x50,0x72,0x72,0x80
+
+# ATT:   vcvtneps2bf16	%zmm29, %ymm30
+# INTEL: vcvtneps2bf16	ymm30, zmm29
+0x62,0x02,0x7e,0x48,0x72,0xf5
+
+# ATT:   vcvtneps2bf16	268435456(%rbp,%r14,8), %ymm30 {%k7}
+# INTEL: vcvtneps2bf16	ymm30 {k7}, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x22,0x7e,0x4f,0x72,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vcvtneps2bf16	(%r9){1to16}, %ymm30
+# INTEL: vcvtneps2bf16	ymm30, dword ptr [r9]{1to16}
+0x62,0x42,0x7e,0x58,0x72,0x31
+
+# ATT:   vcvtneps2bf16	8128(%rcx), %ymm30
+# INTEL: vcvtneps2bf16	ymm30, zmmword ptr [rcx + 8128]
+0x62,0x62,0x7e,0x48,0x72,0x71,0x7f
+
+# ATT:   vcvtneps2bf16	-512(%rdx){1to16}, %ymm30 {%k7} {z}
+# INTEL: vcvtneps2bf16	ymm30 {k7} {z}, dword ptr [rdx - 512]{1to16}
+0x62,0x62,0x7e,0xdf,0x72,0x72,0x80
+
+# ATT:   vdpbf16ps	%zmm28, %zmm29, %zmm30
+# INTEL: vdpbf16ps	zmm30, zmm29, zmm28
+0x62,0x02,0x16,0x40,0x52,0xf4
+
+# ATT:   vdpbf16ps	268435456(%rbp,%r14,8), %zmm29, %zmm30 {%k7}
+# INTEL: vdpbf16ps	zmm30 {k7}, zmm29, zmmword ptr [rbp + 8*r14 + 268435456]
+0x62,0x22,0x16,0x47,0x52,0xb4,0xf5,0x00,0x00,0x00,0x10
+
+# ATT:   vdpbf16ps	(%r9){1to16}, %zmm29, %zmm30
+# INTEL: vdpbf16ps	zmm30, zmm29, dword ptr [r9]{1to16}
+0x62,0x42,0x16,0x50,0x52,0x31
+
+# ATT:   vdpbf16ps	8128(%rcx), %zmm29, %zmm30
+# INTEL: vdpbf16ps	zmm30, zmm29, zmmword ptr [rcx + 8128]
+0x62,0x62,0x16,0x40,0x52,0x71,0x7f
+
+# ATT:   vdpbf16ps	-512(%rdx){1to16}, %zmm29, %zmm30 {%k7} {z}
+# INTEL: vdpbf16ps	zmm30 {k7} {z}, zmm29, dword ptr [rdx - 512]{1to16}
+0x62,0x62,0x16,0xd7,0x52,0x72,0x80

@@ -1,0 +1,54 @@
+## Show how yaml2obj sets physical and virtual addresses of program headers.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --sections --segments %t | FileCheck %s
+
+# CHECK: Section Headers:
+# CHECK:  [Nr] Name Type     Address          Off    Size   ES Flg
+# CHECK:  [ 1] .foo PROGBITS 0000000000001234 000120 000001 00   A
+
+# CHECK:      Program Headers:
+# CHECK-NEXT:  Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK-NEXT:  LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R E 0x1
+# CHECK-NEXT:  LOAD 0x000120 0x0000000000000000 0x0000000000000000 0x000001 0x000001 R E 0x1
+# CHECK-NEXT:  LOAD 0x000120 0x00000000aaaa1000 0x00000000aaaa1000 0x000001 0x000001 R E 0x1
+# CHECK-NEXT:  LOAD 0x000120 0x00000000aaaa1000 0x00000000bbbb2000 0x000001 0x000001 R E 0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x1
+    Address: 0x1234
+ProgramHeaders:
+## Show what virtual and physical address we set by default for the case where
+## a program header has no sections.
+  - Type:  PT_LOAD
+    Flags: [ PF_X, PF_R ]
+## Show what virtual and physical address we set by default for the case
+## where a program header includes a section with a virtual address that
+## is explicitly set.
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .foo
+    LastSec:  .foo
+## Now we have a program header that has a virtual address different to
+## the address of the section included. Show that the default physical address
+## is equal to the program header's virtual address.
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xAAAA1000
+    FirstSec: .foo
+    LastSec:  .foo
+## Show that we are able to set different virtual and physical addresses.
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xAAAA1000
+    PAddr:    0xBBBB2000
+    FirstSec: .foo
+    LastSec:  .foo

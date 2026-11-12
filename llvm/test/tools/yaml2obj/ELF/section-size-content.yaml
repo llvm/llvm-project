@@ -1,0 +1,171 @@
+## For regular sections, it is common to specify `Size` and/or `Content` fields in YAML.
+## Here we test the behavior in different cases.
+
+## In this case, we have both `Content` and `Size` fields specified and `Size`
+## is less than content size. Check we report an error.
+
+# RUN: not yaml2obj --docnum=1 %s -o %t1 2>&1 | FileCheck %s --check-prefix=ERR
+# ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Content: "FF"
+    Size:    0
+
+## In this case, we have both `Content` and `Size` fields specified and
+## `Size` is equal to the content size. We check that this is allowed and
+## that the output section has a correct size value.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --section-data -S %t2 | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      Name: .foo
+# CASE2-NEXT: Type: SHT_PROGBITS
+# CASE2-NEXT: Flags [
+# CASE2-NEXT: ]
+# CASE2-NEXT: Address: 0x0
+# CASE2-NEXT: Offset: 0x40
+# CASE2-NEXT: Size: 1
+# CASE2-NEXT: Link: 0
+# CASE2-NEXT: Info: 0
+# CASE2-NEXT: AddressAlignment: 0
+# CASE2-NEXT: EntrySize: 0
+# CASE2-NEXT: SectionData (
+# CASE2-NEXT:   0000: FF
+# CASE2-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Content: "FF"
+    Size:    1
+
+## Check we can specify only `Content`.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --section-data -S %t3 | FileCheck %s --check-prefix=CASE2
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Content: "FF"
+
+## Check we can specify only `Size`.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --section-data -S %t4 | FileCheck %s --check-prefix=CASE3
+
+# CASE3:      Name: .foo
+# CASE3-NEXT: Type: SHT_PROGBITS
+# CASE3-NEXT: Flags [
+# CASE3-NEXT: ]
+# CASE3-NEXT: Address: 0x0
+# CASE3-NEXT: Offset: 0x40
+# CASE3-NEXT: Size: 1
+# CASE3-NEXT: Link: 0
+# CASE3-NEXT: Info: 0
+# CASE3-NEXT: AddressAlignment: 0
+# CASE3-NEXT: EntrySize: 0
+# CASE3-NEXT: SectionData (
+# CASE3-NEXT:   0000: 00
+# CASE3-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 1
+
+## Check we can specify both `Size` and `Content` when size is greater
+## than content size. In this case zeroes are added as padding
+## after the specified content.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readobj --section-data -S %t5 | FileCheck %s --check-prefix=CASE4
+
+# CASE4:      Name: .foo
+# CASE4-NEXT: Type: SHT_PROGBITS
+# CASE4-NEXT: Flags [
+# CASE4-NEXT: ]
+# CASE4-NEXT: Address: 0x0
+# CASE4-NEXT: Offset: 0x40
+# CASE4-NEXT: Size: 3
+# CASE4-NEXT: Link: 0
+# CASE4-NEXT: Info: 0
+# CASE4-NEXT: AddressAlignment: 0
+# CASE4-NEXT: EntrySize: 0
+# CASE4-NEXT: SectionData (
+# CASE4-NEXT:   0000: FF0000
+# CASE4-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Content: "FF"
+    Size:    3
+
+## Check we emit an empty section if neither 'Content' nor 'Size' were set.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readobj %t6 --sections | FileCheck %s --check-prefix=CASE5
+
+# CASE5:      Name: .foo
+# CASE5-NEXT: Type: SHT_PROGBITS
+# CASE5-NEXT: Flags [
+# CASE5-NEXT: ]
+# CASE5-NEXT: Address: 0x0
+# CASE5-NEXT: Offset: 0x40
+# CASE5-NEXT: Size: 0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ERR2
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .data
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+    Content: 0000000000000000
+    Size: 2
+
+# ERR2:      error: Section size must be greater than or equal to the content size
+# ERR2-NEXT: - Name: .data
+# ERR2-NEXT:   ^
+# ERR2-NEXT: error: failed to parse YAML input

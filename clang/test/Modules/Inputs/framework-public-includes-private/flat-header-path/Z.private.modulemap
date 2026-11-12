@@ -1,0 +1,4 @@
+// framework-public-includes-private/flat-header-path/Z.private.modulemap
+framework module Z_Private {
+  header "ZPriv.h"
+}

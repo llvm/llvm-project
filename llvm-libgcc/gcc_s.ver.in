@@ -1,0 +1,157 @@
+// Detect if we're using arm-*-*-gnueabihf
+#if defined(__arm__) && \
+    defined(__ARM_ARCH_7A__) && defined(__ARM_EABI__) && \
+    defined(__ARM_FP) && (__ARM_FP >= 0x04)
+  #define ARM_GNUEABIHF
+#endif
+
+#if !defined(__x86_64__)  && \
+    !defined(__aarch64__) && \
+    !defined(__i386__)    && \
+    !defined(ARM_GNUEABIHF)
+  #error The only platforms that are currently supported are x86_64, i386, arm-gnueabihf, and aarch64.
+#endif
+
+#if defined(__x86_64__) || defined(__i386__)
+  #define GLOBAL_X86
+#endif
+
+#if __SIZEOF_POINTER__ >= 8
+  #define GLOBAL_64BIT
+#else
+  #define GLOBAL_32BIT
+#endif
+
+GCC_3.0 {
+  __absvdi2;    __absvsi2;    __addvdi3; __addvsi3; __clear_cache; __ffsdi2;
+  __fixunsdfdi; __fixunssfdi; __mulvdi3; __mulvsi3; __negvdi2;     __negvsi2;
+  __subvdi3;    __subvsi3;
+  _Unwind_DeleteException;
+  _Unwind_ForcedUnwind;
+  _Unwind_GetDataRelBase;
+  _Unwind_GetLanguageSpecificData;
+  _Unwind_GetRegionStart;
+  _Unwind_GetTextRelBase;
+  _Unwind_RaiseException;
+  _Unwind_Resume;
+};
+
+GCC_3.3   { _Unwind_GetCFA; _Unwind_Resume_or_Rethrow;                    };
+GCC_3.3.1 { __gcc_personality_v0;                                         };
+GCC_3.4   { __clzdi2; __ctzdi2; __paritydi2; __popcountdi2;               };
+GCC_3.4.2 { __enable_execute_stack;                                       };
+GCC_4.0.0 { __divdc3; __divsc3; __muldc3; __mulsc3; __powidf2; __powisf2; };
+GCC_4.3.0 { __bswapdi2; __bswapsi2; __emutls_get_address;                 };
+
+#if defined(GLOBAL_32BIT)
+  GCC_3.0 {
+    __ashldi3;    __ashrdi3;   __cmpdi2;    __fixdfdi; __fixsfdi; __fixunsdfsi;
+    __fixunssfsi; __floatdidf; __floatdisf; __lshrdi3; __muldi3;  __negdi2;
+    __ucmpdi2;    __udivmoddi4;
+  };
+
+  GCC_3.4   { __clzsi2;      __ctzsi2;      __paritysi2; __popcountsi2; };
+  GCC_4.2.0 { __floatundidf; __floatundisf;                             };
+  GCC_4.3.0 { __ffssi2;                                                 };
+  GCC_7.0.0 { __divmoddi4;                                              };
+  GLIBC_2.0 { __divdi3;     __moddi3;       __udivdi3; __umoddi3;       };
+#elif defined(GLOBAL_64BIT)
+  GCC_3.0 {
+    __ashlti3; __ashrti3;    __cmpti2;     __divti3;  __ffsti2;  __fixdfti;
+    __fixsfti; __fixunssfti; __floattidf;  __lshrti3; __modti3;  __multi3;
+    __negti2;  __ucmpti2;    __udivmodti4; __udivti3; __umodti3; __fixunsdfti;
+    __floattisf;
+  };
+
+  GCC_3.4   { __clzti2;      __ctzti2;  __parityti2; __popcountti2;           };
+  GCC_3.4.4 { __absvti2;     __addvti3; __mulvti3;   __negvti2;    __subvti3; };
+  GCC_4.2.0 { __floatuntidf; __floatuntisf;                                   };
+  GCC_7.0.0 { __divmodti4;                                                    };
+#endif
+
+#if defined(GLOBAL_X86)
+  GCC_3.0 { __fixunsxfdi; };
+  GCC_4.0.0 { __divxc3; __mulxc3; __powixf2; };
+  GCC_4.8.0 { __cpu_indicator_init;          };
+#endif
+
+#if !defined(ARM_GNUEABIHF)
+  GCC_3.0 {
+    _Unwind_Find_FDE; _Unwind_GetGR; _Unwind_GetIP; _Unwind_SetGR; _Unwind_SetIP;
+  };
+
+  GCC_3.3   { _Unwind_Backtrace; _Unwind_FindEnclosingFunction; };
+  GCC_4.2.0 { _Unwind_GetIPInfo; };
+#else // defined(ARM_GNUEABIHF)
+  GCC_3.0 {
+    __adddf3;  __addsf3;      __divdf3;  __divsf3;    __divsi3;    __eqdf2;
+    __eqsf2;   __extendsfdf2; __fixdfsi; __fixsfsi;   __floatsidf; __floatsisf;
+    __gedf2;   __gesf2;       __gtdf2;   __gtsf2;     __ledf2;     __lesf2;
+    __ltdf2;   __ltsf2;       __modsi3;  __muldf3;    __mulsf3;    __nedf2;
+    __negdf2;  __negsf2;      __nesf2;   __subdf3;    __subsf3;    __truncdfsf2;
+    __udivsi3; __umodsi3;
+  };
+
+  GCC_3.3.4 { __unorddf2; __unordsf2; };
+
+  GCC_3.5 {
+    __aeabi_cdcmpeq; __aeabi_cdcmple;  __aeabi_cdrcmple;       __aeabi_cfcmpeq;
+    __aeabi_cfcmple; __aeabi_cfrcmple; __aeabi_d2f;            __aeabi_d2iz;
+    __aeabi_d2lz;    __aeabi_d2uiz;    __aeabi_d2ulz;          __aeabi_dadd;
+    __aeabi_dcmpeq;  __aeabi_dcmpge;   __aeabi_dcmpgt;         __aeabi_dcmple;
+    __aeabi_dcmplt;  __aeabi_dcmpun;   __aeabi_ddiv;           __aeabi_dmul;
+    __aeabi_dneg;    __aeabi_drsub;    __aeabi_dsub;           __aeabi_f2d;
+    __aeabi_f2iz;    __aeabi_f2lz;     __aeabi_f2uiz;          __aeabi_f2ulz;
+    __aeabi_fadd;    __aeabi_fcmpeq;   __aeabi_fcmpge;         __aeabi_fcmpgt;
+    __aeabi_fcmple;  __aeabi_fcmplt;   __aeabi_fcmpun;         __aeabi_fdiv;
+    __aeabi_fmul;    __aeabi_fneg;     __aeabi_frsub;          __aeabi_fsub;
+    __aeabi_i2d;     __aeabi_i2f;      __aeabi_idiv;           __aeabi_idiv0;
+    __aeabi_idivmod; __aeabi_l2d;      __aeabi_l2f;            __aeabi_lasr;
+    __aeabi_lcmp;    __aeabi_ldiv0;    __aeabi_ldivmod;        __aeabi_llsl;
+    __aeabi_llsr;    __aeabi_lmul;     __aeabi_ui2d;           __aeabi_ui2f;
+    __aeabi_uidiv;   __aeabi_uidivmod; __aeabi_ul2d;           __aeabi_ul2f;
+    __aeabi_ulcmp;   __aeabi_uldivmod; __aeabi_unwind_cpp_pr0;
+    __aeabi_unwind_cpp_pr1;            __aeabi_unwind_cpp_pr2;
+    __gnu_unwind_frame;
+    _Unwind_Complete;
+    _Unwind_VRS_Get;
+    _Unwind_VRS_Pop;
+    _Unwind_VRS_Set;
+  };
+
+  GCC_4.2.0 { __floatunsidf; __floatunsisf; };
+  GCC_4.3.0 { _Unwind_Backtrace;            };
+#endif
+
+#if defined(__aarch64__)
+  GCC_3.0 {
+    __addtf3;     __divtf3;     __eqtf2;     __extenddftf2; __extendsftf2;
+    __fixtfdi;    __fixtfsi;    __fixtfti;   __fixunstfdi;  __fixunstfsi;
+    __fixunstfti; __floatditf;  __floatsitf; __floattitf;   __getf2;
+    __gttf2;      __letf2;      __lttf2;     __multf3;      __netf2;
+    __subtf3;     __trunctfdf2; __trunctfsf2;
+  };
+
+  GCC_4.0.0 { __powitf2;     __divtc3;      __multc3; };
+  GCC_4.2.0 { __floatunditf; __floatunsitf; __floatuntitf; };
+  GCC_4.5.0 { __unordtf2; };
+#endif
+
+#if defined(__aarch64__) || defined(__i386__)
+  GLIBC_2.0 { __deregister_frame; __register_frame; };
+#endif
+
+#if defined(__i386__)
+  GCC_3.0   { __fixunsxfsi; __fixxfdi; __floatdixf; };
+  GCC_4.2.0 { __floatundixf; };
+#endif
+
+#if defined(__x86_64__)
+  GCC_3.0 {
+    __deregister_frame;    __register_frame;
+    __fixunsxfti;          __fixxfti;                   __floattixf;
+  };
+
+  GCC_4.2.0 { __floatuntixf; };
+  GCC_4.3.0 { __divtc3; __multc3; };
+#endif

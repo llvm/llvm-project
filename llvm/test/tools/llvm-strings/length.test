@@ -1,0 +1,65 @@
+## Show that llvm-strings prints only strings with length of at least the
+## requested number of characters.
+
+RUN: echo a > %t
+RUN: echo ab >> %t
+RUN: echo abc >> %t
+RUN: echo abcd >> %t
+RUN: echo abcde >> %t
+RUN: not llvm-strings -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
+RUN: llvm-strings -n 1 %t | FileCheck --check-prefix CHECK-1 %s --implicit-check-not={{.}}
+RUN: llvm-strings -n 2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
+RUN: llvm-strings -n 4 %t | FileCheck --check-prefix CHECK-4 %s --implicit-check-not={{.}}
+RUN: llvm-strings -n 5 %t | FileCheck --check-prefix CHECK-5 %s --implicit-check-not={{.}}
+RUN: llvm-strings -n 6 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
+
+## Default is equivalent to -n 4.
+RUN: llvm-strings %t | FileCheck --check-prefix CHECK-4 %s --implicit-check-not={{.}}
+
+## Show --bytes works too.
+RUN: llvm-strings --bytes 2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
+
+## Show different syntaxes work.
+RUN: llvm-strings --bytes=2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
+RUN: llvm-strings -n 2 %t | FileCheck --check-prefix CHECK-2 %s --implicit-check-not={{.}}
+
+CHECK-0: error: expected a positive integer, but got '0'
+
+CHECK-1:      a
+CHECK-1-NEXT: ab
+CHECK-1-NEXT: abc
+CHECK-1-NEXT: abcd
+CHECK-1-NEXT: abcde
+
+CHECK-2:      ab
+CHECK-2-NEXT: abc
+CHECK-2-NEXT: abcd
+CHECK-2-NEXT: abcde
+
+CHECK-4:      abcd
+CHECK-4-NEXT: abcde
+
+CHECK-5:      abcde
+
+## Show that a non-numeric argument is rejected.
+RUN: not llvm-strings -n foo %t 2>&1 | FileCheck %s --check-prefix=ERR
+ERR: error: expected a positive integer, but got 'foo'
+
+## Show that the count is number of characters, not number of bytes.
+RUN: echo -e '\0302\0241' > %t
+RUN: echo -e '\0302\0241\0302\0242' >> %t
+RUN: echo -e '\0302\0241\0302\0242\0302\0243' >> %t
+RUN: not llvm-strings --encoding utf8 -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
+RUN: llvm-strings --encoding utf8 -n 1 %t | FileCheck --check-prefix UTF-8-1 %s --implicit-check-not={{.}}
+RUN: llvm-strings --encoding utf8 -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --implicit-check-not={{.}}
+RUN: llvm-strings --encoding utf8 -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
+RUN: llvm-strings --encoding utf8 -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
+
+UTF-8-1:      {{\xc2\xa1}}
+UTF-8-1-NEXT: {{\xc2\xa1\xc2\xa2}}
+UTF-8-1-NEXT: {{\xc2\xa1\xc2\xa2\xc2\xa3}}
+
+UTF-8-2:      {{\xc2\xa1\xc2\xa2}}
+UTF-8-2-NEXT: {{\xc2\xa1\xc2\xa2\xc2\xa3}}
+
+UTF-8-3:      {{\xc2\xa1\xc2\xa2\xc2\xa3}}

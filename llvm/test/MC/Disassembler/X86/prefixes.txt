@@ -1,0 +1,114 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s
+
+# CHECK: rep insb    %dx, %es:(%rdi)
+0xf3 0x6c #rep ins
+# CHECK: rep insl    %dx, %es:(%rdi)
+0xf3 0x6d #rep ins
+# CHECK: rep movsb   (%rsi), %es:(%rdi)
+0xf3 0xa4 #rep movs
+# CHECK: rep movsl   (%rsi), %es:(%rdi)
+0xf3 0xa5 #rep movs
+# CHECK: rep outsb   (%rsi), %dx
+0xf3 0x6e #rep outs
+# CHECK: rep outsl   (%rsi), %dx
+0xf3 0x6f #rep outs
+# CHECK: rep lodsb   (%rsi), %al
+0xf3 0xac #rep lods
+# CHECK: rep lodsl   (%rsi), %eax
+0xf3 0xad #rep lods
+# CHECK: rep stosb   %al, %es:(%rdi)
+0xf3 0xaa #rep stos
+# CHECK: rep stosl   %eax, %es:(%rdi)
+0xf3 0xab #rep stos
+# CHECK: rep cmpsb   %es:(%rdi), (%rsi)
+0xf3 0xa6 #rep cmps
+# CHECK: rep cmpsl   %es:(%rdi), (%rsi)
+0xf3 0xa7 #repe cmps
+# CHECK: rep scasb   %es:(%rdi), %al
+0xf3 0xae #repe scas
+# CHECK: rep scasl   %es:(%rdi), %eax
+0xf3 0xaf #repe scas
+# CHECK: repne cmpsb   %es:(%rdi), (%rsi)
+0xf2 0xa6 #repne cmps
+# CHECK: repne cmpsl   %es:(%rdi), (%rsi)
+0xf2 0xa7 #repne cmps
+# CHECK: repne scasb   %es:(%rdi), %al
+0xf2 0xae #repne scas
+# CHECK: repne scasl   %es:(%rdi), %eax
+0xf2 0xaf #repne scas
+
+# CHECK: repne scasw   %es:(%rdi), %ax
+# CHECK: repne scasw   %es:(%rdi), %ax
+0x66 0xF2 0xAF 0xF2 0x66 0xAF
+
+# CHECK: lock
+# CHECK-NEXT: orl $16, %fs:776
+0xf0 0x64 0x83 0x0c 0x25 0x08 0x03 0x00 0x00 0x10
+
+# CHECK: movq	%fs:768, %rdi
+0x64 0x48 0x8b 0x3c 0x25 0x00 0x03 0x00 0x00
+
+# CHECK: rep stosq %rax, %es:(%rdi)
+0xf3 0x48 0xab
+
+# CHECK: rep stosq %rax, %es:(%edi)
+0xf3 0x67 0x48 0xab
+
+# CHECK: movl 32(%rbp), %eax
+0x8b 0x45 0x20
+
+# CHECK: movl %es:32(%rbp), %eax
+0x26 0x8b 0x45 0x20
+
+# CHECK: movl %es:32(%rbp), %eax
+0x2e 0x26 0x8b 0x45 0x20
+
+# Test that multiple prefixes stack.
+#    (todo- the correct disassembly is actually more like "es movl %cs:32(%rbp), %eax"
+#    but we don't support that)
+# CHECK: movl %cs:32(%rbp), %eax
+0x26 0x2e 0x8b 0x45 0x20
+
+# Test that 0xf3 as part of the opcode works.
+# CHECK: cvtdq2pd	(%rax), %xmm0
+0xf3 0x0f 0xe6 0x00
+
+# CHECK: pause
+0xf3 0x90
+
+# CHECK: nop
+0x90
+
+# CHECK: 		lock
+# CHECK-NEXT:	nop
+0xf0 0x90
+
+# Test that immediate is printed correctly within opsize prefix
+# CHECK: addw    $-12, %ax
+0x66,0x83,0xc0,0xf4
+
+# Test that multiple redundant prefixes work (redundant, but valid x86).
+# CHECK: rep stosq
+0xf3 0xf3 0x48 0xab
+
+# Test that we can disassembler control registers above CR8
+# CHECK: movq %cr15, %rax
+0x44 0x0f 0x20 0xf8
+# CHECK: movq %dr15, %rax
+0x44 0x0f 0x21 0xf8
+
+# Test that MMX ignore REX.R and REX.B.
+# CHECK: movq %mm0, %mm1
+0x46 0x0f 0x7f 0xc1
+
+# Test that lock prefix is not dropped if it's not the first prefix
+# CHECK: lock cmpxchgw %di, (%rcx)
+0x66 0xf0 0x0f 0xb1 0x39
+
+# Test that a prefix on it's own works. It's debatable as to if this is 
+# something that is considered valid, but however as LLVM's own disassembler
+# has decided to disassemble prefixes as being separate opcodes, it therefore 
+# should be capable of re-consuming it's own output.
+# CHECK: rep
+0xf3
+# ***IMPORTANT ^-- this must be at the end of the file to be a valid test *** 

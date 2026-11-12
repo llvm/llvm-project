@@ -1,0 +1,5 @@
+RUN: llvm-nm -arch arm64_32 %p/../Inputs/trivial-object-test.macho-arm64_32 \
+RUN:   | FileCheck %s
+
+CHECK: 00000000 T _foo
+CHECK: 00000000 t ltmp0

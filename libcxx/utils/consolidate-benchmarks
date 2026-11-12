@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+import argparse
+import pathlib
+import sys
+
+def main(argv):
+    parser = argparse.ArgumentParser(
+        prog='consolidate-benchmarks',
+        description='Consolidate benchmark result files (in LNT format) into a single LNT-format file.')
+    parser.add_argument('files_or_directories', type=str, nargs='+',
+        help='Path to files or directories containing LNT data to consolidate. Directories are searched '
+             'recursively for files with a .lnt extension.')
+    parser.add_argument('--output', '-o', type=argparse.FileType('w'), default=sys.stdout,
+        help='Where to output the result. Default to stdout.')
+    args = parser.parse_args(argv)
+
+    files = []
+    for arg in args.files_or_directories:
+        path = pathlib.Path(arg)
+        if path.is_dir():
+            for p in path.rglob('*.lnt'):
+                files.append(p)
+        else:
+            files.append(path)
+
+    for file in files:
+        for line in file.open().readlines():
+            line = line.strip()
+            if not line:
+                continue
+            args.output.write(line)
+            args.output.write('\n')
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

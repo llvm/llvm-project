@@ -1,0 +1,147 @@
+## Check a common case for BOLT address translation tables. These tables are used
+## to translate profile activity happening in a bolted binary back to the
+## original binary, so you can run BOLT again, with updated profile collected
+## in a production environment that only runs bolted binaries. As BOLT only
+## takes no-bolt binaries as inputs, this translation is necessary to cover
+## this scenario.
+#
+# RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+# RUN: llvm-bolt %t.exe -o %t.out --data %p/Inputs/blarge.fdata \
+# RUN:   --reorder-blocks=normal --split-functions --enable-bat 2>&1 | FileCheck %s
+# RUN: llvm-bat-dump %t.out --dump-all \
+# RUN:   --translate=0x401180 | FileCheck %s --check-prefix=CHECK-BAT-DUMP
+#
+## In this test we focus on function usqrt at address 0x401170. This is a
+## non-reloc binary case, so we don't expect this address to change, that's
+## why we hardcode its address here. This address also comes hardcoded in the
+## blarge.yaml input file.
+##
+## This is the layout of the function before BOLT reorder blocks:
+##
+##    BB Layout   : .LBB02, .Ltmp39, .LFT1, .Ltmp38, .LFT2
+##
+## This is the layout of the function after BOLT reorder blocks:
+##
+##    BB Layout   : .LBB02, .Ltmp38, .Ltmp39, .LFT2, .LFT3
+##
+## .Ltmp38 is originally at offset 0x39 but gets moved to 0xc (see full dump
+## below).
+##
+## We check that BAT is able to translate references happening in .Ltmp38 to
+## its original offset.
+##
+
+## This binary has 3 functions with profile, all of them are split, so 6 maps.
+## BAT creates one map per function fragment.
+#
+# CHECK:      BOLT: 3 out of 7 functions were overwritten.
+# CHECK:      BOLT-INFO: Wrote 6 BAT maps
+# CHECK:      BOLT-INFO: Wrote 3 function and 58 basic block hashes
+# CHECK:      BOLT-INFO: BAT section size (bytes): 940
+#
+# usqrt mappings (hot part). We match against any key (left side containing
+# the bolted binary offsets) because BOLT may change where it puts instructions
+# depending on whether it is relaxing a branch or not. But the original input
+# binary offsets (right side) should be the same because these addresses are
+# hardcoded in the blarge.yaml file.
+#
+# CHECK-BAT-DUMP:      Function Address: 0x401170, hash: 0xace6cbc638b31983
+# CHECK-BAT-DUMP-NEXT: BB mappings:
+# CHECK-BAT-DUMP-NEXT: 0x0 -> 0x0 hash: 0x36007ba1d80c0000
+# CHECK-BAT-DUMP-NEXT: 0x8 -> 0x8 (branch)
+# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x39 hash: 0x5c06705524800039
+# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x3d (branch)
+# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x10 hash: 0xd70d7a64320e0010
+# CHECK-BAT-DUMP-NEXT: 0x{{.*}} -> 0x30 (branch)
+#
+# CHECK-BAT-DUMP: 3 cold mappings
+#
+# Now check that the translation 0x401180 maps back to its correct
+# input offset (offset 3d in the usqrt input function).
+#
+# COM: CHECK-BAT-DUMP: Translating addresses according to parsed BAT tables:
+#      CHECK-BAT-DUMP: 0x401180 -> usqrt + 0x3d
+
+# -------------------------
+# Full dump for reference (this is not checked):
+# -------------------------
+
+Binary Function "usqrt" after finalize-functions
+  Number      : 7
+  State       : CFG finalized
+  Address     : 0x401170
+  Size        : 0x43
+  MaxSize     : 0x43
+  Offset      : 0xcb0
+  Section     : .text
+  Orc Section : .local.text.usqrt
+  LSDA        : 0x0
+  IsSimple    : 1
+  IsMultiEntry: 0
+  IsSplit     : 1
+  BB Count    : 5
+  Hash        : a6468f132ec176ca
+  BB Layout   : .LBB02, .Ltmp38, .Ltmp39, .LFT2, .LFT3
+  Exec Count  : 199
+  Profile Acc : 100.0%
+
+.LBB02 (4 instructions, align : 1)
+  Entry Point
+  Exec Count : 199
+  CFI State : 0
+  Input offset: 0
+    00000000:   movl    $0x20, %r8d
+    00000006:   xorl    %eax, %eax
+    00000008:   xorl    %edx, %edx # Offset: 8
+    0000000a:   jmp     .Ltmp39
+  Successors: .Ltmp39 (mispreds: 0, count: 0)
+
+.Ltmp38 (2 instructions, align : 1)
+  Exec Count : 4711
+  CFI State : 0
+  Input offset: 39
+  Predecessors: .Ltmp39, .LFT2
+    0000000c:   subl    $0x1, %r8d
+    00000010:   je      .LFT3 # Offset: 61
+  Successors: .LFT3 (mispreds: 0, count: 0), .Ltmp39 (mispreds: 33, count: 4711)
+
+.Ltmp39 (10 instructions, align : 1)
+  Exec Count : 4711
+  CFI State : 0
+  Input offset: 10
+  Predecessors: .Ltmp38, .LBB02
+    00000012:   movq    %rdi, %rcx
+    00000015:   addq    %rax, %rax
+    00000018:   shlq    $0x2, %rdi
+    0000001c:   andl    $0xc0000000, %ecx
+    00000022:   shrq    $0x1e, %rcx
+    00000026:   leaq    (%rcx,%rdx,4), %rdx
+    0000002a:   leaq    0x1(%rax,%rax), %rcx
+    0000002f:   cmpq    %rcx, %rdx
+    00000032:   jb      .Ltmp38 # Offset: 48
+    00000034:   jmp     .LFT2
+  Successors: .Ltmp38 (mispreds: 171, count: 2886), .LFT2 (mispreds: 0, count: 0)
+
+-------   HOT-COLD SPLIT POINT   -------
+
+.LFT2 (3 instructions, align : 1)
+  Exec Count : 0
+  CFI State : 0
+  Input offset: 32
+  Predecessors: .Ltmp39
+    00000036:   subq    %rcx, %rdx
+    00000039:   addq    $0x1, %rax # Offset: 53
+    0000003d:   jmp     .Ltmp38
+  Successors: .Ltmp38 (mispreds: 0, count: 0)
+
+.LFT3 (2 instructions, align : 1)
+  Exec Count : 0
+  CFI State : 0
+  Input offset: 3f
+  Predecessors: .Ltmp38
+    0000003f:   movq    %rax, (%rsi)
+    00000042:   retq # Offset: 66
+
+DWARF CFI Instructions:
+    <empty>
+End of Function "usqrt"

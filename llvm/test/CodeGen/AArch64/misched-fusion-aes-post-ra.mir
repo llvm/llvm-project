@@ -1,0 +1,83 @@
+# REQUIRES: asserts
+
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=generic -mattr=+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a53 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a57 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a65 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a72 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a73 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a76 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a77 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78c -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-x1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-e1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-n1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-v1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-512tvb -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m3 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m4 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m5 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1a -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1b -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=-fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -filetype=null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -mattr=-fuse-aes -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+
+---
+name: encode_waw
+body: |
+  bb.0:
+    ; CHECK-LABEL: encode_waw
+    ; CHECK: SU(0): $q0 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency=0 Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): $q0 = AESMCrr $q0
+    $q0 = AESErr undef $q0, undef $q1
+    $q3 = ADDv16i8 undef $q4, undef $q5
+    $q0 = AESMCrr $q0
+...
+---
+name: encode_nowaw
+body: |
+  bb.0:
+    ; CHECK-LABEL: encode_nowaw
+    ; CHECK: SU(0): $q0 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): $q2 = AESMCrr $q0
+    $q0 = AESErr undef $q0, undef $q1
+    $q3 = ADDv16i8 undef $q4, undef $q5
+    $q2 = AESMCrr $q0
+...
+---
+name: decode_waw
+body: |
+  bb.0:
+    ; CHECK-LABEL: decode_waw
+    ; CHECK: SU(0): $q0 = AESDrr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; FUSE: SU(2): Ord  Latency=0 Cluster
+    ; NOFUSE-NOT: SU(2): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): $q0 = AESIMCrr $q0
+    $q0 = AESDrr undef $q0, undef $q1
+    $q3 = ADDv16i8 undef $q4, undef $q5
+    $q0 = AESIMCrr $q0
+...
+---
+name: decode_nowaw
+body: |
+  bb.0:
+    ; CHECK-LABEL: decode_nowaw
+    ; CHECK: SU(0): $q0 = AESDrr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(2): $q2 = AESIMCrr $q0
+    $q0 = AESDrr undef $q0, undef $q1
+    $q3 = ADDv16i8 undef $q4, undef $q5
+    $q2 = AESIMCrr $q0
+...

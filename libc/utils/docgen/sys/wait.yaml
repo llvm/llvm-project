@@ -1,0 +1,53 @@
+posix: posix-2024
+types:
+  id_t:
+    in-latest-posix: ''
+  idtype_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  siginfo_t:
+    in-latest-posix: ''
+  struct rusage:
+    extension: bsd
+functions:
+  wait:
+    in-latest-posix: ''
+  waitid:
+    in-latest-posix: ''
+  waitpid:
+    in-latest-posix: ''
+
+  wait4:
+    extension: bsd
+macros:
+  WCONTINUED:
+    in-latest-posix: ''
+  WEXITED:
+    in-latest-posix: ''
+  WEXITSTATUS:
+    in-latest-posix: ''
+  WIFCONTINUED:
+    in-latest-posix: ''
+  WIFEXITED:
+    in-latest-posix: ''
+  WIFSIGNALED:
+    in-latest-posix: ''
+  WIFSTOPPED:
+    in-latest-posix: ''
+  WNOHANG:
+    in-latest-posix: ''
+  WNOWAIT:
+    in-latest-posix: ''
+  WSTOPPED:
+    in-latest-posix: ''
+  WSTOPSIG:
+    in-latest-posix: ''
+  WTERMSIG:
+    in-latest-posix: ''
+  WUNTRACED:
+    in-latest-posix: ''
+  WCORE_DUMPED:
+    in-latest-posix: ''
+  WCOREDUMP:
+    in-latest-posix: ''

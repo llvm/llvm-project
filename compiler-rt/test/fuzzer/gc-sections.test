@@ -1,0 +1,14 @@
+REQUIRES: linux, lld-available
+# LLD isn't pruning functions as we expect it to with ASAN on i386.
+UNSUPPORTED: i386
+
+No gc-sections:
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t
+RUN: nm %t | grep UnusedFunctionShouldBeRemovedByLinker | count 1
+
+With gc-sections. Currently, we can't remove unused code except with LLD.
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -fuse-ld=lld -ffunction-sections -Wl,-gc-sections
+RUN: nm %t | not grep UnusedFunctionShouldBeRemovedByLinker
+RUN: %run %t -runs=0 2>&1 | FileCheck %s
+
+CHECK-NOT: ERROR: The size of coverage PC tables does not match

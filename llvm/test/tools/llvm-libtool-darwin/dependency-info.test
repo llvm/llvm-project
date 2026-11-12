@@ -1,0 +1,19 @@
+## This test validates the format of the dependency info file
+# RUN: rm -rf %t; mkdir -p %t
+
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t/foo.o
+# RUN: llvm-libtool-darwin -static -o %t/libfirst.a %t/foo.o -dependency_info %t/simple.dat
+# RUN: %python %S/Inputs/DependencyDump.py %t/simple.dat | FileCheck --check-prefix=SIMPLE %s
+
+# RUN: llvm-libtool-darwin -static -o %t/second.lib %t/foo.o -lfirst -L/missing/directory/without/lib -L%t -dependency_info %t/lib.dat
+# RUN: %python %S/Inputs/DependencyDump.py %t/lib.dat | FileCheck --check-prefix=LIB %s
+
+# SIMPLE: version: llvm-libtool-darwin
+# SIMPLE: input-file: {{.+}}foo.o
+# SIMPLE: output-file: {{.+}}libfirst.a
+
+# LIB: version: llvm-libtool-darwin
+# LIB: input-file: {{.+}}foo.o
+# LIB: input-file: {{.+}}libfirst.a
+# LIB: not-found: {{.+}}missing{{.+}}directory{{.+}}without{{.+}}lib{{.+}}libfirst.a
+# LIB: output-file: {{.+}}second.lib

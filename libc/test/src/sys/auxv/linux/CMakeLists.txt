@@ -1,0 +1,14 @@
+add_libc_testsuite(libc-sys-auxv-tests)
+add_libc_test(
+  getauxval_test
+  SUITE
+    libc-sys-auxv-tests
+  SRCS
+    getauxval_test.cpp
+  DEPENDS
+    libc.hdr.sys_auxv_macros
+    libc.src.sys.auxv.getauxval
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.src.string.strstr
+)

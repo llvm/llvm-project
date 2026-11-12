@@ -1,0 +1,287 @@
+## Test that DWARFv5 .debug_rnglists is correctly recognized
+## and converted into the DW_FORM_sec_offset form in --garbage-collection
+## case or correctly preserved in --no-garbage-collection case.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s --check-prefix DWARF-CHECK
+
+# RUN: llvm-dwarfutil --linker parallel %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s --check-prefix DWARF-CHECK
+
+# RUN: llvm-dwarfutil --no-garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t.o %t1
+# RUN: llvm-dwarfdump -verify %t1 | FileCheck %s
+# RUN: llvm-dwarfdump -a --verbose %t1 | FileCheck %s --check-prefix UPD-DWARF-CHECK
+
+#CHECK: No errors.
+
+#DWARF-CHECK: DW_TAG_compile_unit
+#DWARF-CHECK:   DW_AT_name [DW_FORM_strx]  {{.*}}     "CU1"
+#DWARF-CHECK:   DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000000001130)
+#DWARF-CHECK:   DW_AT_ranges [DW_FORM_sec_offset] (0x[[CURANGE_OFF:[0-9a-f]*]]
+#DWARF-CHECK:   [0x0000000000001130, 0x0000000000001170))
+#DWARF-CHECK:   DW_AT_str_offsets_base [DW_FORM_sec_offset]
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo1"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000001130)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:     DW_TAG_lexical_block
+#DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F1RANGE_OFF:[0-9a-f]*]]
+#DWARF-CHECK:       [0x0000000000001130, 0x0000000000001140))
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo2"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000001140)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:     DW_TAG_lexical_block
+#DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F2RANGE_OFF:[0-9a-f]*]]
+#DWARF-CHECK:            [0x0000000000001140, 0x0000000000001150))
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo3"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000001150)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:     DW_TAG_lexical_block
+#DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F3RANGE_OFF:[0-9a-f]*]]
+#DWARF-CHECK:          [0x0000000000001150, 0x0000000000001160))
+#DWARF-CHECK:   DW_TAG_subprogram
+#DWARF-CHECK:     DW_AT_name  [DW_FORM_strx] {{.*}}   "foo4"
+#DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000000001160)
+#DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#DWARF-CHECK:     DW_TAG_lexical_block
+#DWARF-CHECK:       DW_AT_ranges [DW_FORM_sec_offset]     (0x[[F4RANGE_OFF:[0-9a-f]*]]
+#DWARF-CHECK:          [0x0000000000001160, 0x0000000000001170))
+#DWARF-CHECK: .debug_aranges contents:
+#DWARF-CHECK: Address Range Header: length = 0x0000002c, format = DWARF32, version = 0x0002, cu_offset = 0x000000{{00|21}}, addr_size = 0x08, seg_size = 0x00
+#DWARF-CHECK: [0x0000000000001130, 0x0000000000001170)
+#DWARF-CHECK: .debug_addr contents:
+#DWARF-CHECK: 0x00000000: Address table header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+#DWARF-CHECK: Addrs: [
+#DWARF-CHECK: 0x0000000000001130
+#DWARF-CHECK: 0x0000000000001140
+#DWARF-CHECK: 0x0000000000001150
+#DWARF-CHECK: 0x0000000000001160
+#DWARF-CHECK: ]
+#DWARF-CHECK: .debug_rnglists contents:
+#DWARF-CHECK: 0x00000000: range list header: length = 0x00000026, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+#DWARF-CHECK: ranges:
+#DWARF-CHECK: 0x[[F1RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000000
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK: 0x[[F2RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000001
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK: 0x[[F3RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000002
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK: 0x[[F4RANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000003
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000010
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+#DWARF-CHECK 0x[[CURANGE_OFF]]: [DW_RLE_base_addressx]:  0x0000000000000000
+#DWARF-CHECK: {{.}}: [DW_RLE_offset_pair  ]:  0x0000000000000000, 0x0000000000000040
+#DWARF-CHECK: {{.}}: [DW_RLE_end_of_list  ]
+
+#UPD-DWARF-CHECK: DW_TAG_compile_unit
+#UPD-DWARF-CHECK:   DW_AT_name {{.*}}"CU1"
+#UPD-DWARF-CHECK:   DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000000001130)
+#UPD-DWARF-CHECK:   DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x4) rangelist = 0x0000003e
+#UPD-DWARF-CHECK:      [0x0000000000001130, 0x0000000000001170))
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo1"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000000) address = 0x0000000000001130) 
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:     DW_TAG_lexical_block
+#UPD-DWARF-CHECK:     DW_AT_ranges [DW_FORM_rnglistx]       (indexed (0x0) rangelist = 0x00000020
+#UPD-DWARF-CHECK:        [0x0000000000001130, 0x0000000000001140))
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo2"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000001) address = 0x0000000000001140) 
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:     DW_TAG_lexical_block
+#UPD-DWARF-CHECK:     DW_AT_ranges [DW_FORM_rnglistx]       (indexed (0x1) rangelist = 0x00000024
+#UPD-DWARF-CHECK:     [0x0000000000001140, 0x0000000000001150))
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo3"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000002) address = 0x0000000000001150) 
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:     DW_TAG_lexical_block
+#UPD-DWARF-CHECK:     DW_AT_ranges [DW_FORM_sec_offset]     (0x00000028
+#UPD-DWARF-CHECK:        [0x0000000000001150, 0x0000000000001160))
+#UPD-DWARF-CHECK:   DW_TAG_subprogram
+#UPD-DWARF-CHECK:     DW_AT_name  {{.*}}"foo4"
+#UPD-DWARF-CHECK:     DW_AT_low_pc [DW_FORM_addrx]   (indexed (00000003) address = 0x0000000000001160)
+#UPD-DWARF-CHECK:     DW_AT_high_pc [DW_FORM_data8]   (0x0000000000000010)
+#UPD-DWARF-CHECK:     DW_TAG_lexical_block
+#UPD-DWARF-CHECK:     DW_AT_ranges [DW_FORM_sec_offset]     (0x00000033
+#UPD-DWARF-CHECK:        [0x0000000000001160, 0x0000000000001170))
+#UPD-DWARF-CHECK: .debug_addr contents:
+#UPD-DWARF-CHECK: 0x00000000: Address table header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+#UPD-DWARF-CHECK: Addrs: [
+#UPD-DWARF-CHECK: 0x0000000000001130
+#UPD-DWARF-CHECK: 0x0000000000001140
+#UPD-DWARF-CHECK: 0x0000000000001150
+#UPD-DWARF-CHECK: 0x0000000000001160
+#UPD-DWARF-CHECK: ]
+#UPD-DWARF-CHECK: .debug_rnglists contents:
+#UPD-DWARF-CHECK: 0x00000000: range list header: length = 0x0000003e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000005
+#UPD-DWARF-CHECK: offsets: [
+#UPD-DWARF-CHECK: 0x00000014 => 0x00000020
+#UPD-DWARF-CHECK: 0x00000018 => 0x00000024
+#UPD-DWARF-CHECK: 0x0000001c => 0x00000028
+#UPD-DWARF-CHECK: 0x00000027 => 0x00000033
+#UPD-DWARF-CHECK: 0x00000032 => 0x0000003e
+#UPD-DWARF-CHECK: ]
+#UPD-DWARF-CHECK: ranges:
+#UPD-DWARF-CHECK: 0x00000020: [DW_RLE_startx_length]:  0x0000000000000000, 0x0000000000000010
+#UPD-DWARF-CHECK: 0x00000023: [DW_RLE_end_of_list  ]
+#UPD-DWARF-CHECK: 0x00000024: [DW_RLE_startx_length]:  0x0000000000000001, 0x0000000000000010
+#UPD-DWARF-CHECK: 0x00000027: [DW_RLE_end_of_list  ]
+#UPD-DWARF-CHECK: 0x00000028: [DW_RLE_start_length ]:  0x0000000000001150, 0x0000000000000010
+#UPD-DWARF-CHECK: 0x00000032: [DW_RLE_end_of_list  ]
+#UPD-DWARF-CHECK: 0x00000033: [DW_RLE_start_length ]:  0x0000000000001160, 0x0000000000000010
+#UPD-DWARF-CHECK: 0x0000003d: [DW_RLE_end_of_list  ]
+#UPD-DWARF-CHECK: 0x0000003e: [DW_RLE_startx_length]:  0x0000000000000000, 0x0000000000000040
+#UPD-DWARF-CHECK: 0x00000041: [DW_RLE_end_of_list  ]
+
+## Following yaml description has Content of the .debug_rnglists exactly like above data ^^^^^^
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x70
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "3e000000050008000500000014000000180000001c000000270000003200000003001000030110000750110000000000001000076011000000000000100003004000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_rnglistx 
+          - Attribute: DW_AT_rnglists_base
+            Form:      DW_FORM_sec_offset
+          - Attribute: DW_AT_addr_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx 
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_lexical_block
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_rnglistx
+      - Tag:      DW_TAG_lexical_block
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_ranges    
+            Form:      DW_FORM_sec_offset 
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 5
+      UnitType:   DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x0
+            - Value:  0x4
+            - Value:  0xc
+            - Value:  0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x00
+            - Value: 0x10
+            - Value: 0x83
+        - AbbrCode: 3
+          Values:
+            - Value: 0x00
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x01
+            - Value: 0x10
+            - Value: 0x83
+        - AbbrCode: 3
+          Values:
+            - Value: 0x01
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value: 0x02
+            - Value: 0x10
+            - Value: 0x83
+        - AbbrCode: 4
+          Values:
+            - Value: 0x28
+        - AbbrCode: 0
+        - AbbrCode: 2
+          Values:
+            - CStr: foo4
+            - Value: 0x03
+            - Value: 0x10
+            - Value: 0x83
+        - AbbrCode: 4
+          Values:
+            - Value: 0x33
+        - AbbrCode: 0
+        - AbbrCode: 5
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+  debug_addr:
+    - Version: 5
+      AddressSize: 0x08
+      Entries:
+        - Address: 0x1130
+        - Address: 0x1140
+        - Address: 0x1150
+        - Address: 0x1160
+...

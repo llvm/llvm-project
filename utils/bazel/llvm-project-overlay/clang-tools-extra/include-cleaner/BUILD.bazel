@@ -1,0 +1,124 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("//llvm:lit_test.bzl", "lit_expand_template", "lit_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "include_cleaner",
+    srcs = glob([
+        "lib/*.h",
+        "lib/*.cpp",
+    ]),
+    hdrs = glob(["include/clang-include-cleaner/*.h"]),
+    includes = ["include/"],
+    deps = [
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:format",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:tooling_core",
+        "//clang:tooling_inclusions",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "include_cleaner_internal",
+    hdrs = glob(["lib/*.h"]),
+    includes = ["lib/"],
+    visibility = [":__subpackages__"],
+    deps = [
+        ":include_cleaner",
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:tooling_inclusions",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-include-cleaner",
+    srcs = glob([
+        "tool/*.cpp",
+    ]),
+    deps = [
+        ":include_cleaner",
+        ":include_cleaner_internal",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:tooling",
+        "//llvm:Support",
+    ],
+)
+
+cc_test(
+    name = "unittests",
+    srcs = glob(["unittests/*.cpp"]),
+    deps = [
+        ":include_cleaner",
+        ":include_cleaner_internal",
+        "//clang:ast",
+        "//clang:basic",
+        "//clang:format",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:serialization",
+        "//clang:testing",
+        "//clang:tooling",
+        "//clang:tooling_inclusions",
+        "//llvm:Support",
+        "//llvm:TestingAnnotations",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
+lit_expand_template(
+    name = "lit_site_cfg_py",
+    testonly = True,
+    out = "test/lit.site.cfg.py",
+    dirname_substitutions = {
+        # Anchor on a file that lives in each target directory so the rule
+        # can read its `short_path.dirname`.
+        "@CMAKE_CURRENT_BINARY_DIR@": ":test/lit.cfg.py",
+        "@CMAKE_CURRENT_SOURCE_DIR@": ":test/lit.cfg.py",
+        "@CURRENT_TOOLS_DIR@": ":BUILD.bazel",
+        "@LLVM_LIBS_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_LIT_TOOLS_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_TOOLS_DIR@": "//llvm:BUILD.bazel",
+    },
+    substitutions = {
+        '"@Python3_EXECUTABLE@"': "sys.executable",
+        "@TARGET_TRIPLE@": "",
+    },
+    template = "test/lit.site.cfg.py.in",
+)
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        args = ["-svv"],
+        data = glob(["test/Inputs/**/*"]) + [
+            "test/lit.cfg.py",
+            "test/lit.site.cfg.py",
+            ":clang-include-cleaner",
+            "//llvm:FileCheck",
+            "//llvm:count",
+            "//llvm:not",
+        ],
+    )
+    for src in glob(["test/*.cpp"])
+]

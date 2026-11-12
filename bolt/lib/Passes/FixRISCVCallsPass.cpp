@@ -1,0 +1,99 @@
+//===- bolt/Passes/FixRISCVCallsPass.cpp ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "bolt/Passes/FixRISCVCallsPass.h"
+#include "bolt/Core/ParallelUtilities.h"
+
+#include <iterator>
+
+using namespace llvm;
+
+namespace llvm {
+namespace bolt {
+
+void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
+  auto &BC = BF.getBinaryContext();
+  auto &MIB = BC.MIB;
+  auto *Ctx = BC.Ctx.get();
+
+  for (auto &BB : BF) {
+    for (auto II = BB.begin(); II != BB.end();) {
+      // RISC-V has no conditional tail call. One here usually comes from
+      // __builtin_unreachable(), so skip it. Branch relaxation can handle an
+      // out-of-range target later if needed.
+      if (MIB->isCall(*II) && !MIB->isIndirectCall(*II) &&
+          !MIB->isConditionalBranch(*II)) {
+        auto *Target = MIB->getTargetSymbol(*II);
+        assert(Target && "Cannot find call target");
+
+        MCInst OldCall = *II;
+        auto L = BC.scopeLock();
+
+        if (MIB->isTailCall(*II))
+          MIB->createTailCall(*II, Target, Ctx);
+        else
+          MIB->createCall(*II, Target, Ctx);
+
+        // Discard annotations added by the builder before moving the originals.
+        MIB->stripAnnotations(*II);
+        MIB->moveAnnotations(std::move(OldCall), *II);
+        ++II;
+        continue;
+      }
+
+      auto NextII = std::next(II);
+
+      if (NextII == BB.end())
+        break;
+
+      if (MIB->isRISCVCall(*II, *NextII)) {
+        auto *Target = MIB->getTargetSymbol(*II);
+        assert(Target && "Cannot find call target");
+
+        MCInst OldCall = *NextII;
+        auto L = BC.scopeLock();
+
+        MIB->createNoop(*II);
+        // Mark the replacement NOP for removal by the later RemoveNops pass.
+        MIB->addAnnotation(*II, "NOP", static_cast<uint32_t>(1));
+
+        if (MIB->isTailCall(*NextII))
+          MIB->createTailCall(*NextII, Target, Ctx);
+        else
+          MIB->createCall(*NextII, Target, Ctx);
+
+        // Discard annotations added by the builder before moving the originals.
+        MIB->stripAnnotations(*NextII);
+        MIB->moveAnnotations(std::move(OldCall), *NextII);
+
+        II = std::next(NextII);
+        continue;
+      }
+
+      ++II;
+    }
+  }
+}
+
+Error FixRISCVCallsPass::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isRISCV() || !BC.HasRelocations)
+    return Error::success();
+
+  ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+    runOnFunction(BF);
+  };
+
+  ParallelUtilities::runOnEachFunction(
+      BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun, nullptr,
+      "FixRISCVCalls");
+
+  return Error::success();
+}
+
+} // namespace bolt
+} // namespace llvm

@@ -1,0 +1,191 @@
+## Check that yaml2obj is able to produce output
+## when a symbol with section index SHN_XINDEX is used,
+## but no SHT_SYMTAB_SHNDX section is defined.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --symbols 2>&1 %t1 | FileCheck -DFILE=%t1 %s --check-prefix=CASE1
+
+# CASE1: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj keeps the SHT_SYMTAB_SHNDX section in the output
+## even when symbol's section index value is low enough to not require the extended symtab.
+## Also, check that symbols in .symtab still have the SHN_XINDEX index.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --symbols --section-data 2>&1 %t2 | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      Section {
+# CASE2:       Name: .symtab_shndx (1)
+# CASE2-NEXT:  Type: SHT_SYMTAB_SHNDX (0x12)
+
+# CASE2:      Name: .symtab
+# CASE2:      SectionData (
+# CASE2-NEXT:   0000: 00000000 00000000 00000000 00000000
+# CASE2-NEXT:   0010: 00000000 00000000 00000000 0300FFFF
+##                                                   ^-- 0xFFFF here is a SHN_XINDEX.
+# CASE2-NEXT:   0020: 00000000 00000000 00000000 00000000
+# CASE2-NEXT: )
+
+# CASE2:      Symbol {
+# CASE2:        Name: bar (0)
+# CASE2-NEXT:   Value: 0x0
+# CASE2-NEXT:   Size: 0
+# CASE2-NEXT:   Binding: Local (0x0)
+# CASE2-NEXT:   Type: Section (0x3)
+# CASE2-NEXT:   Other: 0
+# CASE2-NEXT:   Section: bar (0x1)
+# CASE2-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj allows producing broken SHT_SYMTAB_SHNDX section
+## content (in the case below it contains 0xff as an index of a section,
+## which is larger than the total number of sections in the file).
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --symbols 2>&1 %t3 | FileCheck %s -DFILE=%t3 --check-prefix=CASE3
+
+# CASE3: warning: '[[FILE]]': invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: bar
+    Type: SHT_PROGBITS
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 255 ]
+    Link:    .symtab
+Symbols:
+  - Type:  STT_SECTION
+    Index: SHN_XINDEX
+
+## Check that yaml2obj reports an error if a symbol index does not fit into 2 bytes.
+
+# RUN: not yaml2obj --docnum=4 %s -o %t4 2>&1 | FileCheck %s --check-prefix=CASE4
+
+# CASE4: error: out of range hex16 number
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Type:  STT_SECTION
+    Index: 65536
+
+## Check we can set a custom sh_entsize for SHT_SYMTAB_SHNDX section.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readelf -S 2>&1 %t5 | FileCheck %s -DFILE=%t5 --check-prefix=CASE5
+
+# CASE5: warning: '[[FILE]]': section [index 1] has invalid sh_entsize: expected 4, but got 2
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0 ]
+    EntSize: 2
+
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=6 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Link:    .symtab
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+    Entries: [[ENTRIES=<none>]]
+  - Name: .symtab
+    Type: SHT_SYMTAB
+## llvm-readobj validates that SHT_SYMTAB_SHNDX section has the same number
+## of entries that the symbol table associated has.
+    Size: [[SYMTAB=0x24]]
+
+# RUN: yaml2obj --docnum=6 -DSIZE=4 -DCONTENT="'00112233'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="00112233"
+
+# RUN: yaml2obj --docnum=6 -DSIZE=8 -DSYMTAB=0x36 -DCONTENT="'00112233'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="00112233 00000000"
+
+# CHECK-CONTENT:      Name: .symtab_shndx
+# CHECK-CONTENT:      SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=6 -DSIZE=4 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="00000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=6 -DCONTENT="'11223344'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="11223344"
+
+## Check we can't use the "Entries" key together with the "Content" or "Size" keys.
+
+# RUN: not yaml2obj --docnum=6 -DSIZE=0 -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+# RUN: not yaml2obj --docnum=6 -DCONTENT="'00'" -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+
+# ENTRIES-ERR: error: "Entries" cannot be used with "Content" or "Size"
+
+## Check we create an empty section when none of "Size", "Entries" or "Content" are specified.
+
+# RUN: yaml2obj --docnum=6 -DSYMTAB=0x0 %s -o %t.empty
+# RUN: llvm-readelf --sections %t.empty | FileCheck %s --check-prefix=EMPTY
+
+# EMPTY: [Nr] Name          Type                   Address          Off    Size
+# EMPTY: [ 1] .symtab_shndx SYMTAB SECTION INDICES 0000000000000000 000040 000000

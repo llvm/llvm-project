@@ -1,0 +1,52 @@
+; RUN: llc < %s -mtriple=nvptx64 -mattr=+ptx64 -mcpu=sm_30 | FileCheck %s
+; RUN: %if ptxas-isa-6.0 %{llc < %s -mtriple=nvptx64 -mattr=+ptx60 -mcpu=sm_30 | %ptxas-verify %}
+
+@function_pointer = addrspace(1) global ptr null
+
+; CHECK: .func trap_wrapper
+; CHECK-NEXT: ()
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
+
+declare void @trap_wrapper() #0
+
+; CHECK: .func {{.*}} non_void_noreturn()
+; CHECK-NOT: .noreturn
+
+define i32 @non_void_noreturn() #0 {
+  ret i32 54
+}
+
+; CHECK: .func true_noreturn0()
+; CHECK-NEXT: .noreturn
+
+define void @true_noreturn0() #0 {
+  call void @trap_wrapper()
+  ret void
+}
+
+; CHECK: .entry ignore_kernel_noreturn()
+; CHECK-NOT: .noreturn
+
+define ptx_kernel void @ignore_kernel_noreturn() #0 {
+  unreachable
+}
+
+; CHECK-LABEL: .entry callprototype_noreturn(
+; CHECK: {{[$]}}L__prototype_{{[0-9]+}}:
+; CHECK-NEXT: _ (.param .b32 _)
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
+; CHECK: {{[$]}}L__prototype_{{[0-9]+}}:
+; CHECK-NEXT: .callprototype (.param .b32 _) _ (.param .b32 _)
+; CHECK-NEXT: ;
+
+define ptx_kernel void @callprototype_noreturn(i32) {
+  %fn = load ptr, ptr addrspace(1) @function_pointer
+  call void %fn(i32 %0) #0
+  %non_void = bitcast ptr %fn to ptr
+  %2 = call i32 %non_void(i32 %0) #0
+  ret void
+}
+
+attributes #0 = { noreturn }

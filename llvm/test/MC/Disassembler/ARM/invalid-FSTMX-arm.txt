@@ -1,0 +1,8 @@
+# RUN: llvm-mc --disassemble %s -triple=armv7 2>&1 | FileCheck %s -check-prefix=CHECK-WARN
+# RUN: llvm-mc --disassemble %s -triple=armv7 2>&1 | FileCheck %s
+
+# offset=1
+# CHECK-WARN: potentially undefined
+# CHECK-WARN: 0x01 0xdb 0x84 0xec
+# CHECK: fstmiax r4, {d13}
+0x01 0xdb 0x84 0xec

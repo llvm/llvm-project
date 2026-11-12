@@ -1,0 +1,5 @@
+# RUN: llvm-ifs --help | FileCheck %s --check-prefix HELP --implicit-check-not='{{[Oo]}}ptions:'
+
+# HELP: OVERVIEW:
+# HELP: USAGE:
+# HELP: OPTIONS:

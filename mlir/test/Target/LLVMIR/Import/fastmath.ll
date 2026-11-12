@@ -1,0 +1,85 @@
+; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+
+; CHECK-LABEL: @fastmath_inst
+define void @fastmath_inst(float %arg1, float %arg2, i1 %arg3) {
+  ; CHECK: llvm.fadd %{{.*}}, %{{.*}} fastmath<nnan, ninf> : f32
+  %1 = fadd nnan ninf float %arg1, %arg2
+  ; CHECK: llvm.fsub %{{.*}}, %{{.*}} fastmath<nsz> : f32
+  %2 = fsub nsz float %arg1, %arg2
+  ; CHECK: llvm.fmul %{{.*}}, %{{.*}} fastmath<arcp, contract> : f32
+  %3 = fmul arcp contract float %arg1, %arg2
+  ; CHECK: llvm.fdiv %{{.*}}, %{{.*}} fastmath<afn, reassoc> : f32
+  %4 = fdiv afn reassoc float %arg1, %arg2
+  ; CHECK: llvm.fneg %{{.*}} fastmath<fast> : f32
+  %5 = fneg fast float %arg1
+  ; CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} fastmath<contract> : i1, f32
+  %6 = select contract i1 %arg3, float %arg1, float %arg2
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @fastmath_cast
+define void @fastmath_cast(float %arg1) {
+  ; CHECK: llvm.fpext %{{.*}} fastmath<nnan> : f32 to f64
+  %1 = fpext nnan float %arg1 to double
+  ; CHECK: llvm.fptrunc %{{.*}} fastmath<fast> : f32 to f16
+  %2 = fptrunc fast float %arg1 to half
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @fastmath_fcmp
+define void @fastmath_fcmp(float %arg1, float %arg2) {
+  ; CHECK:  llvm.fcmp "oge" %{{.*}}, %{{.*}} fastmath<nsz> : f32
+  %1 = fcmp nsz oge float %arg1, %arg2
+  ret void
+}
+
+; // -----
+
+declare float @fn(float)
+
+; CHECK-LABEL: @fastmath_call
+define void @fastmath_call(float %arg1) {
+  ; CHECK:  llvm.call @fn(%{{.*}}) {fastmathFlags = #llvm.fastmath<ninf>} : (f32) -> f32
+  %1 = call ninf float @fn(float %arg1)
+  ret void
+}
+
+; // -----
+
+declare float @llvm.exp.f32(float)
+declare float @llvm.powi.f32.i32(float, i32)
+declare float @llvm.pow.f32(float, float)
+declare float @llvm.fmuladd.f32(float, float, float)
+declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fmax.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fminimum.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fmaximum.v2f32(<2 x float>)
+declare { float, float } @llvm.modf.f32(float)
+
+; CHECK-LABEL: @fastmath_intr
+define void @fastmath_intr(float %arg1, i32 %arg2, <2 x float> %arg3) {
+  ; CHECK: llvm.intr.exp(%{{.*}}) fastmath<nnan, ninf> : (f32) -> f32
+  %1 = call nnan ninf float @llvm.exp.f32(float %arg1)
+  ; CHECK: llvm.intr.powi(%{{.*}}, %{{.*}}) fastmath<fast> : (f32, i32) -> f32
+  %2 = call fast float @llvm.powi.f32.i32(float %arg1, i32 %arg2)
+  ; CHECK:  llvm.intr.pow(%{{.*}}, %{{.*}}) fastmath<fast> : (f32, f32) -> f32
+  %3 = call fast float @llvm.pow.f32(float %arg1, float %arg1)
+  ; CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) fastmath<fast> : (f32, f32, f32) -> f32
+  %4 = call fast float @llvm.fmuladd.f32(float %arg1, float %arg1, float %arg1)
+  ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fmin({{.*}}) fastmath<nnan> : (vector<2xf32>) -> f32
+  %5 = call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> %arg3)
+  ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fmax({{.*}}) fastmath<nnan> : (vector<2xf32>) -> f32
+  %6 = call nnan float @llvm.vector.reduce.fmax.v2f32(<2 x float> %arg3)
+  ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fminimum({{.*}}) fastmath<nnan> : (vector<2xf32>) -> f32
+  %7 = call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> %arg3)
+  ; CHECK: %{{.*}} = llvm.intr.vector.reduce.fmaximum({{.*}}) fastmath<nnan> : (vector<2xf32>) -> f32
+  %8 = call nnan float @llvm.vector.reduce.fmaximum.v2f32(<2 x float> %arg3)
+  ; CHECK: llvm.intr.modf(%{{.*}}) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
+  %9 = call ninf { float, float } @llvm.modf.f32(float %arg1)
+
+  ret void
+}

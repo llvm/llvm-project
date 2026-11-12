@@ -1,0 +1,63 @@
+posix: posix-2024
+types:
+  Dl_info:
+    in-latest-posix: ''
+functions:
+  dladdr:
+    in-latest-posix: ""
+  dlclose:
+    in-latest-posix: ""
+  dlerror:
+    in-latest-posix: ""
+  dlopen:
+    in-latest-posix: ""
+  dlsym:
+    in-latest-posix: ""
+
+  dlinfo:
+    extension: gnu
+macros:
+  RTLD_GLOBAL:
+    in-latest-posix: ""
+  RTLD_LAZY:
+    in-latest-posix: ""
+  RTLD_LOCAL:
+    in-latest-posix: ""
+  RTLD_NOW:
+    in-latest-posix: ""
+  RTLD_BINDING_MASK:
+    extension: gnu
+  RTLD_DEEPBIND:
+    extension: gnu
+  RTLD_DEFAULT:
+    extension: gnu
+  RTLD_DI_CONFIGADDR:
+    extension: gnu
+  RTLD_DI_LINKMAP:
+    extension: gnu
+  RTLD_DI_LMID:
+    extension: gnu
+  RTLD_DI_MAX:
+    extension: gnu
+  RTLD_DI_ORIGIN:
+    extension: gnu
+  RTLD_DI_PHDR:
+    extension: gnu
+  RTLD_DI_PROFILENAME:
+    extension: gnu
+  RTLD_DI_PROFILEOUT:
+    extension: gnu
+  RTLD_DI_SERINFO:
+    extension: gnu
+  RTLD_DI_SERINFOSIZE:
+    extension: gnu
+  RTLD_DI_TLS_DATA:
+    extension: gnu
+  RTLD_DI_TLS_MODID:
+    extension: gnu
+  RTLD_NEXT:
+    in-latest-posix: ''
+  RTLD_NODELETE:
+    extension: gnu
+  RTLD_NOLOAD:
+    extension: gnu

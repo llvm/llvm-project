@@ -1,0 +1,106 @@
+//===-- BitstreamRemarkContainer.h - Container for remarks --------------*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides declarations for things used in the various types of
+// remark containers.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_REMARKS_BITSTREAMREMARKCONTAINER_H
+#define LLVM_REMARKS_BITSTREAMREMARKCONTAINER_H
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Bitstream/BitCodes.h"
+#include <cstdint>
+
+namespace llvm {
+namespace remarks {
+
+/// The current version of the remark container.
+/// Note: this is different from the version of the remark entry.
+constexpr uint64_t CurrentContainerVersion = 1;
+/// The magic number used for identifying remark blocks.
+constexpr StringLiteral ContainerMagic("RMRK");
+
+/// Type of the remark container.
+enum class BitstreamRemarkContainerType {
+  /// Emit a link to an external remarks file
+  /// (usually as a section of the object file, to enable discovery of all
+  /// remarks files from the final linked object file)
+  /// RemarksFileExternal:
+  ///   | Meta:
+  ///   | | Container info
+  ///   | | External file
+  RemarksFileExternal,
+  /// Emit metadata and remarks into a file
+  /// RemarksFile:
+  ///   | Meta:
+  ///   | | Container info
+  ///   | | Remark version
+  ///   | Remarks:
+  ///   | | Remark0
+  ///   | | Remark1
+  ///   | | Remark2
+  ///   | | ...
+  ///   | Late Meta:
+  ///   | | String table
+  RemarksFile,
+  First = RemarksFileExternal,
+  Last = RemarksFile
+};
+
+/// The possible blocks that will be encountered in a bitstream remark
+/// container.
+enum BlockIDs {
+  /// The metadata block is mandatory. It should always come after the
+  /// BLOCKINFO_BLOCK, and contains metadata that should be used when parsing
+  /// REMARK_BLOCKs.
+  /// There should always be only one META_BLOCK.
+  META_BLOCK_ID = bitc::FIRST_APPLICATION_BLOCKID,
+  /// One remark entry is represented using a REMARK_BLOCK. There can be
+  /// multiple REMARK_BLOCKs in the same file.
+  REMARK_BLOCK_ID
+};
+
+constexpr StringLiteral MetaBlockName("Meta");
+constexpr StringLiteral RemarkBlockName("Remark");
+
+/// The possible records that can be encountered in the previously described
+/// blocks.
+enum RecordIDs {
+  // Meta block records.
+  RECORD_META_CONTAINER_INFO = 1,
+  RECORD_META_REMARK_VERSION,
+  RECORD_META_STRTAB,
+  RECORD_META_EXTERNAL_FILE,
+  // Remark block records.
+  RECORD_REMARK_HEADER,
+  RECORD_REMARK_DEBUG_LOC,
+  RECORD_REMARK_HOTNESS,
+  RECORD_REMARK_ARG_WITH_DEBUGLOC,
+  RECORD_REMARK_ARG_WITHOUT_DEBUGLOC,
+  // Helpers.
+  RECORD_FIRST = RECORD_META_CONTAINER_INFO,
+  RECORD_LAST = RECORD_REMARK_ARG_WITHOUT_DEBUGLOC
+};
+
+constexpr StringLiteral MetaContainerInfoName("Container info");
+constexpr StringLiteral MetaRemarkVersionName("Remark version");
+constexpr StringLiteral MetaStrTabName("String table");
+constexpr StringLiteral MetaExternalFileName("External File");
+constexpr StringLiteral RemarkHeaderName("Remark header");
+constexpr StringLiteral RemarkDebugLocName("Remark debug location");
+constexpr StringLiteral RemarkHotnessName("Remark hotness");
+constexpr StringLiteral
+    RemarkArgWithDebugLocName("Argument with debug location");
+constexpr StringLiteral RemarkArgWithoutDebugLocName("Argument");
+
+} // end namespace remarks
+} // end namespace llvm
+
+#endif // LLVM_REMARKS_BITSTREAMREMARKCONTAINER_H

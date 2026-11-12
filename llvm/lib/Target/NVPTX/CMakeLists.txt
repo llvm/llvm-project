@@ -1,0 +1,87 @@
+add_llvm_component_group(NVPTX)
+
+set(LLVM_TARGET_DEFINITIONS NVPTX.td)
+
+llvm_tablegen(NVPTXGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(NVPTXGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(NVPTXGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(NVPTXGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(NVPTXGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(NVPTXGenSubtargetInfo.inc -gen-subtarget)
+
+set(LLVM_TARGET_DEFINITIONS NVPTXOptions.td)
+llvm_tablegen(NVPTXOptions.inc -gen-opt-parser-defs)
+
+add_public_tablegen_target(NVPTXCommonTableGen)
+
+set(NVPTXCodeGen_sources
+  NVPTXAddressFolder.cpp
+  NVPTXAliasAnalysis.cpp
+  NVPTXAllocaHoisting.cpp
+  NVPTXAsmPrinter.cpp
+  NVPTXAssignValidGlobalNames.cpp
+  NVPTXAtomicLower.cpp
+  NVPTXCanonicalizeDynamicShared.cpp
+  NVPTXCodeGenPassBuilder.cpp
+  NVPTXCtorDtorLowering.cpp
+  NVPTXDwarfDebug.cpp
+  NVPTXForwardParams.cpp
+  NVPTXFrameLowering.cpp
+  NVPTXGenericToNVVM.cpp
+  NVPTXIRPeephole.cpp
+  NVPTXISelDAGToDAG.cpp
+  NVPTXISelLowering.cpp
+  NVPTXImageOptimizer.cpp
+  NVPTXInstrInfo.cpp
+  NVPTXLowerAggrCopies.cpp
+  NVPTXLowerAlloca.cpp
+  NVPTXLowerArgs.cpp
+  NVPTXLowerUnreachable.cpp
+  NVPTXMCExpr.cpp
+  NVPTXMarkKernelPtrsGlobal.cpp
+  NVPTXPeephole.cpp
+  NVPTXPrologEpilogPass.cpp
+  NVPTXPromoteParamAlign.cpp
+  NVPTXProxyRegErasure.cpp
+  NVPTXRegisterInfo.cpp
+  NVPTXReplaceImageHandles.cpp
+  NVPTXSelectionDAGInfo.cpp
+  NVPTXSubtarget.cpp
+  NVPTXTagInvariantLoads.cpp
+  NVPTXTargetMachine.cpp
+  NVPTXTargetTransformInfo.cpp
+  NVPTXUtilities.cpp
+  NVVMIntrRange.cpp
+  NVVMProperties.cpp
+  NVVMReflect.cpp
+  )
+
+add_llvm_target(NVPTXCodeGen
+  ${NVPTXCodeGen_sources}
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  CodeGen
+  CodeGenTypes
+  Core
+  IPO
+  MC
+  NVPTXDesc
+  NVPTXInfo
+  Option
+  Passes
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TargetParser
+  TransformUtils
+  Vectorize
+
+  ADD_TO_COMPONENT
+  NVPTX
+  )
+
+add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)

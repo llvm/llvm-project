@@ -1,0 +1,20 @@
+//===-- Shared/Targets.def - Target plugin enumerator -----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Enumerates over all of the supported target plugins that are available to
+// the offloading library.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef PLUGIN_TARGET
+#  error Please define the macro PLUGIN_TARGET(TargetName)
+#endif
+
+@LIBOMPTARGET_ENUM_PLUGIN_TARGETS@
+
+#undef PLUGIN_TARGET

@@ -1,0 +1,44 @@
+RUN: split-file %s %t
+RUN: llvm-symbolizer --filter-markup < %t/log 2> %t.err
+RUN: FileCheck %s -input-file=%t.err --match-full-lines
+
+CHECK-NOT: error: expected address; found '0x4f'
+CHECK-NOT: error: expected address; found '00'
+CHECK:     error: expected address; found ''
+CHECK:     error: expected address; found '42'
+CHECK:     error: expected address; found '0xgg'
+
+CHECK-NOT: error: expected module ID; found '0'
+CHECK:     error: expected module ID; found ''
+CHECK:     error: expected module ID; found '-1'
+CHECK-NOT: error: expected module ID; found '077'
+CHECK:     error: expected module ID; found '079'
+CHECK-NOT: error: expected module ID; found '0xff'
+CHECK:     error: expected module ID; found '0xfg'
+CHECK:     error: expected module ID; found '0x'
+
+CHECK:     error: expected build ID; found ''
+CHECK-NOT: error: expected build ID; found '0'
+CHECK-NOT: error: expected build ID; found '0xff'
+CHECK:     error: expected build ID; found 'fg'
+
+;--- log
+{{{mmap:0x4f:1:unknown}}}
+{{{mmap:00:1:unknown}}}
+{{{mmap::1:unknown}}}
+{{{mmap:42:1:unknown}}}
+{{{mmap:0xgg:1:unknown}}}
+
+{{{module:0::elf:00}}}
+{{{module:::elf:00}}}
+{{{module:-1::elf:00}}}
+{{{module:077::elf:00}}}
+{{{module:079::elf:00}}}
+{{{module:0xff::elf:00}}}
+{{{module:0xfg::elf:00}}}
+{{{module:0x::elf:00}}}
+
+{{{module:1::elf:}}}
+{{{module:2::elf:0}}}
+{{{module:3::elf:ff}}}
+{{{module:4::elf:fg}}}

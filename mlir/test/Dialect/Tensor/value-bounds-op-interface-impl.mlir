@@ -1,0 +1,424 @@
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds))' -verify-diagnostics \
+// RUN:     -split-input-file | FileCheck %s
+
+func.func @unknown_op() -> index {
+  %0 = "test.foo"() : () -> (tensor<?x?xf32>)
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @cast(
+//       CHECK:   %[[c10:.*]] = arith.constant 10 : index
+//       CHECK:   return %[[c10]]
+func.func @cast(%t: tensor<10xf32>) -> index {
+  %0 = tensor.cast %t : tensor<10xf32> to tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @cast_unranked(%t: tensor<*xf32>) -> index {
+  %0 = tensor.cast %t : tensor<*xf32> to tensor<?xf32>
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+//       CHECK: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL: func @concat(
+//  CHECK-SAME:     %[[t0:[a-zA-Z0-9]+]]: tensor<?x4xf32>, %[[t1:[a-zA-Z0-9]+]]: tensor<?x4xf32>
+//       CHECK:   %[[dim0:.*]] = tensor.dim %[[t0]]
+//       CHECK:   %[[dim1:.*]] = tensor.dim %[[t1]]
+//       CHECK:   %[[sum:.*]] = affine.apply #[[$MAP]]()[%[[dim0]], %[[dim1]]]
+//       CHECK:   return %[[sum]]
+func.func @concat(%t0: tensor<?x4xf32>, %t1: tensor<?x4xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1
+      : (tensor<?x4xf32>, tensor<?x4xf32>) -> tensor<?x4xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x4xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// The size of a dimension that is not concatenated is the same in the result
+// and in every input. The first input is dynamic in dimension 1, so the
+// constant size can only come from the second one.
+
+// CHECK-LABEL: func @concat_non_concatenated_dim(
+//       CHECK:   %[[c4:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[c4]]
+func.func @concat_non_concatenated_dim(%t0: tensor<?x?xf32>,
+                                       %t1: tensor<?x4xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1
+      : (tensor<?x?xf32>, tensor<?x4xf32>) -> tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 1, constant} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// Every input is dynamic in a dimension that is not concatenated, so the size
+// of the result is the size of any of them. The bound is reified in terms of
+// the first input.
+
+// CHECK-LABEL: func @concat_non_concatenated_dim_dynamic(
+//  CHECK-SAME:     %[[t0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t0]], %[[c1]]
+//       CHECK:   return %[[dim]]
+func.func @concat_non_concatenated_dim_dynamic(%t0: tensor<?x?xf32>,
+                                               %t1: tensor<?x?xf32>,
+                                               %t2: tensor<?x?xf32>) -> index {
+  %0 = tensor.concat dim(0) %t0, %t1, %t2
+      : (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @dim(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]]
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]]
+//       CHECK:   return %[[dim]]
+func.func @dim(%t: tensor<?xf32>) -> index {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %t, %c0 : tensor<?xf32>
+  %1 = "test.reify_bound"(%0) : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @dim_all_positive(
+func.func @dim_all_positive(%t: tensor<?xf32>, %x: index) {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.dim %t, %x : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%0, %c0) {cmp = "GE" } : (index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @empty(
+//  CHECK-SAME:     %[[sz:.*]]: index
+//       CHECK:   %[[c6:.*]] = arith.constant 6 : index
+//       CHECK:   return %[[c6]], %[[sz]]
+func.func @empty(%sz: index) -> (index, index) {
+  %0 = tensor.empty(%sz) : tensor<6x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<6x?xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<6x?xf32>) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_slice_dynamic(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>, %[[sz:.*]]: index
+//       CHECK:   return %[[sz]]
+func.func @extract_slice_dynamic(%t: tensor<?xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<?xf32> to tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_slice_static(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[c5]]
+func.func @extract_slice_static(%t: tensor<?xf32>) -> index {
+  %0 = tensor.extract_slice %t[2][5][1] : tensor<?xf32> to tensor<5xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<5xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @extract_slice_dynamic_constant(%t: tensor<?xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<?xf32> to tensor<?xf32>
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {dim = 0, constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_slice_static_constant(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
+//       CHECK:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[c5]]
+func.func @extract_slice_static_constant(%t: tensor<?xf32>) -> index {
+  %0 = tensor.extract_slice %t[2][5][1] : tensor<?xf32> to tensor<5xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0, constant} : (tensor<5xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @extract_slice_rank_reduce(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[sz:.*]]: index
+//       CHECK:   return %[[sz]]
+func.func @extract_slice_rank_reduce(%t: tensor<?x?xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[0, 2][1, %sz][1, 1] : tensor<?x?xf32> to tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// An in-bounds extract_slice cannot exceed ceil((src - offset) / stride).
+// Default constant upper bounds are open, so size <= 8 reifies as 9.
+
+// CHECK-LABEL: func @extract_slice_in_bounds_constant_ub(
+//       CHECK:   %[[c9:.*]] = arith.constant 9 : index
+//       CHECK:   return %[[c9]]
+func.func @extract_slice_in_bounds_constant_ub(%t: tensor<10xf32>, %sz: index) -> index {
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0, type = "UB", constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @extract_slice_in_bounds_compare(%t: tensor<10xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %0 = tensor.extract_slice %t[2][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c8) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// src=10, stride=3 allows indices {0,3,6,9}, so size <= 4 = ceil(10/3).
+// floor(10/3) = 3 would be too tight.
+
+func.func @extract_slice_strided_in_bounds(%t: tensor<10xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %0 = tensor.extract_slice %t[0][%sz][3] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c4) {cmp = "LE"} : (index, index) -> ()
+  // expected-error @below{{unknown}}
+  "test.compare"(%d, %c3) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// A dynamic offset is non-negative, so size <= src - 0.
+
+func.func @extract_slice_dynamic_offset_in_bounds(%t: tensor<10xf32>, %off: index, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %0 = tensor.extract_slice %t[%off][%sz][1] : tensor<10xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c10) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @extract_slice_rank_reduce_in_bounds(%t: tensor<8x16xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %c14 = arith.constant 14 : index
+  %0 = tensor.extract_slice %t[0, 2][1, %sz][1, 1] : tensor<8x16xf32> to tensor<?xf32>
+  %d = tensor.dim %0, %c0 : tensor<?xf32>
+  // expected-remark @below{{true}}
+  "test.compare"(%d, %c14) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @extract_slice_dynamic_stride_no_constant_ub(%t: tensor<10xf32>, %sz: index, %st: index) -> index {
+  %0 = tensor.extract_slice %t[0][%sz][%st] : tensor<10xf32> to tensor<?xf32>
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {dim = 0, type = "UB", constant} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @insert(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]], %[[c0]]
+//       CHECK:   return %[[dim]]
+func.func @insert(%t: tensor<?xf32>, %f: f32, %pos: index) -> index {
+  %0 = tensor.insert %f into %t[%pos] : tensor<?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK: #[[$map:.*]] = affine_map<()[s0, s1] -> (s0 + s1 * 2)>
+// CHECK: #[[$map1:.*]] = affine_map<()[s0] -> (s0 + 12)>
+// CHECK-LABEL: func @pad(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x7xf32>, %[[a:.*]]: index, %[[b:.*]]: index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[dim0:.*]] = tensor.dim %[[t]], %[[c0]]
+//       CHECK:   %[[bound0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[a]]]
+//       CHECK:   %[[bound1:.*]] = affine.apply #[[$map1]]()[%[[b]]]
+//       CHECK:   return %[[bound0]], %[[bound1]]
+func.func @pad(%t: tensor<?x7xf32>, %a: index, %b: index) -> (index, index) {
+  %pad = arith.constant 0.0 : f32
+  %0 = tensor.pad %t low[%a, 5] high[%a, %b] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad : f32
+    } : tensor<?x7xf32> to tensor<?x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x?xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x?xf32>) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @rank(
+//  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   return %[[c1]]
+func.func @rank(%t: tensor<5xf32>) -> index {
+  %0 = tensor.rank %t : tensor<5xf32>
+  %1 = "test.reify_bound"(%0) : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @splat(
+//  CHECK-SAME:     %[[sz:[a-zA-Z0-9]+]]: index
+//       CHECK:   %[[c17:.*]] = arith.constant 17 : index
+//       CHECK:   return %[[sz]], %[[c17]]
+func.func @splat(%f: f32, %sz: index) -> (index, index) {
+  %0 = tensor.splat %f[%sz] : tensor<?x17xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<?x17xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<?x17xf32>) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// A dimension that is dynamic in the result type is mapped to its own size
+// operand, and not to the first one.
+
+// CHECK-LABEL: func @splat_multiple_dynamic_dims(
+//  CHECK-SAME:     %[[sz1:[a-zA-Z0-9]+]]: index, %[[sz2:[a-zA-Z0-9]+]]: index
+//       CHECK:   return %[[sz2]]
+func.func @splat_multiple_dynamic_dims(%f: f32, %sz1: index,
+                                       %sz2: index) -> index {
+  %0 = tensor.splat %f[%sz1, %sz2] : tensor<?x20x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 2} : (tensor<?x20x?xf32>) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @dynamic_dims_are_equal(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
+  %dim1 = tensor.dim %t, %c0 : tensor<?xf32>
+  // expected-remark @below {{true}}
+  "test.compare"(%dim0, %dim1) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_dims_are_different(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
+  %val = arith.addi %dim0, %c1 : index
+  // expected-remark @below {{false}}
+  "test.compare"(%dim0, %val) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_dims_are_maybe_equal_1(%t: tensor<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?xf32>
+  // expected-error @below {{unknown}}
+  "test.compare"(%dim0, %c5) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dynamic_dims_are_maybe_equal_2(%t: tensor<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0 = tensor.dim %t, %c0 : tensor<?x?xf32>
+  %dim1 = tensor.dim %t, %c1 : tensor<?x?xf32>
+  // expected-error @below {{unknown}}
+  "test.compare"(%dim0, %dim1) : (index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL:  func.func @pad_reification
+func.func @pad_reification(%cst : f32, %idx : index, %t: tensor<64x?x64xf32>) {
+  %pad_amt = affine.apply affine_map<(d0) -> (-d0 + 256)>(%idx)
+  %es = tensor.extract_slice %t[0, 0, 0] [1, %idx, 64] [1, 1, 1] : tensor<64x?x64xf32> to tensor<1x?x64xf32>
+
+  %padded = tensor.pad %es low[0, 0, 0] high[0, %pad_amt, 0] {
+  ^bb0(%a: index, %b: index, %c: index):
+    tensor.yield %cst : f32
+  } : tensor<1x?x64xf32> to tensor<1x?x64xf32>
+
+  // CHECK: arith.constant 256 : index
+  %1 = "test.reify_bound"(%padded) {dim = 1, constant} : (tensor<1x?x64xf32>) -> (index)
+  return
+}
+
+// -----
+
+//       CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-LABEL: func @tensor_collapse(
+//  CHECK-SAME:     %[[sz0:.*]]: index
+//   CHECK-DAG:   %[[c2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK:   %[[dim:.*]] = tensor.dim %{{.*}}, %[[c2]] : tensor<3x4x?x2xf32>
+//       CHECK:   %[[mul:.*]] = affine.apply #[[$MAP]]()[%[[dim]]]
+//       CHECK:   return %[[c12]], %[[mul]]
+func.func @tensor_collapse(%sz0: index) -> (index, index) {
+  %0 = tensor.empty(%sz0) : tensor<3x4x?x2xf32>
+  %1 = tensor.collapse_shape %0 [[0, 1], [2, 3]] : tensor<3x4x?x2xf32> into tensor<12x?xf32>
+  %2 = "test.reify_bound"(%1) {dim = 0} : (tensor<12x?xf32>) -> (index)
+  %3 = "test.reify_bound"(%1) {dim = 1} : (tensor<12x?xf32>) -> (index)
+  return %2, %3 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_expand(
+//  CHECK-SAME:     %[[t:[a-zA-Z0-9]+]]: tensor<?xf32>
+//  CHECK-SAME:     %[[sz:[a-zA-Z0-9]+]]: index
+//       CHECK:   %[[c4:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[c4]], %[[sz]]
+func.func @tensor_expand(%t: tensor<?xf32>, %sz: index) -> (index, index) {
+  %0 = tensor.expand_shape %t [[0, 1]] output_shape [4, %sz] : tensor<?xf32> into tensor<4x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<4x?xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<4x?xf32>) -> (index)
+  return %1, %2 : index, index
+}

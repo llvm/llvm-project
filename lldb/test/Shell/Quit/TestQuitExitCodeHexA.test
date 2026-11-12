@@ -1,0 +1,2 @@
+# RUN: %python %S/expect_exit_code.py 10 %lldb -b -s %s
+q 0xA

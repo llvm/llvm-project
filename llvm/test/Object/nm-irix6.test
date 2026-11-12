@@ -1,0 +1,27 @@
+# Check reading IRIX 6.0 64-bit archive file.
+RUN: llvm-nm %p/Inputs/archive-test.a-irix6-mips64el | FileCheck %s
+
+CHECK:      f1.o:
+CHECK-NEXT: 00000028 T f1
+CHECK-NEXT: 00000000 d s_d
+CHECK-NEXT: 00000000 t s_foo
+
+CHECK:      f2.o:
+CHECK-NEXT: 00000028 T f2
+CHECK-NEXT: 00000000 d s_d
+CHECK-NEXT: 00000000 t s_foo
+
+CHECK:      f3.o:
+CHECK-NEXT: 00000028 T f3
+CHECK-NEXT: 00000000 d s_d
+CHECK-NEXT: 00000000 t s_foo
+
+CHECK:      f4.o:
+CHECK-NEXT: 00000028 T f4
+CHECK-NEXT: 00000000 d s_d
+CHECK-NEXT: 00000000 t s_foo
+
+CHECK:      f5.o:
+CHECK-NEXT: 00000028 T f5
+CHECK-NEXT: 00000000 d s_d
+CHECK-NEXT: 00000000 t s_foo

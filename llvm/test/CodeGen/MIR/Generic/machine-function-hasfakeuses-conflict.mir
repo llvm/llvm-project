@@ -1,0 +1,14 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+# Test that computed properties are not conflicting with explicitly set
+# properties
+
+---
+# CHECK: error: {{.*}}: TestHasFakeUsesOverrideConflict has explicit property hasFakeUses=false, but contains fake uses
+name:            TestHasFakeUsesOverrideConflict
+hasFakeUses: false
+body: |
+  bb.0:
+    %0:_(s32) = G_IMPLICIT_DEF
+    FAKE_USE %0
+...

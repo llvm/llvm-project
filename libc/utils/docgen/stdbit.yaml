@@ -1,0 +1,268 @@
+standard: c23
+c-reference-root: numeric/bit
+functions:
+  stdc_bit_ceil_uc:
+    c-definition: 7.18.16
+    c-reference: numeric/bit/stdc_bit_ceil
+  stdc_bit_ceil_ui:
+    c-definition: 7.18.16
+    c-reference: numeric/bit/stdc_bit_ceil
+  stdc_bit_ceil_ul:
+    c-definition: 7.18.16
+    c-reference: numeric/bit/stdc_bit_ceil
+  stdc_bit_ceil_ull:
+    c-definition: 7.18.16
+    c-reference: numeric/bit/stdc_bit_ceil
+  stdc_bit_ceil_us:
+    c-definition: 7.18.16
+    c-reference: numeric/bit/stdc_bit_ceil
+  stdc_bit_floor_uc:
+    c-definition: 7.18.15
+    c-reference: numeric/bit/stdc_bit_floor
+  stdc_bit_floor_ui:
+    c-definition: 7.18.15
+    c-reference: numeric/bit/stdc_bit_floor
+  stdc_bit_floor_ul:
+    c-definition: 7.18.15
+    c-reference: numeric/bit/stdc_bit_floor
+  stdc_bit_floor_ull:
+    c-definition: 7.18.15
+    c-reference: numeric/bit/stdc_bit_floor
+  stdc_bit_floor_us:
+    c-definition: 7.18.15
+    c-reference: numeric/bit/stdc_bit_floor
+  stdc_bit_width_uc:
+    c-definition: 7.18.14
+    c-reference: numeric/bit/stdc_bit_width
+  stdc_bit_width_ui:
+    c-definition: 7.18.14
+    c-reference: numeric/bit/stdc_bit_width
+  stdc_bit_width_ul:
+    c-definition: 7.18.14
+    c-reference: numeric/bit/stdc_bit_width
+  stdc_bit_width_ull:
+    c-definition: 7.18.14
+    c-reference: numeric/bit/stdc_bit_width
+  stdc_bit_width_us:
+    c-definition: 7.18.14
+    c-reference: numeric/bit/stdc_bit_width
+  stdc_count_ones_uc:
+    c-definition: 7.18.12
+    c-reference: numeric/bit/stdc_count_ones
+  stdc_count_ones_ui:
+    c-definition: 7.18.12
+    c-reference: numeric/bit/stdc_count_ones
+  stdc_count_ones_ul:
+    c-definition: 7.18.12
+    c-reference: numeric/bit/stdc_count_ones
+  stdc_count_ones_ull:
+    c-definition: 7.18.12
+    c-reference: numeric/bit/stdc_count_ones
+  stdc_count_ones_us:
+    c-definition: 7.18.12
+    c-reference: numeric/bit/stdc_count_ones
+  stdc_count_zeros_uc:
+    c-definition: 7.18.11
+    c-reference: numeric/bit/stdc_count_zeros
+  stdc_count_zeros_ui:
+    c-definition: 7.18.11
+    c-reference: numeric/bit/stdc_count_zeros
+  stdc_count_zeros_ul:
+    c-definition: 7.18.11
+    c-reference: numeric/bit/stdc_count_zeros
+  stdc_count_zeros_ull:
+    c-definition: 7.18.11
+    c-reference: numeric/bit/stdc_count_zeros
+  stdc_count_zeros_us:
+    c-definition: 7.18.11
+    c-reference: numeric/bit/stdc_count_zeros
+  stdc_first_leading_one_uc:
+    c-definition: 7.18.8
+    c-reference: numeric/bit/stdc_first_leading_one
+  stdc_first_leading_one_ui:
+    c-definition: 7.18.8
+    c-reference: numeric/bit/stdc_first_leading_one
+  stdc_first_leading_one_ul:
+    c-definition: 7.18.8
+    c-reference: numeric/bit/stdc_first_leading_one
+  stdc_first_leading_one_ull:
+    c-definition: 7.18.8
+    c-reference: numeric/bit/stdc_first_leading_one
+  stdc_first_leading_one_us:
+    c-definition: 7.18.8
+    c-reference: numeric/bit/stdc_first_leading_one
+  stdc_first_leading_zero_uc:
+    c-definition: 7.18.7
+    c-reference: numeric/bit/stdc_first_leading_zero
+  stdc_first_leading_zero_ui:
+    c-definition: 7.18.7
+    c-reference: numeric/bit/stdc_first_leading_zero
+  stdc_first_leading_zero_ul:
+    c-definition: 7.18.7
+    c-reference: numeric/bit/stdc_first_leading_zero
+  stdc_first_leading_zero_ull:
+    c-definition: 7.18.7
+    c-reference: numeric/bit/stdc_first_leading_zero
+  stdc_first_leading_zero_us:
+    c-definition: 7.18.7
+    c-reference: numeric/bit/stdc_first_leading_zero
+  stdc_first_trailing_one_uc:
+    c-definition: 7.18.10
+    c-reference: numeric/bit/stdc_first_trailing_one
+  stdc_first_trailing_one_ui:
+    c-definition: 7.18.10
+    c-reference: numeric/bit/stdc_first_trailing_one
+  stdc_first_trailing_one_ul:
+    c-definition: 7.18.10
+    c-reference: numeric/bit/stdc_first_trailing_one
+  stdc_first_trailing_one_ull:
+    c-definition: 7.18.10
+    c-reference: numeric/bit/stdc_first_trailing_one
+  stdc_first_trailing_one_us:
+    c-definition: 7.18.10
+    c-reference: numeric/bit/stdc_first_trailing_one
+  stdc_first_trailing_zero_uc:
+    c-definition: 7.18.9
+    c-reference: numeric/bit/stdc_first_trailing_zero
+  stdc_first_trailing_zero_ui:
+    c-definition: 7.18.9
+    c-reference: numeric/bit/stdc_first_trailing_zero
+  stdc_first_trailing_zero_ul:
+    c-definition: 7.18.9
+    c-reference: numeric/bit/stdc_first_trailing_zero
+  stdc_first_trailing_zero_ull:
+    c-definition: 7.18.9
+    c-reference: numeric/bit/stdc_first_trailing_zero
+  stdc_first_trailing_zero_us:
+    c-definition: 7.18.9
+    c-reference: numeric/bit/stdc_first_trailing_zero
+  stdc_has_single_bit_uc:
+    c-definition: 7.18.13
+    c-reference: numeric/bit/stdc_has_single_bit
+  stdc_has_single_bit_ui:
+    c-definition: 7.18.13
+    c-reference: numeric/bit/stdc_has_single_bit
+  stdc_has_single_bit_ul:
+    c-definition: 7.18.13
+    c-reference: numeric/bit/stdc_has_single_bit
+  stdc_has_single_bit_ull:
+    c-definition: 7.18.13
+    c-reference: numeric/bit/stdc_has_single_bit
+  stdc_has_single_bit_us:
+    c-definition: 7.18.13
+    c-reference: numeric/bit/stdc_has_single_bit
+  stdc_leading_ones_uc:
+    c-definition: 7.18.4
+    c-reference: numeric/bit/stdc_leading_ones
+  stdc_leading_ones_ui:
+    c-definition: 7.18.4
+    c-reference: numeric/bit/stdc_leading_ones
+  stdc_leading_ones_ul:
+    c-definition: 7.18.4
+    c-reference: numeric/bit/stdc_leading_ones
+  stdc_leading_ones_ull:
+    c-definition: 7.18.4
+    c-reference: numeric/bit/stdc_leading_ones
+  stdc_leading_ones_us:
+    c-definition: 7.18.4
+    c-reference: numeric/bit/stdc_leading_ones
+  stdc_leading_zeros_uc:
+    c-definition: 7.18.3
+    c-reference: numeric/bit/stdc_leading_zeros
+  stdc_leading_zeros_ui:
+    c-definition: 7.18.3
+    c-reference: numeric/bit/stdc_leading_zeros
+  stdc_leading_zeros_ul:
+    c-definition: 7.18.3
+    c-reference: numeric/bit/stdc_leading_zeros
+  stdc_leading_zeros_ull:
+    c-definition: 7.18.3
+    c-reference: numeric/bit/stdc_leading_zeros
+  stdc_leading_zeros_us:
+    c-definition: 7.18.3
+    c-reference: numeric/bit/stdc_leading_zeros
+  stdc_trailing_ones_uc:
+    c-definition: 7.18.6
+    c-reference: numeric/bit/stdc_trailing_ones
+  stdc_trailing_ones_ui:
+    c-definition: 7.18.6
+    c-reference: numeric/bit/stdc_trailing_ones
+  stdc_trailing_ones_ul:
+    c-definition: 7.18.6
+    c-reference: numeric/bit/stdc_trailing_ones
+  stdc_trailing_ones_ull:
+    c-definition: 7.18.6
+    c-reference: numeric/bit/stdc_trailing_ones
+  stdc_trailing_ones_us:
+    c-definition: 7.18.6
+    c-reference: numeric/bit/stdc_trailing_ones
+  stdc_trailing_zeros_uc:
+    c-definition: 7.18.5
+    c-reference: numeric/bit/stdc_trailing_zeros
+  stdc_trailing_zeros_ui:
+    c-definition: 7.18.5
+    c-reference: numeric/bit/stdc_trailing_zeros
+  stdc_trailing_zeros_ul:
+    c-definition: 7.18.5
+    c-reference: numeric/bit/stdc_trailing_zeros
+  stdc_trailing_zeros_ull:
+    c-definition: 7.18.5
+    c-reference: numeric/bit/stdc_trailing_zeros
+  stdc_trailing_zeros_us:
+    c-definition: 7.18.5
+    c-reference: numeric/bit/stdc_trailing_zeros
+macros:
+  __STDC_ENDIAN_BIG__:
+    c-definition: 7.18.2.2
+    c-reference: numeric/bit/endian
+  __STDC_ENDIAN_LITTLE__:
+    c-definition: 7.18.2.2
+    c-reference: numeric/bit/endian
+  __STDC_ENDIAN_NATIVE__:
+    c-definition: 7.18.2.2
+    c-reference: numeric/bit/endian
+  __STDC_VERSION_STDBIT_H__:
+    c-definition: 7.18.1.2
+  stdc_bit_ceil:
+    c-definition: 7.18.16.1
+    c-reference: numeric/bit/stdc_bit_ceil
+  stdc_bit_floor:
+    c-definition: 7.18.15.1
+    c-reference: numeric/bit/stdc_bit_floor
+  stdc_bit_width:
+    c-definition: 7.18.14.1
+    c-reference: numeric/bit/stdc_bit_width
+  stdc_count_ones:
+    c-definition: 7.18.12.1
+    c-reference: numeric/bit/stdc_count_ones
+  stdc_count_zeros:
+    c-definition: 7.18.11.1
+    c-reference: numeric/bit/stdc_count_zeros
+  stdc_first_leading_one:
+    c-definition: 7.18.8.1
+    c-reference: numeric/bit/stdc_first_leading_one
+  stdc_first_leading_zero:
+    c-definition: 7.18.7.1
+    c-reference: numeric/bit/stdc_first_leading_zero
+  stdc_first_trailing_one:
+    c-definition: 7.18.10.1
+    c-reference: numeric/bit/stdc_first_trailing_one
+  stdc_first_trailing_zero:
+    c-definition: 7.18.9.1
+    c-reference: numeric/bit/stdc_first_trailing_zero
+  stdc_has_single_bit:
+    c-definition: 7.18.13.1
+    c-reference: numeric/bit/stdc_has_single_bit
+  stdc_leading_ones:
+    c-definition: 7.18.4.1
+    c-reference: numeric/bit/stdc_leading_ones
+  stdc_leading_zeros:
+    c-definition: 7.18.3.1
+    c-reference: numeric/bit/stdc_leading_zeros
+  stdc_trailing_ones:
+    c-definition: 7.18.6.1
+    c-reference: numeric/bit/stdc_trailing_ones
+  stdc_trailing_zeros:
+    c-definition: 7.18.5.1
+    c-reference: numeric/bit/stdc_trailing_zeros
+

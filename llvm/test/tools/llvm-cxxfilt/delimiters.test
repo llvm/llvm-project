@@ -1,0 +1,69 @@
+RUN: echo ',,_Z3Foo!' \
+RUN:      '_Z3Foo"'   \
+RUN:      '_Z3Foo#'   \
+RUN:      '_Z3Foo%'   \
+RUN:      '_Z3Foo&'   \
+RUN:      "\"_Z3Foo'\"" \
+RUN:      '_Z3Foo('   \
+RUN:      '_Z3Foo)'   \
+RUN:      '_Z3Foo*'   \
+RUN:      '_Z3Foo+'   \
+RUN:      '_Z3Foo,'   \
+RUN:      '_Z3Foo-'   \
+RUN:      '_Z3Foo/'   \
+RUN:      '_Z3Foo:'   \
+RUN:      '_Z3Foo;'   \
+RUN:      '_Z3Foo<'   \
+RUN:      '_Z3Foo='   \
+RUN:      '_Z3Foo>'   \
+RUN:      '_Z3Foo?'   \
+RUN:      '_Z3Foo@'   \
+RUN:      '_Z3Foo['   \
+RUN:      '_Z3Foo\'   \
+RUN:      '_Z3Foo]'   \
+RUN:      '_Z3Foo^'   \
+RUN:      '_Z3Foo`'   \
+RUN:      "\"_Z3Foo{\"" \
+RUN:      '_Z3Foo|'   \
+RUN:      '_Z3Foo}'   \
+RUN:      '_Z3Foo~,,' \
+RUN:      '_Z3Foo⦙_Z3Bar' \
+RUN:      '_Z3Foo,,_Z3Bar::_Z3Baz  _Z3Foo,_Z3Bar:_Z3Baz' \
+COM: Piping the echo output causes '⦙' to be converted to '?' in some
+COM: builds/environments. Redirect echo output to and from %t to work
+COM: around this. See D111072.
+RUN:      '_Z3Foo$ Foo._Z3Bar' > %t
+RUN:      llvm-cxxfilt -n < %t | FileCheck %s
+
+CHECK: ,,Foo!
+CHECK: Foo"
+CHECK: Foo#
+CHECK: Foo%
+CHECK: Foo&
+CHECK: Foo'
+CHECK: Foo(
+CHECK: Foo)
+CHECK: Foo*
+CHECK: Foo+
+CHECK: Foo,
+CHECK: Foo-
+CHECK: Foo/
+CHECK: Foo:
+CHECK: Foo;
+CHECK: Foo<
+CHECK: Foo=
+CHECK: Foo>
+CHECK: Foo?
+CHECK: Foo@
+CHECK: Foo[
+CHECK: Foo\
+CHECK: Foo]
+CHECK: Foo^
+CHECK: Foo`
+CHECK: Foo{
+CHECK: Foo|
+CHECK: Foo}
+CHECK: Foo~,,
+CHECK: Foo⦙Bar
+CHECK: Foo,,Bar::Baz  Foo,Bar:Baz
+CHECK: _Z3Foo$ Foo._Z3Bar

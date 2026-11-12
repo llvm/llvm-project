@@ -1,0 +1,7 @@
+macros:
+  bswap_16:
+    extension: gnu
+  bswap_32:
+    extension: gnu
+  bswap_64:
+    extension: gnu

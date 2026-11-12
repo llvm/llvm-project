@@ -1,0 +1,106 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=x86_64 -x86-asm-syntax=intel --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+# ATT:        tcvtrowd2ps %ecx, %tmm5, %zmm22
+# INTEL:      tcvtrowd2ps zmm22, tmm5, ecx
+0x62,0xe2,0x76,0x48,0x4a,0xf5
+
+# ATT:        tcvtrowd2ps %ecx, %tmm2, %zmm22
+# INTEL:      tcvtrowd2ps zmm22, tmm2, ecx
+0x62,0xe2,0x76,0x48,0x4a,0xf2
+
+# ATT:        tcvtrowd2ps $123, %tmm5, %zmm22
+# INTEL:      tcvtrowd2ps zmm22, tmm5, 123
+0x62,0xe3,0x7e,0x48,0x07,0xf5,0x7b
+
+# ATT:        tcvtrowd2ps $123, %tmm2, %zmm22
+# INTEL:      tcvtrowd2ps zmm22, tmm2, 123
+0x62,0xe3,0x7e,0x48,0x07,0xf2,0x7b
+
+# ATT:        tcvtrowps2bf16h %ecx, %tmm5, %zmm22
+# INTEL:      tcvtrowps2bf16h zmm22, tmm5, ecx
+0x62,0xe2,0x77,0x48,0x6d,0xf5
+
+# ATT:        tcvtrowps2bf16h %ecx, %tmm2, %zmm22
+# INTEL:      tcvtrowps2bf16h zmm22, tmm2, ecx
+0x62,0xe2,0x77,0x48,0x6d,0xf2
+
+# ATT:        tcvtrowps2bf16h $123, %tmm5, %zmm22
+# INTEL:      tcvtrowps2bf16h zmm22, tmm5, 123
+0x62,0xe3,0x7f,0x48,0x07,0xf5,0x7b
+
+# ATT:        tcvtrowps2bf16h $123, %tmm2, %zmm22
+# INTEL:      tcvtrowps2bf16h zmm22, tmm2, 123
+0x62,0xe3,0x7f,0x48,0x07,0xf2,0x7b
+
+# ATT:        tcvtrowps2bf16l %ecx, %tmm5, %zmm22
+# INTEL:      tcvtrowps2bf16l zmm22, tmm5, ecx
+0x62,0xe2,0x76,0x48,0x6d,0xf5
+
+# ATT:        tcvtrowps2bf16l %ecx, %tmm2, %zmm22
+# INTEL:      tcvtrowps2bf16l zmm22, tmm2, ecx
+0x62,0xe2,0x76,0x48,0x6d,0xf2
+
+# ATT:        tcvtrowps2bf16l $123, %tmm5, %zmm22
+# INTEL:      tcvtrowps2bf16l zmm22, tmm5, 123
+0x62,0xe3,0x7e,0x48,0x77,0xf5,0x7b
+
+# ATT:        tcvtrowps2bf16l $123, %tmm2, %zmm22
+# INTEL:      tcvtrowps2bf16l zmm22, tmm2, 123
+0x62,0xe3,0x7e,0x48,0x77,0xf2,0x7b
+
+# ATT:        tcvtrowps2phh %ecx, %tmm5, %zmm22
+# INTEL:      tcvtrowps2phh zmm22, tmm5, ecx
+0x62,0xe2,0x74,0x48,0x6d,0xf5
+
+# ATT:        tcvtrowps2phh %ecx, %tmm2, %zmm22
+# INTEL:      tcvtrowps2phh zmm22, tmm2, ecx
+0x62,0xe2,0x74,0x48,0x6d,0xf2
+
+# ATT:        tcvtrowps2phh $123, %tmm5, %zmm22
+# INTEL:      tcvtrowps2phh zmm22, tmm5, 123
+0x62,0xe3,0x7c,0x48,0x07,0xf5,0x7b
+
+# ATT:        tcvtrowps2phh $123, %tmm2, %zmm22
+# INTEL:      tcvtrowps2phh zmm22, tmm2, 123
+0x62,0xe3,0x7c,0x48,0x07,0xf2,0x7b
+
+# ATT:        tcvtrowps2phl %ecx, %tmm5, %zmm22
+# INTEL:      tcvtrowps2phl zmm22, tmm5, ecx
+0x62,0xe2,0x75,0x48,0x6d,0xf5
+
+# ATT:        tcvtrowps2phl %ecx, %tmm2, %zmm22
+# INTEL:      tcvtrowps2phl zmm22, tmm2, ecx
+0x62,0xe2,0x75,0x48,0x6d,0xf2
+
+# ATT:        tcvtrowps2phl $123, %tmm5, %zmm22
+# INTEL:      tcvtrowps2phl zmm22, tmm5, 123
+0x62,0xe3,0x7f,0x48,0x77,0xf5,0x7b
+
+# ATT:        tcvtrowps2phl $123, %tmm2, %zmm22
+# INTEL:      tcvtrowps2phl zmm22, tmm2, 123
+0x62,0xe3,0x7f,0x48,0x77,0xf2,0x7b
+
+# ATT:   tilemovrow     %ecx, %tmm3, %zmm22
+# INTEL: tilemovrow     zmm22, tmm3, ecx
+0x62,0xe2,0x75,0x48,0x4a,0xf3
+
+# ATT:   tilemovrow     %ecx, %tmm2, %zmm22
+# INTEL: tilemovrow     zmm22, tmm2, ecx
+0x62,0xe2,0x75,0x48,0x4a,0xf2
+
+# ATT:   tilemovrow     $123, %tmm3, %zmm22
+# INTEL: tilemovrow     zmm22, tmm3, 123
+0x62,0xe3,0x7d,0x48,0x07,0xf3,0x7b
+
+# ATT:   tilemovrow     $123, %tmm2, %zmm22
+# INTEL: tilemovrow     zmm22, tmm2, 123
+0x62,0xe3,0x7d,0x48,0x07,0xf2,0x7b
+
+# ATT:   tilemovrow     %edx, %tmm0, %zmm22
+# INTEL: tilemovrow     zmm22, tmm0, edx
+0x62,0xe2,0x6d,0x48,0x4a,0xf0
+
+# ATT:   tilemovrow     $123, %tmm0, %zmm22
+# INTEL: tilemovrow     zmm22, tmm0, 123
+0x62,0xe3,0x7d,0x48,0x07,0xf0,0x7b

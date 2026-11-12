@@ -1,0 +1,57 @@
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/2-identical-func-1-instr-1-stack.yaml --parser=yaml --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=ADD
+RUN: llvm-remarkutil size-diff %p/Inputs/2-identical-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml  --parser=yaml --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=REMOVE
+
+; The "two-identical-one-instr-funcs" file contains a single-instruction
+; function which does not appear in the other file.
+
+; ADD-LABEL: "Files":
+; ADD: "A":{{.*}}1-func-1-instr-1-stack.yaml
+; ADD-NEXT: "B":{{.*}}2-identical-func-1-instr-1-stack.yaml
+
+; ADD-LABEL: "InBoth": [
+; ADD: "FunctionName": "func0",
+; ADD-NEXT: "InstCount": [
+; ADD-NEXT: 1,
+; ADD-NEXT: 1
+; ADD-NEXT: ],
+; ADD-NEXT: "StackSize": [
+; ADD-NEXT: 1,
+; ADD-NEXT: 1
+
+; ADD-LABEL: "OnlyInA": [],
+
+; ADD-LABEL: "OnlyInB": [
+; ADD: "FunctionName": "func1",
+; ADD-NEXT: "InstCount": [
+; ADD-NEXT: 0,
+; ADD-NEXT: 1
+; ADD-NEXT: ],
+; ADD-NEXT: "StackSize": [
+; ADD-NEXT: 0,
+; ADD-NEXT: 1
+
+; REMOVE-LABEL: "Files":
+; REMOVE: "A":{{.*}}2-identical-func-1-instr-1-stack.yaml
+; REMOVE-NEXT: "B":{{.*}}1-func-1-instr-1-stack.yaml
+
+; REMOVE-LABEL: "InBoth": [
+; REMOVE: "FunctionName": "func0",
+; REMOVE-NEXT: "InstCount": [
+; REMOVE-NEXT: 1,
+; REMOVE-NEXT: 1
+; REMOVE-NEXT: ],
+; REMOVE-NEXT: "StackSize": [
+; REMOVE-NEXT: 1,
+; REMOVE-NEXT: 1
+
+; REMOVE-LABEL: "OnlyInA": [
+; REMOVE: "FunctionName": "func1",
+; REMOVE-NEXT: "InstCount": [
+; REMOVE-NEXT: 1,
+; REMOVE-NEXT: 0
+; REMOVE-NEXT: ],
+; REMOVE-NEXT: "StackSize": [
+; REMOVE-NEXT: 1,
+; REMOVE-NEXT: 0
+
+; REMOVE-LABEL: "OnlyInB": []

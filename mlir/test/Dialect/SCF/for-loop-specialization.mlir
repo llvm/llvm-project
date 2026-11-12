@@ -1,0 +1,99 @@
+// RUN: mlir-opt %s -scf-for-loop-specialization -split-input-file | FileCheck %s
+
+#map0 = affine_map<()[s0, s1] -> (1024, s0 - s1)>
+#map1 = affine_map<()[s0, s1] -> (64, s0 - s1)>
+
+func.func @for(%outer: index, %A: memref<?xf32>, %B: memref<?xf32>,
+          %C: memref<?xf32>, %result: memref<?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %d0 = memref.dim %A, %c0 : memref<?xf32>
+  %b0 = affine.min #map0()[%d0, %outer]
+  scf.for %i0 = %c0 to %b0 step %c1 {
+    %B_elem = memref.load %B[%i0] : memref<?xf32>
+    %C_elem = memref.load %C[%i0] : memref<?xf32>
+    %sum_elem = arith.addf %B_elem, %C_elem : f32
+    memref.store %sum_elem, %result[%i0] : memref<?xf32>
+  }
+  return
+}
+
+// CHECK-LABEL:   func @for(
+// CHECK-SAME:              [[ARG0:%.*]]: index, [[ARG1:%.*]]: memref<?xf32>, [[ARG2:%.*]]: memref<?xf32>, [[ARG3:%.*]]: memref<?xf32>, [[ARG4:%.*]]: memref<?xf32>) {
+// CHECK:           [[CST_0:%.*]] = arith.constant 0 : index
+// CHECK:           [[CST_1:%.*]] = arith.constant 1 : index
+// CHECK:           [[DIM_0:%.*]] = memref.dim [[ARG1]], [[CST_0]] : memref<?xf32>
+// CHECK:           [[MIN:%.*]] = affine.min #{{.*}}(){{\[}}[[DIM_0]], [[ARG0]]]
+// CHECK:           [[CST_1024:%.*]] = arith.constant 1024 : index
+// CHECK:           [[PRED:%.*]] = arith.cmpi eq, [[MIN]], [[CST_1024]] : index
+// CHECK:           scf.if [[PRED]] {
+// CHECK:             scf.for [[IDX0:%.*]] = [[CST_0]] to [[CST_1024]] step [[CST_1]] {
+// CHECK:               memref.store
+// CHECK:             }
+// CHECK:           } else {
+// CHECK:             scf.for [[IDX0:%.*]] = [[CST_0]] to [[MIN]] step [[CST_1]] {
+// CHECK:               memref.store
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// -----
+
+func.func @for_constant_operand(%n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %ub = affine.min affine_map<(d0)[s0] -> (d0, s0)>(%n)[%c8]
+  scf.for %i = %c0 to %ub step %c1 {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @for_constant_operand(
+// CHECK-SAME:    [[N:%.*]]: index)
+// CHECK:         [[C8:%.*]] = arith.constant 8 : index
+// CHECK:         [[MIN:%.*]] = affine.min #{{.*}}([[N]]){{\[}}[[C8]]]
+// CHECK:         [[SPECIALIZED_C8:%.*]] = arith.constant 8 : index
+// CHECK:         [[PRED:%.*]] = arith.cmpi eq, [[MIN]], [[SPECIALIZED_C8]]
+// CHECK:         scf.if [[PRED]] {
+// CHECK:           scf.for {{%.*}} = {{%.*}} to [[SPECIALIZED_C8]] step {{%.*}} {
+// CHECK:           }
+// CHECK:         } else {
+// CHECK:           scf.for {{%.*}} = {{%.*}} to [[MIN]] step {{%.*}} {
+// CHECK:           }
+// CHECK:         }
+
+// -----
+
+// see https://github.com/llvm/llvm-project/issues/235552
+// CHECK-LABEL: func @specialize_with_iter_args
+// CHECK-SAME:    (%[[N:.*]]: index) -> index {
+func.func @specialize_with_iter_args(%n: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %ub = affine.min affine_map<(d0) -> (d0, 4)>(%n)
+  %result = scf.for %iv = %c0 to %ub step %c1
+      iter_args(%acc = %c0) -> (index) {
+    scf.yield %acc : index
+  }
+  return %result : index
+}
+
+// CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+// CHECK:       %[[UB:.*]] = affine.min #{{.*}}(%[[N]])
+// CHECK:       %[[C4:.*]] = arith.constant 4 : index
+// CHECK:       %[[COND:.*]] = arith.cmpi eq, %[[UB]], %[[C4]] : index
+// CHECK:       %[[RES:.*]] = scf.if %[[COND]] -> (index) {
+// CHECK:         %[[THEN:.*]] = scf.for %{{.*}} = %[[C0]] to %[[C4]] step %[[C1]] iter_args(%[[ACC1:.*]] = %[[C0]]) -> (index) {
+// CHECK:           scf.yield %[[ACC1]] : index
+// CHECK:         }
+// CHECK:         scf.yield %[[THEN]] : index
+// CHECK:       } else {
+// CHECK:         %[[ELSE:.*]] = scf.for %{{.*}} = %[[C0]] to %[[UB]] step %[[C1]] iter_args(%[[ACC2:.*]] = %[[C0]]) -> (index) {
+// CHECK:           scf.yield %[[ACC2]] : index
+// CHECK:         }
+// CHECK:         scf.yield %[[ELSE]] : index
+// CHECK:       }
+// CHECK:       return %[[RES]] : index

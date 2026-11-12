@@ -1,0 +1,39 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows test.s -o test.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-lib -machine:arm64ec -def:test.def -out:test.lib
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out.dll loadconfig-arm64ec.obj test.obj test.lib
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 180001000: 52800000     mov     w0, #0x0                // =0
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 188001008: b000000b     adrp    x11, 0x188002000
+DISASM-NEXT: 18800100c: f940016b     ldr     x11, [x11]
+DISASM-NEXT: 188001010: f0fbffea     adrp    x10, 0x180000000
+DISASM-NEXT: 188001014: 9100014a     add     x10, x10, #0x0
+DISASM-NEXT: 188001018: 90fc0010     adrp    x16, 0x180001000 <.text>
+DISASM-NEXT: 18800101c: 91000210     add     x16, x16, #0x0
+DISASM-NEXT: 188001020: d61f0200     br      x16
+
+#--- test.s
+    .text
+    .globl __icall_helper_arm64ec
+    .p2align 2, 0x0
+__icall_helper_arm64ec:
+    mov w0, #0
+    ret
+
+    .space 0x8000000
+
+    .data
+    .rva __imp_func
+
+#--- test.def
+NAME test.dll
+EXPORTS
+    func

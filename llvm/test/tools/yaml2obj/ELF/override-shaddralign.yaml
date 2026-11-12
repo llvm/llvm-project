@@ -1,0 +1,30 @@
+## Check we are able to set a custom sh_addralign field for different sections
+## and that doing this does not affect the output size.
+
+## Test that we are able to override the sh_addralign section
+## field with use of the "ShAddrAlign" key.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf --sections %t | FileCheck %s --check-prefix=CHECK
+
+# CHECK:      Section Headers:
+# CHECK-NEXT:   [Nr] Name    {{.*}} Off    Size   ES Flg Lk Inf Al
+# CHECK-NEXT:   [ 0]         {{.*}} 000000 000000 00     0   0  0
+# CHECK-NEXT:   [ 1] .foo    {{.*}} 000080 000000 00     0   0 1229782938247303441
+# CHECK-NEXT:   [ 2] .bar    {{.*}} 000100 000000 00     0   0 2459565876494606882
+# CHECK-NEXT:   [ 3] .strtab {{.*}} 000100 000001 00     0   0  1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:         .foo
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x80
+    ShAddrAlign:  0x1111111111111111
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    AddressAlign: 0x100
+    ShAddrAlign:  0x2222222222222222

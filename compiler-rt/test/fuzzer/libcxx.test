@@ -1,0 +1,16 @@
+# Ensures that the libFuzzer library does not export exceptions.
+REQUIRES: linux
+
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t
+RUN: nm %t 2>&1 | FileCheck %s
+
+CHECK-NOT: t __cxa_allocate_dependent_exception
+CHECK-NOT: t __cxa_allocate_exception
+CHECK-NOT: t __cxa_begin_catch
+CHECK-NOT: t __cxa_call_unexpected
+CHECK-NOT: t __cxa_current_exception_type
+CHECK-NOT: t __cxa_end_catch
+CHECK-NOT: t __cxa_free_dependent_exception
+CHECK-NOT: t __cxa_free_exception
+CHECK-NOT: t __cxa_get_exception_ptr
+CHECK-NOT: t __cxa_throw

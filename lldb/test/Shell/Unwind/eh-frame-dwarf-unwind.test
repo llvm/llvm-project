@@ -1,0 +1,23 @@
+# Test handing of dwarf expressions specifying the location of registers, if
+# those expressions refer to the frame's CFA value.
+
+# UNSUPPORTED: system-windows, ld_new-bug
+# REQUIRES: target-x86_64, native
+
+# RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/eh-frame-dwarf-unwind.s -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+breakpoint set -n bar
+# CHECK: Breakpoint 1: where = {{.*}}`bar
+
+process launch
+# CHECK: stop reason = breakpoint 1.1
+
+thread backtrace
+# CHECK: frame #0: {{.*}}`bar
+# CHECK: frame #1: {{.*}}`foo + 5
+# CHECK: frame #2: {{.*}}`asm_main + 22
+
+target modules show-unwind -n foo
+# CHECK: eh_frame UnwindPlan:
+# CHECK: row[0]: 0: CFA=rsp +8 => rip=DW_OP_lit8, DW_OP_minus, DW_OP_deref, DW_OP_const1u 0x47, DW_OP_minus

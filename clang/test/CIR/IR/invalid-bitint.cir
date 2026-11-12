@@ -1,0 +1,13 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// _BitInt types with fundamental widths should not satisfy fundamental type
+// constraints.  Verify that cir.libc.memcpy rejects a _BitInt(32) length.
+
+module {
+  cir.func @bitint_not_fundamental_memcpy(%src : !cir.ptr<!cir.void>,
+                                          %len : !cir.int<u, 32, bitint>) {
+    // expected-error@+1 {{'cir.libc.memcpy' op operand #2 must be fundamental unsigned integer type, but got '!cir.int<u, 32, bitint>'}}
+    cir.libc.memcpy %len bytes from %src to %src : !cir.int<u, 32, bitint>, !cir.ptr<!cir.void> -> !cir.ptr<!cir.void>
+    cir.return
+  }
+}

@@ -1,0 +1,4 @@
+module hidden {
+  header "visible.h"
+  explicit module sub { header "hidden.h" }
+}

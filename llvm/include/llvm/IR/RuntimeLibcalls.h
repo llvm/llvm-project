@@ -1,0 +1,351 @@
+//===- RuntimeLibcalls.h - Interface for runtime libcalls -------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements a common interface to work with library calls into a
+// runtime that may be emitted by a given backend.
+//
+// FIXME: This should probably move to Analysis
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_IR_RUNTIME_LIBCALLS_H
+#define LLVM_IR_RUNTIME_LIBCALLS_H
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringTable.h"
+#include "llvm/IR/CallingConv.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/SystemLibraries.h"
+#include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
+#include <optional>
+
+/// TableGen will produce 2 enums, RTLIB::Libcall and
+/// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
+/// compiler may choose to access, RTLIB::LibcallImpl describes a particular ABI
+/// implementation, which includes a name and type signature.
+#define GET_RUNTIME_LIBCALL_ENUM
+#include "llvm/IR/RuntimeLibcalls.inc"
+
+namespace llvm {
+
+template <> struct enum_iteration_traits<RTLIB::Libcall> {
+  static constexpr bool is_iterable = true;
+};
+
+template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
+  static constexpr bool is_iterable = true;
+};
+
+class LibcallLoweringInfo;
+class GlobalValue;
+class Module;
+class Type;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
+
+namespace RTLIB {
+
+// Return an iterator over all Libcall values.
+static inline auto libcalls() {
+  return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
+}
+
+static inline auto libcall_impls() {
+  return enum_seq(static_cast<RTLIB::LibcallImpl>(1),
+                  static_cast<RTLIB::LibcallImpl>(RTLIB::NumLibcallImpls));
+}
+
+/// Manage a bitset representing the list of available libcalls for a module.
+class LibcallImplBitset : public Bitset<RTLIB::NumLibcallImpls> {
+public:
+  constexpr LibcallImplBitset() = default;
+  constexpr LibcallImplBitset(
+      const std::array<uint64_t, (RTLIB::NumLibcallImpls + 63) / 64> &Src)
+      : Bitset(Src) {}
+};
+
+/// A simple container for information about the supported runtime calls.
+struct RuntimeLibcallsInfo {
+private:
+  /// Bitset of libcalls a module may emit a call to.
+  LibcallImplBitset AvailableLibcallImpls;
+
+  LongDoubleFormat LongDoubleFmt;
+
+public:
+  friend class llvm::LibcallLoweringInfo;
+
+  RuntimeLibcallsInfo() = default;
+
+  LLVM_ABI explicit RuntimeLibcallsInfo(
+      const Triple &TT,
+      ExceptionHandling ExceptionModel = ExceptionHandling::Default,
+      FloatABI::ABIType FloatABI = FloatABI::Default,
+      std::optional<LongDoubleFormat> LDblFormat = std::nullopt,
+      StringRef ABIName = "", VectorLibrary VecLib = VectorLibrary::NoLibrary);
+
+  // FIXME: The exception model, floating-point ABI and long double format are
+  // read from the "exception-model", "float-abi" and "long-double-type" module
+  // flags, but the ABIName/VecLib parameters are still TargetOptions values
+  // that are not yet represented in the IR. Delete these parameters (and build
+  // everything from the Module) once those fields are migrated to module flags.
+  LLVM_ABI explicit RuntimeLibcallsInfo(
+      const Module &M, StringRef ABIName = "",
+      VectorLibrary VecLib = VectorLibrary::NoLibrary);
+
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &);
+
+  /// Get the libcall routine name for the specified libcall implementation.
+  static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
+    if (CallImpl == RTLIB::Unsupported)
+      return StringRef();
+    return StringRef(RuntimeLibcallImplNameTable.getCString(
+                         RuntimeLibcallNameOffsetTable[CallImpl]),
+                     RuntimeLibcallNameSizeTable[CallImpl]);
+  }
+
+  /// Set the CallingConv that should be used for the specified libcall
+  /// implementation
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    LibcallImplCallingConvs[Call] = CC;
+  }
+
+  /// Get the CallingConv that should be used for the specified libcall.
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return LibcallImplCallingConvs[Call];
+  }
+
+  /// Return the libcall provided by \p Impl
+  LLVM_ABI RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) const;
+
+  /// Return the runtime libcall that the floating-point math intrinsic \p ID
+  /// may be lowered to, or RTLIB::UNKNOWN_LIBCALL if there is no such mapping.
+  ///
+  /// \p FTy must be the intrinsic's call signature.
+  LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,
+                                                        FunctionType *FTy);
+
+  /// Return the runtime libraries enabled by default for \p TT.
+  LLVM_ABI static ArrayRef<RTLIB::RuntimeLibrary>
+  getDefaultRuntimeLibraries(const Triple &TT);
+
+  unsigned getNumAvailableLibcallImpls() const {
+    return AvailableLibcallImpls.count();
+  }
+
+  bool isAvailable(RTLIB::LibcallImpl Impl) const {
+    return AvailableLibcallImpls.test(Impl);
+  }
+
+  void setAvailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.set(Impl);
+  }
+
+  void setUnavailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.reset(Impl);
+  }
+
+  /// Check if a function name is a recognized runtime call of any kind. This
+  /// does not consider if this call is available for any current compilation,
+  /// just that it is a known call somewhere. This returns the set of all
+  /// LibcallImpls which match the name; multiple implementations with the same
+  /// name may exist but differ in interpretation based on the target context.
+  ///
+  /// Generated by tablegen.
+  static inline iota_range<RTLIB::LibcallImpl>
+  lookupLibcallImplName(StringRef Name){
+  // Inlining the early exit on the string name appears to be worthwhile when
+  // querying a real set of symbols
+#define GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
+#include "llvm/IR/RuntimeLibcalls.inc"
+  }
+
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
+    for (RTLIB::LibcallImpl Impl : lookupLibcallImplName(FuncName)) {
+      if (isAvailable(Impl))
+        return Impl;
+    }
+
+    return RTLIB::Unsupported;
+  }
+
+  /// Get size of a C-level int or unsigned int, in bits.
+  // FIXME Could move into Triple class.
+  static unsigned getIntSize(const Triple &TT) {
+    return TT.isArch16Bit() ? 16 : 32;
+  }
+
+  /// Determine the extension attributes needed for i32 parameters and returns
+  /// corresponding to C-level int or unsigned int on \p T.
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
+
+  /// Determine whether bool parameters and returns need zeroext on \p T.
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
+
+  /// Get the C-type function signature of the Libcall if provided,
+  /// and convert it to IR FunctionType and Attributes.
+  /// If the C-type function signature is not provided, return nullptr.
+  LLVM_ABI std::pair<FunctionType *, AttributeList>
+  getDefaultFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                       RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the function type and attributes for the \p LibcallImpl,
+  /// depending on the target \p TT. If the function has incomplete type
+  /// information, return nullptr for the function type.
+  LLVM_ABI std::pair<FunctionType *, AttributeList>
+  getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the value type of \p LibcallImpl if it is a global variable
+  /// rather than a function, or nullptr otherwise.
+  LLVM_ABI Type *getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                 const DataLayout &DL,
+                                 RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the declaration of \p LibcallImpl in \p M. If \p M does not
+  /// contain a global with its name, a function is inserted with the
+  /// signature, attributes and calling convention of \p LibcallImpl. If the
+  /// signature is unknown, the function is declared as void(...).
+  LLVM_ABI FunctionCallee
+  getOrInsertLibcallDecl(Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the global for the variable \p LibcallImpl in \p M. If \p M does
+  /// not contain a global with its name, a global variable is inserted with
+  /// the type and thread local mode of \p LibcallImpl.
+  LLVM_ABI GlobalValue *
+  getOrInsertImplGlobal(Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns true if \p LibcallImpl is a global variable rather than a
+  /// function.
+  static bool isVariable(RTLIB::LibcallImpl LibcallImpl) {
+    RTLIB::FuncArgTypeID ID = SignatureTable[SignatureOffset[LibcallImpl]];
+    return ID == RTLIB::Variable || ID == RTLIB::ThreadLocalVariable;
+  }
+
+  /// \returns true if \p LibcallImpl is a thread local variable.
+  static bool isThreadLocalVariable(RTLIB::LibcallImpl LibcallImpl) {
+    return SignatureTable[SignatureOffset[LibcallImpl]] ==
+           RTLIB::ThreadLocalVariable;
+  }
+
+  /// Return the unmasked variant of the masked vector libcall \p LC, or
+  /// RTLIB::UNKNOWN_LIBCALL if \p LC is not a masked vector libcall.
+  LLVM_ABI static RTLIB::Libcall getUnmaskedVectorLibcall(RTLIB::Libcall LC);
+
+  /// Return the masked variant of the vector libcall \p LC, or
+  /// RTLIB::UNKNOWN_LIBCALL if \p LC has no masked variant.
+  LLVM_ABI static RTLIB::Libcall getMaskedVectorLibcall(RTLIB::Libcall LC);
+
+  /// Returns true if the function has a vector mask argument, which is assumed
+  /// to be the last argument.
+  static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
+    return getUnmaskedVectorLibcall(ImplToLibcall[Impl]) !=
+           RTLIB::UNKNOWN_LIBCALL;
+  }
+
+private:
+  // Generated per-library setup helpers, dispatched from
+  // setTargetRuntimeLibcallSets.
+#define GET_RUNTIME_LIBCALLS_INFO_MEMBER_DECLS
+#include "llvm/IR/RuntimeLibcalls.inc"
+
+  LLVM_ABI static iota_range<RTLIB::LibcallImpl>
+  lookupLibcallImplNameImpl(StringRef Name);
+
+  static_assert(static_cast<int>(CallingConv::C) == 0,
+                "default calling conv should be encoded as 0");
+
+  /// Stores the CallingConv that should be used for each libcall
+  /// implementation.;
+  CallingConv::ID LibcallImplCallingConvs[RTLIB::NumLibcallImpls] = {};
+
+  /// Names of concrete implementations of runtime calls. e.g. __ashlsi3 for
+  /// SHL_I32
+  LLVM_ABI static const char RuntimeLibcallImplNameTableStorage[];
+  LLVM_ABI static const StringTable RuntimeLibcallImplNameTable;
+  LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
+  LLVM_ABI static const uint8_t RuntimeLibcallNameSizeTable[];
+
+  /// Function signature of runtime lib calls
+  LLVM_ABI static const FuncArgTypeID SignatureTable[];
+  LLVM_ABI static const uint16_t SignatureOffset[];
+
+  /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
+  LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+
+  RTLIB::Libcall selectLongDoubleLibcall(RTLIB::Libcall F80,
+                                         RTLIB::Libcall F128,
+                                         RTLIB::Libcall PPCF128) const;
+
+  /// Utility function for tablegenerated lookup function. Return a range of
+  /// enum values that apply for the function name at \p NameOffsetEntry with
+  /// the value \p StrOffset.
+  static inline iota_range<RTLIB::LibcallImpl>
+  libcallImplNameHit(uint16_t NameOffsetEntry, uint16_t StrOffset);
+
+  static bool darwinHasSinCosStret(const Triple &TT) {
+    if (!TT.isOSDarwin())
+      return false;
+
+    // Don't bother with 32 bit x86.
+    if (TT.getArch() == Triple::x86)
+      return false;
+    // Macos < 10.9 has no sincos_stret.
+    if (TT.isMacOSX())
+      return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
+    // iOS < 7.0 has no sincos_stret.
+    if (TT.isiOS())
+      return !TT.isOSVersionLT(7, 0);
+    // Any other darwin such as WatchOS/TvOS is new enough.
+    return true;
+  }
+
+  LLVM_READONLY
+  static bool isAAPCS_ABI(const Triple &TT, StringRef ABIName);
+
+  /// Return whether the runtime library \p Library is available for the
+  /// current module.
+  bool isLibraryAvailable(RTLIB::RuntimeLibrary Library) const;
+
+  /// Set the calling convention and enable the default runtime libraries for
+  /// \p TT.
+  void setTargetRuntimeLibcallSets(const Triple &TT,
+                                   ExceptionHandling ExceptionModel,
+                                   FloatABI::ABIType FloatABI,
+                                   StringRef ABIName,
+                                   LongDoubleFormat LongDoubleFormat);
+
+  /// Set default libcall names. If a target wants to opt-out of a libcall it
+  /// should be placed here.
+  LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
+                             FloatABI::ABIType FloatABI, StringRef ABIName,
+                             LongDoubleFormat LongDoubleFormat);
+};
+
+} // namespace RTLIB
+
+} // namespace llvm
+
+#endif // LLVM_IR_RUNTIME_LIBCALLS_H

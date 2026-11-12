@@ -1,0 +1,49 @@
+// File-I/O error tests: readJSON() input validation and writeJSON() output
+// validation for clang-ssaf-format --type lu.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// readJSON() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/invalid-syntax.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-SYNTAX
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/invalid-syntax.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-SYNTAX
+// INVALID-SYNTAX:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}invalid-syntax.json'
+// INVALID-SYNTAX-NEXT: {{.*}}Expected object key
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NOT-OBJECT
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NOT-OBJECT
+// NOT-OBJECT:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}not-object.json'
+// NOT-OBJECT-NEXT: failed to read LUSummary: expected JSON object
+
+// ============================================================================
+// writeJSON() errors
+// ============================================================================
+
+// RUN: echo '{}' > %t/existing.json
+// RUN: not clang-ssaf-format --type lu %S/Inputs/rt-empty-namespace.json -o %t/existing.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-FILE-ALREADY-EXISTS
+// RUN: echo '{}' > %t/existing-enc.json
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/rt-empty-namespace.json -o %t/existing-enc.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-FILE-ALREADY-EXISTS
+// WRITE-FILE-ALREADY-EXISTS: clang-ssaf-format: error: failed to validate path '{{.*}}existing{{.*}}.json': File already exists
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/rt-empty-namespace.json -o %t/nonexistent-dir/test.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-PARENT-DIR-NOT-FOUND
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/rt-empty-namespace.json -o %t/nonexistent-dir/test.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-PARENT-DIR-NOT-FOUND
+// WRITE-PARENT-DIR-NOT-FOUND: clang-ssaf-format: error: failed to validate path '{{.*}}nonexistent-dir{{.*}}test.json': Parent directory does not exist
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/rt-empty-namespace.json -o %t/test.txt 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-NOT-JSON-EXTENSION
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/rt-empty-namespace.json -o %t/test.txt 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRITE-NOT-JSON-EXTENSION
+// WRITE-NOT-JSON-EXTENSION: clang-ssaf-format: error: failed to validate path '{{.*}}test.txt': No format registered for extension 'txt'

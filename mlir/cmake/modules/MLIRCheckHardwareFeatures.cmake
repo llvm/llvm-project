@@ -1,0 +1,161 @@
+# A collection of helper CMake functions to detect hardware capabilities. At
+# the moment these are used when configuring MLIR integration tests.
+
+# Checks whether SME is supported by the host Darwin (macOS) system. This is
+# implemented via `sysctl`, since Darwin has no equivalent of Linux's
+# auxiliary vector feature bits (hwcap).
+#
+# check_sme_support_on_darwin(
+#   output_var
+# )
+function(check_sme_support_on_darwin output)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_SME
+        OUTPUT_VARIABLE sysctl_output
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE sysctl_result
+    )
+
+    if(sysctl_result EQUAL 0 AND sysctl_output STREQUAL "1")
+      set(local_result TRUE)
+    else()
+      set(local_result FALSE)
+    endif()
+    message(STATUS "Checking whether SME is supported by the host system (via sysctl hw.optional.arm.FEAT_SME): ${local_result}")
+    set(${output} ${local_result} PARENT_SCOPE)
+endfunction(check_sme_support_on_darwin)
+
+# Checks whether I8MM is supported by the host Darwin (macOS) system. This is
+# implemented via `sysctl`, since Darwin has no equivalent of Linux's
+# auxiliary vector feature bits (hwcap).
+#
+# check_i8mm_support_on_darwin(
+#   output_var
+# )
+function(check_i8mm_support_on_darwin output)
+    execute_process(
+        COMMAND sysctl -n hw.optional.arm.FEAT_I8MM
+        OUTPUT_VARIABLE sysctl_output
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE sysctl_result
+    )
+
+    if(sysctl_result EQUAL 0 AND sysctl_output STREQUAL "1")
+      set(local_result TRUE)
+    else()
+      set(local_result FALSE)
+    endif()
+    message(STATUS "Checking whether I8MM is supported by the host system (via sysctl hw.optional.arm.FEAT_I8MM): ${local_result}")
+    set(${output} ${local_result} PARENT_SCOPE)
+endfunction(check_i8mm_support_on_darwin)
+
+# Checks whether the specified hardware capability is supported by the host
+# Linux system. This is implemented by checking auxiliary vector feature
+# provided by the Linux kernel.
+#
+# check_hwcap(
+#   hwcap_spec
+#   output_var
+# )
+#
+# hwcap_spec - HWCAP value to check - these are defined in hwcap.h in the Linux
+#              kernel.
+#
+# output_var - Output variable to use to save the results (TRUE for supported,
+#              FALSE for not supported).
+#
+# EXAMPLES:
+#
+# check_hwcap("HWCAP2_SME" SME_EMULATOR_REQUIRED)
+#
+function(check_hwcap hwcap_spec output)
+    set(hwcap_test_src
+      [====[
+      #include <asm/hwcap.h>
+      #include <sys/auxv.h>
+
+      int main(void)
+      {
+          long hwcaps = getauxval(AT_<HWCAP_VEC>);
+          return (hwcaps & <HWCAP_SPEC>) != 0;
+      }
+      ]====]
+    )
+
+    # Extract from $hwcap_spec whether this is AT_HWCAP or AT_HWCAP2
+    string(FIND ${hwcap_spec} "_" wsloc)
+    string(SUBSTRING ${hwcap_spec} 0 ${wsloc} hwcap_vec)
+
+    string(REPLACE "<HWCAP_VEC>" ${hwcap_vec} hwcap_test_src "${hwcap_test_src}")
+    string(REPLACE "<HWCAP_SPEC>" ${hwcap_spec} hwcap_test_src "${hwcap_test_src}")
+
+    set(hwcap_test_file ${CMAKE_BINARY_DIR}/temp/hwcap_check.c)
+    file(WRITE ${hwcap_test_file} "${hwcap_test_src}")
+
+    # Compile _and_ run
+    try_run(
+        test_run_result test_compile_result
+        "${CMAKE_BINARY_DIR}"
+        "${hwcap_test_file}"
+    )
+    # Compilation will fail if hwcap_spec is not defined - this usually means
+    # that your Linux kernel is too old.
+    if(${test_compile_result} AND (DEFINED test_run_result))
+      message(STATUS "Checking whether ${hwcap_spec} is supported by the host system: ${test_run_result}")
+      set(${output} ${test_run_result} PARENT_SCOPE)
+    else()
+      message(STATUS "Checking whether ${hwcap_spec} is supported by the host system: FALSE")
+    endif()
+endfunction(check_hwcap)
+
+# For the given group of e2e tests (defined by the `mlir_e2e_tests` flag),
+# checks whether an emulator is required. If yes, verifies that the
+# corresponding CMake var pointing to an emulator (`emulator_exec`) has been
+# set.
+#
+# check_emulator(
+#   mlir_e2e_tests
+#   hwcap_spec
+#   emulator_exec
+# )
+#
+# mlir_e2e_tests  - Name of the MLIR CMake variable to gate on; also used to
+#                   name the flag in the error message below.
+# hwcap_spec      - HWCAP value to check. This should correspond to the hardware
+#                   capabilities required by the tests to be checked. Possible
+#                   values are defined in hwcap.h in the Linux kernel.
+# emulator_exec   - variable the defines the emulator (ought to be set if
+#                   required, can be empty otherwise).
+#
+# EXAMPLES:
+#
+#  check_emulator(MLIR_RUN_ARM_SVE_TESTS "HWCAP_SVE" ARM_EMULATOR_EXECUTABLE)
+#
+function(check_emulator mlir_e2e_tests hwcap_spec emulator_exec)
+  if (NOT ${mlir_e2e_tests})
+    return()
+  endif()
+
+  if(APPLE AND hwcap_spec STREQUAL "HWCAP2_SME")
+    check_sme_support_on_darwin(emulator_not_required)
+  elseif(APPLE AND hwcap_spec STREQUAL "HWCAP2_I8MM")
+    check_i8mm_support_on_darwin(emulator_not_required)
+  elseif(APPLE)
+    # No Darwin mapping for anything else (yet); conservatively assume an
+    # emulator is required.
+    set(emulator_not_required FALSE)
+  else()
+    check_hwcap(${hwcap_spec} emulator_not_required)
+  endif()
+
+  if (${emulator_not_required})
+    return()
+  endif()
+
+  if (${emulator_exec} STREQUAL "")
+    message(FATAL_ERROR "${mlir_e2e_tests} requires an emulator, but ${emulator_exec} is not set")
+  endif()
+
+endfunction()

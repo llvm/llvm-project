@@ -1,0 +1,110 @@
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify=expected,both %s
+// RUN: %clang_cc1                                         -fms-extensions -std=c++20 -verify=ref,both      %s
+
+namespace std {
+  typedef decltype(sizeof(int)) size_t;
+  template <class _E>
+  class initializer_list
+  {
+    const _E* __begin_;
+    size_t    __size_;
+
+    initializer_list(const _E* __b, size_t __s)
+      : __begin_(__b),
+        __size_(__s)
+    {}
+
+  public:
+    typedef _E        value_type;
+    typedef const _E& reference;
+    typedef const _E& const_reference;
+    typedef size_t    size_type;
+
+    typedef const _E* iterator;
+    typedef const _E* const_iterator;
+
+    constexpr initializer_list() : __begin_(nullptr), __size_(0) {}
+
+    constexpr size_t    size()  const {return __size_;}
+    constexpr const _E* begin() const {return __begin_;}
+    constexpr const _E* end()   const {return __begin_ + __size_;}
+  };
+}
+
+class Thing {
+public:
+  int m = 12;
+  constexpr Thing(int m) : m(m) {}
+  constexpr bool operator==(const Thing& that) const {
+    return this->m == that.m;
+  }
+};
+
+constexpr bool is_contained(std::initializer_list<Thing> Set, const Thing &Element) {
+   return (*Set.begin() == Element);
+}
+
+constexpr int foo() {
+  const Thing a{12};
+  const Thing b{14};
+  return is_contained({a}, b);
+}
+
+static_assert(foo() == 0);
+
+
+namespace rdar13395022 {
+  struct MoveOnly { // both-note {{candidate}}
+    MoveOnly(MoveOnly&&); // both-note 2{{copy constructor is implicitly deleted because}} both-note {{candidate}}
+  };
+
+  void test(MoveOnly mo) {
+    auto &&list1 = {mo}; // both-error {{call to implicitly-deleted copy constructor}} both-note {{in initialization of temporary of type 'std::initializer_list}}
+    MoveOnly (&&list2)[1] = {mo}; // both-error {{call to implicitly-deleted copy constructor}} both-note {{in initialization of temporary of type 'MoveOnly[1]'}}
+    std::initializer_list<MoveOnly> &&list3 = {};
+    MoveOnly (&&list4)[1] = {}; // both-error {{no matching constructor}}
+    // both-note@-1 {{in implicit initialization of array element 0 with omitted initializer}}
+    // both-note@-2 {{in initialization of temporary of type 'MoveOnly[1]' created to list-initialize this reference}}
+  }
+}
+
+namespace CopiedForRangeIterator {
+  struct holder {
+    int *p = nullptr;
+    constexpr holder() {
+      p = new int;
+    }
+    constexpr holder(holder&&) {
+      delete p;
+      p = new int;
+    }
+    constexpr holder(const holder&) {
+      delete p;
+      p = new int;
+    }
+    constexpr ~holder() {
+      delete p;
+    }
+  };
+
+  constexpr int copies() {
+    for (holder h : {holder(), holder()}) {
+    }
+    return 0;
+  }
+  static_assert(copies() == 0);
+}
+
+namespace Primitive {
+  constexpr auto A = std::initializer_list<int>{42};
+  static_assert(A.size() == 1);
+  static_assert(*A.begin() == 42);
+}
+
+namespace Ignored {
+  constexpr int foo() {
+    std::initializer_list<int>{42}; // both-warning {{expression result unused}}
+    return 1;
+  }
+  static_assert(foo() == 1);
+}

@@ -1,0 +1,125 @@
+## Show that llvm-readobj prints the symbol visibility where recognised, or
+## something sensible when not, for both GNU and LLVM output.
+
+## Check how we dump symbols when they have only STV_* bits set for st_other.
+## (This is the most common case).
+
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-readobj --symbols %t1.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols %t1.o | FileCheck %s --strict-whitespace --check-prefix=GNU
+# RUN: llvm-readobj --symbols --pretty-print --elf-output-style=JSON %t1.o | FileCheck %s --check-prefix=JSON
+
+# LLVM:      Name: default
+# LLVM:      Other: 0
+# LLVM:      Name: internal
+# LLVM:      Other [ (0x1)
+# LLVM-NEXT:   STV_INTERNAL (0x1)
+# LLVM-NEXT: ]
+# LLVM:      Name: hidden
+# LLVM:      Other [ (0x2)
+# LLVM-NEXT:   STV_HIDDEN (0x2)
+# LLVM-NEXT: ]
+# LLVM:      Name: protected
+# LLVM:      Other [ (0x3)
+# LLVM-NEXT:   STV_PROTECTED (0x3)
+# LLVM-NEXT: ]
+
+# GNU:      Vis       Ndx Name
+# GNU-NEXT: DEFAULT   UND
+# GNU-NEXT: DEFAULT   UND default
+# GNU-NEXT: INTERNAL  UND internal
+# GNU-NEXT: HIDDEN    UND hidden
+# GNU-NEXT: PROTECTED UND protected
+
+# JSON:      "Name": "default",
+# JSON:      "Other": {
+# JSON-NEXT:   "Value": 0,
+# JSON-NEXT:   "Flags": []
+# JSON-NEXT: },
+
+# JSON:      "Name": "internal",
+# JSON:      "Other": {
+# JSON-NEXT:    "Value": 1,
+# JSON-NEXT:    "Flags": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Name": "STV_INTERNAL",
+# JSON-NEXT:        "Value": 1
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  },
+
+# JSON:      "Name": "hidden",
+# JSON:      "Other": {
+# JSON-NEXT:    "Value": 2,
+# JSON-NEXT:    "Flags": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Name": "STV_HIDDEN",
+# JSON-NEXT:        "Value": 2
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  },
+
+# JSON:      "Name": "protected",
+# JSON:      "Other": {
+# JSON-NEXT:    "Value": 3,
+# JSON-NEXT:    "Flags": [
+# JSON-NEXT:      {
+# JSON-NEXT:        "Name": "STV_PROTECTED",
+# JSON-NEXT:        "Value": 3
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  },
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name: default
+    Other: [ STV_DEFAULT ]
+    Binding: STB_GLOBAL
+  - Name: internal
+    Other: [ STV_INTERNAL ]
+    Binding: STB_GLOBAL
+  - Name: hidden
+    Other: [ STV_HIDDEN ]
+    Binding: STB_GLOBAL
+  - Name: protected
+    Other: [ STV_PROTECTED ]
+    Binding: STB_GLOBAL
+
+## Check the output when we have non-visibility bits set for at least one of the symbols.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-readobj --symbols %t2.o | FileCheck %s --check-prefixes=LLVM,LLVM-OTHER
+# RUN: llvm-readelf --symbols %t2.o | FileCheck %s --strict-whitespace --check-prefix=GNU-OTHER
+
+# LLVM-OTHER:      Name: other
+# LLVM-OTHER:      Other [ (0x4)
+# LLVM-OTHER-NEXT: ]
+
+#      GNU-OTHER: Vis                    Ndx Name
+# GNU-OTHER-NEXT: DEFAULT                UND
+# GNU-OTHER-NEXT: DEFAULT                UND default
+# GNU-OTHER-NEXT: INTERNAL               UND internal
+# GNU-OTHER-NEXT: HIDDEN                 UND hidden
+# GNU-OTHER-NEXT: PROTECTED              UND protected
+# GNU-OTHER-NEXT: DEFAULT [<other: 0x4>] UND other
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name: default
+    Other: [ STV_DEFAULT ]
+  - Name: internal
+    Other: [ STV_INTERNAL ]
+  - Name: hidden
+    Other: [ STV_HIDDEN ]
+  - Name: protected
+    Other: [ STV_PROTECTED ]
+  - Name: other
+    Other: [ 4 ]

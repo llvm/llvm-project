@@ -1,0 +1,55 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --publics %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --publics-stream %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s
+
+# CHECK-YAML2PDB: S_PUB32 [size = 44] `?AMethod@AClass@@QEAAXHPEAD@Z`
+# CHECK-YAML2PDB:      flags = function, addr = 0001:0480
+# CHECK-YAML2PDB: S_PUB32 [size = 28] `??_7Base@@6B@`
+# CHECK-YAML2PDB:      flags = none, addr = 0002:0000
+# CHECK-YAML2PDB: S_PUB32 [size = 32] `??0Base@@QEAA@XZ`
+# CHECK-YAML2PDB:      flags = function, addr = 0001:0000
+
+# CHECK-PDB2YAML: - Kind:            S_PUB32
+# CHECK-PDB2YAML:   PublicSym32:
+# CHECK-PDB2YAML:     Flags:           [ Function ]
+# CHECK-PDB2YAML:     Offset:          480
+# CHECK-PDB2YAML:     Segment:         1
+# CHECK-PDB2YAML:     Name:            '?AMethod@AClass@@QEAAXHPEAD@Z'
+# CHECK-PDB2YAML: - Kind:            S_PUB32
+# CHECK-PDB2YAML:   PublicSym32:
+# CHECK-PDB2YAML:     Flags:           [  ]
+# CHECK-PDB2YAML:     Offset:          0
+# CHECK-PDB2YAML:     Segment:         2
+# CHECK-PDB2YAML:     Name:            '??_7Base@@6B@'
+# CHECK-PDB2YAML: - Kind:            S_PUB32
+# CHECK-PDB2YAML:   PublicSym32:
+# CHECK-PDB2YAML:     Flags:           [ Function ]
+# CHECK-PDB2YAML:     Offset:          0
+# CHECK-PDB2YAML:     Segment:         1
+# CHECK-PDB2YAML:     Name:            '??0Base@@QEAA@XZ'
+
+---
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          480
+        Segment:         1
+        Name:            '?AMethod@AClass@@QEAAXHPEAD@Z'
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [  ]
+        Offset:          0
+        Segment:         2
+        Name:            '??_7Base@@6B@'
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            '??0Base@@QEAA@XZ'
+...
+

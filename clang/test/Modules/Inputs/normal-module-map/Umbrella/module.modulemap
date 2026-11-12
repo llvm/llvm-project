@@ -1,0 +1,3 @@
+module Umbrella {
+  umbrella header "Umbrella.h"
+}

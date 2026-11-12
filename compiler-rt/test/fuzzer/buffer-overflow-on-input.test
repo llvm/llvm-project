@@ -1,0 +1,5 @@
+RUN: %cpp_compiler %S/BufferOverflowOnInput.cpp -o %t-BufferOverflowOnInput
+
+RUN: not %run %t-BufferOverflowOnInput 2>&1 | FileCheck %s --check-prefix=OOB
+OOB: AddressSanitizer: heap-buffer-overflow
+OOB: is located 0 bytes after 3-byte region

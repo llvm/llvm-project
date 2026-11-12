@@ -1,0 +1,197 @@
+standard: c23
+posix: posix-2024
+c-reference-root: program
+types:
+  mcontext_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  pthread_attr_t:
+    in-latest-posix: ''
+  pthread_t:
+    in-latest-posix: ''
+  sig_atomic_t:
+    c-definition: '7.14'
+    c-reference: program/sig_atomic_t
+    in-latest-posix: ''
+  sig_t:
+    extension: bsd
+  sighandler_t:
+    extension: gnu
+  siginfo_t:
+    in-latest-posix: ''
+  sigset_t:
+    in-latest-posix: ''
+  stack_t:
+    in-latest-posix: ''
+  struct sigaction:
+    in-latest-posix: ''
+  struct sigevent:
+    in-latest-posix: ''
+  ucontext_t:
+    in-latest-posix: ''
+  uid_t:
+    in-latest-posix: ''
+  union sigval:
+    in-latest-posix: ''
+functions:
+  kill:
+    in-latest-posix: ''
+  raise:
+    c-definition: 7.14.2.1
+    in-latest-posix: ''
+  sigaction:
+    in-latest-posix: ''
+  sigaddset:
+    in-latest-posix: ''
+  sigaltstack:
+    in-latest-posix: ''
+  sigdelset:
+    in-latest-posix: ''
+  sigemptyset:
+    in-latest-posix: ''
+  sigfillset:
+    in-latest-posix: ''
+  sigismember:
+    in-latest-posix: ''
+  signal:
+    c-definition: 7.14.1.1
+    in-latest-posix: ''
+  sigprocmask:
+    in-latest-posix: ''
+  killpg:
+    in-latest-posix: ''
+  psiginfo:
+    in-latest-posix: ''
+  psignal:
+    in-latest-posix: ''
+  pthread_kill:
+    in-latest-posix: ''
+  pthread_sigmask:
+    in-latest-posix: ''
+  sig2str:
+    in-latest-posix: ''
+  sighold:
+    removed-in-posix-2024: ''
+  sigignore:
+    removed-in-posix-2024: ''
+  siginterrupt:
+    removed-in-posix-2024: ''
+  sigpause:
+    removed-in-posix-2024: ''
+  sigpending:
+    in-latest-posix: ''
+  sigqueue:
+    in-latest-posix: ''
+  sigrelse:
+    removed-in-posix-2024: ''
+  sigset:
+    removed-in-posix-2024: ''
+  sigsuspend:
+    in-latest-posix: ''
+  sigtimedwait:
+    in-latest-posix: ''
+  sigwait:
+    in-latest-posix: ''
+  sigwaitinfo:
+    in-latest-posix: ''
+  str2sig:
+    in-latest-posix: ''
+macros:
+  SIGABRT:
+    c-definition: 7.14.3
+    c-reference: program/SIG_types
+    in-latest-posix: ''
+  SIGALRM:
+    in-latest-posix: ''
+  SIGBUS:
+    in-latest-posix: ''
+  SIGCHLD:
+    in-latest-posix: ''
+  SIGCONT:
+    in-latest-posix: ''
+  SIGFPE:
+    c-definition: 7.14.3
+    c-reference: program/SIG_types
+    in-latest-posix: ''
+  SIGHUP:
+    in-latest-posix: ''
+  SIGILL:
+    c-definition: 7.14.3
+    c-reference: program/SIG_types
+    in-latest-posix: ''
+  SIGINT:
+    c-definition: 7.14.3
+    c-reference: program/SIG_types
+    in-latest-posix: ''
+  SIGKILL:
+    in-latest-posix: ''
+  SIGPIPE:
+    in-latest-posix: ''
+  SIGPOLL:
+    in-latest-posix: ''
+  SIGPROF:
+    in-latest-posix: ''
+  SIGQUIT:
+    in-latest-posix: ''
+  SIGRTMAX:
+    in-latest-posix: ''
+  SIGRTMIN:
+    in-latest-posix: ''
+  SIGSEGV:
+    c-definition: 7.14.3
+    c-reference: program/SIG_types
+    in-latest-posix: ''
+  SIGSTOP:
+    in-latest-posix: ''
+  SIGSYS:
+    in-latest-posix: ''
+  SIGTERM:
+    c-definition: 7.14.3
+    c-reference: program/SIG_types
+    in-latest-posix: ''
+  SIGTRAP:
+    in-latest-posix: ''
+  SIGTSTP:
+    in-latest-posix: ''
+  SIGTTIN:
+    in-latest-posix: ''
+  SIGTTOU:
+    in-latest-posix: ''
+  SIGURG:
+    in-latest-posix: ''
+  SIGUSR1:
+    in-latest-posix: ''
+  SIGUSR2:
+    in-latest-posix: ''
+  SIGVTALRM:
+    in-latest-posix: ''
+  SIGXCPU:
+    in-latest-posix: ''
+  SIGXFSZ:
+    in-latest-posix: ''
+  SIG_DFL:
+    c-definition: 7.14.3
+    c-reference: program/SIG_strategies
+    in-latest-posix: ''
+  SIG_ERR:
+    c-definition: 7.14.3
+    c-reference: program/SIG_strategies
+    in-latest-posix: ''
+  SIG_HOLD:
+    in-latest-posix: ''
+  SIG_IGN:
+    c-definition: 7.14.3
+    c-reference: program/SIG_strategies
+    in-latest-posix: ''
+
+  SIG2STR_MAX:
+    in-latest-posix: ''
+  SIGEV_NONE:
+    in-latest-posix: ''
+  SIGEV_SIGNAL:
+    in-latest-posix: ''
+  SIGEV_THREAD:
+    in-latest-posix: ''
+  SIGEV_THREAD_ID:
+    extension: gnu

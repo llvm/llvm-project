@@ -1,0 +1,12 @@
+// RUN: mlir-lsp-server -lit-test < %s | FileCheck -strict-whitespace %s
+// Test with invalid initialize request parameters
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":"","rootUri":"test:///workspace","capabilities":{},"clientInfo":{"name": 10},"trace":"verbose"}}
+//      CHECK:  "id": 0,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "capabilities": {
+// ...
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

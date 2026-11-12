@@ -1,0 +1,21 @@
+{
+   "context" : "[n, m] -> {  : n <= 9223372036854775807 and n >= -9223372036854775808 and m <= 9223372036854775807 and m >= -9223372036854775808 }",
+   "name" : "bb1 => bb17",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[n, m] -> { Stmt_bb4[i0, i1] -> MemRef_A[i0, i1 + 13] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[n, m] -> { Stmt_bb4[i0, i1] -> MemRef_A[i0, i1 + 43] }"
+            }
+         ],
+         "domain" : "[n, m] -> { Stmt_bb4[i0, i1] : i0 >= 0 and n >= 1 and i0 <= -1 + n and i1 >= 0 and i1 <= 99 }",
+         "name" : "Stmt_bb4",
+         "schedule" : "[n, m] -> { Stmt_bb4[i0, i1] -> [i0, i1] }"
+      }
+   ]
+}

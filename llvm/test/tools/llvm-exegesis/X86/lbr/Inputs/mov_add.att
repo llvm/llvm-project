@@ -1,0 +1,4 @@
+# llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64-LIVEIN RDI
+# llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64-DEFREG XMM1 42
+movq $2, %rdi
+addq $0x10, %rdi

@@ -1,0 +1,18 @@
+{
+  'version': 0,
+  'roots': [
+    { 'name': 'OUT_DIR', 'type': 'directory',
+      'contents': [
+        { 'name': 'module.modulemap', 'type': 'file',
+          'external-contents': 'INPUT_DIR/module.modulemap'
+        },
+        { 'name': 'ModuleNeedsVFS.h', 'type': 'file',
+          'external-contents': 'INPUT_DIR/module_needs_vfs.h'
+        },
+        { 'name': 'BaseModuleNeedsVFS.framework/Headers/BaseModuleNeedsVFS.h', 'type': 'file',
+          'external-contents': 'INPUT_DIR/base_module_needs_vfs.h'
+        },
+      ]
+    }
+  ]
+}

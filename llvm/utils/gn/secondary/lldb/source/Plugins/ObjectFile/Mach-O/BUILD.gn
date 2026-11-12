@@ -1,0 +1,20 @@
+static_library("Mach-O") {
+  output_name = "lldbPluginObjectFileMachO"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Core",
+    "//lldb/source/Host",
+    "//lldb/source/Plugins/Register/Darwin",
+    "//lldb/source/Symbol",
+    "//lldb/source/Target",
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+
+  # Reaches into Plugins/Process/Utility.
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "MachOTrie.cpp",
+    "ObjectFileMachO.cpp",
+  ]
+}

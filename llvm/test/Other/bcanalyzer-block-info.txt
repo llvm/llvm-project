@@ -1,0 +1,32 @@
+RUN: llvm-bcanalyzer -dump %S/Inputs/has-block-info.bc | FileCheck -check-prefix=CHECK -check-prefix=DATA %s
+RUN: llvm-bcanalyzer -dump %S/Inputs/no-block-info.bc | FileCheck -check-prefix=UNKNOWN -check-prefix=DATA %s
+RUN: llvm-bcanalyzer -dump %S/Inputs/no-block-info.bc -block-info %S/Inputs/block-info-only.bc | FileCheck -check-prefix=CHECK -check-prefix=DATA %s
+
+  CHECK: <ABC
+UNKNOWN: <UnknownBlock8
+   DATA:   NumWords=4 BlockCodeSize=2>
+  CHECK:   <AAA 
+UNKNOWN:   <UnknownCode0
+   DATA:     op0=42 op1=43 op2=44/>
+  CHECK:   <BBB
+UNKNOWN:   <UnknownCode1
+   DATA:     op0=42/>
+  CHECK:   <AAA
+UNKNOWN:   <UnknownCode0
+   DATA:     op0=42/>
+  CHECK: </ABC>
+UNKNOWN: </UnknownBlock8>
+  CHECK: <XYZ
+UNKNOWN: <UnknownBlock9
+   DATA:   NumWords=3 BlockCodeSize=3>
+  CHECK:   <XXX
+UNKNOWN:   <UnknownCode0
+   DATA:     abbrevid=4 op0=50 op1=4/>
+  CHECK:   <YYY
+UNKNOWN:   <UnknownCode1
+   DATA:     op0=42/>
+  CHECK:   <XXX
+UNKNOWN:   <UnknownCode0
+   DATA:     abbrevid=4 op0=50 op1=5/>
+  CHECK: </XYZ>
+UNKNOWN: </UnknownBlock9>

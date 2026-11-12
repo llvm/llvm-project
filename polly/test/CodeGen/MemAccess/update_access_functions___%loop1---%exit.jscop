@@ -1,0 +1,47 @@
+{
+   "context" : "[arg] -> {  : -9223372036854775808 <= arg <= 9223372036854775807 }",
+   "name" : "%loop1---%exit",
+   "statements" : [
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[arg] -> { Stmt_loop1[i0] -> MemRef_A[1 + i0] }"
+            }
+         ],
+         "domain" : "[arg] -> { Stmt_loop1[i0] : 0 <= i0 <= -2 + arg }",
+         "name" : "Stmt_loop1",
+         "schedule" : "[arg] -> { Stmt_loop1[i0] -> [0, i0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "read",
+               "relation" : "[arg] -> { Stmt_loop2[i0] -> MemRef_A[1 + i0] }"
+            },
+            {
+               "kind" : "write",
+               "relation" : "[arg] -> { Stmt_loop2[i0] -> MemRef_val[] }"
+            }
+         ],
+         "domain" : "[arg] -> { Stmt_loop2[i0] : 0 <= i0 <= -2 + arg }",
+         "name" : "Stmt_loop2",
+         "schedule" : "[arg] -> { Stmt_loop2[i0] -> [1, i0] }"
+      },
+      {
+         "accesses" : [
+            {
+               "kind" : "write",
+               "relation" : "[arg] -> { Stmt_loop3[i0] -> MemRef_A[1 + i0] }"
+            },
+            {
+               "kind" : "read",
+               "relation" : "[arg] -> { Stmt_loop3[i0] -> MemRef_val[] }"
+            }
+         ],
+         "domain" : "[arg] -> { Stmt_loop3[i0] : 0 <= i0 <= -2 + arg }",
+         "name" : "Stmt_loop3",
+         "schedule" : "[arg] -> { Stmt_loop3[i0] -> [2, i0] }"
+      }
+   ]
+}

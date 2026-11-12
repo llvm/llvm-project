@@ -1,0 +1,13 @@
+# RUN: llc -mtriple=hexagon -run-pass=post-ra-pseudos -o - %s | FileCheck %s
+
+# CHECK: $v2 = V6_vcmov $p0, killed $v0
+# CHECK: $v2 = V6_vncmov killed $p0, killed $v1, implicit $v2
+
+---
+name: f0
+body: |
+  bb.0:
+    liveins: $p0, $v0, $v1
+    $v2 = PS_vselect killed $p0, killed $v0, killed $v1
+...
+

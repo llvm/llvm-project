@@ -1,0 +1,30 @@
+# REQUIRES: x86
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
+
+## /DISCARD/ specified by OVERWRITE_SECTIONS can discard sections as well.
+
+# RUN: ld.lld %t/overwrite.lds -T %t/main.lds %t/a.o -o %t1 2>&1 | count 0
+# RUN: llvm-readelf -S -l %t1 | FileCheck %s
+# RUN: ld.lld %t/overwrite.lds %t/overwrite.lds -T %t/main.lds %t/a.o -o %t1 2>&1 | count 0
+# RUN: llvm-readelf -S -l %t1 | FileCheck %s
+
+# CHECK:     Name
+# CHECK-NOT: .data
+
+#--- a.s
+.globl _start
+_start:
+
+.section .data.1,"aw"; .byte 1
+.section .data.2,"aw"; .byte 2
+
+#--- main.lds
+SECTIONS {
+  /DISCARD/ : { *(.data.1) }
+}
+
+#--- overwrite.lds
+OVERWRITE_SECTIONS {
+  /DISCARD/ : { *(.data.2) }
+}

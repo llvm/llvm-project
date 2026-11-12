@@ -1,0 +1,7 @@
+# RUN: not yaml-bench -canonical %s 2>&1 | FileCheck %s
+
+# Invalid use of BOM
+﻿# inside a
+# document.
+
+# CHECK: error

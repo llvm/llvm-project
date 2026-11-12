@@ -1,0 +1,112 @@
+# Compatibility tests for older profile format versions. These ensure
+# that we don't break compatibility with an older profile version
+# without noticing it.
+
+# The input file at %S/Inputs/compat.profdata.v1 was generated with
+# llvm-profdata merge from r214548.
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v1 --function function_count_only --counts | FileCheck %s -check-prefix=FUNC_COUNT_ONLY
+function_count_only
+0
+1
+97531
+# FUNC_COUNT_ONLY:      Hash: 0x{{0+$}}
+# FUNC_COUNT_ONLY-NEXT: Counters: 1
+# FUNC_COUNT_ONLY-NEXT: Function count: 97531
+# FUNC_COUNT_ONLY-NEXT: Block counts: []
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v1 --function "name with spaces" --counts | FileCheck %s -check-prefix=SPACES
+name with spaces
+1024
+2
+0
+0
+# SPACES:      Hash: 0x{{0+}}400
+# SPACES-NEXT: Counters: 2
+# SPACES-NEXT: Function count: 0
+# SPACES-NEXT: Block counts: [0]
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v1 --function large_numbers --counts | FileCheck %s -check-prefix=LARGENUM
+large_numbers
+4611686018427387903
+6
+2305843009213693952
+1152921504606846976
+576460752303423488
+288230376151711744
+144115188075855872
+72057594037927936
+# LARGENUM:      Hash: 0x3fffffffffffffff
+# LARGENUM-NEXT: Counters: 6
+# LARGENUM-NEXT: Function count: 2305843009213693952
+# LARGENUM-NEXT: Block counts: [1152921504606846976, 576460752303423488, 288230376151711744, 144115188075855872, 72057594037927936]
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v1 | FileCheck %s -check-prefix=SUMMARY
+# SUMMARY: Total functions: 3
+# SUMMARY: Maximum function count: 2305843009213693952
+# SUMMARY: Maximum internal block count: 1152921504606846976
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v2 -all-functions --counts | FileCheck %s -check-prefix=FORMATV2
+
+# FORMATV2: Counters:
+# FORMATV2-NEXT:   foo:
+# FORMATV2-NEXT:     Hash: 0x000000000000000a
+# FORMATV2-NEXT:     Counters: 2
+# FORMATV2-NEXT:     Function count: 499500
+# FORMATV2-NEXT:     Block counts: [179900]
+# FORMATV2-NEXT:   main:
+# FORMATV2-NEXT:     Hash: 0x000000000000410a
+# FORMATV2-NEXT:     Counters: 4
+# FORMATV2-NEXT:     Function count: 1
+# FORMATV2-NEXT:     Block counts: [1000, 1000000, 499500]
+# FORMATV2-NEXT: Instrumentation level: Front-end
+# FORMATV2-NEXT: Functions shown: 2
+# FORMATV2-NEXT: Total functions: 2
+# FORMATV2-NEXT: Maximum function count: 499500
+# FORMATV2-NEXT: Maximum internal block count: 1000000
+#
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v4 -all-functions --counts | FileCheck %s -check-prefix=FORMATV4
+
+# FORMATV4: Counters:
+# FORMATV4:   name with spaces:
+# FORMATV4:     Hash: 0x0000000000000400
+# FORMATV4:     Counters: 2
+# FORMATV4:     Function count: 0
+# FORMATV4:     Block counts: [0]
+# FORMATV4:   function_count_only:
+# FORMATV4:     Hash: 0x0000000000000000
+# FORMATV4:     Counters: 1
+# FORMATV4:     Function count: 97531
+# FORMATV4:     Block counts: []
+# FORMATV4:   large_numbers:
+# FORMATV4:     Hash: 0x3fffffffffffffff
+# FORMATV4:     Counters: 6
+# FORMATV4:     Function count: 2305843009213693952
+# FORMATV4:     Block counts: [1152921504606846976, 576460752303423488, 288230376151711744, 144115188075855872, 72057594037927936]
+# FORMATV4: Functions shown: 3
+# FORMATV4: Total functions: 3
+# FORMATV4: Maximum function count: 2305843009213693952
+# FORMATV4: Maximum internal block count: 1152921504606846976
+
+# RUN: llvm-profdata show %S/Inputs/compat.profdata.v10 -all-functions --counts | FileCheck %s -check-prefix=FORMATV10
+
+# FORMATV10: Counters:
+# FORMATV10:   large_numbers:
+# FORMATV10:     Hash: 0x3fffffffffffffff
+# FORMATV10:     Counters: 6
+# FORMATV10:     Function count: 2305843009213693952
+# FORMATV10:     Block counts: [1152921504606846976, 576460752303423488, 288230376151711744, 144115188075855872, 72057594037927936]
+# FORMATV10:   name with spaces:
+# FORMATV10:     Hash: 0x0000000000000400
+# FORMATV10:     Counters: 2
+# FORMATV10:     Function count: 0
+# FORMATV10:     Block counts: [0]
+# FORMATV10:   function_count_only:
+# FORMATV10:     Hash: 0x0000000000000000
+# FORMATV10:     Counters: 1
+# FORMATV10:     Function count: 97531
+# FORMATV10:     Block counts: []
+# FORMATV10: Functions shown: 3
+# FORMATV10: Total functions: 3
+# FORMATV10: Maximum function count: 2305843009213693952
+# FORMATV10: Maximum internal block count: 1152921504606846976

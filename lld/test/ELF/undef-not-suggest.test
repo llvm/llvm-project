@@ -1,0 +1,83 @@
+## Check we don't suggest alternative spelling for relocations to symbols
+## defined in discarded sections.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK-NOT: did you mean:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: foo
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.foo
+  - Name:  .text.foo
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name:  .rodata
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]
+  - Name: .rela.rodata
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .rodata
+    Relocations:
+      ## Relocation which references ".text.foo". Check we don't suggest the
+      ## section symbol for ".data", which has an empty name.
+      - Type:   R_X86_64_64
+        ## .text.foo
+        Symbol: 1
+      ## Relocation which references "foo". Check we don't suggest "for".
+      - Type:   R_X86_64_64
+        Symbol: foo
+  - Name: .data
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    ""
+    Type:    STT_SECTION
+    Section: .text.foo
+  - Name:    ""
+    Type:    STT_SECTION
+    Section: .data
+  - Name:    foo
+    Section: .text.foo
+    Binding: STB_GLOBAL
+  - Name:    for
+    Section: .data
+
+## Check we don't suggest an empty name symbol (e.g. STT_SECTION).
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name: .rela.text
+    Type:  SHT_RELA
+    Info: .text
+    Relocations:
+      - Type:   R_X86_64_64
+        Symbol: f
+Symbols:
+  - Name:    ""
+    Type:    STT_SECTION
+    Section: .text
+  - Name:    f
+    Binding: STB_GLOBAL

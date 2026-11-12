@@ -1,0 +1,101 @@
+//===- OptReductionPass.cpp - Optimization Reduction Pass Wrapper ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the Opt Reduction Pass Wrapper. It creates a MLIR pass to
+// run any optimization pass within it and only replaces the output module with
+// the transformed version if it is smaller and interesting.
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Reducer/Passes.h"
+#include "mlir/Reducer/Tester.h"
+
+#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/MemoryBuffer.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_OPTREDUCTIONPASS
+#include "mlir/Reducer/Passes.h.inc"
+} // namespace mlir
+
+#define DEBUG_TYPE "mlir-reduce"
+
+using namespace mlir;
+
+namespace {
+
+class OptReductionPass : public impl::OptReductionPassBase<OptReductionPass> {
+public:
+  using Base::Base;
+
+  /// Runs the pass instance in the pass pipeline.
+  void runOnOperation() override;
+};
+
+} // namespace
+
+/// Runs the pass instance in the pass pipeline.
+void OptReductionPass::runOnOperation() {
+  LDBG() << "\nOptimization Reduction pass: ";
+
+  Tester test(testerName, testerArgs);
+  Operation *topOp = this->getOperation();
+
+  std::string pipelineStr = optPass;
+  if (pipelineStr.empty()) {
+    if (!optPassFile.empty()) {
+      auto fileOrErr = llvm::MemoryBuffer::getFile(optPassFile);
+      if (std::error_code ec = fileOrErr.getError()) {
+        topOp->emitError() << "Could not open pass pipeline file: "
+                           << optPassFile << " (" << ec.message() << ")";
+        return signalPassFailure();
+      }
+      pipelineStr = fileOrErr.get()->getBuffer().trim().str();
+    }
+  }
+
+  PassManager passManager(topOp->getName());
+  if (failed(parsePassPipeline(pipelineStr, passManager))) {
+    topOp->emitError() << "\nfailed to parse pass pipeline";
+    return signalPassFailure();
+  }
+
+  std::pair<Tester::Interestingness, int> original = test.isInteresting(topOp);
+  if (original.first != Tester::Interestingness::True) {
+    topOp->emitError() << "\nthe original input is not interested";
+    return signalPassFailure();
+  }
+  Operation *topOpVariant = topOp->clone();
+
+  LogicalResult pipelineResult = passManager.run(topOpVariant);
+  if (failed(pipelineResult)) {
+    topOp->emitError() << "\nfailed to run pass pipeline";
+    return signalPassFailure();
+  }
+
+  std::pair<Tester::Interestingness, int> reduced =
+      test.isInteresting(topOpVariant);
+
+  if (reduced.first == Tester::Interestingness::True &&
+      reduced.second < original.second) {
+    topOp->getRegion(0).getBlocks().clear();
+    topOp->getRegion(0).getBlocks().splice(
+        topOp->getRegion(0).getBlocks().begin(),
+        topOpVariant->getRegion(0).getBlocks());
+
+    LDBG() << "\nSuccessful Transformed version\n";
+  } else {
+    LDBG() << "\nUnsuccessful Transformed version\n";
+  }
+
+  topOpVariant->destroy();
+
+  LDBG() << "Pass Complete\n";
+}

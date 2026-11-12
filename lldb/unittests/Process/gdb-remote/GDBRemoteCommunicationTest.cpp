@@ -1,0 +1,152 @@
+//===-- GDBRemoteCommunicationTest.cpp ------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "GDBRemoteTestUtils.h"
+#include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Utility/Log.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Testing/Support/Error.h"
+
+using namespace lldb_private::process_gdb_remote;
+using namespace lldb_private;
+using namespace lldb;
+typedef GDBRemoteCommunication::PacketResult PacketResult;
+
+namespace {
+
+class CapturingLogHandler : public LogHandler {
+public:
+  void Emit(llvm::StringRef message) override { output += message; }
+
+  std::string output;
+};
+
+class TestClient : public GDBRemoteCommunication {
+public:
+  TestClient() : GDBRemoteCommunication("test.client") {}
+
+  PacketResult ReadPacket(StringExtractorGDBRemote &response) {
+    return GDBRemoteCommunication::ReadPacket(response, std::chrono::seconds(1),
+                                              /*sync_on_timeout*/ false);
+  }
+};
+
+class GDBRemoteCommunicationTest : public GDBRemoteTest {
+public:
+  void SetUp() override {
+    llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+    ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+    client.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->first)));
+    server.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
+  }
+
+protected:
+  TestClient client;
+  MockServer server;
+
+  bool Write(llvm::StringRef packet) {
+    ConnectionStatus status;
+    return server.WriteAll(packet.data(), packet.size(), status, nullptr) ==
+           packet.size();
+  }
+};
+} // end anonymous namespace
+
+TEST_F(GDBRemoteCommunicationTest, PacketLogsIncludeChannelName) {
+  ProcessGDBRemoteLog::Initialize();
+  llvm::scope_exit cleanup([] { ProcessGDBRemoteLog::Terminate(); });
+
+  auto handler = std::make_shared<CapturingLogHandler>();
+  ASSERT_THAT_ERROR(
+      Log::EnableLogChannel(handler, 0, "gdb-remote", {"packets"}),
+      llvm::Succeeded());
+
+  ASSERT_EQ(PacketResult::Success, server.SendPacket("OK"));
+  StringExtractorGDBRemote response;
+  ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
+
+  llvm::StringRef output = handler->output;
+  EXPECT_TRUE(output.contains("test.server <   6> send packet: $OK#9a"));
+  EXPECT_TRUE(output.contains("test.client <   6> read packet: $OK#9a"));
+}
+
+// Test that we can decode packets correctly. In particular, verify that
+// checksum calculation works.
+TEST_F(GDBRemoteCommunicationTest, ReadPacket) {
+  struct TestCase {
+    llvm::StringLiteral Packet;
+    llvm::StringLiteral Payload;
+  };
+  static constexpr TestCase Tests[] = {
+      {{"$#00"}, {""}},
+      {{"$foobar#79"}, {"foobar"}},
+      {{"$}]#da"}, {"}"}},          // Escaped }
+      {{"$x*%#c7"}, {"xxxxxxxxx"}}, // RLE
+      {{"+$#00"}, {""}},            // Spurious ACK
+      {{"-$#00"}, {""}},            // Spurious NAK
+  };
+  for (const auto &Test : Tests) {
+    SCOPED_TRACE(Test.Packet + " -> " + Test.Payload);
+    StringExtractorGDBRemote response;
+    ASSERT_TRUE(Write(Test.Packet));
+    ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
+    ASSERT_EQ(Test.Payload, response.GetStringRef());
+    ASSERT_EQ(PacketResult::Success, server.GetAck());
+  }
+}
+
+// Test that packets with incorrect RLE sequences do not cause a crash and
+// reported as invalid.
+TEST_F(GDBRemoteCommunicationTest, CheckForPacket) {
+  using PacketType = GDBRemoteCommunication::PacketType;
+  struct TestCase {
+    llvm::StringLiteral Packet;
+    PacketType Result;
+  };
+  static constexpr TestCase Tests[] = {
+      {{"$#00"}, PacketType::Standard},
+      {{"$xx*#00"}, PacketType::Invalid}, // '*' without a count
+      {{"$*#00"}, PacketType::Invalid},   // '*' without a preceding character
+      {{"$xx}#00"}, PacketType::Invalid}, // bare escape character '}'
+      {{"%#00"}, PacketType::Notify},     // a correct packet after an invalid
+  };
+  for (const auto &Test : Tests) {
+    SCOPED_TRACE(Test.Packet);
+    StringExtractorGDBRemote response;
+    EXPECT_EQ(Test.Result, client.CheckForPacket(Test.Packet.bytes_begin(),
+                                                 Test.Packet.size(), response));
+  }
+}
+
+// Test that a packet split across reads is found wherever the split falls, and
+// that a packet left in the buffer is found without another read.
+TEST_F(GDBRemoteCommunicationTest, CheckForPacketInPieces) {
+  using PacketType = GDBRemoteCommunication::PacketType;
+  StringExtractorGDBRemote response;
+  auto check = [&](llvm::StringRef bytes) {
+    return client.CheckForPacket(bytes.bytes_begin(), bytes.size(), response);
+  };
+
+  llvm::StringRef packet = "$foo#44";
+  for (size_t split = 1; split < packet.size(); ++split) {
+    SCOPED_TRACE(split);
+    EXPECT_EQ(PacketType::Invalid, check(packet.take_front(split)));
+    EXPECT_EQ(PacketType::Standard, check(packet.drop_front(split)));
+    EXPECT_EQ("foo", response.GetStringRef());
+  }
+
+  // The search for the second packet's '#' must start over.
+  EXPECT_EQ(PacketType::Invalid, check("$abcdefgh"));
+  EXPECT_EQ(PacketType::Standard, check("#24$b#62"));
+  EXPECT_EQ("abcdefgh", response.GetStringRef());
+  EXPECT_EQ(PacketType::Standard, client.CheckForPacket(nullptr, 0, response));
+  EXPECT_EQ("b", response.GetStringRef());
+}

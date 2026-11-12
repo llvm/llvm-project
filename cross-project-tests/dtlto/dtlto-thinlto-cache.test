@@ -1,0 +1,70 @@
+REQUIRES: x86-registered-target, ld.lld
+
+# This test verifies that a cache populated by an in-process ThinLTO codegen is
+# not reused by an out-of-process (DTLTO) codegen and vice versa.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+# Compile source files into bitcode files.
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -c foo.c main.c
+
+# Execute the linker and check that in-process ThinLTO cache is populated.
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.o foo.o -o main.elf \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+RUN: ls cache.dir/llvmcache.timestamp
+RUN: ls cache.dir | count 3
+
+# Execute the linker and check that out-of-process codegen (DTLTO) adds
+# additional entries to the cache, implying that in-process and
+# out-of-process codegens do not share cache entries.
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.o foo.o -o populate1.elf \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+# Check that there are two backend compilation jobs occurred.
+RUN: grep -wo args populate1.*.dist-file.json | wc -l | grep -qx "\s*3"
+RUN: ls cache.dir | count 5
+
+# Clean up cache directory.
+RUN: rm -rf cache.dir
+
+# Execute the linker and check that out-of-process (DTLTO) cache is populated.
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.o foo.o -o populate2.elf \
+RUN:   -Wl,--thinlto-distributor=%python \
+RUN:   -Wl,--thinlto-distributor-arg=%llvm_src_root/utils/dtlto/local.py \
+RUN:   -Wl,--thinlto-remote-compiler=%clang \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+# Check that there are two backend compilation jobs occurred.
+RUN: grep -wo args populate2.*.dist-file.json | wc -l | grep -qx "\s*3"
+RUN: ls cache.dir/llvmcache.timestamp
+RUN: ls cache.dir | count 3
+
+# Execute the linker and check that in-process codegen adds additional entries
+# to the cache, implying that in-process and out-of-process codegens do
+# not share cache entries.
+RUN: %clang -O2 --target=x86_64-linux-gnu -Werror -flto=thin -fuse-ld=lld -nostdlib -e main \
+RUN:   main.o foo.o -o main.elf \
+RUN:   -Wl,--thinlto-cache-dir=cache.dir \
+RUN:   -Wl,--save-temps
+
+RUN: ls cache.dir | count 5
+
+#--- foo.c
+volatile int foo_int;
+__attribute__((retain)) int foo(int x) { return x + foo_int; }
+
+#--- main.c
+extern int foo(int x);
+__attribute__((retain)) int main(int argc, char** argv) {
+  return foo(argc);
+}

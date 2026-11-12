@@ -1,0 +1,20 @@
+# CSIR level Instrumentation Flag
+:csir
+foo
+# Func Hash:
+784007059655560962
+# Num Counters:
+2
+# Counter Values:
+12
+24
+
+foo
+# Func Hash:
+1936928564262407938
+# Num Counters:
+2
+# Counter Values:
+24
+12
+

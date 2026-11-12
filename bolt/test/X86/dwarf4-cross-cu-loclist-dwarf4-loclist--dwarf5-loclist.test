@@ -1,0 +1,60 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-cross-cu-with-loclist.s -o %t.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-loclist.s -o %t1.o
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-two-entries-loclist.s -o %t2.o
+# RUN: %clang %cflags %t1.o %t2.o %t.o -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+
+## Tests that BOLT correctly handles location list with DWARF5/DWARF4 when order of CUs is not the same as in input.
+
+# PRECHECK: version = 0x0005
+# PRECHECK: version = 0x0004
+# PRECHECK: version = 0x0004
+# PRECHECK: version = 0x0004
+
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK-NEXT: DW_AT_location
+# POSTCHECK-NEXT: DW_AT_name
+# POSTCHECK-NEXT: DW_AT_decl_file
+# POSTCHECK-NEXT: DW_AT_decl_line
+# POSTCHECK-NEXT: DW_AT_type [DW_FORM_ref_addr]
+# POSTCHECK-SAME: "int")
+
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR1:]]
+# POSTCHECK-SAME:  0x[[#ADDR1 + 0x8]]):
+# POSTCHECK-SAME:  DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_lit3, DW_OP_stack_value, DW_OP_piece 0x4)
+
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR2:]]
+# POSTCHECK-SAME:  0x[[#ADDR2 + 0x4]]):
+# POSTCHECK-SAME:  DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_lit3, DW_OP_stack_value, DW_OP_piece 0x4)
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0) loclist
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR3:]]
+# POSTCHECK-SAME:  0x[[#ADDR3 + 0x4]]):
+# POSTCHECK-SAME:  DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_lit3, DW_OP_stack_value, DW_OP_piece 0x4)
+
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR4:]]
+# POSTCHECK-SAME:  0x[[#ADDR4 + 0x8]]): DW_OP_reg5 RDI
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR5:]]
+# POSTCHECK-SAME:  0x[[#ADDR5 + 0x16]]): DW_OP_GNU_entry_value(DW_OP_reg5 RDI), DW_OP_stack_value)
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR6:]]
+# POSTCHECK-SAME:  0x[[#ADDR6 + 0x8]]): DW_OP_reg5 RDI
+# POSTCHECK-NEXT: [0x[[#%.16x,ADDR7:]]
+# POSTCHECK-SAME:  0x[[#ADDR7 + 0x16]]): DW_OP_GNU_entry_value(DW_OP_reg5 RDI), DW_OP_stack_value)

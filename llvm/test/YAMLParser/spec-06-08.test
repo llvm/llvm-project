@@ -1,0 +1,4 @@
+# RUN: yaml-bench -canonical %s
+
+>-
+  specific   trimmed     as  space

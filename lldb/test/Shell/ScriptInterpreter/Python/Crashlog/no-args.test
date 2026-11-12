@@ -1,0 +1,11 @@
+# RUN: %lldb -o 'command script import lldb.macosx.crashlog' -o 'crashlog' 2>&1 | FileCheck %s
+
+# CHECK: "crashlog" {{.*}} commands have been installed, use the "--help" options on these commands
+
+# CHECK: usage: crashlog [options] <FILE> [FILE ...]
+# CHECK: Symbolicate one or more darwin crash log files to provide source file and line
+# CHECK: positional arguments:
+# CHECK-NEXT: FILE                  crash report(s) to symbolicate (default: None)
+# CHECK: option
+# CHECK:  -h, --help            show this help message and exit
+

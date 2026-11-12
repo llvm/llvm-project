@@ -1,0 +1,583 @@
+standard: c23
+posix: posix-2024
+c-reference-root: types/integer
+types:
+  imaxdiv_t:
+    c-definition: '7.8'
+    c-reference: numeric/math/div
+    in-latest-posix: ''
+functions:
+  imaxabs:
+    c-definition: 7.8.2.1
+    c-reference: numeric/math/abs
+    in-latest-posix: ''
+  imaxdiv:
+    c-definition: 7.8.2.2
+    c-reference: numeric/math/div
+    in-latest-posix: ''
+  strtoimax:
+    c-definition: 7.8.2.3
+    c-reference: string/byte/strtoimax
+    in-latest-posix: ''
+  strtoumax:
+    c-definition: 7.8.2.3
+    c-reference: string/byte/strtoimax
+    in-latest-posix: ''
+  wcstoimax:
+    c-definition: 7.8.2.4
+    c-reference: string/wide/wcstoimax
+    in-latest-posix: ''
+  wcstoumax:
+    c-definition: 7.8.2.4
+    c-reference: string/wide/wcstoimax
+    in-latest-posix: ''
+
+macros:
+  PRIB16:
+    c-definition: 7.8.1
+  PRIB32:
+    c-definition: 7.8.1
+  PRIB64:
+    c-definition: 7.8.1
+  PRIB8:
+    c-definition: 7.8.1
+  PRIBFAST16:
+    c-definition: 7.8.1
+  PRIBFAST32:
+    c-definition: 7.8.1
+  PRIBFAST64:
+    c-definition: 7.8.1
+  PRIBFAST8:
+    c-definition: 7.8.1
+  PRIBLEAST16:
+    c-definition: 7.8.1
+  PRIBLEAST32:
+    c-definition: 7.8.1
+  PRIBLEAST64:
+    c-definition: 7.8.1
+  PRIBLEAST8:
+    c-definition: 7.8.1
+  PRIBMAX:
+    c-definition: 7.8.1
+  PRIBPTR:
+    c-definition: 7.8.1
+  PRIX16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIX32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIX64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIX8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIXPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIb16:
+    c-definition: 7.8.1
+  PRIb32:
+    c-definition: 7.8.1
+  PRIb64:
+    c-definition: 7.8.1
+  PRIb8:
+    c-definition: 7.8.1
+  PRIbFAST16:
+    c-definition: 7.8.1
+  PRIbFAST32:
+    c-definition: 7.8.1
+  PRIbFAST64:
+    c-definition: 7.8.1
+  PRIbFAST8:
+    c-definition: 7.8.1
+  PRIbLEAST16:
+    c-definition: 7.8.1
+  PRIbLEAST32:
+    c-definition: 7.8.1
+  PRIbLEAST64:
+    c-definition: 7.8.1
+  PRIbLEAST8:
+    c-definition: 7.8.1
+  PRIbMAX:
+    c-definition: 7.8.1
+  PRIbPTR:
+    c-definition: 7.8.1
+  PRId16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRId32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRId64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRId8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIdPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIi16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIi32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIi64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIi8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIiPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIo16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIo32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIo64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIo8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIoPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIu16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIu32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIu64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIu8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIuPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIx16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIx32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIx64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIx8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  PRIxPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNb16:
+    c-definition: 7.8.1
+  SCNb32:
+    c-definition: 7.8.1
+  SCNb64:
+    c-definition: 7.8.1
+  SCNb8:
+    c-definition: 7.8.1
+  SCNbFAST16:
+    c-definition: 7.8.1
+  SCNbFAST32:
+    c-definition: 7.8.1
+  SCNbFAST64:
+    c-definition: 7.8.1
+  SCNbFAST8:
+    c-definition: 7.8.1
+  SCNbLEAST16:
+    c-definition: 7.8.1
+  SCNbLEAST32:
+    c-definition: 7.8.1
+  SCNbLEAST64:
+    c-definition: 7.8.1
+  SCNbLEAST8:
+    c-definition: 7.8.1
+  SCNbMAX:
+    c-definition: 7.8.1
+  SCNbPTR:
+    c-definition: 7.8.1
+  SCNd16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNd32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNd64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNd8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNdPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNi16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNi32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNi64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNi8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNiPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNo16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNo32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNo64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNo8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNoPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNu16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNu32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNu64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNu8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNuPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNx16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNx32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNx64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNx8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxFAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxFAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxFAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxFAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxLEAST16:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxLEAST32:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxLEAST64:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxLEAST8:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxMAX:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  SCNxPTR:
+    c-definition: 7.8.1
+    in-latest-posix: ''
+  __STDC_VERSION_INTTYPES_H__:
+    c-definition: '7.8'

@@ -1,0 +1,5 @@
+add_libc_testsuite(libc-support-time-tests PARENT libc-support-tests)
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+endif()

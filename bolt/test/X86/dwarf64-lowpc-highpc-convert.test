@@ -1,0 +1,143 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
+# RUN: %clang %cflags -Wl,-q -Wl,-e,main %t.o -o %t.exe
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | \
+# RUN:   FileCheck --check-prefix=INPUT %s
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections \
+# RUN:   --always-convert-to-ranges
+# RUN: llvm-dwarfdump --show-form --verbose --debug-addr --debug-rnglists \
+# RUN:   --debug-info %t.bolt | FileCheck --check-prefix=BOLT %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+## Check that BOLT rewrites a DWARF64 v5 CU with addrx low_pc/high_pc into
+## DWARF64 rnglists and that the decoded range uses the rewritten PC address.
+
+# INPUT-LABEL: .debug_info contents:
+# INPUT: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# INPUT: DW_AT_low_pc [DW_FORM_addrx]{{.*}}(indexed (00000000)
+# INPUT-NEXT: DW_AT_high_pc [DW_FORM_data4] (0x00000003)
+# INPUT: DW_TAG_subprogram
+# INPUT: DW_AT_low_pc [DW_FORM_addrx]{{.*}}(indexed (00000000)
+# INPUT-NEXT: DW_AT_high_pc [DW_FORM_data4] (0x00000003)
+
+# BOLT-LABEL: .debug_info contents:
+# BOLT: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# BOLT: DW_AT_low_pc [DW_FORM_addrx]
+# BOLT-SAME: address = 0x0000000000000000
+# BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
+# BOLT-SAME: rangelist = 0x00000024
+# BOLT-NEXT: [
+# BOLT-SAME: 0x[[#%.16x,ADDR:]]
+# BOLT-SAME: 0x[[#ADDR + 3]]
+# BOLT: DW_AT_addr_base [DW_FORM_sec_offset]
+# BOLT: DW_AT_rnglists_base [DW_FORM_sec_offset] (0x0000000000000014)
+# BOLT: DW_TAG_subprogram
+# BOLT: DW_AT_ranges [DW_FORM_rnglistx]
+# BOLT-SAME: rangelist = 0x00000028
+# BOLT-NEXT: [
+# BOLT-SAME: 0x[[#ADDR]]
+# BOLT-SAME: 0x[[#ADDR + 3]]
+
+# BOLT-LABEL: .debug_addr contents:
+# BOLT: Address table header: length = 0x{{[0-9a-f]+}}, format = DWARF64
+# BOLT: Addrs: [
+# BOLT-NEXT: 0x[[#ADDR]]
+# BOLT-NEXT: 0x0000000000000000
+
+# BOLT-LABEL: .debug_rnglists contents:
+# BOLT: range list header: length = 0x{{[0-9a-f]+}}, format = DWARF64
+# BOLT: 0x0000000000000010 => 0x00000024
+# BOLT: 0x0000000000000014 => 0x00000028
+# BOLT: 0x00000024: [DW_RLE_startx_length]:
+# BOLT-SAME: [0x[[#ADDR]], 0x[[#ADDR + 3]])
+# BOLT: 0x00000028: [DW_RLE_startx_length]:
+# BOLT-SAME: [0x[[#ADDR]], 0x[[#ADDR + 3]])
+
+  .text
+  .globl main
+  .type main,@function
+main:
+.Lfunc_begin0:
+  .file 0 "." "dwarf64-lowpc-highpc-convert.s"
+  .loc 0 1 0
+  pushq %rbp
+  .loc 0 2 0
+  popq %rbp
+  .loc 0 3 0
+  retq
+.Lfunc_end0:
+  .size main, .Lfunc_end0-main
+
+  .section .debug_abbrev,"",@progbits
+.Labbrev:
+  .byte 1                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x10                      # DW_AT_stmt_list
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x73                      # DW_AT_addr_base
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0
+  .byte 0
+  .byte 2                         # Abbrev code
+  .byte 0x2e                      # DW_TAG_subprogram
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x3f                      # DW_AT_external
+  .byte 0x19                      # DW_FORM_flag_present
+  .byte 0
+  .byte 0
+  .byte 0
+
+  .section .debug_info,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Lcu_end-.Lcu_start       # DWARF64 unit length
+.Lcu_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .quad .Labbrev                  # Abbrev offset
+  .byte 1                         # DW_TAG_compile_unit
+  .quad .Lstr_file                # DW_AT_name
+  .quad .Lline_table_start0       # DW_AT_stmt_list
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
+  .quad .Laddr_table_base0        # DW_AT_addr_base
+  .byte 2                         # DW_TAG_subprogram
+  .quad .Lstr_main                # DW_AT_name
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
+  .byte 0                         # End children
+.Lcu_end:
+
+  .section .debug_addr,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Ldebug_addr_end-.Ldebug_addr_start
+.Ldebug_addr_start:
+  .short 5                        # Version
+  .byte 8                         # Address size
+  .byte 0                         # Segment selector size
+.Laddr_table_base0:
+  .quad .Lfunc_begin0
+.Ldebug_addr_end:
+
+  .section .debug_str,"MS",@progbits,1
+.Lstr_file:
+  .asciz "dwarf64-lowpc-highpc-convert.s"
+.Lstr_main:
+  .asciz "main"
+
+  .section .debug_line,"",@progbits
+.Lline_table_start0:

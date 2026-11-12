@@ -1,0 +1,70 @@
+# REQUIRES: system-darwin
+
+# In this test we have two CUs with conflicting forward declaration
+# depending on the CU language (one is C++ and the other is Objective-C++).
+# We are then stopped in the C++ CU and try to print the type, at which
+# point LLDB will try to make it into an Clang AST node. If LLDB were to
+# interpret the type as C++ instead of Objective-C, we'd violate Clang
+# invariants and crash.
+#
+# RUN: split-file %s %t
+# RUN: %clangxx_host -c -g -x objective-c++ %t/request.m -o %t/request_objc.o
+# RUN: %clangxx_host -c -g %t/main.cpp -o %t/main.o
+# RUN: %clangxx_host %t/main.o %t/request_objc.o -framework Foundation -o %t/a.out
+#
+# RUN: %lldb %t/a.out \
+# RUN:    -o "breakpoint set -p return -X main" \
+# RUN:    -o run \
+# RUN:    -o "frame variable r" \
+# RUN:    -o exit | FileCheck %s
+#
+# RUN: dsymutil %t/a.out
+#
+# RUN: %lldb %t/a.out \
+# RUN:    -o "breakpoint set -p return -X main" \
+# RUN:    -o run \
+# RUN:    -o "frame variable r" \
+# RUN:    -o exit | FileCheck %s --check-prefix=CHECK-DSYM
+
+# CHECK:      (lldb) frame variable r
+# CHECK-NEXT: (Request) ::r = (m_request = "Hello, World!")
+
+# CHECK-DSYM:      (lldb) frame variable r
+# CHECK-DSYM-NEXT: (Request) ::r = (m_request = "Hello, World!")
+
+#--- lib.h
+#ifndef LIB_H_IN
+#define LIB_H_IN
+
+#ifdef __OBJC__
+@class NSString;                                               
+#else
+class NSString;
+#endif
+
+struct Request {
+  NSString * m_request = nullptr;
+};
+
+#endif // _H_IN
+
+#--- main.cpp
+#include "lib.h"
+
+void process(Request *);
+
+Request r;
+
+int main() {
+    process(&r);
+    return 0;
+}
+
+#--- request.m
+#import <Foundation/Foundation.h>
+
+#include "lib.h"
+
+void process(Request * r) {
+  r->m_request = @"Hello, World!";
+}

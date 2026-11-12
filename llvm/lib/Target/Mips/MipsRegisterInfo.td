@@ -1,0 +1,848 @@
+//===-- MipsRegisterInfo.td - Mips Register defs -----------*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+//  Declarations that describe the MIPS register file
+//===----------------------------------------------------------------------===//
+let Namespace = "Mips" in {
+def sub_32     : SubRegIndex<32>;
+def sub_64     : SubRegIndex<64>;
+def sub_lo     : SubRegIndex<32>;
+def sub_hi     : SubRegIndex<32, 32>;
+def sub_dsp16_19 : SubRegIndex<4, 16>;
+def sub_dsp20    : SubRegIndex<1, 20>;
+def sub_dsp21    : SubRegIndex<1, 21>;
+def sub_dsp22    : SubRegIndex<1, 22>;
+def sub_dsp23    : SubRegIndex<1, 23>;
+
+let FallbackRegAltNameIndex = NoRegAltName in {
+def OABIRegAltName : RegAltNameIndex;
+def NABIRegAltName : RegAltNameIndex;
+def PABIRegAltName : RegAltNameIndex;
+// Assembler and named-register aliases.
+def RegAliasName : RegAltNameIndex;
+}
+}
+
+class Unallocatable {
+  bit isAllocatable = 0;
+}
+
+// We have banks of 32 registers each.
+class MipsReg<bits<16> Enc, string n> : Register<n> {
+  let HWEncoding = Enc;
+  let Namespace = "Mips";
+}
+
+class MipsRegAlias<string alias> {
+  list<RegAltNameIndex> RegAltNameIndices = [RegAliasName];
+  list<string> AltNames = [alias];
+}
+
+class MipsRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
+  : RegisterWithSubRegs<n, subregs> {
+  let HWEncoding = Enc;
+  let Namespace = "Mips";
+}
+
+// Mips CPU Registers.
+class MipsGPRReg<bits<16> Enc, string n, string oabi,
+                 string nabi = oabi, string pabi = nabi> : MipsReg<Enc, n> {
+  let RegAltNameIndices = [OABIRegAltName, NABIRegAltName, PABIRegAltName];
+  let AltNames = [oabi, nabi, pabi];
+}
+
+// Mips 64-bit CPU Registers
+class Mips64GPRReg<MipsGPRReg subreg>
+  : MipsRegWithSubRegs<subreg.HWEncoding, subreg.AsmName, [subreg]> {
+  let SubRegIndices = [sub_32];
+  let RegAltNameIndices = subreg.RegAltNameIndices;
+  let AltNames = subreg.AltNames;
+}
+
+// Mips 32-bit FPU Registers
+class FPR<bits<16> Enc, string n> : MipsReg<Enc, n>;
+
+// Mips 64-bit (aliased) FPU Registers
+class AFPR<bits<16> Enc, string n, list<Register> subregs>
+  : MipsRegWithSubRegs<Enc, n, subregs> {
+  let SubRegIndices = [sub_lo, sub_hi];
+  let CoveredBySubRegs = 1;
+}
+
+class AFPR64<bits<16> Enc, string n, list<Register> subregs>
+  : MipsRegWithSubRegs<Enc, n, subregs> {
+  let SubRegIndices = [sub_lo, sub_hi];
+  let CoveredBySubRegs = 1;
+}
+
+// Mips 128-bit (aliased) MSA Registers
+class AFPR128<bits<16> Enc, string n, list<Register> subregs>
+  : MipsRegWithSubRegs<Enc, n, subregs> {
+  let SubRegIndices = [sub_64];
+}
+
+// Accumulator Registers
+class ACCReg<bits<16> Enc, string n, list<Register> subregs>
+  : MipsRegWithSubRegs<Enc, n, subregs> {
+  let SubRegIndices = [sub_lo, sub_hi];
+  let CoveredBySubRegs = 1;
+}
+
+// Mips Hardware Registers
+class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
+
+class MipsCP0Reg<bits<5> reg, bits<5> sel, string name>
+    : MipsReg<!or(!shl(reg, 5), sel), name>;
+
+multiclass CP0Registers<int reg, list<string> names = []> {
+  foreach sel = 0-7 in {
+    defvar regName = !if(!lt(sel, !size(names)), names[sel], "");
+    def NAME # !if(!eq(sel, 0), "", "_" # sel)
+        : MipsCP0Reg<reg, sel,
+            !if(!empty(regName), "cop0_" # reg # "_" # sel, regName)>;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+//  Registers
+//===----------------------------------------------------------------------===//
+
+let Namespace = "Mips" in {
+  // General Purpose Registers
+  // Registers whose ABI names differ between the O, N and P ABIs use
+  // ABI-independent R<n> record names. For ABI-specific roles use the
+  // aliases above (TableGen) or MipsABIInfo accessors (C++).
+  let isConstant = true in
+  def R0   : MipsGPRReg< 0, "zero", "zero">,              DwarfRegNum<[0]>;
+  def R1   : MipsGPRReg< 1, "1", "at">,                   DwarfRegNum<[1]>;
+  def R2   : MipsGPRReg< 2, "2", "v0", "v0", "t4">,       DwarfRegNum<[2]>;
+  def R3   : MipsGPRReg< 3, "3", "v1", "v1", "t5">,       DwarfRegNum<[3]>;
+  def R4   : MipsGPRReg< 4, "4", "a0">,                   DwarfRegNum<[4]>;
+  def R5   : MipsGPRReg< 5, "5", "a1">,                   DwarfRegNum<[5]>;
+  def R6   : MipsGPRReg< 6, "6", "a2">,                   DwarfRegNum<[6]>;
+  def R7   : MipsGPRReg< 7, "7", "a3">,                   DwarfRegNum<[7]>;
+  def R8   : MipsGPRReg< 8, "8", "t0", "a4">,             DwarfRegNum<[8]>;
+  def R9   : MipsGPRReg< 9, "9", "t1", "a5">,             DwarfRegNum<[9]>;
+  def R10  : MipsGPRReg<10, "10", "t2", "a6">,            DwarfRegNum<[10]>;
+  def R11  : MipsGPRReg<11, "11", "t3", "a7">,            DwarfRegNum<[11]>;
+  def R12  : MipsGPRReg<12, "12", "t4", "t0">,            DwarfRegNum<[12]>;
+  def R13  : MipsGPRReg<13, "13", "t5", "t1">,            DwarfRegNum<[13]>;
+  def R14  : MipsGPRReg<14, "14", "t6", "t2">,            DwarfRegNum<[14]>;
+  def R15  : MipsGPRReg<15, "15", "t7", "t3">,            DwarfRegNum<[15]>;
+  def R16  : MipsGPRReg<16, "16", "s0">,                  DwarfRegNum<[16]>;
+  def R17  : MipsGPRReg<17, "17", "s1">,                  DwarfRegNum<[17]>;
+  def R18  : MipsGPRReg<18, "18", "s2">,                  DwarfRegNum<[18]>;
+  def R19  : MipsGPRReg<19, "19", "s3">,                  DwarfRegNum<[19]>;
+  def R20  : MipsGPRReg<20, "20", "s4">,                  DwarfRegNum<[20]>;
+  def R21  : MipsGPRReg<21, "21", "s5">,                  DwarfRegNum<[21]>;
+  def R22  : MipsGPRReg<22, "22", "s6">,                  DwarfRegNum<[22]>;
+  def R23  : MipsGPRReg<23, "23", "s7">,                  DwarfRegNum<[23]>;
+  def R24  : MipsGPRReg<24, "24", "t8">,                  DwarfRegNum<[24]>;
+  def R25  : MipsGPRReg<25, "25", "t9">,                  DwarfRegNum<[25]>;
+  def R26  : MipsGPRReg<26, "26", "k0">,                  DwarfRegNum<[26]>;
+  def R27  : MipsGPRReg<27, "27", "k1">,                  DwarfRegNum<[27]>;
+  def R28  : MipsGPRReg<28, "gp", "gp">,                  DwarfRegNum<[28]>;
+  def R29  : MipsGPRReg<29, "sp", "sp">,                  DwarfRegNum<[29]>;
+  def R30  : MipsGPRReg<30, "fp", "fp">,                  DwarfRegNum<[30]>;
+  def R31  : MipsGPRReg<31, "ra", "ra">,                  DwarfRegNum<[31]>;
+
+  // General Purpose 64-bit Registers
+  let isConstant = true in
+  def R0_64  : Mips64GPRReg<R0>, DwarfRegNum<[0]>;
+  def R1_64  : Mips64GPRReg<R1>, DwarfRegNum<[1]>;
+  def R2_64  : Mips64GPRReg<R2>, DwarfRegNum<[2]>;
+  def R3_64  : Mips64GPRReg<R3>, DwarfRegNum<[3]>;
+  def R4_64  : Mips64GPRReg<R4>, DwarfRegNum<[4]>;
+  def R5_64  : Mips64GPRReg<R5>, DwarfRegNum<[5]>;
+  def R6_64  : Mips64GPRReg<R6>, DwarfRegNum<[6]>;
+  def R7_64  : Mips64GPRReg<R7>, DwarfRegNum<[7]>;
+  def R8_64  : Mips64GPRReg<R8>, DwarfRegNum<[8]>;
+  def R9_64  : Mips64GPRReg<R9>, DwarfRegNum<[9]>;
+  def R10_64 : Mips64GPRReg<R10>, DwarfRegNum<[10]>;
+  def R11_64 : Mips64GPRReg<R11>, DwarfRegNum<[11]>;
+  def R12_64 : Mips64GPRReg<R12>, DwarfRegNum<[12]>;
+  def R13_64 : Mips64GPRReg<R13>, DwarfRegNum<[13]>;
+  def R14_64 : Mips64GPRReg<R14>, DwarfRegNum<[14]>;
+  def R15_64 : Mips64GPRReg<R15>, DwarfRegNum<[15]>;
+  def R16_64 : Mips64GPRReg<R16>, DwarfRegNum<[16]>;
+  def R17_64 : Mips64GPRReg<R17>, DwarfRegNum<[17]>;
+  def R18_64 : Mips64GPRReg<R18>, DwarfRegNum<[18]>;
+  def R19_64 : Mips64GPRReg<R19>, DwarfRegNum<[19]>;
+  def R20_64 : Mips64GPRReg<R20>, DwarfRegNum<[20]>;
+  def R21_64 : Mips64GPRReg<R21>, DwarfRegNum<[21]>;
+  def R22_64 : Mips64GPRReg<R22>, DwarfRegNum<[22]>;
+  def R23_64 : Mips64GPRReg<R23>, DwarfRegNum<[23]>;
+  def R24_64 : Mips64GPRReg<R24>, DwarfRegNum<[24]>;
+  def R25_64 : Mips64GPRReg<R25>, DwarfRegNum<[25]>;
+  def R26_64 : Mips64GPRReg<R26>, DwarfRegNum<[26]>;
+  def R27_64 : Mips64GPRReg<R27>, DwarfRegNum<[27]>;
+  def R28_64 : Mips64GPRReg<R28>, DwarfRegNum<[28]>;
+  def R29_64 : Mips64GPRReg<R29>, DwarfRegNum<[29]>;
+  def R30_64 : Mips64GPRReg<R30>, DwarfRegNum<[30]>;
+  def R31_64 : Mips64GPRReg<R31>, DwarfRegNum<[31]>;
+
+  /// Mips Single point precision FPU Registers
+  foreach I = 0-31 in
+  def F#I : FPR<I, "f"#I>, DwarfRegNum<[!add(I, 32)]>;
+
+  // Higher half of 64-bit FP registers.
+  foreach I = 0-31 in
+  def F_HI#I : FPR<I, "f"#I>, DwarfRegNum<[!add(I, 32)]>;
+
+  /// Mips Double point precision FPU Registers (aliased
+  /// with the single precision to hold 64 bit values)
+  foreach I = 0-15 in
+  def D#I : AFPR<!shl(I, 1), "f"#!shl(I, 1),
+                 [!cast<FPR>("F"#!shl(I, 1)),
+                  !cast<FPR>("F"#!add(!shl(I, 1), 1))]>;
+
+  /// Mips Double point precision FPU Registers in MFP64 mode.
+  foreach I = 0-31 in
+  def D#I#_64 : AFPR64<I, "f"#I, [!cast<FPR>("F"#I), !cast<FPR>("F_HI"#I)]>,
+                DwarfRegNum<[!add(I, 32)]>;
+
+  /// Mips MSA registers
+  /// MSA and FPU cannot both be present unless the FPU has 64-bit registers
+  foreach I = 0-31 in
+  def W#I : AFPR128<I, "w"#I, [!cast<AFPR64>("D"#I#"_64")]>,
+            DwarfRegNum<[!add(I, 32)]>;
+
+  // Hi/Lo registers
+  def HI0 : MipsReg<0, "ac0">, MipsRegAlias<"hi">, DwarfRegNum<[64]>;
+  def HI1 : MipsReg<1, "ac1">, DwarfRegNum<[176]>;
+  def HI2 : MipsReg<2, "ac2">, DwarfRegNum<[178]>;
+  def HI3 : MipsReg<3, "ac3">, DwarfRegNum<[180]>;
+  def LO0 : MipsReg<0, "ac0">, MipsRegAlias<"lo">, DwarfRegNum<[65]>;
+  def LO1 : MipsReg<1, "ac1">, DwarfRegNum<[177]>;
+  def LO2 : MipsReg<2, "ac2">, DwarfRegNum<[179]>;
+  def LO3 : MipsReg<3, "ac3">, DwarfRegNum<[181]>;
+
+  let SubRegIndices = [sub_32] in {
+  def HI0_64  : RegisterWithSubRegs<"hi", [HI0]>;
+  def LO0_64  : RegisterWithSubRegs<"lo", [LO0]>;
+  }
+
+  // FP control registers.
+  foreach I = 0-31 in
+  def FCR#I : MipsReg<I, ""#I>;
+
+  // FP condition code registers.
+  foreach I = 0-7 in
+  def FCC#I : MipsReg<I, "fcc"#I>;
+
+  // Each COP0 register is identified by its register number and selector.
+  defm COP00  : CP0Registers<0, ["index", "mvpcontrol", "mvpconf0", "mvpconf1",
+                                "vpcontrol"]>;
+  defm COP01  : CP0Registers<1, ["random", "vpecontrol", "vpeconf0", "vpeconf1",
+                                "yqmask", "vpeschedule", "vpeschefback", "vpeopt"]>;
+  defm COP02  : CP0Registers<2, ["entrylo0", "tcstatus", "tcbind", "tcrestart",
+                                "tchalt", "tccontext", "tcschedule", "tcschefback"]>;
+  defm COP03  : CP0Registers<3, ["entrylo1", "globalnumber", "", "", "", "",
+                                "", "tcopt"]>;
+  defm COP04  : CP0Registers<4, ["context", "contextconfig", "userlocal",
+                                "xcontext_config", "debugcontextid", "memorymapid"]>;
+  defm COP05  : CP0Registers<5, ["pagemask", "pagegrain", "segctl0", "segctl1",
+                                "segctl2", "pwbase", "pwfield", "pwsize"]>;
+  defm COP06  : CP0Registers<6, ["wired", "srsconf0", "srsconf1", "srsconf2",
+                                "srsconf3", "srsconf4", "pwctl"]>;
+  defm COP07  : CP0Registers<7, ["hwrena"]>;
+  defm COP08  : CP0Registers<8, ["badvaddr", "badinstr", "badinstrp"]>;
+  defm COP09  : CP0Registers<9, ["count"]>;
+  defm COP010 : CP0Registers<10, ["entryhi", "", "", "", "guestctl1", "guestctl2",
+                                 "guestctl3"]>;
+  defm COP011 : CP0Registers<11, ["compare", "", "", "", "guestctl0ext"]>;
+  defm COP012 : CP0Registers<12, ["status", "intctl", "srsctl", "srsmap", "view_ipl",
+                                 "srsmap2", "guestctl0", "gtoffset"]>;
+  defm COP013 : CP0Registers<13, ["cause", "", "", "", "view_ripl", "nestedexc"]>;
+  defm COP014 : CP0Registers<14, ["epc", "", "nestedepc"]>;
+  defm COP015 : CP0Registers<15, ["prid", "ebase", "cdmmbase", "cmgcrbase",
+                                 "bevva"]>;
+  defm COP016 : CP0Registers<16, ["config", "config1", "config2", "config3",
+                                 "config4", "config5", "config6", "config7"]>;
+  defm COP017 : CP0Registers<17, ["lladdr", "maar", "maari"]>;
+  defm COP018 : CP0Registers<18, !foreach(I, !range(8), "watchlo" # I)>;
+  defm COP019 : CP0Registers<19, !foreach(I, !range(8), "watchhi" # I)>;
+  defm COP020 : CP0Registers<20, ["xcontext"]>;
+  defm COP021 : CP0Registers<21>;
+  defm COP022 : CP0Registers<22>;
+  defm COP023 : CP0Registers<23, ["debug", "tracecontrol", "tracecontrol2",
+                                 "usertracedata1", "traceibpc", "tracedbpc",
+                                 "debug2"]>;
+  defm COP024 : CP0Registers<24, ["depc", "", "tracecontrol3", "usertracedata2"]>;
+  defm COP025 : CP0Registers<25, ["perfctl0", "perfcnt0", "perfctl1", "perfcnt1",
+                                 "perfctl2", "perfcnt2", "perfctl3", "perfcnt3"]>;
+  defm COP026 : CP0Registers<26, ["errctl"]>;
+  defm COP027 : CP0Registers<27, ["cacheerr"]>;
+  defm COP028 : CP0Registers<28, ["taglo", "datalo"]>;
+  defm COP029 : CP0Registers<29, ["taghi", "datahi"]>;
+  defm COP030 : CP0Registers<30, ["errorepc"]>;
+  defm COP031 : CP0Registers<31, ["desave", "", "kscratch1", "kscratch2",
+                                 "kscratch3", "kscratch4", "kscratch5", "kscratch6"]>;
+
+  // COP2 registers.
+  foreach I = 0-31 in
+  def COP2#I : MipsReg<I, ""#I>;
+
+  // COP3 registers.
+  foreach I = 0-31 in
+  def COP3#I : MipsReg<I, ""#I>;
+
+  // PC register
+  def PC : Register<"pc">;
+
+  // Hardware registers
+  def HWR0 : MipsReg<0, "hwr_cpunum">;
+  def HWR1 : MipsReg<1, "hwr_synci_step">;
+  def HWR2 : MipsReg<2, "hwr_cc">;
+  def HWR3 : MipsReg<3, "hwr_ccres">;
+  // GAS does not accept $hwr_ulr, so use the numeric name.
+  def HWR29 : MipsReg<29, "29">, MipsRegAlias<"hwr_ulr">;
+
+  foreach I = {4-28, 30-31} in
+  def HWR#I : MipsReg<I, ""#I>;
+
+  // Accum registers
+  foreach I = 0-3 in
+  def AC#I : ACCReg<I, "ac"#I,
+                    [!cast<Register>("LO"#I), !cast<Register>("HI"#I)]>;
+
+  def AC0_64 : ACCReg<0, "ac0", [LO0_64, HI0_64]>;
+
+  // DSP-ASE control register fields.
+  def DSPPos : Register<"">;
+  def DSPSCount : Register<"">;
+  def DSPCarry : Register<"">;
+  def DSPEFI : Register<"">;
+  def DSPOutFlag16_19 : Register<"">;
+  def DSPOutFlag20 : Register<"">;
+  def DSPOutFlag21 : Register<"">;
+  def DSPOutFlag22 : Register<"">;
+  def DSPOutFlag23 : Register<"">;
+  def DSPCCond : Register<"">;
+
+  let SubRegIndices = [sub_dsp16_19, sub_dsp20, sub_dsp21, sub_dsp22,
+                       sub_dsp23] in
+  def DSPOutFlag : RegisterWithSubRegs<"", [DSPOutFlag16_19, DSPOutFlag20,
+                                            DSPOutFlag21, DSPOutFlag22,
+                                            DSPOutFlag23]>;
+
+  // MSA-ASE control registers.
+  def MSAIR      : MipsReg<0, "0">, MipsRegAlias<"msair">;
+  def MSACSR     : MipsReg<1, "1">, MipsRegAlias<"msacsr">;
+  def MSAAccess  : MipsReg<2, "2">, MipsRegAlias<"msaaccess">;
+  def MSASave    : MipsReg<3, "3">, MipsRegAlias<"msasave">;
+  def MSAModify  : MipsReg<4, "4">, MipsRegAlias<"msamodify">;
+  def MSARequest : MipsReg<5, "5">, MipsRegAlias<"msarequest">;
+  def MSAMap     : MipsReg<6, "6">, MipsRegAlias<"msamap">;
+  def MSAUnmap   : MipsReg<7, "7">, MipsRegAlias<"msaunmap">;
+  // MSA-ASE fake control registers.
+  // These registers do not exist, but instructions like `cfcmsa`
+  // and `ctcmsa` allows to specify them.
+  foreach I = 8-31 in
+  def MSA#I : MipsReg<I, ""#I>;
+
+  // Octeon multiplier and product registers
+  def MPL0 : MipsReg<0, "mpl0">;
+  def MPL1 : MipsReg<1, "mpl1">;
+  def MPL2 : MipsReg<2, "mpl2">;
+  def P0 : MipsReg<0, "p0">;
+  def P1 : MipsReg<1, "p1">;
+  def P2 : MipsReg<2, "p2">;
+
+}
+
+//===----------------------------------------------------------------------===//
+// Register Classes
+//===----------------------------------------------------------------------===//
+
+class GPR32Class<list<ValueType> regTypes> :
+  RegisterClass<"Mips", regTypes, 32, (add
+  // Reserved
+  R0, R1,
+  // Return Values and Arguments
+  R2, R3, R4, R5, R6, R7,
+  // Not preserved across procedure calls
+  R8, R9, R10, R11, R12, R13, R14, R15,
+  // Callee save
+  R16, R17, R18, R19, R20, R21, R22, R23,
+  // Not preserved across procedure calls
+  R24, R25,
+  // Reserved
+  R26, R27, R28, R29, R30, R31)>;
+
+def GPR32 : GPR32Class<[i32]>;
+
+def GPR32ZERO : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved
+  R0)>;
+
+def GPR32NONZERO : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved
+  R1,
+  // Return Values and Arguments
+  R2, R3, R4, R5, R6, R7,
+  // Not preserved across procedure calls
+  R8, R9, R10, R11, R12, R13, R14, R15,
+  // Callee save
+  R16, R17, R18, R19, R20, R21, R22, R23,
+  // Not preserved across procedure calls
+  R24, R25,
+  // Reserved
+  R26, R27, R28, R29, R30, R31)>;
+
+def DSPR  : GPR32Class<[v4i8, v2i16, i32]>;
+
+def GPRMM16 : RegisterClass<"Mips", [i32], 32, (add
+  // Callee save
+  R16, R17,
+  // Return Values and Arguments
+  R2, R3, R4, R5, R6, R7)>;
+
+def GPRMM16Zero : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved
+  R0,
+  // Callee save
+  R17,
+  // Return Values and Arguments
+  R2, R3, R4, R5, R6, R7)>;
+
+def GPRMM16MoveP : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved
+  R0,
+  // Callee save
+  R17,
+  // Return Values and Arguments
+  R2, R3,
+  // Callee save
+  R16, R18, R19, R20)>;
+
+def GPRMM16MovePPairFirst : RegisterClass<"Mips", [i32], 32, (add
+  // Arguments
+  R4, R5, R6)>;
+
+def GPRMM16MovePPairSecond : RegisterClass<"Mips", [i32], 32, (add
+  // Arguments
+  R5, R6, R7,
+  // Callee save
+  R21, R22)>;
+
+def GPR64 : RegisterClass<"Mips", [i64], 64, (add
+  // Reserved
+  R0_64, R1_64,
+  // Return Values and Arguments
+  R2_64, R3_64, R4_64, R5_64, R6_64, R7_64,
+  // Not preserved across procedure calls
+  R8_64, R9_64, R10_64, R11_64, R12_64, R13_64, R14_64, R15_64,
+  // Callee save
+  R16_64, R17_64, R18_64, R19_64, R20_64, R21_64, R22_64, R23_64,
+  // Not preserved across procedure calls
+  R24_64, R25_64,
+  // Reserved
+  R26_64, R27_64, R28_64, R29_64, R30_64, R31_64)>;
+
+def CPU16Regs : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments
+  R2, R3, R4, R5, R6, R7,
+  // Callee save
+  R16, R17)>;
+
+def CPU16RegsPlusSP : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments
+  R2, R3, R4, R5, R6, R7,
+  // Callee save
+  R16, R17,
+  R29)>;
+
+def CPURAReg : RegisterClass<"Mips", [i32], 32, (add R31)>, Unallocatable;
+
+def CPUSPReg : RegisterClass<"Mips", [i32], 32, (add R29)>, Unallocatable;
+
+// 64bit fp:
+// * FGR64  - 32 64-bit registers
+// * AFGR64 - 16 32-bit even registers (32-bit FP Mode)
+//
+// 32bit fp:
+// * FGR32 - 16 32-bit even registers
+// * FGR32 - 32 32-bit registers (single float only mode)
+def FGR32 : RegisterClass<"Mips", [f32], 32, (sequence "F%u", 0, 31)> {
+  // Do not allocate odd registers when given -mattr=+nooddspreg.
+  let AltOrders = [(decimate FGR32, 2)];
+  let AltOrderSelect = [{
+    const auto & S = MF.getSubtarget<MipsSubtarget>();
+    return S.isABI_O32() && !S.useOddSPReg();
+  }];
+}
+
+def AFGR64 : RegisterClass<"Mips", [f64], 64, (add
+  // Return Values and Arguments
+  D0, D1,
+  // Not preserved across procedure calls
+  D2, D3, D4, D5,
+  // Return Values and Arguments
+  D6, D7,
+  // Not preserved across procedure calls
+  D8, D9,
+  // Callee save
+  D10, D11, D12, D13, D14, D15)>;
+
+def FGR64 : RegisterClass<"Mips", [f64], 64, (sequence "D%u_64", 0, 31)> {
+  // Do not allocate odd registers when given -mattr=+nooddspreg.
+  let AltOrders = [(decimate FGR64, 2)];
+  let AltOrderSelect = [{
+    const auto & S = MF.getSubtarget<MipsSubtarget>();
+    return S.isABI_O32() && !S.useOddSPReg();
+  }];
+}
+
+// FP control registers.
+def CCR : RegisterClass<"Mips", [i32], 32, (sequence "FCR%u", 0, 31)>,
+          Unallocatable;
+
+// FP condition code registers.
+def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>,
+          Unallocatable;
+
+def MSA128B: RegisterClass<"Mips", [v16i8], 128,
+                           (sequence "W%u", 0, 31)>;
+def MSA128H: RegisterClass<"Mips", [v8i16, v8f16], 128,
+                           (sequence "W%u", 0, 31)>;
+def MSA128W: RegisterClass<"Mips", [v4i32, v4f32], 128,
+                           (sequence "W%u", 0, 31)>;
+def MSA128D: RegisterClass<"Mips", [v2i64, v2f64], 128,
+                           (sequence "W%u", 0, 31)>;
+def MSA128WEvens: RegisterClass<"Mips", [v4i32, v4f32], 128,
+                                (decimate (sequence "W%u", 0, 31), 2)>;
+
+def MSACtrl: RegisterClass<"Mips", [i32], 32, (add
+  MSAIR, MSACSR, MSAAccess, MSASave, MSAModify, MSARequest, MSAMap, MSAUnmap,
+  (sequence "MSA%u", 8, 31))>, Unallocatable;
+
+// Hi/Lo Registers
+def LO32 : RegisterClass<"Mips", [i32], 32, (add LO0)>;
+def HI32 : RegisterClass<"Mips", [i32], 32, (add HI0)>;
+def LO32DSP : RegisterClass<"Mips", [i32], 32, (sequence "LO%u", 0, 3)>;
+def HI32DSP : RegisterClass<"Mips", [i32], 32, (sequence "HI%u", 0, 3)>;
+def LO64 : RegisterClass<"Mips", [i64], 64, (add LO0_64)>;
+def HI64 : RegisterClass<"Mips", [i64], 64, (add HI0_64)>;
+
+// Hardware registers
+def HWRegs : RegisterClass<"Mips", [i32], 32, (sequence "HWR%u", 0, 31)>,
+             Unallocatable;
+
+// Accumulator Registers
+def ACC64 : RegisterClass<"Mips", [untyped], 64, (add AC0)> {
+  let Size = 64;
+}
+
+def ACC128 : RegisterClass<"Mips", [untyped], 128, (add AC0_64)> {
+  let Size = 128;
+}
+
+def ACC64DSP : RegisterClass<"Mips", [untyped], 64, (sequence "AC%u", 0, 3)> {
+  let Size = 64;
+}
+
+def DSPCC : RegisterClass<"Mips", [v4i8, v2i16], 32, (add DSPCCond)>;
+
+// Coprocessor 0 registers.
+// Ordered by selector, then register number; see MIPS_MC::getCOP0Register.
+def COP0 : RegisterClass<"Mips", [i32], 32, (add
+    (sequence "COP0%u", 0, 31),
+    (sequence "COP0%u_1", 0, 31), (sequence "COP0%u_2", 0, 31),
+    (sequence "COP0%u_3", 0, 31), (sequence "COP0%u_4", 0, 31),
+    (sequence "COP0%u_5", 0, 31), (sequence "COP0%u_6", 0, 31),
+    (sequence "COP0%u_7", 0, 31))>, Unallocatable;
+
+// Coprocessor 2 registers.
+def COP2 : RegisterClass<"Mips", [i32], 32, (sequence "COP2%u", 0, 31)>,
+           Unallocatable;
+
+// Coprocessor 3 registers.
+def COP3 : RegisterClass<"Mips", [i32], 32, (sequence "COP3%u", 0, 31)>,
+           Unallocatable;
+
+// Stack pointer and global pointer classes for instructions that are limited
+// to a single register such as lwgp/lwsp in microMIPS.
+def SP32 : RegisterClass<"Mips", [i32], 32, (add R29)>, Unallocatable;
+def SP64 : RegisterClass<"Mips", [i64], 64, (add R29_64)>, Unallocatable;
+def GP32 : RegisterClass<"Mips", [i32], 32, (add R28)>, Unallocatable;
+def GP64 : RegisterClass<"Mips", [i64], 64, (add R28_64)>, Unallocatable;
+
+// Octeon multiplier and product registers
+def OCTEON_MPL : RegisterClass<"Mips", [i64], 64, (add MPL0, MPL1, MPL2)>,
+                 Unallocatable;
+def OCTEON_P : RegisterClass<"Mips", [i64], 64, (add P0, P1, P2)>,
+               Unallocatable;
+
+// Register Operands.
+
+class MipsAsmRegOperand : AsmOperandClass {
+  let ParserMethod = "parseAnyRegister";
+}
+
+def GPR64AsmOperand : MipsAsmRegOperand {
+  let Name = "GPR64AsmReg";
+  let PredicateMethod = "isGPRAsmReg";
+}
+
+def GPR32ZeroAsmOperand : MipsAsmRegOperand {
+  let Name = "GPR32ZeroAsmReg";
+  let PredicateMethod = "isGPRZeroAsmReg";
+}
+
+def GPR32NonZeroAsmOperand : MipsAsmRegOperand {
+  let Name = "GPR32NonZeroAsmReg";
+  let PredicateMethod = "isGPRNonZeroAsmReg";
+}
+
+def GPR32AsmOperand : MipsAsmRegOperand {
+  let Name = "GPR32AsmReg";
+  let PredicateMethod = "isGPRAsmReg";
+}
+
+def GPRMM16AsmOperand : MipsAsmRegOperand {
+  let Name = "GPRMM16AsmReg";
+  let PredicateMethod = "isMM16AsmReg";
+}
+
+def GPRMM16AsmOperandZero : MipsAsmRegOperand {
+  let Name = "GPRMM16AsmRegZero";
+  let PredicateMethod = "isMM16AsmRegZero";
+}
+
+def GPRMM16AsmOperandMoveP : MipsAsmRegOperand {
+  let Name = "GPRMM16AsmRegMoveP";
+  let PredicateMethod = "isMM16AsmRegMoveP";
+}
+
+def GPRMM16AsmOperandMovePPairFirst : MipsAsmRegOperand {
+  let Name = "GPRMM16AsmRegMovePPairFirst";
+  let PredicateMethod = "isMM16AsmRegMovePPairFirst";
+}
+
+def GPRMM16AsmOperandMovePPairSecond : MipsAsmRegOperand {
+  let Name = "GPRMM16AsmRegMovePPairSecond";
+  let PredicateMethod = "isMM16AsmRegMovePPairSecond";
+}
+
+def ACC64DSPAsmOperand : MipsAsmRegOperand {
+  let Name = "ACC64DSPAsmReg";
+  let PredicateMethod = "isACCAsmReg";
+}
+
+def HI32DSPAsmOperand : MipsAsmRegOperand {
+  let Name = "HI32DSPAsmReg";
+  let PredicateMethod = "isACCAsmReg";
+}
+
+def LO32DSPAsmOperand : MipsAsmRegOperand {
+  let Name = "LO32DSPAsmReg";
+  let PredicateMethod = "isACCAsmReg";
+}
+
+def CCRAsmOperand : MipsAsmRegOperand {
+  let Name = "CCRAsmReg";
+}
+
+def AFGR64AsmOperand : MipsAsmRegOperand {
+  let Name = "AFGR64AsmReg";
+  let PredicateMethod = "isFGRAsmReg";
+}
+
+def StrictlyAFGR64AsmOperand : MipsAsmRegOperand {
+  let Name = "StrictlyAFGR64AsmReg";
+  let PredicateMethod = "isStrictlyFGRAsmReg";
+}
+
+def FGR64AsmOperand : MipsAsmRegOperand {
+  let Name = "FGR64AsmReg";
+  let PredicateMethod = "isFGRAsmReg";
+}
+
+def StrictlyFGR64AsmOperand : MipsAsmRegOperand {
+  let Name = "StrictlyFGR64AsmReg";
+  let PredicateMethod = "isStrictlyFGRAsmReg";
+}
+
+def FGR32AsmOperand : MipsAsmRegOperand {
+  let Name = "FGR32AsmReg";
+  let PredicateMethod = "isFGRAsmReg";
+}
+
+def StrictlyFGR32AsmOperand : MipsAsmRegOperand {
+  let Name = "StrictlyFGR32AsmReg";
+  let PredicateMethod = "isStrictlyFGRAsmReg";
+}
+
+def FCCRegsAsmOperand : MipsAsmRegOperand {
+  let Name = "FCCAsmReg";
+}
+
+def MSA128AsmOperand : MipsAsmRegOperand {
+  let Name = "MSA128AsmReg";
+}
+
+def MSACtrlAsmOperand : MipsAsmRegOperand {
+  let Name = "MSACtrlAsmReg";
+}
+
+def GPR32ZeroOpnd : RegisterOperand<GPR32ZERO> {
+  let ParserMatchClass = GPR32ZeroAsmOperand;
+}
+
+def GPR32NonZeroOpnd : RegisterOperand<GPR32NONZERO> {
+  let ParserMatchClass = GPR32NonZeroAsmOperand;
+}
+
+def GPR32Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPR32AsmOperand;
+}
+
+def GPRMM16Opnd : RegisterOperand<GPRMM16> {
+  let ParserMatchClass = GPRMM16AsmOperand;
+}
+
+def GPRMM16OpndZero : RegisterOperand<GPRMM16Zero> {
+  let ParserMatchClass = GPRMM16AsmOperandZero;
+}
+
+def GPRMM16OpndMoveP : RegisterOperand<GPRMM16MoveP> {
+  let ParserMatchClass = GPRMM16AsmOperandMoveP;
+  let EncoderMethod = "getMovePRegSingleOpValue";
+}
+
+def GPRMM16OpndMovePPairFirst : RegisterOperand<GPRMM16MovePPairFirst> {
+  let ParserMatchClass = GPRMM16AsmOperandMovePPairFirst;
+}
+
+def GPRMM16OpndMovePPairSecond : RegisterOperand<GPRMM16MovePPairSecond> {
+  let ParserMatchClass = GPRMM16AsmOperandMovePPairSecond;
+}
+
+def GPR64Opnd : RegisterOperand<GPR64> {
+  let ParserMatchClass = GPR64AsmOperand;
+}
+
+def DSPROpnd : RegisterOperand<DSPR> {
+  let ParserMatchClass = GPR32AsmOperand;
+}
+
+def CCROpnd : RegisterOperand<CCR> {
+  let ParserMatchClass = CCRAsmOperand;
+}
+
+def HWRegsAsmOperand : MipsAsmRegOperand {
+  let Name = "HWRegsAsmReg";
+}
+
+def COP0AsmOperand : MipsAsmRegOperand {
+  let Name = "COP0AsmReg";
+  let ParserMethod = "parseCOP0Register";
+}
+
+def COP2AsmOperand : MipsAsmRegOperand {
+  let Name = "COP2AsmReg";
+}
+
+def COP3AsmOperand : MipsAsmRegOperand {
+  let Name = "COP3AsmReg";
+}
+
+def HWRegsOpnd : RegisterOperand<HWRegs> {
+  let ParserMatchClass = HWRegsAsmOperand;
+}
+
+def AFGR64Opnd : RegisterOperand<AFGR64> {
+  let ParserMatchClass = AFGR64AsmOperand;
+}
+
+def StrictlyAFGR64Opnd : RegisterOperand<AFGR64> {
+  let ParserMatchClass = StrictlyAFGR64AsmOperand;
+}
+
+def FGR64Opnd : RegisterOperand<FGR64> {
+  let ParserMatchClass = FGR64AsmOperand;
+}
+
+def StrictlyFGR64Opnd : RegisterOperand<FGR64> {
+  let ParserMatchClass = StrictlyFGR64AsmOperand;
+}
+
+def FGR32Opnd : RegisterOperand<FGR32> {
+  let ParserMatchClass = FGR32AsmOperand;
+}
+
+def StrictlyFGR32Opnd : RegisterOperand<FGR32> {
+  let ParserMatchClass = StrictlyFGR32AsmOperand;
+}
+
+def FCCRegsOpnd : RegisterOperand<FCC> {
+  let ParserMatchClass = FCCRegsAsmOperand;
+}
+
+def LO32DSPOpnd : RegisterOperand<LO32DSP> {
+  let ParserMatchClass = LO32DSPAsmOperand;
+}
+
+def HI32DSPOpnd : RegisterOperand<HI32DSP> {
+  let ParserMatchClass = HI32DSPAsmOperand;
+}
+
+def ACC64DSPOpnd : RegisterOperand<ACC64DSP> {
+  let ParserMatchClass = ACC64DSPAsmOperand;
+}
+
+def COP0Opnd : RegisterOperand<COP0> {
+  let ParserMatchClass = COP0AsmOperand;
+  let PrintMethod = "printCOP0Operand";
+}
+
+def COP2Opnd : RegisterOperand<COP2> {
+  let ParserMatchClass = COP2AsmOperand;
+}
+
+def COP3Opnd : RegisterOperand<COP3> {
+  let ParserMatchClass = COP3AsmOperand;
+}
+
+def MSA128BOpnd : RegisterOperand<MSA128B> {
+  let ParserMatchClass = MSA128AsmOperand;
+}
+
+def MSA128HOpnd : RegisterOperand<MSA128H> {
+  let ParserMatchClass = MSA128AsmOperand;
+}
+
+def MSA128WOpnd : RegisterOperand<MSA128W> {
+  let ParserMatchClass = MSA128AsmOperand;
+}
+
+def MSA128DOpnd : RegisterOperand<MSA128D> {
+  let ParserMatchClass = MSA128AsmOperand;
+}
+
+def MSA128CROpnd : RegisterOperand<MSACtrl> {
+  let ParserMatchClass = MSACtrlAsmOperand;
+}
+
+def mips_ptr_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [GPR32, GPR64]>;
+
+def ptr_gpr16mm_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [GPRMM16, GPRMM16]>; // FIXME: Why even use this if it's just a constant
+
+def ptr_sp_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [SP32, SP64]>;
+
+def ptr_gp_rc : RegClassByHwMode<
+  [MIPS32, MIPS64],
+  [GP32, GP64]>;

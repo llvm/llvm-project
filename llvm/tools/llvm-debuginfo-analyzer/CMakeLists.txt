@@ -1,0 +1,21 @@
+set(LLVM_LINK_COMPONENTS
+  AllTargetsDescs
+  AllTargetsDisassemblers
+  AllTargetsInfos
+  BinaryFormat
+  Core
+  DebugInfoCodeView
+  DebugInfoLogicalView
+  DebugInfoPDB
+  IRReader
+  MC
+  MCDisassembler
+  Object
+  Support
+  TransformUtils
+  )
+
+add_llvm_tool(llvm-debuginfo-analyzer
+  llvm-debuginfo-analyzer.cpp
+  Options.cpp
+  )

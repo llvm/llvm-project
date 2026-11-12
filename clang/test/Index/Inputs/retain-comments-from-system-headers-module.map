@@ -1,0 +1,4 @@
+module retain_comments_from_system_headers {
+  header "retain-comments-from-system-headers.h"
+  export *
+}

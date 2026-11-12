@@ -1,0 +1,33 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - F32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - F64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            neg_f32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            neg_f64
+        Kind:            FUNCTION
+        Index:           1
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            43000020418C0B
+      - Index:           1
+        Locals:          []
+        Body:            4400000000000024409A0B
+...

@@ -1,0 +1,19 @@
+RUN: %cpp_compiler %S/FlagsTest.cpp -o %t-FlagsTest
+RUN: %run %t-FlagsTest -runs=10 -foo_bar=1 2>&1 | FileCheck %s --check-prefix=FOO_BAR
+FOO_BAR: WARNING: unrecognized flag '-foo_bar=1'; use -help=1 to list all flags
+FOO_BAR: BINGO
+
+RUN: %run %t-FlagsTest -runs=10 --max_len=100 2>&1 | FileCheck %s --check-prefix=DASH_DASH
+DASH_DASH: WARNING: did you mean '-max_len=100' (single dash)?
+DASH_DASH: INFO: A corpus is not provided, starting from an empty corpus
+
+RUN: %run %t-FlagsTest -help=1 2>&1 | FileCheck %s --check-prefix=NO_INTERNAL
+NO_INTERNAL-NOT: internal flag
+
+RUN: %run %t-FlagsTest --foo-bar -runs=10 -ignore_remaining_args=1 --baz -help=1 test 2>&1 | FileCheck %s --check-prefix=PASSTHRU
+PASSTHRU: BINGO --foo-bar --baz -help=1 test
+
+RUN: mkdir -p %t/T0 %t/T1
+RUN: echo z > %t/T1/z
+RUN: %run %t-FlagsTest -runs=10 --foo-bar -merge=1 %t/T0 %t/T1 -ignore_remaining_args=1 --baz -help=1 test 2>&1 | FileCheck %s --check-prefix=PASSTHRU-MERGE
+PASSTHRU-MERGE: BINGO --foo-bar --baz -help=1 test

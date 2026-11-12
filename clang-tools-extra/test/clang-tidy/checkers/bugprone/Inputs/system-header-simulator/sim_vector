@@ -1,0 +1,150 @@
+#ifndef _SIM_VECTOR
+#define _SIM_VECTOR
+
+#pragma clang system_header
+
+#include "sim_iterator_base"
+
+namespace std {
+
+template <typename T, typename Ptr, typename Ref> struct __vector_iterator {
+  typedef __vector_iterator<T, T *, T &> iterator;
+  typedef __vector_iterator<T, const T *, const T &> const_iterator;
+
+  typedef ptrdiff_t difference_type;
+  typedef T value_type;
+  typedef Ptr pointer;
+  typedef Ref reference;
+  typedef std::random_access_iterator_tag iterator_category;
+
+  __vector_iterator(const Ptr p = 0) : ptr(p) {}
+  __vector_iterator(const iterator &rhs): ptr(rhs.base()) {}
+  __vector_iterator<T, Ptr, Ref>& operator++() { ++ ptr; return *this; }
+  __vector_iterator<T, Ptr, Ref> operator++(int) {
+    auto tmp = *this;
+    ++ ptr;
+    return tmp;
+  }
+  __vector_iterator<T, Ptr, Ref> operator--() { -- ptr; return *this; }
+  __vector_iterator<T, Ptr, Ref> operator--(int) {
+    auto tmp = *this; -- ptr;
+    return tmp;
+  }
+  __vector_iterator<T, Ptr, Ref> operator+(difference_type n) {
+    return ptr + n;
+  }
+  friend __vector_iterator<T, Ptr, Ref> operator+(
+      difference_type n,
+      const __vector_iterator<T, Ptr, Ref> &iter) {
+    return n + iter.ptr;
+  }
+  __vector_iterator<T, Ptr, Ref> operator-(difference_type n) {
+    return ptr - n;
+  }
+  __vector_iterator<T, Ptr, Ref> operator+=(difference_type n) {
+    return ptr += n;
+  }
+  __vector_iterator<T, Ptr, Ref> operator-=(difference_type n) {
+    return ptr -= n;
+  }
+
+  template<typename U, typename Ptr2, typename Ref2>
+  difference_type operator-(const __vector_iterator<U, Ptr2, Ref2> &rhs);
+
+  Ref operator*() const { return *ptr; }
+  Ptr operator->() const { return ptr; }
+
+  Ref operator[](difference_type n) {
+    return *(ptr+n);
+  }
+
+  bool operator==(const iterator &rhs) const { return ptr == rhs.ptr; }
+  bool operator==(const const_iterator &rhs) const { return ptr == rhs.ptr; }
+
+  bool operator!=(const iterator &rhs) const { return ptr != rhs.ptr; }
+  bool operator!=(const const_iterator &rhs) const { return ptr != rhs.ptr; }
+
+  const Ptr& base() const { return ptr; }
+
+private:
+  Ptr ptr;
+};
+
+template<typename T>
+class vector {
+  T *_start;
+  T *_finish;
+  T *_end_of_storage;
+
+public:
+  typedef T value_type;
+  typedef size_t size_type;
+  typedef __vector_iterator<T, T *, T &> iterator;
+  typedef __vector_iterator<T, const T *, const T &> const_iterator;
+
+  vector() : _start(0), _finish(0), _end_of_storage(0) {}
+  template <typename InputIterator>
+  vector(InputIterator first, InputIterator last);
+  vector(const vector &other);
+  vector(vector &&other);
+  ~vector();
+
+  size_t size() const {
+    return size_t(_finish - _start);
+  }
+
+  vector& operator=(const vector &other);
+  vector& operator=(vector &&other);
+  vector& operator=(std::initializer_list<T> ilist);
+
+  void assign(size_type count, const T &value);
+  template <typename InputIterator >
+  void assign(InputIterator first, InputIterator last);
+  void assign(std::initializer_list<T> ilist);
+
+  void clear();
+
+  void push_back(const T &value);
+  void push_back(T &&value);
+  template<class... Args>
+  void emplace_back(Args&&... args);
+  void pop_back();
+
+  iterator insert(const_iterator position, const value_type &val);
+  iterator insert(const_iterator position, size_type n,
+                  const value_type &val);
+  template <typename InputIterator>
+  iterator insert(const_iterator position, InputIterator first,
+                  InputIterator last);
+  iterator insert(const_iterator position, value_type &&val);
+  iterator insert(const_iterator position, initializer_list<value_type> il);
+
+  template <class... Args>
+  iterator emplace(const_iterator position, Args&&... args);
+
+  iterator erase(const_iterator position);
+  iterator erase(const_iterator first, const_iterator last);
+
+  T &operator[](size_t n) {
+    return _start[n];
+  }
+
+  const T &operator[](size_t n) const {
+    return _start[n];
+  }
+
+  iterator begin() { return iterator(_start); }
+  const_iterator begin() const { return const_iterator(_start); }
+  const_iterator cbegin() const { return const_iterator(_start); }
+  iterator end() { return iterator(_finish); }
+  const_iterator end() const { return const_iterator(_finish); }
+  const_iterator cend() const { return const_iterator(_finish); }
+  T& front() { return *begin(); }
+  const T& front() const { return *begin(); }
+  T& back() { return *(end() - 1); }
+  const T& back() const { return *(end() - 1); }
+};
+
+} // namespace std
+
+#endif // _SIM_VECTOR

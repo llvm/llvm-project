@@ -1,0 +1,3 @@
+BasedOnStyle: LLVM
+# We don't want clang-format to introduce line breaks in RUN commands.
+ColumnLimit: 999

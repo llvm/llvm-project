@@ -1,0 +1,14 @@
+module A [system] { // expected-note {{previous definition is here}}
+  module sub {
+    header "sys/A.h"
+  }
+  module sub2 {
+    header "sys/A2.h"
+  }
+  module stdarg {
+    header "stdarg.h"
+    export *
+  }
+}
+
+module A2 {}

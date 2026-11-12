@@ -1,0 +1,367 @@
+//===- VectorTransformOps.cpp - Implementation of Vector transform ops ----===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
+
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/Dialect/X86/Transforms.h"
+
+using namespace mlir;
+using namespace mlir::vector;
+using namespace mlir::transform;
+
+//===----------------------------------------------------------------------===//
+// Apply...ConversionPatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyVectorToLLVMConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  populateVectorToLLVMConversionPatterns(
+      static_cast<LLVMTypeConverter &>(typeConverter), patterns,
+      getReassociateFpReductions(), getForce_32bitVectorIndices(),
+      getUseVectorAlignment());
+}
+
+LogicalResult
+transform::ApplyVectorToLLVMConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+void transform::ApplyVectorLinearizeConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  ConversionTarget target(*getContext());
+  vector::populateVectorLinearizeBasePatterns(typeConverter, target, patterns);
+  if (getShuffleLikeOps())
+    vector::populateVectorLinearizeShuffleLikeOpsPatterns(typeConverter, target,
+                                                          patterns);
+}
+
+void transform::ApplyVectorLinearizeConversionPatternsOp::
+    populateConversionTargetRules(const TypeConverter &typeConverter,
+                                  ConversionTarget &conversionTarget) {
+  // The legality rules need a mutable converter; they keep their own copy.
+  TypeConverter linearizer;
+  vector::populateForVectorLinearize(linearizer, conversionTarget);
+  if (std::optional<int64_t> bitwidth = getTargetVectorBitwidth())
+    vector::populateVectorLinearizeBitWidthTargetRules(conversionTarget,
+                                                       *bitwidth);
+}
+
+LogicalResult
+transform::ApplyVectorLinearizeConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() !=
+      VectorLinearizeTypeConverterOp::getTypeConverterType())
+    return emitOpError("expected VectorLinearizeTypeConverter");
+  return success();
+}
+
+std::unique_ptr<TypeConverter>
+transform::VectorLinearizeTypeConverterOp::getTypeConverter() {
+  auto typeConverter = std::make_unique<TypeConverter>();
+  ConversionTarget target(*getContext());
+  vector::populateForVectorLinearize(*typeConverter, target);
+  return typeConverter;
+}
+
+StringRef transform::VectorLinearizeTypeConverterOp::getTypeConverterType() {
+  return "VectorLinearizeTypeConverter";
+}
+
+//===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyCastAwayVectorLeadingOneDimPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+}
+
+void transform::ApplyFoldArithExtensionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateFoldArithExtensionPatterns(patterns);
+}
+
+void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateElementwiseToVectorOpsPatterns(patterns);
+}
+
+void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorReductionToContractPatterns(patterns);
+}
+
+void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorMaskOpLoweringPatterns(patterns);
+}
+
+void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransferDropUnitDimsPatterns(patterns);
+}
+
+void transform::ApplyTransferPermutationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
+}
+
+void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateDropUnitDimWithShapeCastPatterns(patterns);
+}
+
+void transform::ApplyDropInnerMostUnitDimsFromXferOpsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  vector::populateDropInnerMostUnitDimsXferOpPatterns(patterns);
+}
+
+void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorBitCastLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerBroadcastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorBroadcastLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerContractionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorContractLoweringPatterns(patterns, getLoweringStrategy(),
+                                         /*benefit=*/1,
+                                         /*disableOuterProductLowering=*/true);
+}
+
+void transform::ApplyLowerMasksPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorMaskOpLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerMaskedTransfersPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorMaskLoweringPatternsForSideEffectingOps(patterns);
+}
+
+void transform::ApplyMaterializeMasksPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorMaskMaterializationPatterns(patterns,
+                                            /*force32BitVectorIndices=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// Multi-reduction patterns
+//===----------------------------------------------------------------------===//
+void transform::ApplyReorderMultiReductionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionReorderPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyMultiReductionFlatteningPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionFlatteningPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyMultiReductionUnrollingPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionUnrollingPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyLowerOuterProductPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorOuterProductLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerGatherPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorGatherLoweringPatterns(patterns);
+}
+
+void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorFromElementsUnrollPatterns(patterns);
+}
+
+void transform::ApplyUnrollContractPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  int64_t m = getM();
+  int64_t n = getN();
+  int64_t k = getK();
+
+  auto nativeShapeFn =
+      [m, n, k](Operation *op) -> std::optional<SmallVector<int64_t>> {
+    return SmallVector<int64_t>({m, n, k});
+  };
+
+  auto constraint = [](Operation *op) {
+    auto contract = dyn_cast<vector::ContractionOp>(op);
+    if (!contract)
+      return failure();
+
+    auto iterators = contract.getIteratorTypesArray();
+    if (iterators.size() != 3 ||
+        iterators[0] != vector::IteratorType::parallel ||
+        iterators[1] != vector::IteratorType::parallel ||
+        iterators[2] != vector::IteratorType::reduction)
+      return failure();
+
+    auto type = dyn_cast<VectorType>(contract.getType());
+    if (!type || type.getRank() != 2)
+      return failure();
+    return success();
+  };
+
+  vector::populateVectorContractUnrollPatterns(
+      patterns, vector::UnrollVectorOptions()
+                    .setNativeShapeFn(nativeShapeFn)
+                    .setFilterConstraint(constraint));
+}
+
+void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorToElementsUnrollPatterns(patterns);
+}
+
+void transform::ApplyLowerScanPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorScanLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerShapeCastPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorShapeCastLoweringPatterns(patterns);
+}
+
+void transform::ApplyLowerStepPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorStepLoweringPatterns(patterns, getIndexBitwidth());
+}
+
+void transform::ApplyLowerTransferPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransferLoweringPatterns(patterns,
+                                                 getMaxTransferRank());
+}
+
+void transform::ApplyLowerTransposePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransposeLoweringPatterns(patterns,
+                                                  getLoweringStrategy());
+  if (getAvx2LoweringStrategy()) {
+    auto avx2LoweringOptions = x86::avx2::LoweringOptions().setTransposeOptions(
+        x86::avx2::TransposeLoweringOptions().lower4x8xf32(true).lower8x8xf32(
+            true));
+    x86::avx2::populateSpecializedTransposeLoweringPatterns(
+        patterns, avx2LoweringOptions, /*benefit=*/10);
+  }
+}
+
+void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorInterleaveLoweringPatterns(patterns);
+}
+
+void transform::ApplyInterleaveAndDeinterleaveToShufflePatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  vector::populateVectorInterleaveToShufflePatterns(patterns);
+  vector::populateVectorDeinterleaveToShufflePatterns(patterns);
+}
+
+void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorNarrowTypeRewritePatterns(patterns);
+  populateVectorTransposeNarrowTypeRewritePatterns(patterns);
+}
+
+void transform::ApplySplitTransferFullPartialPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorTransferSplit(getSplitTransferStrategy());
+  populateVectorTransferFullPartialPatterns(patterns, vectorTransformOptions);
+}
+
+void transform::ApplyTransferToScfPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  VectorTransferToSCFOptions vectorTransferToSCFOptions =
+      VectorTransferToSCFOptions()
+          .enableFullUnroll(getFullUnroll())
+          .setTargetRank(getMaxTransferRank());
+  populateVectorToSCFConversionPatterns(patterns, vectorTransferToSCFOptions);
+}
+
+void transform::ApplySinkVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateSinkVectorOpsPatterns(patterns);
+}
+
+void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateSinkVectorMemOpsPatterns(patterns);
+}
+
+void transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateFlattenVectorTransferPatterns(patterns,
+                                                getTargetVectorBitwidth());
+}
+
+//===----------------------------------------------------------------------===//
+// Transform op registration
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Registers new ops and declares PDL as dependent dialect since the additional
+/// ops are using PDL types for operands and results.
+class VectorTransformDialectExtension
+    : public transform::TransformDialectExtension<
+          VectorTransformDialectExtension> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(VectorTransformDialectExtension)
+
+  VectorTransformDialectExtension() {
+    declareGeneratedDialect<vector::VectorDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
+    declareGeneratedDialect<LLVM::LLVMDialect>();
+    registerTransformOps<
+#define GET_OP_LIST
+#include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.cpp.inc"
+        >();
+  }
+};
+} // namespace
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.cpp.inc"
+
+void mlir::vector::registerTransformDialectExtension(
+    DialectRegistry &registry) {
+  registry.addExtensions<VectorTransformDialectExtension>();
+}

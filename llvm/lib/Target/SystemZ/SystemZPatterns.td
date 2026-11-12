@@ -1,0 +1,207 @@
+//===-- SystemZPatterns.td - SystemZ-specific pattern rules ---*- tblgen-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// Record that INSN performs a 64-bit version of unary operator OPERATOR
+// in which the operand is sign-extended from 32 to 64 bits.
+multiclass SXU<SDPatternOperator operator, Instruction insn> {
+  def : Pat<(operator (sext (i32 GR32:$src))),
+            (insn GR32:$src)>;
+  def : Pat<(operator (sext_inreg GR64:$src, i32)),
+            (insn (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
+}
+
+// Record that INSN performs a 64-bit version of binary operator OPERATOR
+// in which the first operand has class CLS and which the second operand
+// is sign-extended from a 32-bit register.
+multiclass SXB<SDPatternOperator operator, RegisterOperand cls,
+               Instruction insn> {
+  def : Pat<(operator cls:$src1, (sext GR32:$src2)),
+            (insn cls:$src1, GR32:$src2)>;
+  def : Pat<(operator cls:$src1, (sext_inreg GR64:$src2, i32)),
+            (insn cls:$src1, (EXTRACT_SUBREG GR64:$src2, subreg_l32))>;
+}
+
+// Like SXB, but for zero extension.
+multiclass ZXB<SDPatternOperator operator, RegisterOperand cls,
+               Instruction insn> {
+  def : Pat<(operator cls:$src1, (zext GR32:$src2)),
+            (insn cls:$src1, GR32:$src2)>;
+  def : Pat<(operator cls:$src1, (and GR64:$src2, 0xffffffff)),
+            (insn cls:$src1, (EXTRACT_SUBREG GR64:$src2, subreg_l32))>;
+}
+
+// Record that INSN performs a binary read-modify-write operation,
+// with LOAD, OPERATOR and STORE being the read, modify and write
+// respectively.  MODE is the addressing mode and IMM is the type
+// of the second operand.
+class RMWI<ValueType vt, SDPatternOperator load, SDPatternOperator op,
+           SDPatternOperator store, ComplexPattern mode, PatFrag imm,
+           Instruction insn>
+  : Pat<(store (op (vt (load mode:$addr)), imm:$src), mode:$addr),
+        (insn mode:$addr, (UIMM8 $src))>;
+
+// Record that INSN performs binary operation OPERATION on a byte
+// memory location.  IMM is the type of the second operand.
+multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
+                    Instruction insn20, PatFrag imm16Leaf = imm32zx8,
+                    PatFrag imm32Leaf = imm32zx8,
+                    PatFrag imm16Leaf64 = imm64zx8,
+                    PatFrag imm32Leaf64 = imm64zx8,
+                    PatFrag imm64Leaf = imm64zx8> {
+  // 12-bit displacement variants.
+  def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
+             imm32zx8, insn12>;
+  def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
+             imm64zx8, insn12>;
+  def : RMWI<i32, nonvolatile_anyextloadi16, operator,
+             nonvolatile_truncstorei16, bdaddr12off1, imm16Leaf, insn12>;
+  def : RMWI<i64, nonvolatile_anyextloadi16, operator,
+             nonvolatile_truncstorei16, bdaddr12off1, imm16Leaf64, insn12>;
+  def : RMWI<i32, nonvolatile_load, operator, nonvolatile_store,
+             bdaddr12off3, imm32Leaf, insn12>;
+  def : RMWI<i64, nonvolatile_anyextloadi32, operator,
+             nonvolatile_truncstorei32, bdaddr12off3, imm32Leaf64, insn12>;
+  def : RMWI<i64, nonvolatile_load, operator, nonvolatile_store,
+             bdaddr12off7, imm64Leaf, insn12>;
+
+  // 20-bit displacement variants.
+  def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
+             imm32zx8, insn20>;
+  def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
+             imm64zx8, insn20>;
+  def : RMWI<i32, nonvolatile_anyextloadi16, operator,
+             nonvolatile_truncstorei16, bdaddr20off1, imm16Leaf, insn20>;
+  def : RMWI<i64, nonvolatile_anyextloadi16, operator,
+             nonvolatile_truncstorei16, bdaddr20off1, imm16Leaf64, insn20>;
+  def : RMWI<i32, nonvolatile_load, operator, nonvolatile_store,
+             bdaddr20off3, imm32Leaf, insn20>;
+  def : RMWI<i64, nonvolatile_anyextloadi32, operator,
+             nonvolatile_truncstorei32, bdaddr20off3, imm32Leaf64, insn20>;
+  def : RMWI<i64, nonvolatile_load, operator, nonvolatile_store,
+             bdaddr20off7, imm64Leaf, insn20>;
+}
+
+// Record that INSN performs insertion TYPE into a register of class CLS.
+// The inserted operand is loaded using LOAD from an address of mode MODE.
+multiclass InsertMem<string type, Instruction insn, RegisterOperand cls,
+                     SDPatternOperator load, AddressingMode mode> {
+  def : Pat<(!cast<SDPatternOperator>("or_as_"#type)
+              cls:$src1, (load mode:$src2)),
+            (insn cls:$src1, mode:$src2)>;
+  def : Pat<(!cast<SDPatternOperator>("or_as_rev"#type)
+              (load mode:$src2), cls:$src1),
+            (insn cls:$src1, mode:$src2)>;
+}
+
+// INSN stores the low 32 bits of a GPR to a memory with addressing mode MODE.
+// Record that it is equivalent to using OPERATOR to store a GR64.
+class StoreGR64<Instruction insn, SDPatternOperator operator,
+                AddressingMode mode>
+  : Pat<(operator GR64:$R1, mode:$XBD2),
+        (insn (EXTRACT_SUBREG GR64:$R1, subreg_l32), mode:$XBD2)>;
+
+// INSN and INSNY are an RX/RXY pair of instructions that store the low
+// 32 bits of a GPR to memory.  Record that they are equivalent to using
+// OPERATOR to store a GR64.
+multiclass StoreGR64Pair<Instruction insn, Instruction insny,
+                         SDPatternOperator operator> {
+  def : StoreGR64<insn, operator, bdxaddr12pair>;
+  def : StoreGR64<insny, operator, bdxaddr20pair>;
+}
+
+// INSN stores the low 32 bits of a GPR using PC-relative addressing.
+// Record that it is equivalent to using OPERATOR to store a GR64.
+class StoreGR64PC<Instruction insn, SDPatternOperator operator>
+  : Pat<(operator GR64:$R1, pcrel32:$XBD2),
+        (insn (EXTRACT_SUBREG GR64:$R1, subreg_l32), pcrel32:$XBD2)> {
+  // We want PC-relative addresses to be tried ahead of BD and BDX addresses.
+  // However, BDXs have two extra operands and are therefore 6 units more
+  // complex.
+  let AddedComplexity = 7;
+}
+
+// INSN and INSNINV conditionally store the low 32 bits of a GPR to memory,
+// with INSN storing when the condition is true and INSNINV storing when the
+// condition is false.  Record that they are equivalent to a LOAD/select/STORE
+// sequence for GR64s.
+multiclass CondStores64<Instruction insn, Instruction insninv,
+                        SDPatternOperator store, SDPatternOperator load,
+                        AddressingMode mode> {
+  def : Pat<(store (z_select_ccmask GR64:$new, (load mode:$addr),
+                                    imm32zx4_timm:$valid, imm32zx4_timm:$cc),
+                   mode:$addr),
+            (insn (EXTRACT_SUBREG GR64:$new, subreg_l32), mode:$addr,
+                  imm32zx4:$valid, imm32zx4:$cc)>;
+  def : Pat<(store (z_select_ccmask (load mode:$addr), GR64:$new,
+                                    imm32zx4_timm:$valid, imm32zx4_timm:$cc),
+                   mode:$addr),
+            (insninv (EXTRACT_SUBREG GR64:$new, subreg_l32), mode:$addr,
+                     imm32zx4:$valid, imm32zx4:$cc)>;
+}
+
+// Try to use MVC instruction INSN for a load of type LOAD followed by a store
+// of the same size.  VT is the type of the intermediate (legalized) value and
+// LENGTH is the number of bytes loaded by LOAD.
+multiclass MVCLoadStore<SDPatternOperator load, ValueType vt, Instruction insn,
+                        bits<5> length> {
+  def : Pat<(mvc_store (vt (load bdaddr12only:$src)), bdaddr12only:$dest),
+            (insn bdaddr12only:$dest, bdaddr12only:$src, length)>;
+}
+
+// Use NC-like instruction INSN for block_op operation OPERATOR.
+// The other operand is a load of type LOAD, which accesses LENGTH bytes.
+// VT is the intermediate legalized type in which the binary operation
+// is actually done.
+multiclass BinaryLoadStore<SDPatternOperator operator, SDPatternOperator load,
+                           ValueType vt, Instruction insn, bits<5> length> {
+  def : Pat<(operator (vt (load bdaddr12only:$src)), bdaddr12only:$dest),
+            (insn bdaddr12only:$dest, bdaddr12only:$src, length)>;
+}
+
+// A convenient way of generating all block peepholes for a particular
+// LOAD/VT/LENGTH combination.
+multiclass BlockLoadStore<SDPatternOperator load, ValueType vt,
+                          Instruction mvc, Instruction nc, Instruction oc,
+                          Instruction xc, bits<5> length> {
+  defm : MVCLoadStore<load, vt, mvc, length>;
+  defm : BinaryLoadStore<block_and1, load, vt, nc, length>;
+  defm : BinaryLoadStore<block_and2, load, vt, nc, length>;
+  defm : BinaryLoadStore<block_or1,  load, vt, oc, length>;
+  defm : BinaryLoadStore<block_or2,  load, vt, oc, length>;
+  defm : BinaryLoadStore<block_xor1, load, vt, xc, length>;
+  defm : BinaryLoadStore<block_xor2, load, vt, xc, length>;
+}
+
+// Record that INSN is a LOAD AND TEST that can be used to compare
+// registers in CLS against zero.
+multiclass CompareZeroFP<Instruction insn, RegisterOperand cls> {
+  def : Pat<(z_any_fcmp cls:$reg, (fpimm0)), (insn cls:$reg)>;
+  // The sign of the zero makes no difference.
+  def : Pat<(z_any_fcmp cls:$reg, (fpimmneg0)), (insn cls:$reg)>;
+}
+
+// Use INSN for performing binary operation OPERATION of type VT
+// on registers of class CLS.
+class BinaryRRWithType<Instruction insn, RegisterOperand cls,
+                       SDPatternOperator operator, ValueType vt>
+  : Pat<(vt (operator cls:$x, cls:$y)), (insn cls:$x, cls:$y)>;
+
+// Use INSN to perform conversion operation OPERATOR, with the input being
+// TR2 and the output being TR1.  SUPPRESS is 4 to suppress inexact conditions
+// and 0 to allow them.  MODE is the rounding mode to use.
+class FPConversion<Instruction insn, SDPatternOperator operator, TypedReg tr1,
+                   TypedReg tr2, bits<3> suppress, bits<4> mode>
+  : Pat<(tr1.vt (operator (tr2.vt tr2.op:$vec))),
+        (insn tr2.op:$vec, suppress, mode)>;
+
+// Use INSN to perform minimum/maximum operation OPERATOR on type TR.
+// FUNCTION is the type of minimum/maximum function to perform.
+class FPMinMax<Instruction insn, SDPatternOperator operator, TypedReg tr,
+               bits<4> function>
+  : Pat<(tr.vt (operator (tr.vt tr.op:$vec1), (tr.vt tr.op:$vec2))),
+        (insn tr.op:$vec1, tr.op:$vec2, function)>;

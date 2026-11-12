@@ -1,0 +1,19 @@
+//===-- Unittests for lroundf128 ------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "RoundToIntegerTest.h"
+
+#include "src/__support/FPUtil/float128.h"
+#include "src/math/lroundf128.h"
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_ROUND_TO_INTEGER_TESTS(Lroundf128, float128, long,
+                            LIBC_NAMESPACE::lroundf128)

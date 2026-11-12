@@ -1,0 +1,32 @@
+## We're intentionally testing fatal errors, which isn't supported for testing
+## when main is run twice.
+XFAIL: main-run-twice
+
+## Check that we only see 20 (the default error-limit) "cannot open" errors
+RUN: not %lld A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 2>&1 | \
+RUN:     FileCheck -check-prefix=DEFAULT %s
+
+DEFAULT:      cannot open A:
+DEFAULT:      cannot open T:
+DEFAULT-NOT:  cannot open U:
+DEFAULT-NEXT: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
+
+## Check that we only see 5 "cannot open" errors when --error-limit=5
+RUN: not %lld --error-limit=5 A B C D E F G H I J 2>&1 \
+RUN:   | FileCheck -check-prefix=LIMIT5 %s
+
+LIMIT5:      cannot open A:
+LIMIT5:      cannot open E:
+LIMIT5-NOT:  cannot open F:
+LIMIT5-NEXT: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
+
+## Check that we see all "cannot open" errors when --error-limit=0 (unimited)
+RUN: not %lld --error-limit=0 A B C D E F G H I J K L M N O P Q R S T U V W 2>&1 | \
+RUN:     FileCheck -check-prefix=UNLIMITED %s
+
+UNLIMITED:     cannot open A:
+UNLIMITED:     cannot open T:
+UNLIMITED:     cannot open U:
+UNLIMITED:     cannot open V:
+UNLIMITED:     cannot open W:
+UNLIMITED-NOT: too many errors emitted, stopping now (use --error-limit=0 to see all errors)

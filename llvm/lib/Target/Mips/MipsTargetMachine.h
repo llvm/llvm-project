@@ -1,0 +1,112 @@
+//===- MipsTargetMachine.h - Define TargetMachine for Mips ------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file declares the Mips specific subclass of TargetMachine.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_MIPS_MIPSTARGETMACHINE_H
+#define LLVM_LIB_TARGET_MIPS_MIPSTARGETMACHINE_H
+
+#include "MCTargetDesc/MipsABIInfo.h"
+#include "MipsSubtarget.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Support/CodeGen.h"
+#include <memory>
+#include <optional>
+
+namespace llvm {
+
+class MipsTargetMachine : public CodeGenTargetMachineImpl {
+  const MipsOptions &CLOpts;
+  const MipsMCOptions &MCCLOpts;
+  bool isLittle;
+  bool IsJIT;
+  // Used to initialize module-wide object-file policy.
+  MipsSubtarget DefaultSubtarget;
+  std::unique_ptr<TargetLoweringObjectFile> TLOF;
+
+  mutable StringMap<std::unique_ptr<MipsSubtarget>> SubtargetMap;
+
+public:
+  MipsTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                    StringRef FS, const TargetOptions &Options,
+                    std::optional<Reloc::Model> RM,
+                    std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                    bool JIT, bool isLittle);
+  ~MipsTargetMachine() override;
+
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+
+  const MipsOptions &getCLOpts() const { return CLOpts; }
+  const MipsMCOptions &getMCCLOpts() const { return MCCLOpts; }
+  const MipsSubtarget *getSubtargetImpl(const Function &F) const override;
+
+  // Pass Pipeline Configuration
+  TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+
+  TargetLoweringObjectFile *getObjFileLowering() const override {
+    return TLOF.get();
+  }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
+
+  /// Returns true if a cast between SrcAS and DestAS is a noop.
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
+    // Mips doesn't have any special address spaces so we just reserve
+    // the first 256 for software use (e.g. OpenCL) and treat casts
+    // between them as noops.
+    return SrcAS < 256 && DestAS < 256;
+  }
+
+  bool isLittleEndian() const { return isLittle; }
+  bool isJIT() const { return IsJIT; }
+
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
+};
+
+/// Mips32/64 big endian target machine.
+///
+class MipsebTargetMachine : public MipsTargetMachine {
+  virtual void anchor();
+
+public:
+  MipsebTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                      StringRef FS, const TargetOptions &Options,
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                      bool JIT);
+};
+
+/// Mips32/64 little endian target machine.
+///
+class MipselTargetMachine : public MipsTargetMachine {
+  virtual void anchor();
+
+public:
+  MipselTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                      StringRef FS, const TargetOptions &Options,
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                      bool JIT);
+};
+
+} // end namespace llvm
+
+#endif // LLVM_LIB_TARGET_MIPS_MIPSTARGETMACHINE_H

@@ -1,0 +1,15 @@
+---
+Name: WhereParametersConvertDiag
+Functions:
+- Name: makeWidget
+  Where:
+    Parameters:
+      - int
+  SwiftName: makeWidget(_:)
+Tags:
+- Name: Widget
+  Methods:
+  - Name: reset
+    Where:
+      Parameters: []
+    SwiftName: reset()

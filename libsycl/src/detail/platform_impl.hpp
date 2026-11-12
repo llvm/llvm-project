@@ -1,0 +1,158 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the PlatformImpl class, which
+/// implements sycl::platform functionality.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBSYCL_SRC_DETAIL_PLATFORM_IMPL_HPP
+#define _LIBSYCL_SRC_DETAIL_PLATFORM_IMPL_HPP
+
+#include <sycl/__impl/backend.hpp>
+#include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/platform.hpp>
+
+#include <detail/device_impl.hpp>
+#include <detail/offload/offload_utils.hpp>
+
+#include <OffloadAPI.h>
+
+#include <cassert>
+#include <functional>
+#include <memory>
+#include <string>
+#include <type_traits>
+#include <vector>
+
+_LIBSYCL_BEGIN_NAMESPACE_SYCL
+
+namespace unittests {
+struct UnittestsHelper;
+}
+
+namespace detail {
+
+class DeviceImpl;
+class ContextImpl;
+
+using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
+using DeviceImplUPtr = std::unique_ptr<DeviceImpl>;
+
+class PlatformImpl {
+  // Helper to limit PlatformImpl creation. It must be created in getPlatforms
+  // only. Using tag instead of private ctor + friend class to allow make_unique
+  // usage and to align with classes which impl is shared_ptr<>.
+  struct PrivateTag {
+    explicit PrivateTag() = default;
+  };
+
+public:
+  /// Constructs PlatformImpl from a platform handle.
+  ///
+  /// \param Platform is a raw offload library handle representing platform.
+  /// \param Devices are the devices in one platform context group.
+  /// All platform impls are created during first getPlatforms() call.
+  PlatformImpl(ol_platform_handle_t Platform,
+               const std::vector<ol_device_handle_t> &Devices, PrivateTag);
+
+  ~PlatformImpl() = default;
+
+  /// \return sycl::backend associated with this platform.
+  backend getBackend() const noexcept { return MBackend; }
+
+  /// Returns all SYCL platforms from all backends that are
+  /// available in the system.
+  ///
+  /// \return std::vector of all platforms that are available in the system.
+  static const std::vector<PlatformImplUPtr> &getPlatforms();
+
+  /// Returns the raw underlying offload platform handle.
+  ///
+  /// The caller is responsible for ensuring that the returned handle is only
+  /// used while the PlatformImpl object from which it was obtained is still
+  /// within its lifetime.
+  ///
+  /// \return a raw offload platform handle.
+  const ol_platform_handle_t &getOLHandleRef() const {
+    return MOffloadPlatform;
+  }
+
+  /// Indicates if all of the SYCL devices on this platform have the
+  /// given aspect.
+  ///
+  /// \param Aspect is one of the values defined in SYCL 2020 Section 4.6.4.5.
+  ///
+  /// \return true all of the SYCL devices on this platform have the
+  /// given aspect.
+  bool has(aspect Aspect) const;
+
+  /// Queries this SYCL platform for info.
+  ///
+  /// The return type depends on information being queried.
+  template <typename Param> typename Param::return_type getInfo() const {
+    // For now we have only std::string properties
+    static_assert(std::is_same_v<typename Param::return_type, std::string>,
+                  "Only string platform info descriptors are supported");
+
+    using namespace info::platform;
+    using Map = InfoOLMapping<ol_platform_info_t>;
+
+    constexpr ol_platform_info_t OLInfo =
+        mapInfoDesc<Param, ol_platform_info_t>(
+            Map::M<version>{OL_PLATFORM_INFO_VERSION},
+            Map::M<name>{OL_PLATFORM_INFO_NAME},
+            Map::M<vendor>{OL_PLATFORM_INFO_VENDOR_NAME});
+
+    size_t ExpectedSize = 0;
+    callAndThrow(olGetPlatformInfoSize, MOffloadPlatform, OLInfo,
+                 &ExpectedSize);
+    assert(ExpectedSize > 0 && "String info descriptor size must account for "
+                               "the null terminator");
+    // liboffload counts the null terminator in the size while std::string
+    // doesn't.
+    std::string Result;
+    Result.resize(ExpectedSize - 1);
+    callAndThrow(olGetPlatformInfo, MOffloadPlatform, OLInfo, ExpectedSize,
+                 Result.data());
+    return Result;
+  }
+
+  /// Calls Callback with every root device of type == DeviceType associated
+  /// with this platform.
+  void iterateDevices(info::device_type DeviceType,
+                      const std::function<void(DeviceImpl *)> &Callback) const;
+
+  /// \return the default context containing all devices in this platform.
+  ContextImpl &getDefaultContext();
+
+private:
+  /// \return reference to collection of root devices for platform
+  const std::vector<DeviceImplUPtr> &getRootDevices() const;
+
+  const ol_platform_handle_t MOffloadPlatform{};
+
+  backend MBackend{};
+
+  std::vector<DeviceImplUPtr> MRootDevices;
+
+  std::shared_ptr<ContextImpl> MDefaultContext;
+
+  // Single initialization of platforms and devices doesn't allow to implement
+  // unittests for this behavior. This flag and friend class allows to force
+  // device & platform rediscovery at the next getPlatforms() call if the cache
+  // is empty.
+  static bool MRediscoverIfEmpty;
+  friend struct ::sycl::unittests::UnittestsHelper;
+};
+
+} // namespace detail
+_LIBSYCL_END_NAMESPACE_SYCL
+
+#endif // _LIBSYCL_SRC_DETAIL_PLATFORM_IMPL_HPP

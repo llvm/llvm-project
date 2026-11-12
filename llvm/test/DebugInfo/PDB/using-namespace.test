@@ -1,0 +1,51 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-readobj --codeview %t.obj | FileCheck %s
+
+# CHECK:         Kind: S_UNAMESPACE (0x1124)
+# CHECK-NEXT:    Namespace: __vc_attributes
+
+--- !COFF
+header:          
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:        
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    Subsections:     
+      - !Symbols
+        Records:         
+          - Kind:            S_OBJNAME
+            ObjNameSym:      
+              Signature:       0
+              ObjectName:      'SimpleFunction.obj'
+          - Kind:            S_COMPILE3
+            Compile3Sym:     
+              Flags:           [ SecurityChecks, HotPatch ]
+              Machine:         X64
+              FrontendMajor:   19
+              FrontendMinor:   14
+              FrontendBuild:   26433
+              FrontendQFE:     0
+              BackendMajor:    19
+              BackendMinor:    14
+              BackendBuild:    26433
+              BackendQFE:      0
+              Version:         'Microsoft (R) Optimizing Compiler'
+          - Kind:            S_UNAMESPACE
+            UsingNamespaceSym: 
+              Namespace:       __vc_attributes
+          - Kind:            S_UNAMESPACE
+            UsingNamespaceSym: 
+              Namespace:       helper_attributes
+          - Kind:            S_UNAMESPACE
+            UsingNamespaceSym: 
+              Namespace:       atl
+          - Kind:            S_UNAMESPACE
+            UsingNamespaceSym: 
+              Namespace:       std
+      - !StringTable
+        Strings:
+          - 'SimpleFunction.c'
+symbols:         
+...

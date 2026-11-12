@@ -1,0 +1,21 @@
+# REQUIRES: asserts
+# RUN: llc -verify-machineinstrs -simplify-mir -mtriple=powerpc-ibm-aix-xcoff \
+# RUN:   -debug-only=regalloc %s -o - 2>&1 | FileCheck %s
+
+---
+name: i32
+alignment: 4
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r3
+    %0:gprc = COPY $r3
+    %1:gprc_and_gprc_nor0 = COPY $r3
+    %2:gprc = ADD4 %0, %1
+    $r3 = COPY %2
+    BLR implicit $lr, implicit undef $rm, implicit $r3
+...
+
+# CHECK-DAG: AllocationOrder(GPRC) = [ $r3 $r4 $r5 $r6 $r7 $r8 $r9 $r10 $r11 $r12 $r0 $r31 $r30 $r29 $r28 $r27 $r26 $r25 $r24 $r23 $r22 $r21 $r20 $r19 $r18 $r17 $r16 $r15 $r14 $r13 ]
+# CHECK-DAG: AllocationOrder(F4RC) = [ $f0 $f1 $f2 $f3 $f4 $f5 $f6 $f7 $f8 $f9 $f10 $f11 $f12 $f13 $f31 $f30 $f29 $f28 $f27 $f26 $f25 $f24 $f23 $f22 $f21 $f20 $f19 $f18 $f17 $f16 $f15 $f14 ]
+# CHECK-DAG: AllocationOrder(GPRC_and_GPRC_NOR0) = [ $r3 $r4 $r5 $r6 $r7 $r8 $r9 $r10 $r11 $r12 $r31 $r30 $r29 $r28 $r27 $r26 $r25 $r24 $r23 $r22 $r21 $r20 $r19 $r18 $r17 $r16 $r15 $r14 $r13 ]

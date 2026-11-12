@@ -1,0 +1,4 @@
+module Umbrella {
+  header "umbrella.h"
+  export *
+}

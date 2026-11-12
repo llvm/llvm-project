@@ -1,0 +1,2324 @@
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-unknown -mcpu=pwr7 | FileCheck %s --check-prefixes=CHECK,MODERN
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefixes=CHECK,MODERN
+# RUN: llvm-mc --disassemble %s -triple powerpc64-ibm-aix-xcoff -mcpu=pwr7 | FileCheck %s --check-prefixes=CHECK,OLD
+# RUN: llvm-mc --disassemble %s -triple powerpc64-ibm-aix-xcoff -mattr=+modern-aix-as -mcpu=pwr7 | FileCheck %s --check-prefixes=CHECK,MODERN
+
+# FIXME: decode as beqlr 0
+# CHECK: bclr 12, 2
+0x4d 0x82 0x00 0x20
+
+# FIXME: decode as beqlr 1
+# CHECK: bclr 12, 6
+0x4d 0x86 0x00 0x20
+
+# FIXME: decode as beqlr 2
+# CHECK: bclr 12, 10
+0x4d 0x8a 0x00 0x20
+
+# FIXME: decode as beqlr 3
+# CHECK: bclr 12, 14
+0x4d 0x8e 0x00 0x20
+
+# FIXME: decode as beqlr 4
+# CHECK: bclr 12, 18
+0x4d 0x92 0x00 0x20
+
+# FIXME: decode as beqlr 5
+# CHECK: bclr 12, 22
+0x4d 0x96 0x00 0x20
+
+# FIXME: decode as beqlr 6
+# CHECK: bclr 12, 26
+0x4d 0x9a 0x00 0x20
+
+# FIXME: decode as beqlr 7
+# CHECK: bclr 12, 30
+0x4d 0x9e 0x00 0x20
+
+# CHECK: bclr 12, 0
+0x4d 0x80 0x00 0x20
+
+# CHECK: bclr 12, 1
+0x4d 0x81 0x00 0x20
+
+# CHECK: bclr 12, 2
+0x4d 0x82 0x00 0x20
+
+# CHECK: bclr 12, 3
+0x4d 0x83 0x00 0x20
+
+# CHECK: bclr 12, 3
+0x4d 0x83 0x00 0x20
+
+# CHECK: bclr 12, 4
+0x4d 0x84 0x00 0x20
+
+# CHECK: bclr 12, 5
+0x4d 0x85 0x00 0x20
+
+# CHECK: bclr 12, 6
+0x4d 0x86 0x00 0x20
+
+# CHECK: bclr 12, 7
+0x4d 0x87 0x00 0x20
+
+# CHECK: bclr 12, 7
+0x4d 0x87 0x00 0x20
+
+# CHECK: bclr 12, 8
+0x4d 0x88 0x00 0x20
+
+# CHECK: bclr 12, 9
+0x4d 0x89 0x00 0x20
+
+# CHECK: bclr 12, 10
+0x4d 0x8a 0x00 0x20
+
+# CHECK: bclr 12, 11
+0x4d 0x8b 0x00 0x20
+
+# CHECK: bclr 12, 11
+0x4d 0x8b 0x00 0x20
+
+# CHECK: bclr 12, 12
+0x4d 0x8c 0x00 0x20
+
+# CHECK: bclr 12, 13
+0x4d 0x8d 0x00 0x20
+
+# CHECK: bclr 12, 14
+0x4d 0x8e 0x00 0x20
+
+# CHECK: bclr 12, 15
+0x4d 0x8f 0x00 0x20
+
+# CHECK: bclr 12, 15
+0x4d 0x8f 0x00 0x20
+
+# CHECK: bclr 12, 16
+0x4d 0x90 0x00 0x20
+
+# CHECK: bclr 12, 17
+0x4d 0x91 0x00 0x20
+
+# CHECK: bclr 12, 18
+0x4d 0x92 0x00 0x20
+
+# CHECK: bclr 12, 19
+0x4d 0x93 0x00 0x20
+
+# CHECK: bclr 12, 19
+0x4d 0x93 0x00 0x20
+
+# CHECK: bclr 12, 20
+0x4d 0x94 0x00 0x20
+
+# CHECK: bclr 12, 21
+0x4d 0x95 0x00 0x20
+
+# CHECK: bclr 12, 22
+0x4d 0x96 0x00 0x20
+
+# CHECK: bclr 12, 23
+0x4d 0x97 0x00 0x20
+
+# CHECK: bclr 12, 23
+0x4d 0x97 0x00 0x20
+
+# CHECK: bclr 12, 24
+0x4d 0x98 0x00 0x20
+
+# CHECK: bclr 12, 25
+0x4d 0x99 0x00 0x20
+
+# CHECK: bclr 12, 26
+0x4d 0x9a 0x00 0x20
+
+# CHECK: bclr 12, 27
+0x4d 0x9b 0x00 0x20
+
+# CHECK: bclr 12, 27
+0x4d 0x9b 0x00 0x20
+
+# CHECK: bclr 12, 28
+0x4d 0x9c 0x00 0x20
+
+# CHECK: bclr 12, 29
+0x4d 0x9d 0x00 0x20
+
+# CHECK: bclr 12, 30
+0x4d 0x9e 0x00 0x20
+
+# CHECK: bclr 12, 31
+0x4d 0x9f 0x00 0x20
+
+# CHECK: bclr 12, 31
+0x4d 0x9f 0x00 0x20
+
+# CHECK: blr
+0x4e 0x80 0x00 0x20
+
+# CHECK: bctr
+0x4e 0x80 0x04 0x20
+
+# CHECK: blrl
+0x4e 0x80 0x00 0x21
+
+# CHECK: bctrl
+0x4e 0x80 0x04 0x21
+
+# CHECK: bclr 12, 2
+0x4d 0x82 0x00 0x20
+
+# CHECK: bcctr 12, 2
+0x4d 0x82 0x04 0x20
+
+# CHECK: bclrl 12, 2
+0x4d 0x82 0x00 0x21
+
+# CHECK: bcctrl 12, 2
+0x4d 0x82 0x04 0x21
+
+# CHECK: bclr 15, 2
+0x4d 0xe2 0x00 0x20
+
+# CHECK: bcctr 15, 2
+0x4d 0xe2 0x04 0x20
+
+# CHECK: bclrl 15, 2
+0x4d 0xe2 0x00 0x21
+
+# CHECK: bcctrl 15, 2
+0x4d 0xe2 0x04 0x21
+
+# CHECK: bclr 14, 2
+0x4d 0xc2 0x00 0x20
+
+# CHECK: bcctr 14, 2
+0x4d 0xc2 0x04 0x20
+
+# CHECK: bclrl 14, 2
+0x4d 0xc2 0x00 0x21
+
+# CHECK: bcctrl 14, 2
+0x4d 0xc2 0x04 0x21
+
+# CHECK: bclr 4, 2
+0x4c 0x82 0x00 0x20
+
+# CHECK: bcctr 4, 2
+0x4c 0x82 0x04 0x20
+
+# CHECK: bclrl 4, 2
+0x4c 0x82 0x00 0x21
+
+# CHECK: bcctrl 4, 2
+0x4c 0x82 0x04 0x21
+
+# CHECK: bclr 7, 2
+0x4c 0xe2 0x00 0x20
+
+# CHECK: bcctr 7, 2
+0x4c 0xe2 0x04 0x20
+
+# CHECK: bclrl 7, 2
+0x4c 0xe2 0x00 0x21
+
+# CHECK: bcctrl 7, 2
+0x4c 0xe2 0x04 0x21
+
+# CHECK: bclr 6, 2
+0x4c 0xc2 0x00 0x20
+
+# CHECK: bcctr 6, 2
+0x4c 0xc2 0x04 0x20
+
+# CHECK: bclrl 6, 2
+0x4c 0xc2 0x00 0x21
+
+# CHECK: bcctrl 6, 2
+0x4c 0xc2 0x04 0x21
+
+# CHECK: bdnzlr
+0x4e 0x00 0x00 0x20
+
+# CHECK: bdnzlrl
+0x4e 0x00 0x00 0x21
+
+# CHECK: bdnzlr+
+0x4f 0x20 0x00 0x20
+
+# CHECK: bdnzlrl+
+0x4f 0x20 0x00 0x21
+
+# CHECK: bdnzlr-
+0x4f 0x00 0x00 0x20
+
+# CHECK: bdnzlrl-
+0x4f 0x00 0x00 0x21
+
+# CHECK: bclr 8, 2
+0x4d 0x02 0x00 0x20
+
+# CHECK: bclrl 8, 2
+0x4d 0x02 0x00 0x21
+
+# CHECK: bclr 0, 2
+0x4c 0x02 0x00 0x20
+
+# CHECK: bclrl 0, 2
+0x4c 0x02 0x00 0x21
+
+# CHECK: bdzlr
+0x4e 0x40 0x00 0x20
+
+# CHECK: bdzlrl
+0x4e 0x40 0x00 0x21
+
+# CHECK: bdzlr+
+0x4f 0x60 0x00 0x20
+
+# CHECK: bdzlrl+
+0x4f 0x60 0x00 0x21
+
+# CHECK: bdzlr-
+0x4f 0x40 0x00 0x20
+
+# CHECK: bdzlrl-
+0x4f 0x40 0x00 0x21
+
+# CHECK: bclr 10, 2
+0x4d 0x42 0x00 0x20
+
+# CHECK: bclrl 10, 2
+0x4d 0x42 0x00 0x21
+
+# CHECK: bclr 2, 2
+0x4c 0x42 0x00 0x20
+
+# CHECK: bclrl 2, 2
+0x4c 0x42 0x00 0x21
+
+# FIXME: decode as bltlr 2
+# CHECK: bclr 12, 8
+0x4d 0x88 0x00 0x20
+
+# FIXME: decode as bltlr 0
+# CHECK: bclr 12, 0
+0x4d 0x80 0x00 0x20
+
+# FIXME: decode as bltctr 2
+# CHECK: bcctr 12, 8
+0x4d 0x88 0x04 0x20
+
+# FIXME: decode as bltctr 0
+# CHECK: bcctr 12, 0
+0x4d 0x80 0x04 0x20
+
+# FIXME: decode as bltlrl 2
+# CHECK: bclrl 12, 8
+0x4d 0x88 0x00 0x21
+
+# FIXME: decode as bltlrl 0
+# CHECK: bclrl 12, 0
+0x4d 0x80 0x00 0x21
+
+# FIXME: decode as bltctrl 2
+# CHECK: bcctrl 12, 8
+0x4d 0x88 0x04 0x21
+
+# FIXME: decode as bltctrl 0
+# CHECK: bcctrl 12, 0
+0x4d 0x80 0x04 0x21
+
+# FIXME: decode as bltlr+ 2
+# CHECK: bclr 15, 8
+0x4d 0xe8 0x00 0x20
+
+# FIXME: decode as bltlr+ 0
+# CHECK: bclr 15, 0
+0x4d 0xe0 0x00 0x20
+
+# FIXME: decode as bltctr+ 2
+# CHECK: bcctr 15, 8
+0x4d 0xe8 0x04 0x20
+
+# FIXME: decode as bltctr+ 0
+# CHECK: bcctr 15, 0
+0x4d 0xe0 0x04 0x20
+
+# FIXME: decode as bltlrl+ 2
+# CHECK: bclrl 15, 8
+0x4d 0xe8 0x00 0x21
+
+# FIXME: decode as bltlrl+ 0
+# CHECK: bclrl 15, 0
+0x4d 0xe0 0x00 0x21
+
+# FIXME: decode as bltctrl+ 2
+# CHECK: bcctrl 15, 8
+0x4d 0xe8 0x04 0x21
+
+# FIXME: decode as bltctrl+ 0
+# CHECK: bcctrl 15, 0
+0x4d 0xe0 0x04 0x21
+
+# FIXME: decode as bltlr- 2
+# CHECK: bclr 14, 8
+0x4d 0xc8 0x00 0x20
+
+# FIXME: decode as bltlr- 0
+# CHECK: bclr 14, 0
+0x4d 0xc0 0x00 0x20
+
+# FIXME: decode as bltctr- 2
+# CHECK: bcctr 14, 8
+0x4d 0xc8 0x04 0x20
+
+# FIXME: decode as bltctr- 0
+# CHECK: bcctr 14, 0
+0x4d 0xc0 0x04 0x20
+
+# FIXME: decode as bltlrl- 2
+# CHECK: bclrl 14, 8
+0x4d 0xc8 0x00 0x21
+
+# FIXME: decode as bltlrl- 0
+# CHECK: bclrl 14, 0
+0x4d 0xc0 0x00 0x21
+
+# FIXME: decode as bltctrl- 2
+# CHECK: bcctrl 14, 8
+0x4d 0xc8 0x04 0x21
+
+# FIXME: decode as bltctrl- 0
+# CHECK: bcctrl 14, 0
+0x4d 0xc0 0x04 0x21
+
+# FIXME: decode as blelr 2
+# CHECK: bclr 4, 9
+0x4c 0x89 0x00 0x20
+
+# FIXME: decode as blelr 0
+# CHECK: bclr 4, 1
+0x4c 0x81 0x00 0x20
+
+# FIXME: decode as blectr 2
+# CHECK: bcctr 4, 9
+0x4c 0x89 0x04 0x20
+
+# FIXME: decode as blectr 0
+# CHECK: bcctr 4, 1
+0x4c 0x81 0x04 0x20
+
+# FIXME: decode as blelrl 2
+# CHECK: bclrl 4, 9
+0x4c 0x89 0x00 0x21
+
+# FIXME: decode as blelrl 0
+# CHECK: bclrl 4, 1
+0x4c 0x81 0x00 0x21
+
+# FIXME: decode as blectrl 2
+# CHECK: bcctrl 4, 9
+0x4c 0x89 0x04 0x21
+
+# FIXME: decode as blectrl 0
+# CHECK: bcctrl 4, 1
+0x4c 0x81 0x04 0x21
+
+# FIXME: decode as blelr+ 2
+# CHECK: bclr 7, 9
+0x4c 0xe9 0x00 0x20
+
+# FIXME: decode as blelr+ 0
+# CHECK: bclr 7, 1
+0x4c 0xe1 0x00 0x20
+
+# FIXME: decode as blectr+ 2
+# CHECK: bcctr 7, 9
+0x4c 0xe9 0x04 0x20
+
+# FIXME: decode as blectr+ 0
+# CHECK: bcctr 7, 1
+0x4c 0xe1 0x04 0x20
+
+# FIXME: decode as blelrl+ 2
+# CHECK: bclrl 7, 9
+0x4c 0xe9 0x00 0x21
+
+# FIXME: decode as blelrl+ 0
+# CHECK: bclrl 7, 1
+0x4c 0xe1 0x00 0x21
+
+# FIXME: decode as blectrl+ 2
+# CHECK: bcctrl 7, 9
+0x4c 0xe9 0x04 0x21
+
+# FIXME: decode as blectrl+ 0
+# CHECK: bcctrl 7, 1
+0x4c 0xe1 0x04 0x21
+
+# FIXME: decode as blelr- 2
+# CHECK: bclr 6, 9
+0x4c 0xc9 0x00 0x20
+
+# FIXME: decode as blelr- 0
+# CHECK: bclr 6, 1
+0x4c 0xc1 0x00 0x20
+
+# FIXME: decode as blectr- 2
+# CHECK: bcctr 6, 9
+0x4c 0xc9 0x04 0x20
+
+# FIXME: decode as blectr- 0
+# CHECK: bcctr 6, 1
+0x4c 0xc1 0x04 0x20
+
+# FIXME: decode as blelrl- 2
+# CHECK: bclrl 6, 9
+0x4c 0xc9 0x00 0x21
+
+# FIXME: decode as blelrl- 0
+# CHECK: bclrl 6, 1
+0x4c 0xc1 0x00 0x21
+
+# FIXME: decode as blectrl- 2
+# CHECK: bcctrl 6, 9
+0x4c 0xc9 0x04 0x21
+
+# FIXME: decode as blectrl- 0
+# CHECK: bcctrl 6, 1
+0x4c 0xc1 0x04 0x21
+
+# FIXME: decode as beqlr 2
+# CHECK: bclr 12, 10
+0x4d 0x8a 0x00 0x20
+
+# FIXME: decode as beqlr 0
+# CHECK: bclr 12, 2
+0x4d 0x82 0x00 0x20
+
+# FIXME: decode as beqctr 2
+# CHECK: bcctr 12, 10
+0x4d 0x8a 0x04 0x20
+
+# FIXME: decode as beqctr 0
+# CHECK: bcctr 12, 2
+0x4d 0x82 0x04 0x20
+
+# FIXME: decode as beqlrl 2
+# CHECK: bclrl 12, 10
+0x4d 0x8a 0x00 0x21
+
+# FIXME: decode as beqlrl 0
+# CHECK: bclrl 12, 2
+0x4d 0x82 0x00 0x21
+
+# FIXME: decode as beqctrl 2
+# CHECK: bcctrl 12, 10
+0x4d 0x8a 0x04 0x21
+
+# FIXME: decode as beqctrl 0
+# CHECK: bcctrl 12, 2
+0x4d 0x82 0x04 0x21
+
+# FIXME: decode as beqlr+ 2
+# CHECK: bclr 15, 10
+0x4d 0xea 0x00 0x20
+
+# FIXME: decode as beqlr+ 0
+# CHECK: bclr 15, 2
+0x4d 0xe2 0x00 0x20
+
+# FIXME: decode as beqctr+ 2
+# CHECK: bcctr 15, 10
+0x4d 0xea 0x04 0x20
+
+# FIXME: decode as beqctr+ 0
+# CHECK: bcctr 15, 2
+0x4d 0xe2 0x04 0x20
+
+# FIXME: decode as beqlrl+ 2
+# CHECK: bclrl 15, 10
+0x4d 0xea 0x00 0x21
+
+# FIXME: decode as beqlrl+ 0
+# CHECK: bclrl 15, 2
+0x4d 0xe2 0x00 0x21
+
+# FIXME: decode as beqctrl+ 2
+# CHECK: bcctrl 15, 10
+0x4d 0xea 0x04 0x21
+
+# FIXME: decode as beqctrl+ 0
+# CHECK: bcctrl 15, 2
+0x4d 0xe2 0x04 0x21
+
+# FIXME: decode as beqlr- 2
+# CHECK: bclr 14, 10
+0x4d 0xca 0x00 0x20
+
+# FIXME: decode as beqlr- 0
+# CHECK: bclr 14, 2
+0x4d 0xc2 0x00 0x20
+
+# FIXME: decode as beqctr- 2
+# CHECK: bcctr 14, 10
+0x4d 0xca 0x04 0x20
+
+# FIXME: decode as beqctr- 0
+# CHECK: bcctr 14, 2
+0x4d 0xc2 0x04 0x20
+
+# FIXME: decode as beqlrl- 2
+# CHECK: bclrl 14, 10
+0x4d 0xca 0x00 0x21
+
+# FIXME: decode as beqlrl- 0
+# CHECK: bclrl 14, 2
+0x4d 0xc2 0x00 0x21
+
+# FIXME: decode as beqctrl- 2
+# CHECK: bcctrl 14, 10
+0x4d 0xca 0x04 0x21
+
+# FIXME: decode as beqctrl- 0
+# CHECK: bcctrl 14, 2
+0x4d 0xc2 0x04 0x21
+
+# FIXME: decode as bgelr 2
+# CHECK: bclr 4, 8
+0x4c 0x88 0x00 0x20
+
+# FIXME: decode as bgelr 0
+# CHECK: bclr 4, 0
+0x4c 0x80 0x00 0x20
+
+# FIXME: decode as bgectr 2
+# CHECK: bcctr 4, 8
+0x4c 0x88 0x04 0x20
+
+# FIXME: decode as bgectr 0
+# CHECK: bcctr 4, 0
+0x4c 0x80 0x04 0x20
+
+# FIXME: decode as bgelrl 2
+# CHECK: bclrl 4, 8
+0x4c 0x88 0x00 0x21
+
+# FIXME: decode as bgelrl 0
+# CHECK: bclrl 4, 0
+0x4c 0x80 0x00 0x21
+
+# FIXME: decode as bgectrl 2
+# CHECK: bcctrl 4, 8
+0x4c 0x88 0x04 0x21
+
+# FIXME: decode as bgectrl 0
+# CHECK: bcctrl 4, 0
+0x4c 0x80 0x04 0x21
+
+# FIXME: decode as bgelr+ 2
+# CHECK: bclr 7, 8
+0x4c 0xe8 0x00 0x20
+
+# FIXME: decode as bgelr+ 0
+# CHECK: bclr 7, 0
+0x4c 0xe0 0x00 0x20
+
+# FIXME: decode as bgectr+ 2
+# CHECK: bcctr 7, 8
+0x4c 0xe8 0x04 0x20
+
+# FIXME: decode as bgectr+ 0
+# CHECK: bcctr 7, 0
+0x4c 0xe0 0x04 0x20
+
+# FIXME: decode as bgelrl+ 2
+# CHECK: bclrl 7, 8
+0x4c 0xe8 0x00 0x21
+
+# FIXME: decode as bgelrl+ 0
+# CHECK: bclrl 7, 0
+0x4c 0xe0 0x00 0x21
+
+# FIXME: decode as bgectrl+ 2
+# CHECK: bcctrl 7, 8
+0x4c 0xe8 0x04 0x21
+
+# FIXME: decode as bgectrl+ 0
+# CHECK: bcctrl 7, 0
+0x4c 0xe0 0x04 0x21
+
+# FIXME: decode as bgelr- 2
+# CHECK: bclr 6, 8
+0x4c 0xc8 0x00 0x20
+
+# FIXME: decode as bgelr- 0
+# CHECK: bclr 6, 0
+0x4c 0xc0 0x00 0x20
+
+# FIXME: decode as bgectr- 2
+# CHECK: bcctr 6, 8
+0x4c 0xc8 0x04 0x20
+
+# FIXME: decode as bgectr- 0
+# CHECK: bcctr 6, 0
+0x4c 0xc0 0x04 0x20
+
+# FIXME: decode as bgelrl- 2
+# CHECK: bclrl 6, 8
+0x4c 0xc8 0x00 0x21
+
+# FIXME: decode as bgelrl- 0
+# CHECK: bclrl 6, 0
+0x4c 0xc0 0x00 0x21
+
+# FIXME: decode as bgectrl- 2
+# CHECK: bcctrl 6, 8
+0x4c 0xc8 0x04 0x21
+
+# FIXME: decode as bgectrl- 0
+# CHECK: bcctrl 6, 0
+0x4c 0xc0 0x04 0x21
+
+# FIXME: decode as bgtlr 2
+# CHECK: bclr 12, 9
+0x4d 0x89 0x00 0x20
+
+# FIXME: decode as bgtlr 0
+# CHECK: bclr 12, 1
+0x4d 0x81 0x00 0x20
+
+# FIXME: decode as bgtctr 2
+# CHECK: bcctr 12, 9
+0x4d 0x89 0x04 0x20
+
+# FIXME: decode as bgtctr 0
+# CHECK: bcctr 12, 1
+0x4d 0x81 0x04 0x20
+
+# FIXME: decode as bgtlrl 2
+# CHECK: bclrl 12, 9
+0x4d 0x89 0x00 0x21
+
+# FIXME: decode as bgtlrl 0
+# CHECK: bclrl 12, 1
+0x4d 0x81 0x00 0x21
+
+# FIXME: decode as bgtctrl 2
+# CHECK: bcctrl 12, 9
+0x4d 0x89 0x04 0x21
+
+# FIXME: decode as bgtctrl 0
+# CHECK: bcctrl 12, 1
+0x4d 0x81 0x04 0x21
+
+# FIXME: decode as bgtlr+ 2
+# CHECK: bclr 15, 9
+0x4d 0xe9 0x00 0x20
+
+# FIXME: decode as bgtlr+ 0
+# CHECK: bclr 15, 1
+0x4d 0xe1 0x00 0x20
+
+# FIXME: decode as bgtctr+ 2
+# CHECK: bcctr 15, 9
+0x4d 0xe9 0x04 0x20
+
+# FIXME: decode as bgtctr+ 0
+# CHECK: bcctr 15, 1
+0x4d 0xe1 0x04 0x20
+
+# FIXME: decode as bgtlrl+ 2
+# CHECK: bclrl 15, 9
+0x4d 0xe9 0x00 0x21
+
+# FIXME: decode as bgtlrl+ 0
+# CHECK: bclrl 15, 1
+0x4d 0xe1 0x00 0x21
+
+# FIXME: decode as bgtctrl+ 2
+# CHECK: bcctrl 15, 9
+0x4d 0xe9 0x04 0x21
+
+# FIXME: decode as bgtctrl+ 0
+# CHECK: bcctrl 15, 1
+0x4d 0xe1 0x04 0x21
+
+# FIXME: decode as bgtlr- 2
+# CHECK: bclr 14, 9
+0x4d 0xc9 0x00 0x20
+
+# FIXME: decode as bgtlr- 0
+# CHECK: bclr 14, 1
+0x4d 0xc1 0x00 0x20
+
+# FIXME: decode as bgtctr- 2
+# CHECK: bcctr 14, 9
+0x4d 0xc9 0x04 0x20
+
+# FIXME: decode as bgtctr- 0
+# CHECK: bcctr 14, 1
+0x4d 0xc1 0x04 0x20
+
+# FIXME: decode as bgtlrl- 2
+# CHECK: bclrl 14, 9
+0x4d 0xc9 0x00 0x21
+
+# FIXME: decode as bgtlrl- 0
+# CHECK: bclrl 14, 1
+0x4d 0xc1 0x00 0x21
+
+# FIXME: decode as bgtctrl- 2
+# CHECK: bcctrl 14, 9
+0x4d 0xc9 0x04 0x21
+
+# FIXME: decode as bgtctrl- 0
+# CHECK: bcctrl 14, 1
+0x4d 0xc1 0x04 0x21
+
+# FIXME: decode as bgelr 2
+# CHECK: bclr 4, 8
+0x4c 0x88 0x00 0x20
+
+# FIXME: decode as bgelr 0
+# CHECK: bclr 4, 0
+0x4c 0x80 0x00 0x20
+
+# FIXME: decode as bgectr 2
+# CHECK: bcctr 4, 8
+0x4c 0x88 0x04 0x20
+
+# FIXME: decode as bgectr 0
+# CHECK: bcctr 4, 0
+0x4c 0x80 0x04 0x20
+
+# FIXME: decode as bgelrl 2
+# CHECK: bclrl 4, 8
+0x4c 0x88 0x00 0x21
+
+# FIXME: decode as bgelrl 0
+# CHECK: bclrl 4, 0
+0x4c 0x80 0x00 0x21
+
+# FIXME: decode as bgectrl 2
+# CHECK: bcctrl 4, 8
+0x4c 0x88 0x04 0x21
+
+# FIXME: decode as bgectrl 0
+# CHECK: bcctrl 4, 0
+0x4c 0x80 0x04 0x21
+
+# FIXME: decode as bgelr+ 2
+# CHECK: bclr 7, 8
+0x4c 0xe8 0x00 0x20
+
+# FIXME: decode as bgelr+ 0
+# CHECK: bclr 7, 0
+0x4c 0xe0 0x00 0x20
+
+# FIXME: decode as bgectr+ 2
+# CHECK: bcctr 7, 8
+0x4c 0xe8 0x04 0x20
+
+# FIXME: decode as bgectr+ 0
+# CHECK: bcctr 7, 0
+0x4c 0xe0 0x04 0x20
+
+# FIXME: decode as bgelrl+ 2
+# CHECK: bclrl 7, 8
+0x4c 0xe8 0x00 0x21
+
+# FIXME: decode as bgelrl+ 0
+# CHECK: bclrl 7, 0
+0x4c 0xe0 0x00 0x21
+
+# FIXME: decode as bgectrl+ 2
+# CHECK: bcctrl 7, 8
+0x4c 0xe8 0x04 0x21
+
+# FIXME: decode as bgectrl+ 0
+# CHECK: bcctrl 7, 0
+0x4c 0xe0 0x04 0x21
+
+# FIXME: decode as bgelr- 2
+# CHECK: bclr 6, 8
+0x4c 0xc8 0x00 0x20
+
+# FIXME: decode as bgelr- 0
+# CHECK: bclr 6, 0
+0x4c 0xc0 0x00 0x20
+
+# FIXME: decode as bgectr- 2
+# CHECK: bcctr 6, 8
+0x4c 0xc8 0x04 0x20
+
+# FIXME: decode as bgectr- 0
+# CHECK: bcctr 6, 0
+0x4c 0xc0 0x04 0x20
+
+# FIXME: decode as bgelrl- 2
+# CHECK: bclrl 6, 8
+0x4c 0xc8 0x00 0x21
+
+# FIXME: decode as bgelrl- 0
+# CHECK: bclrl 6, 0
+0x4c 0xc0 0x00 0x21
+
+# FIXME: decode as bgectrl- 2
+# CHECK: bcctrl 6, 8
+0x4c 0xc8 0x04 0x21
+
+# FIXME: decode as bgectrl- 0
+# CHECK: bcctrl 6, 0
+0x4c 0xc0 0x04 0x21
+
+# FIXME: decode as bnelr 2
+# CHECK: bclr 4, 10
+0x4c 0x8a 0x00 0x20
+
+# FIXME: decode as bnelr 0
+# CHECK: bclr 4, 2
+0x4c 0x82 0x00 0x20
+
+# FIXME: decode as bnectr 2
+# CHECK: bcctr 4, 10
+0x4c 0x8a 0x04 0x20
+
+# FIXME: decode as bnectr 0
+# CHECK: bcctr 4, 2
+0x4c 0x82 0x04 0x20
+
+# FIXME: decode as bnelrl 2
+# CHECK: bclrl 4, 10
+0x4c 0x8a 0x00 0x21
+
+# FIXME: decode as bnelrl 0
+# CHECK: bclrl 4, 2
+0x4c 0x82 0x00 0x21
+
+# FIXME: decode as bnectrl 2
+# CHECK: bcctrl 4, 10
+0x4c 0x8a 0x04 0x21
+
+# FIXME: decode as bnectrl 0
+# CHECK: bcctrl 4, 2
+0x4c 0x82 0x04 0x21
+
+# FIXME: decode as bnelr+ 2
+# CHECK: bclr 7, 10
+0x4c 0xea 0x00 0x20
+
+# FIXME: decode as bnelr+ 0
+# CHECK: bclr 7, 2
+0x4c 0xe2 0x00 0x20
+
+# FIXME: decode as bnectr+ 2
+# CHECK: bcctr 7, 10
+0x4c 0xea 0x04 0x20
+
+# FIXME: decode as bnectr+ 0
+# CHECK: bcctr 7, 2
+0x4c 0xe2 0x04 0x20
+
+# FIXME: decode as bnelrl+ 2
+# CHECK: bclrl 7, 10
+0x4c 0xea 0x00 0x21
+
+# FIXME: decode as bnelrl+ 0
+# CHECK: bclrl 7, 2
+0x4c 0xe2 0x00 0x21
+
+# FIXME: decode as bnectrl+ 2
+# CHECK: bcctrl 7, 10
+0x4c 0xea 0x04 0x21
+
+# FIXME: decode as bnectrl+ 0
+# CHECK: bcctrl 7, 2
+0x4c 0xe2 0x04 0x21
+
+# FIXME: decode as bnelr- 2
+# CHECK: bclr 6, 10
+0x4c 0xca 0x00 0x20
+
+# FIXME: decode as bnelr- 0
+# CHECK: bclr 6, 2
+0x4c 0xc2 0x00 0x20
+
+# FIXME: decode as bnectr- 2
+# CHECK: bcctr 6, 10
+0x4c 0xca 0x04 0x20
+
+# FIXME: decode as bnectr- 0
+# CHECK: bcctr 6, 2
+0x4c 0xc2 0x04 0x20
+
+# FIXME: decode as bnelrl- 2
+# CHECK: bclrl 6, 10
+0x4c 0xca 0x00 0x21
+
+# FIXME: decode as bnelrl- 0
+# CHECK: bclrl 6, 2
+0x4c 0xc2 0x00 0x21
+
+# FIXME: decode as bnectrl- 2
+# CHECK: bcctrl 6, 10
+0x4c 0xca 0x04 0x21
+
+# FIXME: decode as bnectrl- 0
+# CHECK: bcctrl 6, 2
+0x4c 0xc2 0x04 0x21
+
+# FIXME: decode as blelr 2
+# CHECK: bclr 4, 9
+0x4c 0x89 0x00 0x20
+
+# FIXME: decode as blelr 0
+# CHECK: bclr 4, 1
+0x4c 0x81 0x00 0x20
+
+# FIXME: decode as blectr 2
+# CHECK: bcctr 4, 9
+0x4c 0x89 0x04 0x20
+
+# FIXME: decode as blectr 0
+# CHECK: bcctr 4, 1
+0x4c 0x81 0x04 0x20
+
+# FIXME: decode as blelrl 2
+# CHECK: bclrl 4, 9
+0x4c 0x89 0x00 0x21
+
+# FIXME: decode as blelrl 0
+# CHECK: bclrl 4, 1
+0x4c 0x81 0x00 0x21
+
+# FIXME: decode as blectrl 2
+# CHECK: bcctrl 4, 9
+0x4c 0x89 0x04 0x21
+
+# FIXME: decode as blectrl 0
+# CHECK: bcctrl 4, 1
+0x4c 0x81 0x04 0x21
+
+# FIXME: decode as blelr+ 2
+# CHECK: bclr 7, 9
+0x4c 0xe9 0x00 0x20
+
+# FIXME: decode as blelr+ 0
+# CHECK: bclr 7, 1
+0x4c 0xe1 0x00 0x20
+
+# FIXME: decode as blectr+ 2
+# CHECK: bcctr 7, 9
+0x4c 0xe9 0x04 0x20
+
+# FIXME: decode as blectr+ 0
+# CHECK: bcctr 7, 1
+0x4c 0xe1 0x04 0x20
+
+# FIXME: decode as blelrl+ 2
+# CHECK: bclrl 7, 9
+0x4c 0xe9 0x00 0x21
+
+# FIXME: decode as blelrl+ 0
+# CHECK: bclrl 7, 1
+0x4c 0xe1 0x00 0x21
+
+# FIXME: decode as blectrl+ 2
+# CHECK: bcctrl 7, 9
+0x4c 0xe9 0x04 0x21
+
+# FIXME: decode as blectrl+ 0
+# CHECK: bcctrl 7, 1
+0x4c 0xe1 0x04 0x21
+
+# FIXME: decode as blelr- 2
+# CHECK: bclr 6, 9
+0x4c 0xc9 0x00 0x20
+
+# FIXME: decode as blelr- 0
+# CHECK: bclr 6, 1
+0x4c 0xc1 0x00 0x20
+
+# FIXME: decode as blectr- 2
+# CHECK: bcctr 6, 9
+0x4c 0xc9 0x04 0x20
+
+# FIXME: decode as blectr- 0
+# CHECK: bcctr 6, 1
+0x4c 0xc1 0x04 0x20
+
+# FIXME: decode as blelrl- 2
+# CHECK: bclrl 6, 9
+0x4c 0xc9 0x00 0x21
+
+# FIXME: decode as blelrl- 0
+# CHECK: bclrl 6, 1
+0x4c 0xc1 0x00 0x21
+
+# FIXME: decode as blectrl- 2
+# CHECK: bcctrl 6, 9
+0x4c 0xc9 0x04 0x21
+
+# FIXME: decode as blectrl- 0
+# CHECK: bcctrl 6, 1
+0x4c 0xc1 0x04 0x21
+
+# FIXME: decode as bunlr 2
+# CHECK: bclr 12, 11
+0x4d 0x8b 0x00 0x20
+
+# FIXME: decode as bunlr 0
+# CHECK: bclr 12, 3
+0x4d 0x83 0x00 0x20
+
+# FIXME: decode as bunctr 2
+# CHECK: bcctr 12, 11
+0x4d 0x8b 0x04 0x20
+
+# FIXME: decode as bunctr 0
+# CHECK: bcctr 12, 3
+0x4d 0x83 0x04 0x20
+
+# FIXME: decode as bunlrl 2
+# CHECK: bclrl 12, 11
+0x4d 0x8b 0x00 0x21
+
+# FIXME: decode as bunlrl 0
+# CHECK: bclrl 12, 3
+0x4d 0x83 0x00 0x21
+
+# FIXME: decode as bunctrl 2
+# CHECK: bcctrl 12, 11
+0x4d 0x8b 0x04 0x21
+
+# FIXME: decode as bunctrl 0
+# CHECK: bcctrl 12, 3
+0x4d 0x83 0x04 0x21
+
+# FIXME: decode as bunlr+ 2
+# CHECK: bclr 15, 11
+0x4d 0xeb 0x00 0x20
+
+# FIXME: decode as bunlr+ 0
+# CHECK: bclr 15, 3
+0x4d 0xe3 0x00 0x20
+
+# FIXME: decode as bunctr+ 2
+# CHECK: bcctr 15, 11
+0x4d 0xeb 0x04 0x20
+
+# FIXME: decode as bunctr+ 0
+# CHECK: bcctr 15, 3
+0x4d 0xe3 0x04 0x20
+
+# FIXME: decode as bunlrl+ 2
+# CHECK: bclrl 15, 11
+0x4d 0xeb 0x00 0x21
+
+# FIXME: decode as bunlrl+ 0
+# CHECK: bclrl 15, 3
+0x4d 0xe3 0x00 0x21
+
+# FIXME: decode as bunctrl+ 2
+# CHECK: bcctrl 15, 11
+0x4d 0xeb 0x04 0x21
+
+# FIXME: decode as bunctrl+ 0
+# CHECK: bcctrl 15, 3
+0x4d 0xe3 0x04 0x21
+
+# FIXME: decode as bunlr- 2
+# CHECK: bclr 14, 11
+0x4d 0xcb 0x00 0x20
+
+# FIXME: decode as bunlr- 0
+# CHECK: bclr 14, 3
+0x4d 0xc3 0x00 0x20
+
+# FIXME: decode as bunctr- 2
+# CHECK: bcctr 14, 11
+0x4d 0xcb 0x04 0x20
+
+# FIXME: decode as bunctr- 0
+# CHECK: bcctr 14, 3
+0x4d 0xc3 0x04 0x20
+
+# FIXME: decode as bunlrl- 2
+# CHECK: bclrl 14, 11
+0x4d 0xcb 0x00 0x21
+
+# FIXME: decode as bunlrl- 0
+# CHECK: bclrl 14, 3
+0x4d 0xc3 0x00 0x21
+
+# FIXME: decode as bunctrl- 2
+# CHECK: bcctrl 14, 11
+0x4d 0xcb 0x04 0x21
+
+# FIXME: decode as bunctrl- 0
+# CHECK: bcctrl 14, 3
+0x4d 0xc3 0x04 0x21
+
+# FIXME: decode as bnulr 2
+# CHECK: bclr 4, 11
+0x4c 0x8b 0x00 0x20
+
+# FIXME: decode as bnulr 0
+# CHECK: bclr 4, 3
+0x4c 0x83 0x00 0x20
+
+# FIXME: decode as bnuctr 2
+# CHECK: bcctr 4, 11
+0x4c 0x8b 0x04 0x20
+
+# FIXME: decode as bnuctr 0
+# CHECK: bcctr 4, 3
+0x4c 0x83 0x04 0x20
+
+# FIXME: decode as bnulrl 2
+# CHECK: bclrl 4, 11
+0x4c 0x8b 0x00 0x21
+
+# FIXME: decode as bnulrl 0
+# CHECK: bclrl 4, 3
+0x4c 0x83 0x00 0x21
+
+# FIXME: decode as bnuctrl 2
+# CHECK: bcctrl 4, 11
+0x4c 0x8b 0x04 0x21
+
+# FIXME: decode as bnuctrl 0
+# CHECK: bcctrl 4, 3
+0x4c 0x83 0x04 0x21
+
+# FIXME: decode as bnulr+ 2
+# CHECK: bclr 7, 11
+0x4c 0xeb 0x00 0x20
+
+# FIXME: decode as bnulr+ 0
+# CHECK: bclr 7, 3
+0x4c 0xe3 0x00 0x20
+
+# FIXME: decode as bnuctr+ 2
+# CHECK: bcctr 7, 11
+0x4c 0xeb 0x04 0x20
+
+# FIXME: decode as bnuctr+ 0
+# CHECK: bcctr 7, 3
+0x4c 0xe3 0x04 0x20
+
+# FIXME: decode as bnulrl+ 2
+# CHECK: bclrl 7, 11
+0x4c 0xeb 0x00 0x21
+
+# FIXME: decode as bnulrl+ 0
+# CHECK: bclrl 7, 3
+0x4c 0xe3 0x00 0x21
+
+# FIXME: decode as bnuctrl+ 2
+# CHECK: bcctrl 7, 11
+0x4c 0xeb 0x04 0x21
+
+# FIXME: decode as bnuctrl+ 0
+# CHECK: bcctrl 7, 3
+0x4c 0xe3 0x04 0x21
+
+# FIXME: decode as bnulr- 2
+# CHECK: bclr 6, 11
+0x4c 0xcb 0x00 0x20
+
+# FIXME: decode as bnulr- 0
+# CHECK: bclr 6, 3
+0x4c 0xc3 0x00 0x20
+
+# FIXME: decode as bnuctr- 2
+# CHECK: bcctr 6, 11
+0x4c 0xcb 0x04 0x20
+
+# FIXME: decode as bnuctr- 0
+# CHECK: bcctr 6, 3
+0x4c 0xc3 0x04 0x20
+
+# FIXME: decode as bnulrl- 2
+# CHECK: bclrl 6, 11
+0x4c 0xcb 0x00 0x21
+
+# FIXME: decode as bnulrl- 0
+# CHECK: bclrl 6, 3
+0x4c 0xc3 0x00 0x21
+
+# FIXME: decode as bnuctrl- 2
+# CHECK: bcctrl 6, 11
+0x4c 0xcb 0x04 0x21
+
+# FIXME: decode as bnuctrl- 0
+# CHECK: bcctrl 6, 3
+0x4c 0xc3 0x04 0x21
+
+# FIXME: decode as bunlr 2
+# CHECK: bclr 12, 11
+0x4d 0x8b 0x00 0x20
+
+# FIXME: decode as bunlr 0
+# CHECK: bclr 12, 3
+0x4d 0x83 0x00 0x20
+
+# FIXME: decode as bunctr 2
+# CHECK: bcctr 12, 11
+0x4d 0x8b 0x04 0x20
+
+# FIXME: decode as bunctr 0
+# CHECK: bcctr 12, 3
+0x4d 0x83 0x04 0x20
+
+# FIXME: decode as bunlrl 2
+# CHECK: bclrl 12, 11
+0x4d 0x8b 0x00 0x21
+
+# FIXME: decode as bunlrl 0
+# CHECK: bclrl 12, 3
+0x4d 0x83 0x00 0x21
+
+# FIXME: decode as bunctrl 2
+# CHECK: bcctrl 12, 11
+0x4d 0x8b 0x04 0x21
+
+# FIXME: decode as bunctrl 0
+# CHECK: bcctrl 12, 3
+0x4d 0x83 0x04 0x21
+
+# FIXME: decode as bunlr+ 2
+# CHECK: bclr 15, 11
+0x4d 0xeb 0x00 0x20
+
+# FIXME: decode as bunlr+ 0
+# CHECK: bclr 15, 3
+0x4d 0xe3 0x00 0x20
+
+# FIXME: decode as bunctr+ 2
+# CHECK: bcctr 15, 11
+0x4d 0xeb 0x04 0x20
+
+# FIXME: decode as bunctr+ 0
+# CHECK: bcctr 15, 3
+0x4d 0xe3 0x04 0x20
+
+# FIXME: decode as bunlrl+ 2
+# CHECK: bclrl 15, 11
+0x4d 0xeb 0x00 0x21
+
+# FIXME: decode as bunlrl+ 0
+# CHECK: bclrl 15, 3
+0x4d 0xe3 0x00 0x21
+
+# FIXME: decode as bunctrl+ 2
+# CHECK: bcctrl 15, 11
+0x4d 0xeb 0x04 0x21
+
+# FIXME: decode as bunctrl+ 0
+# CHECK: bcctrl 15, 3
+0x4d 0xe3 0x04 0x21
+
+# FIXME: decode as bunlr- 2
+# CHECK: bclr 14, 11
+0x4d 0xcb 0x00 0x20
+
+# FIXME: decode as bunlr- 0
+# CHECK: bclr 14, 3
+0x4d 0xc3 0x00 0x20
+
+# FIXME: decode as bunctr- 2
+# CHECK: bcctr 14, 11
+0x4d 0xcb 0x04 0x20
+
+# FIXME: decode as bunctr- 0
+# CHECK: bcctr 14, 3
+0x4d 0xc3 0x04 0x20
+
+# FIXME: decode as bunlrl- 2
+# CHECK: bclrl 14, 11
+0x4d 0xcb 0x00 0x21
+
+# FIXME: decode as bunlrl- 0
+# CHECK: bclrl 14, 3
+0x4d 0xc3 0x00 0x21
+
+# FIXME: decode as bunctrl- 2
+# CHECK: bcctrl 14, 11
+0x4d 0xcb 0x04 0x21
+
+# FIXME: decode as bunctrl- 0
+# CHECK: bcctrl 14, 3
+0x4d 0xc3 0x04 0x21
+
+# FIXME: decode as bnulr 2
+# CHECK: bclr 4, 11
+0x4c 0x8b 0x00 0x20
+
+# FIXME: decode as bnulr 0
+# CHECK: bclr 4, 3
+0x4c 0x83 0x00 0x20
+
+# FIXME: decode as bnuctr 2
+# CHECK: bcctr 4, 11
+0x4c 0x8b 0x04 0x20
+
+# FIXME: decode as bnuctr 0
+# CHECK: bcctr 4, 3
+0x4c 0x83 0x04 0x20
+
+# FIXME: decode as bnulrl 2
+# CHECK: bclrl 4, 11
+0x4c 0x8b 0x00 0x21
+
+# FIXME: decode as bnulrl 0
+# CHECK: bclrl 4, 3
+0x4c 0x83 0x00 0x21
+
+# FIXME: decode as bnuctrl 2
+# CHECK: bcctrl 4, 11
+0x4c 0x8b 0x04 0x21
+
+# FIXME: decode as bnuctrl 0
+# CHECK: bcctrl 4, 3
+0x4c 0x83 0x04 0x21
+
+# FIXME: decode as bnulr+ 2
+# CHECK: bclr 7, 11
+0x4c 0xeb 0x00 0x20
+
+# FIXME: decode as bnulr+ 0
+# CHECK: bclr 7, 3
+0x4c 0xe3 0x00 0x20
+
+# FIXME: decode as bnuctr+ 2
+# CHECK: bcctr 7, 11
+0x4c 0xeb 0x04 0x20
+
+# FIXME: decode as bnuctr+ 0
+# CHECK: bcctr 7, 3
+0x4c 0xe3 0x04 0x20
+
+# FIXME: decode as bnulrl+ 2
+# CHECK: bclrl 7, 11
+0x4c 0xeb 0x00 0x21
+
+# FIXME: decode as bnulrl+ 0
+# CHECK: bclrl 7, 3
+0x4c 0xe3 0x00 0x21
+
+# FIXME: decode as bnuctrl+ 2
+# CHECK: bcctrl 7, 11
+0x4c 0xeb 0x04 0x21
+
+# FIXME: decode as bnuctrl+ 0
+# CHECK: bcctrl 7, 3
+0x4c 0xe3 0x04 0x21
+
+# FIXME: decode as bnulr- 2
+# CHECK: bclr 6, 11
+0x4c 0xcb 0x00 0x20
+
+# FIXME: decode as bnulr- 0
+# CHECK: bclr 6, 3
+0x4c 0xc3 0x00 0x20
+
+# FIXME: decode as bnuctr- 2
+# CHECK: bcctr 6, 11
+0x4c 0xcb 0x04 0x20
+
+# FIXME: decode as bnuctr- 0
+# CHECK: bcctr 6, 3
+0x4c 0xc3 0x04 0x20
+
+# FIXME: decode as bnulrl- 2
+# CHECK: bclrl 6, 11
+0x4c 0xcb 0x00 0x21
+
+# FIXME: decode as bnulrl- 0
+# CHECK: bclrl 6, 3
+0x4c 0xc3 0x00 0x21
+
+# FIXME: decode as bnuctrl- 2
+# CHECK: bcctrl 6, 11
+0x4c 0xcb 0x04 0x21
+
+# FIXME: decode as bnuctrl- 0
+# CHECK: bcctrl 6, 3
+0x4c 0xc3 0x04 0x21
+
+# FIXME: test bc 12, 2, target
+# FIXME: test bca 12, 2, target
+# FIXME: test bcl 12, 2, target
+# FIXME: test bcla 12, 2, target
+# FIXME: test bc 15, 2, target
+# FIXME: test bca 15, 2, target
+# FIXME: test bcl 15, 2, target
+# FIXME: test bcla 15, 2, target
+# FIXME: test bc 14, 2, target
+# FIXME: test bca 14, 2, target
+# FIXME: test bcl 14, 2, target
+# FIXME: test bcla 14, 2, target
+# FIXME: test bc 4, 2, target
+# FIXME: test bca 4, 2, target
+# FIXME: test bcl 4, 2, target
+# FIXME: test bcla 4, 2, target
+# FIXME: test bc 7, 2, target
+# FIXME: test bca 7, 2, target
+# FIXME: test bcl 7, 2, target
+# FIXME: test bcla 7, 2, target
+# FIXME: test bc 6, 2, target
+# FIXME: test bca 6, 2, target
+# FIXME: test bcl 6, 2, target
+# FIXME: test bcla 6, 2, target
+# FIXME: test bdnz target
+# FIXME: test bdnza target
+# FIXME: test bdnzl target
+# FIXME: test bdnzla target
+# FIXME: test bdnz+ target
+# FIXME: test bdnza+ target
+# FIXME: test bdnzl+ target
+# FIXME: test bdnzla+ target
+# FIXME: test bdnz- target
+# FIXME: test bdnza- target
+# FIXME: test bdnzl- target
+# FIXME: test bdnzla- target
+# FIXME: test bc 8, 2, target
+# FIXME: test bca 8, 2, target
+# FIXME: test bcl 8, 2, target
+# FIXME: test bcla 8, 2, target
+# FIXME: test bc 0, 2, target
+# FIXME: test bca 0, 2, target
+# FIXME: test bcl 0, 2, target
+# FIXME: test bcla 0, 2, target
+# FIXME: test bdz target
+# FIXME: test bdza target
+# FIXME: test bdzl target
+# FIXME: test bdzla target
+# FIXME: test bdz+ target
+# FIXME: test bdza+ target
+# FIXME: test bdzl+ target
+# FIXME: test bdzla+ target
+# FIXME: test bdz- target
+# FIXME: test bdza- target
+# FIXME: test bdzl- target
+# FIXME: test bdzla- target
+# FIXME: test bc 10, 2, target
+# FIXME: test bca 10, 2, target
+# FIXME: test bcl 10, 2, target
+# FIXME: test bcla 10, 2, target
+# FIXME: test bc 2, 2, target
+# FIXME: test bca 2, 2, target
+# FIXME: test bcl 2, 2, target
+# FIXME: test bcla 2, 2, target
+# FIXME: test blt 2, target
+# FIXME: test blt 0, target
+# FIXME: test blta 2, target
+# FIXME: test blta 0, target
+# FIXME: test bltl 2, target
+# FIXME: test bltl 0, target
+# FIXME: test bltla 2, target
+# FIXME: test bltla 0, target
+# FIXME: test blt+ 2, target
+# FIXME: test blt+ 0, target
+# FIXME: test blta+ 2, target
+# FIXME: test blta+ 0, target
+# FIXME: test bltl+ 2, target
+# FIXME: test bltl+ 0, target
+# FIXME: test bltla+ 2, target
+# FIXME: test bltla+ 0, target
+# FIXME: test blt- 2, target
+# FIXME: test blt- 0, target
+# FIXME: test blta- 2, target
+# FIXME: test blta- 0, target
+# FIXME: test bltl- 2, target
+# FIXME: test bltl- 0, target
+# FIXME: test bltla- 2, target
+# FIXME: test bltla- 0, target
+# FIXME: test ble 2, target
+# FIXME: test ble 0, target
+# FIXME: test blea 2, target
+# FIXME: test blea 0, target
+# FIXME: test blel 2, target
+# FIXME: test blel 0, target
+# FIXME: test blela 2, target
+# FIXME: test blela 0, target
+# FIXME: test ble+ 2, target
+# FIXME: test ble+ 0, target
+# FIXME: test blea+ 2, target
+# FIXME: test blea+ 0, target
+# FIXME: test blel+ 2, target
+# FIXME: test blel+ 0, target
+# FIXME: test blela+ 2, target
+# FIXME: test blela+ 0, target
+# FIXME: test ble- 2, target
+# FIXME: test ble- 0, target
+# FIXME: test blea- 2, target
+# FIXME: test blea- 0, target
+# FIXME: test blel- 2, target
+# FIXME: test blel- 0, target
+# FIXME: test blela- 2, target
+# FIXME: test blela- 0, target
+# FIXME: test beq 2, target
+# FIXME: test beq 0, target
+# FIXME: test beqa 2, target
+# FIXME: test beqa 0, target
+# FIXME: test beql 2, target
+# FIXME: test beql 0, target
+# FIXME: test beqla 2, target
+# FIXME: test beqla 0, target
+# FIXME: test beq+ 2, target
+# FIXME: test beq+ 0, target
+# FIXME: test beqa+ 2, target
+# FIXME: test beqa+ 0, target
+# FIXME: test beql+ 2, target
+# FIXME: test beql+ 0, target
+# FIXME: test beqla+ 2, target
+# FIXME: test beqla+ 0, target
+# FIXME: test beq- 2, target
+# FIXME: test beq- 0, target
+# FIXME: test beqa- 2, target
+# FIXME: test beqa- 0, target
+# FIXME: test beql- 2, target
+# FIXME: test beql- 0, target
+# FIXME: test beqla- 2, target
+# FIXME: test beqla- 0, target
+# FIXME: test bge 2, target
+# FIXME: test bge 0, target
+# FIXME: test bgea 2, target
+# FIXME: test bgea 0, target
+# FIXME: test bgel 2, target
+# FIXME: test bgel 0, target
+# FIXME: test bgela 2, target
+# FIXME: test bgela 0, target
+# FIXME: test bge+ 2, target
+# FIXME: test bge+ 0, target
+# FIXME: test bgea+ 2, target
+# FIXME: test bgea+ 0, target
+# FIXME: test bgel+ 2, target
+# FIXME: test bgel+ 0, target
+# FIXME: test bgela+ 2, target
+# FIXME: test bgela+ 0, target
+# FIXME: test bge- 2, target
+# FIXME: test bge- 0, target
+# FIXME: test bgea- 2, target
+# FIXME: test bgea- 0, target
+# FIXME: test bgel- 2, target
+# FIXME: test bgel- 0, target
+# FIXME: test bgela- 2, target
+# FIXME: test bgela- 0, target
+# FIXME: test bgt 2, target
+# FIXME: test bgt 0, target
+# FIXME: test bgta 2, target
+# FIXME: test bgta 0, target
+# FIXME: test bgtl 2, target
+# FIXME: test bgtl 0, target
+# FIXME: test bgtla 2, target
+# FIXME: test bgtla 0, target
+# FIXME: test bgt+ 2, target
+# FIXME: test bgt+ 0, target
+# FIXME: test bgta+ 2, target
+# FIXME: test bgta+ 0, target
+# FIXME: test bgtl+ 2, target
+# FIXME: test bgtl+ 0, target
+# FIXME: test bgtla+ 2, target
+# FIXME: test bgtla+ 0, target
+# FIXME: test bgt- 2, target
+# FIXME: test bgt- 0, target
+# FIXME: test bgta- 2, target
+# FIXME: test bgta- 0, target
+# FIXME: test bgtl- 2, target
+# FIXME: test bgtl- 0, target
+# FIXME: test bgtla- 2, target
+# FIXME: test bgtla- 0, target
+# FIXME: test bge 2, target
+# FIXME: test bge 0, target
+# FIXME: test bgea 2, target
+# FIXME: test bgea 0, target
+# FIXME: test bgel 2, target
+# FIXME: test bgel 0, target
+# FIXME: test bgela 2, target
+# FIXME: test bgela 0, target
+# FIXME: test bge+ 2, target
+# FIXME: test bge+ 0, target
+# FIXME: test bgea+ 2, target
+# FIXME: test bgea+ 0, target
+# FIXME: test bgel+ 2, target
+# FIXME: test bgel+ 0, target
+# FIXME: test bgela+ 2, target
+# FIXME: test bgela+ 0, target
+# FIXME: test bge- 2, target
+# FIXME: test bge- 0, target
+# FIXME: test bgea- 2, target
+# FIXME: test bgea- 0, target
+# FIXME: test bgel- 2, target
+# FIXME: test bgel- 0, target
+# FIXME: test bgela- 2, target
+# FIXME: test bgela- 0, target
+# FIXME: test bne 2, target
+# FIXME: test bne 0, target
+# FIXME: test bnea 2, target
+# FIXME: test bnea 0, target
+# FIXME: test bnel 2, target
+# FIXME: test bnel 0, target
+# FIXME: test bnela 2, target
+# FIXME: test bnela 0, target
+# FIXME: test bne+ 2, target
+# FIXME: test bne+ 0, target
+# FIXME: test bnea+ 2, target
+# FIXME: test bnea+ 0, target
+# FIXME: test bnel+ 2, target
+# FIXME: test bnel+ 0, target
+# FIXME: test bnela+ 2, target
+# FIXME: test bnela+ 0, target
+# FIXME: test bne- 2, target
+# FIXME: test bne- 0, target
+# FIXME: test bnea- 2, target
+# FIXME: test bnea- 0, target
+# FIXME: test bnel- 2, target
+# FIXME: test bnel- 0, target
+# FIXME: test bnela- 2, target
+# FIXME: test bnela- 0, target
+# FIXME: test ble 2, target
+# FIXME: test ble 0, target
+# FIXME: test blea 2, target
+# FIXME: test blea 0, target
+# FIXME: test blel 2, target
+# FIXME: test blel 0, target
+# FIXME: test blela 2, target
+# FIXME: test blela 0, target
+# FIXME: test ble+ 2, target
+# FIXME: test ble+ 0, target
+# FIXME: test blea+ 2, target
+# FIXME: test blea+ 0, target
+# FIXME: test blel+ 2, target
+# FIXME: test blel+ 0, target
+# FIXME: test blela+ 2, target
+# FIXME: test blela+ 0, target
+# FIXME: test ble- 2, target
+# FIXME: test ble- 0, target
+# FIXME: test blea- 2, target
+# FIXME: test blea- 0, target
+# FIXME: test blel- 2, target
+# FIXME: test blel- 0, target
+# FIXME: test blela- 2, target
+# FIXME: test blela- 0, target
+# FIXME: test bun 2, target
+# FIXME: test bun 0, target
+# FIXME: test buna 2, target
+# FIXME: test buna 0, target
+# FIXME: test bunl 2, target
+# FIXME: test bunl 0, target
+# FIXME: test bunla 2, target
+# FIXME: test bunla 0, target
+# FIXME: test bun+ 2, target
+# FIXME: test bun+ 0, target
+# FIXME: test buna+ 2, target
+# FIXME: test buna+ 0, target
+# FIXME: test bunl+ 2, target
+# FIXME: test bunl+ 0, target
+# FIXME: test bunla+ 2, target
+# FIXME: test bunla+ 0, target
+# FIXME: test bun- 2, target
+# FIXME: test bun- 0, target
+# FIXME: test buna- 2, target
+# FIXME: test buna- 0, target
+# FIXME: test bunl- 2, target
+# FIXME: test bunl- 0, target
+# FIXME: test bunla- 2, target
+# FIXME: test bunla- 0, target
+# FIXME: test bnu 2, target
+# FIXME: test bnu 0, target
+# FIXME: test bnua 2, target
+# FIXME: test bnua 0, target
+# FIXME: test bnul 2, target
+# FIXME: test bnul 0, target
+# FIXME: test bnula 2, target
+# FIXME: test bnula 0, target
+# FIXME: test bnu+ 2, target
+# FIXME: test bnu+ 0, target
+# FIXME: test bnua+ 2, target
+# FIXME: test bnua+ 0, target
+# FIXME: test bnul+ 2, target
+# FIXME: test bnul+ 0, target
+# FIXME: test bnula+ 2, target
+# FIXME: test bnula+ 0, target
+# FIXME: test bnu- 2, target
+# FIXME: test bnu- 0, target
+# FIXME: test bnua- 2, target
+# FIXME: test bnua- 0, target
+# FIXME: test bnul- 2, target
+# FIXME: test bnul- 0, target
+# FIXME: test bnula- 2, target
+# FIXME: test bnula- 0, target
+# FIXME: test bun 2, target
+# FIXME: test bun 0, target
+# FIXME: test buna 2, target
+# FIXME: test buna 0, target
+# FIXME: test bunl 2, target
+# FIXME: test bunl 0, target
+# FIXME: test bunla 2, target
+# FIXME: test bunla 0, target
+# FIXME: test bun+ 2, target
+# FIXME: test bun+ 0, target
+# FIXME: test buna+ 2, target
+# FIXME: test buna+ 0, target
+# FIXME: test bunl+ 2, target
+# FIXME: test bunl+ 0, target
+# FIXME: test bunla+ 2, target
+# FIXME: test bunla+ 0, target
+# FIXME: test bun- 2, target
+# FIXME: test bun- 0, target
+# FIXME: test buna- 2, target
+# FIXME: test buna- 0, target
+# FIXME: test bunl- 2, target
+# FIXME: test bunl- 0, target
+# FIXME: test bunla- 2, target
+# FIXME: test bunla- 0, target
+# FIXME: test bnu 2, target
+# FIXME: test bnu 0, target
+# FIXME: test bnua 2, target
+# FIXME: test bnua 0, target
+# FIXME: test bnul 2, target
+# FIXME: test bnul 0, target
+# FIXME: test bnula 2, target
+# FIXME: test bnula 0, target
+# FIXME: test bnu+ 2, target
+# FIXME: test bnu+ 0, target
+# FIXME: test bnua+ 2, target
+# FIXME: test bnua+ 0, target
+# FIXME: test bnul+ 2, target
+# FIXME: test bnul+ 0, target
+# FIXME: test bnula+ 2, target
+# FIXME: test bnula+ 0, target
+# FIXME: test bnu- 2, target
+# FIXME: test bnu- 0, target
+# FIXME: test bnua- 2, target
+# FIXME: test bnua- 0, target
+# FIXME: test bnul- 2, target
+# FIXME: test bnul- 0, target
+# FIXME: test bnula- 2, target
+# FIXME: test bnula- 0, target
+
+# CHECK: crset 2
+0x4c 0x42 0x12 0x42
+
+# CHECK: crclr 2
+0x4c 0x42 0x11 0x82
+
+# CHECK: crmove 2, 3
+0x4c 0x43 0x1b 0x82
+
+# CHECK: crnot 2, 3
+0x4c 0x43 0x18 0x42
+
+# CHECK: addi 2, 3, -128
+0x38 0x43 0xff 0x80
+
+# CHECK: addis 2, 3, -128
+0x3c 0x43 0xff 0x80
+
+# CHECK: addic 2, 3, -128
+0x30 0x43 0xff 0x80
+
+# CHECK: addic. 2, 3, -128
+0x34 0x43 0xff 0x80
+
+# CHECK: sub 2, 3, 4
+0x7c 0x44 0x18 0x50
+
+# CHECK: sub. 2, 3, 4
+0x7c 0x44 0x18 0x51
+
+# CHECK: subc 2, 3, 4
+0x7c 0x44 0x18 0x10
+
+# CHECK: subc. 2, 3, 4
+0x7c 0x44 0x18 0x11
+
+# CHECK: cmpdi 2, 3, 128
+0x2d 0x23 0x00 0x80
+
+# CHECK: cmpdi 3, 128
+0x2c 0x23 0x00 0x80
+
+# CHECK: cmpd 2, 3, 4
+0x7d 0x23 0x20 0x00
+
+# CHECK: cmpd 3, 4
+0x7c 0x23 0x20 0x00
+
+# CHECK: cmpldi 2, 3, 128
+0x29 0x23 0x00 0x80
+
+# CHECK: cmpldi 3, 128
+0x28 0x23 0x00 0x80
+
+# CHECK: cmpld 2, 3, 4
+0x7d 0x23 0x20 0x40
+
+# CHECK: cmpld 3, 4
+0x7c 0x23 0x20 0x40
+
+# CHECK: cmpwi 2, 3, 128
+0x2d 0x03 0x00 0x80
+
+# CHECK: cmpwi 3, 128
+0x2c 0x03 0x00 0x80
+
+# CHECK: cmpw 2, 3, 4
+0x7d 0x03 0x20 0x00
+
+# CHECK: cmpw 3, 4
+0x7c 0x03 0x20 0x00
+
+# CHECK: cmplwi 2, 3, 128
+0x29 0x03 0x00 0x80
+
+# CHECK: cmplwi 3, 128
+0x28 0x03 0x00 0x80
+
+# CHECK: cmplw 2, 3, 4
+0x7d 0x03 0x20 0x40
+
+# CHECK: cmplw 3, 4
+0x7c 0x03 0x20 0x40
+
+# CHECK: twlti 3, 4
+0x0e 0x03 0x00 0x04
+
+# CHECK: twlt 3, 4
+0x7e 0x03 0x20 0x08
+
+# CHECK: tdlti 3, 4
+0x0a 0x03 0x00 0x04
+
+# CHECK: tdlt 3, 4
+0x7e 0x03 0x20 0x88
+
+# CHECK: twi 20, 3, 4
+0x0e 0x83 0x00 0x04
+
+# CHECK: tw 20, 3, 4
+0x7e 0x83 0x20 0x08
+
+# CHECK: tdi 20, 3, 4
+0x0a 0x83 0x00 0x04
+
+# CHECK: td 20, 3, 4
+0x7e 0x83 0x20 0x88
+
+# CHECK: tweqi 3, 4
+0x0c 0x83 0x00 0x04
+
+# CHECK: tweq 3, 4
+0x7c 0x83 0x20 0x08
+
+# CHECK: tdeqi 3, 4
+0x08 0x83 0x00 0x04
+
+# CHECK: tdeq 3, 4
+0x7c 0x83 0x20 0x88
+
+# CHECK: twi 12, 3, 4
+0x0d 0x83 0x00 0x04
+
+# CHECK: tw 12, 3, 4
+0x7d 0x83 0x20 0x08
+
+# CHECK: tdi 12, 3, 4
+0x09 0x83 0x00 0x04
+
+# CHECK: td 12, 3, 4
+0x7d 0x83 0x20 0x88
+
+# CHECK: twgti 3, 4
+0x0d 0x03 0x00 0x04
+
+# CHECK: twgt 3, 4
+0x7d 0x03 0x20 0x08
+
+# CHECK: tdgti 3, 4
+0x09 0x03 0x00 0x04
+
+# CHECK: tdgt 3, 4
+0x7d 0x03 0x20 0x88
+
+# CHECK: twi 12, 3, 4
+0x0d 0x83 0x00 0x04
+
+# CHECK: tw 12, 3, 4
+0x7d 0x83 0x20 0x08
+
+# CHECK: tdi 12, 3, 4
+0x09 0x83 0x00 0x04
+
+# CHECK: td 12, 3, 4
+0x7d 0x83 0x20 0x88
+
+# CHECK: twnei 3, 4
+0x0f 0x03 0x00 0x04
+
+# CHECK: twne 3, 4
+0x7f 0x03 0x20 0x08
+
+# CHECK: tdnei 3, 4
+0x0b 0x03 0x00 0x04
+
+# CHECK: tdne 3, 4
+0x7f 0x03 0x20 0x88
+
+# CHECK: twi 20, 3, 4
+0x0e 0x83 0x00 0x04
+
+# CHECK: tw 20, 3, 4
+0x7e 0x83 0x20 0x08
+
+# CHECK: tdi 20, 3, 4
+0x0a 0x83 0x00 0x04
+
+# CHECK: td 20, 3, 4
+0x7e 0x83 0x20 0x88
+
+# CHECK: twllti 3, 4
+0x0c 0x43 0x00 0x04
+
+# CHECK: twllt 3, 4
+0x7c 0x43 0x20 0x08
+
+# CHECK: tdllti 3, 4
+0x08 0x43 0x00 0x04
+
+# CHECK: tdllt 3, 4
+0x7c 0x43 0x20 0x88
+
+# CHECK: twi 6, 3, 4
+0x0c 0xc3 0x00 0x04
+
+# CHECK: tw 6, 3, 4
+0x7c 0xc3 0x20 0x08
+
+# CHECK: tdi 6, 3, 4
+0x08 0xc3 0x00 0x04
+
+# CHECK: td 6, 3, 4
+0x7c 0xc3 0x20 0x88
+
+# CHECK: twi 5, 3, 4
+0x0c 0xa3 0x00 0x04
+
+# CHECK: tw 5, 3, 4
+0x7c 0xa3 0x20 0x08
+
+# CHECK: tdi 5, 3, 4
+0x08 0xa3 0x00 0x04
+
+# CHECK: td 5, 3, 4
+0x7c 0xa3 0x20 0x88
+
+# CHECK: twlgti 3, 4
+0x0c 0x23 0x00 0x04
+
+# CHECK: twlgt 3, 4
+0x7c 0x23 0x20 0x08
+
+# CHECK: tdlgti 3, 4
+0x08 0x23 0x00 0x04
+
+# CHECK: tdlgt 3, 4
+0x7c 0x23 0x20 0x88
+
+# CHECK: twi 5, 3, 4
+0x0c 0xa3 0x00 0x04
+
+# CHECK: tw 5, 3, 4
+0x7c 0xa3 0x20 0x08
+
+# CHECK: tdi 5, 3, 4
+0x08 0xa3 0x00 0x04
+
+# CHECK: td 5, 3, 4
+0x7c 0xa3 0x20 0x88
+
+# CHECK: twi 6, 3, 4
+0x0c 0xc3 0x00 0x04
+
+# CHECK: tw 6, 3, 4
+0x7c 0xc3 0x20 0x08
+
+# CHECK: tdi 6, 3, 4
+0x08 0xc3 0x00 0x04
+
+# CHECK: td 6, 3, 4
+0x7c 0xc3 0x20 0x88
+
+# CHECK: twui 3, 4
+0x0f 0xe3 0x00 0x04
+
+# CHECK: twu 3, 4
+0x7f 0xe3 0x20 0x08
+
+# CHECK: tdui 3, 4
+0x0b 0xe3 0x00 0x04
+
+# CHECK: tdu 3, 4
+0x7f 0xe3 0x20 0x88
+
+# CHECK: trap
+0x7f 0xe0 0x00 0x08
+
+# CHECK: rldicr 2, 3, 5, 3
+0x78 0x62 0x28 0xc4
+
+# CHECK: rldicr. 2, 3, 5, 3
+0x78 0x62 0x28 0xc5
+
+# CHECK: rldicl 2, 3, 9, 60
+0x78 0x62 0x4f 0x20
+
+# CHECK: rldicl. 2, 3, 9, 60
+0x78 0x62 0x4f 0x21
+
+# CHECK: rldimi 2, 3, 55, 5
+0x78 0x62 0xb9 0x4e
+
+# CHECK: rldimi. 2, 3, 55, 5
+0x78 0x62 0xb9 0x4f
+
+# CHECK: rotldi 2, 3, 4
+0x78 0x62 0x20 0x00
+
+# CHECK: rotldi. 2, 3, 4
+0x78 0x62 0x20 0x01
+
+# CHECK: rotldi 2, 3, 60
+0x78 0x62 0xe0 0x02
+
+# CHECK: rotldi. 2, 3, 60
+0x78 0x62 0xe0 0x03
+
+# CHECK: rotld 2, 3, 4
+0x78 0x62 0x20 0x10
+
+# CHECK: rotld. 2, 3, 4
+0x78 0x62 0x20 0x11
+
+# CHECK: sldi 2, 3, 4
+0x78 0x62 0x26 0xe4
+
+# CHECK: rldicr. 2, 3, 4, 59
+0x78 0x62 0x26 0xe5
+
+# CHECK: rldicl 2, 3, 60, 4
+0x78 0x62 0xe1 0x02
+
+# CHECK: rldicl. 2, 3, 60, 4
+0x78 0x62 0xe1 0x03
+
+# CHECK: clrldi 2, 3, 4
+0x78 0x62 0x01 0x00
+
+# CHECK: clrldi. 2, 3, 4
+0x78 0x62 0x01 0x01
+
+# CHECK: rldicr 2, 3, 0, 59
+0x78 0x62 0x06 0xe4
+
+# CHECK: rldicr. 2, 3, 0, 59
+0x78 0x62 0x06 0xe5
+
+# CHECK: rldic 2, 3, 4, 1
+0x78 0x62 0x20 0x48
+
+# CHECK: rldic. 2, 3, 4, 1
+0x78 0x62 0x20 0x49
+
+# CHECK: rlwinm 2, 3, 5, 0, 3
+0x54 0x62 0x28 0x06
+
+# CHECK: rlwinm. 2, 3, 5, 0, 3
+0x54 0x62 0x28 0x07
+
+# CHECK: rlwinm 2, 3, 9, 28, 31
+0x54 0x62 0x4f 0x3e
+
+# CHECK: rlwinm. 2, 3, 9, 28, 31
+0x54 0x62 0x4f 0x3f
+
+# CHECK: rlwimi 2, 3, 27, 5, 8
+0x50 0x62 0xd9 0x50
+
+# CHECK: rlwimi. 2, 3, 27, 5, 8
+0x50 0x62 0xd9 0x51
+
+# CHECK: rlwimi 2, 3, 23, 5, 8
+0x50 0x62 0xb9 0x50
+
+# CHECK: rlwimi. 2, 3, 23, 5, 8
+0x50 0x62 0xb9 0x51
+
+# CHECK: rotlwi 2, 3, 4
+0x54 0x62 0x20 0x3e
+
+# CHECK: rotlwi. 2, 3, 4
+0x54 0x62 0x20 0x3f
+
+# CHECK: rotlwi 2, 3, 28
+0x54 0x62 0xe0 0x3e
+
+# CHECK: rotlwi. 2, 3, 28
+0x54 0x62 0xe0 0x3f
+
+# CHECK: rotlw 2, 3, 4
+0x5c 0x62 0x20 0x3e
+
+# CHECK: rotlw. 2, 3, 4
+0x5c 0x62 0x20 0x3f
+
+# CHECK: slwi 2, 3, 4
+0x54 0x62 0x20 0x36
+
+# CHECK: rlwinm. 2, 3, 4, 0, 27
+0x54 0x62 0x20 0x37
+
+# CHECK: srwi 2, 3, 4
+0x54 0x62 0xe1 0x3e
+
+# CHECK: rlwinm. 2, 3, 28, 4, 31
+0x54 0x62 0xe1 0x3f
+
+# CHECK: clrlwi 2, 3, 4
+0x54 0x62 0x01 0x3e
+
+# CHECK: clrlwi. 2, 3, 4
+0x54 0x62 0x01 0x3f
+
+# CHECK: rlwinm 2, 3, 0, 0, 27
+0x54 0x62 0x00 0x36
+
+# CHECK: rlwinm. 2, 3, 0, 0, 27
+0x54 0x62 0x00 0x37
+
+# CHECK: rlwinm 2, 3, 4, 1, 27
+0x54 0x62 0x20 0x76
+
+# CHECK: rlwinm. 2, 3, 4, 1, 27
+0x54 0x62 0x20 0x77
+
+# CHECK: mtxer 2
+0x7c 0x41 0x03 0xa6
+
+# CHECK: mfxer 2
+0x7c 0x41 0x02 0xa6
+
+# MODERN: mtudscr 2
+# OLD: mtspr 3, 2
+0x7c 0x43 0x03 0xa6
+
+# MODERN: mfudscr 2
+# OLD: mfspr 2, 3
+0x7c 0x43 0x02 0xa6
+
+# CHECK: mtlr 2
+0x7c 0x48 0x03 0xa6
+
+# CHECK: mflr 2
+0x7c 0x48 0x02 0xa6
+
+# CHECK: mtctr 2
+0x7c 0x49 0x03 0xa6
+
+# CHECK: mfctr 2
+0x7c 0x49 0x02 0xa6
+
+# MODERN: mtuamr 2
+# OLD: mtspr 13, 2
+0x7c 0x4d 0x03 0xa6
+
+# MODERN: mfuamr 2
+# OLD: mfspr 2, 13
+0x7c 0x4d 0x02 0xa6
+
+# MODERN: mtppr 2
+# OLD: mtspr 896, 2
+0x7c 0x40 0xe3 0xa6
+
+# MODERN: mfppr 2
+# OLD: mfspr 2, 896
+0x7c 0x40 0xe2 0xa6
+
+# CHECK: nop
+0x60 0x00 0x00 0x00
+
+# CHECK: xnop
+0x68 0x00 0x00 0x00
+
+# CHECK: li 2, 128
+0x38 0x40 0x00 0x80
+
+# CHECK: lis 2, 128
+0x3c 0x40 0x00 0x80
+
+# CHECK: mr 2, 3
+0x7c 0x62 0x1b 0x78
+
+# CHECK: mr. 2, 3
+0x7c 0x62 0x1b 0x79
+
+# CHECK: not 2, 3
+0x7c 0x62 0x18 0xf8
+
+# CHECK: not. 2, 3
+0x7c 0x62 0x18 0xf9
+
+# CHECK: mtcr 2
+0x7c 0x4f 0xf1 0x20
+
+# CHECK: dss 3
+0x7c 0x60 0x06 0x6c
+# CHECK: dssall
+0x7e 0x00 0x06 0x6c
+# CHECK: dst 12, 11, 3
+0x7c 0x6c 0x5a 0xac
+# CHECK: dstt 12, 11, 3
+0x7e 0x6c 0x5a 0xac
+# CHECK: dstst 12, 11, 3
+0x7c 0x6c 0x5a 0xec
+# CHECK: dststt 12, 11, 3
+0x7e 0x6c 0x5a 0xec
+
+# CHECK: tlbia
+0x7c 0x00 0x02 0xe4
+
+# CHECK: lswi 8, 6, 7
+0x7d 0x06 0x3c 0xaa
+# CHECK: stswi 8, 6, 7
+0x7d 0x06 0x3d 0xaa
+
+# CHECK: rfid
+0x4c 0x00 0x00 0x24
+
+# CHECK: lbzcix 21, 5, 7
+0x7e 0xa5 0x3e 0xaa
+# CHECK: lhzcix 21, 5, 7
+0x7e 0xa5 0x3e 0x6a
+# CHECK: lwzcix 21, 5, 7
+0x7e 0xa5 0x3e 0x2a
+# CHECK: ldcix  21, 5, 7
+0x7e 0xa5 0x3e 0xea
+# CHECK: stbcix 21, 5, 7
+0x7e 0xa5 0x3f 0xaa
+# CHECK: sthcix 21, 5, 7
+0x7e 0xa5 0x3f 0x6a
+# CHECK: stwcix 21, 5, 7
+0x7e 0xa5 0x3f 0x2a
+# CHECK: stdcix 21, 5, 7
+0x7e 0xa5 0x3f 0xea
+
+# CHECK: attn
+0x00 0x00 0x02 0x00
+

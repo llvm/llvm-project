@@ -1,0 +1,35 @@
+RUN: %build -n --verbose --arch=32 --mode=compile --compiler=any -o %t/foo.out foobar.c \
+RUN:    | FileCheck --check-prefix=COMPILE %s
+
+RUN: %build -n --verbose --arch=32 --mode=compile --compiler=any --outdir %t foo.c bar.c \
+RUN:    | FileCheck --check-prefix=COMPILE-MULTI %s
+
+RUN: %build -n --verbose --arch=32 --mode=link --compiler=any -o %t/foo.exe foobar.obj \
+RUN:    | FileCheck --check-prefix=LINK %s
+
+RUN: %build -n --verbose --arch=32 --mode=link --compiler=any -o %t/foobar.exe foo.obj bar.obj \
+RUN:    | FileCheck --check-prefix=LINK-MULTI %s
+
+RUN: %build -n --verbose --arch=32 --mode=compile-and-link --compiler=any -o %t/foobar.exe foobar.c \
+RUN:    | FileCheck --check-prefix=BOTH %s
+
+RUN: %build -n --verbose --arch=32 --mode=compile-and-link --compiler=any -o %t/foobar.exe foo.c bar.c \
+RUN:    | FileCheck --check-prefix=BOTH-MULTI %s
+
+
+COMPILE: compiling foobar.c -> foo.out
+
+COMPILE-MULTI: compiling foo.c -> foo.o{{(bj)?}}
+COMPILE-MULTI: compiling bar.c -> bar.o{{(bj)?}}
+
+
+LINK: linking foobar.obj -> foo.exe
+
+LINK-MULTI: linking foo.obj+bar.obj -> foobar.exe
+
+BOTH: compiling foobar.c -> [[OBJFOO:foobar.exe-foobar.o(bj)?]]
+BOTH: linking [[OBJFOO]] -> foobar.exe
+
+BOTH-MULTI: compiling foo.c -> [[OBJFOO:foobar.exe-foo.o(bj)?]]
+BOTH-MULTI: compiling bar.c -> [[OBJBAR:foobar.exe-bar.o(bj)?]]
+BOTH-MULTI: linking [[OBJFOO]]+[[OBJBAR]] -> foobar.exe

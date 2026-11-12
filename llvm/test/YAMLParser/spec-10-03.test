@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+block: # Block
+       # sequence
+- one
+- two : three

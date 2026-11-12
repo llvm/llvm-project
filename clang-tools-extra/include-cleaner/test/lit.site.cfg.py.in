@@ -1,0 +1,14 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Variables needed for common llvm config.
+config.clang_tools_dir = path("@CURRENT_TOOLS_DIR@")
+config.lit_tools_dir = path("@LLVM_LIT_TOOLS_DIR@")
+config.llvm_tools_dir = path(lit_config.substitute("@LLVM_TOOLS_DIR@"))
+config.llvm_libs_dir = path(lit_config.substitute("@LLVM_LIBS_DIR@"))
+config.target_triple = "@TARGET_TRIPLE@"
+config.python_executable = "@Python3_EXECUTABLE@"
+
+config.clang_include_cleaner_source_dir = path("@CMAKE_CURRENT_SOURCE_DIR@/..")
+config.clang_include_cleaner_binary_dir = path("@CMAKE_CURRENT_BINARY_DIR@/..")
+# Delegate logic to lit.cfg.py.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

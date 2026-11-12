@@ -1,0 +1,28 @@
+# REQUIRES: zstd
+## Test --decompress/-z for zstd.
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-readelf -z -x .strings %t | FileCheck %s --check-prefix=HEX
+# RUN: llvm-readobj --decompress -p .strings %t | FileCheck %s --check-prefix=STR
+
+# HEX:      Hex dump of section '.strings':
+# HEX-NEXT: 0x00000000 68657265 00617265 00736f6d 65007374 here.are.some.st
+# HEX-NEXT: 0x00000010 72696e67 7300                       rings.
+
+# STR:      String dump of section '.strings':
+# STR-NEXT: [ 0] here
+# STR-NEXT: [ 5] are
+# STR-NEXT: [ 9] some
+# STR-NEXT: [ e] strings
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .strings
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 02000000000000001600000000000000000000000000000028b52ffd2016b10000686572650061726500736f6d6500737472696e677300

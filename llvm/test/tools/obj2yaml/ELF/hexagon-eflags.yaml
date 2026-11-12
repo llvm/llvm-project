@@ -1,0 +1,19 @@
+# RUN: yaml2obj -DF=EF_HEXAGON_MACH_V68 %s | obj2yaml - | FileCheck %s --check-prefix=CHECK-V68
+# CHECK-V68: Flags: [ EF_HEXAGON_MACH_V68, EF_HEXAGON_ISA_V68 ]
+
+# RUN: yaml2obj -DF=EF_HEXAGON_MACH_V71T %s | obj2yaml - | FileCheck %s --check-prefix=CHECK-V71T
+# CHECK-V71T: Flags: [ EF_HEXAGON_MACH_V71T, EF_HEXAGON_ISA_V71 ]
+
+# RUN: yaml2obj -DF=EF_HEXAGON_MACH_V91 %s | obj2yaml - | FileCheck %s --check-prefix=CHECK-V91
+# CHECK-V91: Flags: [ EF_HEXAGON_MACH_V91, EF_HEXAGON_ISA_V91 ]
+
+# RUN: yaml2obj -DF=EF_HEXAGON_MACH_V93 %s | obj2yaml - | FileCheck %s --check-prefix=CHECK-V93
+# CHECK-V93: Flags: [ EF_HEXAGON_MACH_V93, EF_HEXAGON_ISA_V93 ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_HEXAGON
+  Flags:           [ [[F]] ]

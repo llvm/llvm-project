@@ -1,0 +1,4 @@
+#STUB
+bar: foo
+memcpy: foo
+baz: quux

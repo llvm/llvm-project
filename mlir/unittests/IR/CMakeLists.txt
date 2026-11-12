@@ -1,0 +1,38 @@
+add_mlir_unittest(MLIRIRTests
+  AdaptorTest.cpp
+  AffineExprTest.cpp
+  AffineMapTest.cpp
+  AttributeTest.cpp
+  AttrTypeReplacerTest.cpp
+  BuiltinDialectVersionTest.cpp
+  Diagnostic.cpp
+  DialectTest.cpp
+  DistinctAttributeAllocatorTest.cpp
+  InterfaceTest.cpp
+  IRMapping.cpp
+  InterfaceAttachmentTest.cpp
+  LocationTest.cpp
+  MLIRContextResetTest.cpp
+  MLIRContextTest.cpp
+  MemrefLayoutTest.cpp
+  OpImplementationTest.cpp
+  OperationSupportTest.cpp
+  PatternMatchTest.cpp
+  RemarkPolicyTest.cpp
+  RemarkTest.cpp
+  ShapedTypeTest.cpp
+  SymbolTableTest.cpp
+  TypeTest.cpp
+  TypeAttrNamesTest.cpp
+  OpPropertiesTest.cpp
+  ValueTest.cpp
+  VerifierTest.cpp
+  BlobManagerTest.cpp
+
+  DEPENDS
+  MLIRTestInterfaceIncGen
+)
+mlir_target_link_libraries(MLIRIRTests PRIVATE MLIRIR)
+target_link_libraries(MLIRIRTests PRIVATE MLIRBytecodeWriter)
+target_link_libraries(MLIRIRTests PRIVATE MLIRTestDialect)
+target_link_libraries(MLIRIRTests PRIVATE MLIRRemarkStreamer)

@@ -1,0 +1,10 @@
+## Show that llvm-strings can handle a negative signed char value (i.e. > 0x7f).
+## Such characters should form string delimiters like other unprintable ones,
+## unless using an encoding where they form valid characters.
+
+# RUN: echo -n -e "z\0\0200\0\0302\0241\0a\0" > %t
+# RUN: llvm-strings --encoding=s --bytes 1 %t | FileCheck %s
+# RUN: llvm-strings --encoding=utf8 --bytes 1 %t | FileCheck %s --check-prefixes=CHECK,CHECK-UTF8
+# CHECK: z{{$}}
+# CHECK-UTF8-NEXT: {{^\xc2\xa1$}}
+# CHECK-NEXT: {{^}}a

@@ -1,0 +1,69 @@
+## Test moving files after a file.
+
+RUN: touch %t1.txt
+RUN: touch %t2.txt
+RUN: touch %t3.txt
+RUN: touch %t4.txt
+
+# Move one file:
+RUN: rm -f %t-one.a
+RUN: llvm-ar rc %t-one.a %t1.txt %t2.txt %t3.txt
+RUN: llvm-ar mb %t2.txt %t-one.a %t3.txt
+RUN: llvm-ar t %t-one.a | FileCheck %s --check-prefix=ONE
+
+ONE:      1.txt
+ONE-NEXT: 3.txt
+ONE-NEXT: 2.txt
+
+# Move file to front:
+RUN: rm -f %t-front.a
+RUN: llvm-ar rc %t-front.a %t1.txt %t2.txt %t3.txt
+RUN: llvm-ar mb %t1.txt %t-front.a %t3.txt
+RUN: llvm-ar t %t-front.a | FileCheck %s --check-prefix=FRONT
+
+FRONT:      3.txt
+FRONT-NEXT: 1.txt
+FRONT-NEXT: 2.txt
+
+# Move multiple files:
+RUN: rm -f %t-multiple.a
+RUN: llvm-ar rc %t-multiple.a %t1.txt %t2.txt %t3.txt %t4.txt
+RUN: llvm-ar mb %t2.txt %t-multiple.a %t4.txt %t3.txt
+RUN: llvm-ar t %t-multiple.a | FileCheck %s --check-prefix=MULTIPLE
+
+MULTIPLE:      1.txt
+MULTIPLE-NEXT: 3.txt
+MULTIPLE-NEXT: 4.txt
+MULTIPLE-NEXT: 2.txt
+
+# Move before invalid file:
+RUN: rm -f %t-invalid.a
+RUN: llvm-ar rc %t-invalid.a %t1.txt %t2.txt %t3.txt
+RUN: not llvm-ar mb invalid.txt %t-invalid.a %t2.txt 2>&1 \
+RUN:   | FileCheck %s --check-prefix=ERROR
+RUN: llvm-ar t %t-invalid.a | FileCheck %s --check-prefix=INVALID
+
+ERROR: error: insertion point not found
+INVALID:      1.txt
+INVALID-NEXT: 2.txt
+INVALID-NEXT: 3.txt
+
+# Move file to the same position:
+RUN: rm -f %t-position.a
+RUN: llvm-ar rc %t-position.a %t1.txt %t2.txt %t3.txt
+RUN: llvm-ar mb %t3.txt %t-position.a %t2.txt
+RUN: llvm-ar t %t-position.a | FileCheck %s --check-prefix=POSITION
+
+POSITION:      1.txt
+POSITION-NEXT: 2.txt
+POSITION-NEXT: 3.txt
+
+# Move file after itself:
+RUN: rm -f %t-same.a
+RUN: llvm-ar rc %t-same.a %t1.txt %t2.txt %t3.txt
+RUN: llvm-ar mb %t2.txt %t-same.a %t2.txt
+RUN: llvm-ar t %t-same.a | FileCheck %s --check-prefix=SAME
+
+SAME:      1.txt
+SAME-NEXT: 2.txt
+SAME-NEXT: 3.txt

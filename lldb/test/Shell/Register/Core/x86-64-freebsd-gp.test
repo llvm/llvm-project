@@ -1,0 +1,3 @@
+# RUN: %lldb -b -s %s -c %p/Inputs/x86-64-freebsd.core | FileCheck %p/Inputs/x86-64-gp-hixmm.check
+
+register read --all

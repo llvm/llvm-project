@@ -1,0 +1,70 @@
+# REQUIRES: x86
+# This test checks that CallGraphSort ignores edges that would form "bad"
+# clusters.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
+# RUN: echo "A C 1" > %t.call_graph
+# RUN: echo "E B 4" >> %t.call_graph
+# RUN: echo "C D 2" >> %t.call_graph
+# RUN: echo "B D 1" >> %t.call_graph
+# RUN: echo "F G 6" >> %t.call_graph
+# RUN: echo "G H 5" >> %t.call_graph
+# RUN: echo "H I 4" >> %t.call_graph
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph --call-graph-profile-sort=hfsort -o %t2
+# RUN: llvm-readobj --symbols %t2 | FileCheck %s
+
+    .section    .text.A,"ax",@progbits
+    .globl A
+A:
+    retq
+
+    .section    .text.D,"ax",@progbits
+D:
+    .fill 1000, 1, 0
+
+    .section    .text.E,"ax",@progbits
+E:
+    retq
+
+    .section    .text.C,"ax",@progbits
+C:
+    retq
+
+    .section    .text.B,"ax",@progbits
+B:
+    .fill 1000, 1, 0
+
+    .section    .text.F,"ax",@progbits
+F:
+    .fill (1024 * 1024) - 1, 1, 0
+
+    .section    .text.G,"ax",@progbits
+G:
+    retq
+
+    .section    .text.H,"ax",@progbits
+H:
+    retq
+
+    .section    .text.I,"ax",@progbits
+I:
+    .fill 13, 1, 0
+
+# CHECK:          Name: D
+# CHECK-NEXT:     Value: 0x201519
+# CHECK:          Name: E
+# CHECK-NEXT:     Value: 0x201130
+# CHECK:          Name: C
+# CHECK-NEXT:     Value: 0x20112F
+# CHECK:          Name: B
+# CHECK-NEXT:     Value: 0x201131
+# CHECK:          Name: F
+# CHECK-NEXT:     Value: 0x201901
+# CHECK:          Name: G
+# CHECK-NEXT:     Value: 0x301900
+# CHECK:          Name: H
+# CHECK-NEXT:     Value: 0x201120
+# CHECK:          Name: I
+# CHECK-NEXT:     Value: 0x201121
+# CHECK:          Name: A
+# CHECK-NEXT:     Value: 0x20112E

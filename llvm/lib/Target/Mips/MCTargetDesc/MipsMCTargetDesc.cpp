@@ -1,0 +1,394 @@
+//===-- MipsMCTargetDesc.cpp - Mips Target Descriptions -------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides Mips specific target descriptions.
+//
+//===----------------------------------------------------------------------===//
+
+#include "MipsMCTargetDesc.h"
+#include "MipsAsmBackend.h"
+#include "MipsBaseInfo.h"
+#include "MipsELFStreamer.h"
+#include "MipsInstPrinter.h"
+#include "MipsMCAsmInfo.h"
+#include "MipsMCOptions.h"
+#include "MipsTargetStreamer.h"
+#include "TargetInfo/MipsTargetInfo.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCELFStreamer.h"
+#include "llvm/MC/MCInstrAnalysis.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/Triple.h"
+
+using namespace llvm;
+
+#define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
+#include "MipsGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_MC_DESC
+#include "MipsGenSubtargetInfo.inc"
+
+#define GET_REGINFO_MC_DESC
+#include "MipsGenRegisterInfo.inc"
+
+#define GET_REGISTER_MATCHER
+#include "MipsGenAsmMatcher.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "MipsMCOptions.inc"
+
+MCRegister MIPS_MC::getCOP0Register(const MCRegisterInfo &MRI,
+                                    unsigned Encoding) {
+  unsigned Reg = getCOP0RegNum(Encoding);
+  unsigned Sel = getCOP0Sel(Encoding);
+  assert(Reg < 32 && Sel < 8 && "Invalid COP0 register encoding");
+  // COP0's register class is ordered by selector, then register number.
+  return MRI.getRegClass(Mips::COP0RegClassID).getRegister(Sel * 32 + Reg);
+}
+
+MCRegister MIPS_MC::matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
+                                      unsigned RegClassID, unsigned AltIdx) {
+  MCRegister Reg = MatchRegisterAltName(Name, AltIdx);
+  if (!Reg)
+    Reg = MatchRegisterName(Name);
+  if (!Reg)
+    return MCRegister();
+
+  const MCRegisterClass &RC = MRI.getRegClass(RegClassID);
+  // GPR32 and GPR64 share names; select the requested width.
+  if (!RC.contains(Reg)) {
+    if (RegClassID == Mips::GPR32RegClassID &&
+        MRI.getRegClass(Mips::GPR64RegClassID).contains(Reg))
+      Reg = MRI.getSubReg(Reg, Mips::sub_32);
+    else if (RegClassID == Mips::GPR64RegClassID &&
+             MRI.getRegClass(Mips::GPR32RegClassID).contains(Reg))
+      Reg = MRI.getMatchingSuperReg(Reg, Mips::sub_32, &RC);
+  }
+  return RC.contains(Reg) ? Reg : MCRegister();
+}
+
+int MIPS_MC::getCPURegisterIndex(StringRef Name, const MCRegisterInfo &MRI,
+                                 unsigned AltIdx, bool *IsDeprecated) {
+  if (IsDeprecated)
+    *IsDeprecated = false;
+
+  if (MCRegister Reg =
+          matchRegisterName(Name, MRI, Mips::GPR32RegClassID, AltIdx))
+    return MRI.getEncodingValue(Reg);
+
+  static const struct {
+    StringLiteral Name;
+    MCPhysReg Reg;
+    // NoRegAltName applies to all ABIs.
+    unsigned AltIdx;
+  } Aliases[] = {
+      {"AT", Mips::R1, Mips::NoRegAltName},
+      {"s8", Mips::FP, Mips::NoRegAltName},
+      {"kt0", Mips::R26, Mips::NABIRegAltName},
+      {"kt1", Mips::R27, Mips::NABIRegAltName},
+  };
+  for (const auto &Alias : Aliases)
+    if (Name == Alias.Name &&
+        (Alias.AltIdx == Mips::NoRegAltName || Alias.AltIdx == AltIdx))
+      return MRI.getEncodingValue(Alias.Reg);
+
+  // GNU also accepts t4-t7 for NABI's t0-t3.
+  if (AltIdx == Mips::NABIRegAltName) {
+    static const struct {
+      StringLiteral Name;
+      MCPhysReg Reg;
+    } Deprecated[] = {
+        {"t4", Mips::R12},
+        {"t5", Mips::R13},
+        {"t6", Mips::R14},
+        {"t7", Mips::R15},
+    };
+    for (const auto &Alias : Deprecated) {
+      if (Name == Alias.Name) {
+        if (IsDeprecated)
+          *IsDeprecated = true;
+        return MRI.getEncodingValue(Alias.Reg);
+      }
+    }
+  }
+  return -1;
+}
+
+void MIPS_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
+  // Mapping from CodeView to MC register id.
+  static const struct {
+    codeview::RegisterId CVReg;
+    MCPhysReg Reg;
+  } RegMap[] = {
+      {codeview::RegisterId::MIPS_ZERO, Mips::R0},
+      {codeview::RegisterId::MIPS_AT, Mips::R1},
+      {codeview::RegisterId::MIPS_V0, Mips::R2},
+      {codeview::RegisterId::MIPS_V1, Mips::R3},
+      {codeview::RegisterId::MIPS_A0, Mips::R4},
+      {codeview::RegisterId::MIPS_A1, Mips::R5},
+      {codeview::RegisterId::MIPS_A2, Mips::R6},
+      {codeview::RegisterId::MIPS_A3, Mips::R7},
+      {codeview::RegisterId::MIPS_T0, Mips::R8},
+      {codeview::RegisterId::MIPS_T1, Mips::R9},
+      {codeview::RegisterId::MIPS_T2, Mips::R10},
+      {codeview::RegisterId::MIPS_T3, Mips::R11},
+      {codeview::RegisterId::MIPS_T4, Mips::R12},
+      {codeview::RegisterId::MIPS_T5, Mips::R13},
+      {codeview::RegisterId::MIPS_T6, Mips::R14},
+      {codeview::RegisterId::MIPS_T7, Mips::R15},
+      {codeview::RegisterId::MIPS_S0, Mips::R16},
+      {codeview::RegisterId::MIPS_S1, Mips::R17},
+      {codeview::RegisterId::MIPS_S2, Mips::R18},
+      {codeview::RegisterId::MIPS_S3, Mips::R19},
+      {codeview::RegisterId::MIPS_S4, Mips::R20},
+      {codeview::RegisterId::MIPS_S5, Mips::R21},
+      {codeview::RegisterId::MIPS_S6, Mips::R22},
+      {codeview::RegisterId::MIPS_S7, Mips::R23},
+      {codeview::RegisterId::MIPS_T8, Mips::R24},
+      {codeview::RegisterId::MIPS_T9, Mips::R25},
+      {codeview::RegisterId::MIPS_K0, Mips::R26},
+      {codeview::RegisterId::MIPS_K1, Mips::R27},
+      {codeview::RegisterId::MIPS_GP, Mips::GP},
+      {codeview::RegisterId::MIPS_SP, Mips::SP},
+      {codeview::RegisterId::MIPS_S8, Mips::FP},
+      {codeview::RegisterId::MIPS_RA, Mips::RA},
+      {codeview::RegisterId::MIPS_LO, Mips::HI0},
+      {codeview::RegisterId::MIPS_HI, Mips::LO0},
+      {codeview::RegisterId::MIPS_Fir, Mips::FCR0},
+      {codeview::RegisterId::MIPS_Psr, Mips::COP012}, // CP0.Status
+      {codeview::RegisterId::MIPS_F0, Mips::F0},
+      {codeview::RegisterId::MIPS_F1, Mips::F1},
+      {codeview::RegisterId::MIPS_F2, Mips::F2},
+      {codeview::RegisterId::MIPS_F3, Mips::F3},
+      {codeview::RegisterId::MIPS_F4, Mips::F4},
+      {codeview::RegisterId::MIPS_F5, Mips::F5},
+      {codeview::RegisterId::MIPS_F6, Mips::F6},
+      {codeview::RegisterId::MIPS_F7, Mips::F7},
+      {codeview::RegisterId::MIPS_F8, Mips::F8},
+      {codeview::RegisterId::MIPS_F9, Mips::F9},
+      {codeview::RegisterId::MIPS_F10, Mips::F10},
+      {codeview::RegisterId::MIPS_F11, Mips::F11},
+      {codeview::RegisterId::MIPS_F12, Mips::F12},
+      {codeview::RegisterId::MIPS_F13, Mips::F13},
+      {codeview::RegisterId::MIPS_F14, Mips::F14},
+      {codeview::RegisterId::MIPS_F15, Mips::F15},
+      {codeview::RegisterId::MIPS_F16, Mips::F16},
+      {codeview::RegisterId::MIPS_F17, Mips::F17},
+      {codeview::RegisterId::MIPS_F18, Mips::F18},
+      {codeview::RegisterId::MIPS_F19, Mips::F19},
+      {codeview::RegisterId::MIPS_F20, Mips::F20},
+      {codeview::RegisterId::MIPS_F21, Mips::F21},
+      {codeview::RegisterId::MIPS_F22, Mips::F22},
+      {codeview::RegisterId::MIPS_F23, Mips::F23},
+      {codeview::RegisterId::MIPS_F24, Mips::F24},
+      {codeview::RegisterId::MIPS_F25, Mips::F25},
+      {codeview::RegisterId::MIPS_F26, Mips::F26},
+      {codeview::RegisterId::MIPS_F27, Mips::F27},
+      {codeview::RegisterId::MIPS_F28, Mips::F28},
+      {codeview::RegisterId::MIPS_F29, Mips::F29},
+      {codeview::RegisterId::MIPS_F30, Mips::F30},
+      {codeview::RegisterId::MIPS_F31, Mips::F31},
+      {codeview::RegisterId::MIPS_Fsr, Mips::FCR31},
+  };
+  for (const auto &I : RegMap)
+    MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
+}
+
+namespace {
+class MipsWinCOFFTargetStreamer : public MipsTargetStreamer {
+public:
+  MipsWinCOFFTargetStreamer(MCStreamer &S) : MipsTargetStreamer(S) {}
+};
+} // end namespace
+
+/// Select the Mips CPU for the given triple and cpu name.
+StringRef MIPS_MC::selectMipsCPU(const Triple &TT, StringRef CPU) {
+  if (CPU.empty() || CPU == "generic") {
+    if (TT.getSubArch() == llvm::Triple::MipsSubArch_r6) {
+      if (TT.isMIPS32())
+        CPU = "mips32r6";
+      else
+        CPU = "mips64r6";
+    } else {
+      if (TT.isMIPS32())
+        CPU = "mips32";
+      else
+        CPU = "mips64";
+    }
+  }
+  return CPU;
+}
+
+static MCInstrInfo *createMipsMCInstrInfo() {
+  MCInstrInfo *X = new MCInstrInfo();
+  InitMipsMCInstrInfo(X);
+  return X;
+}
+
+static MCRegisterInfo *createMipsMCRegisterInfo(const Triple &TT) {
+  MCRegisterInfo *X = new MCRegisterInfo();
+  InitMipsMCRegisterInfo(X, Mips::RA);
+  return X;
+}
+
+static MCSubtargetInfo *createMipsMCSubtargetInfo(const Triple &TT,
+                                                  StringRef CPU, StringRef FS) {
+  CPU = MIPS_MC::selectMipsCPU(TT, CPU);
+  return createMipsMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+}
+
+static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
+                                      const Triple &TT,
+                                      const MCTargetOptions &Options) {
+  MCAsmInfo *MAI;
+
+  if (TT.isOSBinFormatCOFF())
+    MAI = new MipsCOFFMCAsmInfo(Options);
+  else
+    MAI = new MipsELFMCAsmInfo(TT, Options);
+
+  unsigned SP = MRI.getDwarfRegNum(Mips::SP, true);
+  MCCFIInstruction Inst = MCCFIInstruction::createDefCfaRegister(nullptr, SP);
+  MAI->addInitialFrameState(Inst);
+
+  return MAI;
+}
+
+static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
+                                              unsigned SyntaxVariant,
+                                              const MCAsmInfo &MAI,
+                                              const MCInstrInfo &MII,
+                                              const MCRegisterInfo &MRI) {
+  return new MipsInstPrinter(MAI, MII, MRI);
+}
+
+static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
+                                    std::unique_ptr<MCAsmBackend> &&MAB,
+                                    std::unique_ptr<MCObjectWriter> &&OW,
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  MCStreamer *S;
+  S = createMipsELFStreamer(Context, std::move(MAB), std::move(OW),
+                            std::move(Emitter));
+  return S;
+}
+
+static MCTargetStreamer *createMipsAsmTargetStreamer(MCStreamer &S,
+                                                     formatted_raw_ostream &OS,
+                                                     MCInstPrinter *InstPrint) {
+  return new MipsTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *createMipsNullTargetStreamer(MCStreamer &S) {
+  return new MipsTargetStreamer(S);
+}
+
+static MCTargetStreamer *
+createMipsObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  if (STI.getTargetTriple().isOSBinFormatCOFF())
+    return new MipsWinCOFFTargetStreamer(S);
+  return new MipsTargetELFStreamer(S, STI);
+}
+
+namespace {
+
+class MipsMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  MipsMCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    unsigned NumOps = Inst.getNumOperands();
+    // Register-list transfers have more MC operands than descriptor entries.
+    if (NumOps == 0 || NumOps > Info->get(Inst.getOpcode()).getNumOperands())
+      return false;
+    switch (Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType) {
+    case MipsII::OPERAND_JUMP_TARGET: {
+      // Absolute branch within the current 256 MB-aligned region
+      uint64_t Region = Addr & ~uint64_t(0xfffffff);
+      Target = Region + Inst.getOperand(NumOps - 1).getImm();
+      return true;
+    }
+    case MipsII::OPERAND_JUMP_TARGET_MM: {
+      // Absolute branch within the current 128 MB-aligned region
+      uint64_t Region = Addr & ~uint64_t(0x7ffffff);
+      Target = Region + Inst.getOperand(NumOps - 1).getImm();
+      return true;
+    }
+    case MCOI::OPERAND_PCREL:
+      // b, beq ...
+      Target = Addr + Inst.getOperand(NumOps - 1).getImm();
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+} // anonymous namespace
+
+static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
+  return new MipsMCInstrAnalysis(Info);
+}
+
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
+  static opt::RegisterLibraryOptions<MipsMCOptions> O;
+  for (Target *T : {&getTheMipsTarget(), &getTheMipselTarget(),
+                    &getTheMips64Target(), &getTheMips64elTarget()}) {
+    // Register the MC asm info.
+    RegisterMCAsmInfoFn X(*T, createMipsMCAsmInfo);
+
+    // Register the MC instruction info.
+    TargetRegistry::RegisterMCInstrInfo(*T, createMipsMCInstrInfo);
+
+    // Register the MC register info.
+    TargetRegistry::RegisterMCRegInfo(*T, createMipsMCRegisterInfo);
+
+    // Register the elf streamer.
+    TargetRegistry::RegisterELFStreamer(*T, createMCStreamer);
+
+    // Register the asm target streamer.
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createMipsAsmTargetStreamer);
+
+    TargetRegistry::RegisterNullTargetStreamer(*T,
+                                               createMipsNullTargetStreamer);
+
+    TargetRegistry::RegisterCOFFStreamer(*T, createMipsWinCOFFStreamer);
+
+    // Register the MC subtarget info.
+    TargetRegistry::RegisterMCSubtargetInfo(*T, createMipsMCSubtargetInfo);
+
+    // Register the MC instruction analyzer.
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createMipsMCInstrAnalysis);
+
+    // Register the MCInstPrinter.
+    TargetRegistry::RegisterMCInstPrinter(*T, createMipsMCInstPrinter);
+
+    TargetRegistry::RegisterObjectTargetStreamer(
+        *T, createMipsObjectTargetStreamer);
+
+    // Register the asm backend.
+    TargetRegistry::RegisterMCAsmBackend(*T, createMipsAsmBackend);
+  }
+
+  // Register the MC Code Emitter
+  for (Target *T : {&getTheMipsTarget(), &getTheMips64Target()})
+    TargetRegistry::RegisterMCCodeEmitter(*T, createMipsMCCodeEmitterEB);
+
+  for (Target *T : {&getTheMipselTarget(), &getTheMips64elTarget()})
+    TargetRegistry::RegisterMCCodeEmitter(*T, createMipsMCCodeEmitterEL);
+}

@@ -1,0 +1,70 @@
+# Test stop hook user ID assignment, ordering, and printing.
+#
+# RUN: %lldb -b -s %s | FileCheck %s
+
+# Create some stop hooks
+target stop-hook add -o 'print "Hello"'
+target stop-hook add -o 'print "world,"'
+target stop-hook add -o 'print "nice"'
+target stop-hook add -o 'print "weather"'
+target stop-hook add -o 'print "today!"'
+
+# Print hooks
+target stop-hook list
+
+# CHECK: (lldb) target stop-hook list
+# CHECK: Hook: 1
+# CHECK:   "Hello"
+# CHECK: Hook: 2
+# CHECK:   "world,"
+# CHECK: Hook: 3
+# CHECK:   "nice"
+# CHECK: Hook: 4
+# CHECK:   "weather"
+# CHECK: Hook: 5
+# CHECK:   "today!"
+
+# Delete last hook, then add new one
+target stop-hook delete 5
+target stop-hook add -o 'print "Sunshine,"'
+
+# Stop hook gets new user ID (it is not reused)
+# CHECK: (lldb) target stop-hook add -o 'print "Sunshine,"'
+# CHECK: Stop hook #6 added.
+
+target stop-hook list
+# CHECK: (lldb) target stop-hook list
+# CHECK:     Hook: 4
+# CHECK-NOT: Hook: 5
+# CHECK:     Hook: 6
+
+# Add a few more hooks
+target stop-hook add -o 'print "rain,"'
+target stop-hook add -o 'print "and wind!"'
+target stop-hook add -o 'print "It is all okay!"'
+# CHECK: Stop hook #7 added.
+# CHECK: Stop hook #8 added.
+# CHECK: Stop hook #9 added.
+
+# Delete a few hooks
+target stop-hook delete 1
+target stop-hook delete 3
+target stop-hook delete 7
+target stop-hook delete 9
+
+# Check that the list is still well-ordered
+target stop-hook list
+# CHECK: (lldb) target stop-hook list
+# CHECK-NOT: Hook: 1
+# CHECK:     Hook: 2
+# CHECK:       "world,"
+# CHECK-NOT: Hook: 3
+# CHECK:     Hook: 4
+# CHECK:       "weather"
+# CHECK-NOT: Hook: 5
+# CHECK:     Hook: 6
+# CHECK:       "Sunshine,"
+# CHECK-NOT: Hook: 7
+# CHECK:     Hook: 8
+# CHECK:       "and wind!"
+# CHECK-NOT: Hook: 9

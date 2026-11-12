@@ -1,0 +1,257 @@
+## This test checks that overlapping function address ranges
+## are combined during --garbage-collection optimisation.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfutil --no-odr --garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --no-odr --linker parallel --garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"CU1"
+# CHECK: DW_AT_low_pc{{.*}}0000000000001000
+# CHECK: DW_AT_ranges
+# CHECK: [0x0000000000001000, 0x000000000000102d)
+# CHECK: [0x0000000000002002, 0x000000000000200d)
+# CHECK: [0x000000000000201b, 0x000000000000202a)
+# CHECK: [0x0000000000003002, 0x0000000000003007)
+# CHECK: [0x0000000000003012, 0x0000000000003017)
+# CHECK: [0x0000000000003018, 0x000000000000301a)
+# CHECK: [0x0000000000003022, 0x0000000000003027
+# CHECK: DW_TAG_class_type
+# CHECK: DW_AT_name{{.*}}"class1"
+# CHECK: DW_TAG_class_type
+# CHECK: "class2"
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_name{{.*}}"foo1"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000001000
+# CHECK: DW_AT_high_pc{{.*}}0x0000000000001010
+# CHECK: DW_AT_type{{.*}}"class1"
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo2"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000001004
+# CHECK: DW_AT_high_pc{{.*}}0x0000000000001007
+# CHECK: DW_AT_type{{.*}}"class2"
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo3"
+# CHECK: DW_AT_low_pc{{.*}}0x000000000000100d
+# CHECK: DW_AT_high_pc{{.*}}0x000000000000102d
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo4"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000002002
+# CHECK: DW_AT_high_pc{{.*}}0x000000000000200d
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo5"
+# CHECK: DW_AT_low_pc{{.*}}0x000000000000201b
+# CHECK: DW_AT_high_pc{{.*}}0x000000000000202a
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo6"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000003002
+# CHECK: DW_AT_high_pc{{.*}}0x0000000000003007
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo7"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000003012
+# CHECK: DW_AT_high_pc{{.*}}0x0000000000003017
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo8"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000003022
+# CHECK: DW_AT_high_pc{{.*}}0x0000000000003027
+# CHECK: DW_TAG_subprogram
+# CHECK: "foo9"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000003012
+# CHECK: DW_AT_high_pc{{.*}}0x0000000000003017
+# CHECK: "foo10"
+# CHECK: DW_AT_low_pc{{.*}}0x0000000000003018
+# CHECK: DW_AT_high_pc{{.*}}0x000000000000301a
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x0000000000000010
+    Content:        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x2000
+    AddressAlign:    0x0000000000000010
+    Content:        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  - Name:            .text3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x3000
+    AddressAlign:    0x0000000000000010
+    Content:        "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_ranges
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_declaration
+            Form:      DW_FORM_flag_present
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+            - Value:  0x00
+            - Value:  0x00
+        - AbbrCode: 3
+          Values:
+            - CStr: class1
+        - AbbrCode: 4
+          Values:
+            - Value:  0x00000052
+            - CStr: member1
+        - AbbrCode: 0
+        - AbbrCode: 3
+          Values:
+            - CStr: class2
+        - AbbrCode: 4
+          Values:
+            - Value:  0x00000052
+            - CStr: member1
+        - AbbrCode: 0
+        - AbbrCode: 8
+          Values:
+            - CStr: int
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value:  0x1000
+            - Value:  0x10
+            - Value:  0x00000026
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value:  0x1004
+            - Value:  0x3
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value:  0x100d
+            - Value:  0x20
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo4
+            - Value:  0x2002
+            - Value:  0xb
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo5
+            - Value:  0x201b
+            - Value:  0xf
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo6
+            - Value:  0x3002
+            - Value:  0x5
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo7
+            - Value:  0x3012
+            - Value:  0x5
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo8
+            - Value:  0x3022
+            - Value:  0x5
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo9
+            - Value:  0x3012
+            - Value:  0x5
+            - Value:  0x0000003c
+        - AbbrCode: 2
+          Values:
+            - CStr: foo10
+            - Value:  0x3018
+            - Value:  0x2
+            - Value:  0x0000003c
+        - AbbrCode: 0
+
+  debug_ranges:
+    - Offset:          0x00000000
+      AddrSize:        0x08
+      Entries:
+        - LowOffset:       0x0000000000001000
+          HighOffset:      0x000000000000102d
+        - LowOffset:       0x0000000000002000
+          HighOffset:      0x000000000000202d
+        - LowOffset:       0x0000000000000000
+          HighOffset:      0x0000000000000000
+...

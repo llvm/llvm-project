@@ -1,0 +1,20 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+// Test that various linkage types are correctly lowered from CIR to LLVM dialect.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @aaaa = #cir.int<0> : !s32i
+  cir.global internal @bbbb = #cir.int<0> : !s32i
+  cir.global linkonce_odr @cccc = #cir.int<0> : !s32i
+  cir.global weak_odr @dddd = #cir.int<0> : !s32i
+  cir.global appending @eeee = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
+}
+
+// CHECK: llvm.mlir.global external @aaaa
+// CHECK: llvm.mlir.global internal @bbbb
+// CHECK: llvm.mlir.global linkonce_odr @cccc
+// CHECK: llvm.mlir.global weak_odr @dddd
+// CHECK: llvm.mlir.global appending @eeee

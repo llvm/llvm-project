@@ -1,0 +1,1172 @@
+//===- PluginInterface.cpp - Target independent plugin device interface ---===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
+
+#include "PluginInterface.h"
+
+#include "Shared/Debug.h"
+
+#include "ErrorReporting.h"
+#include "GenericProfiler.h"
+#include "GlobalHandler.h"
+#include "JIT.h"
+#include "Shared/Utils.h"
+#include "Utils/ELF.h"
+
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <cstdint>
+
+using namespace llvm;
+using namespace omp;
+using namespace target;
+using namespace plugin;
+using namespace error;
+using namespace llvm::offload::debug;
+
+AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
+                                       __tgt_async_info *AsyncInfoPtr)
+    : Device(Device),
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
+  LocalAsyncInfo.ProfilerData = nullptr;
+}
+
+void AsyncInfoWrapperTy::finalize(Error &Err) {
+  assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
+
+  // If we used a local async info object we want synchronous behavior. In that
+  // case, and assuming the current status code is correct, we will synchronize
+  // explicitly when the object is deleted. Update the error with the result of
+  // the synchronize operation.
+  if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
+    Err = Device.synchronize(&LocalAsyncInfo);
+
+  // With the force-synchronization escape hatch enabled, also drain external
+  // async info objects after each operation.
+  else if (shouldForceSync(Device.forceSyncOps(),
+                           AsyncInfoPtr == &LocalAsyncInfo,
+                           AsyncInfoPtr->Queue != nullptr, (bool)Err))
+    Err = Device.synchronize(AsyncInfoPtr, /*ReleaseQueue=*/false);
+
+  // The local async info is about to be destroyed; make sure no kernel trace
+  // entry keeps pointing to it. This is done after synchronizing so that a trap
+  // raised while waiting for the kernel can still be attributed to it.
+  if (KernelTraced && AsyncInfoPtr == &LocalAsyncInfo)
+    Device.KernelLaunchTraces.getExclusiveAccessor()->clearAsyncInfo(
+        &LocalAsyncInfo);
+
+  // Invalidate the wrapper object.
+  AsyncInfoPtr = nullptr;
+}
+
+Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
+                            DeviceImageTy &Image) {
+  return initImpl(GenericDevice, Image);
+}
+
+Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
+                                       const KernelLaunchArgsTy &LaunchArgs,
+                                       uint32_t NumThreads[3],
+                                       uint32_t NumBlocks[3]) const {
+  return printLaunchInfoDetails(GenericDevice, LaunchArgs, NumThreads,
+                                NumBlocks);
+}
+
+Error GenericKernelTy::printLaunchInfoDetails(
+    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
+    uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
+  return Plugin::success();
+}
+
+Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
+                              KernelLaunchArgsTy &LaunchArgs,
+                              AsyncInfoWrapperTy &AsyncInfoWrapper,
+                              GenericProfilerTy *ProfilerPtr) const {
+  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
+
+  {
+    std::string StackTrace;
+    if (GenericDevice.OMPX_TrackNumKernelLaunches) {
+      llvm::raw_string_ostream OS(StackTrace);
+      llvm::sys::PrintStackTrace(OS);
+    }
+
+    auto KernelTraceInfoRecord =
+        GenericDevice.KernelLaunchTraces.getExclusiveAccessor();
+    // For a synchronous launch this is the wrapper's stack-local async info;
+    // finalize() removes the reference before that object is destroyed as
+    // otherwise it could be accessed from the trap handlers.
+    (*KernelTraceInfoRecord)
+        .emplace(this, std::move(StackTrace), AsyncInfoWrapper);
+    AsyncInfoWrapper.setKernelTraced();
+  }
+
+  uint32_t EffectiveNumThreads[3] = {LaunchArgs.UserThreadLimit[0],
+                                     LaunchArgs.UserThreadLimit[1],
+                                     LaunchArgs.UserThreadLimit[2]};
+  uint32_t EffectiveNumBlocks[3] = {LaunchArgs.UserNumBlocks[0],
+                                    LaunchArgs.UserNumBlocks[1],
+                                    LaunchArgs.UserNumBlocks[2]};
+
+  if (auto Err = printLaunchInfo(GenericDevice, LaunchArgs, EffectiveNumThreads,
+                                 EffectiveNumBlocks))
+    return Err;
+
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  // No enough block memory to cover the static one. Cannot run the kernel.
+  if (StaticBlockMemSize > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Static block memory size exceeds maximum");
+  // No enough block memory to cover dynamic one
+  if (StaticBlockMemSize + LaunchArgs.DynCGroupMem > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Requested block memory size (static + dynamic) exceeds maximum");
+
+  Profiler.handlePreKernelLaunch(&GenericDevice, EffectiveNumBlocks,
+                                 AsyncInfoWrapper);
+
+  return launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
+                    LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper,
+                    ProfilerPtr);
+}
+
+GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
+                                 int32_t NumDevices,
+                                 const llvm::omp::GV &OMPGridValues)
+    : Plugin(Plugin),
+      // Do not initialize the following two envars since they depend on the
+      // device initialization. These cannot be consulted until the device is
+      // initialized correctly. We initialize them in GenericDeviceTy::init().
+      OMPX_TargetStackSize(), OMPX_TargetHeapSize(),
+      // By default, the initial number of streams and events is 1.
+      OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 1),
+      OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 1),
+      DeviceId(DeviceId), GridValues(OMPGridValues),
+      PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
+      PinnedAllocs(*this), RPCServer(nullptr) {
+  // Conservative fall-back to the plugin's device uid for the case that no real
+  // vendor (u)uid will become available later.
+  setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
+}
+
+Error GenericDeviceTy::init(GenericPluginTy &Plugin,
+                            GenericProfilerTy *ProfilerPtr) {
+
+  if (auto Err = initImpl(Plugin, ProfilerPtr))
+    return Err;
+
+  // Read and reinitialize the envars that depend on the device initialization.
+  // Notice these two envars may change the stack size and heap size of the
+  // device, so they need the device properly initialized.
+  auto StackSizeEnvarOrErr = UInt64Envar::create(
+      "LIBOMPTARGET_STACK_SIZE",
+      [this](uint64_t &V) -> Error { return getDeviceStackSize(V); },
+      [this](uint64_t V) -> Error { return setDeviceStackSize(V); });
+  if (!StackSizeEnvarOrErr)
+    return StackSizeEnvarOrErr.takeError();
+  OMPX_TargetStackSize = std::move(*StackSizeEnvarOrErr);
+
+  if (hasDeviceHeapSize()) {
+    auto HeapSizeEnvarOrErr = UInt64Envar::create(
+        "LIBOMPTARGET_HEAP_SIZE",
+        [this](uint64_t &V) -> Error { return getDeviceHeapSize(V); },
+        [this](uint64_t V) -> Error { return setDeviceHeapSize(V); });
+    if (!HeapSizeEnvarOrErr)
+      return HeapSizeEnvarOrErr.takeError();
+    OMPX_TargetHeapSize = std::move(*HeapSizeEnvarOrErr);
+  }
+
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
+  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+  auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
+  if (!ProfOrErr)
+    return ProfOrErr.takeError();
+
+  if (!ProfOrErr->empty()) {
+    // Dump out profdata
+    static Int32Envar OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG");
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
+    // Write data to profiling file
+    if (auto Err = ProfOrErr->write())
+      return Err;
+  }
+
+  return unloadBinaryImpl(Image);
+}
+
+Error GenericDeviceTy::deinit(GenericPluginTy &Plugin,
+                              GenericProfilerTy *ProfilerPtr) {
+
+  // Run the global destructors first in case they required the RPC server.
+  for (auto &I : LoadedImages) {
+    if (auto Err = callGlobalDestructors(Plugin, *I))
+      return Err;
+  }
+
+  if (RPCServer) {
+    if (auto Err = RPCServer->deinitDevice(*this))
+      return Err;
+    RPCServer = nullptr;
+  }
+
+  for (auto &I : LoadedImages)
+    if (auto Err = unloadBinary(I))
+      return Err;
+  LoadedImages.clear();
+
+  return deinitImpl();
+}
+Expected<DeviceImageTy *>
+GenericDeviceTy::loadBinary(GenericPluginTy &Plugin, StringRef InputTgtImage,
+                            PluginContextTy *Context,
+                            GenericProfilerTy *ProfilerPtr) {
+
+  ODBG(OLDT_Init) << "Load data from image "
+                  << static_cast<const void *>(InputTgtImage.bytes_begin());
+
+  // An empty image is not a valid binary. Plugins behave differently given
+  // empty binaries - e.g. CUDA will map to INVALID_BINARY, while L0 will map to
+  // INVALID_SIZE (which is also associated with invalid kernel launch dims
+  // etc.), so we guard here for consistent behavior across plugins and API
+  // consumers (liboffload and libomptarget).
+  if (InputTgtImage.empty())
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "provided binary image is empty");
+
+  std::unique_ptr<MemoryBuffer> Buffer;
+  if (identify_magic(InputTgtImage) == file_magic::bitcode) {
+    auto CompiledImageOrErr = Plugin.getJIT().process(InputTgtImage, *this);
+    if (!CompiledImageOrErr) {
+      return Plugin::error(ErrorCode::COMPILE_FAILURE,
+                           CompiledImageOrErr.takeError(),
+                           "failure to jit IR image");
+    }
+    Buffer = std::move(*CompiledImageOrErr);
+  } else {
+    Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
+  }
+
+  // Load the binary and allocate the image object. Use the next available id
+  // for the image id, which is the number of previously loaded images.
+  auto ImageOrErr =
+      loadBinaryImpl(std::move(Buffer), LoadedImages.size(), Context);
+  if (!ImageOrErr)
+    return ImageOrErr.takeError();
+  DeviceImageTy *Image = *ImageOrErr;
+
+  // Add the image to list.
+  LoadedImages.push_back(Image);
+
+  if (auto Err = setupRPCServer(Plugin, *Image))
+    return std::move(Err);
+
+  // Call any global constructors present on the device.
+  if (auto Err = callGlobalConstructors(Plugin, *Image))
+    return std::move(Err);
+
+  // Return the pointer to the table of entries.
+  return Image;
+}
+
+Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) {
+  // The plugin either does not need an RPC server or it is unavailable.
+  if (!shouldSetupRPCServer())
+    return Plugin::success();
+
+  // Check if this device needs to run an RPC server.
+  RPCServerTy &Server = Plugin.getRPCServer();
+  auto UsingOrErr =
+      Server.isDeviceUsingRPC(*this, Plugin.getGlobalHandler(), Image);
+  if (!UsingOrErr)
+    return UsingOrErr.takeError();
+
+  if (!UsingOrErr.get())
+    return Plugin::success();
+
+  if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
+    return Err;
+
+  if (auto Err = Server.startThread())
+    return Err;
+
+  RPCServer = &Server;
+  ODBG(OLDT_Init) << "Running an RPC server on device " << getDeviceId();
+  return Plugin::success();
+}
+
+Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,
+                                         size_t Size, bool ExternallyLocked) {
+  // Insert the new entry into the map.
+  auto Res = Allocs.insert({HstPtr, DevAccessiblePtr, Size, ExternallyLocked});
+  if (!Res.second)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot insert locked buffer entry");
+
+  // Check whether the next entry overlaps with the inserted entry.
+  auto It = std::next(Res.first);
+  if (It == Allocs.end())
+    return Plugin::success();
+
+  const EntryTy *NextEntry = &(*It);
+  if (intersects(NextEntry->HstPtr, NextEntry->Size, HstPtr, Size))
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "partial overlapping not allowed in locked buffers");
+
+  return Plugin::success();
+}
+
+Error PinnedAllocationMapTy::eraseEntry(const EntryTy &Entry) {
+  // Erase the existing entry. Notice this requires an additional map lookup,
+  // but this should not be a performance issue. Using iterators would make
+  // the code more difficult to read.
+  size_t Erased = Allocs.erase({Entry.HstPtr});
+  if (!Erased)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot erase locked buffer entry");
+  return Plugin::success();
+}
+
+Error PinnedAllocationMapTy::registerEntryUse(const EntryTy &Entry,
+                                              void *HstPtr, size_t Size) {
+  if (!contains(Entry.HstPtr, Entry.Size, HstPtr, Size))
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "partial overlapping not allowed in locked buffers");
+
+  ++Entry.References;
+  return Plugin::success();
+}
+
+Expected<bool> PinnedAllocationMapTy::unregisterEntryUse(const EntryTy &Entry) {
+  if (Entry.References == 0)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid number of references");
+
+  // Return whether this was the last user.
+  return (--Entry.References == 0);
+}
+
+Error PinnedAllocationMapTy::registerHostBuffer(void *HstPtr,
+                                                void *DevAccessiblePtr,
+                                                size_t Size) {
+  assert(HstPtr && "Invalid pointer");
+  assert(DevAccessiblePtr && "Invalid pointer");
+  assert(Size && "Invalid size");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  // No pinned allocation should intersect.
+  const EntryTy *Entry = findIntersecting(HstPtr);
+  if (Entry)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot insert entry due to an existing one");
+
+  // Now insert the new entry.
+  return insertEntry(HstPtr, DevAccessiblePtr, Size);
+}
+
+Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
+  assert(HstPtr && "Invalid pointer");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  const EntryTy *Entry = findIntersecting(HstPtr);
+  if (!Entry)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot find locked buffer");
+
+  // The address in the entry should be the same we are unregistering.
+  if (Entry->HstPtr != HstPtr)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "unexpected host pointer in locked buffer entry");
+
+  // Unregister from the entry.
+  auto LastUseOrErr = unregisterEntryUse(*Entry);
+  if (!LastUseOrErr)
+    return LastUseOrErr.takeError();
+
+  // There should be no other references to the pinned allocation.
+  if (!(*LastUseOrErr))
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "the locked buffer is still being used");
+
+  // Erase the entry from the map.
+  return eraseEntry(*Entry);
+}
+
+Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
+                                                       size_t Size,
+                                                       bool LockMemory) {
+  assert(HstPtr && "Invalid pointer");
+  assert(Size && "Invalid size");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  const EntryTy *Entry = findIntersecting(HstPtr);
+
+  if (Entry) {
+    // An already registered intersecting buffer was found. Register a new use.
+    if (auto Err = registerEntryUse(*Entry, HstPtr, Size))
+      return std::move(Err);
+
+    // Return the device accessible pointer with the correct offset.
+    return utils::advancePtr(Entry->DevAccessiblePtr,
+                             utils::getPtrDiff(HstPtr, Entry->HstPtr));
+  }
+
+  size_t BaseSize;
+  void *BaseHstPtr, *BaseDevAccessiblePtr;
+
+  // Check if it was externally pinned by a vendor-specific API.
+  auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
+                                              BaseDevAccessiblePtr, BaseSize);
+  if (!IsPinnedOrErr)
+    return IsPinnedOrErr.takeError();
+
+  // If pinned, just insert the entry representing the whole pinned buffer.
+  if (*IsPinnedOrErr) {
+    if (auto Err = insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
+                               /*Externallylocked=*/true))
+      return std::move(Err);
+    return BaseDevAccessiblePtr;
+  }
+
+  // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
+  if (!LockMemory)
+    return nullptr;
+
+  // No intersecting registered allocation found in the map. First, lock the
+  // host buffer and retrieve the device accessible pointer.
+  auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
+  if (!DevAccessiblePtrOrErr)
+    return DevAccessiblePtrOrErr.takeError();
+
+  // Now insert the new entry into the map.
+  if (auto Err = insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size))
+    return std::move(Err);
+
+  // Return the device accessible pointer.
+  return *DevAccessiblePtrOrErr;
+}
+
+Error PinnedAllocationMapTy::unregisterMemory(void *HstPtr, bool UnlockMemory) {
+  assert(HstPtr && "Invalid pointer");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  const EntryTy *Entry = findIntersecting(HstPtr);
+
+  // No entry but automatic locking of mapped buffers is disabled, so
+  // nothing to do.
+  if (!Entry && !UnlockMemory)
+    return Plugin::success();
+
+  if (!Entry)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "cannot find locked buffer");
+
+  // Unregister from the locked buffer. No need to do anything if there are
+  // others using the allocation.
+  auto LastUseOrErr = unregisterEntryUse(*Entry);
+  if (!LastUseOrErr)
+    return LastUseOrErr.takeError();
+
+  // No need to do anything if there are others using the allocation.
+  if (!(*LastUseOrErr))
+    return Plugin::success();
+
+  // This was the last user of the allocation. Unlock the original locked buffer
+  // if it was locked by the plugin. Do not unlock it if it was locked by an
+  // external entity. Unlock the buffer using the host pointer of the entry.
+  if (!Entry->ExternallyLocked)
+    if (auto Err = Device.dataUnlockImpl(Entry->HstPtr))
+      return Err;
+
+  // Erase the entry from the map.
+  return eraseEntry(*Entry);
+}
+
+Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
+                                   bool ReleaseQueue) {
+  if (!AsyncInfo)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
+
+  SmallVector<std::pair<void *, ol_alloc_type_t>> AllocsToDelete{};
+  {
+    std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
+
+    // This can be false when no work has been added to the AsyncInfo. In which
+    // case, the device has nothing to synchronize.
+    if (AsyncInfo->Queue)
+      if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
+        return Err;
+
+    std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
+  }
+
+  for (auto [Ptr, Kind] : AllocsToDelete)
+    if (auto Err = dataDelete(Ptr, Kind))
+      return Err;
+
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
+                                  bool ReleaseQueue,
+                                  bool *IsQueueWorkCompleted) {
+  if (!AsyncInfo || !AsyncInfo->Queue)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "invalid async info queue");
+
+  bool WorkCompleted = false;
+  SmallVector<std::pair<void *, ol_alloc_type_t>> AllocsToDelete{};
+
+  {
+    // Query and collect under the mutex, as synchronize does. Querying outside
+    // it would let an operation issued in between have its allocations freed
+    // here while it is still using them.
+    std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
+    if (auto Err = queryAsyncImpl(*AsyncInfo, ReleaseQueue, &WorkCompleted)) {
+      if (IsQueueWorkCompleted)
+        *IsQueueWorkCompleted = WorkCompleted;
+      return Err;
+    }
+
+    // A completed query is a completion point like synchronize(), and may be
+    // the only one this async info ever gets, so release its allocations here.
+    if (WorkCompleted)
+      std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
+  }
+
+  for (auto [Ptr, Kind] : AllocsToDelete)
+    if (auto Err = dataDelete(Ptr, Kind))
+      return Err;
+
+  if (IsQueueWorkCompleted)
+    *IsQueueWorkCompleted = WorkCompleted;
+
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
+  return Plugin::error(
+      ErrorCode::UNIMPLEMENTED,
+      "missing getDeviceMemorySize implementation (required by RR-heuristic");
+}
+
+Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
+                                            ol_alloc_type_t Kind,
+                                            size_t Alignment,
+                                            GenericProfilerTy *ProfilerPtr) {
+  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
+
+  auto ProfTimer = Profiler.getScopedDataAllocTimer(this, HostPtr, Size);
+
+  void *Alloc = nullptr;
+
+  // TODO Check alignment.
+  auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+  Alloc = *AllocOrErr;
+  if (!Alloc)
+    return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
+                         "failed to allocate from device allocator");
+
+  if (Alignment > 0 && !isAddrAligned(Align(Alignment), Alloc)) {
+    if (auto Err = free(Alloc, Kind))
+      return Err;
+
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "device allocator returned a misaligned pointer");
+  }
+
+  return Alloc;
+}
+
+void GenericDeviceTy::recordAllocation(void *DevicePtr, void *HostPtr,
+                                       int64_t Size, ol_alloc_type_t Kind) {
+  if (!OMPX_TrackAllocationTraces)
+    return;
+
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+
+  AllocationTraceInfoTy *ATI = new AllocationTraceInfoTy();
+  ATI->AllocationTrace = std::move(StackTrace);
+  ATI->DevicePtr = DevicePtr;
+  ATI->HostPtr = HostPtr;
+  ATI->Size = Size;
+  ATI->Kind = Kind;
+
+  auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+  auto *&MapATI = (*AllocationTraceMap)[DevicePtr];
+  ATI->LastAllocationInfo = MapATI;
+  MapATI = ATI;
+}
+
+void GenericDeviceTy::recordDeallocation(void *DevicePtr,
+                                         ol_alloc_type_t Kind) {
+  if (!OMPX_TrackAllocationTraces)
+    return;
+
+  AllocationTraceInfoTy *ATI = nullptr;
+  {
+    auto AllocationTraceMap = AllocationTraces.getExclusiveAccessor();
+    ATI = (*AllocationTraceMap)[DevicePtr];
+  }
+
+  std::string StackTrace;
+  llvm::raw_string_ostream OS(StackTrace);
+  llvm::sys::PrintStackTrace(OS);
+
+  if (!ATI)
+    ErrorReporter::reportDeallocationOfNonAllocatedPtr(DevicePtr, Kind, ATI,
+                                                       StackTrace);
+
+  // ATI is not null, thus we can lock it to inspect and modify it further.
+  std::lock_guard<std::mutex> LG(ATI->Lock);
+  if (!ATI->DeallocationTrace.empty())
+    ErrorReporter::reportDeallocationOfDeallocatedPtr(DevicePtr, Kind, ATI,
+                                                      StackTrace);
+
+  if (ATI->Kind != Kind)
+    ErrorReporter::reportDeallocationOfWrongPtrKind(DevicePtr, Kind, ATI,
+                                                    StackTrace);
+
+  ATI->DeallocationTrace = StackTrace;
+}
+
+Error GenericDeviceTy::dataDelete(void *TgtPtr, ol_alloc_type_t Kind,
+                                  GenericProfilerTy *ProfilerPtr) {
+  GenericProfilerTy &Profiler = ProfilerPtr ? *ProfilerPtr : getNoOpProfiler();
+
+  auto ProfTimer = Profiler.getScopedDataDeleteTimer(this, TgtPtr);
+
+  if (auto Err = free(TgtPtr, Kind))
+    return Err;
+
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::dataSubmit(void *TgtPtr, const void *HstPtr,
+                                  int64_t Size, __tgt_async_info *AsyncInfo,
+                                  GenericProfilerTy *ProfilerPtr) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err =
+      dataSubmitImpl(TgtPtr, HstPtr, Size, AsyncInfoWrapper, ProfilerPtr);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
+                                    int64_t Size, __tgt_async_info *AsyncInfo,
+                                    GenericProfilerTy *ProfilerPtr) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err =
+      dataRetrieveImpl(HstPtr, TgtPtr, Size, AsyncInfoWrapper, ProfilerPtr);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
+                                  int64_t Size, __tgt_async_info *AsyncInfo) {
+  if (Size == 0)
+    return Plugin::success();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataMemcpyImpl(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
+                                    void *DstPtr, int64_t Size,
+                                    __tgt_async_info *AsyncInfo,
+                                    GenericProfilerTy *ProfilerPtr) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataExchangeImpl(SrcPtr, DstDev, DstPtr, Size, AsyncInfoWrapper,
+                              ProfilerPtr);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
+                                int64_t PatternSize, int64_t Size,
+                                __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err =
+      dataFillImpl(TgtPtr, PatternPtr, PatternSize, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataPrefetch(size_t Count, const void **Mems,
+                                    const size_t *Sizes, bool ToHost,
+                                    __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err = dataPrefetchImpl(Count, Mems, Sizes, ToHost, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
+                                     __tgt_async_info **AsyncInfoPtr) {
+  assert(AsyncInfoPtr && "Invalid async info");
+
+  *AsyncInfoPtr = new __tgt_async_info();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(Device, *AsyncInfoPtr);
+
+  auto Err = initAsyncInfoImpl(Device, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+PluginContextTy::~PluginContextTy() {
+  assert(DeviceMemoryManagers.empty() && !HostMemoryManager.Manager &&
+         "plugin context destroyed before its memory pools were released");
+  for (auto &DeviceMemoryManager : DeviceMemoryManagers)
+    (void)DeviceMemoryManager.second.Manager.release();
+  (void)HostMemoryManager.Manager.release();
+}
+
+MemoryManagerTy *
+PluginContextTy::getDeviceMemoryManagerFor(GenericDeviceTy &Device,
+                                           ol_alloc_type_t Kind) {
+  if (Device.OMPX_TrackAllocationTraces)
+    return nullptr;
+
+  assert((Kind == OL_ALLOC_TYPE_DEVICE || Kind == OL_ALLOC_TYPE_MANAGED) &&
+         "host allocations are not device-bound");
+
+  size_t Threshold;
+  if (Kind == OL_ALLOC_TYPE_DEVICE) {
+    auto [EnvThreshold, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
+    if (!EnableMM)
+      return nullptr;
+    Threshold =
+        EnvThreshold ? EnvThreshold : Device.getMemoryManagerSizeThreshold();
+  } else {
+    Threshold = MemoryManagerTy::DefaultSizeThreshold;
+  }
+
+  std::pair<GenericDeviceTy *, int> Key{&Device, static_cast<int>(Kind)};
+
+  std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
+  auto It = DeviceMemoryManagers.find(Key);
+  if (It != DeviceMemoryManagers.end())
+    return It->second.Manager.get();
+
+  MemoryPoolTy Pool;
+  Pool.Allocator = std::make_unique<ContextAllocatorTy>(*this, Device);
+  Pool.Manager =
+      std::make_unique<MemoryManagerTy>(*Pool.Allocator, Threshold, Kind);
+  auto *Raw = Pool.Manager.get();
+  DeviceMemoryManagers[Key] = std::move(Pool);
+  return Raw;
+}
+
+MemoryManagerTy *PluginContextTy::getHostMemoryManager() {
+  if (Devices.empty())
+    return nullptr;
+  if (Devices.front()->OMPX_TrackAllocationTraces)
+    return nullptr;
+
+  std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
+  if (HostMemoryManager.Manager)
+    return HostMemoryManager.Manager.get();
+
+  HostMemoryManager.Allocator =
+      std::make_unique<ContextAllocatorTy>(*this, *Devices.front());
+  HostMemoryManager.Manager = std::make_unique<MemoryManagerTy>(
+      *HostMemoryManager.Allocator, MemoryManagerTy::DefaultSizeThreshold,
+      OL_ALLOC_TYPE_HOST);
+  return HostMemoryManager.Manager.get();
+}
+
+void PluginContextTy::releaseMemoryManagers() {
+  std::lock_guard<std::mutex> Lock(MemoryManagersMutex);
+  DeviceMemoryManagers.clear();
+  HostMemoryManager.Manager.reset();
+  HostMemoryManager.Allocator.reset();
+}
+
+Expected<void *> ContextAllocatorTy::allocate(size_t Size, void *HstPtr,
+                                              ol_alloc_type_t Kind,
+                                              size_t Alignment) {
+  return Context.allocateImpl(Device, Size, HstPtr, Kind, Alignment);
+}
+
+Error ContextAllocatorTy::free(void *TgtPtr, ol_alloc_type_t Kind) {
+  return Context.deallocateImpl(Device, TgtPtr, Kind);
+}
+
+MemoryManagerTy *PluginContextTy::getMemoryManagerFor(GenericDeviceTy &Device,
+                                                      ol_alloc_type_t Kind) {
+  return Kind == OL_ALLOC_TYPE_HOST ? getHostMemoryManager()
+                                    : getDeviceMemoryManagerFor(Device, Kind);
+}
+
+Expected<void *> PluginContextTy::allocate(GenericDeviceTy &Device,
+                                           int64_t Size, void *HostPtr,
+                                           ol_alloc_type_t Kind,
+                                           size_t Alignment,
+                                           GenericProfilerTy *ProfilerPtr) {
+  MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind);
+  auto AllocOrErr = Manager ? Manager->allocate(Size, HostPtr, Alignment)
+                            : allocateImpl(Device, Size, HostPtr, Kind,
+                                           Alignment, ProfilerPtr);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+
+  if (*AllocOrErr) {
+    trackAllocation(Device, *AllocOrErr, Size, Kind);
+    Device.recordAllocation(*AllocOrErr, HostPtr, Size, Kind);
+  }
+
+  return AllocOrErr;
+}
+
+Expected<void *> PluginContextTy::allocateImpl(GenericDeviceTy &Device,
+                                               int64_t Size, void *HostPtr,
+                                               ol_alloc_type_t Kind,
+                                               size_t Alignment,
+                                               GenericProfilerTy *ProfilerPtr) {
+  return Device.dataAlloc(Size, HostPtr, Kind, Alignment, ProfilerPtr);
+}
+
+Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
+  assert(!Devices.empty() && "context constructed without devices");
+  auto InfoOrErr = getAllocInfo(Ptr);
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
+  GenericDeviceTy *OwnerDevice = InfoOrErr->Device;
+  if (!OwnerDevice)
+    OwnerDevice = Devices.front();
+  return deallocate(*OwnerDevice, Ptr, InfoOrErr->Kind, ProfilerPtr);
+}
+
+Error PluginContextTy::deallocate(GenericDeviceTy &Device, void *Ptr,
+                                  ol_alloc_type_t Kind,
+                                  GenericProfilerTy *ProfilerPtr) {
+  Device.recordDeallocation(Ptr, Kind);
+  untrackAllocation(Ptr);
+
+  if (MemoryManagerTy *Manager = getMemoryManagerFor(Device, Kind))
+    return Manager->free(Ptr);
+
+  return deallocateImpl(Device, Ptr, Kind, ProfilerPtr);
+}
+
+Error PluginContextTy::deallocateImpl(GenericDeviceTy &Device, void *Ptr,
+                                      ol_alloc_type_t Kind,
+                                      GenericProfilerTy *ProfilerPtr) {
+  return Device.dataDelete(Ptr, Kind, ProfilerPtr);
+}
+
+Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
+                                       __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = enqueueHostCallImpl(Callback, UserData, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
+  auto InfoOrErr = obtainInfoImpl();
+  if (InfoOrErr)
+    InfoOrErr->add("UID", getDeviceUid(), "", DeviceInfo::UID);
+  return InfoOrErr;
+}
+
+Error GenericDeviceTy::createEvent(void **EventPtrStorage,
+                                   bool EnableProfiling) {
+  return createEventImpl(EventPtrStorage, EnableProfiling);
+}
+
+Error GenericDeviceTy::destroyEvent(void *EventPtr, bool EnableProfiling) {
+  return destroyEventImpl(EventPtr, EnableProfiling);
+}
+
+Error GenericDeviceTy::recordEvent(void *EventPtr, __tgt_async_info *AsyncInfo,
+                                   bool EnableProfiling) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = recordEventImpl(EventPtr, AsyncInfoWrapper, EnableProfiling);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = waitEventImpl(EventPtr, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Expected<bool> GenericDeviceTy::hasPendingWork(__tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Res = hasPendingWorkImpl(AsyncInfoWrapper);
+  if (auto Err = Res.takeError()) {
+    AsyncInfoWrapper.finalize(Err);
+    return Err;
+  }
+
+  auto Err = Plugin::success();
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return Err;
+  return Res;
+}
+
+Expected<bool> GenericDeviceTy::isEventComplete(void *Event,
+                                                __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Res = isEventCompleteImpl(Event, AsyncInfoWrapper);
+  if (auto Err = Res.takeError()) {
+    AsyncInfoWrapper.finalize(Err);
+    return Err;
+  }
+
+  auto Err = Plugin::success();
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return Err;
+  return Res;
+}
+
+Error GenericDeviceTy::syncEvent(void *EventPtr) {
+  return syncEventImpl(EventPtr);
+}
+
+Expected<float> GenericDeviceTy::getEventElapsedTime(void *StartEventPtr,
+                                                     void *EndEventPtr) {
+  return getEventElapsedTimeImpl(StartEventPtr, EndEventPtr);
+}
+
+bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
+
+Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return isAccessiblePtrImpl(Ptr, Size);
+}
+
+void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
+  DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
+}
+
+Error GenericPluginTy::init(GenericProfilerTy *ProfilerPtr) {
+  if (Initialized)
+    return Plugin::success();
+
+  auto NumDevicesOrErr = initImpl();
+  if (!NumDevicesOrErr)
+    return NumDevicesOrErr.takeError();
+  Initialized = true;
+
+  NumDevices = *NumDevicesOrErr;
+  if (NumDevices == 0)
+    return Plugin::success();
+
+  assert(Devices.size() == 0 && "Plugin already initialized");
+  Devices.resize(NumDevices, nullptr);
+
+  GlobalHandler = createGlobalHandler();
+  assert(GlobalHandler && "Invalid global handler");
+
+  RPCServer = new RPCServerTy(*this);
+  assert(RPCServer && "Invalid RPC server");
+
+  return Plugin::success();
+}
+
+Error GenericPluginTy::deinit(GenericProfilerTy *ProfilerPtr) {
+  assert(Initialized && "Plugin was not initialized!");
+
+  // Deinitialize all active devices.
+  for (int32_t DeviceId = 0; DeviceId < NumDevices; ++DeviceId) {
+    if (Devices[DeviceId]) {
+      if (auto Err = deinitDevice(DeviceId, ProfilerPtr))
+        return Err;
+    }
+    assert(!Devices[DeviceId] && "Device was not deinitialized");
+  }
+
+  // There is no global handler if no device is available.
+  if (GlobalHandler)
+    delete GlobalHandler;
+
+  if (RPCServer) {
+    if (Error Err = RPCServer->shutDown(*this))
+      return Err;
+    delete RPCServer;
+  }
+
+  // Perform last deinitializations on the plugin.
+  if (Error Err = deinitImpl())
+    return Err;
+  Initialized = false;
+
+  return Plugin::success();
+}
+
+Error GenericPluginTy::initDevice(int32_t DeviceId,
+                                  GenericProfilerTy *ProfilerPtr) {
+  assert(!Devices[DeviceId] && "Device already initialized");
+
+  // Create the device and save the reference.
+  GenericDeviceTy *Device = createDevice(*this, DeviceId, NumDevices);
+  assert(Device && "Invalid device");
+
+  // Save the device reference into the list.
+  Devices[DeviceId] = Device;
+
+  // Initialize the device and its resources.
+  return Device->init(*this, ProfilerPtr);
+}
+
+Error GenericPluginTy::deinitDevice(int32_t DeviceId,
+                                    GenericProfilerTy *ProfilerPtr) {
+  // The device may be already deinitialized.
+  if (Devices[DeviceId] == nullptr)
+    return Plugin::success();
+
+  // Deinitialize the device and release its resources.
+  if (auto Err = Devices[DeviceId]->deinit(*this, ProfilerPtr))
+    return Err;
+
+  // Delete the device and invalidate its reference.
+  delete Devices[DeviceId];
+  Devices[DeviceId] = nullptr;
+
+  return Plugin::success();
+}
+
+Expected<bool> GenericPluginTy::checkELFImage(StringRef Image) const {
+  // First check if this image is a regular ELF file.
+  if (!utils::elf::isELF(Image))
+    return false;
+
+  // Check if this image is an ELF with a matching machine value.
+  auto MachineOrErr = utils::elf::checkMachine(Image, getMagicElfBits());
+  if (!MachineOrErr)
+    return MachineOrErr.takeError();
+
+  return MachineOrErr;
+}
+
+Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
+  if (identify_magic(Image) != file_magic::bitcode)
+    return false;
+
+  LLVMContext Context;
+  auto ModuleOrErr = getLazyBitcodeModule(MemoryBufferRef(Image, ""), Context,
+                                          /*ShouldLazyLoadMetadata=*/true);
+  if (!ModuleOrErr)
+    return ModuleOrErr.takeError();
+  Module &M = **ModuleOrErr;
+
+  return M.getTargetTriple().getArch() == getTripleArch();
+}
+
+int32_t GenericPluginTy::is_initialized() const { return Initialized; }
+
+int32_t GenericPluginTy::isPluginCompatible(StringRef Image) {
+  auto HandleError = [&](Error Err) -> bool {
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Init) << "Failure to check validity of image "
+                    << static_cast<const void *>(Image.data()) << ": "
+                    << ErrStr;
+    return false;
+  };
+  switch (identify_magic(Image)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = checkELFImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  case file_magic::bitcode: {
+    auto MatchOrErr = checkBitcodeImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
+    auto MatchOrErr = isImageCompatible(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+}
+
+int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
+  auto HandleError = [&](Error Err) -> bool {
+    std::string ErrStr = toString(std::move(Err));
+    ODBG(OLDT_Init) << "Failure to check validity of image "
+                    << static_cast<const void *>(Image.data()) << ": "
+                    << ErrStr;
+    return false;
+  };
+  switch (identify_magic(Image)) {
+  case file_magic::elf:
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::elf_core: {
+    auto MatchOrErr = checkELFImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    if (!*MatchOrErr)
+      return false;
+
+    // Perform plugin-dependent checks for the specific architecture if needed.
+    auto CompatibleOrErr = isELFCompatible(DeviceId, Image);
+    if (Error Err = CompatibleOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *CompatibleOrErr;
+  }
+  case file_magic::bitcode: {
+    auto MatchOrErr = checkBitcodeImage(Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+  default:
+    auto MatchOrErr = isImageCompatible(DeviceId, Image);
+    if (Error Err = MatchOrErr.takeError())
+      return HandleError(std::move(Err));
+    return *MatchOrErr;
+  }
+}

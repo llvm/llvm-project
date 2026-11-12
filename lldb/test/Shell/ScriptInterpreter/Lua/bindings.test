@@ -1,0 +1,5 @@
+# RUN: cat %s | %lldb --script-language lua 2>&1 | FileCheck %s
+script
+debugger = lldb.SBDebugger.Create()
+print("debugger is valid:", tostring(debugger:IsValid()))
+# CHECK: debugger is valid: true

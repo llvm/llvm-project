@@ -1,0 +1,9 @@
+// RUN: not mlir-pdll %s -I %S -split-input-file 2>&1 | FileCheck %s
+
+// CHECK: expected '}]' in string literal
+Constraint Cst() [{
+
+// -----
+
+// CHECK: expected '"' in string literal
+Constraint Cst() "

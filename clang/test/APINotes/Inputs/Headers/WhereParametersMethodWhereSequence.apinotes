@@ -1,0 +1,9 @@
+---
+Name: WhereParametersMethodWhereSequence
+Tags:
+- Name: Widget
+  Methods:
+  - Name: setValue
+    Where:
+      - Parameters:
+        - int

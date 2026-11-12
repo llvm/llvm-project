@@ -1,0 +1,25 @@
+{
+  "linters": {
+    "format": {
+      "include": "(include/polly/.+\\.h$|lib/.+\\.cpp$)",
+      "exclude": "(lib/External/JSON/.*)",
+      "type": "script-and-regex",
+      "script-and-regex.script": "sh -c './utils/check_format.sh \"$0\" 2> /dev/null || true'",
+      "script-and-regex.regex": "/^(OK:(?P<ignore>.+)|Error:) (?P<message>.+)$/m"
+    },
+    "chmod": {
+      "type": "chmod"
+    },
+    "filename": {
+      "exclude": "(www/experiments/.+|.*\\.jscop.*)",
+      "type": "filename"
+    },
+    "merge-conflict": {
+      "type": "merge-conflict"
+    },
+    "spelling": {
+      "exclude": "(configure|autoconf/.*)",
+      "type": "spelling"
+    }
+  }
+}

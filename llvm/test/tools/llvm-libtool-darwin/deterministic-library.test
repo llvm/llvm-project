@@ -1,0 +1,38 @@
+## This test checks that timestamps are set to 0 by default or when the -D
+## option is specified, and that they are preserved when the -U option is
+## specified.
+## We only test timestamps as a proxy for full deterministic writing; i.e. we
+## assume UID/GIDs are preserved if timestamps are preserved.
+
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: touch -t 199505050555.55 %t-input1.o
+
+## Test values are set to 0 (by default):
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+
+## Test values are set to 0 (with -D):
+# RUN: llvm-libtool-darwin -static -o %t.lib -D %t-input1.o
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+
+# CHECK-DETERMINISTIC: {{[[:space:]]1970[[:space:]]}}
+
+## Test values are preserved (with -U):
+# RUN: llvm-libtool-darwin -static -o %t.lib -U %t-input1.o
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+
+# CHECK-NONDETERMINISTIC:  {{[[:space:]]1995[[:space:]]}}
+
+## D Flag specified more than once:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o -D -D 2>&1 | count 0
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-DETERMINISTIC
+
+## U Flag specified more than once:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o -U -U 2>&1 | count 0
+# RUN: env TZ=GMT llvm-ar tv %t.lib | FileCheck %s --check-prefix=CHECK-NONDETERMINISTIC
+
+## Both D and U flags specified:
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t-input1.o -D -U 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CHECK-ERROR-BOTH
+
+# CHECK-ERROR-BOTH: error: cannot specify both -D and -U flags

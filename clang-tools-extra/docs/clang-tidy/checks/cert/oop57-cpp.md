@@ -1,0 +1,12 @@
+```{title} clang-tidy - cert-oop57-cpp
+```
+
+# cert-oop57-cpp
+
+The `cert-oop57-cpp` check is an alias, please see
+{doc}`bugprone-raw-memory-call-on-non-trivial-type <../bugprone/raw-memory-call-on-non-trivial-type>`
+for more information.
+
+This check corresponds to the CERT C++ Coding Standard rule
+[OOP57-CPP. Prefer special member functions and overloaded operators to C
+Standard Library functions](https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/object-oriented-programming-oop/oop57-cpp/).

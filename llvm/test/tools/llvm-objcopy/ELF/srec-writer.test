@@ -1,0 +1,196 @@
+## Check for basic functionality using an input file with
+## various section types, adresses, data, and no segments.
+# RUN: yaml2obj %s --docnum=1 -o %t
+# RUN: llvm-objcopy -O srec %t - | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=SREC
+
+## The record type for the header should be S0 with a 2 byte address
+## of 0. For an output file named "-" the header data field should contain "2D".
+## The byte count field should therefore have a value of 4: 2 bytes for address,
+## 1 byte for output file and 1 byte for checksum.
+     # SREC:S00400002DCE
+# SREC-NEXT:S31500001000000102030405060708090A0B0C0D0E0F62
+# SREC-NEXT:S30A0000101010111213147B
+# SREC-NEXT:S30F00EFFFFF1111111111111111111159
+# SREC-NEXT:S31000FFFFF83031323334353637383940AC
+# SREC-NEXT:S30A8000100000010203045B
+# SREC-NEXT:S70500000000FA
+
+## Terminator should contain the entry point.
+# RUN: llvm-objcopy -O srec --set-start=0xF0000000 %t --only-section=.dummy - 2>&1 | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY
+## Sign-extended entry point is OK.
+# RUN: llvm-objcopy -O srec --set-start=0xFFFFFFFFF0000000 %t --only-section=.dummy - 2>&1 | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=ENTRY
+
+     # ENTRY:S00400002DCE
+# ENTRY-NEXT:S705F00000000A
+
+## Start address which exceeds 32 bit range triggers an error.
+# RUN: not llvm-objcopy -O srec --set-start=0xF00000000 %t - 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD_START
+
+# BAD_START: entry point address 0xf00000000 overflows 32 bits
+
+## Sign-extended start address which exceeds 32 bit range triggers an error.
+# RUN: not llvm-objcopy -O srec --set-start=0xFFFFFFFF0F000000 %t - 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD_EXTENDED_START
+
+# BAD_EXTENDED_START: entry point address 0xffffffff0f000000 overflows 32 bits
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .data1
+## Records for this section should come last.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "11111111111111111111"
+    Address:         0xEFFFFF
+  - Name:            .data2
+## This section overlaps 24-bit address boundary, so we expect
+## its record type to be S3.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "3031323334353637383940"
+    Address:         0xFFFFF8
+## Sign-extended addresses are OK.
+  - Name:            .data3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0xFFFFFFFF80001000
+    Content:         "0001020304"
+  - Name:            .text
+## This section's contents exceed default line length of 16 bytes
+## so we expect two lines created for it. Records for this section
+## should appear before records for the previous section.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    Content:         "000102030405060708090A0B0C0D0E0F1011121314"
+  - Name:            .bss
+## NOBITS sections are not written.
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10100
+    Size:            0x1000
+  - Name:            .dummy
+## Non-allocatable sections are not written.
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Address:         0x20FFF8
+    Size:            65536
+
+## Check for various error cases.
+
+## Check that section address range overlapping 32 bit range
+## triggers an error.
+# RUN: yaml2obj %s --docnum=2 -o %t.err
+# RUN: not llvm-objcopy -O srec --only-section=.text1 %t.err - 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-ADDR
+# RUN: not llvm-objcopy -O srec --only-section=.text2 %t.err - 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=BAD-ADDR2
+
+# BAD-ADDR: section '.text1' address range [0xfffffff8, 0x100000000] is not 32 bit
+# BAD-ADDR2: section '.text2' address range [0xffffffff0, 0xffffffff4] is not 32 bit
+
+## Check that zero length section is not written.
+# RUN: llvm-objcopy -O srec --only-section=.text %t.err - | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace --implicit-check-not={{.}} %s --check-prefix=ZERO_SIZE_SEC
+
+## There should be no records besides header and terminator.
+# ZERO_SIZE_SEC:S00400002DCE
+# ZERO_SIZE_SEC-NEXT:S9030000FC
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text1
+## Part of section data is in 32-bit address range and part isn't.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC]
+    Address:         0xFFFFFFF8
+    Content:         "000102030405060708"
+  - Name:            .text2
+  ## Entire secion is outside of 32-bit range.
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0xFFFFFFFF0
+    Content:         "0001020304"
+
+## This tests an input file with segments and expects
+## physical addresses instead of virtual addresses.
+# RUN: yaml2obj %s --docnum=3 -o %t.seg
+# RUN: llvm-objcopy -O srec %t.seg - | \
+# RUN:   FileCheck --match-full-lines --strict-whitespace %s --check-prefix=PADDR
+
+     # PADDR:S00400002DCE
+# PADDR-NEXT:S214100000000102030405060708090A0B0C0D0E0F63
+# PADDR-NEXT:S20910001010111213147C
+# PADDR-NEXT:S20F10001530313233343536373839407E
+# PADDR-NEXT:S20810002040414243C1
+# PADDR-NEXT:S20F10002450515253545556575859600F
+# PADDR-NEXT:S20720FFF8000000E1
+# PADDR-NEXT:S804100000EB
+
+--- !ELF
+## This file has a non-contiguous section layout with large gaps.
+## These sections are all tightly packed into one PT_LOAD segment
+## starting at physical address 0x100000. Records should use physical addresses.
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x100000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0
+    Content:         "000102030405060708090A0B0C0D0E0F1011121314"
+  - Name:            .data1
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "3031323334353637383940"
+    Address:         0xFFF8
+  - Name:            .data2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "40414243"
+    Address:         0x10100
+  - Name:            .data3
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         "5051525354555657585960"
+    Address:         0x10FFF8
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10100
+    Size:            0x1000
+  - Name:            .dummy
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x20FFF8
+    Size:            3
+  - Name:            .nonalloc
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Address:         0x300000
+    Size:            1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xF00000000
+    PAddr:    0x100000
+    FirstSec: .text
+    LastSec:  .bss

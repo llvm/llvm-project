@@ -1,0 +1,48 @@
+## Tests whether llvm-bolt is able to reorder blocks and fix branches
+## according to the new function layout.
+
+RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.null --data %p/Inputs/blarge.fdata \
+RUN:   --reorder-blocks=normal --print-finalized  2>&1 | FileCheck %s \
+RUN:   --check-prefix=CHECK
+
+CHECK:    Binary Function "usqrt"
+CHECK:    BB Layout :         .LBB{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .LFT{{.*}}, .LFT{{.*}}
+CHECK:    .LBB{{.*}}
+CHECK:      Exec Count : 199
+CHECK:        {{.*}}:   movl    $0x20, %r8d
+CHECK:        {{.*}}:   xorl    %eax, %eax
+CHECK:        {{.*}}:   xorl    %edx, %edx
+CHECK:        {{.*}}:   jmp     .Ltmp{{.*}}
+CHECK:      Successors: .Ltmp{{.*}} (mispreds: 0, count: 0)
+CHECK:    .Ltmp{{.*}}
+CHECK:      Exec Count : 4711
+CHECK:      Predecessors: .Ltmp{{.*}}, .LFT{{.*}}
+CHECK:        {{.*}}:   subl    $0x1, %r8d
+CHECK:        {{.*}}:   je      .LFT{{.*}}
+CHECK:      Successors: .LFT{{.*}} (mispreds: 0, count: 0), .Ltmp{{.*}} (mispreds: 33, count: 4711)
+CHECK:    .Ltmp{{.*}}
+CHECK:      Exec Count : 4711
+CHECK:      Predecessors: .Ltmp{{.*}}, .LBB{{.*}}
+CHECK:        {{.*}}:   movq    %rdi, %rcx
+CHECK:        {{.*}}:   addq    %rax, %rax
+CHECK:        {{.*}}:   shlq    $0x2, %rdi
+CHECK:        {{.*}}:   andl    $0xc0000000, %ecx
+CHECK:        {{.*}}:   shrq    $0x1e, %rcx
+CHECK:        {{.*}}:   leaq    (%rcx,%rdx,4), %rdx
+CHECK:        {{.*}}:   leaq    0x1(%rax,%rax), %rcx
+CHECK:        {{.*}}:   cmpq    %rcx, %rdx
+CHECK:        {{.*}}:   jb      .Ltmp{{.*}}
+CHECK:      Successors: .Ltmp{{.*}} (mispreds: 171, count: 2886), .LFT{{.*}} (mispreds: 0, count: 0)
+CHECK:    .LFT{{.*}}
+CHECK:      Exec Count : 0
+CHECK:      Predecessors: .Ltmp{{.*}}
+CHECK:        {{.*}}:   subq    %rcx, %rdx
+CHECK:        {{.*}}:   addq    $0x1, %rax
+CHECK:        {{.*}}:   jmp     .Ltmp{{.*}}
+CHECK:      Successors: .Ltmp{{.*}} (mispreds: 0, count: 0)
+CHECK:    .LFT{{.*}}
+CHECK:      Exec Count : 0
+CHECK:      Predecessors: .Ltmp{{.*}}
+CHECK:        {{.*}}:   movq    %rax, (%rsi)
+CHECK:        {{.*}}:   retq

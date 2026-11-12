@@ -1,0 +1,115 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+add_entrypoint_object(
+  chmod
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.chmod
+)
+
+add_entrypoint_object(
+  fchmodat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchmodat
+)
+
+add_entrypoint_object(
+  fchmod
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchmod
+)
+
+add_entrypoint_object(
+  fstat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fstat
+)
+
+add_entrypoint_object(
+  fstatat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fstatat
+)
+
+add_entrypoint_object(
+  lstat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.lstat
+)
+
+add_entrypoint_object(
+  mkdir
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkdir
+)
+
+add_entrypoint_object(
+  mkdirat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkdirat
+)
+
+add_entrypoint_object(
+  mkfifo
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkfifo
+)
+
+add_entrypoint_object(
+  mkfifoat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkfifoat
+)
+
+add_entrypoint_object(
+  mknod
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mknod
+)
+
+add_entrypoint_object(
+  mknodat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mknodat
+)
+
+add_entrypoint_object(
+  stat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.stat
+)
+
+add_entrypoint_object(
+  umask
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.umask
+)
+
+add_entrypoint_object(
+  utimensat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.utimensat
+)
+
+add_entrypoint_object(
+  futimens
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.futimens
+)

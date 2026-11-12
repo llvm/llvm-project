@@ -1,0 +1,159 @@
+//===- Utils.h --------------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_DWARFLINKER_UTILS_H
+#define LLVM_DWARFLINKER_UTILS_H
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+
+namespace llvm {
+class DWARFDie;
+class DWARFFormValue;
+
+namespace dwarf_linker {
+
+/// Test if the location of variable \p Die contains a global address
+/// but only uses to compute the variable's value, for example
+/// DW_OP_addr DW_OP_stack_value.
+LLVM_ABI bool hasImplicitAddressLocation(const DWARFDie &Die);
+
+/// Test if the DW_TAG_member \p Die is a DWARF 2-4 style static data member: a
+/// declaration with no storage in the record. DWARF 5 uses a DW_TAG_variable
+/// instead.
+LLVM_ABI bool isStaticDataMember(const DWARFDie &Die);
+
+/// Test if an unnamed type with tag \p Tag is identified by its children, which
+/// tell it apart from other unnamed types declared on the same line. Other
+/// unnamed types, like pointer types, have no such children.
+LLVM_ABI bool isIdentifiedByChildren(dwarf::Tag Tag);
+
+/// Test if \p Die is a child that identifies its unnamed parent type.
+LLVM_ABI bool isIdentifyingChild(const DWARFDie &Die);
+
+/// Hash the fully qualified name of type \p Die for the Apple accelerator
+/// tables. \p ResolveRef returns the DIE that a DW_AT_specification or
+/// DW_AT_abstract_origin of its first argument refers to, or an invalid DIE.
+/// A DW_TAG_module ends the name like the unit does, because LLDB leaves
+/// modules out of the qualified names it looks up.
+LLVM_ABI uint32_t hashFullyQualifiedName(
+    DWARFDie Die,
+    function_ref<DWARFDie(const DWARFDie &, const DWARFFormValue &)>
+        ResolveRef);
+
+/// Build a map from an input DW_AT_LLVM_stmt_sequence byte offset to
+/// the first-row index (in \p LT.Rows) of the corresponding line-table
+/// sequence. Seeds the map from \p LT.Sequences (the DWARF parser's
+/// discovered sequences), then augments it by walking row boundaries
+/// (DW_LNE_end_sequence markers) and matching them against the sorted
+/// input offsets in \p SortedStmtSeqOffsets, using the parser's results
+/// as ground-truth anchors. This recovers sequences the parser may not
+/// have registered and keeps the classic and parallel DWARFLinkers in
+/// lockstep. Caller passes \p SortedStmtSeqOffsets sorted ascending
+/// and deduplicated.
+LLVM_ABI void buildStmtSeqOffsetToFirstRowIndex(
+    const DWARFDebugLine::LineTable &LT,
+    ArrayRef<uint64_t> SortedStmtSeqOffsets,
+    DenseMap<uint64_t, uint64_t> &SeqOffToFirstRow);
+
+/// This function calls \p Iteration() until it returns false.
+/// If number of iterations exceeds \p MaxCounter then an Error is returned.
+/// This function should be used for loops which assumed to have number of
+/// iterations significantly smaller than \p MaxCounter to avoid infinite
+/// looping in error cases.
+inline Error finiteLoop(function_ref<Expected<bool>()> Iteration,
+                        size_t MaxCounter = 100000) {
+  size_t iterationsCounter = 0;
+  while (iterationsCounter++ < MaxCounter) {
+    Expected<bool> IterationResultOrError = Iteration();
+    if (!IterationResultOrError)
+      return IterationResultOrError.takeError();
+    if (!IterationResultOrError.get())
+      return Error::success();
+  }
+  return createStringError(std::errc::invalid_argument, "Infinite recursion");
+}
+
+/// Make a best effort to guess the
+/// Xcode.app/Contents/Developer path from an SDK path.
+inline StringRef guessDeveloperDir(StringRef SysRoot) {
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+  auto it = sys::path::rbegin(SysRoot);
+  auto end = sys::path::rend(SysRoot);
+  if (it == end || !it->ends_with(".sdk"))
+    return {};
+  ++it;
+  // Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs
+  if (it == end || *it != "SDKs")
+    return {};
+  auto developerEnd = it;
+  ++it;
+  while (it != end) {
+    // Contents/Developer/Platforms/MacOSX.platform/Developer
+    if (*it != "Developer")
+      return {};
+    ++it;
+    if (it == end)
+      return {};
+    if (*it == "Contents")
+      return StringRef(SysRoot.data(),
+                       developerEnd - sys::path::rend(SysRoot) - 1);
+    // Contents/Developer/Platforms/MacOSX.platform
+    if (!it->ends_with(".platform"))
+      return {};
+    ++it;
+    // Contents/Developer/Platforms
+    if (it == end || *it != "Platforms")
+      return {};
+    developerEnd = it;
+    ++it;
+  }
+  return {};
+}
+
+/// Make a best effort to determine whether Path is inside a toolchain.
+inline bool isInToolchainDir(StringRef Path) {
+  // Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2024-05-15-a.xctoolchain/usr/lib/swift/macosx/_StringProcessing.swiftmodule/arm64-apple-macos.private.swiftinterface
+  for (auto it = sys::path::rbegin(Path), end = sys::path::rend(Path);
+       it != end; ++it) {
+    if (it->ends_with(".xctoolchain")) {
+      ++it;
+      if (it == end)
+        return false;
+      if (*it != "Toolchains")
+        return false;
+      ++it;
+      if (it == end)
+        return false;
+      if (*it != "Developer")
+        return false;
+      return true;
+    }
+  }
+  return false;
+}
+
+inline bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
+  // Debug info can contain paths from any OS, not necessarily
+  // an OS we're currently running on. Moreover different compilation units can
+  // be compiled on different operating systems and linked together later.
+  return sys::path::is_absolute(Path, sys::path::Style::posix) ||
+         sys::path::is_absolute(Path, sys::path::Style::windows);
+}
+
+} // end of namespace dwarf_linker
+} // end of namespace llvm
+
+#endif // LLVM_DWARFLINKER_UTILS_H

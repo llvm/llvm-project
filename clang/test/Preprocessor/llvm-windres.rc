@@ -1,0 +1,8 @@
+// RUN: llvm-windres -I%p/Inputs %s %t.res
+// RUN: llvm-readobj %t.res | FileCheck %s
+// CHECK: Resource type (int): RCDATA (ID 10)
+// CHECK: Resource name (int): 42
+#include "llvm-windres.h"
+MY_ID RCDATA {
+  "a long string of data"
+}

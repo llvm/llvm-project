@@ -1,0 +1,30 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("BitWriterOptions") {
+  visibility = [ ":Writer" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+static_library("Writer") {
+  output_name = "LLVMBitWriter"
+  deps = [
+    ":BitWriterOptions",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+    "//llvm/lib/Transforms/Utils",
+  ]
+
+  sources = [
+    "BitWriter.cpp",
+    "BitWriterOptions.cpp",
+    "BitcodeWriter.cpp",
+    "BitcodeWriterPass.cpp",
+    "ValueEnumerator.cpp",
+  ]
+}

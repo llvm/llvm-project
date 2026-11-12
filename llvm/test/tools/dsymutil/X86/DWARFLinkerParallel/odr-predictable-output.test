@@ -1,0 +1,117 @@
+# RUN: dsymutil --linker=parallel -f -o %t1.o -oso-prepend-path=%p/ -y %s
+# RUN: llvm-dwarfdump --verify %t1.o | FileCheck -check-prefixes=VERIFY %s
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s --num-threads 1 | llvm-dwarfdump -a - -o %t1
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s --num-threads 3 | llvm-dwarfdump -a - -o %t2
+# RUN: diff %t1 %t2
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s --num-threads 4 | llvm-dwarfdump -a - -o %t3
+# RUN: diff %t1 %t3
+# RUN: dsymutil --linker=parallel -f -o - -oso-prepend-path=%p/ -y %s | llvm-dwarfdump -a - -o %t4
+# RUN: diff %t1 %t4
+
+# This test checks that generated output does not differ between runs.
+#
+# To recreate a test compile following example:
+#
+# main.cpp:
+#
+# include <string>
+#
+# void PrintSize ( const std::string& String );
+# void PrintNewString ( const std::string& String );
+# void PrintNewString2 ( const char* String );
+#
+# int main ( void ) {
+#
+#   PrintSize("hello");
+#   PrintNewString("hello");
+#   PrintNewString2("hello");
+#   printf("\n");
+#
+#   return 0;
+# }
+#
+# foo1.cpp:
+#
+# #include <string>
+#
+# void PrintSize ( const std::string& String ) {
+#   printf("\n String size %lu", String.size() );
+# };
+#
+# foo2.cpp:
+#
+# #include <string>
+#
+# void PrintNewString ( const std::string& String ) {
+#  std::string NewString(String);
+#  NewString += "++";
+#  printf("\n String %s", NewString.c_str());
+#};
+#
+# foo3.cpp:
+# #include <string>
+#
+# void PrintNewString2 ( const char* String ) {
+#   std::string NewString(String);
+#   NewString += "++";
+#   printf("\n String2 %s", NewString.c_str());
+# };
+#
+# with clang++ -O -fno-inline -g -std=c++11
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        'Inputs/String/foo1.o'
+    timestamp:       1638904719
+    symbols:
+      - { sym: __ZNKSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EE5__getEv, objAddr: 0x00000000000000A0, binAddr: 0x0000000100000B10, size: 0x00000009 }
+      - { sym: __ZNKSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_E5firstEv, objAddr: 0x0000000000000090, binAddr: 0x0000000100000B00, size: 0x00000010 }
+      - { sym: __Z9PrintSizeRKNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE, objAddr: 0x0000000000000000, binAddr: 0x0000000100000A70, size: 0x00000020 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE15__get_long_sizeEv, objAddr: 0x0000000000000060, binAddr: 0x0000000100000AD0, size: 0x00000010 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4sizeEv, objAddr: 0x0000000000000020, binAddr: 0x0000000100000A90, size: 0x00000030 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE16__get_short_sizeEv, objAddr: 0x0000000000000070, binAddr: 0x0000000100000AE0, size: 0x00000020 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE9__is_longEv, objAddr: 0x0000000000000050, binAddr: 0x0000000100000AC0, size: 0x00000010 }
+  - filename:        'Inputs/String/foo2.o'
+    timestamp:       1638904723
+    symbols:
+      - { sym: __ZNSt3__112__to_addressIKcEEPT_S3_, objAddr: 0x00000000000000E0, binAddr: 0x0000000100000BD0, size: 0x00000010 }
+      - { sym: GCC_except_table0, objAddr: 0x000000000000016C, binAddr: 0x0000000100000F24, size: 0x00000000 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE18__get_long_pointerEv, objAddr: 0x0000000000000120, binAddr: 0x0000000100000C10, size: 0x00000010 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE19__get_short_pointerEv, objAddr: 0x0000000000000130, binAddr: 0x0000000100000C20, size: 0x00000020 }
+      - { sym: __ZNSt3__114pointer_traitsIPKcE10pointer_toERS1_, objAddr: 0x0000000000000150, binAddr: 0x0000000100000C40, size: 0x00000010 }
+      - { sym: __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEpLEPKc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000B90, size: 0x00000010 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE4dataEv, objAddr: 0x00000000000000C0, binAddr: 0x0000000100000BB0, size: 0x00000020 }
+      - { sym: __Z14PrintNewStringRKNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE, objAddr: 0x0000000000000000, binAddr: 0x0000000100000B20, size: 0x00000070 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5c_strEv, objAddr: 0x0000000000000080, binAddr: 0x0000000100000BA1, size: 0x00000010 }
+      - { sym: __ZNSt3__19addressofIKcEEPT_RS2_, objAddr: 0x0000000000000160, binAddr: 0x0000000100000C50, size: 0x00000009 }
+      - { sym: __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13__get_pointerEv, objAddr: 0x00000000000000F0, binAddr: 0x0000000100000BE0, size: 0x00000030 }
+  - filename:        'Inputs/String/foo3.o'
+    timestamp:       1638904727
+    symbols:
+      - { sym: __ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC2INS_18__default_init_tagESA_EEOT_OT0_, objAddr: 0x0000000000000130, binAddr: 0x0000000100000D50, size: 0x00000040 }
+      - { sym: __ZNSt3__117__compressed_pairINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repES5_EC1INS_18__default_init_tagESA_EEOT_OT0_, objAddr: 0x0000000000000110, binAddr: 0x0000000100000D20, size: 0x00000010 }
+      - { sym: __ZNSt3__111char_traitsIcE6lengthEPKc, objAddr: 0x0000000000000120, binAddr: 0x0000000100000D40, size: 0x00000010 }
+      - { sym: __ZNSt3__116__non_trivial_ifILb1ENS_9allocatorIcEEEC2Ev, objAddr: 0x00000000000001B0, binAddr: 0x0000000100000DC0, size: 0x00000010 }
+      - { sym: __ZNSt3__17forwardINS_18__default_init_tagEEEOT_RNS_16remove_referenceIS2_E4typeE, objAddr: 0x0000000000000170, binAddr: 0x0000000100000D80, size: 0x00000010 }
+      - { sym: __ZNSt3__122__compressed_pair_elemINS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE5__repELi0ELb0EEC2ENS_18__default_init_tagE, objAddr: 0x0000000000000180, binAddr: 0x0000000100000D90, size: 0x00000010 }
+      - { sym: __ZNSt3__122__compressed_pair_elemINS_9allocatorIcEELi1ELb1EEC2ENS_18__default_init_tagE, objAddr: 0x0000000000000190, binAddr: 0x0000000100000DA0, size: 0x00000010 }
+      - { sym: __ZNSt3__19allocatorIcEC2Ev, objAddr: 0x00000000000001A0, binAddr: 0x0000000100000DB0, size: 0x00000010 }
+      - { sym: __Z15PrintNewString2PKc, objAddr: 0x0000000000000000, binAddr: 0x0000000100000C60, size: 0x00000070 }
+      - { sym: GCC_except_table0, objAddr: 0x000000000000026C, binAddr: 0x0000000100000F34, size: 0x00000000 }
+      - { sym: __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC1IDnEEPKc, objAddr: 0x0000000000000070, binAddr: 0x0000000100000CD0, size: 0x00000010 }
+      - { sym: __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEC2IDnEEPKc, objAddr: 0x00000000000000D0, binAddr: 0x0000000100000CE0, size: 0x00000040 }
+  - filename:        'Inputs/String/main.o'
+    timestamp:       1638904734
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000DD0, size: 0x00000090 }
+      - { sym: GCC_except_table0, objAddr: 0x0000000000000188, binAddr: 0x0000000100000F44, size: 0x00000000 }
+...
+
+VERIFY: Verifying .debug_abbrev...
+VERIFY: Verifying .debug_info Unit Header Chain...
+VERIFY: Verifying .apple_names...
+VERIFY: Verifying .apple_types...
+VERIFY: Verifying .apple_namespaces...
+VERIFY: Verifying .apple_objc...
+VERIFY: No errors.

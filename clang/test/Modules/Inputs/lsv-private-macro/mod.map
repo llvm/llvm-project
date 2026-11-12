@@ -1,0 +1,7 @@
+module self {
+  header "self.h"
+}
+
+module other {
+  header "other.h"
+}

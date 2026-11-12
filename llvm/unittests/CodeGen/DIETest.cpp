@@ -1,0 +1,316 @@
+//===- llvm/unittest/CodeGen/DIETest.cpp ----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "llvm/CodeGen/DIE.h"
+#include "TestAsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/Testing/Support/Error.h"
+
+using namespace llvm;
+using testing::_;
+using testing::SaveArg;
+
+namespace {
+
+using DIETestParams =
+    std::tuple<unsigned, dwarf::DwarfFormat, dwarf::Form, unsigned>;
+
+class DIEFixtureBase : public testing::TestWithParam<DIETestParams> {
+protected:
+  void SetUp() override {
+    unsigned Version;
+    dwarf::DwarfFormat Format;
+    std::tie(Version, Format, Form, Size) = GetParam();
+    auto ExpectedTestPrinter =
+        TestAsmPrinter::create("x86_64-pc-linux", Version, Format);
+    ASSERT_THAT_EXPECTED(ExpectedTestPrinter, Succeeded());
+    TestPrinter = std::move(ExpectedTestPrinter.get());
+    if (!TestPrinter)
+      GTEST_SKIP();
+  }
+
+  dwarf::Form Form;
+  unsigned Size;
+  std::unique_ptr<TestAsmPrinter> TestPrinter;
+};
+
+struct DIEExprFixture : public DIEFixtureBase {
+  void SetUp() override {
+    DIEFixtureBase::SetUp();
+    if (!TestPrinter)
+      return;
+
+    Val = MCConstantExpr::create(42, TestPrinter->getCtx());
+  }
+
+  const MCExpr *Val = nullptr;
+};
+
+TEST_P(DIEExprFixture, SizeOf) {
+  DIEExpr Tst(Val);
+  EXPECT_EQ(Size, Tst.sizeOf(TestPrinter->getAP()->getDwarfFormParams(), Form));
+}
+
+TEST_P(DIEExprFixture, EmitValue) {
+  DIEExpr Tst(Val);
+  EXPECT_CALL(TestPrinter->getMS(), emitValueImpl(Val, Size, _));
+  Tst.emitValue(TestPrinter->getAP(), Form);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DIETestParams, DIEExprFixture,
+    testing::Values(
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
+
+struct DIELabelFixture : public DIEFixtureBase {
+  void SetUp() override {
+    DIEFixtureBase::SetUp();
+    if (!TestPrinter)
+      return;
+
+    Val = TestPrinter->getCtx().createTempSymbol();
+  }
+
+  const MCSymbol *Val = nullptr;
+};
+
+TEST_P(DIELabelFixture, SizeOf) {
+  DIELabel Tst(Val);
+  EXPECT_EQ(Size, Tst.sizeOf(TestPrinter->getAP()->getDwarfFormParams(), Form));
+}
+
+TEST_P(DIELabelFixture, EmitValue) {
+  DIELabel Tst(Val);
+
+  const MCExpr *Arg0 = nullptr;
+  EXPECT_CALL(TestPrinter->getMS(), emitValueImpl(_, Size, _))
+      .WillOnce(SaveArg<0>(&Arg0));
+  Tst.emitValue(TestPrinter->getAP(), Form);
+
+  const MCSymbolRefExpr *ActualArg0 = dyn_cast_or_null<MCSymbolRefExpr>(Arg0);
+  ASSERT_NE(ActualArg0, nullptr);
+  EXPECT_EQ(&(ActualArg0->getSymbol()), Val);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DIETestParams, DIELabelFixture,
+    testing::Values(
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_strp, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_addr, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_strp, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_addr, 8u}));
+
+struct DIEDeltaFixture : public DIEFixtureBase {
+  void SetUp() override {
+    DIEFixtureBase::SetUp();
+    if (!TestPrinter)
+      return;
+
+    Hi = TestPrinter->getCtx().createTempSymbol();
+    Lo = TestPrinter->getCtx().createTempSymbol();
+  }
+
+  const MCSymbol *Hi = nullptr;
+  const MCSymbol *Lo = nullptr;
+};
+
+TEST_P(DIEDeltaFixture, SizeOf) {
+  DIEDelta Tst(Hi, Lo);
+  EXPECT_EQ(Size, Tst.sizeOf(TestPrinter->getAP()->getDwarfFormParams(), Form));
+}
+
+TEST_P(DIEDeltaFixture, EmitValue) {
+  DIEDelta Tst(Hi, Lo);
+  EXPECT_CALL(TestPrinter->getMS(), emitAbsoluteSymbolDiff(Hi, Lo, Size));
+  Tst.emitValue(TestPrinter->getAP(), Form);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DIETestParams, DIEDeltaFixture,
+    testing::Values(
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
+
+struct DIELocListFixture : public DIEFixtureBase {
+  void SetUp() override { DIEFixtureBase::SetUp(); }
+};
+
+TEST_P(DIELocListFixture, SizeOf) {
+  DIELocList Tst(999);
+  EXPECT_EQ(Size, Tst.sizeOf(TestPrinter->getAP()->getDwarfFormParams(), Form));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    DIETestParams, DIELocListFixture,
+    testing::Values(
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_loclistx, 2u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_data4, 4u},
+        DIETestParams{4, dwarf::DWARF32, dwarf::DW_FORM_sec_offset, 4u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_loclistx, 2u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
+        DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
+
+TEST(DIEValueListTest, DeleteValue) {
+  SmallVector<dwarf::Attribute, 4> Expected = {
+      dwarf::DW_AT_name, dwarf::DW_AT_type, dwarf::DW_AT_location,
+      dwarf::DW_AT_ranges};
+  SmallVector<dwarf::Attribute, 4> Result;
+
+  BumpPtrAllocator Alloc;
+  DIEValueList List;
+  for (auto [I, Attr] : enumerate(Expected))
+    List.addValue(Alloc, Attr, dwarf::DW_FORM_data1, DIEInteger(I));
+
+  auto readResult = [&List, &Result] {
+    Result.clear();
+    for (const DIEValue &V : List.values())
+      Result.push_back(V.getAttribute());
+  };
+
+  // Delete non-existing
+  EXPECT_FALSE(List.deleteValue(dwarf::DW_AT_high_pc));
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete back
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_ranges));
+  Expected.pop_back();
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete middle
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_type));
+  Expected.erase(Expected.begin() + 1);
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete front
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_name));
+  Expected.erase(Expected.begin());
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete last
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_location));
+  Expected.pop_back();
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete empty
+  EXPECT_FALSE(List.deleteValue(dwarf::DW_AT_high_pc));
+}
+
+TEST(DIETest, GetUnitDie) {
+  // A DIEUnit owns exactly one DIE, its unit DIE, whatever the root tag is, so
+  // the walk up from a nested DIE has to reach the unit for every unit root
+  // tag.
+  static const dwarf::Tag UnitTags[] = {
+      dwarf::DW_TAG_compile_unit, dwarf::DW_TAG_partial_unit,
+      dwarf::DW_TAG_type_unit, dwarf::DW_TAG_skeleton_unit};
+
+  BumpPtrAllocator Alloc;
+  for (dwarf::Tag UnitTag : UnitTags) {
+    BasicDIEUnit Unit(UnitTag);
+    Unit.setDebugSectionOffset(0x100);
+
+    DIE &Root = Unit.getUnitDie();
+    DIE &Namespace = Root.addChild(DIE::get(Alloc, dwarf::DW_TAG_namespace));
+    DIE &Struct =
+        Namespace.addChild(DIE::get(Alloc, dwarf::DW_TAG_structure_type));
+    Struct.setOffset(0x20);
+
+    EXPECT_EQ(&Root, Struct.getUnitDie());
+    EXPECT_EQ(static_cast<DIEUnit *>(&Unit), Struct.getUnit());
+    EXPECT_EQ(0x120u, Struct.getDebugSectionOffset());
+  }
+}
+
+TEST(DIETest, GetUnitDieWithoutUnit) {
+  // A tree carrying a unit root tag that was never handed to a DIEUnit belongs
+  // to no unit, so there is no absolute offset to compute for anything in it.
+  BumpPtrAllocator Alloc;
+  DIE *Root = DIE::get(Alloc, dwarf::DW_TAG_compile_unit);
+  DIE &Struct = Root->addChild(DIE::get(Alloc, dwarf::DW_TAG_structure_type));
+
+  EXPECT_EQ(nullptr, Root->getUnitDie());
+  EXPECT_EQ(nullptr, Root->getUnit());
+  EXPECT_EQ(nullptr, Struct.getUnitDie());
+  EXPECT_EQ(nullptr, Struct.getUnit());
+}
+
+TEST(DIETest, RemoveAndTakeChildren) {
+  BumpPtrAllocator Alloc;
+  auto CreateDIE = [&Alloc](dwarf::Tag Tag) { return DIE::get(Alloc, Tag); };
+  auto GetTags = [](const DIE &Parent) {
+    SmallVector<dwarf::Tag, 4> Tags;
+    for (const DIE &Child : Parent.children()) {
+      EXPECT_EQ(Child.getParent(), &Parent);
+      Tags.push_back(Child.getTag());
+    }
+    return Tags;
+  };
+
+  DIE *Parent = CreateDIE(dwarf::DW_TAG_subprogram);
+  DIE *Var = CreateDIE(dwarf::DW_TAG_variable);
+  Parent->addChild(Var);
+  DIE *Label = CreateDIE(dwarf::DW_TAG_label);
+  Parent->addChild(Label);
+
+  DIE *Pending = CreateDIE(dwarf::DW_TAG_lexical_block);
+  Pending->addChild(CreateDIE(dwarf::DW_TAG_structure_type));
+  Pending->addChild(CreateDIE(dwarf::DW_TAG_typedef));
+
+  // Move to the front.
+  Parent->takeChildren(*Pending, /*AtFront=*/true);
+  EXPECT_FALSE(Pending->hasChildren());
+  EXPECT_EQ(GetTags(*Parent),
+            (SmallVector<dwarf::Tag, 4>{
+                dwarf::DW_TAG_structure_type, dwarf::DW_TAG_typedef,
+                dwarf::DW_TAG_variable, dwarf::DW_TAG_label}));
+
+  // Remove the first child, a middle child and the last child.
+  Parent->removeChild(*Parent->children().begin());
+  Parent->removeChild(*Var);
+  Parent->removeChild(*Label);
+  EXPECT_EQ(Var->getParent(), nullptr);
+  EXPECT_EQ(Label->getParent(), nullptr);
+  EXPECT_EQ(GetTags(*Parent),
+            (SmallVector<dwarf::Tag, 4>{dwarf::DW_TAG_typedef}));
+
+  // Move to the back.
+  Pending->addChild(Var);
+  Pending->addChild(Label);
+  Parent->takeChildren(*Pending);
+  EXPECT_FALSE(Pending->hasChildren());
+  EXPECT_EQ(GetTags(*Parent), (SmallVector<dwarf::Tag, 4>{
+                                  dwarf::DW_TAG_typedef, dwarf::DW_TAG_variable,
+                                  dwarf::DW_TAG_label}));
+
+  // Moving from a DIE without children does nothing.
+  Parent->takeChildren(*Pending, /*AtFront=*/true);
+  EXPECT_EQ(GetTags(*Parent).size(), 3u);
+}
+
+} // end namespace

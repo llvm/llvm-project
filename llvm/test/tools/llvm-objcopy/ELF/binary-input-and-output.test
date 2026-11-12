@@ -1,0 +1,23 @@
+# RUN: echo abcd > %t.txt
+
+# Preserve input to verify it is not modified
+# RUN: cp %t.txt %t-copy.txt
+
+## -I binary -O binary preserves payload through in-memory representation.
+# RUN: llvm-objcopy -I binary -O binary %t.txt %t.2.txt
+# RUN: cmp %t.txt %t.2.txt
+# RUN: cmp %t.txt %t-copy.txt
+
+## If -O is not specified, it defaults to -I, i.e. "binary".
+# RUN: llvm-objcopy -I binary %t.txt %t.3.txt
+# RUN: cmp %t.txt %t.3.txt
+
+## -I binary -O elf* creates an ELF. -O binary transforms it back to the
+## original file.
+# RUN: llvm-objcopy -I binary -O elf64-x86-64 %t.txt %t.o
+# RUN: llvm-objcopy -O binary %t.o %t.4.txt
+# RUN: cmp %t.txt %t.4.txt
+
+## -B is ignored.
+# RUN: llvm-objcopy -I binary -B i386:x86-64 -O binary %t.txt %t.5.txt
+# RUN: cmp %t.txt %t.5.txt

@@ -1,0 +1,9 @@
+Purpose:
+    Check the `help` subtool runs.
+
+RUN: %dexter_base help | FileCheck %s
+CHECK: The following subtools are available:
+CHECK: help
+CHECK: list-debuggers
+CHECK: test
+CHECK: view

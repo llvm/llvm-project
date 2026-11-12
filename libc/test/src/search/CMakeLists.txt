@@ -1,0 +1,64 @@
+add_libc_testsuite(libc-search-tests)
+add_libc_test(
+  hsearch_test
+  SUITE
+    libc-search-tests
+  SRCS
+    hsearch_test.cpp
+  DEPENDS
+    libc.src.search.hsearch_r
+    libc.src.search.hcreate_r
+    libc.src.search.hdestroy_r
+    libc.src.search.hsearch
+    libc.src.search.hcreate
+    libc.src.search.hdestroy
+)
+
+add_libc_test(
+  insque_test
+  SUITE
+    libc-search-tests
+  SRCS
+    insque_test.cpp
+  DEPENDS
+    libc.src.search.insque
+    libc.src.search.remque
+)
+
+add_libc_test(
+  lfind_test
+  SUITE
+    libc-search-tests
+  SRCS
+    lfind_test.cpp
+  DEPENDS
+    libc.src.search.lfind
+)
+
+add_libc_test(
+  lsearch_test
+  SUITE
+    libc-search-tests
+  SRCS
+    lsearch_test.cpp
+  DEPENDS
+    libc.src.search.lsearch
+)
+
+add_libc_test(
+  tsearch_test
+  SUITE
+    libc-search-tests
+  SRCS
+    tsearch_test.cpp
+  DEPENDS
+    libc.src.search.tsearch
+    libc.src.search.tfind
+    libc.src.search.tdelete
+    libc.src.search.twalk
+    libc.src.search.twalk_r
+    libc.src.search.tdestroy
+    libc.src.string.strlen
+    libc.src.string.strcpy
+    libc.src.string.strcmp
+)
