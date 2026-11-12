@@ -7,7 +7,7 @@ gpu.module @test_module_0 {
   func.func @gpu_index_ops()
       -> (index, index, index, index, index, index,
           index, index, index, index, index, index,
-          index) {
+          index, index, index, index) {
     %tIdX = gpu.thread_id x
     %tIdY = gpu.thread_id y
     %tIdZ = gpu.thread_id z
@@ -26,13 +26,16 @@ gpu.module @test_module_0 {
 
     // CHECK-NOT: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
+    %subgroupSize = gpu.subgroup_size : index
+    %subgroupId = gpu.subgroup_id : index
+    %numSubgroups = gpu.num_subgroups : index
 
     func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
                %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ,
-               %laneId
+               %laneId, %subgroupSize, %subgroupId, %numSubgroups
         : index, index, index, index, index, index,
           index, index, index, index, index, index,
-          index
+          index, index, index, index
   }
 }
 
