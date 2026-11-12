@@ -208,8 +208,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       cir::FuncType fnTy =
           cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
       cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
-
-      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      fnPtr.setUnnamedAddr(true);
 
       // The Microsoft ABI uses the same function name for pure and deleted
       // virtual functions.
