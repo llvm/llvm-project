@@ -585,11 +585,135 @@ KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
   return applyOutputDenormalMode(Known, Mode);
 }
 
+namespace {
+
+// TODO: Turn this into a class and add getters if UnroundedFMul is used
+// outside this file. This is because the fields of UnroundedFMul are unstable
+// and should not be relied upon.
+struct UnroundedFMul {
+  bool NeverExactPosInf = false;
+  bool NeverExactNegInf = false;
+
+  bool NeverExactPosZero = false;
+  bool NeverExactNegZero = false;
+
+  // Overflow is defined as max-normal < product < exact-infinity.
+  bool NeverPosOverflow = false;
+  bool NeverNegOverflow = false;
+
+  // Underflow is defined as exact-zero < product < min-subnormal.
+  bool NeverPosUnderflow = false;
+  bool NeverNegUnderflow = false;
+
+  bool NeverPosFiniteLargerEqFour = false;
+  bool NeverNegFiniteLargerEqFour = false;
+
+  // Computes the unrounded result for fmul. Assumes IEEE denormal behavior.
+  static UnroundedFMul compute(const KnownFPClass &LHS,
+                               const KnownFPClass &RHS);
+
+  // Computes the unrounded result for fmul(x, x). Assumes IEEE denormal
+  // behavior.
+  static UnroundedFMul computeSquare(const KnownFPClass &Src);
+};
+
+UnroundedFMul UnroundedFMul::compute(const KnownFPClass &LHS,
+                                     const KnownFPClass &RHS) {
+  UnroundedFMul Mul;
+
+  // Exact conditions for ruling out exact infinities.
+  Mul.NeverExactPosInf =
+      (LHS.isKnownNever(fcPosInf) ||
+       RHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
+      (RHS.isKnownNever(fcPosInf) ||
+       LHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
+      (LHS.isKnownNever(fcNegInf) ||
+       RHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
+      (RHS.isKnownNever(fcNegInf) ||
+       LHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal));
+  Mul.NeverExactNegInf =
+      (LHS.isKnownNever(fcPosInf) ||
+       RHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
+      (RHS.isKnownNever(fcPosInf) ||
+       LHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
+      (LHS.isKnownNever(fcNegInf) ||
+       RHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
+      (RHS.isKnownNever(fcNegInf) ||
+       LHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal));
+
+  // Exact conditions for ruling out exact zeroes.
+  Mul.NeverExactPosZero =
+      (LHS.isKnownNever(fcPosZero) || RHS.isKnownNever(fcPosFinite)) &&
+      (RHS.isKnownNever(fcPosZero) || LHS.isKnownNever(fcPosFinite)) &&
+      (LHS.isKnownNever(fcNegZero) || RHS.isKnownNever(fcNegFinite)) &&
+      (RHS.isKnownNever(fcNegZero) || LHS.isKnownNever(fcNegFinite));
+  Mul.NeverExactNegZero =
+      (LHS.isKnownNever(fcPosZero) || RHS.isKnownNever(fcNegFinite)) &&
+      (RHS.isKnownNever(fcPosZero) || LHS.isKnownNever(fcNegFinite)) &&
+      (LHS.isKnownNever(fcNegZero) || RHS.isKnownNever(fcPosFinite)) &&
+      (RHS.isKnownNever(fcNegZero) || LHS.isKnownNever(fcPosFinite));
+
+  // Approximate conditions for ruling out overflow.
+  Mul.NeverPosOverflow =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcPosNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcNegNormal));
+  Mul.NeverNegOverflow =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcNegNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcPosNormal));
+
+  // max-subnormal * max-normal < 4.0 for IEEE and extended formats.
+  // max-subnormal * max-normal < 2.0 for m68_f80.
+  Mul.NeverPosFiniteLargerEqFour =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcPosNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcNegNormal));
+  Mul.NeverNegFiniteLargerEqFour =
+      (LHS.isKnownNever(fcPosNormal) || RHS.isKnownNever(fcNegNormal)) &&
+      (LHS.isKnownNever(fcNegNormal) || RHS.isKnownNever(fcPosNormal));
+
+  // Approximate conditions for ruling out underflow.
+  Mul.NeverPosUnderflow = (LHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
+                           RHS.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
+                          (LHS.isKnownNever(fcNegSubnormal | fcNegNormal) ||
+                           RHS.isKnownNever(fcNegSubnormal | fcNegNormal));
+  Mul.NeverNegUnderflow = (LHS.isKnownNever(fcPosSubnormal | fcPosNormal) ||
+                           RHS.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
+                          (LHS.isKnownNever(fcNegSubnormal | fcNegNormal) ||
+                           RHS.isKnownNever(fcPosSubnormal | fcPosNormal));
+
+  return Mul;
+}
+
+UnroundedFMul UnroundedFMul::computeSquare(const KnownFPClass &Src) {
+  UnroundedFMul Mul;
+
+  // x * x is never negative.
+  Mul.NeverExactNegInf = true;
+  Mul.NeverExactNegZero = true;
+  Mul.NeverNegOverflow = true;
+  Mul.NeverNegUnderflow = true;
+  Mul.NeverNegFiniteLargerEqFour = false;
+
+  Mul.NeverExactPosInf = Src.isKnownNever(fcInf);
+  Mul.NeverExactPosZero = Src.isKnownNever(fcZero);
+
+  // Approximate conditions for ruling out overflow and underflow.
+  Mul.NeverPosOverflow = Src.isKnownNever(fcNormal);
+  Mul.NeverPosUnderflow = Src.isKnownNever(fcSubnormal | fcNormal);
+
+  Mul.NeverPosFiniteLargerEqFour = Src.isKnownNever(fcNormal);
+
+  return Mul;
+}
+
+} // end anonymous namespace
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
                                 const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+
+  const UnroundedFMul Mul = UnroundedFMul::compute(KnownLHS, KnownRHS);
 
   KnownFPClass Known;
 
@@ -606,15 +730,9 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
     Known.knownNot(fcNan);
 
   // Infinity may be produced from two non-zero inputs.
-  if ((KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf) ||
-       KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf)) &&
-      (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf) ||
-       KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf)))
+  if (Mul.NeverExactPosInf && Mul.NeverPosOverflow)
     Known.knownNot(fcPosInf);
-  if ((KnownLHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf) ||
-       KnownRHS.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf)) &&
-      (KnownLHS.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf) ||
-       KnownRHS.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf)))
+  if (Mul.NeverExactNegInf && Mul.NeverNegOverflow)
     Known.knownNot(fcNegInf);
 
   // Normal and subnormal results require two non-zero finite operands.
@@ -630,15 +748,9 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
     Known.knownNot(fcNegSubnormal | fcNegNormal);
 
   // Zero may be produced from two finite inputs.
-  if ((KnownLHS.isKnownNever(fcPosFinite) ||
-       KnownRHS.isKnownNever(fcPosFinite)) &&
-      (KnownLHS.isKnownNever(fcNegFinite) ||
-       KnownRHS.isKnownNever(fcNegFinite)))
+  if (Mul.NeverExactPosZero && Mul.NeverPosUnderflow)
     Known.knownNot(fcPosZero);
-  if ((KnownLHS.isKnownNever(fcPosFinite) ||
-       KnownRHS.isKnownNever(fcNegFinite)) &&
-      (KnownLHS.isKnownNever(fcNegFinite) ||
-       KnownRHS.isKnownNever(fcPosFinite)))
+  if (Mul.NeverExactNegZero && Mul.NeverNegUnderflow)
     Known.knownNot(fcNegZero);
 
   return applyOutputDenormalMode(Known, Mode);
@@ -806,27 +918,58 @@ KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc_,
   return Known;
 }
 
-static KnownFPClass fma_impl(const KnownFPClass &KnownLHS,
-                             const KnownFPClass &KnownRHS) {
+// Assumes that the rounding mode is Dynamic.
+static KnownFPClass fma_impl(const UnroundedFMul Mul,
+                             const KnownFPClass &Product,
+                             const KnownFPClass &Addend) {
   KnownFPClass Known;
 
-  if (KnownLHS.cannotBeOrderedLessThanZero() &&
-      KnownRHS.cannotBeOrderedLessThanZero()) {
-    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+  if (Mul.NeverExactPosInf && Addend.isKnownNever(fcPosInf)) {
+    // Overflow in the general case may occur when:
+    // * pos-overflow + finite
+    // * pos-large + pos-non-zero
+    // * pos-non-zero + pos-large
+    if (Mul.NeverPosOverflow &&
+        (Mul.NeverPosFiniteLargerEqFour ||
+         Addend.isKnownNever(fcPosSubnormal | fcPosNormal)) &&
+        ((Mul.NeverPosUnderflow &&
+          Product.isKnownNever(fcPosSubnormal | fcPosNormal)) ||
+         Addend.isKnownNever(fcPosNormal)))
+      Known.knownNot(fcPosInf);
+  }
+  if (Mul.NeverExactNegInf && Addend.isKnownNever(fcNegInf)) {
+    // Overflow in the general case may occur when:
+    // * neg-overflow + finite
+    // * neg-large + neg-non-zero
+    // * neg-non-zero + neg-large
+    if (Mul.NeverNegOverflow &&
+        (Mul.NeverNegFiniteLargerEqFour ||
+         Addend.isKnownNever(fcNegSubnormal | fcNegNormal)) &&
+        ((Mul.NeverNegUnderflow &&
+          Product.isKnownNever(fcNegSubnormal | fcNegNormal)) ||
+         Addend.isKnownNever(fcNegNormal)))
+      Known.knownNot(fcNegInf);
+  }
+
+  if (Mul.NeverNegOverflow &&
+      Product.isKnownNever(fcNegSubnormal | fcNegNormal) &&
+      Addend.isKnownNever(fcNegSubnormal | fcNegNormal)) {
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
 
     // This can't underflow if one of the operands is known normal.
-    if (KnownLHS.isKnownNever(fcZero | fcPosSubnormal) ||
-        KnownRHS.isKnownNever(fcZero | fcPosSubnormal))
+    if (Product.isKnownNever(fcZero | fcPosSubnormal) ||
+        Addend.isKnownNever(fcZero | fcPosSubnormal))
       Known.knownNot(fcZero | fcPosSubnormal);
   }
 
-  if (KnownLHS.cannotBeOrderedGreaterThanZero() &&
-      KnownRHS.cannotBeOrderedGreaterThanZero()) {
-    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+  if (Mul.NeverPosOverflow &&
+      Product.isKnownNever(fcPosSubnormal | fcPosNormal) &&
+      Addend.isKnownNever(fcPosSubnormal | fcPosNormal)) {
+    Known.knownNot(fcPosSubnormal | fcPosNormal);
 
     // This can't underflow if one of the operands is known normal.
-    if (KnownLHS.isKnownNever(fcZero | fcNegSubnormal) ||
-        KnownRHS.isKnownNever(fcZero | fcNegSubnormal))
+    if (Product.isKnownNever(fcZero | fcNegSubnormal) ||
+        Addend.isKnownNever(fcZero | fcNegSubnormal))
       Known.knownNot(fcZero | fcNegSubnormal);
   }
 
@@ -841,14 +984,10 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS_,
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
   KnownFPClass KnownAddend = applyInputDenormalMode(KnownAddend_, Mode);
 
-  KnownFPClass Mul = fmul(KnownLHS, KnownRHS, DenormalMode::getIEEE());
+  KnownFPClass Product = fmul(KnownLHS, KnownRHS, DenormalMode::getIEEE());
+  const UnroundedFMul Mul = UnroundedFMul::compute(KnownLHS, KnownRHS);
 
-  // FMA differs from the base fmul + fadd handling only in the treatment of -0
-  // results.
-  //
-  // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
-  // unlike for a separate fadd.
-  KnownFPClass Known = fma_impl(Mul, KnownAddend);
+  KnownFPClass Known = fma_impl(Mul, Product, KnownAddend);
 
   // propagateNonSNaN for 3 arguments.
   if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
@@ -866,27 +1005,9 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS_,
         (KnownLHS.isKnownNever(fcInf) || KnownRHS.isKnownNever(fcZero)) &&
         (KnownRHS.isKnownNever(fcInf) || KnownLHS.isKnownNever(fcZero));
     // Multiplying infinity by a non-zero finite may change the sign.
-    const bool NeverExactPosInf =
-        (KnownLHS.isKnownNever(fcPosInf) ||
-         KnownRHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
-        (KnownRHS.isKnownNever(fcPosInf) ||
-         KnownLHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
-        (KnownLHS.isKnownNever(fcNegInf) ||
-         KnownRHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
-        (KnownRHS.isKnownNever(fcNegInf) ||
-         KnownLHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal));
-    const bool NeverExactNegInf =
-        (KnownLHS.isKnownNever(fcPosInf) ||
-         KnownRHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
-        (KnownRHS.isKnownNever(fcPosInf) ||
-         KnownLHS.isKnownNever(fcNegInf | fcNegNormal | fcNegSubnormal)) &&
-        (KnownLHS.isKnownNever(fcNegInf) ||
-         KnownRHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal)) &&
-        (KnownRHS.isKnownNever(fcNegInf) ||
-         KnownLHS.isKnownNever(fcPosInf | fcPosNormal | fcPosSubnormal));
     if (NeverZeroMulInf &&
-        (KnownAddend.isKnownNever(fcPosInf) || NeverExactNegInf) &&
-        (KnownAddend.isKnownNever(fcNegInf) || NeverExactPosInf))
+        (KnownAddend.isKnownNever(fcPosInf) || Mul.NeverExactNegInf) &&
+        (KnownAddend.isKnownNever(fcNegInf) || Mul.NeverExactPosInf))
       Known.knownNot(fcNan);
   }
 
@@ -910,15 +1031,17 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared_,
   KnownFPClass KnownSquared = applyInputDenormalMode(KnownSquared_, Mode);
   KnownFPClass KnownAddend = applyInputDenormalMode(KnownAddend_, Mode);
 
-  KnownFPClass Squared = square(KnownSquared, DenormalMode::getIEEE());
-  KnownFPClass Known = fma_impl(Squared, KnownAddend);
+  KnownFPClass Product = square(KnownSquared, DenormalMode::getIEEE());
+  const UnroundedFMul Mul = UnroundedFMul::computeSquare(KnownSquared);
+
+  KnownFPClass Known = fma_impl(Mul, Product, KnownAddend);
 
   Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
-  // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
-  // squaring.
+  // Squaring never produces -inf, so only fma(+inf, +inf, -inf) and
+  // fma(-inf, -inf, -inf) produce NaN.
   if (KnownSquared.isKnownNeverNaN() && KnownAddend.isKnownNeverNaN() &&
-      (KnownSquared.isKnownNever(fcInf) || KnownAddend.isKnownNever(fcNegInf)))
+      (Mul.NeverExactPosInf || KnownAddend.isKnownNever(fcNegInf)))
     Known.knownNot(fcNan);
 
   return applyOutputDenormalMode(Known, Mode);

@@ -1348,6 +1348,92 @@ define float @ret_fmul__no_pzero_psub_pnorm__no_pinf_psub_pnorm(float nofpclass(
   ret float %fmul
 }
 
+;-------------------------------------------------------------------------------
+; Rule out overflow.
+;-------------------------------------------------------------------------------
+
+define float @ret_fmul__no_inf_norm__no_inf(float nofpclass(inf norm) %lhs, float nofpclass(inf) %rhs) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__no_inf_norm__no_inf(
+; CHECK-SAME: float nofpclass(inf norm) [[LHS:%.*]], float nofpclass(inf) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul__no_inf__no_inf_norm(float nofpclass(inf) %lhs, float nofpclass(inf norm) %rhs) {
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__no_inf__no_inf_norm(
+; CHECK-SAME: float nofpclass(inf) [[LHS:%.*]], float nofpclass(inf norm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul__psub__pnorm(float nofpclass(nan inf zero nsub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @ret_fmul__psub__pnorm(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul__psub__nnorm(float nofpclass(nan inf zero nsub norm) %lhs, float nofpclass(nan inf zero sub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) float @ret_fmul__psub__nnorm(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul__nsub__pnorm(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nan inf pzero psub pnorm) float @ret_fmul__nsub__pnorm(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul__nsub__nnorm(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @ret_fmul__nsub__nnorm(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %lhs, %rhs
+  ret float %fmul
+}
+
+define float @ret_fmul_self__no_inf_norm(float noundef nofpclass(inf norm) %arg) {
+; CHECK-LABEL: define noundef nofpclass(inf nzero nsub nnorm) float @ret_fmul_self__no_inf_norm(
+; CHECK-SAME: float noundef nofpclass(inf norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_self__sub(float noundef nofpclass(nan inf zero norm) %arg) {
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero nsub nnorm) float @ret_fmul_self__sub(
+; CHECK-SAME: float noundef nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+;-------------------------------------------------------------------------------
+
 attributes #0 = { denormal_fpenv(ieee|ieee) }
 attributes #1 = { denormal_fpenv(ieee|preservesign) }
 attributes #2 = { denormal_fpenv(ieee|positivezero) }
