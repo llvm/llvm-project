@@ -447,6 +447,17 @@ WithReason<int64_t> GetHeightWithReason(
     const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
     SemanticsContext *semaCtx = nullptr);
 
+std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
+getApplyDirectives(const parser::OmpDirectiveSpecification &spec,
+    llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
+WithReason<llvm::omp::LoopModifier> getLoopModifierWithReason(
+    const parser::OmpDirectiveSpecification &spec,
+    const parser::OmpClause &clause, llvm::omp::Version version);
+WithReason<llvm::SmallVector<int64_t>> getSelectedIndexesWithReason(
+    const parser::OmpClause &clause, int64_t numIndexes,
+    SemanticsContext *semaCtx = nullptr);
+bool IsInnerLoopModifier(const parser::OmpApplyClause &clause);
+
 /// Return the depth of the affected nest(s):
 ///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
@@ -534,6 +545,9 @@ struct LoopSequence {
   WithReason<bool> isRectangular(
       const std::vector<const LoopSequence *> &outer) const;
 
+  void updateLoopSequenceWith(
+      int64_t index, const parser::OmpDirectiveSpecification &spec);
+
 private:
   using Construct = ExecutionPartIterator::Construct;
 
@@ -554,6 +568,8 @@ private:
 
   /// Precalculate length and depth.
   void precalculate();
+
+  void calculateApplyClauses(const parser::OmpDirectiveSpecification &spec);
 
   WithReason<int64_t> calculateLength() const;
   WithReason<int64_t> getNestedLength() const;
@@ -592,6 +608,17 @@ private:
   std::vector<LoopSequence> children_;
   SemanticsContext *semaCtx_{nullptr};
 };
+
+/// Calculate the depth resulting of the application of spec at height index
+LoopSequence::Depth calculateDepthsWith(LoopSequence::Depth depth,
+    WithReason<int64_t> &length, int64_t index,
+    const parser::OmpDirectiveSpecification &spec, llvm::omp::Version version,
+    SemanticsContext *semaCtx = nullptr);
+
+/// Calculate the length resulting of the application of spec
+WithReason<int64_t> calculateLengthWith(WithReason<int64_t> length,
+    int64_t index, const parser::OmpDirectiveSpecification &spec,
+    llvm::omp::Version version, SemanticsContext *semaCtx = nullptr);
 
 // ---------------------------------------------------------------------------
 // Trait-matching helpers shared between metadirective lowering and

@@ -262,6 +262,82 @@ void OmpStructureChecker::CheckRectangularNest(
   }
 }
 
+std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
+OmpStructureChecker::GetOrderedApplyDirectives(
+    const parser::OmpDirectiveSpecification &spec) {
+  llvm::omp::Version version{context_.langOptions().OpenMPVersion};
+  std::string dirName{parser::omp::GetUpperName(spec.DirId(), version)};
+  std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
+      orderedDirectives;
+  const auto &height{GetHeightWithReason(spec, version)};
+  auto [generatedLoops, _isPerfect]{
+      GetGeneratedNestDepthWithReason(spec, version)};
+  if (!generatedLoops)
+    return orderedDirectives; // empty
+
+  int64_t maxLoops = spec.DirId() == llvm::omp::Directive::OMPD_tile ||
+          spec.DirId() == llvm::omp::Directive::OMPD_stripe
+      ? generatedLoops.value.value() / 2
+      : generatedLoops.value.value();
+
+  for (auto &clause : spec.Clauses().v) {
+    if (clause.Id() == llvm::omp::Clause::OMPC_apply) {
+      auto &applyClause{
+          DEREF(parser::Unwrap<parser::OmpApplyClause>(clause.u))};
+
+      auto indexList{getSelectedIndexesWithReason(clause, maxLoops)};
+      const auto &directiveList{
+          std::get<std::list<parser::OmpDirectiveSpecification>>(
+              applyClause.t)};
+
+      if (indexList.value.value().size() != directiveList.size()) {
+        auto &msg{context_.Say(clause.source,
+            "The number of selected loops (%d) and the number of directives (%d) must match"_err_en_US,
+            indexList.value.value().size(), directiveList.size())};
+        indexList.reason.AttachTo(msg);
+        return orderedDirectives; // empty
+      }
+
+      int64_t addedHeight =
+          IsInnerLoopModifier(applyClause) && height ? height.value.value() : 0;
+      auto loopModifier{getLoopModifierWithReason(spec, clause, version)};
+      if (!loopModifier)
+        return orderedDirectives; // empty
+      llvm::StringRef modifierName =
+          llvm::omp::getLoopModifierName(loopModifier.value.value());
+
+      auto itV = orderedDirectives.begin();
+      for (const auto [index, dir] :
+          llvm::zip_equal(indexList.value.value(), directiveList)) {
+        if (maxLoops < index) {
+          auto &msg{context_.Say(clause.source,
+              "Loop index %" PRId64
+              " is larger than the generated loops by the %s directive for the "
+              "%s modifier (%" PRId64 ")"_err_en_US,
+              index, dirName, parser::ToUpperCaseLetters(modifierName),
+              maxLoops)};
+          generatedLoops.reason.AttachTo(msg);
+        } else {
+          while (itV != orderedDirectives.end() &&
+              (*itV).first < (addedHeight + index)) {
+            itV++;
+          }
+          if (itV != orderedDirectives.end() &&
+              (*itV).first == (addedHeight + index)) {
+            auto &msg{context_.Say(clause.source,
+                "Loop index %" PRId64
+                " is selected multiple times for the %s modifier"_err_en_US,
+                index, parser::ToUpperCaseLetters(modifierName))};
+            indexList.reason.AttachTo(msg);
+          }
+          itV = orderedDirectives.insert(itV, {addedHeight + index, &dir});
+        }
+      }
+    }
+  }
+  return orderedDirectives;
+}
+
 void OmpStructureChecker::CheckNestedConstruct(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
@@ -308,6 +384,10 @@ void OmpStructureChecker::CheckNestedConstruct(
   const auto MsgRequiresCanonical{
       "This construct requires a canonical loop %s"_err_en_US};
 
+  // Check requirements on nest depth.
+  auto [needDepth, needPerfect]{
+      GetAffectedNestDepthWithReason(beginSpec, version)};
+
   if (assoc == llvm::omp::Association::LoopNest) {
     if (sequence.children().size() == 0) {
       context_.Say(beginSource, MsgShouldContainDoOr, "nest");
@@ -323,10 +403,6 @@ void OmpStructureChecker::CheckNestedConstruct(
       auto &msg{context_.Say(beginSource, MsgRequiresCanonical, "nest")};
       whyNot.AttachTo(msg);
     }
-
-    // Check requirements on nest depth.
-    auto [needDepth, needPerfect]{
-        GetAffectedNestDepthWithReason(beginSpec, version)};
 
     // Perfect nesting for doacross loop nests is handled differently across
     // versions. Only in 6.0+ is the requirement keyed off the body
@@ -366,6 +442,9 @@ void OmpStructureChecker::CheckNestedConstruct(
       }
     }
 
+    sequence.updateLoopSequenceWith(1, beginSpec);
+    CheckApplyConstruct(beginSpec, sequence, needPerfect);
+
   } else if (assoc == llvm::omp::Association::LoopSequence) {
     if (haveLength.value == 0) {
       context_.Say(beginSource, MsgShouldContainDoOr, "sequence");
@@ -386,6 +465,58 @@ void OmpStructureChecker::CheckNestedConstruct(
           needRange.reason.AttachTo(msg);
         }
       }
+      sequence.updateLoopSequenceWith(1, beginSpec);
+      CheckApplyConstruct(beginSpec, sequence, needPerfect);
+    }
+  }
+}
+
+void OmpStructureChecker::CheckApplyConstruct(
+    const parser::OmpDirectiveSpecification &spec, LoopSequence &sequence,
+    bool &needPerfect) {
+  llvm::omp::Version version{context_.langOptions().OpenMPVersion};
+  std::string_view perfectTxt{needPerfect ? " perfect" : ""};
+  const auto &directiveList = GetOrderedApplyDirectives(spec);
+  auto [max, _]{GetAffectedNestDepthWithReason(spec, version)};
+  // the apply directives are applied from innermost to outermost index
+  for (int64_t i = directiveList.size() - 1; i >= 0; i--) {
+    const auto *sp = directiveList[i].second;
+    auto index = directiveList[i].first;
+
+    if (!IsLoopTransforming(sp->DirId())) {
+      context_.Say(sp->source,
+          "Only Loop Transformation directives are allowed in the APPLY clause directive list"_err_en_US);
+      continue;
+    }
+
+    auto [affectedDepth, affectedPerfect]{
+        GetAffectedNestDepthWithReason(*sp, version)};
+    needPerfect = needPerfect || affectedPerfect;
+    auto haveDepth =
+        needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
+    if (affectedDepth && haveDepth) {
+      if (*affectedDepth.value > (*haveDepth.value - (index - 1))) {
+        auto indexValue = ((index - 1) % *max.value) + 1;
+        auto &msg{context_.Say(sp->source,
+            "This construct requires a%s nest of depth %" PRId64
+            ", but the associated nest at index %" PRId64
+            " is a%s nest of depth %" PRId64 ""_err_en_US,
+            perfectTxt, *affectedDepth.value, indexValue, perfectTxt,
+            (*haveDepth.value - (index - 1)))};
+        haveDepth.reason.AttachTo(msg);
+        affectedDepth.reason.AttachTo(msg);
+      }
+    }
+    sequence.updateLoopSequenceWith(index, *sp);
+    auto depth =
+        needPerfect ? sequence.depth().perfect : sequence.depth().semantic;
+    if (!depth) {
+      auto &msg{context_.Say(sp->source,
+          "Cannot apply the transformation at index %" PRId64 ""_err_en_US,
+          directiveList[i].first)};
+      depth.reason.AttachTo(msg);
+    } else {
+      CheckApplyConstruct(*sp, sequence, needPerfect);
     }
   }
 }
@@ -1104,44 +1235,57 @@ void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
   constructStack_.push_back(&x);
 }
 
-void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
+void OmpStructureChecker::Enter(const parser::OmpClause::Apply &x) {
   DirectiveContext &dirCtx = GetContext();
+  EnterDirectiveNest(ApplyNest);
   llvm::omp::Directive dir{dirCtx.directive};
-  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
-  auto &m{std::get<llvm::omp::LoopModifier>(x.t)};
-  if (!llvm::omp::isAllowedLoopModifier(dir, m)) {
-    llvm::StringRef name = llvm::omp::getLoopModifierName(m);
-    context_.Say(x.source,
-        "%s modifier is not allowed on %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(name),
-        parser::omp::GetUpperName(dir, version));
-  }
-  if (const auto &il{
-          std::get<std::optional<std::list<parser::ScalarIntConstantExpr>>>(
-              x.t)}) {
-    int64_t last = -1;
-    for (auto &i : il.value()) {
-      if (const auto v{GetIntValue(i)}) {
-        if (*v <= 0) {
-          context_.Say(x.source,
-              "The loop modifier indexes of the %s clause must be constant positive integer expressions"_err_en_US,
-              parser::ToUpperCaseLetters(
-                  getClauseName(llvm::omp::Clause::OMPC_apply).str()));
-        } else if (*v <= last) {
-          context_.Say(x.source,
-              "The loop modifier indexes of the %s clause must be in ascending order"_err_en_US,
-              parser::ToUpperCaseLetters(
-                  getClauseName(llvm::omp::Clause::OMPC_apply).str()));
-        } else {
-          last = *v;
+  llvm::omp::Version version{context_.langOptions().OpenMPVersion};
+
+  auto &modifiers{OmpGetModifiers(x.v)};
+  if (auto *loopModifier{
+          OmpGetUniqueModifier<parser::OmpLoopModifier>(modifiers)}) {
+    auto &m{std::get<llvm::omp::LoopModifier>(loopModifier->t)};
+    if (!llvm::omp::isAllowedLoopModifier(dir, m)) {
+      llvm::StringRef name = llvm::omp::getLoopModifierName(m);
+      context_.Say(loopModifier->source,
+          "%s modifier is not allowed on %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(name),
+          parser::omp::GetUpperName(dir, version));
+    }
+    if (const auto &il{
+            std::get<std::optional<std::list<parser::ScalarIntConstantExpr>>>(
+                loopModifier->t)}) {
+      int64_t last = -1;
+      for (const auto &expr : il.value()) {
+        if (const auto &index{GetIntValue(expr)}) {
+          if (*index <= 0) {
+            context_.Say(*parser::GetSource(expr),
+                "The loop modifier indexes of the %s clause must be constant positive integer expressions"_err_en_US,
+                parser::omp::GetUpperName(
+                    llvm::omp::Clause::OMPC_apply, version));
+          } else if (*index <= last) {
+            context_.Say(*parser::GetSource(expr),
+                "The loop modifier indexes of the %s clause must be in ascending order"_err_en_US,
+                parser::omp::GetUpperName(
+                    llvm::omp::Clause::OMPC_apply, version));
+          }
+          last = *index;
         }
       }
     }
+  } else {
+    switch (dir) {
+    case llvm::omp::Directive::OMPD_split:
+    case llvm::omp::Directive::OMPD_stripe:
+    case llvm::omp::Directive::OMPD_tile:
+      context_.Say(dirCtx.clauseSource,
+          "%s directive does not have a default loop modifier"_because_en_US,
+          parser::omp::GetUpperName(dir, version));
+      break;
+    default:
+      break;
+    }
   }
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Apply &x) {
-  EnterDirectiveNest(ApplyNest);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpClause::Apply &x) {

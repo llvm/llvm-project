@@ -739,7 +739,8 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
 
   // Record each variant directive. A loop-associated one is later validated
   // against the loop nest that follows the metadirective.
-  if (dirId != llvm::omp::Directive::OMPD_metadirective) {
+  if (dirId != llvm::omp::Directive::OMPD_metadirective &&
+      !GetDirectiveNest(ApplyNest)) {
     metadirectiveLoopVariants_.push_back(
         {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
     // Metadirective is "pure", but its selected variant may not be.

@@ -19,6 +19,7 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -187,8 +188,6 @@ public:
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
 
-  void Enter(const parser::OmpLoopModifier &);
-
   void Enter(const parser::OmpClause::Apply &);
   void Leave(const parser::OmpClause::Apply &);
 
@@ -327,6 +326,10 @@ private:
       const parser::OmpDoacross &doa, llvm::omp::Clause clauseId);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckUnrollFullTripCount(const parser::OpenMPLoopConstruct &x);
+  std::vector<std::pair<int64_t, const parser::OmpDirectiveSpecification *>>
+  GetOrderedApplyDirectives(const parser::OmpDirectiveSpecification &spec);
+  void CheckApplyConstruct(const parser::OmpDirectiveSpecification &spec,
+      omp::LoopSequence &sequence, bool &needPerfect);
 
   void BeginMetadirectiveVariantScope();
   void EndMetadirectiveVariantScope();
