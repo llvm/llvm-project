@@ -28,7 +28,7 @@ void GH3206(char *a, char *b) {
     if (a != nullptr || b == nullptr) {
       // no-warning: 'a' is checked against null and even if 'b' is null the
       // outer if statement rules out entering with both 'a' and 'b' being null.
-			a[0] = '\0';
-		}
+      a[0] = '\0';
+    }
   }
 }
