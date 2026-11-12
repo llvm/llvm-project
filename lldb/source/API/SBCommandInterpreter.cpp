@@ -661,12 +661,6 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
 
 SBCommandPluginInterface::~SBCommandPluginInterface() = default;
 
-bool SBCommandPluginInterface::DoExecute(
-    lldb::SBDebugger /*debugger*/, char ** /*command*/,
-    lldb::SBCommandReturnObject & /*result*/) {
-  return false;
-}
-
 SBCommand::SBCommand() { LLDB_INSTRUMENT_VA(this); }
 
 SBCommand::SBCommand(const SBCommand &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
