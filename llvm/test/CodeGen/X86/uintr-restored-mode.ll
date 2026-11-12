@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu \
 ; RUN:   -mattr=+uintr | FileCheck %s --check-prefix=BASIC
 ;
-; RUN: not llc < %s -mtriple=i386-unknown-linux-gnu \
+; RUN: not --crash llc < %s -mtriple=i386-unknown-linux-gnu \
 ; RUN:   -mattr=+uintr 2>&1 | FileCheck %s --check-prefix=REJECT
 
 declare void @llvm.x86.clui()
@@ -25,4 +25,4 @@ define void @probe() {
 ; BASIC:    clui
 ; BASIC:    ret
 
-; REJECT: error   
+; REJECT: LLVM ERROR: Cannot select: intrinsic %llvm.x86.clui
