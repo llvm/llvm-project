@@ -919,6 +919,76 @@ exit:
   ret void
 }
 
+; The start of %src.off is a non-affine AddRec of the outer loop with a step
+; containing udiv %m, (%stride + %y), which gets rewritten to udiv %m, (%y + 1)
+; using %stride == 1. The AddRec is expanded in the outer loop header, before
+; the SCEV checks, so the udiv must not divide by zero if %stride != 1.
+define void @outer_nonaffine_addrec_bound_with_versioned_stride_udiv(ptr %dst, ptr %src, i64 %m, i64 %stride, i64 %y, i64 %tc, i64 %outer.n) {
+; CHECK-LABEL: define void @outer_nonaffine_addrec_bound_with_versioned_stride_udiv(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[M:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]], i64 [[TC:%.*]], i64 [[OUTER_N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SRC4:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST3:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[STRIDE]], [[Y]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST3]], [[SRC4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[Y]], 1
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi i64 [ [[INDUCTION_IV_NEXT:%.*]], [[OUTER_LATCH1:%.*]] ], [ [[TMP0]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[J_NEXT:%.*]], [[OUTER_LATCH1]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], [[OUTER_LATCH1]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[STEP_NEXT:%.*]], [[OUTER_LATCH1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 [[M]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], -4
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], [[J]]
+; CHECK-NEXT:    [[SRC_OFF:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[ACC]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.umax.i64(i64 [[TC]], i64 1)
+; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[TMP7]], 4
+; CHECK-NEXT:    br i1 [[EC]], [[LOOP:label %.*]], label %[[OUTER_LATCH:.*]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; CHECK-NEXT:    br i1 [[IDENT_CHECK]], [[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[INDUCTION_IV]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP8]], 15
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[LOOP]], [[VECTOR_PH:label %.*]]
+;
+entry:
+  %d = add i64 %stride, %y
+  br label %outer.header
+
+outer.header:
+  %j = phi i64 [ 0, %entry ], [ %j.next, %outer.latch ]
+  %acc = phi i64 [ 0, %entry ], [ %acc.next, %outer.latch ]
+  %step = phi i64 [ 0, %entry ], [ %step.next, %outer.latch ]
+  %src.off = getelementptr i32, ptr %src, i64 %acc
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %outer.header ], [ %iv.next, %loop ]
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src.off, i64 %idx
+  %l.src = load i32, ptr %gep.src, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %l.src, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %tc
+  br i1 %ec, label %loop, label %outer.latch
+
+outer.latch:
+  %q = udiv i64 %m, %d
+  %step.next = add i64 %step, %q
+  %acc.next = add i64 %acc, %step
+  %j.next = add i64 %j, 1
+  %oc = icmp ult i64 %j.next, %outer.n
+  br i1 %oc, label %outer.header, label %exit
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}
 

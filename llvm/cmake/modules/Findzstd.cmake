@@ -29,7 +29,42 @@ find_package_handle_standard_args(
 )
 
 if(zstd_FOUND)
-  if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND NOT zstd_LIBRARY MATCHES "\\.dll\\.a$")
+  set(zstd_library_is_static FALSE)
+  if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$"
+      AND NOT zstd_LIBRARY MATCHES "\\.dll\\.a$")
+    if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+      set(zstd_library_is_static TRUE)
+    else()
+      # On AIX, .a archives may contain shared objects rather than relocatable
+      # objects. A member ending in .imp means a shared library that specifies
+      # symbols to import. Otherwise, a member whose XCOFF flags include
+      # SHROBJ but not LOADONLY is a linkable shared object.
+      execute_process(
+        COMMAND ar -X32_64 -t "${zstd_LIBRARY}"
+        OUTPUT_VARIABLE zstd_ar_output
+        ERROR_QUIET)
+      if(NOT zstd_ar_output MATCHES "\\.imp(\n|$)")
+        execute_process(
+          COMMAND dump -X32_64 -ov "${zstd_LIBRARY}"
+          OUTPUT_VARIABLE zstd_dump_output
+          ERROR_QUIET)
+        string(REGEX MATCHALL "Flags=\\([^)]*\\)" zstd_flags
+               "${zstd_dump_output}")
+        set(zstd_library_is_static TRUE)
+        foreach(zstd_flag IN LISTS zstd_flags)
+          if(zstd_flag MATCHES "SHROBJ" AND NOT zstd_flag MATCHES "LOADONLY")
+            set(zstd_library_is_static FALSE)
+            break()
+          endif()
+        endforeach()
+        unset(zstd_dump_output)
+        unset(zstd_flags)
+        unset(zstd_flag)
+      endif()
+      unset(zstd_ar_output)
+    endif()
+  endif()
+  if(zstd_library_is_static)
     set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
   elseif (NOT TARGET zstd::libzstd_shared)
     add_library(zstd::libzstd_shared SHARED IMPORTED)
@@ -54,6 +89,7 @@ if(zstd_FOUND)
           IMPORTED_LOCATION "${zstd_LIBRARY}")
     endif()
   endif()
+  unset(zstd_library_is_static)
   if(zstd_STATIC_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND
      NOT TARGET zstd::libzstd_static)
     add_library(zstd::libzstd_static STATIC IMPORTED)

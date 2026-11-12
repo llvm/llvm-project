@@ -22,7 +22,6 @@
 #include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -5199,13 +5198,6 @@ LogicalResult WhileOp::inferReturnTypeComponents(
   }
 
   return success();
-}
-
-std::optional<SmallVector<int64_t, 4>>
-ApplyScaleOp::getIterationShapeToUnroll() {
-  if (auto vt = llvm::dyn_cast<VectorType>(getType()))
-    return llvm::to_vector<4>(vt.getShape());
-  return std::nullopt;
 }
 
 static void printInitializationList(OpAsmPrinter &parser,

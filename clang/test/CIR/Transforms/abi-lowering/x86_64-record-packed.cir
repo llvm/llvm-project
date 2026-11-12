@@ -33,7 +33,7 @@ module attributes {
   // allocated as the coerce type and the record is read through a bitcast of
   // it.  That is the opposite direction from a padded record, where the slot
   // has to be the wider record or the reload would run past it.
-  cir.func @take_five_short(%arg0: !rec_FiveShort) {
+  cir.func @take_five_short(%arg0: !rec_FiveShort) requires_call_conv_lowering {
     cir.return
   }
 
@@ -45,7 +45,7 @@ module attributes {
 
   // The caller allocates the slot the other way round, as the record, and
   // reads the register out through a view of it.
-  cir.func @call_five_short(%arg0: !rec_FiveShort) {
+  cir.func @call_five_short(%arg0: !rec_FiveShort) requires_call_conv_lowering {
     cir.call @take_five_short(%arg0) : (!rec_FiveShort) -> ()
     cir.return
   }
@@ -60,7 +60,7 @@ module attributes {
 
   // Two eightbytes flatten into two wire arguments, so the record is rebuilt a
   // register at a time through the coercion tuple rather than by one bitcast.
-  cir.func @take_nine(%arg0: !rec_Nine) {
+  cir.func @take_nine(%arg0: !rec_Nine) requires_call_conv_lowering {
     cir.return
   }
 
@@ -75,14 +75,14 @@ module attributes {
   // A packed record the caller must destroy takes the non-byval form rather
   // than byval, which keeps the record's declared alignment where byval would
   // raise it to the ABI minimum of 8.
-  cir.func @take_p(%arg0: !rec_P) {
+  cir.func @take_p(%arg0: !rec_P) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.dereferenceable = 5 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A union coerces through the same one-register path as FiveShort.
-  cir.func @take_upacked(%arg0: !rec_UPacked) {
+  cir.func @take_upacked(%arg0: !rec_UPacked) requires_call_conv_lowering {
     cir.return
   }
 

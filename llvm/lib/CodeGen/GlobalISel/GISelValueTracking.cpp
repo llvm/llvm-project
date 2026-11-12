@@ -1494,11 +1494,19 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
 
     if (A == B && isGuaranteedNotToBeUndef(A, MRI, Depth + 1)) {
-      // x * x + y
+      FPClassTest InterestedSquared = InterestedClasses;
+      FPClassTest InterestedAddend = InterestedClasses;
+      // Only fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) produce NaN when
+      // squaring.
+      if (InterestedClasses & fcQNan) {
+        InterestedSquared |= fcSNan | fcInf;
+        InterestedAddend |= fcSNan | fcNegInf;
+      }
+
       KnownFPClass KnownSrc, KnownAddend;
-      computeKnownFPClass(C, DemandedElts, InterestedClasses, KnownAddend,
+      computeKnownFPClass(C, DemandedElts, InterestedAddend, KnownAddend,
                           Depth + 1);
-      computeKnownFPClass(A, DemandedElts, InterestedClasses, KnownSrc,
+      computeKnownFPClass(A, DemandedElts, InterestedSquared, KnownSrc,
                           Depth + 1);
       if (KnownNotFromFlags) {
         KnownSrc.knownNot(KnownNotFromFlags);
@@ -2051,7 +2059,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     Known = KnownFPClass::fdiv(KnownLHS, KnownRHS, Mode);
     break;
   }
-  case TargetOpcode::G_FREM: {
+  case TargetOpcode::G_FREM:
+  case TargetOpcode::G_STRICT_FREM: {
     FPClassTest InterestedLHS = fcNone;
     FPClassTest InterestedRHS = fcNone;
 
@@ -2463,7 +2472,9 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     case TargetOpcode::G_FMUL:
     case TargetOpcode::G_STRICT_FMUL:
     case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_STRICT_FDIV:
     case TargetOpcode::G_FREM:
+    case TargetOpcode::G_STRICT_FREM:
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_STRICT_FMA:
     case TargetOpcode::G_FMAD:

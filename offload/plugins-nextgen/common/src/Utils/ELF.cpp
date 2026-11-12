@@ -339,10 +339,17 @@ getSymbolAddressImpl(const ELFObjectFile<ELFT> &ELFObj,
   const auto &Section = *SecOrErr;
 
   // A section with SHT_NOBITS occupies no space in the file and has no
-  // offset.
+  // offset, so the symbol has no address in the file.
   if (Section->sh_type == ELF::SHT_NOBITS)
-    return createError(
-        "invalid sh_type for symbol lookup, cannot be SHT_NOBITS");
+    return nullptr;
+
+  // Level Zero native binaries (relocatable objects) place zero-initialized
+  // globals past the end of a section that is not marked SHT_NOBITS. Such
+  // symbols have no contents in the file, so return no address.
+  // FIXME: Remove this check when Level Zero ELF files are fixed.
+  if (ELFFile.getHeader().e_machine == ELF::EM_INTELGT &&
+      Symbol.st_value + Symbol.st_size > Section->sh_size)
+    return nullptr;
 
   uint64_t Offset = Section->sh_offset - Section->sh_addr + Symbol.st_value;
   if (Offset > ELFFile.getBufSize())

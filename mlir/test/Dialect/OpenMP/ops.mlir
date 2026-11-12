@@ -1155,16 +1155,16 @@ func.func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
 func.func @wsloop_inscan_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
-  // CHECK: reduction(mod: inscan, @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
-  omp.wsloop reduction(mod:inscan, @add_f32 %0 -> %prv : !llvm.ptr) {
+  // CHECK: reduction(inscan @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(inscan @add_f32 %0 -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
        // CHECK: omp.scan inclusive(%{{.*}} : !llvm.ptr)
        omp.scan inclusive(%prv : !llvm.ptr)
        omp.yield
     }
   }
-  // CHECK: reduction(mod: inscan, @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
-  omp.wsloop reduction(mod:inscan, @add_f32 %0 -> %prv : !llvm.ptr) {
+  // CHECK: reduction(inscan @add_f32 %{{.+}} -> %[[PRV:.+]] : !llvm.ptr)
+  omp.wsloop reduction(inscan @add_f32 %0 -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
        // CHECK: omp.scan exclusive(%{{.*}} : !llvm.ptr)
        omp.scan exclusive(%prv : !llvm.ptr)
@@ -4272,6 +4272,18 @@ func.func @omp_iterator_negative_step(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
     omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
   } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  return
+}
+
+// CHECK-LABEL: func.func @omp_iterator_inclusive_wide
+func.func @omp_iterator_inclusive_wide(%hi : i128, %st : i128) -> () {
+  // CHECK: omp.iterator(%[[IV:.*]]: i128) = (%{{.*}} to %{{.*}} step %{{.*}}) {
+  // CHECK:   omp.yield(%[[IV]] : i128)
+  // CHECK: } inclusive -> !omp.iterated<i128>
+  %lb = arith.constant 0 : i128
+  %0 = omp.iterator(%iv: i128) = (%lb to %hi step %st) {
+    omp.yield(%iv : i128)
+  } inclusive -> !omp.iterated<i128>
   return
 }
 

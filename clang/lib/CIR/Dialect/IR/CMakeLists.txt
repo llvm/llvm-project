@@ -9,7 +9,7 @@ math(EXPR CIR_LAST_SHARD_INDEX "${CLANG_CIR_OP_SHARD_COUNT} - 1")
 foreach(index RANGE ${CIR_LAST_SHARD_INDEX})
   set(CIR_SHARDED_SRC CIROpDefinitions.${index}.cpp)
   list(APPEND CIR_SHARDED_SRCS ${CIR_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${CIR_SHARDED_SRC}
+  mlir_src_sharder(${CIR_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRCIROpsShardGen)

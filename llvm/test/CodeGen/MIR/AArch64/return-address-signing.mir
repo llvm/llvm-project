@@ -22,7 +22,6 @@
 #CHECK: foo
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 #CHECK:    frame-setup PACIASP implicit-def $lr, implicit $lr, implicit $sp
@@ -38,7 +37,6 @@ body:             |
 #CHECK: bar
 name:            bar
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 #CHECK:    frame-setup EMITBKEY
@@ -55,7 +53,6 @@ body:             |
 #CHECK: foobar
 name:            foobar
 alignment:       4
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 #CHECK:    frame-setup PACM

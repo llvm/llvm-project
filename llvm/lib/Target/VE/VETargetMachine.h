@@ -58,8 +58,6 @@ public:
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
-  unsigned getSjLjDataSize() const override { return 64; }
-
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,

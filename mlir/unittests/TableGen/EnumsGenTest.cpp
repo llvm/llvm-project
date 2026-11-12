@@ -9,11 +9,8 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringExtras.h"
 
 #include "gmock/gmock.h"
 

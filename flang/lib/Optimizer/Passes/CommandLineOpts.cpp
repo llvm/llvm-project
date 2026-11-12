@@ -27,12 +27,6 @@ cl::opt<bool> dynamicArrayStackToHeapAllocation(
     cl::desc("place all array allocations of dynamic size on the heap"),
     cl::init(false), cl::Hidden);
 
-cl::opt<std::size_t> arrayStackAllocationThreshold(
-    "fstack-array-size",
-    cl::desc(
-        "place all array allocations more than <size> elements on the heap"),
-    cl::init(~static_cast<std::size_t>(0)), cl::Hidden);
-
 cl::opt<bool> ignoreMissingTypeDescriptors(
     "ignore-missing-type-desc",
     cl::desc("ignore failures to find derived type descriptors when "

@@ -3666,7 +3666,7 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   // View the function.
   StringRef ViewFuncName =
       getViewBlockFreqFuncName(F->getFunction().getContext());
-  if (ViewBlockLayoutWithBFI != GVDT_None &&
+  if (ViewBlockLayoutWithBFI != GVDAGType::None &&
       (ViewFuncName.empty() || F->getFunction().getName() == ViewFuncName)) {
     if (RenumberBlocksBeforeView)
       MF.RenumberBlocks();

@@ -37,6 +37,7 @@
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -682,6 +683,34 @@ bool DWARFExpression::LinkThreadLocalStorage(
 
   m_data.SetData(encoder.GetDataBuffer());
   return true;
+}
+
+/// Asks the language runtime of the current function to evaluate
+/// DW_OP_entry_value(\p entry_value), possibly together with some of the
+/// \p following operations, which it consumes.
+static std::optional<Value>
+EvaluateEntryValueInLanguageRuntime(EvalContext &eval_ctx,
+                                    llvm::ArrayRef<uint8_t> entry_value,
+                                    llvm::ArrayRef<uint8_t> &following) {
+  if (!eval_ctx.frame || !eval_ctx.process)
+    return std::nullopt;
+  Function *function =
+      eval_ctx.frame->GetSymbolContext(eSymbolContextFunction).function;
+  if (!function)
+    return std::nullopt;
+  LanguageRuntime *runtime =
+      eval_ctx.process->GetLanguageRuntime(function->GetLanguage());
+  if (!runtime)
+    return std::nullopt;
+
+  llvm::ArrayRef<uint8_t> rest = following;
+  std::optional<Value> value =
+      runtime->EvaluateEntryValue(*eval_ctx.frame, entry_value, rest);
+  // The runtime may only consume operations from the front.
+  if (!value || rest.end() != following.end() || rest.size() > following.size())
+    return std::nullopt;
+  following = rest;
+  return value;
 }
 
 static llvm::Error Evaluate_DW_OP_entry_value(EvalContext &eval_ctx,
@@ -2331,6 +2360,18 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
       if (error)
         return error;
+
+      // A language runtime may know the entry value without call site
+      // information.
+      llvm::ArrayRef<uint8_t> following = llvm::arrayRefFromStringRef(
+          expr_data.getData().drop_front(block_offset));
+      const size_t following_size = following.size();
+      if (std::optional<Value> value = EvaluateEntryValueInLanguageRuntime(
+              eval_ctx, block_data, following)) {
+        stack.push_back(*value);
+        op = op.skipBytes(block_size + following_size - following.size());
+        continue;
+      }
 
       if (llvm::Error err = Evaluate_DW_OP_entry_value(eval_ctx, block_data))
         return llvm::createStringError(
