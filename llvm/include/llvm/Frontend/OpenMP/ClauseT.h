@@ -198,15 +198,21 @@ struct StylizedInstanceT {
 };
 
 template <typename I, typename E> //
+struct IntrinsicOperatorT {
+  ENUM(Operator, Power, Multiply, Divide, Add, Subtract, Concat, LT, LE, EQ, NE,
+       GE, GT, NOT, AND, OR, EQV, NEQV, Min, Max);
+  using WrapperTrait = std::true_type;
+  Operator v;
+};
+
+template <typename I, typename E> //
 struct DefinedOperatorT {
   struct DefinedOpName {
     using WrapperTrait = std::true_type;
     ObjectT<I, E> v;
   };
-  ENUM(IntrinsicOperator, Power, Multiply, Divide, Add, Subtract, Concat, LT,
-       LE, EQ, NE, GE, GT, NOT, AND, OR, EQV, NEQV, Min, Max);
   using UnionTrait = std::true_type;
-  std::variant<DefinedOpName, IntrinsicOperator> u;
+  std::variant<DefinedOpName, IntrinsicOperatorT<I, E>> u;
 };
 
 // V5.2: [3.2.6] `iterator` modifier
@@ -255,7 +261,7 @@ template <typename I, typename E> //
 struct LoopIterationT {
   struct Distance {
     using TupleTrait = std::true_type;
-    std::tuple<DefinedOperatorT<I, E>, E> t;
+    std::tuple<IntrinsicOperatorT<I, E>, E> t;
   };
   using TupleTrait = std::true_type;
   std::tuple<ObjectT<I, E>, OPT(Distance)> t;

@@ -330,7 +330,8 @@ define void @narrow_iv_i8_sext_i64_wrapping(ptr noalias %arr, ptr noalias %out) 
 ; RV32-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP4]], i64 0
 ; RV32-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; RV32-NEXT:    [[TMP5:%.*]] = sext <vscale x 16 x i8> [[VEC_IND]] to <vscale x 16 x i64>
-; RV32-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [1024 x i8], ptr [[ARR]], <vscale x 16 x i64> [[TMP5]]
+; RV32-NEXT:    [[TMP7:%.*]] = trunc <vscale x 16 x i64> [[TMP5]] to <vscale x 16 x i32>
+; RV32-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [1024 x i8], ptr [[ARR]], <vscale x 16 x i32> [[TMP7]]
 ; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.vp.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> align 1 [[WIDE_GEP]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
 ; RV32-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> [[WIDE_MASKED_GATHER]], <vscale x 16 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP2]]

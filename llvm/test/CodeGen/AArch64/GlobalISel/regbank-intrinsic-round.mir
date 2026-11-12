@@ -8,7 +8,6 @@
 name:            test_f16.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -33,7 +32,6 @@ body:             |
 name:            test_f32.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -58,7 +56,6 @@ body:             |
 name:            test_f64.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -83,7 +80,6 @@ body:             |
 name:            test_v8f16.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -108,7 +104,6 @@ body:             |
 name:            test_v4f16.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -133,7 +128,6 @@ body:             |
 name:            test_v2f32.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -158,7 +152,6 @@ body:             |
 name:            test_v4f32.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}
@@ -183,7 +176,6 @@ body:             |
 name:            test_v2f64.round
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 frameInfo:
   maxCallFrameSize: 0
 machineFunctionInfo: {}

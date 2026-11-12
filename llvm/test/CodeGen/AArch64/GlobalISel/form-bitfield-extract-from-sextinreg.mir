@@ -6,7 +6,6 @@
 ...
 ---
 name:            sextinreg_ashr_to_sbfx
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -30,7 +29,6 @@ body:             |
 ...
 ---
 name:            sextinreg_lshr_to_sbfx
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -55,7 +53,6 @@ body:             |
 ...
 ---
 name:            dont_apply_no_constant
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -81,7 +78,6 @@ body:             |
 ...
 ---
 name:            dont_apply_shift_imm_too_large
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -107,7 +103,6 @@ body:             |
 ...
 ---
 name:            dont_apply_negative_shift_imm
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -133,7 +128,6 @@ body:             |
 ...
 ---
 name:            dont_apply_more_than_one_use
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IdivFxTest.h"
+#include "test/src/stdfix/IdivFxTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h" // unsigned fract
+#include "include/llvm-libc-macros/stdfix-macros.h" // unsigned fract
 #include "src/stdfix/idivur.h"
 
 LIST_IDIVFX_TESTS(ur, unsigned fract, unsigned int, LIBC_NAMESPACE::idivur);

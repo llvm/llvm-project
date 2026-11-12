@@ -1,0 +1,28 @@
+## Verify bb-path-cloning preserves MachineBlockHashInfo while invalidating
+## Machine-CFG analyses (MBFI, MDT, MLI).
+# RUN: echo 'v1' > %t
+# RUN: llc -mtriple=x86_64-pc-linux -basic-block-sections=%t \
+# RUN:     -run-pass=machine-loops,machine-block-freq,machine-block-hash,bb-path-cloning,machine-block-match-infer,block-placement \
+# RUN:     -verify-machineinstrs=0 -debug-pass=Structure %s -o /dev/null 2>&1 \
+# RUN:   | FileCheck %s
+
+---
+name: foo
+body: |
+  bb.0:
+    RET 0
+...
+
+# CHECK:      MachineDominator Tree Construction
+# CHECK-NEXT: Machine Natural Loop Construction
+# CHECK-NEXT: Machine Cycle Info Analysis
+# CHECK-NEXT: Machine Block Frequency Analysis
+# CHECK-NEXT: Basic Block Hash Compute
+# CHECK-NEXT: Basic Block Path Cloning
+# CHECK-NEXT: Basic Block Matching and Inference
+# CHECK-NEXT: Machine Cycle Info Analysis
+# CHECK-NEXT: Machine Block Frequency Analysis
+# CHECK-NEXT: MachinePostDominator Tree Construction
+# CHECK-NEXT: MachineDominator Tree Construction
+# CHECK-NEXT: Machine Natural Loop Construction
+# CHECK-NEXT: Branch Probability Basic Block Placement

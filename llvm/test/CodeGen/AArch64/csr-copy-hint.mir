@@ -3,7 +3,6 @@
 
 ---
 name:            ra0
-tracksRegLiveness: true
 isSSA:           true
 body:             |
   bb.0.entry:

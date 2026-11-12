@@ -23,8 +23,11 @@ using namespace llvm;
 #define OPTIONS_STRUCT_DEFS
 #include "MCToolOptions.inc"
 
-llvm::mc::RegisterMCToolOptions::RegisterMCToolOptions() {
-  static opt::RegisterLibraryOptions<MCToolOptions> Registration;
+ArrayRef<const cl::LibraryOptions *> llvm::mc::getToolOptions() {
+  static constexpr opt::LibraryOptionsParser Parser(
+      std::in_place_type<MCToolOptions>);
+  static constexpr const cl::LibraryOptions *Libraries[] = {&Parser};
+  return Libraries;
 }
 
 StringRef llvm::mc::getABIName(const cl::LibraryOptionsContext &C) {

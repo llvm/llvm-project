@@ -97,6 +97,7 @@ getSupportedMetadataImpl(llvm::LLVMContext &llvmContext) {
       llvm::LLVMContext::MD_mmra,
       llvm::LLVMContext::MD_memprof,
       llvm::LLVMContext::MD_callsite,
+      llvm::LLVMContext::MD_tbaa_struct,
       llvmContext.getMDKindID(vecTypeHintMDName),
       llvmContext.getMDKindID(workGroupSizeHintMDName),
       llvmContext.getMDKindID(reqdWorkGroupSizeMDName),
@@ -211,6 +212,24 @@ static LogicalResult setTBAAAttr(const llvm::MDNode *node, Operation *op,
     return failure();
 
   iface.setTBAATags(ArrayAttr::get(iface.getContext(), tbaaTagSym));
+  return success();
+}
+
+/// Attaches the `tbaa_struct` attribute converted from `!tbaa.struct` by
+/// ModuleImport::convertTBAAStructMetadata to the imported aggregate copy,
+/// like setTBAAAttr does for access tags. Nodes that could not be modeled
+/// are unmapped and declined here.
+static LogicalResult setTBAAStructAttr(const llvm::MDNode *node, Operation *op,
+                                       LLVM::ModuleImport &moduleImport) {
+  auto fields =
+      dyn_cast_if_present<ArrayAttr>(moduleImport.lookupTBAAStructAttr(node));
+  if (!fields)
+    return failure();
+
+  auto iface = dyn_cast<TBAAStructOpInterface>(op);
+  if (!iface)
+    return failure();
+  iface.setTBAAStruct(fields);
   return success();
 }
 
@@ -604,6 +623,8 @@ public:
       return setMemProfAttr(builder, node, op);
     if (kind == llvm::LLVMContext::MD_callsite)
       return setCallsiteAttr(builder, node, op);
+    if (kind == llvm::LLVMContext::MD_tbaa_struct)
+      return setTBAAStructAttr(node, op, moduleImport);
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))
       return setVecTypeHintAttr(builder, node, op, moduleImport);

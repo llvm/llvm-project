@@ -41,7 +41,6 @@
 ...
 ---
 name:            jt_test
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:

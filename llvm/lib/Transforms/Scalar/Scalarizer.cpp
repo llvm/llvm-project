@@ -387,6 +387,7 @@ Value *Scatterer::operator[](unsigned Frag) {
   if (CV[Frag])
     return CV[Frag];
   IRBuilder<> Builder(BBI);
+  Builder.disableGEPCanonicalization();
   if (IsPointer) {
     if (Frag == 0)
       CV[Frag] = V;
@@ -872,6 +873,7 @@ bool ScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     return false;
 
   IRBuilder<> Builder(&GEPI);
+  Builder.disableGEPCanonicalization();
   unsigned NumIndices = GEPI.getNumIndices();
 
   // The base pointer and indices might be scalar even if it's a vector GEP.

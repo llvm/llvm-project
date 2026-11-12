@@ -16,13 +16,17 @@
 #include "test/UnitTest/Test.h"
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::TypeList<char32_t, wchar_t>;
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::Types<char32_t, wchar_t>;
 #else
-using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::TypeList<char32_t>;
+using TestCharTypesUTF32 = LIBC_NAMESPACE::testing::Types<char32_t>;
 #endif
 
-TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32, TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+template <typename T>
+class LlvmLibcStringConverterTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcStringConverterTest, TestCharTypesUTF32);
+
+TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32) {
+  using CharType32 = TypeParam;
 
   // first 4 bytes are clown emoji (🤡)
   // next 3 bytes are sigma symbol (∑)
@@ -64,8 +68,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32, TestCharTypesUTF32) {
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 11);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8, TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8) {
+  using CharType32 = TypeParam;
 
   // clown emoji, sigma symbol, y with diaeresis, letter A
   const CharType32 src[] = {
@@ -141,9 +145,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8, TestCharTypesUTF32) {
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 5);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
+  using CharType32 = TypeParam;
 
   const CharType32 src[] = {
       static_cast<CharType32>(0x1f921), static_cast<CharType32>(0x2211),
@@ -178,9 +181,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead,
   ASSERT_EQ(res.error(), -1);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
+  using CharType32 = TypeParam;
 
   // first 4 bytes are clown emoji, then next 3 are sigma symbol
   const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91";
@@ -199,9 +201,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead,
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 5);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
+  using CharType32 = TypeParam;
 
   const CharType32 src[] = {
       static_cast<CharType32>(0x1f921), static_cast<CharType32>(0xffffff),
@@ -236,9 +237,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling,
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling) {
+  using CharType32 = TypeParam;
 
   // first 4 bytes are clown emoji (🤡)
   // next 3 form an invalid character
@@ -258,9 +258,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling,
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 4);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, InvalidCharacterOutsideBounds,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, InvalidCharacterOutsideBounds) {
+  using CharType32 = TypeParam;
 
   // if an invalid character exists in the source string but we don't have space
   // to write it, we should return a "stop converting" error rather than an
@@ -317,9 +316,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, InvalidCharacterOutsideBounds,
   ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
+  using CharType32 = TypeParam;
 
   /*
   We do NOT test partially popping a character and expecting the next
@@ -368,9 +366,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8,
   ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32,
-           TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32) {
+  using CharType32 = TypeParam;
 
   const char *src = "\xF0\x9F\xA4\xA1"; // clown emoji
   LIBC_NAMESPACE::internal::mbstate state;
@@ -398,8 +395,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32,
   ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 3);
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32, TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32) {
+  using CharType32 = TypeParam;
 
   const char *src = "\xF0\x9F\xA4\xA1\xF0\x9F\xA4\xA1"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
@@ -414,8 +411,8 @@ TYPED_TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32, TestCharTypesUTF32) {
   ASSERT_FALSE(res.has_value());
 }
 
-TYPED_TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8, TestCharTypesUTF32) {
-  using CharType32 = ParamType;
+TYPED_TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8) {
+  using CharType32 = TypeParam;
 
   const CharType32 src[] = {static_cast<CharType32>(0x1f921),
                             static_cast<CharType32>(0x1f921)}; // 2 clown emojis
