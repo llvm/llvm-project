@@ -784,6 +784,20 @@ static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
     return ResA;
   };
 
+  // An add/sub.with.overflow is only decomposed for the fact queued on its
+  // no-overflow edge, where it does not overflow.
+  if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
+    if (isKnownNoWrap(WO->getBinaryOp(), WO->getLHS(), WO->getRHS(),
+                      WO->getNoWrapKind(), Info, IsSigned)) {
+      auto ResA = decompose(WO->getLHS(), Info, IsSigned, DL);
+      auto ResB = decompose(WO->getRHS(), Info, IsSigned, DL);
+      if (!(WO->getBinaryOp() == Instruction::Add ? ResA.add(ResB)
+                                                  : ResA.sub(ResB)))
+        return ResA;
+    }
+    return V;
+  }
+
   Type *Ty = V->getType()->getScalarType();
   if (Ty->isPointerTy() && !IsSigned) {
     if (auto *GEP = dyn_cast<GEPOperator>(V))
@@ -1826,6 +1840,17 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
 
   Value *Cond = Br->getCondition();
+
+  // On the false successor of a branch on the overflow bit of an add/sub
+  // overflow intrinsic, its results equal the plain add/sub.
+  WithOverflowInst *WO;
+  if (match(Cond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
+      WO->getBinaryOp() != Instruction::Mul &&
+      canAddSuccessor(BB, Br->getSuccessor(1)))
+    for (User *U : WO->users())
+      if (match(U, m_ExtractValue<0>(m_Value())))
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DT.getNode(Br->getSuccessor(1)), CmpInst::ICMP_EQ, U, WO));
 
   // If the condition is a chain of ORs/AND and the successor only has the
   // current block as predecessor, queue conditions for the successor.
