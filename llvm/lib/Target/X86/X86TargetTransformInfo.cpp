@@ -7427,13 +7427,18 @@ X86TTIImpl::getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
     // Without a compile-time mask the tail that legalization's widening added
     // cannot be proved dead. A gather's tail produces an unused result and is
     // dropped, but a scatter's survives as a store under a zeroed mask, which
-    // is still an instruction. How far the widening reaches is set by the
-    // predicate: AVX512BW holds it in a k-register as wide as the legalized
-    // vector, so the length rounds up to a power of two, while without it the
-    // mask is broken into 16-lane pieces and only rounds up to one of those.
-    unsigned WidenedLanes = PowerOf2Ceil(VF);
+    // is still an instruction. The predicate legalizes into k-register pieces,
+    // so the widened length is the next whole number of pieces, never beyond
+    // the next power of two. The piece follows the wider of the data and index
+    // element, the one that sets how many lanes a part holds: sixteen 64-bit
+    // values need two zmm, so with no zmm that piece stops at 8.
+    unsigned PartEltBits = std::max(IdxsLT.second.getScalarSizeInBits(),
+                                    SrcLT.second.getScalarSizeInBits());
+    unsigned PieceLanes = 32;
     if (!ST->hasBWI())
-      WidenedLanes = std::min(WidenedLanes, alignTo(VF, 16u));
+      PieceLanes = PartEltBits > 32 && !ST->useAVX512Regs() ? 8 : 16;
+    unsigned WidenedLanes =
+        std::min<unsigned>(PowerOf2Ceil(VF), alignTo(VF, PieceLanes));
     EmittedParts = divideCeil(WidenedLanes, LanesPerPart);
   }
 

@@ -367,7 +367,7 @@ define void @scatter_v48i32_dword_index_var_mask(ptr %base, <48 x i32> %idx, <48
 ; parts and ten. Rounding the length up to a power of two instead would reach
 ; 128 and overcharge both.
 ; SKX-COST-LABEL: 'scatter_v65i32_qword_index_var_mask'
-; SKX-COST: cost of 16 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 12 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v65i32_qword_index_var_mask:
 ; SKX-ASM-COUNT-12: vpscatterqd
 ; SKX-ASM-NOT: vpscatter
@@ -385,7 +385,7 @@ define void @scatter_v65i32_qword_index_var_mask(ptr %base, <65 x i64> %idx, <65
 ; The same length with dword indices, sixteen lanes to a part: six and five.
 ; These deltas differ from the qword pair, so no constant satisfies both.
 ; SKX-COST-LABEL: 'scatter_v65i32_dword_index_var_mask'
-; SKX-COST: cost of 8 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 6 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v65i32_dword_index_var_mask:
 ; SKX-ASM-COUNT-6: vpscatterdd
 ; SKX-ASM-NOT: vpscatter
@@ -411,7 +411,7 @@ define void @scatter_v65i32_dword_index_var_mask(ptr %base, <65 x i32> %idx, <65
 ; SKX-ASM-COUNT-8: vpscatterqd
 ; SKX-ASM-NOT: vpscatter
 ; NOBW-COST-LABEL: 'scatter_v17i32_qword_index_var_mask_256bit'
-; NOBW-COST: cost of 8 for instruction: {{.*}}masked.scatter
+; NOBW-COST: cost of 6 for instruction: {{.*}}masked.scatter
 ; NOBW-ASM-LABEL: scatter_v17i32_qword_index_var_mask_256bit:
 ; NOBW-ASM-COUNT-6: vpscatterqd
 ; NOBW-ASM-NOT: vpscatter
@@ -460,7 +460,7 @@ define void @scatter_v17i32_dword_index_var_mask_256bit(ptr %base, <17 x i32> %i
 ; SKX-ASM-COUNT-8: vpscatterdq
 ; SKX-ASM-NOT: vpscatter
 ; NOBW-COST-LABEL: 'scatter_v17i64_dword_index_var_mask_256bit'
-; NOBW-COST: cost of 8 for instruction: {{.*}}masked.scatter
+; NOBW-COST: cost of 6 for instruction: {{.*}}masked.scatter
 ; NOBW-ASM-LABEL: scatter_v17i64_dword_index_var_mask_256bit:
 ; NOBW-ASM-COUNT-6: vpscatterdq
 ; NOBW-ASM-NOT: vpscatter
