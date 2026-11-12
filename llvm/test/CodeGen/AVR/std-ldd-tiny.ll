@@ -72,6 +72,73 @@ define void @spill_across_call(i8 %a, i8 %b, i8 %c) {
 define void @stack_arg_no_fp(i8 %x) {
 ; CHECK-LABEL: stack_arg_no_fp:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    push r28
+; CHECK-NEXT:    push r29
+; CHECK-NEXT:    in r28, 61
+; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    sbiw r28, 1
+; CHECK-NEXT:    in r0, 63
+; CHECK-NEXT:    cli
+; CHECK-NEXT:    out 62, r29
+; CHECK-NEXT:    out 63, r0
+; CHECK-NEXT:    out 61, r28
+; CHECK-NEXT:    std Y+1, r24
+; CHECK-NEXT:    call baz
+; CHECK-NEXT:    adiw r28, 1
+; CHECK-NEXT:    in r0, 63
+; CHECK-NEXT:    cli
+; CHECK-NEXT:    out 62, r29
+; CHECK-NEXT:    out 63, r0
+; CHECK-NEXT:    out 61, r28
+; CHECK-NEXT:    pop r29
+; CHECK-NEXT:    pop r28
+; CHECK-NEXT:    ret
+;
+; TINY-LABEL: stack_arg_no_fp:
+; TINY:       ; %bb.0:
+; TINY-NEXT:    push r28
+; TINY-NEXT:    push r29
+; TINY-NEXT:    in r28, 61
+; TINY-NEXT:    clr r29
+; TINY-NEXT:    subi r28, 1
+; TINY-NEXT:    sbci r29, 0
+; TINY-NEXT:    out 61, r28
+; TINY-NEXT:    subi r28, 255
+; TINY-NEXT:    sbci r29, 255
+; TINY-NEXT:    st Y, r24
+; TINY-NEXT:    subi r28, 1
+; TINY-NEXT:    sbci r29, 0
+; TINY-NEXT:    rcall baz
+; TINY-NEXT:    subi r28, 255
+; TINY-NEXT:    sbci r29, 255
+; TINY-NEXT:    out 61, r28
+; TINY-NEXT:    pop r29
+; TINY-NEXT:    pop r28
+; TINY-NEXT:    ret
+  call void (i8, ...) @baz(i8 %x)
+  ret void
+}
+
+; With a variable-sized object, the stack pointer moves with it, so the call
+; frame is not reserved: the call moves the stack pointer through Z, then
+; stores its argument through Z.
+define void @stack_arg_dynamic_alloca(i8 %x, i16 %n) {
+; CHECK-LABEL: stack_arg_dynamic_alloca:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    push r28
+; CHECK-NEXT:    push r29
+; CHECK-NEXT:    in r28, 61
+; CHECK-NEXT:    in r29, 62
+; CHECK-NEXT:    in r26, 61
+; CHECK-NEXT:    in r27, 62
+; CHECK-NEXT:    sub r26, r22
+; CHECK-NEXT:    sbc r27, r23
+; CHECK-NEXT:    in r0, 63
+; CHECK-NEXT:    cli
+; CHECK-NEXT:    out 62, r27
+; CHECK-NEXT:    out 63, r0
+; CHECK-NEXT:    out 61, r26
+; CHECK-NEXT:    st X, r24
 ; CHECK-NEXT:    in r30, 61
 ; CHECK-NEXT:    in r31, 62
 ; CHECK-NEXT:    subi r30, 1
@@ -91,10 +158,27 @@ define void @stack_arg_no_fp(i8 %x) {
 ; CHECK-NEXT:    out 62, r31
 ; CHECK-NEXT:    out 63, r0
 ; CHECK-NEXT:    out 61, r30
+; CHECK-NEXT:    in r0, 63
+; CHECK-NEXT:    cli
+; CHECK-NEXT:    out 62, r29
+; CHECK-NEXT:    out 63, r0
+; CHECK-NEXT:    out 61, r28
+; CHECK-NEXT:    pop r29
+; CHECK-NEXT:    pop r28
 ; CHECK-NEXT:    ret
 ;
-; TINY-LABEL: stack_arg_no_fp:
+; TINY-LABEL: stack_arg_dynamic_alloca:
 ; TINY:       ; %bb.0:
+; TINY-NEXT:    push r28
+; TINY-NEXT:    push r29
+; TINY-NEXT:    in r28, 61
+; TINY-NEXT:    clr r29
+; TINY-NEXT:    in r26, 61
+; TINY-NEXT:    clr r27
+; TINY-NEXT:    sub r26, r22
+; TINY-NEXT:    sbc r27, r23
+; TINY-NEXT:    out 61, r26
+; TINY-NEXT:    st X, r24
 ; TINY-NEXT:    in r30, 61
 ; TINY-NEXT:    clr r31
 ; TINY-NEXT:    subi r30, 1
@@ -111,7 +195,12 @@ define void @stack_arg_no_fp(i8 %x) {
 ; TINY-NEXT:    subi r30, 255
 ; TINY-NEXT:    sbci r31, 255
 ; TINY-NEXT:    out 61, r30
+; TINY-NEXT:    out 61, r28
+; TINY-NEXT:    pop r29
+; TINY-NEXT:    pop r28
 ; TINY-NEXT:    ret
+  %buf = alloca i8, i16 %n
+  store volatile i8 %x, ptr %buf
   call void (i8, ...) @baz(i8 %x)
   ret void
 }
