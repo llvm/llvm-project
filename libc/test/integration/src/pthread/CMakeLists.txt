@@ -13,6 +13,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_mutexattr_destroy
@@ -443,6 +444,7 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
+    libc.src.pthread.pthread_mutex_timedlock
     libc.src.pthread.pthread_mutex_trylock
     libc.src.pthread.pthread_mutex_unlock
 )

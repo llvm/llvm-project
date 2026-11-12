@@ -15,8 +15,9 @@
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
-#include "llvm/ExecutionEngine/Orc/BindCallControllerHandlerSPS.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -39,6 +40,22 @@ struct CreatePThreadKey {
   using SPSSig = SPSExpected<uint64_t>();
 };
 } // namespace llvm::orc::elfnix_sps_ci
+
+// Specs for the call-controller handlers that the ELFNix platform
+// runtime calls.
+namespace llvm::orc::elfnix_sps_handlers {
+struct RecordInitializers
+    : sps::HandlerSpec<SPSExpected<SPSELFNixJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_elfnix_push_initializers_tag");
+};
+struct LookupSymbol : sps::HandlerSpec<SPSExpected<SPSExecutorAddr>(
+                          SPSExecutorAddr, SPSString)> {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_elfnix_symbol_lookup_tag");
+};
+} // namespace llvm::orc::elfnix_sps_handlers
 
 namespace {
 
@@ -478,19 +495,12 @@ ELFNixPlatform::ELFNixPlatform(
 }
 
 Error ELFNixPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
-  using RecordInitializersSPSSig =
-      SPSExpected<SPSELFNixJITDylibDepInfoMap>(SPSExecutorAddr);
-  using LookupSymbolSPSSig =
-      SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
-
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandlerSPS<RecordInitializersSPSSig>(
-          SymbolNameSpec::c("__orc_rt_elfnix_push_initializers_tag"), this,
-          &ELFNixPlatform::rt_recordInitializers),
-      bindCallControllerHandlerSPS<LookupSymbolSPSSig>(
-          SymbolNameSpec::c("__orc_rt_elfnix_symbol_lookup_tag"), this,
-          &ELFNixPlatform::rt_lookupSymbol));
+      bindCallControllerHandler<elfnix_sps_handlers::RecordInitializers>(
+          this, &ELFNixPlatform::rt_recordInitializers),
+      bindCallControllerHandler<elfnix_sps_handlers::LookupSymbol>(
+          this, &ELFNixPlatform::rt_lookupSymbol));
 }
 
 void ELFNixPlatform::pushInitializersLoop(
@@ -759,8 +769,7 @@ Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
 
   using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
   CreatePThreadKeyProxy CreateKey(
-      sps::ProxySpec<CreatePThreadKeyProxy,
-                     elfnix_sps_ci::CreatePThreadKey>::dispatch,
+      sps::ProxySpec<elfnix_sps_ci::CreatePThreadKey>::dispatch,
       CreatePThreadKey.Addr);
   return CreateKey(ES);
 }

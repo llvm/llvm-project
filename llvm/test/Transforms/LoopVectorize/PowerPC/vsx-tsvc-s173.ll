@@ -25,13 +25,13 @@ define signext i32 @s173() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA:%.*]], ptr @global_data, i64 0, i32 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 12
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 20
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 24
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 28
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 48
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 80
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 96
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 112
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
@@ -41,13 +41,13 @@ define signext i32 @s173() {
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], ptr @global_data, i64 0, i32 3, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 8
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 12
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 16
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 20
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 24
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 28
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 16
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 32
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 48
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 64
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 80
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 96
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 112
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP11]], align 4
@@ -66,13 +66,13 @@ define signext i32 @s173() {
 ; CHECK-NEXT:    [[TMP24:%.*]] = fadd <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD15]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = add nsw i64 [[INDEX]], 16000
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [[STRUCT_GLOBALDATA]], ptr @global_data, i64 0, i32 0, i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 8
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 12
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 16
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 20
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 24
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 28
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 16
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 32
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 48
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 64
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 80
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 96
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[TMP26]], i64 112
 ; CHECK-NEXT:    store <4 x float> [[TMP17]], ptr [[TMP26]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP18]], ptr [[TMP27]], align 4
 ; CHECK-NEXT:    store <4 x float> [[TMP19]], ptr [[TMP28]], align 4

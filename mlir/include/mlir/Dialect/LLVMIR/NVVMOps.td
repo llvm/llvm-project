@@ -56,6 +56,7 @@ class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
 
 class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<NVVM_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/NVVMAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -765,16 +766,23 @@ def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx",
     synchronizing effect of the `mbarrier.expect_tx` operation. `CTA`
     and `CLUSTER` are the only allowed values for `scope`.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
 
   let assemblyFormat = [{
-    $addr `,` $txcount oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
   }];
 
   let hasVerifier = 1;
@@ -791,23 +799,31 @@ def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx",
     observe the memory synchronizing effect of the `mbarrier.complete_tx`
     operation. `CTA` and `CLUSTER` are the only allowed values for `scope`.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
 
   let assemblyFormat = [{
-    $addr `,` $txcount oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
   }];
 
   let hasVerifier = 1;
 }
 
 def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
-    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<80>]> {
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<80>]> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -840,6 +856,11 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
     - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
       and does not provide any ordering or visibility guarantees.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
 
@@ -847,11 +868,13 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     Optional<I32>:$count,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
   let assemblyFormat = [{
-    $addr (`,` $count^)? oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    $addr (`,` $count^)? (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type($addr)
     (`->` type($res)^)?
   }];
@@ -860,7 +883,8 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
 }
 
 def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop",
-    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<80>]> {
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<80>]> {
   let summary = "MBarrier Arrive-Drop Operation";
   let description = [{
     The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
@@ -870,6 +894,11 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
     *mbarrier object*. The remaining semantics are identical to those of the
     `nvvm.mbarrier.arrive` operation.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
@@ -877,11 +906,13 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     Optional<I32>:$count,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
   let assemblyFormat = [{
-    $addr (`,` $count^)? oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    $addr (`,` $count^)? (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type($addr)
     (`->` type($res)^)?
   }];
@@ -943,7 +974,8 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
-    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<90>]> {
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<90>]> {
   let summary = "MBarrier Arrive with Expected Transaction Count";
   let description = [{
     The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
@@ -973,6 +1005,11 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
     - `predicate`: Optional predicate for conditional execution used only when lowering to
       inline-ptx.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
@@ -980,12 +1017,14 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed,
     PtxPredicate:$predicate);
 
   let assemblyFormat = [{
     $addr `,` $txcount (`,` `predicate` `=` $predicate^)?
+    (`multicast_mask` `=` $multicastMask^)?
     oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type(operands) (`->` type($res)^)?
   }];
@@ -1021,6 +1060,11 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.a
     `nvvm.mbarrier.arrive.expect_tx` operation except that it performs an
     `arrive_drop` operation instead of only an `arrive` operation.
 
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
 
@@ -1028,11 +1072,13 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.a
   let arguments = (ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
     I32:$txcount,
+    Optional<I32>:$multicastMask,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
   let assemblyFormat = [{
-    $addr `,` $txcount oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
     attr-dict `:` type(operands)
     (`->` type($res)^)?
   }];

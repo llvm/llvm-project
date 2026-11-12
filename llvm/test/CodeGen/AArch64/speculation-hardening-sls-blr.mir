@@ -25,7 +25,6 @@
 ...
 ---
 name:            fn1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: fn1
   bb.0.entry:

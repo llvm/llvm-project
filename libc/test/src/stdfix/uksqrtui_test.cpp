@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ISqrtTest.h"
+#include "test/src/stdfix/ISqrtTest.h"
 
 #include "src/__support/fixed_point/sqrt.h"
 #include "src/stdfix/uksqrtui.h"

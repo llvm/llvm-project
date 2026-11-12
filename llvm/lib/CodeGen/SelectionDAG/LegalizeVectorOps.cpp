@@ -1754,7 +1754,8 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
   SDValue EVLMask =
       DAG.getSetCC(DL, MaskVT, StepVec, SplatEVL, ISD::CondCode::SETULT);
 
-  SDValue FullMask = DAG.getNode(ISD::AND, DL, MaskVT, Mask, EVLMask);
+  SDValue FullMask =
+      DAG.getNode(ISD::AND, DL, MaskVT, DAG.getFreeze(Mask), EVLMask);
   return DAG.getSelect(DL, Node->getValueType(0), FullMask, Op1, Op2);
 }
 

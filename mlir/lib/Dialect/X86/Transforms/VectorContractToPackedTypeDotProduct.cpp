@@ -215,15 +215,12 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
 //   x86.avx512.dot vector<32xbf16>, %3 -> vector<16xf32>
 // ```
 struct VectorContractToPackedTypeDotProduct
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+    : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isBF16() &&
@@ -489,7 +486,6 @@ struct VectorContractToPackedTypeDotProduct
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToPackedTypeDotProductPatterns(

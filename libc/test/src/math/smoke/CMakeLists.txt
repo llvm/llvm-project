@@ -1990,7 +1990,6 @@ add_fp_unittest(
     libc.src.__support.FPUtil.bfloat16
 )
 
-
 add_fp_unittest(
   ufromfp_test
   SUITE
@@ -4754,6 +4753,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log10p1bf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log10p1bf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.log10p1bf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   log_bf16_test
   SUITE
     libc-math-smoke-tests
@@ -5697,6 +5710,7 @@ add_fp_unittest(
   SRCS
     pow_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.pow
 )
@@ -6482,7 +6496,6 @@ add_fp_unittest(
     libc.src.math.fsqrt
 )
 
-
 add_fp_unittest(
   fsqrtl_test
   SUITE
@@ -7125,7 +7138,6 @@ add_fp_unittest(
     libc.src.math.bf16mulf128
     libc.src.__support.FPUtil.bfloat16
 )
-
 
 add_fp_unittest(
   bf16sub_test

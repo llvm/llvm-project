@@ -21,6 +21,7 @@ class LLVM_Attr<string name, string attrMnemonic,
                 list<Trait> traits = [],
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/LLVMAttrs.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -1382,6 +1383,43 @@ def LLVM_TBAATagAttr : LLVM_Attr<"TBAATag", "tbaa_tag"> {
 def LLVM_TBAATagArrayAttr
     : TypedArrayAttrBase<LLVM_TBAATagAttr,
                          LLVM_TBAATagAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// TBAAStructFieldAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TBAAStructFieldAttr
+    : LLVM_Attr<"TBAAStructField", "tbaa_struct_field"> {
+  let parameters = (ins
+    "uint64_t":$offset,
+    "uint64_t":$size,
+    "TBAATagAttr":$tag
+  );
+
+  let summary = "One field of an LLVM dialect tbaa.struct description";
+
+  let description = [{
+    One entry of a `!tbaa.struct` node, which describes the fields an aggregate
+    copy touches so that the copy is not treated as one opaque access. The
+    fields need not be contiguous: a gap is padding, which carries no data.
+
+    Example:
+    ```mlir
+    #field = #llvm.tbaa_struct_field<offset = 0, size = 4, tag = #tbaa_tag>
+    ```
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+
+  // Generate mnemonic alias for the attribute.
+  let genMnemonicAlias = 1;
+}
+
+def LLVM_TBAAStructFieldArrayAttr
+    : TypedArrayAttrBase<LLVM_TBAAStructFieldAttr,
+                         LLVM_TBAAStructFieldAttr.summary # " array"> {
   let constBuilderCall = ?;
 }
 

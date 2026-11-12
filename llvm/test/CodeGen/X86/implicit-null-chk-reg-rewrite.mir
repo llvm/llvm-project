@@ -24,7 +24,6 @@
 name:            reg-rewrite
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 

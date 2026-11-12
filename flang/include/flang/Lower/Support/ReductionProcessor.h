@@ -78,14 +78,14 @@ public:
   getReductionType(const omp::clause::ProcedureDesignator &pd);
 
   static ReductionIdentifier
-  getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
+  getReductionType(omp::clause::IntrinsicOperator intrinsicOp);
 
   /// Map a clause-level intrinsic operator to the parser-level one, so callers
   /// can build the operator's mangled reduction name (MakeNameFromOperator)
   /// that semantics stores a user-defined intrinsic-operator reduction under.
   /// Only the operators a user reduction may use are handled.
   static parser::DefinedOperator::IntrinsicOperator
-  toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
+  toParserIntrinsicOperator(omp::clause::IntrinsicOperator op);
 
   static ReductionIdentifier
   getReductionType(const fir::ReduceOperationEnum &pd);
