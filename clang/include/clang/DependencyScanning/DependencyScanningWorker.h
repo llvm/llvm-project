@@ -17,6 +17,7 @@
 #include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -47,7 +48,9 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  DependencyScanningWorker(DependencyScanningService &Service);
+  DependencyScanningWorker(
+      DependencyScanningService &Service,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS = nullptr);
 
   ~DependencyScanningWorker();
 
@@ -74,6 +77,14 @@ public:
       DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
       llvm::function_ref<std::optional<std::string>()> getNextName,
       DependencyConsumer &DepConsumer);
+
+  /// Creates a compiler instance to return a map of module names to their
+  /// defined module map path.
+  std::optional<llvm::StringMap<std::string>> computeModuleMapsForModules(
+      StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+      ArrayRef<StringRef> ModuleNames);
 
   /// Creates the effective VFS that will be used for the scan.
   ///

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.0 profiles=pro_int,pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround" -tosa-validate="strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.0 profiles=pro_int,pro_fp extensions=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,dynamic,doubleround,inexactround" -tosa-validate="strict-op-spec-alignment validate-function-signature=false"
 
 // -----
 
@@ -426,4 +426,44 @@ func.func @test_reverse_block_scaled(%arg0: tensor<2x3x64x!tosa.block_scaled<BLO
   // expected-error@+1 {{'tosa.reverse' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp8e4m3] profiles/extensions to be specified in the target environment}}
   %0 = tosa.reverse %arg0 axis(2) : (tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
   return %0 : tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+func.func @test_conv3d_mxfp(%input: tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %weight: tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp4e2m1] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8x1x1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_conv3d_fp16_input_fp32_weight(%input: tensor<1x4x4x4x32xf16>, %weight: tensor<8x1x1x1x32xf32>, %bias: tensor<8xf32>) -> tensor<1x4x4x4x8xf32> {
+  %input_zp = tosa.const values(dense<0.0> : tensor<1xf16>) : () -> tensor<1xf16>
+  %weight_zp = tosa.const values(dense<0.0> : tensor<1xf32>) : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.conv3d' op illegal: requires specification version compatible with 1.1.draft (got 1.0) to be specified in the target environment}}
+  %0 = tosa.conv3d %input, %weight, %bias, %input_zp, %weight_zp pad([0, 0, 0, 0, 0, 0]) stride([1, 1, 1]) dilation([1, 1, 1]) acc_type(f32) : (tensor<1x4x4x4x32xf16>, tensor<8x1x1x1x32xf32>, tensor<8xf32>, tensor<1xf16>, tensor<1xf32>) -> tensor<1x4x4x4x8xf32>
+  return %0 : tensor<1x4x4x4x8xf32>
+}
+
+// -----
+
+func.func @test_matmul_rank3_lhs_broadcast_dynamic_rhs(%arg0: tensor<1x4x7xf32>, %arg1: tensor<?x7x5xf32>) -> tensor<2x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x4x7xf32>, tensor<?x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
+  return %0 : tensor<2x4x5xf32>
+}
+
+// -----
+
+func.func @test_matmul_rank3_rhs_broadcast_dynamic_lhs(%arg0: tensor<?x4x7xf32>, %arg1: tensor<1x7x5xf32>) -> tensor<2x4x5xf32> {
+  %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.matmul' op MATMUL ranks other than 3 or batch broadcasting require TOSA specification version 1.1.draft}}
+  %0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<?x4x7xf32>, tensor<1x7x5xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x5xf32>
+  return %0 : tensor<2x4x5xf32>
 }

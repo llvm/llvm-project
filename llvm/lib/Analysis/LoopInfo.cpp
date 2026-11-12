@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
@@ -197,7 +198,7 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 /// Get the latch condition instruction.
 ICmpInst *Loop::getLatchCmpInst() const {
   if (BasicBlock *Latch = getLoopLatch())
-    if (CondBrInst *BI = dyn_cast_or_null<CondBrInst>(Latch->getTerminator()))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(Latch->getTerminator()))
       return dyn_cast<ICmpInst>(BI->getCondition());
 
   return nullptr;
@@ -408,8 +409,6 @@ CondBrInst *Loop::getLoopGuardBranch() const {
   if (!GuardBB)
     return nullptr;
 
-  assert(GuardBB->getTerminator() && "Expecting valid guard terminator");
-
   CondBrInst *GuardBI = dyn_cast<CondBrInst>(GuardBB->getTerminator());
   if (!GuardBI)
     return nullptr;
@@ -442,7 +441,7 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   if (IndDesc.getInductionOpcode() != Instruction::Add)
     return false;
 
-  ConstantInt *Step = IndDesc.getConstIntStepValue();
+  std::optional<APInt> Step = IndDesc.getConstStepValue();
   if (!Step || !Step->isOne())
     return false;
 
@@ -1217,6 +1216,33 @@ CallBase *llvm::getLoopConvergenceHeart(const Loop *TheLoop) {
 
 bool llvm::isFinite(const Loop *L) {
   return L->getHeader()->getParent()->willReturn();
+}
+
+bool llvm::isLoopNestFinite(Loop *L, ScalarEvolution &SE, const LoopInfo &LI) {
+  // An assumption on L covers every cycle inside it.
+  if (SE.loopIsFiniteByAssumption(L))
+    return true;
+
+  // An irreducible cycle has no Loop to prove finite.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(&LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
+    return false;
+
+  // Likewise, a sub-loop that is finite by assumption covers its own sub-loops.
+  if (isa<SCEVCouldNotCompute>(SE.getConstantMaxBackedgeTakenCount(L)))
+    return false;
+  SmallVector<Loop *, 8> WorkList(L->begin(), L->end());
+  while (!WorkList.empty()) {
+    Loop *Current = WorkList.pop_back_val();
+    if (SE.loopIsFiniteByAssumption(Current))
+      continue;
+    if (isa<SCEVCouldNotCompute>(SE.getConstantMaxBackedgeTakenCount(Current)))
+      return false;
+    WorkList.append(Current->begin(), Current->end());
+  }
+
+  return true;
 }
 
 static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";

@@ -26,7 +26,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGenUtils/ClassUtils.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
@@ -908,6 +907,12 @@ public:
     // Give the subclass a chance to bail out if it feels the memcpy isn't
     // worth it (e.g. Hasn't aggregated enough data).
     if (!FirstField) {
+      return;
+    }
+
+    // Unreachable, e.g. after a noreturn member copy; drop it like EmitStmt.
+    if (!CGF.HaveInsertPoint()) {
+      reset();
       return;
     }
 
@@ -2917,21 +2922,28 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       !CGM.HasHiddenLTOVisibility(RD))
     return;
 
-  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
-
-  std::string TypeName = RD->getQualifiedNameAsString();
+  auto [M, _] = SanitizerInfoFromCFICheckKind(TCK);
   if (getContext().getNoSanitizeList().containsType(
-          SanitizerMask::bitPosToMask(M), TypeName))
+          SanitizerMask::bitPosToMask(M), RD->getQualifiedNameAsString()))
     return;
-
-  EmitSanitizerStatReport(SSK);
 
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
-
   llvm::Value *TypeTest = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, TypeId});
+
+  EmitVTableCheck(TCK, T, MD, VTable, TypeTest, Loc,
+                  CGM.getCodeGenOpts().SanitizeCfiCrossDso);
+}
+
+void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
+                                      llvm::Metadata *MD, llvm::Value *VTable,
+                                      llvm::Value *TypeTest, SourceLocation Loc,
+                                      bool UseCrossDsoSlowPath) {
+  assert(IsSanitizerScope);
+  auto [M, SSK] = SanitizerInfoFromCFICheckKind(TCK);
+  EmitSanitizerStatReport(SSK);
 
   llvm::Constant *StaticData[] = {
       llvm::ConstantInt::get(Int8Ty, TCK),
@@ -2939,8 +2951,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       EmitCheckTypeDescriptor(T),
   };
 
-  auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
+  llvm::ConstantInt *CrossDsoTypeId =
+      UseCrossDsoSlowPath ? CGM.CreateCrossDsoCfiTypeId(MD) : nullptr;
+  if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
     return;
   }

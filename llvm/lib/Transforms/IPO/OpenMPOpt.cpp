@@ -57,6 +57,8 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/AtomicScope.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -814,13 +816,10 @@ struct KernelInfoState : AbstractState {
       indicatePessimisticFixpoint();
   }
 
-  /// See AbstractState::isValidState(...)
   bool isValidState() const override { return true; }
 
-  /// See AbstractState::isAtFixpoint(...)
   bool isAtFixpoint() const override { return IsAtFixpoint; }
 
-  /// See AbstractState::indicatePessimisticFixpoint(...)
   ChangeStatus indicatePessimisticFixpoint() override {
     IsAtFixpoint = true;
     ParallelLevels.indicatePessimisticFixpoint();
@@ -832,7 +831,6 @@ struct KernelInfoState : AbstractState {
     return ChangeStatus::CHANGED;
   }
 
-  /// See AbstractState::indicateOptimisticFixpoint(...)
   ChangeStatus indicateOptimisticFixpoint() override {
     IsAtFixpoint = true;
     ParallelLevels.indicateOptimisticFixpoint();
@@ -1838,7 +1836,7 @@ private:
     auto &IRBuilder = OMPInfoCache.OMPBuilder;
     Function *F = RuntimeCall.getCaller();
     BasicBlock &Entry = F->getEntryBlock();
-    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrDbgOrAlloca());
+    IRBuilder.Builder.SetInsertPoint(Entry.getFirstNonPHIOrAlloca());
     Value *Handle = IRBuilder.Builder.CreateAlloca(
         IRBuilder.AsyncInfo, /*ArraySize=*/nullptr, "handle");
     Handle =
@@ -2436,10 +2434,8 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   // this array will only grow with time.
   InternalControlVar TrackableICVs[1] = {ICV_nthreads};
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAICVTracker"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AAICVTracker
@@ -2637,8 +2633,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
       // Go through all predecessors and add terminators for analysis.
       for (const BasicBlock *Pred : predecessors(CurrBB))
-        if (const Instruction *Terminator = Pred->getTerminator())
-          Worklist.push_back(Terminator);
+        Worklist.push_back(Pred->getTerminator());
     }
 
     return ReplVal;
@@ -2878,7 +2873,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
            " executed by initial thread / aligned";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
   ChangeStatus manifest(Attributor &A) override {
@@ -2981,7 +2975,6 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   /// Accumulate information for the entry block in \p EntryBBED.
   bool handleCallees(Attributor &A, ExecutionDomainTy &EntryBBED);
 
-  /// See AbstractAttribute::updateImpl.
   ChangeStatus updateImpl(Attributor &A) override;
 
   /// Query interface, see AAExecutionDomain
@@ -3550,10 +3543,8 @@ struct AAHeapToShared : public StateWrapper<BooleanState, AbstractAttribute> {
   /// callsite to a free operation to be removed.
   virtual bool isAssumedHeapToSharedRemovedFree(CallBase &CB) const = 0;
 
-  /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAHeapToShared"; }
 
-  /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -3575,7 +3566,6 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
            " malloc calls eligible.";
   }
 
-  /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
   /// This functions finds free calls that will be removed by the
@@ -3776,7 +3766,6 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   /// Statistics are tracked as part of manifest for now.
   void trackStatistics() const override {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *) const override {
     if (!isValidState())
       return "<invalid>";
@@ -3806,10 +3795,8 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   /// Create an abstract attribute biew for the position \p IRP.
   static AAKernelInfo &createForPosition(const IRPosition &IRP, Attributor &A);
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAKernelInfo"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AAKernelInfo
@@ -3819,6 +3806,36 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
 
   static const char ID;
 };
+
+// Fences stronger than a workgroup order memory the SPMD barrier does not.
+static bool isStrictFence(const Instruction &I) {
+  const auto *FI = dyn_cast<FenceInst>(&I);
+  if (!FI)
+    return false;
+  SyncScope::ID SS = FI->getSyncScopeID();
+  if (SS == SyncScope::SingleThread)
+    return false;
+  if (SS == SyncScope::System)
+    return true;
+  std::optional<StringRef> Name = FI->getContext().getSyncScopeName(SS);
+  if (!Name)
+    return true;
+  auto Parsed =
+      parseAtomicScopeIRString(FI->getModule()->getTargetTriple(), *Name);
+  if (!Parsed)
+    return true;
+  switch (Parsed->first) {
+  case AtomicScope::Single:
+  case AtomicScope::Wavefront:
+  case AtomicScope::Workgroup:
+    return false;
+  case AtomicScope::Cluster:
+  case AtomicScope::Device:
+  case AtomicScope::System:
+    return true;
+  }
+  return true;
+}
 
 /// The function kernel info abstract attribute, basically, what can we say
 /// about a function with regards to the KernelInfoState.
@@ -3859,7 +3876,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
 #undef KERNEL_ENVIRONMENT_CONFIGURATION_SETTER
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     // This is a high-level transform that might change the constant arguments
     // of the init and dinit calls. We need to tell the Attributor about this
@@ -4274,7 +4290,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
         Instruction *I = &*IP;
         if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
           continue;
-        if (!I->user_empty() || !SPMDCompatibilityTracker.contains(I)) {
+        // Nothing tracked is sunk across a strict fence.
+        if (isStrictFence(*I) || !I->user_empty() ||
+            !SPMDCompatibilityTracker.contains(I)) {
           LastEffect = nullptr;
           continue;
         }
@@ -4301,6 +4319,19 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
       Instruction *GuardedRegionStart = nullptr, *GuardedRegionEnd = nullptr;
       for (Instruction &I : *BB) {
+        // A strict fence splits a guarded region so it stays outside it.
+        if (isStrictFence(I)) {
+          if (SPMDCompatibilityTracker.contains(&I))
+            CalleeAAFunction.getGuardedInstructions().insert(&I);
+          if (GuardedRegionStart) {
+            GuardedRegions.push_back(
+                std::make_pair(GuardedRegionStart, GuardedRegionEnd));
+            GuardedRegionStart = nullptr;
+            GuardedRegionEnd = nullptr;
+          }
+          continue;
+        }
+
         // If instruction I needs to be guarded update the guarded region
         // bounds.
         if (SPMDCompatibilityTracker.contains(&I)) {
@@ -4435,11 +4466,15 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Changed = ChangeStatus::CHANGED;
 
     // Do not use instruction guards when no parallel is present inside
-    // the target region.
-    if (mayContainParallelRegion())
+    // the target region. Instead, only the main thread of each team executes
+    // the user code, so there is no need to launch more threads.
+    if (mayContainParallelRegion()) {
       insertInstructionGuardsHelper(A);
-    else
+    } else {
       forceSingleThreadPerWorkgroupHelper(A);
+      setMaxThreadsOfKernelEnvironment(
+          ConstantInt::get(Type::getInt32Ty(Kernel->getContext()), 1));
+    }
 
     // Adjust the global exec mode flag that tells the runtime what mode this
     // kernel is executed in.
@@ -5039,7 +5074,6 @@ struct AAKernelInfoCallSite : AAKernelInfo {
   AAKernelInfoCallSite(const IRPosition &IRP, Attributor &A)
       : AAKernelInfo(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAKernelInfo::initialize(A);
 
@@ -5393,10 +5427,8 @@ struct AAFoldRuntimeCall
   static AAFoldRuntimeCall &createForPosition(const IRPosition &IRP,
                                               Attributor &A);
 
-  /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAFoldRuntimeCall"; }
 
-  /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -5412,7 +5444,6 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
   AAFoldRuntimeCallCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : AAFoldRuntimeCall(IRP, A) {}
 
-  /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *) const override {
     if (!isValidState())
       return "<invalid>";

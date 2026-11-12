@@ -14,6 +14,7 @@
 
 namespace llvm {
 
+struct AMDGPUOptions;
 class FunctionCallee;
 class FunctionType;
 class Function;
@@ -255,24 +256,24 @@ public:
     HALF
   };
 
-  enum EType {
-    B8  = 1,
+  enum EType : unsigned char {
+    B8 = 1,
     B16 = 2,
     B32 = 3,
     B64 = 4,
     SIZE_MASK = 7,
     FLOAT = 0x10,
-    INT   = 0x20,
-    UINT  = 0x30,
+    INT = 0x20,
+    UINT = 0x30,
     BASE_TYPE_MASK = 0x30,
-    U8  =  UINT | B8,
-    U16 =  UINT | B16,
-    U32 =  UINT | B32,
-    U64 =  UINT | B64,
-    I8  =   INT | B8,
-    I16 =   INT | B16,
-    I32 =   INT | B32,
-    I64 =   INT | B64,
+    U8 = UINT | B8,
+    U16 = UINT | B16,
+    U32 = UINT | B32,
+    U64 = UINT | B64,
+    I8 = INT | B8,
+    I16 = INT | B16,
+    I32 = INT | B32,
+    I64 = INT | B64,
     F16 = FLOAT | B16,
     F32 = FLOAT | B32,
     F64 = FLOAT | B64,
@@ -317,9 +318,9 @@ public:
     return static_cast<unsigned>(Id) <= static_cast<unsigned>(EI_LAST_MANGLED);
   }
 
-  static unsigned getEPtrKindFromAddrSpace(unsigned AS) {
+  static unsigned char getEPtrKindFromAddrSpace(unsigned AS) {
     assert(((AS + 1) & ~ADDR_SPACE) == 0);
-    return AS + 1;
+    return static_cast<unsigned char>(AS + 1);
   }
 
   static unsigned getAddrSpaceFromEPtrKind(unsigned Kind) {
@@ -348,7 +349,7 @@ public:
 
   /// \return The mangled function name for mangled library functions
   /// and unmangled function name for unmangled library functions.
-  virtual std::string mangle() const = 0;
+  virtual std::string mangle(const AMDGPUOptions &CLOpts) const = 0;
 
   void setName(StringRef N) { Name = std::string(N); }
   void setPrefix(ENamePrefix pfx) { FKind = pfx; }
@@ -411,7 +412,9 @@ public:
 
   /// \return The mangled function name for mangled library functions
   /// and unmangled function name for unmangled library functions.
-  std::string mangle() const { return Impl->mangle(); }
+  std::string mangle(const AMDGPUOptions &CLOpts) const {
+    return Impl->mangle(CLOpts);
+  }
 
   void setName(StringRef N) { Impl->setName(N); }
   void setPrefix(ENamePrefix PFX) { Impl->setPrefix(PFX); }
@@ -450,10 +453,10 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const AMDGPULibFuncImpl *F) { return F->isMangled(); }
 
-  std::string mangle() const override;
+  std::string mangle(const AMDGPUOptions &CLOpts) const override;
 
 private:
-  std::string mangleNameItanium() const;
+  std::string mangleNameItanium(const AMDGPUOptions &CLOpts) const;
 
   bool parseUnmangledName(StringRef MangledName);
 
@@ -480,7 +483,7 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const AMDGPULibFuncImpl *F) { return !F->isMangled(); }
 
-  std::string mangle() const override { return Name; }
+  std::string mangle(const AMDGPUOptions &) const override { return Name; }
 
   void setFunctionType(FunctionType *FT) { FuncTy = FT; }
 };

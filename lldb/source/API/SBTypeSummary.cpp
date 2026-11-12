@@ -162,7 +162,8 @@ SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
           SBTypeSummaryOptions options(opt);
           if (!cb(sb_value, options, stream))
             return false;
-          stm.Write(stream.GetData(), stream.GetSize());
+          llvm::StringRef sdata = stream.GetString();
+          stm.Write(sdata.data(), sdata.size());
           return true;
         },
         description ? description : "callback summary formatter")));

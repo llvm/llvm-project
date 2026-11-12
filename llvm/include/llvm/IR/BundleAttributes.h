@@ -10,6 +10,7 @@
 #define LLVM_IR_BUNDLE_ATTRIBUTES_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/InstrTypes.h"
 
 enum class BundleAttr {
@@ -57,6 +58,13 @@ struct AssumeNoUndefInfo {
 };
 
 LLVM_ABI AssumeNoUndefInfo getAssumeNoUndefInfo(OperandBundleUse);
+
+struct AssumeRangeInfo {
+  const Use &Val;
+  ConstantRange Range;
+};
+
+LLVM_ABI AssumeRangeInfo getAssumeRangeInfo(OperandBundleUse);
 
 struct AssumeSeparateStorageInfo {
   const Use &Ptr1;

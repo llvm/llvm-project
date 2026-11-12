@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def NullALU : InstrItinClass;
+def ALU_NULL : FuncUnit;
 
 def ALU_X : FuncUnit;
 def ALU_Y : FuncUnit;

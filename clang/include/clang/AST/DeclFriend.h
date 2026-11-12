@@ -100,7 +100,7 @@ public:
   /// If this friend declaration doesn't name a type, return the inner
   /// declaration.
   virtual NamedDecl *getFriendDecl() const {
-    return Friend.dyn_cast<NamedDecl *>();
+    return dyn_cast<NamedDecl *>(Friend);
   }
 
   /// Retrieves the location of the '...', if present.

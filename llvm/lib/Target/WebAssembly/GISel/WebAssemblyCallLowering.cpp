@@ -298,6 +298,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
     HasSwiftSelfArg |= Arg.hasSwiftSelfAttr();
     HasSwiftErrorArg |= Arg.hasSwiftErrorAttr();
+    // TODO: Support SwiftAsync attributes instead of falling back to
+    // SelectionDAG.
+    if (Arg.hasAttribute(Attribute::SwiftAsync))
+      return false;
     if (Arg.hasInAllocaAttr())
       return false;
     if (Arg.hasNestAttr())
@@ -433,6 +437,13 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (CallConv == CallingConv::Swift)
     return false;
 
+  // TODO: Support SwiftAsync attributes instead of falling back to
+  // SelectionDAG.
+  if (Info.CB)
+    for (unsigned I = 0, E = Info.CB->arg_size(); I != E; ++I)
+      if (Info.CB->paramHasAttr(I, Attribute::SwiftAsync))
+        return false;
+
   MachineInstrBuilder CallInst;
 
   // TODO: indirect calls
@@ -440,6 +451,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
 
   CallInst = MIRBuilder.buildInstrNoInsert(WebAssembly::CALL);
+  if (Info.NoMerge)
+    CallInst.setMIFlag(MachineInstr::MIFlag::NoMerge);
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
@@ -514,10 +527,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       CallUseRegs.push_back(Arg.Regs[0]);
     }
   }
-
-  // Analyze operands of the call, assigning locations to each operand.
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, Info.IsVarArg, MF, ArgLocs, Ctx);
 
   MIRBuilder.insertInstr(CallInst);
 

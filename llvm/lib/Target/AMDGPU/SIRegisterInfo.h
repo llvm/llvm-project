@@ -83,7 +83,7 @@ public:
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
-  static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
+  static unsigned getSubRegFromChannel(uint64_t Channel, uint64_t NumRegs = 1);
 
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
@@ -126,6 +126,10 @@ public:
     // registers according to getCalleeSavedRegs, so handling of calling
     // conventions with no CSR is handled there.
     return 27;
+  }
+
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
   }
 
   // When building a block VGPR load, we only really transfer a subset of the
@@ -384,7 +388,7 @@ public:
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
-  getRegClassForSizeOnBank(unsigned Size, const RegisterBank &Bank) const;
+  getRegClassForSizeOnBank(uint64_t Size, const RegisterBank &Bank) const;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
@@ -440,8 +444,8 @@ public:
   }
 
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
-  // \returns \p Reg otherwise.
-  MCPhysReg get32BitRegister(MCPhysReg Reg) const;
+  // \returns NoRegister otherwise.
+  MCRegister get32BitRegister(MCRegister Reg) const;
 
   // Returns true if a given register class is properly aligned for
   // the subtarget.

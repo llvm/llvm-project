@@ -131,7 +131,7 @@ void test7(Test7 *t) {
 // CHECK-NEXT: store
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[T]], align
 // CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: [[T2:%.*]] = call zeroext i8
+// CHECK-NEXT: [[T2:%.*]] = call i8
 // CHECK-NEXT: [[T3:%.*]] = zext i8 [[T2]] to i32
 // CHECK-NEXT: [[T4:%.*]] = and i32 [[T3]], 2
 // CHECK-NEXT: [[T5:%.*]] = trunc i32 [[T4]] to i8
@@ -139,7 +139,7 @@ void test7(Test7 *t) {
 // CHECK-NEXT: call void
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[T]], align
 // CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: [[T2:%.*]] = call zeroext i8
+// CHECK-NEXT: [[T2:%.*]] = call i8
 // CHECK-NEXT: [[T3:%.*]] = zext i8 [[T2]] to i32
 // CHECK-NEXT: [[T4:%.*]] = or i32 [[T3]], 5
 // CHECK-NEXT: [[T5:%.*]] = trunc i32 [[T4]] to i8
@@ -147,7 +147,7 @@ void test7(Test7 *t) {
 // CHECK-NEXT: call void
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[T]], align
 // CHECK-NEXT: load ptr, ptr @OBJC_SELECTOR_REFERENCES
-// CHECK-NEXT: [[T2:%.*]] = call zeroext i8
+// CHECK-NEXT: [[T2:%.*]] = call i8
 // CHECK-NEXT: [[T3:%.*]] = zext i8 [[T2]] to i32
 // CHECK-NEXT: [[T4:%.*]] = xor i32 [[T3]], 8
 // CHECK-NEXT: [[T5:%.*]] = trunc i32 [[T4]] to i8

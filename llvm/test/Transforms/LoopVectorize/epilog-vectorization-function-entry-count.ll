@@ -445,8 +445,8 @@ exit:
 ; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META2]], [[META3]], [[META18:![0-9]+]]}
 ; CHECK: [[META18]] = !{!"llvm.loop.estimated_trip_count", i32 4}
 ; CHECK: [[PROF19]] = !{!"branch_weights", i32 1, i32 0}
-; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META2]], [[META21:![0-9]+]], [[META3]]}
-; CHECK: [[META21]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META2]], [[META3]], [[META21:![0-9]+]]}
+; CHECK: [[META21]] = !{!"llvm.loop.estimated_trip_count", i32 1}
 ; CHECK: [[PROF22]] = !{!"branch_weights", i32 1, i32 1}
 ; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META3]], [[META2]], [[META21]]}
 ;.

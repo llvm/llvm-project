@@ -45,6 +45,16 @@ void AssignmentInIfConditionCheck::check(
           return true;
         }
 
+        // Only traverse the result expression of a statement expression,
+        // looking through labels and attributes on the last statement.
+        bool TraverseStmtExpr(StmtExpr *SE,
+                              DataRecursionQueue *Queue = nullptr) {
+          if (auto *Last =
+                  dyn_cast_if_present<ValueStmt>(SE->getSubStmt()->body_back()))
+            return TraverseStmt(Last->getExprStmt(), Queue);
+          return true;
+        }
+
         bool VisitBinaryOperator(BinaryOperator *BO) {
           if (BO->isAssignmentOp())
             Check.report(BO);

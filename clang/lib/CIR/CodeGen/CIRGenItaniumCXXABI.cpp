@@ -113,6 +113,9 @@ public:
 
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
+  cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase);
@@ -279,14 +282,14 @@ CIRGenItaniumCXXABI::buildStructorSignature(
   // All parameters are already in place except VTT, which goes after 'this'.
   // These are clang types, so we don't need to worry about sret yet.
 
-  // Check if we need to add a VTT parameter (which has type void **).
+  // Check if we need to add a VTT parameter (which has type global void **).
   if ((isa<CXXConstructorDecl>(gd.getDecl()) ? gd.getCtorType() == Ctor_Base
                                              : gd.getDtorType() == Dtor_Base) &&
       cast<CXXMethodDecl>(gd.getDecl())->getParent()->getNumVBases() != 0) {
-    assert(!cir::MissingFeatures::addressSpace());
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
     argTys.insert(argTys.begin() + 1,
-                  astContext.getPointerType(
-                      CanQualType::CreateUnsafe(astContext.VoidPtrTy)));
+                  astContext.getPointerType(CanQualType::CreateUnsafe(q)));
     return AddedStructorArgCounts::withPrefix(1);
   }
 
@@ -354,7 +357,11 @@ static void emitConstructorDestructorAlias(CIRGenModule &cgm,
   auto aliasee = cast<cir::FuncOp>(cgm.getAddrOfGlobal(targetDecl));
 
   // Populate actual alias.
-  cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+  cir::FuncOp alias =
+      cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+
+  // Alias constructors and destructors are always unnamed_addr.
+  alias.setUnnamedAddr(true);
 }
 
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
@@ -411,8 +418,9 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
     ASTContext &astContext = cgm.getASTContext();
 
     // FIXME: avoid the fake decl
-    assert(!cir::MissingFeatures::addressSpace());
-    QualType t = astContext.getPointerType(astContext.VoidPtrTy);
+    LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+    QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+    QualType t = astContext.getPointerType(q);
     auto *vttDecl = ImplicitParamDecl::Create(
         astContext, /*DC=*/nullptr, md->getLocation(),
         &astContext.Idents.get("vtt"), t, ImplicitParamKind::CXXVTT);
@@ -464,9 +472,10 @@ CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
   // some targets.
   mlir::Value vtt =
       cgf.getVTTParameter(GlobalDecl(d, type), forVirtualBase, delegating);
-  QualType vttTy =
-      cgm.getASTContext().getPointerType(cgm.getASTContext().VoidPtrTy);
-  assert(!cir::MissingFeatures::addressSpace());
+  ASTContext &astContext = cgm.getASTContext();
+  LangAS as = cgm.getGlobalVarAddressSpace(nullptr);
+  QualType q = astContext.getAddrSpaceQualType(astContext.VoidPtrTy, as);
+  QualType vttTy = astContext.getPointerType(q);
   return AddedStructorArgs::withPrefix({{vtt, vttTy}});
 }
 
@@ -510,8 +519,12 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   cgvt.createVTableInitializer(vtable, vtLayout, rtti,
                                cir::isLocalLinkage(linkage));
 
-  // Set the correct linkage.
+  // Set the correct linkage. The global was created as a declaration, which
+  // MLIR requires to be private, so the visibility has to follow the linkage of
+  // the definition.
   vtable.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      vtable, CIRGenModule::getMLIRVisibility(vtable));
 
   if (cgm.supportsCOMDAT() && cir::isWeakForLinker(linkage))
     vtable.setSelfComdat();
@@ -634,161 +647,8 @@ public:
   /// Build the RTTI type info struct for the given type.
   mlir::Attribute buildTypeInfo(mlir::Location loc, QualType ty,
                                 cir::GlobalLinkageKind linkage,
-                                mlir::SymbolTable::Visibility visibility);
+                                cir::VisibilityKind globalVisibility);
 };
-} // namespace
-
-namespace {
-
-/// Given a builtin type, returns whether the type
-/// info for that type is defined in the standard library.
-/// TODO(cir): this can unified with LLVM codegen
-static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
-  // Itanium C++ ABI 2.9.2:
-  //   Basic type information (e.g. for "int", "bool", etc.) will be kept in
-  //   the run-time support library. Specifically, the run-time support
-  //   library should contain type_info objects for the types X, X* and
-  //   X const*, for every X in: void, std::nullptr_t, bool, wchar_t, char,
-  //   unsigned char, signed char, short, unsigned short, int, unsigned int,
-  //   long, unsigned long, long long, unsigned long long, float, double,
-  //   long double, char16_t, char32_t, and the IEEE 754r decimal and
-  //   half-precision floating point types.
-  //
-  // GCC also emits RTTI for __int128.
-  // FIXME: We do not emit RTTI information for decimal types here.
-
-  // Types added here must also be added to emitFundamentalRTTIDescriptors.
-  switch (ty->getKind()) {
-  case BuiltinType::Void:
-  case BuiltinType::NullPtr:
-  case BuiltinType::Bool:
-  case BuiltinType::WChar_S:
-  case BuiltinType::WChar_U:
-  case BuiltinType::Char_U:
-  case BuiltinType::Char_S:
-  case BuiltinType::UChar:
-  case BuiltinType::SChar:
-  case BuiltinType::Short:
-  case BuiltinType::UShort:
-  case BuiltinType::Int:
-  case BuiltinType::UInt:
-  case BuiltinType::Long:
-  case BuiltinType::ULong:
-  case BuiltinType::LongLong:
-  case BuiltinType::ULongLong:
-  case BuiltinType::Half:
-  case BuiltinType::Float:
-  case BuiltinType::Double:
-  case BuiltinType::LongDouble:
-  case BuiltinType::Float16:
-  case BuiltinType::Float128:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Char8:
-  case BuiltinType::Char16:
-  case BuiltinType::Char32:
-  case BuiltinType::Int128:
-  case BuiltinType::UInt128:
-    return true;
-
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
-  case BuiltinType::Id:
-#include "clang/Basic/OpenCLImageTypes.def"
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) case BuiltinType::Id:
-#include "clang/Basic/OpenCLExtensionTypes.def"
-  case BuiltinType::OCLSampler:
-  case BuiltinType::OCLEvent:
-  case BuiltinType::OCLClkEvent:
-  case BuiltinType::OCLQueue:
-  case BuiltinType::OCLReserveID:
-#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/AArch64ACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/HLSLIntangibleTypes.def"
-#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/HLSLPackedTypes.def"
-#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/SPIRVTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::BFloat16:
-  case BuiltinType::MetaInfo:
-    return false;
-
-  case BuiltinType::Dependent:
-#define BUILTIN_TYPE(Id, SingletonId)
-#define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
-#include "clang/AST/BuiltinTypes.def"
-    llvm_unreachable("asking for RRTI for a placeholder type!");
-
-  case BuiltinType::ObjCId:
-  case BuiltinType::ObjCClass:
-  case BuiltinType::ObjCSel:
-    llvm_unreachable("FIXME: Objective-C types are unsupported!");
-  }
-
-  llvm_unreachable("Invalid BuiltinType Kind!");
-}
-
-static bool typeInfoIsInStandardLibrary(const PointerType *pointerTy) {
-  QualType pointeeTy = pointerTy->getPointeeType();
-  const auto *builtinTy = dyn_cast<BuiltinType>(pointeeTy);
-  if (!builtinTy)
-    return false;
-
-  // Check the qualifiers.
-  Qualifiers quals = pointeeTy.getQualifiers();
-  quals.removeConst();
-
-  if (!quals.empty())
-    return false;
-
-  return typeInfoIsInStandardLibrary(builtinTy);
-}
-
-/// IsStandardLibraryRTTIDescriptor - Returns whether the type
-/// information for the given type exists in the standard library.
-static bool isStandardLibraryRttiDescriptor(QualType ty) {
-  // Type info for builtin types is defined in the standard library.
-  if (const auto *builtinTy = dyn_cast<BuiltinType>(ty))
-    return typeInfoIsInStandardLibrary(builtinTy);
-
-  // Type info for some pointer types to builtin types is defined in the
-  // standard library.
-  if (const auto *pointerTy = dyn_cast<PointerType>(ty))
-    return typeInfoIsInStandardLibrary(pointerTy);
-
-  return false;
-}
 
 /// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
 /// the given type exists somewhere else, and that we should not emit the type
@@ -1278,7 +1138,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
   }
 
   // Check if there is already an external RTTI descriptor for this type.
-  if (isStandardLibraryRttiDescriptor(ty) ||
+  if (CodeGenUtils::isStandardLibraryRTTIDescriptor(ty) ||
       shouldUseExternalRttiDescriptor(cgm, ty))
     return getAddrOfExternalRTTIDescriptor(loc, ty);
 
@@ -1287,27 +1147,26 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc,
 
   // Give the type_info object and name the formal visibility of the
   // type itself.
-  assert(!cir::MissingFeatures::hiddenVisibility());
-  assert(!cir::MissingFeatures::protectedVisibility());
-
-  mlir::SymbolTable::Visibility symVisibility;
-  if (cir::isLocalLinkage(linkage))
+  cir::VisibilityKind globalVisibility;
+  if (cir::isLocalLinkage(linkage)) {
     // If the linkage is local, only default visibility makes sense.
-    symVisibility = mlir::SymbolTable::Visibility::Public;
-  else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
-           CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
+    globalVisibility = cir::VisibilityKind::Default;
+  } else if (cxxABI.classifyRTTIUniqueness(ty, linkage) ==
+             CIRGenItaniumCXXABI::RUK_NonUniqueHidden) {
     cgm.errorNYI(
         "buildTypeInfo: classifyRTTIUniqueness == RUK_NonUniqueHidden");
-    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
-  } else
-    symVisibility = CIRGenModule::getMLIRVisibility(ty->getVisibility());
+    globalVisibility = cir::VisibilityKind::Hidden;
+  } else {
+    globalVisibility = CIRGenModule::getCIRVisibilityKind(ty->getVisibility());
+  }
 
-  return buildTypeInfo(loc, ty, linkage, symVisibility);
+  return buildTypeInfo(loc, ty, linkage, globalVisibility);
 }
 
-mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
-    mlir::Location loc, QualType ty, cir::GlobalLinkageKind linkage,
-    mlir::SymbolTable::Visibility visibility) {
+mlir::Attribute
+CIRGenItaniumRTTIBuilder::buildTypeInfo(mlir::Location loc, QualType ty,
+                                        cir::GlobalLinkageKind linkage,
+                                        cir::VisibilityKind globalVisibility) {
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   assert(!cir::MissingFeatures::setDLLStorageClass());
@@ -1490,15 +1349,19 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   // All of this is to say that it's important that both the type_info
   // object and the type_info name be uniqued when weakly emitted.
 
-  mlir::SymbolTable::setSymbolVisibility(typeName, visibility);
+  mlir::SymbolTable::setSymbolVisibility(
+      typeName, CIRGenModule::getMLIRVisibilityFromCIRLinkage(linkage));
+  typeName.setGlobalVisibility(globalVisibility);
   assert(!cir::MissingFeatures::setDLLStorageClass());
   assert(!cir::MissingFeatures::opGlobalPartition());
-  assert(!cir::MissingFeatures::setDSOLocal());
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(typeName));
 
-  mlir::SymbolTable::setSymbolVisibility(gv, visibility);
+  mlir::SymbolTable::setSymbolVisibility(
+      gv, CIRGenModule::getMLIRVisibilityFromCIRLinkage(linkage));
+  gv.setGlobalVisibility(globalVisibility);
   assert(!cir::MissingFeatures::setDLLStorageClass());
   assert(!cir::MissingFeatures::opGlobalPartition());
-  assert(!cir::MissingFeatures::setDSOLocal());
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
 
   CIRGenModule::setInitializer(gv, init);
   return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), gv);
@@ -1793,29 +1656,25 @@ CIRGenCallee CIRGenItaniumCXXABI::getVirtualFunctionPointer(
   } else {
     assert(!cir::MissingFeatures::emitTypeMetadataCodeForVCall());
 
-    mlir::Value vfuncLoad;
     if (cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
       cgm.errorNYI(loc, "getVirtualFunctionPointer: isRelativeLayout");
     } else {
-      auto vtableSlotPtr = cir::VTableGetVirtualFnAddrOp::create(
-          builder, loc, builder.getPointerTo(tyPtr), vtable, vtableIndex);
-      vfuncLoad = builder.createAlignedLoad(loc, tyPtr, vtableSlotPtr,
-                                            cgf.getPointerAlign());
+      auto vfuncOp = cir::VTableGetVirtualFnOp::create(builder, loc, tyPtr,
+                                                       vtable, vtableIndex);
+
+      // Set invariant on the virtual function pointer load to indicate that
+      // function didn't change inside vtable.
+      // It's safe to add it without -fstrict-vtable-pointers, but it would not
+      // help in devirtualization because it will only matter if we will have 2
+      // the same virtual function loads from the same vtable load, which won't
+      // happen without enabled devirtualization with -fstrict-vtable-pointers.
+      if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+          cgm.getCodeGenOpts().StrictVTablePointers)
+        vfuncOp.setInvariant(true);
+
+      vfunc = vfuncOp;
     }
-
-    // Set invariant on the cir.load of virtual function pointer to indicate
-    // that function didn't change inside vtable.
-    // It's safe to add it without -fstrict-vtable-pointers, but it would not
-    // help in devirtualization because it will only matter if we will have 2
-    // the same virtual function loads from the same vtable load, which won't
-    // happen without enabled devirtualization with -fstrict-vtable-pointers.
-    if (cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        cgm.getCodeGenOpts().StrictVTablePointers)
-      if (auto loadOp = vfuncLoad.getDefiningOp<cir::LoadOp>())
-        loadOp.setInvariant(true);
-
-    vfunc = vfuncLoad;
   }
 
   CIRGenCallee callee(gd, vfunc.getDefiningOp());
@@ -1865,6 +1724,27 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
       cir::AddressPointAttr::get(cgm.getBuilder().getContext(),
                                  addressPoint.VTableIndex,
                                  addressPoint.AddressPointIndex));
+}
+
+cir::GlobalViewAttr CIRGenItaniumCXXABI::getVTableAddressPointAttr(
+    BaseSubobject base, const CXXRecordDecl *vtableClass) {
+  cir::GlobalOp vtable = getAddrOfVTable(vtableClass, CharUnits());
+
+  // Find the appropriate vtable within the vtable group, and the address point
+  // within that vtable.
+  VTableLayout::AddressPointLocation addressPoint =
+      cgm.getItaniumVTableContext()
+          .getVTableLayout(vtableClass)
+          .getAddressPoint(base);
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::ArrayAttr indices = builder.getArrayAttr(
+      {builder.getI32IntegerAttr(addressPoint.VTableIndex),
+       builder.getI32IntegerAttr(addressPoint.AddressPointIndex)});
+  return cir::GlobalViewAttr::get(
+      cir::VPtrType::get(builder.getContext()),
+      mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()), indices,
+      /*addressPoint=*/true);
 }
 
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
@@ -2230,7 +2110,6 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
 
   // TODO: When sanitizer support is implemented, we'll need to
   // get the address space from `newPtr`.
-  assert(!cir::MissingFeatures::addressSpace());
   assert(!cir::MissingFeatures::sanitizers());
 
   ASTContext &ctx = cgm.getASTContext();
@@ -2243,9 +2122,8 @@ Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
   assert(cookieSize == getArrayCookieSizeImpl(elementType));
 
   mlir::Type u8Ty = cgf.getBuilder().getUInt8Ty();
-  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
   mlir::Value baseBytePtr =
-      cgf.getBuilder().createBitcast(newPtr.getPointer(), u8PtrTy);
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8Ty);
 
   // Compute an offset to the cookie.
   CharUnits cookieOffset = cookieSize - sizeSize;
@@ -2410,8 +2288,10 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = builder.getUnknownLoc();
-  cir::PointerType i8PtrTy = builder.getUInt8PtrTy();
-  mlir::Value v = builder.createBitcast(initialPtr.getPointer(), i8PtrTy);
+  cir::PointerType ui8DefaultASPtrTy = builder.getUInt8PtrTy();
+  mlir::Value v =
+      builder.createPtrBitcast(initialPtr.getPointer(), builder.getUInt8Ty());
+  auto i8PtrTy = mlir::cast<cir::PointerType>(v.getType());
 
   // In a base-to-derived cast, the non-virtual adjustment is applied first.
   if (nonVirtualAdjustment && !isReturnAdjustment) {
@@ -2424,11 +2304,11 @@ static mlir::Value performTypeAdjustment(CIRGenFunction &cgf,
   if (virtualAdjustment) {
     mlir::Value vtablePtr = cgf.getVTablePtr(
         loc, Address(v, clang::CharUnits::One()), unadjustedClass);
-    vtablePtr = builder.createBitcast(vtablePtr, i8PtrTy);
+    vtablePtr = builder.createBitcast(vtablePtr, ui8DefaultASPtrTy);
 
     mlir::Value offset;
     mlir::Value offsetPtr =
-        cir::PtrStrideOp::create(builder, loc, i8PtrTy, vtablePtr,
+        cir::PtrStrideOp::create(builder, loc, ui8DefaultASPtrTy, vtablePtr,
                                  builder.getSInt64(virtualAdjustment, loc));
     if (cgf.cgm.getLangOpts().RelativeCXXABIVTables) {
       assert(!cir::MissingFeatures::vtableRelativeLayout());

@@ -7,11 +7,11 @@
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax b.s -o b.64.o
 # RUN: ld.lld -shared -soname=b.so b.64.o -o b.64.so
 # RUN: ld.lld -T lds a.64.o b.64.so -o 64
-# RUN: llvm-objdump -td --no-show-raw-insn 64 | FileCheck %s --check-prefix=RELAX
+# RUN: llvm-objdump --no-print-imm-hex -td --no-show-raw-insn 64 | FileCheck %s --check-prefix=RELAX
 
 ## --no-relax disables relaxation.
 # RUN: ld.lld -T lds a.64.o b.64.so --no-relax -o 64.norelax
-# RUN: llvm-objdump -td --no-show-raw-insn 64.norelax | FileCheck %s --check-prefix=NORELAX
+# RUN: llvm-objdump --no-print-imm-hex -td --no-show-raw-insn 64.norelax | FileCheck %s --check-prefix=NORELAX
 
 # RELAX:       {{0*}}00010000 g       .text  {{0*}}0000001c _start
 # RELAX:       {{0*}}0001001c g       .text  {{0*}}00000000 _start_end
@@ -25,8 +25,8 @@
 # RELAX-NEXT:              nop
 # RELAX-NEXT:              nop
 ## offset = .plt(0x10400)+32 - 0x10010 = 1040
-# RELAX-NEXT:      10010:  bl     1040 <bar+0x10420>
-# RELAX-NEXT:              b      1036 <bar+0x10420>
+# RELAX-NEXT:      10010:  bl     1040 <bar@plt>
+# RELAX-NEXT:              b      1036 <bar@plt>
 # RELAX-EMPTY:
 # RELAX-NEXT: <a>:
 # RELAX-NEXT:      10018:  ret

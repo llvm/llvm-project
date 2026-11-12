@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 declare i32 @llvm.experimental.get.vector.length.i32(i32, i32, i1)
 
@@ -15,8 +15,3 @@ define i32 @vector_length_zero_vf(i32 zeroext %tc) {
   %a = call i32 @llvm.experimental.get.vector.length.i32(i32 %tc, i32 0, i1 true)
   ret i32 %a
 }
-
-; The vector length argument must be a scalar integer.
-; CHECK: intrinsic argument 0 type (overload type 0) expected any integer type, but got <4 x i32>
-; CHECK-NEXT: declare i32 @llvm.experimental.get.vector.length.v4i32(<4 x i32>, i32, i1)
-declare i32 @llvm.experimental.get.vector.length.v4i32(<4 x i32>, i32, i1)

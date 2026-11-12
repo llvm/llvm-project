@@ -306,6 +306,13 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
 }
 
 // -----
+func.func @bad_char_trim(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) {
+  // expected-error@+1 {{'hlfir.char_trim' op operand #0 must be any character scalar type, but got '!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>'}}
+  %0 = hlfir.char_trim %arg0 : (!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>) -> !hlfir.expr<!fir.char<1,?>>
+  return
+}
+
+// -----
 func.func @bad_cmpchar_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
   // expected-error@+1 {{'hlfir.cmpchar' op character arguments must have the same KIND}}
   %0 = hlfir.cmpchar ne %arg0  %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i1
@@ -1725,40 +1732,9 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
 
 // -----
 
-func.func @bad_pack_result_rank(%arg0: !hlfir.expr<?x?xi32>, %arg1: !fir.logical<4>) {
-  // expected-error@+1 {{'hlfir.pack' op result must be of rank 1}}
-  %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<?x?xi32>, !fir.logical<4>) -> !hlfir.expr<?x?xi32>
+func.func @copy_in_bad_alignment(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+  // expected-error@+1 {{'hlfir.copy_in' op alignment must be a positive power of two}}
+  %0:3 = hlfir.copy_in %box to %temp alignment(24) : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   return
 }
 
-// -----
-
-func.func @bad_pack_mask_rank(%arg0: !hlfir.expr<?x?xi32>, %arg1: !hlfir.expr<?x!fir.logical<4>>) {
-  // expected-error@+1 {{'hlfir.pack' op MASK must be conformable to ARRAY}}
-  %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<?x?xi32>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<?xi32>
-  return
-}
-
-// -----
-
-func.func @bad_pack_mask_shape(%arg0: !hlfir.expr<2x3xi32>, %arg1: !hlfir.expr<2x4x!fir.logical<4>>) {
-  // expected-error@+1 {{'hlfir.pack' op MASK must be conformable to ARRAY}}
-  %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<2x3xi32>, !hlfir.expr<2x4x!fir.logical<4>>) -> !hlfir.expr<?xi32>
-  return
-}
-
-// -----
-
-func.func @bad_pack_vector_rank(%arg0: !hlfir.expr<2x3xi32>, %arg1: !fir.logical<4>, %arg2: !hlfir.expr<?x?xi32>) {
-  // expected-error@+1 {{'hlfir.pack' op VECTOR must be an array of rank 1}}
-  %0 = hlfir.pack %arg0 %arg1 vector %arg2 : (!hlfir.expr<2x3xi32>, !fir.logical<4>, !hlfir.expr<?x?xi32>) -> !hlfir.expr<?xi32>
-  return
-}
-
-// -----
-
-func.func @bad_pack_vector_type(%arg0: !hlfir.expr<2x3xi32>, %arg1: !fir.logical<4>, %arg2: !hlfir.expr<?xf32>) {
-  // expected-error@+1 {{'hlfir.pack' op ARRAY and VECTOR must have the same element type}}
-  %0 = hlfir.pack %arg0 %arg1 vector %arg2 : (!hlfir.expr<2x3xi32>, !fir.logical<4>, !hlfir.expr<?xf32>) -> !hlfir.expr<?xi32>
-  return
-}

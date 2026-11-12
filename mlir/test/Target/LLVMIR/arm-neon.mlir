@@ -1,5 +1,33 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file  %s | FileCheck %s
 
+//===----------------------------------------------------------------------===//
+// Dot ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: arm_neon_sdot_8_i8i8
+llvm.func @arm_neon_sdot_8_i8i8(%a: vector<2xi32>, %b: vector<8xi8>, %c: vector<8xi8>) -> vector<2xi32> {
+  // CHECK: %[[V0:.*]] = call <2 x i32> @llvm.aarch64.neon.sdot.v2i32.v8i8(<2 x i32> %{{.*}}, <8 x i8> %{{.*}}, <8 x i8> %{{.*}})
+  // CHECK-NEXT: ret <2 x i32>
+  %0 = arm_neon.intr.sdot %a, %b, %c : vector<8xi8>, vector<8xi8> to vector<2xi32>
+  llvm.return %0 : vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: arm_neon_sdot_16_i8i8
+llvm.func @arm_neon_sdot_16_i8i8(%a: vector<4xi32>, %b: vector<16xi8>, %c: vector<16xi8>) -> vector<4xi32> {
+  // CHECK: %[[V0:.*]] = call <4 x i32> @llvm.aarch64.neon.sdot.v4i32.v16i8(<4 x i32> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK-NEXT: ret <4 x i32>
+  %0 = arm_neon.intr.sdot %a, %b, %c : vector<16xi8>, vector<16xi8> to vector<4xi32>
+  llvm.return %0 : vector<4xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Smull Ops
+//===----------------------------------------------------------------------===//
+
 // CHECK-LABEL: arm_neon_smull
 llvm.func @arm_neon_smull(%arg0: vector<8xi8>, %arg1: vector<8xi8>) -> !llvm.struct<(vector<8xi16>, vector<4xi32>, vector<2xi64>)> {
   //      CHECK: %[[V0:.*]] = call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %{{.*}}, <8 x i8> %{{.*}})
@@ -26,25 +54,9 @@ llvm.func @arm_neon_smull(%arg0: vector<8xi8>, %arg1: vector<8xi8>) -> !llvm.str
 
 // -----
 
-// CHECK-LABEL: arm_neon_sdot_8_i8i8
-llvm.func @arm_neon_sdot_8_i8i8(%a: vector<2xi32>, %b: vector<8xi8>, %c: vector<8xi8>) -> vector<2xi32> {
-  // CHECK: %[[V0:.*]] = call <2 x i32> @llvm.aarch64.neon.sdot.v2i32.v8i8(<2 x i32> %{{.*}}, <8 x i8> %{{.*}}, <8 x i8> %{{.*}})
-  // CHECK-NEXT: ret <2 x i32>
-  %0 = arm_neon.intr.sdot %a, %b, %c : vector<8xi8>, vector<8xi8> to vector<2xi32>
-  llvm.return %0 : vector<2xi32>
-}
-
-// -----
-
-// CHECK-LABEL: arm_neon_sdot_16_i8i8
-llvm.func @arm_neon_sdot_16_i8i8(%a: vector<4xi32>, %b: vector<16xi8>, %c: vector<16xi8>) -> vector<4xi32> {
-  // CHECK: %[[V0:.*]] = call <4 x i32> @llvm.aarch64.neon.sdot.v4i32.v16i8(<4 x i32> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  // CHECK-NEXT: ret <4 x i32>
-  %0 = arm_neon.intr.sdot %a, %b, %c : vector<16xi8>, vector<16xi8> to vector<4xi32>
-  llvm.return %0 : vector<4xi32>
-}
-
-// -----
+//===----------------------------------------------------------------------===//
+// MMLA Ops
+//===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: arm_neon_smmla
 llvm.func @arm_neon_smmla(%arg0: vector<16xi8>,

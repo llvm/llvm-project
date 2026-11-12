@@ -223,3 +223,83 @@ void tile_of_reverse_intervening() {
       ;
   }
 }
+
+// Clang would previously crash on sizes of type bool or _BitInt.
+namespace GH229039 {
+enum E : bool { Off, On };
+
+void nonconstant_bool(bool b) {
+#pragma omp tile sizes(b)
+  for (int i = 0; i < 2; i++)
+    ;
+}
+
+void constant_bool() {
+#pragma omp tile sizes(true)
+  for (int i = 0; i < 7; ++i)
+    ;
+
+  // Not diagnosed, like sizes(0u).
+#pragma omp tile sizes(false)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void bitint(_BitInt(5) n) {
+#pragma omp tile sizes(n)
+  for (int i = 0; i < 7; ++i)
+    ;
+
+#pragma omp tile sizes((_BitInt(5))3)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void enum_bool(E e) {
+#pragma omp tile sizes(e)
+  for (int i = 0; i < 7; ++i)
+    ;
+
+#pragma omp tile sizes(On)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+template <bool B>
+void nttp_bool() {
+#pragma omp tile sizes(B)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+template <typename T>
+void type_dependent(T t) {
+#pragma omp tile sizes(t)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void instantiate() {
+  nttp_bool<true>();
+  type_dependent(true);
+  type_dependent<_BitInt(5)>(3);
+}
+
+void consumed(bool b) {
+#pragma omp for
+#pragma omp tile sizes(b)
+  for (int i = 0; i < 7; ++i)
+    ;
+
+#pragma omp unroll partial(2)
+#pragma omp tile sizes(b)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+
+void nonconstant_int(int n) {
+#pragma omp tile sizes(n)
+  for (int i = 0; i < 7; ++i)
+    ;
+}
+} // namespace GH229039

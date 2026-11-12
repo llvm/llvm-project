@@ -3,7 +3,7 @@
 #include "mock-types.h"
 
 // expected-note@mock-types.h:299 + {{Calling 'deref'}}
-// expected-note@mock-types.h:313 + {{Calling 'derefIfNotNull'}}
+// expected-note@mock-types.h:316 + {{Calling 'derefIfNotNull'}}
 
 void crash();
 

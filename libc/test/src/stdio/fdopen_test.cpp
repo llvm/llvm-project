@@ -30,7 +30,7 @@ TEST_F(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
   auto *fp = LIBC_NAMESPACE::fdopen(fd, "w");
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_TRUE(nullptr != fp);
+  ASSERT_NE(fp, nullptr);
   constexpr const char HELLO[] = "Hello";
   LIBC_NAMESPACE::fputs(HELLO, fp);
   LIBC_NAMESPACE::fclose(fp);
@@ -40,7 +40,7 @@ TEST_F(LlvmLibcStdioFdopenTest, WriteAppendRead) {
   int fd2 = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_RDWR);
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd2, "a");
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_TRUE(nullptr != fp2);
+  ASSERT_NE(fp2, nullptr);
   LIBC_NAMESPACE::fputs(LLVM, fp2);
   LIBC_NAMESPACE::fclose(fp2);
   ASSERT_ERRNO_SUCCESS();
@@ -62,7 +62,7 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidFd) {
   // With `fd` already closed, `fdopen` should fail and set the `errno` to EBADF
   auto *fp = LIBC_NAMESPACE::fdopen(fd, "r");
   ASSERT_ERRNO_EQ(EBADF);
-  ASSERT_TRUE(nullptr == fp);
+  ASSERT_EQ(fp, nullptr);
 }
 
 TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
@@ -75,14 +75,14 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
   // `Mode` must be one of "r", "w" or "a"
   auto *fp = LIBC_NAMESPACE::fdopen(fd, "m+");
   ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_TRUE(nullptr == fp);
+  ASSERT_EQ(fp, nullptr);
 
   // If the mode argument is invalid, then `fdopen` returns a nullptr and sets
   // the `errno` to EINVAL. In this case the `mode` param can only be "r" or
   // "r+"
   auto *fp2 = LIBC_NAMESPACE::fdopen(fd, "w");
   ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_TRUE(nullptr == fp2);
+  ASSERT_EQ(fp2, nullptr);
   LIBC_NAMESPACE::close(fd);
   ASSERT_ERRNO_SUCCESS();
 }

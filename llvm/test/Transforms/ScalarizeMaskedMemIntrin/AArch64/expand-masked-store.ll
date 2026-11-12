@@ -109,4 +109,474 @@ define void @scalarize_v2i64_const_mask(ptr %p, <2 x i64> %data) {
   ret void
 }
 
-declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)
+define void @scalarize_v1f16(ptr %p, <1 x i1> %mask, <1 x half> %data) vscale_range(2,2) {
+; CHECK-LE-LABEL: @scalarize_v1f16(
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x half> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store half [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v1f16(
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x half> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store half [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v1f16(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = extractelement <1 x half> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds half, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store half [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v1f16.p0(<1 x half> %data, ptr %p, i32 2, <1 x i1> %mask)
+  ret void
+}
+
+define void @scalarize_v1bf16(ptr %p, <1 x i1> %mask, <1 x bfloat> %data) vscale_range(2,2) {
+; CHECK-LE-LABEL: @scalarize_v1bf16(
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x bfloat> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store bfloat [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v1bf16(
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x bfloat> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store bfloat [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v1bf16(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = extractelement <1 x bfloat> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds bfloat, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store bfloat [[TMP2]], ptr [[TMP3]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v1bf16.p0(<1 x bfloat> %data, ptr %p, i32 2, <1 x i1> %mask)
+  ret void
+}
+
+define void @scalarize_v1i1(ptr %p, <1 x i1> %mask, <1 x i1> %data) vscale_range(2,2) {
+; CHECK-LE-LABEL: @scalarize_v1i1(
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store i1 [[TMP2]], ptr [[TMP3]], align 1
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v1i1(
+; CHECK-SVE-LE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-SVE-LE:       cond.store:
+; CHECK-SVE-LE-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[DATA:%.*]], i64 0
+; CHECK-SVE-LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[P:%.*]], i32 0
+; CHECK-SVE-LE-NEXT:    store i1 [[TMP2]], ptr [[TMP3]], align 1
+; CHECK-SVE-LE-NEXT:    br label [[ELSE]]
+; CHECK-SVE-LE:       else:
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v1i1(
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = extractelement <1 x i1> [[MASK:%.*]], i64 0
+; CHECK-BE-NEXT:    br i1 [[TMP1]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = extractelement <1 x i1> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store i1 [[TMP2]], ptr [[TMP3]], align 1
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v1i1.p0(<1 x i1> %data, ptr %p, i32 1, <1 x i1> %mask)
+  ret void
+}
+
+define void @scalarize_v2i16(ptr %p, <2 x i1> %mask, <2 x i16> %data) {
+; CHECK-LE-LABEL: @scalarize_v2i16(
+; CHECK-LE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-LE-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-LE:       cond.store1:
+; CHECK-LE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
+; CHECK-LE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-LE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE2]]
+; CHECK-LE:       else2:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v2i16(
+; CHECK-SVE-LE-NEXT:    call void @llvm.masked.store.v2i16.p0(<2 x i16> [[DATA:%.*]], ptr align 2 [[P:%.*]], <2 x i1> [[MASK:%.*]])
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v2i16(
+; CHECK-BE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <2 x i1> [[MASK:%.*]] to i2
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = and i2 [[SCALAR_MASK]], -2
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    [[TMP5:%.*]] = and i2 [[SCALAR_MASK]], 1
+; CHECK-BE-NEXT:    [[TMP6:%.*]] = icmp ne i2 [[TMP5]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-BE:       cond.store1:
+; CHECK-BE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i16> [[DATA]], i64 1
+; CHECK-BE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-BE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE2]]
+; CHECK-BE:       else2:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v2i16.p0(<2 x i16> %data, ptr %p, i32 2, <2 x i1> %mask)
+  ret void
+}
+
+define void @scalarize_v16i16(ptr %p, <16 x i1> %mask, <16 x i16> %data) {
+; CHECK-LE-LABEL: @scalarize_v16i16(
+; CHECK-LE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <16 x i1> [[MASK:%.*]] to i16
+; CHECK-LE-NEXT:    [[TMP1:%.*]] = and i16 [[SCALAR_MASK]], 1
+; CHECK-LE-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[TMP1]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-LE:       cond.store:
+; CHECK-LE-NEXT:    [[TMP3:%.*]] = extractelement <16 x i16> [[DATA:%.*]], i64 0
+; CHECK-LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-LE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE]]
+; CHECK-LE:       else:
+; CHECK-LE-NEXT:    [[TMP5:%.*]] = and i16 [[SCALAR_MASK]], 2
+; CHECK-LE-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[TMP5]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-LE:       cond.store1:
+; CHECK-LE-NEXT:    [[TMP7:%.*]] = extractelement <16 x i16> [[DATA]], i64 1
+; CHECK-LE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-LE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE2]]
+; CHECK-LE:       else2:
+; CHECK-LE-NEXT:    [[TMP9:%.*]] = and i16 [[SCALAR_MASK]], 4
+; CHECK-LE-NEXT:    [[TMP10:%.*]] = icmp ne i16 [[TMP9]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP10]], label [[COND_STORE3:%.*]], label [[ELSE4:%.*]]
+; CHECK-LE:       cond.store3:
+; CHECK-LE-NEXT:    [[TMP11:%.*]] = extractelement <16 x i16> [[DATA]], i64 2
+; CHECK-LE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 2
+; CHECK-LE-NEXT:    store i16 [[TMP11]], ptr [[TMP12]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE4]]
+; CHECK-LE:       else4:
+; CHECK-LE-NEXT:    [[TMP13:%.*]] = and i16 [[SCALAR_MASK]], 8
+; CHECK-LE-NEXT:    [[TMP14:%.*]] = icmp ne i16 [[TMP13]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP14]], label [[COND_STORE5:%.*]], label [[ELSE6:%.*]]
+; CHECK-LE:       cond.store5:
+; CHECK-LE-NEXT:    [[TMP15:%.*]] = extractelement <16 x i16> [[DATA]], i64 3
+; CHECK-LE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 3
+; CHECK-LE-NEXT:    store i16 [[TMP15]], ptr [[TMP16]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE6]]
+; CHECK-LE:       else6:
+; CHECK-LE-NEXT:    [[TMP17:%.*]] = and i16 [[SCALAR_MASK]], 16
+; CHECK-LE-NEXT:    [[TMP18:%.*]] = icmp ne i16 [[TMP17]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP18]], label [[COND_STORE7:%.*]], label [[ELSE8:%.*]]
+; CHECK-LE:       cond.store7:
+; CHECK-LE-NEXT:    [[TMP19:%.*]] = extractelement <16 x i16> [[DATA]], i64 4
+; CHECK-LE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 4
+; CHECK-LE-NEXT:    store i16 [[TMP19]], ptr [[TMP20]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE8]]
+; CHECK-LE:       else8:
+; CHECK-LE-NEXT:    [[TMP21:%.*]] = and i16 [[SCALAR_MASK]], 32
+; CHECK-LE-NEXT:    [[TMP22:%.*]] = icmp ne i16 [[TMP21]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP22]], label [[COND_STORE9:%.*]], label [[ELSE10:%.*]]
+; CHECK-LE:       cond.store9:
+; CHECK-LE-NEXT:    [[TMP23:%.*]] = extractelement <16 x i16> [[DATA]], i64 5
+; CHECK-LE-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 5
+; CHECK-LE-NEXT:    store i16 [[TMP23]], ptr [[TMP24]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE10]]
+; CHECK-LE:       else10:
+; CHECK-LE-NEXT:    [[TMP25:%.*]] = and i16 [[SCALAR_MASK]], 64
+; CHECK-LE-NEXT:    [[TMP26:%.*]] = icmp ne i16 [[TMP25]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP26]], label [[COND_STORE11:%.*]], label [[ELSE12:%.*]]
+; CHECK-LE:       cond.store11:
+; CHECK-LE-NEXT:    [[TMP27:%.*]] = extractelement <16 x i16> [[DATA]], i64 6
+; CHECK-LE-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 6
+; CHECK-LE-NEXT:    store i16 [[TMP27]], ptr [[TMP28]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE12]]
+; CHECK-LE:       else12:
+; CHECK-LE-NEXT:    [[TMP29:%.*]] = and i16 [[SCALAR_MASK]], 128
+; CHECK-LE-NEXT:    [[TMP30:%.*]] = icmp ne i16 [[TMP29]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP30]], label [[COND_STORE13:%.*]], label [[ELSE14:%.*]]
+; CHECK-LE:       cond.store13:
+; CHECK-LE-NEXT:    [[TMP31:%.*]] = extractelement <16 x i16> [[DATA]], i64 7
+; CHECK-LE-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 7
+; CHECK-LE-NEXT:    store i16 [[TMP31]], ptr [[TMP32]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE14]]
+; CHECK-LE:       else14:
+; CHECK-LE-NEXT:    [[TMP33:%.*]] = and i16 [[SCALAR_MASK]], 256
+; CHECK-LE-NEXT:    [[TMP34:%.*]] = icmp ne i16 [[TMP33]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP34]], label [[COND_STORE15:%.*]], label [[ELSE16:%.*]]
+; CHECK-LE:       cond.store15:
+; CHECK-LE-NEXT:    [[TMP35:%.*]] = extractelement <16 x i16> [[DATA]], i64 8
+; CHECK-LE-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 8
+; CHECK-LE-NEXT:    store i16 [[TMP35]], ptr [[TMP36]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE16]]
+; CHECK-LE:       else16:
+; CHECK-LE-NEXT:    [[TMP37:%.*]] = and i16 [[SCALAR_MASK]], 512
+; CHECK-LE-NEXT:    [[TMP38:%.*]] = icmp ne i16 [[TMP37]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP38]], label [[COND_STORE17:%.*]], label [[ELSE18:%.*]]
+; CHECK-LE:       cond.store17:
+; CHECK-LE-NEXT:    [[TMP39:%.*]] = extractelement <16 x i16> [[DATA]], i64 9
+; CHECK-LE-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 9
+; CHECK-LE-NEXT:    store i16 [[TMP39]], ptr [[TMP40]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE18]]
+; CHECK-LE:       else18:
+; CHECK-LE-NEXT:    [[TMP41:%.*]] = and i16 [[SCALAR_MASK]], 1024
+; CHECK-LE-NEXT:    [[TMP42:%.*]] = icmp ne i16 [[TMP41]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP42]], label [[COND_STORE19:%.*]], label [[ELSE20:%.*]]
+; CHECK-LE:       cond.store19:
+; CHECK-LE-NEXT:    [[TMP43:%.*]] = extractelement <16 x i16> [[DATA]], i64 10
+; CHECK-LE-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 10
+; CHECK-LE-NEXT:    store i16 [[TMP43]], ptr [[TMP44]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE20]]
+; CHECK-LE:       else20:
+; CHECK-LE-NEXT:    [[TMP45:%.*]] = and i16 [[SCALAR_MASK]], 2048
+; CHECK-LE-NEXT:    [[TMP46:%.*]] = icmp ne i16 [[TMP45]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP46]], label [[COND_STORE21:%.*]], label [[ELSE22:%.*]]
+; CHECK-LE:       cond.store21:
+; CHECK-LE-NEXT:    [[TMP47:%.*]] = extractelement <16 x i16> [[DATA]], i64 11
+; CHECK-LE-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 11
+; CHECK-LE-NEXT:    store i16 [[TMP47]], ptr [[TMP48]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE22]]
+; CHECK-LE:       else22:
+; CHECK-LE-NEXT:    [[TMP49:%.*]] = and i16 [[SCALAR_MASK]], 4096
+; CHECK-LE-NEXT:    [[TMP50:%.*]] = icmp ne i16 [[TMP49]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP50]], label [[COND_STORE23:%.*]], label [[ELSE24:%.*]]
+; CHECK-LE:       cond.store23:
+; CHECK-LE-NEXT:    [[TMP51:%.*]] = extractelement <16 x i16> [[DATA]], i64 12
+; CHECK-LE-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 12
+; CHECK-LE-NEXT:    store i16 [[TMP51]], ptr [[TMP52]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE24]]
+; CHECK-LE:       else24:
+; CHECK-LE-NEXT:    [[TMP53:%.*]] = and i16 [[SCALAR_MASK]], 8192
+; CHECK-LE-NEXT:    [[TMP54:%.*]] = icmp ne i16 [[TMP53]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP54]], label [[COND_STORE25:%.*]], label [[ELSE26:%.*]]
+; CHECK-LE:       cond.store25:
+; CHECK-LE-NEXT:    [[TMP55:%.*]] = extractelement <16 x i16> [[DATA]], i64 13
+; CHECK-LE-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 13
+; CHECK-LE-NEXT:    store i16 [[TMP55]], ptr [[TMP56]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE26]]
+; CHECK-LE:       else26:
+; CHECK-LE-NEXT:    [[TMP57:%.*]] = and i16 [[SCALAR_MASK]], 16384
+; CHECK-LE-NEXT:    [[TMP58:%.*]] = icmp ne i16 [[TMP57]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP58]], label [[COND_STORE27:%.*]], label [[ELSE28:%.*]]
+; CHECK-LE:       cond.store27:
+; CHECK-LE-NEXT:    [[TMP59:%.*]] = extractelement <16 x i16> [[DATA]], i64 14
+; CHECK-LE-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 14
+; CHECK-LE-NEXT:    store i16 [[TMP59]], ptr [[TMP60]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE28]]
+; CHECK-LE:       else28:
+; CHECK-LE-NEXT:    [[TMP61:%.*]] = and i16 [[SCALAR_MASK]], -32768
+; CHECK-LE-NEXT:    [[TMP62:%.*]] = icmp ne i16 [[TMP61]], 0
+; CHECK-LE-NEXT:    br i1 [[TMP62]], label [[COND_STORE29:%.*]], label [[ELSE30:%.*]]
+; CHECK-LE:       cond.store29:
+; CHECK-LE-NEXT:    [[TMP63:%.*]] = extractelement <16 x i16> [[DATA]], i64 15
+; CHECK-LE-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 15
+; CHECK-LE-NEXT:    store i16 [[TMP63]], ptr [[TMP64]], align 2
+; CHECK-LE-NEXT:    br label [[ELSE30]]
+; CHECK-LE:       else30:
+; CHECK-LE-NEXT:    ret void
+;
+; CHECK-SVE-LE-LABEL: @scalarize_v16i16(
+; CHECK-SVE-LE-NEXT:    call void @llvm.masked.store.v16i16.p0(<16 x i16> [[DATA:%.*]], ptr align 2 [[P:%.*]], <16 x i1> [[MASK:%.*]])
+; CHECK-SVE-LE-NEXT:    ret void
+;
+; CHECK-BE-LABEL: @scalarize_v16i16(
+; CHECK-BE-NEXT:    [[SCALAR_MASK:%.*]] = bitcast <16 x i1> [[MASK:%.*]] to i16
+; CHECK-BE-NEXT:    [[TMP1:%.*]] = and i16 [[SCALAR_MASK]], -32768
+; CHECK-BE-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[TMP1]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP2]], label [[COND_STORE:%.*]], label [[ELSE:%.*]]
+; CHECK-BE:       cond.store:
+; CHECK-BE-NEXT:    [[TMP3:%.*]] = extractelement <16 x i16> [[DATA:%.*]], i64 0
+; CHECK-BE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i32 0
+; CHECK-BE-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE]]
+; CHECK-BE:       else:
+; CHECK-BE-NEXT:    [[TMP5:%.*]] = and i16 [[SCALAR_MASK]], 16384
+; CHECK-BE-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[TMP5]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP6]], label [[COND_STORE1:%.*]], label [[ELSE2:%.*]]
+; CHECK-BE:       cond.store1:
+; CHECK-BE-NEXT:    [[TMP7:%.*]] = extractelement <16 x i16> [[DATA]], i64 1
+; CHECK-BE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 1
+; CHECK-BE-NEXT:    store i16 [[TMP7]], ptr [[TMP8]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE2]]
+; CHECK-BE:       else2:
+; CHECK-BE-NEXT:    [[TMP9:%.*]] = and i16 [[SCALAR_MASK]], 8192
+; CHECK-BE-NEXT:    [[TMP10:%.*]] = icmp ne i16 [[TMP9]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP10]], label [[COND_STORE3:%.*]], label [[ELSE4:%.*]]
+; CHECK-BE:       cond.store3:
+; CHECK-BE-NEXT:    [[TMP11:%.*]] = extractelement <16 x i16> [[DATA]], i64 2
+; CHECK-BE-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 2
+; CHECK-BE-NEXT:    store i16 [[TMP11]], ptr [[TMP12]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE4]]
+; CHECK-BE:       else4:
+; CHECK-BE-NEXT:    [[TMP13:%.*]] = and i16 [[SCALAR_MASK]], 4096
+; CHECK-BE-NEXT:    [[TMP14:%.*]] = icmp ne i16 [[TMP13]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP14]], label [[COND_STORE5:%.*]], label [[ELSE6:%.*]]
+; CHECK-BE:       cond.store5:
+; CHECK-BE-NEXT:    [[TMP15:%.*]] = extractelement <16 x i16> [[DATA]], i64 3
+; CHECK-BE-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 3
+; CHECK-BE-NEXT:    store i16 [[TMP15]], ptr [[TMP16]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE6]]
+; CHECK-BE:       else6:
+; CHECK-BE-NEXT:    [[TMP17:%.*]] = and i16 [[SCALAR_MASK]], 2048
+; CHECK-BE-NEXT:    [[TMP18:%.*]] = icmp ne i16 [[TMP17]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP18]], label [[COND_STORE7:%.*]], label [[ELSE8:%.*]]
+; CHECK-BE:       cond.store7:
+; CHECK-BE-NEXT:    [[TMP19:%.*]] = extractelement <16 x i16> [[DATA]], i64 4
+; CHECK-BE-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 4
+; CHECK-BE-NEXT:    store i16 [[TMP19]], ptr [[TMP20]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE8]]
+; CHECK-BE:       else8:
+; CHECK-BE-NEXT:    [[TMP21:%.*]] = and i16 [[SCALAR_MASK]], 1024
+; CHECK-BE-NEXT:    [[TMP22:%.*]] = icmp ne i16 [[TMP21]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP22]], label [[COND_STORE9:%.*]], label [[ELSE10:%.*]]
+; CHECK-BE:       cond.store9:
+; CHECK-BE-NEXT:    [[TMP23:%.*]] = extractelement <16 x i16> [[DATA]], i64 5
+; CHECK-BE-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 5
+; CHECK-BE-NEXT:    store i16 [[TMP23]], ptr [[TMP24]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE10]]
+; CHECK-BE:       else10:
+; CHECK-BE-NEXT:    [[TMP25:%.*]] = and i16 [[SCALAR_MASK]], 512
+; CHECK-BE-NEXT:    [[TMP26:%.*]] = icmp ne i16 [[TMP25]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP26]], label [[COND_STORE11:%.*]], label [[ELSE12:%.*]]
+; CHECK-BE:       cond.store11:
+; CHECK-BE-NEXT:    [[TMP27:%.*]] = extractelement <16 x i16> [[DATA]], i64 6
+; CHECK-BE-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 6
+; CHECK-BE-NEXT:    store i16 [[TMP27]], ptr [[TMP28]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE12]]
+; CHECK-BE:       else12:
+; CHECK-BE-NEXT:    [[TMP29:%.*]] = and i16 [[SCALAR_MASK]], 256
+; CHECK-BE-NEXT:    [[TMP30:%.*]] = icmp ne i16 [[TMP29]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP30]], label [[COND_STORE13:%.*]], label [[ELSE14:%.*]]
+; CHECK-BE:       cond.store13:
+; CHECK-BE-NEXT:    [[TMP31:%.*]] = extractelement <16 x i16> [[DATA]], i64 7
+; CHECK-BE-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 7
+; CHECK-BE-NEXT:    store i16 [[TMP31]], ptr [[TMP32]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE14]]
+; CHECK-BE:       else14:
+; CHECK-BE-NEXT:    [[TMP33:%.*]] = and i16 [[SCALAR_MASK]], 128
+; CHECK-BE-NEXT:    [[TMP34:%.*]] = icmp ne i16 [[TMP33]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP34]], label [[COND_STORE15:%.*]], label [[ELSE16:%.*]]
+; CHECK-BE:       cond.store15:
+; CHECK-BE-NEXT:    [[TMP35:%.*]] = extractelement <16 x i16> [[DATA]], i64 8
+; CHECK-BE-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 8
+; CHECK-BE-NEXT:    store i16 [[TMP35]], ptr [[TMP36]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE16]]
+; CHECK-BE:       else16:
+; CHECK-BE-NEXT:    [[TMP37:%.*]] = and i16 [[SCALAR_MASK]], 64
+; CHECK-BE-NEXT:    [[TMP38:%.*]] = icmp ne i16 [[TMP37]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP38]], label [[COND_STORE17:%.*]], label [[ELSE18:%.*]]
+; CHECK-BE:       cond.store17:
+; CHECK-BE-NEXT:    [[TMP39:%.*]] = extractelement <16 x i16> [[DATA]], i64 9
+; CHECK-BE-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 9
+; CHECK-BE-NEXT:    store i16 [[TMP39]], ptr [[TMP40]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE18]]
+; CHECK-BE:       else18:
+; CHECK-BE-NEXT:    [[TMP41:%.*]] = and i16 [[SCALAR_MASK]], 32
+; CHECK-BE-NEXT:    [[TMP42:%.*]] = icmp ne i16 [[TMP41]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP42]], label [[COND_STORE19:%.*]], label [[ELSE20:%.*]]
+; CHECK-BE:       cond.store19:
+; CHECK-BE-NEXT:    [[TMP43:%.*]] = extractelement <16 x i16> [[DATA]], i64 10
+; CHECK-BE-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 10
+; CHECK-BE-NEXT:    store i16 [[TMP43]], ptr [[TMP44]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE20]]
+; CHECK-BE:       else20:
+; CHECK-BE-NEXT:    [[TMP45:%.*]] = and i16 [[SCALAR_MASK]], 16
+; CHECK-BE-NEXT:    [[TMP46:%.*]] = icmp ne i16 [[TMP45]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP46]], label [[COND_STORE21:%.*]], label [[ELSE22:%.*]]
+; CHECK-BE:       cond.store21:
+; CHECK-BE-NEXT:    [[TMP47:%.*]] = extractelement <16 x i16> [[DATA]], i64 11
+; CHECK-BE-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 11
+; CHECK-BE-NEXT:    store i16 [[TMP47]], ptr [[TMP48]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE22]]
+; CHECK-BE:       else22:
+; CHECK-BE-NEXT:    [[TMP49:%.*]] = and i16 [[SCALAR_MASK]], 8
+; CHECK-BE-NEXT:    [[TMP50:%.*]] = icmp ne i16 [[TMP49]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP50]], label [[COND_STORE23:%.*]], label [[ELSE24:%.*]]
+; CHECK-BE:       cond.store23:
+; CHECK-BE-NEXT:    [[TMP51:%.*]] = extractelement <16 x i16> [[DATA]], i64 12
+; CHECK-BE-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 12
+; CHECK-BE-NEXT:    store i16 [[TMP51]], ptr [[TMP52]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE24]]
+; CHECK-BE:       else24:
+; CHECK-BE-NEXT:    [[TMP53:%.*]] = and i16 [[SCALAR_MASK]], 4
+; CHECK-BE-NEXT:    [[TMP54:%.*]] = icmp ne i16 [[TMP53]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP54]], label [[COND_STORE25:%.*]], label [[ELSE26:%.*]]
+; CHECK-BE:       cond.store25:
+; CHECK-BE-NEXT:    [[TMP55:%.*]] = extractelement <16 x i16> [[DATA]], i64 13
+; CHECK-BE-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 13
+; CHECK-BE-NEXT:    store i16 [[TMP55]], ptr [[TMP56]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE26]]
+; CHECK-BE:       else26:
+; CHECK-BE-NEXT:    [[TMP57:%.*]] = and i16 [[SCALAR_MASK]], 2
+; CHECK-BE-NEXT:    [[TMP58:%.*]] = icmp ne i16 [[TMP57]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP58]], label [[COND_STORE27:%.*]], label [[ELSE28:%.*]]
+; CHECK-BE:       cond.store27:
+; CHECK-BE-NEXT:    [[TMP59:%.*]] = extractelement <16 x i16> [[DATA]], i64 14
+; CHECK-BE-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 14
+; CHECK-BE-NEXT:    store i16 [[TMP59]], ptr [[TMP60]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE28]]
+; CHECK-BE:       else28:
+; CHECK-BE-NEXT:    [[TMP61:%.*]] = and i16 [[SCALAR_MASK]], 1
+; CHECK-BE-NEXT:    [[TMP62:%.*]] = icmp ne i16 [[TMP61]], 0
+; CHECK-BE-NEXT:    br i1 [[TMP62]], label [[COND_STORE29:%.*]], label [[ELSE30:%.*]]
+; CHECK-BE:       cond.store29:
+; CHECK-BE-NEXT:    [[TMP63:%.*]] = extractelement <16 x i16> [[DATA]], i64 15
+; CHECK-BE-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i16, ptr [[P]], i32 15
+; CHECK-BE-NEXT:    store i16 [[TMP63]], ptr [[TMP64]], align 2
+; CHECK-BE-NEXT:    br label [[ELSE30]]
+; CHECK-BE:       else30:
+; CHECK-BE-NEXT:    ret void
+;
+  call void @llvm.masked.store.v16i16.p0(<16 x i16> %data, ptr %p, i32 2, <16 x i1> %mask)
+  ret void
+}

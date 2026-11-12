@@ -23,6 +23,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
@@ -45,6 +46,9 @@ struct Config {
     FromPrevailing,
     ELF,
   };
+  // The library options of every LLVMContext that LTO creates.
+  // TODO: Make it non-null once every client sets it. Null means the defaults.
+  const cl::LibraryOptionsContext *LibraryOptions = nullptr;
   // Note: when adding fields here, consider whether they need to be added to
   // computeLTOCacheKey in LTO.cpp.
   std::string CPU;
@@ -57,8 +61,6 @@ struct Config {
   // LoadedPassPlugins is currently used by distributed thin-lto.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
   std::vector<std::string> PassPluginFilenames;
-  /// For adding passes that run right before codegen.
-  std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;
@@ -272,6 +274,12 @@ struct Config {
       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)>;
   CombinedIndexHookFn CombinedIndexHook;
 
+  /// This hook is called after regular LTO modules with summaries (e.g., split
+  /// LTO units) have been linked into the combined module, before optimizing
+  /// the combined module or running ThinLTO.
+  using PostRegularLTOLinkHookFn = std::function<void()>;
+  PostRegularLTOLinkHookFn PostRegularLTOLinkHook;
+
   /// This is a convenience function that configures this Config object to write
   /// temporary files named after the given OutputFileName for each of the LTO
   /// phases to disk. A client can use this function to implement -save-temps.
@@ -334,6 +342,8 @@ struct LTOLLVMContext : LLVMContext {
     enableDebugTypeODRUniquing();
     setDiagnosticHandler(
         std::make_unique<LTOLLVMDiagnosticHandler>(&DiagHandler), true);
+    if (C.LibraryOptions)
+      getLibraryOptions().assign(*C.LibraryOptions);
   }
   DiagnosticHandlerFunction DiagHandler;
 };

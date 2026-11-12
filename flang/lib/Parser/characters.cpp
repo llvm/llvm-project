@@ -8,6 +8,7 @@
 
 #include "flang/Parser/characters.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/numeric-limits.h"
 #include <algorithm>
 #include <cstddef>
 #include <optional>
@@ -40,7 +41,7 @@ std::string QuoteCharacterLiteralHelper(
   const auto emit{[&](char ch) { result += ch; }};
   for (auto ch : str) {
     using CharT = std::decay_t<decltype(ch)>;
-    char32_t ch32{static_cast<std::make_unsigned_t<CharT>>(ch)};
+    char32_t ch32{static_cast<common::make_unsigned_t<CharT>>(ch)};
     if (ch32 == static_cast<unsigned char>('"')) {
       emit('"'); // double the " when it appears in the text
     }
@@ -129,7 +130,7 @@ template <Encoding ENCODING, typename STRING>
 std::string EncodeString(const STRING &str) {
   std::string result;
   for (auto ch : str) {
-    char32_t uch{static_cast<std::make_unsigned_t<decltype(ch)>>(ch)};
+    char32_t uch{static_cast<common::make_unsigned_t<decltype(ch)>>(ch)};
     EncodedCharacter encoded{EncodeCharacter<ENCODING>(uch)};
     result.append(encoded.buffer, static_cast<std::size_t>(encoded.bytes));
   }

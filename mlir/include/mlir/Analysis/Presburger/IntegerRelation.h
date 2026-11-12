@@ -38,6 +38,7 @@ class IntegerRelation;
 class IntegerPolyhedron;
 class PresburgerSet;
 class PresburgerRelation;
+class Simplex;
 struct SymbolicLexOpt;
 
 /// The type of bound: equal, lower bound or upper bound.
@@ -849,7 +850,9 @@ public:
   bool isFullDim();
 
   void print(raw_ostream &os) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 protected:
   /// Checks all rows of equality/inequality constraints for trivial
@@ -922,6 +925,18 @@ protected:
   /// Checks for identical inequalities and eliminates redundant inequalities.
   /// Returns whether the constraint system was modified.
   bool removeDuplicateConstraints();
+
+  /// Removes the constraints of `this` that have been marked redundant in
+  /// `simplex` (see `Simplex::detectRedundant`). The constraints of `this`
+  /// must be in the `simplex` starting at constraint index `offset`,
+  /// and in the same order as `SimplexBase::intersectIntegerRelation`.
+  /// That is, inequality `i` corresponds to simplex constraint `offset + i`,
+  /// and equality `j` corresponds to the pair of simplex constraints
+  /// `offset + numIneqs + 2 * j` , and `offset + numIneqs + 2 * j + 1`.
+  /// An equality is removed only if both constraints of its pair are marked
+  /// redundant.
+  void removeRedundantConstraintsFromSimplex(const Simplex &simplex,
+                                             unsigned offset);
 
   /// Returns false if the fields corresponding to various variable counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This

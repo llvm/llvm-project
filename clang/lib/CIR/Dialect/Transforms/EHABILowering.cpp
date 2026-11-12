@@ -25,7 +25,8 @@
 //                                  catch-copy thunk body, or a store of the
 //                                  exception object address for
 //                                  reference_to_pointer
-//   - personality function set on functions requiring EH
+//   - personality function set on functions requiring EH and removed from
+//     functions without landing pads
 //
 //===----------------------------------------------------------------------===//
 
@@ -73,6 +74,11 @@ static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
   auto funcOp = cir::FuncOp::create(builder, loc, name, funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
   funcOp.setPrivate();
+  funcOp->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+                  builder.getUnitAttr());
+  // This pass runs after CallConvLowering and builds the declaration in its
+  // target ABI form already.
+  funcOp.setRequiresCallConvLowering(false);
   return funcOp;
 }
 
@@ -137,6 +143,8 @@ private:
 
   DenseMap<mlir::StringAttr, cir::FuncOp> catchCopyThunks;
 
+  llvm::SmallSetVector<mlir::StringAttr, 1> droppedPersonalities;
+
   constexpr const static ::llvm::StringLiteral kGxxPersonality =
       "__gxx_personality_v0";
 
@@ -175,6 +183,13 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   for (cir::FuncOp funcOp : mod.getOps<cir::FuncOp>()) {
     if (mlir::failed(lowerFunc(funcOp)))
       return mlir::failure();
+  }
+
+  for (mlir::StringAttr name : droppedPersonalities) {
+    auto personalityDecl = mod.lookupSymbol<cir::FuncOp>(name);
+    if (personalityDecl && personalityDecl.isDeclaration() &&
+        mlir::SymbolTable::symbolKnownUseEmpty(personalityDecl, mod))
+      personalityDecl.erase();
   }
   return mlir::success();
 }
@@ -221,6 +236,8 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
 ///     unreachable;
 ///   }
 void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
+  // TODO(cir): set the runtime calling convention on the runtime calls below.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   if (clangCallTerminateFunc)
     return;
 
@@ -237,6 +254,9 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
       cir::FuncOp::create(builder, loc, "__clang_call_terminate", funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
   funcOp.setGlobalVisibility(cir::VisibilityKind::Hidden);
+  // This pass runs after CallConvLowering and builds the function in its
+  // target ABI form already.
+  funcOp.setRequiresCallConvLowering(false);
 
   mlir::Block *entryBlock = funcOp.addEntryBlock();
   builder.setInsertionPointToStart(entryBlock);
@@ -302,6 +322,8 @@ void ItaniumEHLowering::ensureCxaCallUnexpectedDecl(mlir::Location loc) {
 /// Create a terminate landing pad block at the end of the specified function.
 mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
                                                     mlir::Location loc) {
+  // TODO(cir): set the runtime calling convention on the runtime calls below.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   assert(clangCallTerminateFunc &&
          "ensureClangCallTerminate must run before buildTerminateBlock");
   mlir::Region &body = funcOp.getRegion();
@@ -376,9 +398,22 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   // (begin/end_cleanup, eh.dispatch, begin/end_catch, resume) through the
   // token graph. A single walk to collect initiates is therefore sufficient.
   SmallVector<cir::EhInitiateOp> initiateOps;
-  funcOp.walk([&](cir::EhInitiateOp op) { initiateOps.push_back(op); });
-  if (initiateOps.empty())
+  bool hasLandingPad = false;
+  funcOp.walk([&](mlir::Operation *op) {
+    if (auto initiateOp = mlir::dyn_cast<cir::EhInitiateOp>(op))
+      initiateOps.push_back(initiateOp);
+    else if (mlir::isa<cir::EhInflightOp>(op))
+      hasLandingPad = true;
+  });
+  if (initiateOps.empty()) {
+    // Without a landing pad the personality is dead, as in classic codegen.
+    mlir::FlatSymbolRefAttr personality = funcOp.getPersonalityAttr();
+    if (personality && !hasLandingPad) {
+      droppedPersonalities.insert(personality.getAttr());
+      funcOp.removePersonalityAttr();
+    }
     return mlir::success();
+  }
 
   ensureRuntimeDecls(funcOp.getLoc());
 
@@ -495,6 +530,8 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
     cir::EhInitiateOp initiateOp,
     llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches, bool reachesCleanup,
     EhTokenMap &ehTokenMap) {
+  // TODO(cir): set the runtime calling convention on the runtime calls below.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   mlir::Value rootToken = initiateOp.getEhToken();
 
   // The catch clauses for this landing pad come from the dispatches its
@@ -682,7 +719,11 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
         }
         if (changed) {
           builder.setInsertionPoint(op);
-          cir::BrOp::create(builder, op.getLoc(), op.getDest(), newOperands);
+          // We shouldn't get any loop information here.
+          assert(!op.getLoopIdAttr() && !op.getLoopHintsAttr());
+          cir::BrOp::create(builder, op.getLoc(), newOperands,
+                            /*loop_id=*/nullptr, /*loop_hints=*/nullptr,
+                            op.getDest());
           op.erase();
         }
       }
@@ -826,6 +867,8 @@ ItaniumEHLowering::resolveCatchCopyThunk(cir::ConstructCatchParamOp op) {
 mlir::LogicalResult
 ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
                                             mlir::Value exnPtr) {
+  // TODO(cir): set the runtime calling convention on the runtime calls below.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   mlir::Location loc = op.getLoc();
   mlir::Value paramAddr = op.getParamAddr();
   cir::PointerType paramAddrType =
@@ -913,6 +956,8 @@ ItaniumEHLowering::lowerConstructCatchParam(cir::ConstructCatchParamOp op,
 /// type_info and dtor pointers from their symbol attributes, bitcasting
 /// each to !cir.ptr<!void> as required by the runtime function signature.
 mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
+  // TODO(cir): set the runtime calling convention on the runtime calls below.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
   mlir::Location loc = op.getLoc();
   mlir::Block *normalDest = op.getNormalDest();
   mlir::Block *unwindDest = op.getUnwindDest();

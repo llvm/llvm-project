@@ -1060,3 +1060,33 @@ func.func @noninteger_operation_result(%lb: index, %ub: index, %step: index, %co
   "use"(%result, %outs#1) : (i32, f32) -> ()
   return
 }
+
+
+// A zero divisor produces poison; it must not hide nonnegative result bounds.
+// CHECK-LABEL: func @signed_div_rem_nonnegative
+// CHECK: %[[TRUE:.*]] = arith.constant true
+// CHECK: return %[[TRUE]], %[[TRUE]]
+func.func @signed_div_rem_nonnegative(%a: i32, %b: i32) -> (i1, i1) {
+  %zero = arith.constant 0 : i32
+  %lhs = arith.maxsi %a, %zero : i32
+  %rhs = arith.maxsi %b, %zero : i32
+  %div = arith.divsi %lhs, %rhs : i32
+  %rem = arith.remsi %lhs, %rhs : i32
+  %div_nonnegative = arith.cmpi sge, %div, %zero : i32
+  %rem_nonnegative = arith.cmpi sge, %rem, %zero : i32
+  return %div_nonnegative, %rem_nonnegative : i1, i1
+}
+
+// Remainder magnitude is bounded by the dividend even with an unknown divisor.
+// CHECK-LABEL: func @signed_rem_small_dividend
+// CHECK: %[[TRUE:.*]] = arith.constant true
+// CHECK: return %[[TRUE]]
+func.func @signed_rem_small_dividend(%a: i32, %b: i32) -> i1 {
+  %zero = arith.constant 0 : i32
+  %seven = arith.constant 7 : i32
+  %nonnegative = arith.maxsi %a, %zero : i32
+  %lhs = arith.minsi %nonnegative, %seven : i32
+  %rem = arith.remsi %lhs, %b : i32
+  %bounded = arith.cmpi ule, %rem, %seven : i32
+  return %bounded : i1
+}

@@ -10,7 +10,7 @@ define <8 x i8> @insert_zero_v4i8(<4 x i8> %v) {
 ;
 ; RV64-LABEL: insert_zero_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> zeroinitializer, <4 x i8> %v, i64 0)
   ret <8 x i8> %r
@@ -24,7 +24,7 @@ define <4 x i16> @insert_zero_v2i16(<2 x i16> %v) {
 ;
 ; RV64-LABEL: insert_zero_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    pack a0, a0, zero
 ; RV64-NEXT:    ret
   %r = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> zeroinitializer, <2 x i16> %v, i64 0)
   ret <4 x i16> %r
@@ -42,4 +42,131 @@ define <2 x i32> @insert_zero_v1i32(<1 x i32> %v) {
 ; RV64-NEXT:    ret
   %r = call <2 x i32> @llvm.vector.insert.v2i32.v1i32(<2 x i32> zeroinitializer, <1 x i32> %v, i64 0)
   ret <2 x i32> %r
+}
+
+define <8 x i8> @insert_lo_v4i8(<8 x i8> %v, <4 x i8> %s) {
+; RV32-LABEL: insert_lo_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insert_lo_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 255
+; RV64-NEXT:    mvm a0, a1, a2
+; RV64-NEXT:    lui a3, 16
+; RV64-NEXT:    andi a4, a1, -256
+; RV64-NEXT:    addi a3, a3, -256
+; RV64-NEXT:    mvm a0, a4, a3
+; RV64-NEXT:    lui a3, 1048560
+; RV64-NEXT:    and a3, a1, a3
+; RV64-NEXT:    lui a4, 4080
+; RV64-NEXT:    mvm a0, a3, a4
+; RV64-NEXT:    lui a3, 1044480
+; RV64-NEXT:    and a1, a1, a3
+; RV64-NEXT:    slli a2, a2, 24
+; RV64-NEXT:    mvm a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> %v, <4 x i8> %s, i64 0)
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @insert_hi_v4i8(<8 x i8> %v, <4 x i8> %s) {
+; RV32-LABEL: insert_hi_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insert_hi_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, 255
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    slli a3, a2, 32
+; RV64-NEXT:    mvm a0, a1, a3
+; RV64-NEXT:    srli a3, a1, 40
+; RV64-NEXT:    slli a3, a3, 40
+; RV64-NEXT:    slli a4, a2, 40
+; RV64-NEXT:    mvm a0, a3, a4
+; RV64-NEXT:    srli a3, a1, 48
+; RV64-NEXT:    slli a3, a3, 48
+; RV64-NEXT:    li a4, -1
+; RV64-NEXT:    slli a2, a2, 48
+; RV64-NEXT:    slli a4, a4, 56
+; RV64-NEXT:    mvm a0, a3, a2
+; RV64-NEXT:    and a1, a1, a4
+; RV64-NEXT:    mvm a0, a1, a4
+; RV64-NEXT:    ret
+  %r = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> %v, <4 x i8> %s, i64 4)
+  ret <8 x i8> %r
+}
+
+define <4 x i16> @insert_lo_v2i16(<4 x i16> %v, <2 x i16> %s) {
+; RV32-LABEL: insert_lo_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insert_lo_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 16
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    lui a3, 1048560
+; RV64-NEXT:    mvm a0, a1, a2
+; RV64-NEXT:    lui a2, 65535
+; RV64-NEXT:    and a1, a1, a3
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    mvm a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> %v, <2 x i16> %s, i64 0)
+  ret <4 x i16> %r
+}
+
+define <4 x i16> @insert_hi_v2i16(<4 x i16> %v, <2 x i16> %s) {
+; RV32-LABEL: insert_hi_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insert_hi_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a2, 65535
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    li a3, -1
+; RV64-NEXT:    slli a2, a2, 20
+; RV64-NEXT:    slli a3, a3, 48
+; RV64-NEXT:    mvm a0, a1, a2
+; RV64-NEXT:    and a1, a1, a3
+; RV64-NEXT:    mvm a0, a1, a3
+; RV64-NEXT:    ret
+  %r = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> %v, <2 x i16> %s, i64 2)
+  ret <4 x i16> %r
+}
+
+define <8 x i8> @insert_hi_undef_v4i8(<4 x i8> %s) {
+; RV32-LABEL: insert_hi_undef_v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insert_hi_undef_v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    ppairoe.w a0, a0, a0
+; RV64-NEXT:    ret
+  %r = call <8 x i8> @llvm.vector.insert.v8i8.v4i8(<8 x i8> poison, <4 x i8> %s, i64 4)
+  ret <8 x i8> %r
+}
+
+define <4 x i16> @insert_hi_zero_v2i16(<2 x i16> %s) {
+; RV32-LABEL: insert_hi_zero_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    li a0, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insert_hi_zero_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pack a0, zero, a0
+; RV64-NEXT:    ret
+  %r = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> zeroinitializer, <2 x i16> %s, i64 2)
+  ret <4 x i16> %r
 }

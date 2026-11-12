@@ -50,11 +50,11 @@ llvm.func @exp10_test(%arg0: f32, %arg1: vector<8xf32>) {
 }
 
 // CHECK-LABEL: @ldexp_test
-llvm.func @ldexp_test(%arg0: f32, %arg1: vector<8xf32>, %arg2: i32) {
+llvm.func @ldexp_test(%arg0: f32, %arg1: vector<8xf32>, %arg2: i32, %arg3: vector<8xi32>) {
   // CHECK: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
   "llvm.intr.ldexp"(%arg0, %arg2) : (f32, i32) -> f32
-  // CHECK: call <8 x float> @llvm.ldexp.v8f32.i32(<8 x float> %{{.*}}, i32 %{{.*}})
-  "llvm.intr.ldexp"(%arg1, %arg2) : (vector<8xf32>, i32) -> vector<8xf32>
+  // CHECK: call <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float> %{{.*}}, <8 x i32> %{{.*}})
+  "llvm.intr.ldexp"(%arg1, %arg3) : (vector<8xf32>, vector<8xi32>) -> vector<8xf32>
   llvm.return
 }
 
@@ -985,10 +985,11 @@ llvm.func @coro_suspend(%arg0 : i1) {
 }
 
 // CHECK-LABEL: @coro_end
-llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
+llvm.func @coro_end(%arg0: !llvm.ptr) {
   %none = llvm.mlir.none : token
   // CHECK: call void @llvm.coro.end
-  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, token) -> !llvm.void
+  %zero = llvm.mlir.constant(0 : i1) : i1
+  llvm.intr.coro.end %arg0, %zero, %none : (!llvm.ptr, i1, token) -> !llvm.void
   llvm.return
 }
 
@@ -1243,6 +1244,13 @@ llvm.func @vector_deinterleave2(%vec1: vector<4xf64>, %vec2: vector<[8]xi32>) {
   // CHECK: call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %{{.*}})
   %1 = "llvm.intr.vector.deinterleave2" (%vec2) :
               (vector<[8]xi32>) -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
+  llvm.return
+}
+
+// CHECK-LABEL: @vector_repeat
+llvm.func @vector_repeat(%src: vector<4xf32>) {
+  // CHECK:  call <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32
+  %0 = llvm.intr.vector.repeat (%src) : (vector<4xf32>) -> vector<[4]xf32>
   llvm.return
 }
 
@@ -2060,7 +2068,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare float @llvm.exp10.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp10.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.ldexp.f32.i32(float, i32)
-// CHECK-DAG: declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
+// CHECK-DAG: declare <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float>, <8 x i32>)
 // CHECK-DAG: declare { float, i32 } @llvm.frexp.f32.i32(float)
 // CHECK-DAG: declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 // CHECK-DAG: declare { float, float } @llvm.modf.f32(float)
@@ -2155,7 +2163,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare void @llvm.coro.end(ptr, i1, token)
+// CHECK-DAG: declare void @llvm.coro.end(ptr, i1 immarg, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr readonly captures(none))
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare ptr @llvm.coro.promise(ptr captures(none), i32, i1)
@@ -2198,6 +2206,7 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
 // CHECK-DAG: declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
+// CHECK-DAG: declare <vscale x 4 x float> @llvm.vector.repeat.nxv4f32.v4f32(<4 x float>)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(ptr captures(none))
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(ptr captures(none))
 // CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr captures(none))

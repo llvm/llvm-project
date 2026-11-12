@@ -1,4 +1,4 @@
-; RUN: llc -disable-ppc-vsx-fma-mutation=false -mcpu=pwr10 -verify-machineinstrs \
+; RUN: llc -ppc-vsx-fma-mutation -mcpu=pwr10 -verify-machineinstrs \
 ; RUN:   -ppc-asm-full-reg-names -mtriple powerpc64-ibm-aix7.2.0.0 < %s | FileCheck %s 
 
 target datalayout = "E-m:a-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"

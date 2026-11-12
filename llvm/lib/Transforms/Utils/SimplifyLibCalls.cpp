@@ -334,7 +334,8 @@ static void annotateDereferenceableBytes(CallInst *CI,
 }
 
 static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
-                                         ArrayRef<unsigned> ArgNos) {
+                                                ArrayRef<unsigned> ArgNos,
+                                                uint64_t CharSize = 1) {
   Function *F = CI->getCaller();
   if (!F)
     return;
@@ -351,7 +352,7 @@ static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
       CI->addParamAttr(ArgNo, Attribute::NonNull);
     }
 
-    annotateDereferenceableBytes(CI, ArgNo, 1);
+    annotateDereferenceableBytes(CI, ArgNo, CharSize);
   }
 }
 
@@ -1109,12 +1110,16 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
-  unsigned WCharSize = TLI->getWCharSize(M) * 8;
+  unsigned WCharSize = M.getWCharSize();
   // We cannot perform this optimization without wchar_size metadata.
   if (WCharSize == 0)
     return nullptr;
 
-  return optimizeStringLength(CI, B, WCharSize);
+  if (Value *V = optimizeStringLength(CI, B, WCharSize * 8))
+    return V;
+  // At least the terminating wide character is read.
+  annotateNonNullNoUndefBasedOnAccess(CI, 0, WCharSize);
+  return nullptr;
 }
 
 Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilderBase &B) {
@@ -1319,7 +1324,8 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
                                    "memrchr.cmp");
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr,
                                            B.getInt64(Pos), "memrchr.ptr_plus");
-      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+      return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE,
+                                              "memrchr.sel");
     }
   }
 
@@ -1336,12 +1342,16 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
   // Slice off the sought character's high end bits.
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
-  Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
+  Value *CEqS0 =
+      B.CreateICmpEQ(ConstantInt::get(Int8Ty, (unsigned char)Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
+  if (auto *AndSI = dyn_cast<SelectInst>(And))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*AndSI, DEBUG_TYPE);
   Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
   Value *SrcPlus =
       B.CreateInBoundsGEP(Int8Ty, SrcStr, SizeM1, "memrchr.ptr_plus");
-  return B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
+  return B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                          "memrchr.sel");
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
@@ -1433,7 +1443,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (Pos != StringRef::npos) {
       // Handle two consecutive sequences of the same characters.
       Value *PosVal = ConstantInt::get(SizeTy, Pos);
-      Value *StrPos = ConstantInt::get(Int8Ty, Str[Pos]);
+      Value *StrPos = ConstantInt::get(Int8Ty, (unsigned char)Str[Pos]);
       Value *CEqSPos = B.CreateICmpEQ(CharVal, StrPos);
       Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
@@ -1444,7 +1454,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                                               "memchr.sel1");
     }
 
-    Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
+    Value *Str0 = ConstantInt::get(Int8Ty, (unsigned char)Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
@@ -1990,25 +2000,25 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   case LibFunc_size_returning_new:
     NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                           LibFunc_size_returning_new_hot_cold,
-                                          HotColdVal);
+                                          HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
-      NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
-                                            LibFunc_size_returning_new_hot_cold,
-                                            getHotColdHintForExisting(HotCold));
+      NewCall = emitHotColdSizeReturningNew(
+          CI->getArgOperand(0), B, TLI, LibFunc_size_returning_new_hot_cold,
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   case LibFunc_size_returning_new_aligned:
     NewCall = emitHotColdSizeReturningNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
+        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal, CI->getType());
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
     if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
           LibFunc_size_returning_new_aligned_hot_cold,
-          getHotColdHintForExisting(HotCold));
+          getHotColdHintForExisting(HotCold), CI->getType());
     break;
   default:
     return nullptr;
@@ -2699,7 +2709,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
   Module *Mod = Log->getModule();
   Type *Ty = Log->getType();
 
-  if (UnsafeFPShrink && hasFloatVersion(Mod, LogNm))
+  if (UnsafeFPShrink && (LogFn->isIntrinsic() || hasFloatVersion(Mod, LogNm)))
     if (Value *Ret = optimizeUnaryDoubleFP(Log, B, TLI, true))
       return Ret;
 
@@ -3150,7 +3160,8 @@ static Value *optimizeSymmetricCall(CallInst *CI, bool IsEven,
   Value *X;
   Value *Src = CI->getArgOperand(0);
 
-  if (match(Src, m_OneUse(m_FNeg(m_Value(X)))) &&
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Src, m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
       (IsEven || !mayFlushDenormalsToPositiveZero(CI))) {
     auto *Call = B.CreateCall(CI->getCalledFunction(), {X}, /*FMFSource=*/CI);
     auto *CallInst = copyFlags(*CI, Call);
@@ -4231,6 +4242,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
   case LibFunc_scalbn:
   case LibFunc_scalbnf:
   case LibFunc_scalbnl:
@@ -4250,7 +4264,11 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_sqrtf:
   case LibFunc_sqrt:
   case LibFunc_sqrtl:
-    return optimizeSqrt(CI, Builder);
+    if (Value *V = optimizeSqrt(CI, Builder))
+      return V;
+    if (CI->doesNotAccessMemory())
+      return replaceUnaryCall(CI, Builder, Intrinsic::sqrt);
+    return nullptr;
   case LibFunc_fmod:
   case LibFunc_fmodf:
   case LibFunc_fmodl:
@@ -4287,19 +4305,33 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_atanhf:
   case LibFunc_atanhl:
     return optimizeTrigInversionPairs(CI, Builder);
+  case LibFunc_ceilf:
   case LibFunc_ceil:
+  case LibFunc_ceill:
     return replaceUnaryCall(CI, Builder, Intrinsic::ceil);
+  case LibFunc_floorf:
   case LibFunc_floor:
+  case LibFunc_floorl:
     return replaceUnaryCall(CI, Builder, Intrinsic::floor);
+  case LibFunc_roundf:
   case LibFunc_round:
+  case LibFunc_roundl:
     return replaceUnaryCall(CI, Builder, Intrinsic::round);
+  case LibFunc_roundevenf:
   case LibFunc_roundeven:
+  case LibFunc_roundevenl:
     return replaceUnaryCall(CI, Builder, Intrinsic::roundeven);
+  case LibFunc_nearbyintf:
   case LibFunc_nearbyint:
+  case LibFunc_nearbyintl:
     return replaceUnaryCall(CI, Builder, Intrinsic::nearbyint);
+  case LibFunc_rintf:
   case LibFunc_rint:
+  case LibFunc_rintl:
     return replaceUnaryCall(CI, Builder, Intrinsic::rint);
+  case LibFunc_truncf:
   case LibFunc_trunc:
+  case LibFunc_truncl:
     return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
   case LibFunc_sin:
   case LibFunc_cos:
@@ -4325,8 +4357,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return nullptr;
   case LibFunc_copysign:
     if (hasFloatVersion(M, CI->getCalledFunction()->getName()))
-      return optimizeBinaryDoubleFP(CI, Builder, TLI);
-    return nullptr;
+      if (Value *V = optimizeBinaryDoubleFP(CI, Builder, TLI))
+        return V;
+    [[fallthrough]];
+  case LibFunc_copysignf:
+  case LibFunc_copysignl:
+    return replaceBinaryCall(CI, Builder, Intrinsic::copysign);
   case LibFunc_fdim:
   case LibFunc_fdimf:
   case LibFunc_fdiml:
@@ -4368,6 +4404,15 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   Module *M = CI->getModule();
   assert(!CI->isMustTailCall() && "These transforms aren't musttail safe.");
 
+  Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
+
+  // Most calls are neither intrinsics nor known library functions. Bail out
+  // before doing the (comparatively expensive) set-up below. This also covers
+  // nobuiltin calls, since operator new calls are always library functions.
+  if (Func == NotLibFunc && !isa<IntrinsicInst>(CI))
+    return nullptr;
+
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
@@ -4376,8 +4421,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     return maybeOptimizeNoBuiltinOperatorNew(CI, Builder);
   }
 
-  Function *Callee = CI->getCalledFunction();
-  LibFunc Func = TLI->getLibFunc(*Callee);
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;

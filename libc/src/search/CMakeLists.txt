@@ -24,7 +24,7 @@ add_entrypoint_object(
     libc.src.__support.HashTable.table
     libc.src.__support.HashTable.randomness
     libc.src.errno.errno
-    libc.include.search
+    libc.hdr.types.struct_hsearch_data
 )
 
 add_entrypoint_object(
@@ -51,6 +51,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.ACTION
     libc.hdr.types.ENTRY
+    libc.hdr.types.struct_hsearch_data
     libc.src.__support.HashTable.table
     libc.src.errno.errno
 )
@@ -76,7 +77,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.HashTable.table
-    libc.include.search
+    libc.hdr.types.struct_hsearch_data
 )
 
 add_entrypoint_object(

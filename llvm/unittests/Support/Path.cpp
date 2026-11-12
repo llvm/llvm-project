@@ -32,6 +32,7 @@
 #ifdef _WIN32
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 #include "llvm/Support/WindowsError.h"
 #include <fileapi.h>
@@ -585,6 +586,104 @@ TEST(Support, CacheDirectory) {
   SmallString<128> CacheDir;
   EXPECT_TRUE(path::cache_directory(CacheDir));
   EXPECT_EQ(Expected, CacheDir);
+}
+#endif
+
+#if defined(_WIN32) && LLVM_WINDOWS_RESTRICTED_APIS
+// RAII helper to set and restore a variable in the Win32 environment block,
+// which is what Support reads (the CRT copy used by _wgetenv is not updated).
+class WithEnvW {
+  const wchar_t *Var;
+  std::optional<std::wstring> OriginalValue;
+
+public:
+  WithEnvW(const wchar_t *Var, const wchar_t *Value) : Var(Var) {
+    if (DWORD Size = ::GetEnvironmentVariableW(Var, nullptr, 0)) {
+      std::wstring V(Size, L'\0');
+      V.resize(::GetEnvironmentVariableW(Var, V.data(), Size));
+      OriginalValue = std::move(V);
+    }
+    ::SetEnvironmentVariableW(Var, Value);
+  }
+  ~WithEnvW() {
+    ::SetEnvironmentVariableW(Var,
+                              OriginalValue ? OriginalValue->c_str() : nullptr);
+  }
+};
+
+// Known folders are read from the environment and created if missing, like
+// SHGetKnownFolderPath with KF_FLAG_CREATE.
+TEST(Support, KnownFoldersFromEnv) {
+  SmallString<128> Base;
+  ASSERT_NO_ERROR(fs::createUniqueDirectory("known-folders", Base));
+  llvm::scope_exit Cleanup([&] { fs::remove_directories(Base); });
+
+  SmallString<128> Home(Base), AppData(Base);
+  path::append(Home, "home");
+  path::append(AppData, "appdata");
+  path::make_preferred(Home);
+  path::make_preferred(AppData);
+  SmallVector<wchar_t, 128> Home16, AppData16;
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(Home, Home16));
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(AppData, AppData16));
+  WithEnvW HomeEnv(L"USERPROFILE", Home16.data());
+  WithEnvW AppDataEnv(L"LOCALAPPDATA", AppData16.data());
+
+  SmallString<128> Dir;
+  EXPECT_TRUE(path::home_directory(Dir));
+  EXPECT_EQ(Home, Dir);
+  EXPECT_TRUE(fs::is_directory(Home));
+
+  EXPECT_TRUE(path::user_config_directory(Dir));
+  EXPECT_EQ(AppData, Dir);
+  EXPECT_TRUE(fs::is_directory(AppData));
+
+  EXPECT_TRUE(path::cache_directory(Dir));
+  EXPECT_EQ(AppData, Dir);
+}
+
+TEST(Support, HomeDirectoryMissingEnv) {
+  WithEnvW Env(L"USERPROFILE", nullptr);
+  SmallString<128> HomeDir;
+  EXPECT_FALSE(path::home_directory(HomeDir));
+}
+
+// Returns the lowercase names of the DLLs in the import and delay-import
+// tables of the module that contains Addr.
+static std::vector<std::string> getImportedDLLs(const void *Addr) {
+  std::vector<std::string> DLLs;
+  HMODULE Mod;
+  if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            reinterpret_cast<LPCWSTR>(Addr), &Mod))
+    return DLLs;
+  const char *Base = reinterpret_cast<const char *>(Mod);
+  auto *DOS = reinterpret_cast<const IMAGE_DOS_HEADER *>(Base);
+  auto *NT = reinterpret_cast<const IMAGE_NT_HEADERS *>(Base + DOS->e_lfanew);
+  const IMAGE_DATA_DIRECTORY *Dirs = NT->OptionalHeader.DataDirectory;
+  if (DWORD RVA = Dirs[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress)
+    for (auto *D =
+             reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR *>(Base + RVA);
+         D->Name; ++D)
+      DLLs.push_back(StringRef(Base + D->Name).lower());
+  if (DWORD RVA = Dirs[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT].VirtualAddress)
+    for (auto *D =
+             reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR *>(Base + RVA);
+         D->DllNameRVA; ++D)
+      DLLs.push_back(StringRef(Base + D->DllNameRVA).lower());
+  return DLLs;
+}
+
+TEST(Support, NoShell32Imports) {
+  // Reference the functions that import shell32 without the option.
+  SmallString<128> Dir;
+  (void)path::home_directory(Dir);
+  (void)fs::remove_directories("nonexistent-dir");
+
+  std::vector<std::string> DLLs =
+      getImportedDLLs(reinterpret_cast<const void *>(&path::home_directory));
+  ASSERT_FALSE(DLLs.empty());
+  EXPECT_THAT(DLLs, testing::Not(testing::Contains("shell32.dll")));
 }
 #endif
 
@@ -1478,6 +1577,70 @@ TEST_F(FileSystemTest, Remove) {
 }
 
 #ifdef _WIN32
+// remove_directories() deletes read-only files and directories.
+TEST_F(FileSystemTest, RemoveDirectoriesReadOnly) {
+  SmallString<128> Root(TestDirectory), Sub, File;
+  path::append(Root, "readonly");
+  (Sub = Root) += "/sub";
+  (File = Sub) += "/file";
+  ASSERT_NO_ERROR(fs::create_directories(Sub));
+  {
+    std::error_code EC;
+    raw_fd_ostream OS(File, EC);
+    ASSERT_NO_ERROR(EC);
+  }
+  ASSERT_NO_ERROR(fs::setPermissions(File, fs::all_read));
+  ASSERT_NO_ERROR(fs::setPermissions(Sub, fs::all_read | fs::all_exe));
+  ASSERT_NO_ERROR(fs::remove_directories(Root));
+  EXPECT_FALSE(fs::exists(Root));
+}
+
+// remove_directories() must delete a directory junction, not its target.
+TEST_F(FileSystemTest, RemoveDirectoriesJunction) {
+  ErrorOr<std::string> Cmd = sys::findProgramByName("cmd");
+  if (!Cmd)
+    GTEST_SKIP();
+  auto MakeJunction = [&](StringRef Link, StringRef Target) {
+    std::optional<StringRef> Redirects[] = {std::nullopt, StringRef(""),
+                                            StringRef("")};
+    return sys::ExecuteAndWait(*Cmd, {*Cmd, "/c", "mklink", "/J", Link, Target},
+                               std::nullopt, Redirects) == 0;
+  };
+
+  // mklink only accepts backslashes.
+  auto Child = [&](StringRef A, StringRef B = "") {
+    SmallString<128> P(TestDirectory);
+    path::append(P, A, B);
+    path::native(P, path::Style::windows_backslash);
+    return P;
+  };
+  SmallString<128> Target = Child("target"), Keep = Child("target", "keep");
+  ASSERT_NO_ERROR(fs::create_directories(Target));
+  {
+    std::error_code EC;
+    raw_fd_ostream OS(Keep, EC);
+    ASSERT_NO_ERROR(EC);
+  }
+
+  // A junction nested inside the directory being removed.
+  SmallString<128> Root = Child("root");
+  ASSERT_NO_ERROR(fs::create_directories(Root));
+  if (!MakeJunction(Child("root", "link"), Target))
+    GTEST_SKIP() << "could not create a directory junction";
+  ASSERT_NO_ERROR(fs::remove_directories(Root));
+  EXPECT_FALSE(fs::exists(Root));
+  EXPECT_TRUE(fs::exists(Keep));
+
+  // The path passed to remove_directories() is itself a junction.
+  SmallString<128> TopLevel = Child("toplevel");
+  ASSERT_TRUE(MakeJunction(TopLevel, Target));
+  ASSERT_NO_ERROR(fs::remove_directories(TopLevel));
+  EXPECT_FALSE(fs::exists(TopLevel));
+  EXPECT_TRUE(fs::exists(Keep));
+}
+#endif
+
+#ifdef _WIN32
 TEST_F(FileSystemTest, CarriageReturn) {
   SmallString<128> FilePathname(TestDirectory);
   std::error_code EC;
@@ -1516,6 +1679,9 @@ TEST_F(FileSystemTest, Resize) {
   fs::file_status Status;
   ASSERT_NO_ERROR(fs::status(FD, Status));
   ASSERT_EQ(Status.getSize(), 123U);
+  ErrorOr<uint64_t> Size = fs::file_size(fs::convertFDToNativeFile(FD));
+  ASSERT_TRUE(!!Size);
+  ASSERT_EQ(*Size, 123U);
   ::close(FD);
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
@@ -1969,6 +2135,15 @@ TEST_F(FileSystemTest, OpenFileForRead) {
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
     ASSERT_EQ(D1, D2);
+
+    // getRealPathFromHandle on the open descriptor gives the same path.
+    SmallString<64> HandlePath;
+    auto EC = fs::getRealPathFromHandle(
+        fs::convertFDToNativeFile(FileDescriptor2), HandlePath);
+    if (EC != errc::not_supported) {
+      ASSERT_NO_ERROR(EC);
+      ASSERT_EQ(ResultPath, HandlePath);
+    }
   }
   ::close(FileDescriptor);
   ::close(FileDescriptor2);

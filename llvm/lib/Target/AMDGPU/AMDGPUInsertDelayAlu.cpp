@@ -41,7 +41,8 @@ public:
         MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64)
       return true;
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-        AMDGPU::DepCtr::decodeFieldVaVdst(MI.getOperand(0).getImm()) == 0)
+        AMDGPU::DepCtr::decodeFieldVaVdst(
+            static_cast<unsigned>(MI.getOperand(0).getImm())) == 0)
       return true;
     return false;
   }
@@ -117,25 +118,29 @@ public:
     // until it completes.
     uint8_t SALUCycles = 0;
 
+    // Set when this entry was produced by a data fast-forward producer.
+    bool IsFFProducer = false;
+
     DelayInfo() = default;
 
-    DelayInfo(DelayType Type, unsigned Cycles) {
+    DelayInfo(DelayType Type, unsigned Cycles, bool IsFFProducer = false)
+        : IsFFProducer(IsFFProducer) {
       switch (Type) {
       default:
         llvm_unreachable("unexpected type");
       case VALU:
-        VALUCycles = Cycles;
+        VALUCycles = static_cast<uint8_t>(Cycles);
         VALUNum = 0;
         break;
       case TRANS:
-        TRANSCycles = Cycles;
+        TRANSCycles = static_cast<uint8_t>(Cycles);
         TRANSNum = 0;
         TRANSNumVALU = 0;
         break;
       case SALU:
         // Guard against pseudo-instructions like SI_CALL which are marked as
         // SALU but with a very high latency.
-        SALUCycles = std::min(Cycles, SALU_CYCLES_MAX);
+        SALUCycles = static_cast<uint8_t>(std::min(Cycles, SALU_CYCLES_MAX));
         break;
       }
     }
@@ -143,7 +148,8 @@ public:
     bool operator==(const DelayInfo &RHS) const {
       return VALUCycles == RHS.VALUCycles && VALUNum == RHS.VALUNum &&
              TRANSCycles == RHS.TRANSCycles && TRANSNum == RHS.TRANSNum &&
-             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles;
+             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles &&
+             IsFFProducer == RHS.IsFFProducer;
     }
 
     bool operator!=(const DelayInfo &RHS) const { return !(*this == RHS); }
@@ -157,6 +163,7 @@ public:
       TRANSNum = std::min(TRANSNum, RHS.TRANSNum);
       TRANSNumVALU = std::min(TRANSNumVALU, RHS.TRANSNumVALU);
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
+      IsFFProducer = IsFFProducer && RHS.IsFFProducer;
     }
 
     // Update this DelayInfo after issuing an instruction of the specified type.
@@ -172,7 +179,7 @@ public:
         VALUNum = VALU_MAX;
         VALUCycles = 0;
       } else {
-        VALUCycles -= Cycles;
+        VALUCycles -= static_cast<uint8_t>(Cycles);
         Erase = false;
       }
 
@@ -185,7 +192,7 @@ public:
         TRANSNumVALU = VALU_MAX;
         TRANSCycles = 0;
       } else {
-        TRANSCycles -= Cycles;
+        TRANSCycles -= static_cast<uint8_t>(Cycles);
         Erase = false;
       }
 
@@ -194,7 +201,7 @@ public:
         // now.
         SALUCycles = 0;
       } else {
-        SALUCycles -= Cycles;
+        SALUCycles -= static_cast<uint8_t>(Cycles);
         Erase = false;
       }
 
@@ -327,7 +334,7 @@ public:
       }
       if (Skip < 6) {
         MachineOperand &Op = LastDelayAlu->getOperand(0);
-        unsigned LastImm = Op.getImm();
+        unsigned LastImm = static_cast<unsigned>(Op.getImm());
         assert((LastImm & ~0xf) == 0 &&
                "Remembered an s_delay_alu with no room for another delay!");
         LastImm |= Imm << 7 | Skip << 4;
@@ -342,6 +349,66 @@ public:
     // Remember the s_delay_alu for next time if there is still room in it to
     // encode another delay.
     return (Imm & 0x780) ? nullptr : DelayAlu;
+  }
+
+  // Return true if MO is an SGPR def of MI that the hardware can
+  // fast-forward to a matching consumer. These are VALU carry-out / compare
+  // producers whose result can be consumed without an s_delay_alu wait.
+  //   V_CMP -> V_CNDMASK
+  //   V_ADD/SUB with carry out -> V_ADD/SUB with carry in
+  bool isFastForwardProducer(const MachineInstr &MI, const MachineOperand &MO) {
+    assert((MO.isReg() && MO.isDef()) && "Expected a register definition");
+    if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+    Register Reg = MO.getReg();
+    if (AMDGPU::isSGPR(Reg, TRI)) {
+      switch (MI.getOpcode()) {
+      // VOP3 carry-out producers (explicit VCC/SGPR)
+      case AMDGPU::V_ADD_CO_U32_e64:
+      case AMDGPU::V_SUB_CO_U32_e64:
+      case AMDGPU::V_SUBREV_CO_U32_e64:
+      case AMDGPU::V_ADDC_U32_e64:
+      case AMDGPU::V_SUBB_U32_e64:
+      case AMDGPU::V_SUBBREV_U32_e64:
+        return true;
+      default:
+        if (MI.isCompare())
+          return true;
+      }
+    }
+    return false;
+  }
+
+  // Return true if operand OpNo (MO) of MI is an SGPR use that can receive
+  // fast-forwarded data from a matching producer, letting the s_delay_alu
+  // wait be skipped. These are VALU carry-in / condition-mask consumers that
+  // read the forwarded value
+  //   V_CMP -> V_CNDMASK
+  //   V_ADD/SUB with carry out -> V_ADD/SUB with carry in
+  bool isFastForwardConsumer(const MachineInstr &MI, const MachineOperand &MO,
+                             unsigned OpNo) {
+    assert((MO.isReg() && MO.isUse()) && "Expected a register use");
+    if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
+      return false;
+    Register Reg = MO.getReg();
+    unsigned MIOpCode = MI.getOpcode();
+
+    if (AMDGPU::isSGPR(Reg, TRI)) {
+      switch (MIOpCode) {
+      // VOP3 explicit carry-in / condition-mask consumers
+      case AMDGPU::V_ADDC_U32_e64:
+      case AMDGPU::V_SUBB_U32_e64:
+      case AMDGPU::V_SUBBREV_U32_e64:
+      case AMDGPU::V_CNDMASK_B32_e64:
+      case AMDGPU::V_CNDMASK_B16_fake16_e64:
+      case AMDGPU::V_CNDMASK_B16_t16_e64:
+        int Src2Idx =
+            AMDGPU::getNamedOperandIdx(MIOpCode, AMDGPU::OpName::src2);
+        assert(Src2Idx >= 0 && "Unexpected source index");
+        return OpNo == static_cast<unsigned>(Src2Idx);
+      }
+    }
+    return false;
   }
 
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB, bool Emit) {
@@ -412,6 +479,22 @@ public:
             // Skip the tied srcC of a C-reuse edge.
             if (IsWMMACReuse && Op.isTied() && Op.getReg() == PrevWMMAVDst)
               continue;
+
+            Register Reg = Op.getReg();
+            unsigned OperandNo = MI.getOperandNo(&Op);
+
+            // Suppress the delay for SGPR operands when both producer and
+            // consumer are in the hardware valu data fast-forward set.
+            if (isFastForwardConsumer(MI, Op, OperandNo) &&
+                llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+                  auto It = State.find(Unit);
+                  if (It != State.end())
+                    return It->second.IsFFProducer;
+                  return true; // no wait for this regunit if it has no delay
+                })) {
+              continue;
+            }
+
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
               if (It != State.end()) {
@@ -445,7 +528,8 @@ public:
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
           for (MCRegUnit Unit : TRI->regunits(Op.getReg()))
-            State[Unit] = DelayInfo(ProducerType, Latency);
+            State[Unit] =
+                DelayInfo{ProducerType, Latency, isFastForwardProducer(MI, Op)};
         }
       }
 

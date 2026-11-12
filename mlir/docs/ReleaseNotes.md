@@ -10,6 +10,29 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
 
 ## LLVM 24
 
+### Context Locking Without Parallel Execution
+
+Clients that access an `MLIRContext` from their own threads can enable
+thread-safe locking without creating a context-owned thread pool or enabling
+parallel execution within MLIR:
+
+```c++
+MLIRContext context(MLIRContext::Threading::DISABLED);
+context.enableThreadSafeLocking();
+```
+
+This enables locking for uniquing types, attributes, affine expressions, and
+operation names. Dialects must be loaded before accessing the context
+concurrently. `isMultithreadingEnabled()` remains false, so MLIR's parallel
+helpers execute sequentially. Enabling multithreading also enables locking;
+disabling multithreading disables locking, which can then be re-enabled
+independently. The `--mlir-disable-threading` debugging flag does not override
+explicit calls to `enableThreadSafeLocking()`.
+
+`StorageUniquer::disableMultithreading(disable)` has been renamed to
+`StorageUniquer::setThreadSafeLocking(!disable)` to reflect that it controls
+locking. The new setter takes an explicit boolean argument.
+
 ### Strict Property Assembly Formats
 
 Property-backed operations now use strict declarative assembly formats by
@@ -54,6 +77,24 @@ default rules, `attr-dict` contains only discardable attributes. See
 - `gpu-lower-to-rocdl-pipeline`, however, only supports `arch`/`chip` now, as
   manually setting a triple/chipset/features combination is a low-level
   operation that should require a manual `rocdl-attach-target` call.
+
+### Target-Independent GPU Transforms
+
+`MLIRGPUTransforms` no longer links any target dialect or target library. The
+target-specific GPU passes and patterns moved into per-target libraries with
+their own pass headers; pass names and options are unchanged:
+
+| Library | Header | Contents |
+| --- | --- | --- |
+| `MLIRGPUNVVMTransforms` | `mlir/Dialect/GPU/Transforms/NVVM/Passes.h` | `nvvm-attach-target` |
+| `MLIRGPUROCDLTransforms` | `mlir/Dialect/GPU/Transforms/ROCDL/Passes.h` | `rocdl-attach-target`, `populateGpuPromoteShuffleToAMDGPUPatterns`, `populateGpuLowerSubgroupReduceToDPPPatterns`, `populateGpuLowerClusteredSubgroupReduceToDPPPatterns` |
+| `MLIRGPUSPIRVTransforms` | `mlir/Dialect/GPU/Transforms/SPIRV/Passes.h` | `spirv-attach-target` |
+| `MLIRGPUXeVMTransforms` | `mlir/Dialect/GPU/Transforms/XeVM/Passes.h` | `xevm-attach-target` |
+
+Each header provides its own registration function (for example
+`registerGPUNVVMPasses()`). The C API functions for these passes are renamed
+to match, e.g. `mlirCreateGPUGpuNVVMAttachTarget` is now
+`mlirCreateGPUNVVMGpuNVVMAttachTarget`.
 
 ## LLVM 21
 

@@ -15,6 +15,7 @@
 #include "RISCVInstPrinter.h"
 #include "RISCVMCAsmInfo.h"
 #include "RISCVMCObjectFileInfo.h"
+#include "RISCVMCOptions.h"
 #include "RISCVTargetStreamer.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -43,6 +45,9 @@
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "RISCVGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "RISCVMCOptions.inc"
 
 using namespace llvm;
 
@@ -102,51 +107,8 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
        STI.hasFeature(RISCV::FeatureStdExtZce)))
     STI.ToggleFeature(RISCV::FeatureStdExtZcf);
 
-  // Add C if Zca is enabled and the conditions are met.
-  // This follows the RISC-V spec rules for MISA.C and matches GCC behavior
-  // (PR119122). The rule is:
-  // For RV32:
-  //   - No F and no D: Zca alone implies C
-  //   - F but no D: Zca + Zcf/Y implies C
-  //   - F and D: Zca + Zcf/Y + Zcd implies C
-  // For RV64:
-  //   - No D: Zca alone implies C
-  //   - D: Zca + Zcd/Y implies C
-  if (!STI.hasFeature(RISCV::FeatureStdExtC) &&
-      STI.hasFeature(RISCV::FeatureStdExtZca)) {
-    bool ShouldAddC;
-    if (!STI.hasFeature(RISCV::Feature64Bit))
-      ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
-                    STI.hasFeature(RISCV::FeatureStdExtZcd)) &&
-                   (STI.hasFeature(RISCV::FeatureStdExtY) ||
-                    !STI.hasFeature(RISCV::FeatureStdExtF) ||
-                    STI.hasFeature(RISCV::FeatureStdExtZcf));
-    else
-      ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtY) ||
-                   !STI.hasFeature(RISCV::FeatureStdExtD) ||
-                   STI.hasFeature(RISCV::FeatureStdExtZcd);
-    if (ShouldAddC)
-      STI.ToggleFeature(RISCV::FeatureStdExtC);
-  }
-
-  // Add Zce if Zca+Zcb+Zcmp+Zcmt are enabled and the conditions are met.
-  // For RV32:
-  //   - No F and no D: Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf/Y implies Zce
-  // For RV64:
-  //   - Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  //   - Note: RV64Y is incompatible with Zcmp/Zcmt, never implies Zce
-  if (!STI.hasFeature(RISCV::FeatureStdExtZce) &&
-      STI.hasFeature(RISCV::FeatureStdExtZca) &&
-      STI.hasFeature(RISCV::FeatureStdExtZcb) &&
-      STI.hasFeature(RISCV::FeatureStdExtZcmp) &&
-      STI.hasFeature(RISCV::FeatureStdExtZcmt)) {
-    if (STI.hasFeature(RISCV::Feature64Bit) ||
-        STI.hasFeature(RISCV::FeatureStdExtY) ||
-        !STI.hasFeature(RISCV::FeatureStdExtF) ||
-        STI.hasFeature(RISCV::FeatureStdExtZcf))
-      STI.ToggleFeature(RISCV::FeatureStdExtZce);
-  }
+  // We don't infer C or Zce because no code should be looking at those
+  // subtarget feature flags and they can cause issues like #229758.
 }
 
 static MCSubtargetInfo *
@@ -471,6 +433,7 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMC() {
+  static opt::RegisterLibraryOptions<RISCVMCOptions> O;
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target(),
                     &getTheRISCV32beTarget(), &getTheRISCV64beTarget()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);

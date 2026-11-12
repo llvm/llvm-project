@@ -71,10 +71,8 @@ public:
     return (*this)(component.base());
   }
   // Prevent integer division by known zeroes in constant expressions.
-  template <int KIND>
-  bool operator()(
-      const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
-    using T = Type<TypeCategory::Integer, KIND>;
+  bool operator()(const Divide<Type<TypeCategory::Integer>> &division) const {
+    using T = Type<TypeCategory::Integer>;
     if ((*this)(division.left()) && (*this)(division.right())) {
       const auto divisor{GetScalarConstantValue<T>(division.right())};
       return !divisor || !divisor->IsZero();
@@ -83,7 +81,9 @@ public:
     }
   }
 
-  bool operator()(const Constant<SomeDerived> &) const { return true; }
+  bool operator()(const Constant<Type<TypeCategory::Derived>> &) const {
+    return true;
+  }
   bool operator()(const DescriptorInquiry &x) const {
     const Symbol &sym{x.base().GetLastSymbol()};
     return INVARIANT && !IsAllocatable(sym) &&
@@ -220,7 +220,6 @@ template <typename A> bool IsConstantExpr(const A &x, const FoldingContext *c) {
   return IsConstantExprHelper<false>{c}(x);
 }
 template bool IsConstantExpr(const Expr<SomeType> &, const FoldingContext *);
-template bool IsConstantExpr(const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
@@ -233,8 +232,6 @@ bool IsScopeInvariantExpr(const A &x, const FoldingContext *c) {
 }
 template bool IsScopeInvariantExpr(
     const Expr<SomeType> &, const FoldingContext *);
-template bool IsScopeInvariantExpr(
-    const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsScopeInvariantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 
@@ -279,7 +276,6 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 }
 
 template bool IsActuallyConstant(const Expr<SomeType> &);
-template bool IsActuallyConstant(const Expr<SomeInteger> &);
 template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 template bool IsActuallyConstant(const std::optional<Expr<SubscriptInteger>> &);
 
@@ -481,9 +477,9 @@ public:
   SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
       : Base{*this}, kind_{kind}, context_{c} {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    const int kind{x.kind()};
+    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -492,9 +488,9 @@ public:
       return false;
     }
   }
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Complex>> &x) const {
+    const int kind{x.kind()};
+    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -503,13 +499,14 @@ public:
       return false;
     }
   }
-  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
-  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+  template <TypeCategory TOCAT, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT>, FROMCAT> &x) const {
+    const int toKind{x.kind()};
     if constexpr ((TOCAT == TypeCategory::Real ||
                       TOCAT == TypeCategory::Complex) &&
         (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
       auto fromType{x.left().GetType()};
-      if (!fromType || fromType->kind() < TOKIND) {
+      if (!fromType || fromType->kind() < toKind) {
         return false;
       }
     }
@@ -548,9 +545,8 @@ public:
   using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
   InexactLiteralConversionFlagClearer() : Base(*this) {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real> &>(x.result())};
     mut.set_isFromInexactLiteralConversion(false);
     return false;
   }
@@ -1013,16 +1009,10 @@ void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
 template void CheckSpecificationExpr(const Expr<SomeType> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const Expr<SomeInteger> &,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(
@@ -1858,7 +1848,7 @@ public:
     return {}; // doesn't count as a use
   }
   Result operator()(const RankOneBoundElement &x) const {
-    return {}; // unreachable
+    return (*this)(x.base());
   }
 
   template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {

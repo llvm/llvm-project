@@ -176,7 +176,7 @@ let test_bbinstr fty f f_di file_di dibuilder =
    *)
   let arg0 = (Llvm.params f).(0) in
   let arg1 = (Llvm.params f).(1) in
-  let builder = Llvm.builder_at_end context (Llvm.entry_block f) in
+  let builder = Llvm.builder_at_end (Llvm.entry_block f) in
   let zero = Llvm.const_int (Llvm.i32_type context) 0 in
   let cmpi = Llvm.build_icmp Llvm.Icmp.Ne zero arg0 "cmpi" builder in
   let truebb = Llvm.append_block context "truebb" f in
@@ -284,7 +284,7 @@ let test_variables f dibuilder file_di fun_di =
   stdout_metadata auto_var;
   (* CHECK: [[LOCAL_VAR_PTR:![0-9]+]] = !DILocalVariable(name: "my_local", scope: [[SBPRG_PTR]], file: [[FILE_PTR]], line: 10, type: [[INT64TY_PTR]])
   *)
-  let builder = Llvm.builder_before context entry_term in
+  let builder = Llvm.builder_before entry_term in
   let all = Llvm.build_alloca (Llvm.i64_type context)  "my_alloca" builder in
   let scope =
     Llvm_debuginfo.dibuild_create_lexical_block dibuilder ~scope:fun_di

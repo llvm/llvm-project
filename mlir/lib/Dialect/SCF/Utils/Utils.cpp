@@ -513,6 +513,15 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     auto upperBound = forOp.getUpperBound();
     Value diff =
         arith::SubIOp::create(boundsBuilder, loc, upperBound, lowerBound);
+    Value zero = arith::ConstantOp::create(
+        boundsBuilder, loc, boundsBuilder.getZeroAttr(diff.getType()));
+    Value nonEmpty = arith::CmpIOp::create(boundsBuilder, loc,
+                                           forOp.getUnsignedCmp()
+                                               ? arith::CmpIPredicate::ult
+                                               : arith::CmpIPredicate::slt,
+                                           lowerBound, upperBound);
+    diff = arith::SelectOp::create(boundsBuilder, loc, nonEmpty, diff, zero);
+
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
     Value unrollFactorCst = arith::ConstantOp::create(
         boundsBuilder, loc,
@@ -522,11 +531,11 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
     Value tripCountEvenMultiple =
         arith::SubIOp::create(boundsBuilder, loc, tripCount, tripCountRem);
-    // Compute upperBoundUnrolled = lowerBound + tripCountEvenMultiple * step
+    // Compute upperBoundUnrolled = UpperBound + tripCountEvenMultiple * step
     upperBoundUnrolled = arith::AddIOp::create(
         boundsBuilder, loc, lowerBound,
         arith::MulIOp::create(boundsBuilder, loc, tripCountEvenMultiple, step));
-    // Scale 'step' by 'unrollFactor'.
+    // Compute stepUnrolled = step * unrollFactor
     stepUnrolled =
         arith::MulIOp::create(boundsBuilder, loc, step, unrollFactorCst);
   }

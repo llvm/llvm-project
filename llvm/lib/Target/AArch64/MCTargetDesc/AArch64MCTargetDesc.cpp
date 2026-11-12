@@ -357,7 +357,7 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
                                      Options);
   else if (TheTriple.isOSBinFormatELF())
     MAI = new AArch64MCAsmInfoELF(TheTriple, Options);
-  else if (TheTriple.isWindowsMSVCEnvironment())
+  else if (TheTriple.isWindowsMSVCEnvironment() || TheTriple.isUEFI())
     MAI = new AArch64MCAsmInfoMicrosoftCOFF(Options);
   else if (TheTriple.isOSBinFormatCOFF())
     MAI = new AArch64MCAsmInfoGNUCOFF(Options);

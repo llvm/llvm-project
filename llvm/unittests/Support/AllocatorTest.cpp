@@ -9,6 +9,7 @@
 #include "llvm/Support/Allocator.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
+#include <utility>
 
 using namespace llvm;
 
@@ -323,6 +324,27 @@ TEST(AllocatorTest, TestOverAlignedSpecific) {
     }
   }
   EXPECT_EQ(4u, NumDtorCalls);
+}
+
+TEST(AllocatorTest, TestSpecificMoveAssignment) {
+  struct S {
+    unsigned &Calls;
+    ~S() { ++Calls; }
+  };
+  unsigned OldDtorCalls = 0;
+  unsigned NewDtorCalls = 0;
+  {
+    SpecificBumpPtrAllocator<S> Alloc;
+    SpecificBumpPtrAllocator<S> Other;
+    new (Alloc.Allocate()) S{OldDtorCalls};
+    new (Other.Allocate()) S{NewDtorCalls};
+
+    Alloc = std::move(Other);
+    EXPECT_EQ(1u, OldDtorCalls);
+    EXPECT_EQ(0u, NewDtorCalls);
+  }
+  EXPECT_EQ(1u, OldDtorCalls);
+  EXPECT_EQ(1u, NewDtorCalls);
 }
 
 }  // anonymous namespace

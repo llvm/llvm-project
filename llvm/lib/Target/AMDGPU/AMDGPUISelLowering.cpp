@@ -25,7 +25,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -33,11 +32,6 @@ using namespace llvm;
 
 #define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
-
-static cl::opt<bool> AMDGPUBypassSlowDiv(
-  "amdgpu-bypass-slow-div",
-  cl::desc("Skip 64-bit divide for dynamic 32-bit values"),
-  cl::init(true));
 
 // Find a larger type to do a load / store of a vector with.
 EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
@@ -59,6 +53,19 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
   // In order for this to be a signed 24-bit value, bit 23, must
   // be a sign bit.
   return DAG.ComputeMaxSignificantBits(Op);
+}
+
+KnownBits AMDGPUTargetLowering::computeKnownBitsForMul24(
+    const KnownBits &LHSKnown, const KnownBits &RHSKnown, unsigned BitWidth,
+    bool IsSigned, bool SelfMultiply) {
+  // Sign/Zero extend from 24 bits.
+  KnownBits LHS24 = LHSKnown.trunc(24);
+  KnownBits RHS24 = RHSKnown.trunc(24);
+  if (IsSigned)
+    return KnownBits::mul(LHS24.sext(BitWidth), RHS24.sext(BitWidth),
+                          SelfMultiply);
+  return KnownBits::mul(LHS24.zext(BitWidth), RHS24.zext(BitWidth),
+                        SelfMultiply);
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
@@ -156,19 +163,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::LOAD, MVT::i128, Promote);
   AddPromotedToType(ISD::LOAD, MVT::i128, MVT::v4i32);
-
-  // TODO: Would be better to consume as directly legal
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::f16, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::f16, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
 
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
@@ -475,9 +469,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, VT, Expand);
 
     setOperationAction({ISD::BSWAP, ISD::CTTZ, ISD::CTLZ}, VT, Expand);
-
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
-                       Expand);
   }
 
   // The hardware supports 32-bit FSHR, but not FSHL.
@@ -612,7 +603,7 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset  = 0xffffffff;
 
   // The expansion for 64-bit division is enormous.
-  if (AMDGPUBypassSlowDiv)
+  if (static_cast<const AMDGPUTargetMachine &>(TM).getCLOpts().bypass_slow_div)
     addBypassSlowDiv(64, 32);
 
   setTargetDAGCombine({ISD::BITCAST,    ISD::SHL,
@@ -796,9 +787,11 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 
 // The backend supports 32 and 64 bit floating point immediates.
 // FIXME: Why are we reporting vectors of FP immediates as legal?
-bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return isTypeLegal(VT.getScalarType());
+TargetLowering::FPImmAction
+AMDGPUTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return isTypeLegal(VT.getScalarType()) ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
 }
 
 // We don't want to shrink f64 / f32 constants.
@@ -4973,7 +4966,7 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
-  ISD::CondCode CCOpcode = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  ISD::CondCode CCOpcode = Cond.getOperandCondCode(2);
   SDValue CmpLHS = Cond.getOperand(0);
 
   // select (setcc x, 0, eq), -1, (ctlz_zero_poison x) -> ffbh_u32 x
@@ -6077,27 +6070,25 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
-    KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
-    unsigned BitWidth = Op.getScalarValueSizeInBits();
-
-    // Sign/Zero extend from 24 bits.
-    if (Opc == AMDGPUISD::MUL_I24) {
-      LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
-      RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
-    } else {
-      LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
-      RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
-    }
 
     // TODO: SelfMultiply can be poison, but not undef.
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
+
+    // For a self-multiply both operands are the same value, so RHSKnown also
+    // describes the LHS; avoid the duplicated query.
+    KnownBits LHSKnown =
+        SelfMultiply ? RHSKnown
+                     : DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+
     if (SelfMultiply)
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
           Depth + 1);
 
-    Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
+    Known = computeKnownBitsForMul24(LHSKnown, RHSKnown,
+                                     Op.getScalarValueSizeInBits(),
+                                     Opc == AMDGPUISD::MUL_I24, SelfMultiply);
     break;
   }
   case AMDGPUISD::PERM: {

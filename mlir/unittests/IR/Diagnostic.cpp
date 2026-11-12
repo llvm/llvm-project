@@ -7,17 +7,57 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
+#include <limits>
 #include <memory>
+#include <numeric>
+#include <string>
+#include <vector>
 
 using namespace mlir;
 using namespace mlir::detail;
 
 namespace {
+TEST(Diagnostic, SignedIntegerArguments) {
+  MLIRContext context;
+  Diagnostic diagnostic(UnknownLoc::get(&context), DiagnosticSeverity::Note);
+  const int64_t min = std::numeric_limits<int64_t>::min();
+  const int64_t max = std::numeric_limits<int64_t>::max();
+  diagnostic << min << ", " << max;
+
+  ArrayRef<DiagnosticArgument> arguments = diagnostic.getArguments();
+  ASSERT_EQ(arguments.size(), 3u);
+  ASSERT_EQ(arguments[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Integer);
+  ASSERT_EQ(arguments[2].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Integer);
+  EXPECT_EQ(arguments[0].getAsInteger(), min);
+  EXPECT_EQ(arguments[2].getAsInteger(), max);
+  EXPECT_EQ(diagnostic.str(), "-9223372036854775808, 9223372036854775807");
+}
+
+TEST(Diagnostic, UnsignedIntegerArguments) {
+  MLIRContext context;
+  Diagnostic diagnostic(UnknownLoc::get(&context), DiagnosticSeverity::Note);
+  const uint64_t large = uint64_t{1} << 32;
+  const uint64_t max = std::numeric_limits<uint64_t>::max();
+  diagnostic << large << ", " << max;
+
+  ArrayRef<DiagnosticArgument> arguments = diagnostic.getArguments();
+  ASSERT_EQ(arguments.size(), 3u);
+  ASSERT_EQ(arguments[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Unsigned);
+  ASSERT_EQ(arguments[2].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::Unsigned);
+  EXPECT_EQ(arguments[0].getAsUnsigned(), large);
+  EXPECT_EQ(arguments[2].getAsUnsigned(), max);
+  EXPECT_EQ(diagnostic.str(), "4294967296, 18446744073709551615");
+}
 
 TEST(DiagnosticLifetime, TestCopiesConstCharStar) {
   const auto *expectedMessage = "Error 1, don't mutate this";
@@ -64,6 +104,23 @@ TEST(DiagnosticLifetime, TestLazyCopyStringLiteral) {
   ASSERT_STREQ("^rror 1, mutate this", resultMessage.c_str());
 }
 
+TEST(DiagnosticLifetime, TestMetadataOwnsStringArgument) {
+  mlir::MLIRContext context;
+  Diagnostic diagnostic(mlir::UnknownLoc::get(&context),
+                        DiagnosticSeverity::Note);
+  {
+    std::string value = "metadata value";
+    diagnostic.getMetadata().push_back(diagnostic.getStringArgument(value));
+    value[0] = '^';
+  }
+
+  ArrayRef<DiagnosticArgument> metadata = diagnostic.getMetadata();
+  ASSERT_EQ(metadata.size(), 1u);
+  ASSERT_EQ(metadata[0].getKind(),
+            DiagnosticArgument::DiagnosticArgumentKind::String);
+  EXPECT_EQ(metadata[0].getAsString(), "metadata value");
+}
+
 // Register counting handlers first so they receive diagnostics only after
 // the verifier's registration is erased.
 
@@ -102,6 +159,143 @@ TEST(SourceMgrDiagnosticVerifierHandler, ErasesOwnRegistration) {
   }
   emitRemark(UnknownLoc::get(&own), "after the verifier");
   EXPECT_EQ(seen, 1u);
+}
+
+TEST(ParallelDiagnosticHandler, NestedStackPreservesOrder) {
+  MLIRContext ctx;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  {
+    ParallelDiagnosticHandler outer(&ctx);
+    outer.setOrderIDForThread(1);
+    {
+      ParallelDiagnosticHandler inner(&ctx);
+      // Outer sits at the bottom of the stack, so inner pushes above it.
+      // Inner ids are deliberately disjoint from outer's 0/1.
+      inner.setOrderIDForThread(12);
+      emitError(UnknownLoc::get(&ctx), "inner-12");
+      inner.setOrderIDForThread(11);
+      emitError(UnknownLoc::get(&ctx), "inner-11");
+      inner.eraseOrderIDForThread();
+    } // inner emits sorted: inner-11, inner-12.
+    // Inner popped, so outer is on top again: the inner flush was
+    // attributed to outer's element, and this is held with id 1, so the
+    // id-0 diagnostic below sorts first.
+    emitError(UnknownLoc::get(&ctx), "outer-A");
+    outer.setOrderIDForThread(0);
+    emitError(UnknownLoc::get(&ctx), "outer-B");
+    outer.eraseOrderIDForThread();
+  } // outer emits sorted: outer-B, then the id-1 group in arrival order.
+  ASSERT_EQ(seen.size(), 4u);
+  EXPECT_NE(seen[0].find("outer-B"), std::string::npos);
+  EXPECT_NE(seen[1].find("inner-11"), std::string::npos);
+  EXPECT_NE(seen[2].find("inner-12"), std::string::npos);
+  EXPECT_NE(seen[3].find("outer-A"), std::string::npos);
+}
+
+TEST(ParallelDiagnosticHandler, DeepNestingOverflowPreservesOrder) {
+  MLIRContext ctx;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  // Five nested handlers: the thread-local stack holds four, so the
+  // innermost falls back to the map.
+  constexpr unsigned kDepth = 5;
+  std::vector<std::unique_ptr<ParallelDiagnosticHandler>> handlers;
+  for (unsigned i = 0; i < kDepth; ++i) {
+    handlers.push_back(std::make_unique<ParallelDiagnosticHandler>(&ctx));
+    handlers.back()->setOrderIDForThread(0);
+  }
+  handlers.back()->setOrderIDForThread(2);
+  emitError(UnknownLoc::get(&ctx), "x-2");
+  handlers.back()->setOrderIDForThread(1);
+  emitError(UnknownLoc::get(&ctx), "x-1");
+  for (auto it = handlers.rbegin(); it != handlers.rend(); ++it)
+    (*it)->eraseOrderIDForThread();
+  // Destroy innermost first: the handler impl is a pretty-stack-trace entry,
+  // which requires LIFO destruction.
+  while (!handlers.empty())
+    handlers.pop_back();
+
+  ASSERT_EQ(seen.size(), 2u);
+  EXPECT_NE(seen[0].find("x-1"), std::string::npos);
+  EXPECT_NE(seen[1].find("x-2"), std::string::npos);
+}
+
+TEST(ParallelDiagnosticHandler, InterleavedNestingFindsDeeperEntry) {
+  MLIRContext ctx;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  {
+    ParallelDiagnosticHandler a(&ctx); // Registered first, fires last.
+    ParallelDiagnosticHandler b(&ctx); // Registered later, fires first.
+    // b's loop is outer on this thread, a's nested inside it: the stack
+    // holds b below a, so b's callback must scan past the top to find
+    // itself.
+    b.setOrderIDForThread(0);
+    a.setOrderIDForThread(7);
+    emitError(UnknownLoc::get(&ctx), "d1");
+    a.eraseOrderIDForThread();
+    b.setOrderIDForThread(1);
+    emitError(UnknownLoc::get(&ctx), "d2");
+    b.eraseOrderIDForThread();
+  } // b flushes both, sorted.
+
+  // b holds both, sorted: d1, d2. If b's lookup only saw the top of the
+  // stack, d1 would land in a and flush after d2.
+  ASSERT_EQ(seen.size(), 2u);
+  EXPECT_NE(seen[0].find("d1"), std::string::npos);
+  EXPECT_NE(seen[1].find("d2"), std::string::npos);
+}
+
+TEST(ParallelDiagnosticHandler, MultithreadedOrderingHonored) {
+  MLIRContext ctx;
+  // Element i emits "diag-i"; whatever the thread interleaving, the flush
+  // must come out in index order.
+  constexpr unsigned numElements = 1000;
+  std::vector<std::string> seen;
+  ScopedDiagnosticHandler capture(&ctx, [&](Diagnostic &diag) {
+    std::string msg;
+    llvm::raw_string_ostream os(msg);
+    diag.print(os);
+    seen.push_back(msg);
+    return success();
+  });
+
+  std::vector<unsigned> indices(numElements);
+  std::iota(indices.begin(), indices.end(), 0);
+  ASSERT_TRUE(succeeded(
+      failableParallelForEach(&ctx, indices, [&](unsigned i) -> LogicalResult {
+        emitError(UnknownLoc::get(&ctx), "diag-" + Twine(i));
+        return success();
+      })));
+
+  ASSERT_EQ(seen.size(), numElements);
+  for (size_t i = 0; i < seen.size(); ++i) {
+    size_t pos = seen[i].find("diag-");
+    ASSERT_NE(pos, std::string::npos);
+    EXPECT_EQ(std::stoul(seen[i].substr(pos + 5)), i);
+  }
 }
 
 TEST(SourceMgrDiagnosticVerifierHandler, OutlivesRegisteredContext) {

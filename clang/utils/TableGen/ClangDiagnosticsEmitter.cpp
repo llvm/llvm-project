@@ -196,9 +196,8 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
 
       SMLoc Loc = Def->getLoc().front();
       if (First) {
-        SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error,
-                            Twine("group '") + Group.first +
-                                "' is defined more than once");
+        PrintError(Loc, Twine("group '") + Group.first +
+                            "' is defined more than once");
         First = false;
       } else {
         SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note, "also defined here");
@@ -211,9 +210,8 @@ static void groupDiagnostics(ArrayRef<const Record *> Diags,
 
       SMLoc Loc = Diag->getLoc().front();
       if (First) {
-        SrcMgr.PrintMessage(Loc, SourceMgr::DK_Error,
-                            Twine("group '") + Group.first +
-                                "' is implicitly defined more than once");
+        PrintError(Loc, Twine("group '") + Group.first +
+                            "' is implicitly defined more than once");
         First = false;
       } else {
         SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note,

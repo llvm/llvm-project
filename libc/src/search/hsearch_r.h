@@ -11,8 +11,8 @@
 
 #include "hdr/types/ACTION.h"
 #include "hdr/types/ENTRY.h"
+#include "hdr/types/struct_hsearch_data.h"
 #include "src/__support/macros/config.h"
-#include <search.h> // hsearch_data
 
 namespace LIBC_NAMESPACE_DECL {
 int hsearch_r(ENTRY item, ACTION action, ENTRY **retval,

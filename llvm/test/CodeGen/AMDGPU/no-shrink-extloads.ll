@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
@@ -206,7 +206,9 @@ entry:
 ; SI: buffer_load_dword v
 ; SI: buffer_store_dword v
 define amdgpu_kernel void @extract_hi_i64_bitcast_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) nounwind {
-  %ld = load <2 x i32>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <2 x i32>, ptr addrspace(1) %in, i32 %tid
+  %ld = load <2 x i32>, ptr addrspace(1) %in.tid
   %bc = bitcast <2 x i32> %ld to i64
   %hi = lshr i64 %bc, 32
   %trunc = trunc i64 %hi to i32

@@ -6,6 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The flang-rt unittests are built with -D_POSIX_C_SOURCE=200809 on Darwin,
+// which hides MAP_ANON/MAP_ANONYMOUS in <sys/mman.h>. The /dev/zero fallback
+// below doesn't work on Darwin (mmap of /dev/zero fails with ENODEV), so
+// re-expose the Darwin extensions, as trampoline.cpp does.
+#if defined(__APPLE__) && !defined(_DARWIN_C_SOURCE)
+#define _DARWIN_C_SOURCE
+#endif
+
 #include "flang/Runtime/assign.h"
 #include "CrashHandlerFixture.h"
 #include "tools.h"

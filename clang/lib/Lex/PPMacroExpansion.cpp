@@ -2018,12 +2018,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     }
 
     // Discard the ')', preserving 'Tok' as our result.
-    Token RParen;
-    LexNonComment(RParen);
-    if (RParen.isNot(tok::r_paren)) {
+    Token Next;
+    LexNonComment(Next);
+    if (Next.isNot(tok::r_paren)) {
       Diag(getLocForEndOfToken(Tok.getLocation()), diag::err_pp_expected_after)
         << Tok.getKind() << tok::r_paren;
       Diag(LParenLoc, diag::note_matching) << tok::l_paren;
+      if (Next.isOneOf(tok::eof, tok::eod) || Next.isAnnotation())
+        Tok = Next;
     }
     return;
   } else if (II == Ident__is_target_arch) {

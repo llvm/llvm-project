@@ -1138,24 +1138,33 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         if (!Op)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         StringRef CombineType = Op->getDef()->getName();
-        if (CombineType != "any_of" && CombineType != "all_of")
+        if (CombineType != "any_of" && CombineType != "all_of" &&
+            CombineType != "none_of")
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         if (D->getNumArgs() == 0)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         bool IsOr = CombineType == "any_of";
+        bool IsNone = CombineType == "none_of";
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
+        // Also allow (any_of FeatureAll, (all_of FeatureX)) if the all_of has
+        // a single feature.
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
           const DagInit *RHS = cast<DagInit>(D->getArg(1));
-          SmallVector<std::pair<const Init *, const StringInit *>> Args{
-              *D->getArgAndNames().begin()};
-          llvm::append_range(Args, RHS->getArgAndNames());
-          D = DagInit::get(D->getOperator(), Args);
+          if (RHS->getOperator()->getAsString() == "any_of" ||
+              (RHS->getOperator()->getAsString() == "all_of" &&
+               RHS->getNumArgs() == 1)) {
+            SmallVector<std::pair<const Init *, const StringInit *>> Args{
+                *D->getArgAndNames().begin()};
+            llvm::append_range(Args, RHS->getArgAndNames());
+            D = DagInit::get(D->getOperator(), Args);
+          }
         }
 
         for (auto *Arg : D->getArgs()) {
-          bool IsNeg = false;
+          bool IsNeg = IsNone;
           if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-            if (NotArg->getOperator()->getAsString() != "not" ||
+            std::string NotOp = NotArg->getOperator()->getAsString();
+            if (IsNone || (NotOp != "not" && NotOp != "none_of") ||
                 NotArg->getNumArgs() != 1)
               PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
             Arg = NotArg->getArg(0);

@@ -48,8 +48,8 @@ MCSymbol *AArch64MCInstLower::GetGlobalValueSymbol(const GlobalValue *GV,
   if (!TheTriple.isOSBinFormatCOFF())
     return Printer.getSymbolPreferLocal(*GV);
 
-  assert(TheTriple.isOSWindows() &&
-         "Windows is the only supported COFF target");
+  assert(TheTriple.isOSWindowsOrUEFI() &&
+         "Windows and UEFI are the only supported COFF targets");
 
   bool IsIndirect =
       (TargetFlags & (AArch64II::MO_DLLIMPORT | AArch64II::MO_COFFSTUB));

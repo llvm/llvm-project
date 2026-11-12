@@ -35,7 +35,7 @@ ld1d {za0h.d[w16, 0]}, p0/z, [x0]
 // Invalid vector select offset (expected: 0-1)
 
 ld1d {za0h.d[w12]}, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 1].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ld1d {za0h.d[w12]}, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
