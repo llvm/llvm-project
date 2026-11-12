@@ -146,10 +146,10 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__eqdf2(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__eqsf2(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__eqtf2(fp128, fp128)
-; SJLJ-NEXT: declare arm_aapcscc double @__exp2_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__exp2f_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc double @__exp_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__expf_finite(float)
+; SJLJ-NEXT: declare arm_aapcscc double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__exp_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__expf_finite(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @__extendbfsf2(bfloat)
 ; SJLJ-NEXT: declare arm_aapcscc fp128 @__extenddftf2(double)
 ; SJLJ-NEXT: declare arm_aapcscc double @__extendhfdf2(half)
@@ -233,12 +233,12 @@
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; SJLJ-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @__log10_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__log10f_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc double @__log2_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__log2f_finite(float)
-; SJLJ-NEXT: declare arm_aapcscc double @__log_finite(double)
-; SJLJ-NEXT: declare arm_aapcscc float @__logf_finite(float)
+; SJLJ-NEXT: declare arm_aapcscc double @__log10_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__log10f_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__log2_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__log2f_finite(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__log_finite(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__logf_finite(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__lshrdi3(i64, i32)
 ; SJLJ-NEXT: declare arm_aapcscc signext i16 @__lshrhi3(i16 signext, i32)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__lshrsi3(i32, i32)
@@ -269,11 +269,11 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountdi2(i64)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountsi2(i32)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__popcountti2(i128)
-; SJLJ-NEXT: declare arm_aapcscc double @__pow_finite(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @__powf_finite(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
+; SJLJ-NEXT: declare arm_aapcscc double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @__powidf2(double, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @__powisf2(float, i32) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc float @__subsf3(float, float)
@@ -359,127 +359,129 @@
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__unorddf2(double, double)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__unordsf2(float, float)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__unordtf2(fp128, fp128)
-; SJLJ-NEXT: declare arm_aapcscc double @acos(double)
-; SJLJ-NEXT: declare arm_aapcscc float @acosf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @asin(double)
-; SJLJ-NEXT: declare arm_aapcscc float @asinf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @atan(double)
-; SJLJ-NEXT: declare arm_aapcscc double @atan2(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @atan2f(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @atanf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @acos(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @acosf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @asin(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @asinf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @atan(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @atan2(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @atan2f(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @atanf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @cabs(...)
 ; SJLJ-NEXT: declare arm_aapcscc void @cabsf(...)
 ; SJLJ-NEXT: declare arm_aapcscc noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @cbrt(double)
-; SJLJ-NEXT: declare arm_aapcscc float @cbrtf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @ceil(double)
-; SJLJ-NEXT: declare arm_aapcscc float @ceilf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @copysign(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @copysignf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @cos(double)
-; SJLJ-NEXT: declare arm_aapcscc float @cosf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @cosh(double)
-; SJLJ-NEXT: declare arm_aapcscc float @coshf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @exp(double)
-; SJLJ-NEXT: declare arm_aapcscc double @exp10(double)
-; SJLJ-NEXT: declare arm_aapcscc float @exp10f(float)
-; SJLJ-NEXT: declare arm_aapcscc double @exp2(double)
-; SJLJ-NEXT: declare arm_aapcscc float @exp2f(float)
-; SJLJ-NEXT: declare arm_aapcscc float @expf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @fdim(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fdimf(float, float)
+; SJLJ-NEXT: declare arm_aapcscc double @cbrt(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @cbrtf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @ceil(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @ceilf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @copysign(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @copysignf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @cos(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @cosf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @cosh(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @coshf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @exp(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @exp10(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @exp10f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @exp2(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @exp2f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @expf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fdim(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fdimf(float, float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fegetenv(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fegetmode(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fesetenv(ptr)
 ; SJLJ-NEXT: declare arm_aapcscc i32 @fesetmode(ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @floor(double)
-; SJLJ-NEXT: declare arm_aapcscc float @floorf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @fma(double, double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaf(float, float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmax(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaxf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmaximum(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @fmaximum_num(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @fmaximumf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmin(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fminf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fminimum(double, double)
-; SJLJ-NEXT: declare arm_aapcscc double @fminimum_num(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fminimum_numf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc float @fminimumf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @fmod(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @fmodf(float, float)
+; SJLJ-NEXT: declare arm_aapcscc double @floor(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @floorf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fma(double, double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmax(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaxf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmaximum(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmaximum_num(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmaximumf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmin(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fminf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fminimum(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fminimum_num(double, double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fminimum_numf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fminimumf(float, float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @fmod(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @fmodf(float, float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; SJLJ-NEXT: declare arm_aapcscc double @ldexp(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llrint(double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llrintf(float)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llround(double)
-; SJLJ-NEXT: declare arm_aapcscc i64 @llroundf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @log(double)
-; SJLJ-NEXT: declare arm_aapcscc double @log10(double)
-; SJLJ-NEXT: declare arm_aapcscc float @log10f(float)
-; SJLJ-NEXT: declare arm_aapcscc double @log2(double)
-; SJLJ-NEXT: declare arm_aapcscc float @log2f(float)
-; SJLJ-NEXT: declare arm_aapcscc float @logf(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lrint(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lrintf(float)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lround(double)
-; SJLJ-NEXT: declare arm_aapcscc i32 @lroundf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @ldexp(double, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llrint(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llrintf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llround(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i64 @llroundf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @log(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @log10(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @log10f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @log2(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @log2f(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @logf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lrint(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lrintf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lround(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc i32 @lroundf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
 ; SJLJ-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; SJLJ-NEXT: declare arm_aapcscc double @nan(ptr)
-; SJLJ-NEXT: declare arm_aapcscc float @nanf(ptr)
-; SJLJ-NEXT: declare arm_aapcscc double @nearbyint(double)
-; SJLJ-NEXT: declare arm_aapcscc float @nearbyintf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @nexttoward(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @nexttowardf(float, double)
-; SJLJ-NEXT: declare arm_aapcscc double @pow(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @powf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @remainder(double, double)
-; SJLJ-NEXT: declare arm_aapcscc float @remainderf(float, float)
-; SJLJ-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; SJLJ-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; SJLJ-NEXT: declare arm_aapcscc double @rint(double)
-; SJLJ-NEXT: declare arm_aapcscc float @rintf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @round(double)
-; SJLJ-NEXT: declare arm_aapcscc double @roundeven(double)
-; SJLJ-NEXT: declare arm_aapcscc float @roundevenf(float)
-; SJLJ-NEXT: declare arm_aapcscc float @roundf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @scalbln(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @scalblnf(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @scalbn(double, i32)
-; SJLJ-NEXT: declare arm_aapcscc float @scalbnf(float, i32)
-; SJLJ-NEXT: declare arm_aapcscc double @sin(double)
-; SJLJ-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; SJLJ-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; SJLJ-NEXT: declare arm_aapcscc float @sinf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @sinh(double)
-; SJLJ-NEXT: declare arm_aapcscc float @sinhf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @nearbyint(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @nearbyintf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @nexttoward(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @pow(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @powf(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @remainder(double, double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @remainderf(float, float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @rint(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @rintf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @round(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @roundeven(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @roundevenf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @roundf(float) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @scalbln(double, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @scalbn(double, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @sin(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @sinf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @sinh(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @sinhf(float) [[SQRT_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; SJLJ-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; SJLJ-NEXT: declare arm_aapcscc double @tan(double)
-; SJLJ-NEXT: declare arm_aapcscc float @tanf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @tanh(double)
-; SJLJ-NEXT: declare arm_aapcscc float @tanhf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @tgamma(double)
-; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float)
-; SJLJ-NEXT: declare arm_aapcscc double @trunc(double)
-; SJLJ-NEXT: declare arm_aapcscc float @truncf(float)
+; SJLJ-NEXT: declare arm_aapcscc double @tan(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @tanf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @tanh(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @tanhf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @tgamma(double) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
 ; SJLJ-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; SJLJ-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; SJLJ-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; SJLJ-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; SJLJ-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
 
 ; DWARF: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; DWARF-NEXT: @__stack_chk_guard = external global ptr
@@ -620,10 +622,10 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__eqdf2(double, double)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__eqsf2(float, float)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__eqtf2(fp128, fp128)
-; DWARF-NEXT: declare arm_aapcscc double @__exp2_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__exp2f_finite(float)
-; DWARF-NEXT: declare arm_aapcscc double @__exp_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__expf_finite(float)
+; DWARF-NEXT: declare arm_aapcscc double @__exp2_finite(double) [[SQRT_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc float @__exp2f_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__exp_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__expf_finite(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @__extendbfsf2(bfloat)
 ; DWARF-NEXT: declare arm_aapcscc fp128 @__extenddftf2(double)
 ; DWARF-NEXT: declare arm_aapcscc double @__extendhfdf2(half)
@@ -707,12 +709,12 @@
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_2(ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_4(ptr, i32, i32)
 ; DWARF-NEXT: declare arm_aapcscc void @__llvm_memset_element_unordered_atomic_8(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc double @__log10_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__log10f_finite(float)
-; DWARF-NEXT: declare arm_aapcscc double @__log2_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__log2f_finite(float)
-; DWARF-NEXT: declare arm_aapcscc double @__log_finite(double)
-; DWARF-NEXT: declare arm_aapcscc float @__logf_finite(float)
+; DWARF-NEXT: declare arm_aapcscc double @__log10_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__log10f_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__log2_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__log2f_finite(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__log_finite(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__logf_finite(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i64 @__lshrdi3(i64, i32)
 ; DWARF-NEXT: declare arm_aapcscc signext i16 @__lshrhi3(i16 signext, i32)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__lshrsi3(i32, i32)
@@ -743,11 +745,11 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__popcountdi2(i64)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__popcountsi2(i32)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__popcountti2(i128)
-; DWARF-NEXT: declare arm_aapcscc double @__pow_finite(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @__powf_finite(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32)
-; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32)
+; DWARF-NEXT: declare arm_aapcscc double @__pow_finite(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__powf_finite(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @__powidf2(double, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @__powisf2(float, i32) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc fp128 @__powitf2(fp128, i32) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc double @__subdf3(double, double)
 ; DWARF-NEXT: declare arm_aapcscc float @__subsf3(float, float)
@@ -833,124 +835,126 @@
 ; DWARF-NEXT: declare arm_aapcscc i32 @__unorddf2(double, double)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__unordsf2(float, float)
 ; DWARF-NEXT: declare arm_aapcscc i32 @__unordtf2(fp128, fp128)
-; DWARF-NEXT: declare arm_aapcscc double @acos(double)
-; DWARF-NEXT: declare arm_aapcscc float @acosf(float)
-; DWARF-NEXT: declare arm_aapcscc double @asin(double)
-; DWARF-NEXT: declare arm_aapcscc float @asinf(float)
-; DWARF-NEXT: declare arm_aapcscc double @atan(double)
-; DWARF-NEXT: declare arm_aapcscc double @atan2(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @atan2f(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @atanf(float)
+; DWARF-NEXT: declare arm_aapcscc double @acos(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @acosf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @asin(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @asinf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @atan(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @atan2(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @atan2f(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @atanf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @cabs(...)
 ; DWARF-NEXT: declare arm_aapcscc void @cabsf(...)
 ; DWARF-NEXT: declare arm_aapcscc noalias noundef ptr @calloc(i32 noundef, i32 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @cbrt(double)
-; DWARF-NEXT: declare arm_aapcscc float @cbrtf(float)
-; DWARF-NEXT: declare arm_aapcscc double @ceil(double)
-; DWARF-NEXT: declare arm_aapcscc float @ceilf(float)
-; DWARF-NEXT: declare arm_aapcscc double @copysign(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @copysignf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @cos(double)
-; DWARF-NEXT: declare arm_aapcscc float @cosf(float)
-; DWARF-NEXT: declare arm_aapcscc double @cosh(double)
-; DWARF-NEXT: declare arm_aapcscc float @coshf(float)
-; DWARF-NEXT: declare arm_aapcscc double @exp(double)
-; DWARF-NEXT: declare arm_aapcscc double @exp10(double)
-; DWARF-NEXT: declare arm_aapcscc float @exp10f(float)
-; DWARF-NEXT: declare arm_aapcscc double @exp2(double)
-; DWARF-NEXT: declare arm_aapcscc float @exp2f(float)
-; DWARF-NEXT: declare arm_aapcscc float @expf(float)
-; DWARF-NEXT: declare arm_aapcscc double @fdim(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fdimf(float, float)
+; DWARF-NEXT: declare arm_aapcscc double @cbrt(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @cbrtf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @ceil(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @ceilf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @copysign(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @copysignf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @cos(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @cosf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @cosh(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @coshf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @exp(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @exp10(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @exp10f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @exp2(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @exp2f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @expf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fdim(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fdimf(float, float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @fegetenv(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @fegetmode(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @fesetenv(ptr)
 ; DWARF-NEXT: declare arm_aapcscc i32 @fesetmode(ptr)
-; DWARF-NEXT: declare arm_aapcscc double @floor(double)
-; DWARF-NEXT: declare arm_aapcscc float @floorf(float)
-; DWARF-NEXT: declare arm_aapcscc double @fma(double, double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmaf(float, float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmax(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmaxf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmaximum(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @fmaximum_num(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @fmaximumf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmin(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fminf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fminimum(double, double)
-; DWARF-NEXT: declare arm_aapcscc double @fminimum_num(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fminimum_numf(float, float)
-; DWARF-NEXT: declare arm_aapcscc float @fminimumf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @fmod(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @fmodf(float, float)
+; DWARF-NEXT: declare arm_aapcscc double @floor(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @floorf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fma(double, double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaf(float, float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmax(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaxf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmaximum(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmaximum_num(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaximum_numf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmaximumf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmin(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fminf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fminimum(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fminimum_num(double, double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fminimum_numf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fminimumf(float, float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @fmod(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @fmodf(float, float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @free(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; DWARF-NEXT: declare arm_aapcscc double @ldexp(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @ldexpf(float, i32)
-; DWARF-NEXT: declare arm_aapcscc i64 @llrint(double)
-; DWARF-NEXT: declare arm_aapcscc i64 @llrintf(float)
-; DWARF-NEXT: declare arm_aapcscc i64 @llround(double)
-; DWARF-NEXT: declare arm_aapcscc i64 @llroundf(float)
-; DWARF-NEXT: declare arm_aapcscc double @log(double)
-; DWARF-NEXT: declare arm_aapcscc double @log10(double)
-; DWARF-NEXT: declare arm_aapcscc float @log10f(float)
-; DWARF-NEXT: declare arm_aapcscc double @log2(double)
-; DWARF-NEXT: declare arm_aapcscc float @log2f(float)
-; DWARF-NEXT: declare arm_aapcscc float @logf(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @lrint(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @lrintf(float)
-; DWARF-NEXT: declare arm_aapcscc i32 @lround(double)
-; DWARF-NEXT: declare arm_aapcscc i32 @lroundf(float)
+; DWARF-NEXT: declare arm_aapcscc double @frexp(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @frexpf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @ldexp(double, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @ldexpf(float, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llrint(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llrintf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llround(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i64 @llroundf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @log(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @log10(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @log10f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @log2(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @log2f(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @logf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lrint(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lrintf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lround(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc i32 @lroundf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc noalias noundef ptr @malloc(i32 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc ptr @memcpy(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @memmove(ptr, ptr, i32)
 ; DWARF-NEXT: declare arm_aapcscc ptr @memset(ptr, i32, i32)
-; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; DWARF-NEXT: declare arm_aapcscc double @nan(ptr)
-; DWARF-NEXT: declare arm_aapcscc float @nanf(ptr)
-; DWARF-NEXT: declare arm_aapcscc double @nearbyint(double)
-; DWARF-NEXT: declare arm_aapcscc float @nearbyintf(float)
-; DWARF-NEXT: declare arm_aapcscc double @nexttoward(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @nexttowardf(float, double)
-; DWARF-NEXT: declare arm_aapcscc double @pow(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @powf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @remainder(double, double)
-; DWARF-NEXT: declare arm_aapcscc float @remainderf(float, float)
-; DWARF-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; DWARF-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; DWARF-NEXT: declare arm_aapcscc double @rint(double)
-; DWARF-NEXT: declare arm_aapcscc float @rintf(float)
-; DWARF-NEXT: declare arm_aapcscc double @round(double)
-; DWARF-NEXT: declare arm_aapcscc double @roundeven(double)
-; DWARF-NEXT: declare arm_aapcscc float @roundevenf(float)
-; DWARF-NEXT: declare arm_aapcscc float @roundf(float)
-; DWARF-NEXT: declare arm_aapcscc double @scalbln(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @scalblnf(float, i32)
-; DWARF-NEXT: declare arm_aapcscc double @scalbn(double, i32)
-; DWARF-NEXT: declare arm_aapcscc float @scalbnf(float, i32)
-; DWARF-NEXT: declare arm_aapcscc double @sin(double)
-; DWARF-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; DWARF-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; DWARF-NEXT: declare arm_aapcscc float @sinf(float)
-; DWARF-NEXT: declare arm_aapcscc double @sinh(double)
-; DWARF-NEXT: declare arm_aapcscc float @sinhf(float)
+; DWARF-NEXT: declare arm_aapcscc double @modf(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @modff(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) double @nan(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc nofpclass(snan inf zero sub norm) float @nanf(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @nearbyint(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @nearbyintf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @nexttoward(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @nexttowardf(float, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @pow(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @powf(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @remainder(double, double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @remainderf(float, float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @remquo(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc float @remquof(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @rint(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @rintf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @round(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @roundeven(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @roundevenf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @roundf(float) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @scalbln(double, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @scalblnf(float, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @scalbn(double, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @scalbnf(float, i32) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @sin(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @sincos(double, ptr noalias nonnull writeonly align 8 dereferenceable(8), ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @sincosf(float, ptr noalias nonnull writeonly align 4 dereferenceable(4), ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @sinf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @sinh(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @sinhf(float) [[SQRT_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) double @sqrt(double) [[SQRT_ATTRS:#[0-9]+]]
 ; DWARF-NEXT: declare arm_aapcscc nofpclass(ninf nsub nnorm) float @sqrtf(float) [[SQRT_ATTRS:#[0-9]+]]
-; DWARF-NEXT: declare arm_aapcscc double @tan(double)
-; DWARF-NEXT: declare arm_aapcscc float @tanf(float)
-; DWARF-NEXT: declare arm_aapcscc double @tanh(double)
-; DWARF-NEXT: declare arm_aapcscc float @tanhf(float)
-; DWARF-NEXT: declare arm_aapcscc double @tgamma(double)
-; DWARF-NEXT: declare arm_aapcscc float @tgammaf(float)
-; DWARF-NEXT: declare arm_aapcscc double @trunc(double)
-; DWARF-NEXT: declare arm_aapcscc float @truncf(float)
+; DWARF-NEXT: declare arm_aapcscc double @tan(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @tanf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @tanh(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @tanhf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @tgamma(double) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @tgammaf(float) [[SQRT_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc double @trunc(double) [[DIVMOD_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc float @truncf(float) [[DIVMOD_ATTRS]]
 ; DWARF-NEXT: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
+; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; DWARF-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; DWARF-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; DWARF-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; DWARF-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

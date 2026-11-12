@@ -194,10 +194,10 @@
 ; CHECK-NEXT: declare i32 @"#__eqdf2"(double, double)
 ; CHECK-NEXT: declare i32 @"#__eqsf2"(float, float)
 ; CHECK-NEXT: declare i32 @"#__eqtf2"(fp128, fp128)
-; CHECK-NEXT: declare double @"#__exp2_finite"(double)
-; CHECK-NEXT: declare float @"#__exp2f_finite"(float)
-; CHECK-NEXT: declare double @"#__exp_finite"(double)
-; CHECK-NEXT: declare float @"#__expf_finite"(float)
+; CHECK-NEXT: declare double @"#__exp2_finite"(double) [[SQRT_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare float @"#__exp2f_finite"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#__exp_finite"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#__expf_finite"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare float @"#__extendbfsf2"(bfloat)
 ; CHECK-NEXT: declare fp128 @"#__extenddftf2"(double)
 ; CHECK-NEXT: declare double @"#__extendhfdf2"(half)
@@ -280,12 +280,12 @@
 ; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_2"(ptr, i32, i64)
 ; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_4"(ptr, i32, i64)
 ; CHECK-NEXT: declare void @"#__llvm_memset_element_unordered_atomic_8"(ptr, i32, i64)
-; CHECK-NEXT: declare double @"#__log10_finite"(double)
-; CHECK-NEXT: declare float @"#__log10f_finite"(float)
-; CHECK-NEXT: declare double @"#__log2_finite"(double)
-; CHECK-NEXT: declare float @"#__log2f_finite"(float)
-; CHECK-NEXT: declare double @"#__log_finite"(double)
-; CHECK-NEXT: declare float @"#__logf_finite"(float)
+; CHECK-NEXT: declare double @"#__log10_finite"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#__log10f_finite"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#__log2_finite"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#__log2f_finite"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#__log_finite"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#__logf_finite"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare i64 @"#__lshrdi3"(i64, i32)
 ; CHECK-NEXT: declare signext i16 @"#__lshrhi3"(i16 signext, i32)
 ; CHECK-NEXT: declare i32 @"#__lshrsi3"(i32, i32)
@@ -316,9 +316,9 @@
 ; CHECK-NEXT: declare i32 @"#__popcountdi2"(i64)
 ; CHECK-NEXT: declare i32 @"#__popcountsi2"(i32)
 ; CHECK-NEXT: declare i32 @"#__popcountti2"(i128)
-; CHECK-NEXT: declare double @"#__pow_finite"(double, double)
-; CHECK-NEXT: declare float @"#__powf_finite"(float, float)
-; CHECK-NEXT: declare fp128 @"#__powitf2"(fp128, i32)
+; CHECK-NEXT: declare double @"#__pow_finite"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#__powf_finite"(float, float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare fp128 @"#__powitf2"(fp128, i32) [[NOMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare void @"#__security_check_cookie_arm64ec"(ptr)
 ; CHECK-NEXT: declare double @"#__subdf3"(double, double)
 ; CHECK-NEXT: declare float @"#__subsf3"(float, float)
@@ -405,118 +405,121 @@
 ; CHECK-NEXT: declare i32 @"#__unorddf2"(double, double)
 ; CHECK-NEXT: declare i32 @"#__unordsf2"(float, float)
 ; CHECK-NEXT: declare i32 @"#__unordtf2"(fp128, fp128)
-; CHECK-NEXT: declare double @"#acos"(double)
-; CHECK-NEXT: declare float @"#acosf"(float)
-; CHECK-NEXT: declare double @"#asin"(double)
-; CHECK-NEXT: declare float @"#asinf"(float)
-; CHECK-NEXT: declare double @"#atan"(double)
-; CHECK-NEXT: declare double @"#atan2"(double, double)
-; CHECK-NEXT: declare float @"#atan2f"(float, float)
-; CHECK-NEXT: declare float @"#atanf"(float)
+; CHECK-NEXT: declare double @"#acos"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#acosf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#asin"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#asinf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#atan"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#atan2"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#atan2f"(float, float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#atanf"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare void @"#cabs"(...)
 ; CHECK-NEXT: declare void @"#cabsf"(...)
 ; CHECK-NEXT: declare noalias noundef ptr @"#calloc"(i64 noundef, i64 noundef) [[CALLOC_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @"#cbrt"(double)
-; CHECK-NEXT: declare float @"#cbrtf"(float)
-; CHECK-NEXT: declare double @"#ceil"(double)
-; CHECK-NEXT: declare float @"#ceilf"(float)
-; CHECK-NEXT: declare double @"#copysign"(double, double)
-; CHECK-NEXT: declare float @"#copysignf"(float, float)
-; CHECK-NEXT: declare double @"#cos"(double)
-; CHECK-NEXT: declare float @"#cosf"(float)
-; CHECK-NEXT: declare double @"#cosh"(double)
-; CHECK-NEXT: declare float @"#coshf"(float)
-; CHECK-NEXT: declare double @"#exp"(double)
-; CHECK-NEXT: declare double @"#exp10"(double)
-; CHECK-NEXT: declare float @"#exp10f"(float)
-; CHECK-NEXT: declare double @"#exp2"(double)
-; CHECK-NEXT: declare float @"#exp2f"(float)
-; CHECK-NEXT: declare float @"#expf"(float)
-; CHECK-NEXT: declare double @"#fdim"(double, double)
-; CHECK-NEXT: declare float @"#fdimf"(float, float)
+; CHECK-NEXT: declare double @"#cbrt"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#cbrtf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#ceil"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#ceilf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#copysign"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#copysignf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#cos"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#cosf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#cosh"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#coshf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#exp"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#exp10"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#exp10f"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#exp2"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#exp2f"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#expf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#fdim"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#fdimf"(float, float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare i32 @"#fegetenv"(ptr)
 ; CHECK-NEXT: declare i32 @"#fegetmode"(ptr)
 ; CHECK-NEXT: declare i32 @"#fesetenv"(ptr)
 ; CHECK-NEXT: declare i32 @"#fesetmode"(ptr)
-; CHECK-NEXT: declare double @"#floor"(double)
-; CHECK-NEXT: declare float @"#floorf"(float)
-; CHECK-NEXT: declare double @"#fma"(double, double, double)
-; CHECK-NEXT: declare float @"#fmaf"(float, float, float)
-; CHECK-NEXT: declare double @"#fmax"(double, double)
-; CHECK-NEXT: declare float @"#fmaxf"(float, float)
-; CHECK-NEXT: declare double @"#fmaximum"(double, double)
-; CHECK-NEXT: declare double @"#fmaximum_num"(double, double)
-; CHECK-NEXT: declare float @"#fmaximum_numf"(float, float)
-; CHECK-NEXT: declare float @"#fmaximumf"(float, float)
-; CHECK-NEXT: declare double @"#fmin"(double, double)
-; CHECK-NEXT: declare float @"#fminf"(float, float)
-; CHECK-NEXT: declare double @"#fminimum"(double, double)
-; CHECK-NEXT: declare double @"#fminimum_num"(double, double)
-; CHECK-NEXT: declare float @"#fminimum_numf"(float, float)
-; CHECK-NEXT: declare float @"#fminimumf"(float, float)
-; CHECK-NEXT: declare double @"#fmod"(double, double)
-; CHECK-NEXT: declare float @"#fmodf"(float, float)
+; CHECK-NEXT: declare double @"#floor"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#floorf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fma"(double, double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#fmaf"(float, float, float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#fmax"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#fmaxf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fmaximum"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fmaximum_num"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#fmaximum_numf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#fmaximumf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fmin"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#fminf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fminimum"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fminimum_num"(double, double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#fminimum_numf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#fminimumf"(float, float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#fmod"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#fmodf"(float, float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare void @"#free"(ptr allocptr noundef captures(none)) [[FREE_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare double @"#frexp"(double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; CHECK-NEXT: declare double @"#ldexp"(double, i32)
-; CHECK-NEXT: declare i64 @"#llrint"(double)
-; CHECK-NEXT: declare i64 @"#llrintf"(float)
-; CHECK-NEXT: declare i64 @"#llround"(double)
-; CHECK-NEXT: declare i64 @"#llroundf"(float)
-; CHECK-NEXT: declare double @"#log"(double)
-; CHECK-NEXT: declare double @"#log10"(double)
-; CHECK-NEXT: declare float @"#log10f"(float)
-; CHECK-NEXT: declare double @"#log2"(double)
-; CHECK-NEXT: declare float @"#log2f"(float)
-; CHECK-NEXT: declare float @"#logf"(float)
-; CHECK-NEXT: declare i32 @"#lrint"(double)
-; CHECK-NEXT: declare i32 @"#lrintf"(float)
-; CHECK-NEXT: declare i32 @"#lround"(double)
-; CHECK-NEXT: declare i32 @"#lroundf"(float)
+; CHECK-NEXT: declare double @"#frexp"(double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @"#ldexp"(double, i32) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @"#llrint"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @"#llrintf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @"#llround"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i64 @"#llroundf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#log"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#log10"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#log10f"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#log2"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#log2f"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#logf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @"#lrint"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @"#lrintf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @"#lround"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare i32 @"#lroundf"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare noalias noundef ptr @"#malloc"(i64 noundef) [[MALLOC_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare ptr @"#memcpy"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#memmove"(ptr, ptr, i64)
 ; CHECK-NEXT: declare ptr @"#memset"(ptr, i32, i64)
-; CHECK-NEXT: declare double @"#modf"(double, ptr noalias nonnull writeonly align 8 dereferenceable(8))
-; CHECK-NEXT: declare float @"#modff"(float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; CHECK-NEXT: declare double @"#nan"(ptr)
-; CHECK-NEXT: declare float @"#nanf"(ptr)
-; CHECK-NEXT: declare double @"#nearbyint"(double)
-; CHECK-NEXT: declare float @"#nearbyintf"(float)
-; CHECK-NEXT: declare double @"#nexttoward"(double, double)
-; CHECK-NEXT: declare float @"#nexttowardf"(float, double)
-; CHECK-NEXT: declare double @"#pow"(double, double)
-; CHECK-NEXT: declare float @"#powf"(float, float)
-; CHECK-NEXT: declare double @"#remainder"(double, double)
-; CHECK-NEXT: declare float @"#remainderf"(float, float)
-; CHECK-NEXT: declare double @"#remquo"(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; CHECK-NEXT: declare float @"#remquof"(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4))
-; CHECK-NEXT: declare double @"#rint"(double)
-; CHECK-NEXT: declare float @"#rintf"(float)
-; CHECK-NEXT: declare double @"#round"(double)
-; CHECK-NEXT: declare double @"#roundeven"(double)
-; CHECK-NEXT: declare float @"#roundevenf"(float)
-; CHECK-NEXT: declare float @"#roundf"(float)
-; CHECK-NEXT: declare double @"#scalbln"(double, i32)
-; CHECK-NEXT: declare float @"#scalblnf"(float, i32)
-; CHECK-NEXT: declare double @"#scalbn"(double, i32)
-; CHECK-NEXT: declare float @"#scalbnf"(float, i32)
-; CHECK-NEXT: declare double @"#sin"(double)
-; CHECK-NEXT: declare float @"#sinf"(float)
-; CHECK-NEXT: declare double @"#sinh"(double)
-; CHECK-NEXT: declare float @"#sinhf"(float)
+; CHECK-NEXT: declare double @"#modf"(double, ptr noalias nonnull writeonly align 8 dereferenceable(8)) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare float @"#modff"(float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_WRITE_ATTRS]]
+; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) double @"#nan"(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare nofpclass(snan inf zero sub norm) float @"#nanf"(ptr readonly captures(none)) [[ARGMEM_READ_ATTRS]]
+; CHECK-NEXT: declare double @"#nearbyint"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#nearbyintf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#nexttoward"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#nexttowardf"(float, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#pow"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#powf"(float, float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#remainder"(double, double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#remainderf"(float, float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#remquo"(double, double, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS:#[0-9]+]]
+; CHECK-NEXT: declare float @"#remquof"(float, float, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[ARGMEM_ERRNO_WRITE_ATTRS]]
+; CHECK-NEXT: declare double @"#rint"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#rintf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#round"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#roundeven"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#roundevenf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#roundf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare double @"#scalbln"(double, i32) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#scalblnf"(float, i32) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#scalbn"(double, i32) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#scalbnf"(float, i32) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#sin"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#sinf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#sinh"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#sinhf"(float) [[SQRT_ATTRS]]
 ; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) double @"#sqrt"(double) [[SQRT_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare nofpclass(ninf nsub nnorm) float @"#sqrtf"(float) [[SQRT_ATTRS]]
-; CHECK-NEXT: declare double @"#tan"(double)
-; CHECK-NEXT: declare float @"#tanf"(float)
-; CHECK-NEXT: declare double @"#tanh"(double)
-; CHECK-NEXT: declare float @"#tanhf"(float)
-; CHECK-NEXT: declare double @"#tgamma"(double)
-; CHECK-NEXT: declare float @"#tgammaf"(float)
-; CHECK-NEXT: declare double @"#trunc"(double)
-; CHECK-NEXT: declare float @"#truncf"(float)
+; CHECK-NEXT: declare double @"#tan"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#tanf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#tanh"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#tanhf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#tgamma"(double) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare float @"#tgammaf"(float) [[SQRT_ATTRS]]
+; CHECK-NEXT: declare double @"#trunc"(double) [[NOMEM_ATTRS]]
+; CHECK-NEXT: declare float @"#truncf"(float) [[NOMEM_ATTRS]]
+; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; CHECK-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: readwrite) "alloc-family"="malloc" }
-; CHECK-NEXT: attributes [[SQRT_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
+; CHECK-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
+; CHECK-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
