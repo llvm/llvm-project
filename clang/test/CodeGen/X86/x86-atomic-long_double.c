@@ -530,3 +530,71 @@ int pr107054()
     static _Atomic long double n;
     return (++n) == 1;
 }
+
+// X64-LABEL: define dso_local zeroext i1 @test_compare_exchange(
+// X64-SAME: ptr noundef [[ADDR:%.*]], ptr noundef [[EXPECTED:%.*]], ptr noundef [[DESIRED:%.*]]) #[[ATTR0]] {
+// X64-NEXT:  [[ENTRY:.*:]]
+// X64-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[EXPECTED_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[DESIRED_ADDR:%.*]] = alloca ptr, align 8
+// X64-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 16
+// X64-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1
+// X64-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
+// X64-NEXT:    store ptr [[EXPECTED]], ptr [[EXPECTED_ADDR]], align 8
+// X64-NEXT:    store ptr [[DESIRED]], ptr [[DESIRED_ADDR]], align 8
+// X64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
+// X64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[EXPECTED_ADDR]], align 8
+// X64-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DESIRED_ADDR]], align 8
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP]], i8 0, i64 16, i1 false)
+// X64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[ATOMIC_TEMP]], ptr align 16 [[TMP1]], i64 10, i1 false)
+// X64-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], i8 0, i64 16, i1 false)
+// X64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[ATOMIC_TEMP1]], ptr align 16 [[TMP2]], i64 10, i1 false)
+// X64-NEXT:    [[TMP3:%.*]] = load i128, ptr [[ATOMIC_TEMP]], align 16
+// X64-NEXT:    [[TMP4:%.*]] = load i128, ptr [[ATOMIC_TEMP1]], align 16
+// X64-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[TMP0]], i128 [[TMP3]], i128 [[TMP4]] seq_cst seq_cst, align 16
+// X64-NEXT:    [[TMP6:%.*]] = extractvalue { i128, i1 } [[TMP5]], 0
+// X64-NEXT:    [[TMP7:%.*]] = extractvalue { i128, i1 } [[TMP5]], 1
+// X64-NEXT:    br i1 [[TMP7]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_STORE_EXPECTED:.*]]
+// X64:       [[CMPXCHG_STORE_EXPECTED]]:
+// X64-NEXT:    store i128 [[TMP6]], ptr [[TMP1]], align 16
+// X64-NEXT:    br label %[[CMPXCHG_CONTINUE]]
+// X64:       [[CMPXCHG_CONTINUE]]:
+// X64-NEXT:    [[STOREDV:%.*]] = zext i1 [[TMP7]] to i8
+// X64-NEXT:    store i8 [[STOREDV]], ptr [[CMPXCHG_BOOL]], align 1
+// X64-NEXT:    [[TMP8:%.*]] = load i8, ptr [[CMPXCHG_BOOL]], align 1
+// X64-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP8]], 0
+// X64-NEXT:    ret i1 [[LOADEDV]]
+//
+// X86-LABEL: define dso_local zeroext i1 @test_compare_exchange(
+// X86-SAME: ptr noundef [[ADDR:%.*]], ptr noundef [[EXPECTED:%.*]], ptr noundef [[DESIRED:%.*]]) #[[ATTR0]] {
+// X86-NEXT:  [[ENTRY:.*:]]
+// X86-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[EXPECTED_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[DESIRED_ADDR:%.*]] = alloca ptr, align 4
+// X86-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca x86_fp80, align 4
+// X86-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1
+// X86-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
+// X86-NEXT:    store ptr [[EXPECTED]], ptr [[EXPECTED_ADDR]], align 4
+// X86-NEXT:    store ptr [[DESIRED]], ptr [[DESIRED_ADDR]], align 4
+// X86-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
+// X86-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[EXPECTED_ADDR]], align 4
+// X86-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[DESIRED_ADDR]], align 4
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP]], i8 0, i64 12, i1 false)
+// X86-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ATOMIC_TEMP]], ptr align 4 [[TMP1]], i64 10, i1 false)
+// X86-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], i8 0, i64 12, i1 false)
+// X86-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ATOMIC_TEMP1]], ptr align 4 [[TMP2]], i64 10, i1 false)
+// X86-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i32 noundef 12, ptr noundef [[TMP0]], ptr noundef [[ATOMIC_TEMP]], ptr noundef [[ATOMIC_TEMP1]], i32 noundef 5, i32 noundef 5)
+// X86-NEXT:    br i1 [[CALL]], label %[[CMPXCHG_CONTINUE:.*]], label %[[CMPXCHG_COPY_EXPECTED:.*]]
+// X86:       [[CMPXCHG_COPY_EXPECTED]]:
+// X86-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[ATOMIC_TEMP]], i64 12, i1 false)
+// X86-NEXT:    br label %[[CMPXCHG_CONTINUE]]
+// X86:       [[CMPXCHG_CONTINUE]]:
+// X86-NEXT:    ret i1 [[CALL]]
+//
+_Bool test_compare_exchange(long double *addr, long double *expected,
+                            long double *desired) {
+  return __atomic_compare_exchange(addr, expected, desired, 0,
+                                   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}

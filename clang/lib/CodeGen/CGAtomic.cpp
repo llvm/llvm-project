@@ -411,10 +411,13 @@ static void emitAtomicCmpXchg(CodeGenFunction &CGF, AtomicExpr *E, bool IsWeak,
   CGF.Builder.CreateCondBr(Cmp, ContinueBB, StoreExpectedBB);
 
   CGF.Builder.SetInsertPoint(StoreExpectedBB);
-  // Update the memory at Expected with Old's value.
+  // Update the memory at Expected with Old's value. All of it: the
+  // comparison took the padding of the value too, such as the six bytes
+  // after the ten of an x87 long double, so the padding that made it fail
+  // has to be given back with the rest.
   llvm::Type *ExpectedType = ExpectedResult.getElementType();
   const llvm::DataLayout &DL = CGF.CGM.getDataLayout();
-  uint64_t ExpectedSizeInBytes = DL.getTypeStoreSize(ExpectedType);
+  uint64_t ExpectedSizeInBytes = DL.getTypeAllocSize(ExpectedType);
 
   if (ExpectedSizeInBytes == Size) {
     // Sizes match: store directly
@@ -1369,8 +1372,33 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
 
     RValue Res = emitAtomicLibcall(*this, LibCallName, RetTy, Args);
     // The value is returned directly from the libcall.
-    if (E->isCmpXChg())
+    if (E->isCmpXChg()) {
+      // Where the expected value was copied to a temporary in the width of
+      // the atomic type, the library wrote the value it found there, so give
+      // that back to the expected object when the exchange failed.
+      if (Val1.emitRawPointer(*this) != OriginalVal1.emitRawPointer(*this)) {
+        llvm::BasicBlock *CopyBB =
+            createBasicBlock("cmpxchg.copy_expected", CurFn);
+        llvm::BasicBlock *ContinueBB =
+            createBasicBlock("cmpxchg.continue", CurFn);
+        Builder.CreateCondBr(Res.getScalarVal(), ContinueBB, CopyBB);
+        Builder.SetInsertPoint(CopyBB);
+        uint64_t AllocSize =
+            CGM.getDataLayout()
+                .getTypeAllocSize(OriginalVal1.getElementType())
+                .getFixedValue();
+        uint64_t AtomicSize =
+            getContext()
+                .toCharUnitsFromBits(Atomics.getAtomicSizeInBits())
+                .getQuantity();
+        uint64_t ExpectedSize = std::min(AllocSize, AtomicSize);
+        Builder.CreateMemCpy(OriginalVal1, Val1.withElementType(Int8Ty),
+                             ExpectedSize);
+        Builder.CreateBr(ContinueBB);
+        Builder.SetInsertPoint(ContinueBB);
+      }
       return Res;
+    }
 
     if (RValTy->isVoidType())
       return RValue::get(nullptr);
