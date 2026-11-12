@@ -5,6 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Tests for the target-independent link pipeline implemented by JITLinkerBase
+// (see lib/ExecutionEngine/JITLink/JITLinkGeneric.h): the sequencing of link
+// phases and pass lists, error reporting from each phase, and the lifetimes
+// of the linker, LinkGraph, and SymbolStringPool across continuations,
+// including continuations that complete synchronously.
+//
+// These tests use the mock JITLinkContext and JITLinkMemoryManager from
+// JITLinkTestUtils.h to control lookup, allocation, and finalization results
+// and timing. Tests of the LinkGraph API belong in LinkGraphTests.cpp, and
+// tests of target-specific fixups, stubs, or object-file parsing belong in
+// the corresponding target- or format-specific test files.
+//
+//===----------------------------------------------------------------------===//
 
 #include "JITLinkTestUtils.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
