@@ -6275,7 +6275,8 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
       return nullptr;
     }
   } else {
-    RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);
+    RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0,
+                   CM->isEpilogueAllowed());
   }
 
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
@@ -6357,21 +6358,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // Build initial VPlan: Scan the body of the loop in a topological order to
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
-
-  bool RequiresScalarEpilogueCheck =
-      LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&PlanCM](ElementCount VF) {
-            return !PlanCM.requiresScalarEpilogue(VF.isVector());
-          },
-          Range);
-  // Update the branch in the middle block if a scalar epilogue is required.
-  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
-  if (!RequiresScalarEpilogueCheck && MiddleVPBB->getNumSuccessors() == 2) {
-    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
-    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
-           "second successor must be scalar preheader");
-    BranchOnCond->setOperand(0, Plan->getFalse());
-  }
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -6532,6 +6518,12 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
   // Create partial reduction recipes for scaled reductions and transform
@@ -6541,12 +6533,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                  Range);
   RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                  Range);
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, PlanCM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
@@ -6832,7 +6818,8 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
-    ElementCount MinProfitableTripCount, bool TailFoldedEpilogue) const {
+    ElementCount MinProfitableTripCount, bool TailFoldedEpilogue,
+    bool RequiresScalarEpilogue) const {
   const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
@@ -6841,7 +6828,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
   // it can handle any trip count, so the min iter check never needs
   // to branch to the scalar loop.
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount, Plan.requiresScalarEpilogue(),
+                 MinProfitableTripCount, RequiresScalarEpilogue,
                  Plan.hasTailFolded() || TailFoldedEpilogue, OrigLoop,
                  BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
@@ -7885,9 +7872,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     // Add minimum iteration check for the epilogue plan, followed by runtime
     // checks for the main plan.
-    LVP.addMinimumIterationCheck(BestMainPlan, EpilogueVF, /*UF=*/1,
-                                 ElementCount::getFixed(0),
-                                 BestEpiPlan.hasTailFolded());
+    LVP.addMinimumIterationCheck(
+        BestMainPlan, EpilogueVF, /*UF=*/1, ElementCount::getFixed(0),
+        BestEpiPlan.hasTailFolded(), BestEpiPlan.requiresScalarEpilogue());
     LVP.attachRuntimeChecks(BestMainPlan, Checks, VF.Width, IC,
                             HasBranchWeights);
     RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
@@ -7939,9 +7926,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
     ++LoopsEpilogueVectorized;
   } else {
-    LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
-                                 VF.MinProfitableTripCount,
-                                 /*TailFoldedEpilogue=*/false);
+    LVP.addMinimumIterationCheck(
+        BestPlan, VF.Width, IC, VF.MinProfitableTripCount,
+        /*TailFoldedEpilogue=*/false, BestPlan.requiresScalarEpilogue());
     LVP.attachRuntimeChecks(BestPlan, Checks, VF.Width, IC, HasBranchWeights);
 
     if (!IsInnerLoop)

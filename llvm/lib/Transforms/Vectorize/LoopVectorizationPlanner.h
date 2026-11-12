@@ -1051,7 +1051,8 @@ public:
   /// loop.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount,
-                                bool TailFoldedEpilogue) const;
+                                bool TailFoldedEpilogue,
+                                bool RequiresScalarEpilogue) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan. \p VF and \p UF are
   /// used to compute the thresholds of difference checks.
