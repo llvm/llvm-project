@@ -506,7 +506,39 @@ size_t omp_get_dyn_gprivate_size(omp_access_t) {
 omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t) {
   return DynCGroupMem.getMemSpace();
 }
+
+// Fortran API entry points.  These entry points use the default Flang
+// name mangling.  We cannot use BIND(C) in omp_lib due to restrictions
+// w.r.t. OPTIONAL arguments that cannot also have the VALUE attribute
+// for BIND(C) routines.
+// TODO: if the name mangling changes or is different for other OSes,
+// implement improved name mangling schemes.
+// TODO: refactor this code to potentially move the Fortran entry points
+// to their own compilation unit.
+void *omp_get_dyn_gprivate_ptr_(size_t *Offset, omp_access_t *AccessGroup) {
+  size_t Off = Offset ? *Offset : 0;
+  omp_access_t AccGrp = AccessGroup ? *AccessGroup : omp_access_cgroup;
+  return omp_get_dyn_gprivate_ptr(Off, AccGrp);
 }
+
+void *omp_get_dyn_gprivate_nofb_ptr_(size_t *Offset,
+                                     omp_access_t *AccessGroup) {
+  size_t Off = Offset ? *Offset : 0;
+  omp_access_t AccGrp = AccessGroup ? *AccessGroup : omp_access_cgroup;
+  return omp_get_dyn_gprivate_nofb_ptr(Off, AccGrp);
+}
+
+size_t omp_get_dyn_gprivate_size_(omp_access_t *AccessGroup) {
+  omp_access_t AccGrp = AccessGroup ? *AccessGroup : omp_access_cgroup;
+  return omp_get_dyn_gprivate_size(AccGrp);
+}
+
+omp_memspace_handle_t
+omp_get_dyn_gprivate_memspace_(omp_access_t *AccessGroup) {
+  omp_access_t AccGrp = AccessGroup ? *AccessGroup : omp_access_cgroup;
+  return omp_get_dyn_gprivate_memspace(AccGrp);
+}
+} // extern "C"
 
 extern "C" {
 [[clang::noinline]] void *__kmpc_alloc_shared(uint64_t Bytes) {
