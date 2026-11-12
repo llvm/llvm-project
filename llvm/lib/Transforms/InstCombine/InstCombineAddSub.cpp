@@ -2026,6 +2026,12 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         Builder.CreateIntrinsic(Intrinsic::umax, {I.getType()}, {A, B}));
   }
 
+  // trunc(ctpop(A)) + trunc(ctpop(B)) => trunc(ctpop(A) + ctpop(B))
+  if (match(LHS, m_OneUse(m_Trunc(m_Value(A, m_Ctpop(m_Value()))))) &&
+      match(RHS, m_OneUse(m_Trunc(m_Value(B, m_Ctpop(m_Value()))))) &&
+      A->getType() == B->getType())
+    return new TruncInst(Builder.CreateAdd(A, B), I.getType());
+
   // ctpop(A) + ctpop(B) => ctpop(A | B) if A and B have no bits set in common.
   if (match(LHS, m_OneUse(m_Ctpop(m_Value(A)))) &&
       match(RHS, m_OneUse(m_Ctpop(m_Value(B)))) &&
