@@ -320,6 +320,20 @@ LogicalResult OptInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// FenvAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+FenvAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                 std::optional<FPDynamicRoundingMode> dynamicRoundingMode,
+                 std::optional<FPExceptionMode> exceptMode,
+                 mlir::BoolAttr strictExcept) {
+  if (!dynamicRoundingMode && !exceptMode && !strictExcept)
+    return emitError() << "at least one parameter must be set";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstPtrAttr definitions
 //===----------------------------------------------------------------------===//
 

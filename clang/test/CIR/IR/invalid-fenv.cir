@@ -1,0 +1,7 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func @empty_fenv(%a: !cir.float, %b: !cir.float) {
+  // expected-error @below {{at least one parameter must be set}}
+  %0 = cir.fadd %a, %b : !cir.float fenv<>
+  cir.return
+}
