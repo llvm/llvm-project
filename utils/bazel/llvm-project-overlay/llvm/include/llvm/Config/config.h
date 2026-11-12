@@ -35,6 +35,9 @@
 /* Define to 1 to enable crash memory dumps, and to 0 otherwise. */
 #define LLVM_ENABLE_CRASH_DUMPS 0
 
+/* Define to 1 to work around glibc BZ 25847, and to 0 otherwise. */
+#define LLVM_ENABLE_GLIBC_CONDVAR_WORKAROUND 0
+
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
 /* LLVM_WINDOWS_PREFER_FORWARD_SLASH defined in Bazel */
