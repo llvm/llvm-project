@@ -60,39 +60,50 @@ function(_intersection output_var list1 list2)
   set(${output_var} ${tmp} PARENT_SCOPE)
 endfunction()
 
+include(CheckCXXCompilerFlag)
+
+### Compiler Feature Detection ###
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+# clang-8+, gcc-12+
+check_cxx_compiler_flag(
+  "-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT
+)
+
+# clang-6+, gcc-13+
+check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
+
+# clang-3.0+ (not supported by GCC)
+check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
+# clang-all, gcc-8+
+check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
+
+# In full-build mode, probe compiler features with the same freestanding and
+# standard-include-suppression flags used for target objects so host headers
+# (such as glibc's implicit <stdc-predef.h>) do not skew feature detection.
+set(freestanding_compile_options "")
+if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU AND NOT MSVC)
+  list(APPEND freestanding_compile_options "-ffreestanding" "-DLIBC_FULL_BUILD")
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+    (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+    list(APPEND freestanding_compile_options "-D_MM_MALLOC_H_INCLUDED")
+  endif()
+  if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+    list(APPEND freestanding_compile_options "-nostdlibinc")
+  elseif(COMPILER_RESOURCE_DIR)
+    list(APPEND freestanding_compile_options
+      "-isystem${COMPILER_RESOURCE_DIR}/include"
+      "-nostdinc"
+    )
+  endif()
+endif()
+
 set(AVAILABLE_COMPILER_FEATURES "")
 
-# Try compile a C file to check if flag is supported.
+# Try compile a C++ file to check if feature is supported.
 foreach(feature IN LISTS ALL_COMPILER_FEATURES)
-  set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
-  set(link_options "")
-  if(${feature} STREQUAL "fixed_point")
-    list(APPEND compile_options "-ffixed-point")
-  elseif(${feature} STREQUAL "stdc_fenv_access")
-    if(MSVC)
-      list(APPEND compile_options "/WX")
-    else()
-      list(APPEND compile_options "-Wall -Werror")
-    endif()
-  elseif(${feature} MATCHES "^builtin_" OR
-      ${feature} STREQUAL "float16_conversion")
-    set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
-    set(link_options -nostdlib)
-    # The compiler might handle calls to math builtins by generating calls to
-    # the respective libc math functions, in which case we cannot use these
-    # builtins in our implementations of these functions. We check that this is
-    # not the case by trying to link an executable, since linking would fail due
-    # to unresolved references with -nostdlib if calls to libc functions were
-    # generated.
-    #
-    # We also had issues with soft-float float16 conversion functions using both
-    # compiler-rt and libgcc, so we also check whether we can convert from and
-    # to float16 without calls to compiler runtime functions by trying to link
-    # an executable with -nostdlib.
-    set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
-  endif()
-
   if(LIBC_TARGET_OS_IS_GPU)
     # CUDA shouldn't be required to build the libc, only to test it, so we can't
     # try to build CUDA binaries here. Since GPU builds are always compiled with
@@ -104,6 +115,37 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(has_feature TRUE)
     endif()
   else()
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+    set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
+    set(link_options "")
+    if(${feature} STREQUAL "fixed_point")
+      list(APPEND compile_options "-ffixed-point")
+    elseif(${feature} STREQUAL "stdc_fenv_access")
+      if(MSVC)
+        list(APPEND compile_options "/WX")
+      else()
+        list(APPEND compile_options "-Wall -Werror")
+      endif()
+    elseif(${feature} MATCHES "^builtin_" OR
+        ${feature} STREQUAL "float16_conversion")
+      set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
+      set(link_options -nostdlib)
+      # The compiler might handle calls to math builtins by generating calls to
+      # the respective libc math functions, in which case we cannot use these
+      # builtins in our implementations of these functions. We check that this
+      # is not the case by trying to link an executable, since linking would
+      # fail due to unresolved references with -nostdlib if calls to libc
+      # functions were generated.
+      #
+      # We also had issues with soft-float float16 conversion functions using
+      # both compiler-rt and libgcc, so we also check whether we can convert
+      # from and to float16 without calls to compiler runtime functions by
+      # trying to link an executable with -nostdlib.
+      set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
+    endif()
+
+    list(APPEND compile_options ${freestanding_compile_options})
+
     try_compile(
       has_feature
       ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
@@ -150,21 +192,5 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
 endforeach()
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
-set(link_options "")
 
 message(STATUS "Compiler features available: ${AVAILABLE_COMPILER_FEATURES}")
-
-### Compiler Feature Detection ###
-
-# clang-8+, gcc-12+
-check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTERN_INIT)
-
-# clang-6+, gcc-13+
-check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
-
-# clang-3.0+
-check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
-
-# clang-all, gcc-8+
-check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
