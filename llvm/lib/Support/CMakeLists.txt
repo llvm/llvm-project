@@ -198,6 +198,7 @@ add_llvm_component_library(LLVMSupport
   ConvertUTF.cpp
   ConvertEBCDIC.cpp
   ConvertUTFWrapper.cpp
+  Cgroup.cpp
   CrashRecoveryContext.cpp
   CSKYAttributes.cpp
   CSKYAttributeParser.cpp
