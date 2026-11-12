@@ -3601,15 +3601,14 @@ LogicalResult ScopeOp::verify() {
 void SingleOp::build(OpBuilder &builder, OperationState &state,
                      const SingleOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SingleOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
       makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
       makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
       clauses.copyprivateVars, makeArrayAttr(ctx, clauses.copyprivateSyms),
       /*copyprivate_assume_bounded_recipe_effects=*/nullptr, clauses.nowait,
-      /*private_vars=*/{}, /*private_syms=*/nullptr,
-      /*private_needs_barrier=*/nullptr,
+      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier,
       /*private_assume_bounded_recipe_effects=*/nullptr);
 }
 
@@ -3618,6 +3617,9 @@ LogicalResult SingleOp::verify() {
           getOperation(), getAllocateVars(), getAllocatorVars(),
           getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
           getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
+
+  if (failed(verifyPrivateVarList(*this)))
     return failure();
 
   return verifyCopyprivateVarList(*this, getCopyprivateVars(),

@@ -674,10 +674,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkReduction(op, result);
       })
       .Case([&](omp::ScopeOp op) { checkReduction(op, result); })
-      .Case([&](omp::SingleOp op) {
-        checkAllocate(op, result);
-        checkPrivate(op, result);
-      })
+      .Case([&](omp::SingleOp op) { checkAllocate(op, result); })
       .Case([&](omp::TeamsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
@@ -2751,19 +2748,48 @@ static LogicalResult
 convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   if (failed(checkImplementationStatus(*singleOp)))
     return failure();
 
-  auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
-                    llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks) {
+  PrivateVarsInfo privateVarsInfo(singleOp);
+  InsertPointTy privateAllocaIP =
+      findAllocInsertPoints(builder, moduleTranslation);
+  llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
+      singleOp, builder, moduleTranslation, privateVarsInfo, privateAllocaIP);
+  if (failed(handleError(afterAllocas, *singleOp)))
+    return failure();
+
+  auto bodyCB =
+      [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
+          llvm::ArrayRef<llvm::BasicBlock *> deallocBlocks) -> llvm::Error {
     builder.restoreIP(codegenIP);
-    return convertOmpOpRegions(singleOp.getRegion(), "omp.single.region",
-                               builder, moduleTranslation)
-        .takeError();
+    if (failed(handleError(
+            initPrivateVars(builder, moduleTranslation, privateVarsInfo),
+            *singleOp)))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(completePrivateVars(
+            singleOp, builder, moduleTranslation, privateVarsInfo.mlirVars,
+            privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
+            singleOp.getPrivateNeedsBarrier())))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    auto continuationBlock = convertOmpOpRegions(
+        singleOp.getRegion(), "omp.single.region", builder, moduleTranslation);
+    if (failed(handleError(continuationBlock, *singleOp)))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    // Cleanup can introduce control flow. Emit it as part of the selected
+    // thread's body so that all cleanup paths reach OpenMPIRBuilder's
+    // finalization block before __kmpc_end_single and copyprivate.
+    builder.SetInsertPoint((*continuationBlock)->getTerminator());
+    if (failed(cleanupPrivateVars(singleOp, builder, moduleTranslation,
+                                  singleOp.getLoc(), privateVarsInfo)))
+      return llvm::make_error<PreviouslyReportedError>();
+    return llvm::Error::success();
   };
-  auto finiCB = [&](InsertPointTy codeGenIP) { return llvm::Error::success(); };
+  auto finiCB = [](InsertPointTy) { return llvm::Error::success(); };
 
   // Handle copyprivate
   Operation::operand_range cpVars = singleOp.getCopyprivateVars();
@@ -2778,6 +2804,7 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
         moduleTranslation.lookupFunction(llvmFuncOp.getName()));
   }
 
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       getOpenMPBuilder(moduleTranslation)
           ->createSingle(ompLoc, bodyCB, finiCB, singleOp.getNowait(),

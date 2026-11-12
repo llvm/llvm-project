@@ -1975,9 +1975,7 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                     /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
 
-    // TODO: omp.single still uses eager privatisation.
-    // Use clauseOps.privateVars inside genSingleOp once
-    // delayedPrivatization is turned on.
+    // Eager privatization has no private operands. Check the symbols instead.
     if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
       const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
       if (llvm::all_of(privateSyms, [&info](const semantics::Symbol *sym) {
@@ -2591,7 +2589,6 @@ static void genSingleClauses(lower::AbstractConverter &converter,
   cp.processAllocate(clauseOps);
   cp.processCopyprivate(loc, clauseOps);
   cp.processNowait(clauseOps);
-  // TODO Support delayed privatization.
 }
 
 static void
@@ -4008,14 +4005,37 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
             mlir::Location loc, const ConstructQueue &queue,
             ConstructQueue::const_iterator item) {
+  lower::SymMapScope scope(symTable);
   mlir::omp::SingleOperands clauseOps;
   genSingleClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+
+  std::optional<DataSharingProcessor> dsp;
+  if (enableDelayedPrivatization) {
+    dsp.emplace(converter, semaCtx, item->clauses, eval,
+                lower::omp::isLastItemInQueue(item, queue),
+                /*useDelayedPrivatization=*/true, symTable);
+    dsp->processStep1(&clauseOps);
+  }
+
+  ObjectEntryBlockArgs args;
+  if (dsp)
+    args.priv.objects = makeObjects(dsp->getDelayedPrivSymbols());
+  args.priv.vars = clauseOps.privateVars;
 
   auto singleOp = genOpWithBody<mlir::omp::SingleOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
-          .setClauses(&item->clauses),
+          .setClauses(&item->clauses)
+          .setEntryBlockArgs(&args)
+          .setDataSharingProcessor(enableDelayedPrivatization ? &dsp.value()
+                                                              : nullptr),
       queue, item, clauseOps);
+
+  if (enableDelayedPrivatization &&
+      llvm::all_of(clauseOps.privateVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    singleOp.setPrivateAssumeBoundedRecipeEffects(true);
 
   if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
         return canAssumeBoundedRecipeEffects(variable);

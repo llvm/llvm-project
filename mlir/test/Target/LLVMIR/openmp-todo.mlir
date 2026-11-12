@@ -212,23 +212,6 @@ llvm.func @single_allocate(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = private} @x.privatizer : i32 init {
-^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
-  %c0 = llvm.mlir.constant(0 : i32) : i32
-  llvm.store %c0, %private : i32, !llvm.ptr
-  omp.yield(%private: !llvm.ptr)
-}
-llvm.func @single_private(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.single operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.single}}
-  omp.single private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @target_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
