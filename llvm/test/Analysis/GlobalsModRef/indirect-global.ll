@@ -11,7 +11,7 @@ target datalayout = "p:32:32:32"
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0) inaccessiblememonly
 define void @malloc_init() {
 ; CHECK-LABEL: @malloc_init(
-; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i32 4)
+; CHECK-NEXT:    [[A:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i32 4)
 ; CHECK-NEXT:    store ptr [[A]], ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -39,7 +39,7 @@ define i32 @malloc_test(ptr %P) {
 declare noalias ptr @calloc(i32, i32) allockind("alloc,zeroed") allocsize(0,1) inaccessiblememonly
 define void @calloc_init() {
 ; CHECK-LABEL: @calloc_init(
-; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) ptr @calloc(i32 4, i32 1)
+; CHECK-NEXT:    [[A:%.*]] = call align 4 dereferenceable_or_null(4) ptr @calloc(i32 4, i32 1)
 ; CHECK-NEXT:    store ptr [[A]], ptr @G2, align 4
 ; CHECK-NEXT:    ret void
 ;
