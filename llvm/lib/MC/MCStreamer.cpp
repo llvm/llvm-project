@@ -181,16 +181,17 @@ void MCStreamer::emitSymbolValue(const MCSymbol *Sym, unsigned Size) {
   emitValueImpl(MCSymbolRefExpr::create(Sym, getContext()), Size);
 }
 
-unsigned MCStreamer::emitDwarfSectionOffset(const MCSymbol *Sym,
-                                            uint64_t Offset, unsigned Size) {
+void MCStreamer::emitDwarfSectionOffset(const MCSymbol *Sym, uint64_t Offset,
+                                        unsigned Size) {
   const MCAsmInfo &MAI = getContext().getAsmInfo();
   if (MAI.needsDwarfSectionOffsetDirective()) {
     emitCOFFSecRel32(Sym, Offset);
-    return 4;
+    if (Size > 4)
+      emitZeros(Size - 4);
+    return;
   }
 
   emitValueImpl(MAI.getDwarfSectionOffsetExpr(Sym, Offset, getContext()), Size);
-  return Size;
 }
 
 /// Emit NumBytes bytes worth of the value specified by FillValue.
