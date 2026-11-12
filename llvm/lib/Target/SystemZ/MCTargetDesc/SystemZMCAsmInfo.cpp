@@ -30,7 +30,6 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   Data64bitsDirective = "\t.quad\t";
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
@@ -52,7 +51,6 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   CodePointerSize = 8;
   CommentString = "*";
   UsesSetToEquateSymbol = true;
-  ExceptionsType = ExceptionHandling::ZOS;
   IsHLASM = true;
   IsLittleEndian = false;
   MaxInstLength = 6;

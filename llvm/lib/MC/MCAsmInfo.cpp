@@ -25,7 +25,7 @@
 using namespace llvm;
 
 MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
-  const MCCLOptions &CLOpts = MCCLOptions::Global;
+  const MCCLOptions &CLOpts = getMCCLOptions(Options);
   SupportsExtendedDwarfLocDirective =
       valueOr(CLOpts.dwarf_extended_loc, SupportsExtendedDwarfLocDirective);
   HasLEB128Directives =
@@ -35,6 +35,10 @@ MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
 }
 
 MCAsmInfo::~MCAsmInfo() = default;
+
+unsigned MCAsmInfo::getAsmMacroMaxNestingDepth() const {
+  return getMCCLOptions(TargetOptions).asm_macro_max_nesting_depth;
+}
 
 void MCAsmInfo::addInitialFrameState(const MCCFIInstruction &Inst) {
   InitialFrameState.push_back(Inst);

@@ -435,9 +435,8 @@ bool isOpenMPPrivate(OpenMPClauseKind Kind);
 /// \return true - the clause is a threadprivate clause, otherwise - false.
 bool isOpenMPThreadPrivate(OpenMPClauseKind Kind);
 
-/// Checks if the specified directive kind is one of tasking directives - task,
-/// taskloop, taksloop simd, master taskloop, parallel master taskloop, master
-/// taskloop simd, or parallel master taskloop simd.
+/// Checks if the specified directive kind is one of tasking directives - task
+/// or any taskloop-based directive.
 bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 
 /// Checks if the specified directive kind is one of the composite or combined
@@ -516,6 +515,17 @@ bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
                                               const LangOptions &LangOpts);
+
+/// Checks if the specified directive is a simdizable directive, i.e. a
+/// directive that may be encountered during execution of a simd region.
+/// \param DKind Specified directive.
+/// \param BindKind Binding of a loop directive; ignored for other directives.
+/// \param LangOpts Used for getting the OpenMP version.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPSimdizableDirective(OpenMPDirectiveKind DKind,
+                                 OpenMPBindClauseKind BindKind,
+                                 const LangOptions &LangOpts);
 }
 
 template <>

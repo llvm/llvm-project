@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Coroutines/CoroShape.h"
 #include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
@@ -19,10 +20,10 @@ using SpillInfo = SmallMapVector<Value *, SmallVector<Instruction *, 2>, 8>;
 
 struct AllocaInfo {
   AllocaInst *Alloca;
-  DenseMap<Instruction *, std::optional<APInt>> Aliases;
+  SmallMapVector<Instruction *, std::optional<APInt>, 4> Aliases;
   bool MayWriteBeforeCoroBegin;
   AllocaInfo(AllocaInst *Alloca,
-             DenseMap<Instruction *, std::optional<APInt>> Aliases,
+             SmallMapVector<Instruction *, std::optional<APInt>, 4> Aliases,
              bool MayWriteBeforeCoroBegin)
       : Alloca(Alloca), Aliases(std::move(Aliases)),
         MayWriteBeforeCoroBegin(MayWriteBeforeCoroBegin) {}

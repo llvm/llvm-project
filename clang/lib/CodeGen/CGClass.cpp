@@ -26,7 +26,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGenUtils/ClassUtils.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
@@ -908,6 +907,12 @@ public:
     // Give the subclass a chance to bail out if it feels the memcpy isn't
     // worth it (e.g. Hasn't aggregated enough data).
     if (!FirstField) {
+      return;
+    }
+
+    // Unreachable, e.g. after a noreturn member copy; drop it like EmitStmt.
+    if (!CGF.HaveInsertPoint()) {
+      reset();
       return;
     }
 

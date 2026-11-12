@@ -371,8 +371,11 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+    if (CGF.CurLoadedLValueCapture && CGF.CurLoadedLValueCapture->E == E)
+      CGF.CurLoadedLValueCapture->LV = LV;
+
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;
@@ -2246,8 +2249,8 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   TestAndClearIgnoreResultAssign();
 
-  // Handle the vector case.  The base must be a vector, the index must be an
-  // integer value.
+  // HLSL matrix loads are normalized to column-major register values, but
+  // non-HLSL matrix values retain the selected memory layout.
   Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
@@ -2256,8 +2259,11 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
 
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols,
-                              /*IsRowMajor=*/false);
+  bool IsMatrixRowMajor =
+      !CGF.getLangOpts().HLSL &&
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+  Value *Idx =
+      MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
@@ -4478,12 +4484,11 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   Builder.SetInsertPoint(overflowBB);
 
   // Get the overflow handler.
-  llvm::Type *Int8Ty = CGF.Int8Ty;
-  llvm::Type *argTypes[] = { CGF.Int64Ty, CGF.Int64Ty, Int8Ty, Int8Ty };
-  llvm::FunctionType *handlerTy =
-      llvm::FunctionType::get(CGF.Int64Ty, argTypes, true);
+  ASTContext &Ctx = CGF.getContext();
+  QualType ArgTys[] = {Ctx.LongLongTy, Ctx.LongLongTy, Ctx.UnsignedCharTy,
+                       Ctx.UnsignedCharTy};
   llvm::FunctionCallee handler =
-      CGF.CGM.CreateRuntimeFunction(handlerTy, *handlerName);
+      CGF.CGM.CreateRuntimeFunction(Ctx.LongLongTy, ArgTys, *handlerName);
 
   // Sign extend the args to 64-bit, so that we can use the same handler for
   // all types of overflow.

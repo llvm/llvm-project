@@ -199,7 +199,8 @@ mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
 }
 
 /// Find the fir.type_info that was created for this \p recordType in \p module,
-/// if any. \p  symbolTable can be provided to speed-up the lookup. This tool
+/// if any. \p  symbolTable can be provided to speed-up the lookup; it is
+/// trusted, so it must contain every fir.type_info of \p module. This tool
 /// will match record type even if they have been "altered" in type conversion
 /// passes.
 fir::TypeInfoOp

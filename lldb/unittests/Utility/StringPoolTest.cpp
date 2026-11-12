@@ -35,6 +35,14 @@ TEST(StringPoolTest, InternNullAndEmpty) {
   EXPECT_STREQ("", empty);
 }
 
+TEST(StringPoolTest, InternNonEmpty) {
+  StringPool pool;
+  StringPoolRef ref(pool);
+  EXPECT_EQ(nullptr, ref.InternNonEmpty(""));
+  EXPECT_EQ(nullptr, ref.InternNonEmpty(llvm::StringRef()));
+  EXPECT_EQ(pool.Intern("foo"), ref.InternNonEmpty("foo"));
+}
+
 TEST(StringPoolTest, GlobalPoolBacksConstString) {
   ConstString cs("global_pool_string");
   EXPECT_EQ(cs.GetCString(),
@@ -45,7 +53,7 @@ TEST(StringPoolTest, GlobalPoolBacksConstString) {
 TEST(StringPoolTest, SystemPool) {
   StringPool::Initialize();
   EXPECT_EQ(StringPool::GetGlobal().Intern("system"),
-            StringPool::GetSystem().Intern("system"));
+            StringPool::GetSystemPool().Intern("system"));
   StringPool::Terminate();
 }
 

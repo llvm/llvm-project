@@ -1,18 +1,15 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test relational operators and SELECT CASE for enumeration types (F2023 7.6.2)
 
 module enum_mod
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
 
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: direction
     enumerator :: north, south, east, west
   end enumeration type
 
-  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: w_value
     enumerator :: w1, w2, w3, w4, w5
   end enumeration type

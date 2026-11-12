@@ -69,10 +69,10 @@ struct Origin {
       : ID(ID), Ptr(E), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
 
   const clang::ValueDecl *getDecl() const {
-    return Ptr.dyn_cast<const clang::ValueDecl *>();
+    return dyn_cast<const clang::ValueDecl *>(Ptr);
   }
   const clang::Expr *getExpr() const {
-    return Ptr.dyn_cast<const clang::Expr *>();
+    return dyn_cast<const clang::Expr *>(Ptr);
   }
 };
 

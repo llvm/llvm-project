@@ -444,21 +444,18 @@ public:
   int getJumpTableIndex(const MachineInstr &MI) const override;
 
   std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const override;
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const override;
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
   bool preservesZeroValueInReg(const MachineInstr *MI,
-                               const Register NullValueReg,
-                               const TargetRegisterInfo *TRI) const override;
+                               const Register NullValueReg) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,
                               bool AllowModify = false) const override;
@@ -470,8 +467,8 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       Register, Register, Register, int &, int &,
-                       int &) const override;
+                       Register, Register, Register,
+                       SelectExpansion &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
@@ -537,8 +534,8 @@ public:
                                int64_t &Offset2) const override;
 
   /// Overrides the isSchedulingBoundary from Codegen/TargetInstrInfo.cpp to
-  /// make it capable of identifying ENDBR intructions and prevent it from being
-  /// re-scheduled.
+  /// make it capable of identifying ENDBR instructions and prevent it from
+  /// being re-scheduled.
   bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;
@@ -584,13 +581,12 @@ public:
 
   bool setExecutionDomainCustom(MachineInstr &MI, unsigned Domain) const;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &MI, unsigned OpNum,
-                               const TargetRegisterInfo *TRI) const override;
-  unsigned getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
-                                const TargetRegisterInfo *TRI) const override;
-  void breakPartialRegDependency(MachineInstr &MI, unsigned OpNum,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &MI,
+                                        unsigned OpNum) const override;
+  unsigned getUndefRegClearance(const MachineInstr &MI,
+                                unsigned OpNum) const override;
+  void breakPartialRegDependency(MachineInstr &MI,
+                                 unsigned OpNum) const override;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       unsigned OpNum,

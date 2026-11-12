@@ -231,8 +231,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
   auto flags = launch_info.GetLaunchFlags();
-  flags =
-      SetLaunchFlag(flags, arguments.disableASLR, lldb::eLaunchFlagDisableASLR);
+  if (arguments.disableASLR)
+    flags = SetLaunchFlag(flags, *arguments.disableASLR,
+                          lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments.disableSTDIO,
                         lldb::eLaunchFlagDisableSTDIO);
 #ifdef _WIN32
@@ -287,7 +288,7 @@ void BaseRequestHandler::PrintWelcomeMessage() const {
   llvm::raw_string_ostream OS(message);
 
 #ifdef LLDB_DAP_WELCOME_MESSAGE
-  dap.SendOutput(eOutputCategoryConsole, LLDB_DAP_WELCOME_MESSAGE);
+  dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 
   // Trying to provide a brief but helpful welcome message for users to better

@@ -26,6 +26,10 @@
 
 namespace llvm {
 
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
 using IndexPairHash = std::pair<IndexPair, stable_hash>;
 using IndexOperandHashVecType = SmallVector<IndexPairHash>;
 
@@ -153,7 +157,8 @@ struct StableFunctionMap {
   LLVM_ABI size_t size(SizeType Type = UniqueHashCount) const;
 
   /// Finalize the stable function map by trimming content.
-  LLVM_ABI void finalize(bool SkipTrim = false);
+  LLVM_ABI void finalize(const cl::LibraryOptionsContext &LibraryOptions,
+                         bool SkipTrim = false);
 
 private:
   /// Insert a `StableFunctionEntry` into the function map directly. This

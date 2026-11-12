@@ -184,11 +184,11 @@ static void addSaveRestoreRegs(MachineInstrBuilder &MIB,
     Register Reg = CSI[e-i-1].getReg();
     switch (Reg) {
     case Mips::RA:
-    case Mips::S0:
-    case Mips::S1:
+    case Mips::R16:
+    case Mips::R17:
       MIB.addReg(Reg, Flags);
       break;
-    case Mips::S2:
+    case Mips::R18:
       break;
     default:
       llvm_unreachable("unexpected mips16 callee saved register");
@@ -205,14 +205,14 @@ void Mips16InstrInfo::makeFrame(unsigned SP, int64_t FrameSize,
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI    = MF.getFrameInfo();
   const BitVector Reserved = RI.getReservedRegs(MF);
-  bool SaveS2 = Reserved[Mips::S2];
+  bool SaveS2 = Reserved[Mips::R18];
   MachineInstrBuilder MIB;
   unsigned Opc = ((FrameSize <= 128) && !SaveS2)? Mips::Save16:Mips::SaveX16;
   MIB = BuildMI(MBB, I, DL, get(Opc));
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   addSaveRestoreRegs(MIB, CSI);
   if (SaveS2)
-    MIB.addReg(Mips::S2);
+    MIB.addReg(Mips::R18);
   if (isUInt<11>(FrameSize))
     MIB.addImm(FrameSize);
   else {
@@ -223,7 +223,7 @@ void Mips16InstrInfo::makeFrame(unsigned SP, int64_t FrameSize,
     if (isInt<16>(-Remainder))
       BuildAddiuSpImm(MBB, I, -Remainder);
     else
-      adjustStackPtrBig(SP, -Remainder, MBB, I, Mips::V0, Mips::V1);
+      adjustStackPtrBig(SP, -Remainder, MBB, I, Mips::R2, Mips::R3);
   }
 }
 
@@ -235,7 +235,7 @@ void Mips16InstrInfo::restoreFrame(unsigned SP, int64_t FrameSize,
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI    = MF->getFrameInfo();
   const BitVector Reserved = RI.getReservedRegs(*MF);
-  bool SaveS2 = Reserved[Mips::S2];
+  bool SaveS2 = Reserved[Mips::R18];
   MachineInstrBuilder MIB;
   unsigned Opc = ((FrameSize <= 128) && !SaveS2)?
     Mips::Restore16:Mips::RestoreX16;
@@ -249,13 +249,13 @@ void Mips16InstrInfo::restoreFrame(unsigned SP, int64_t FrameSize,
     if (isInt<16>(Remainder))
       BuildAddiuSpImm(MBB, I, Remainder);
     else
-      adjustStackPtrBig(SP, Remainder, MBB, I, Mips::A0, Mips::A1);
+      adjustStackPtrBig(SP, Remainder, MBB, I, Mips::R4, Mips::R5);
   }
   MIB = BuildMI(MBB, I, DL, get(Opc));
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   addSaveRestoreRegs(MIB, CSI, RegState::Define);
   if (SaveS2)
-    MIB.addReg(Mips::S2, RegState::Define);
+    MIB.addReg(Mips::R18, RegState::Define);
   MIB.addImm(FrameSize);
 }
 
@@ -380,7 +380,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
     Candidates.reset(Reg);
     if (DefReg != Reg) {
       FirstRegSaved = Reg;
-      FirstRegSavedTo = Mips::T0;
+      FirstRegSavedTo = Mips::R8;
       copyPhysReg(MBB, II, DL, FirstRegSavedTo, FirstRegSaved, true);
     }
   }
@@ -395,7 +395,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
       // Candidates.reset(SpReg); // not really needed
       if (DefReg!= SpReg) {
         SecondRegSaved = SpReg;
-        SecondRegSavedTo = Mips::T1;
+        SecondRegSavedTo = Mips::R9;
       }
       if (SecondRegSaved)
         copyPhysReg(MBB, II, DL, SecondRegSavedTo, SecondRegSaved, true);

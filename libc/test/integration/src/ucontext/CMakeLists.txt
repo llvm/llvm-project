@@ -1,4 +1,4 @@
-add_libc_integration_test_suite(libc-ucontext-integration-tests)
+add_libc_testsuite(libc-ucontext-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   ucontext_test

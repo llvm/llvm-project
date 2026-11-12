@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=aarch64-linux-ohos -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-fuchsia -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-windows -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=aarch64-unknown-uefi -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 
 ; Test reserve-x# options individually.
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x1 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X1

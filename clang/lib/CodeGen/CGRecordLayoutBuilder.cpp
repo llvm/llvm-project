@@ -21,8 +21,8 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -172,10 +172,6 @@ struct CGRecordLowering {
   void accumulateBases();
   void accumulateVPtrs();
   void accumulateVBases();
-  /// Recursively searches all of the bases to find out if a vbase is
-  /// not the primary vbase of some base class.
-  bool hasOwnStorage(const CXXRecordDecl *Decl,
-                     const CXXRecordDecl *Query) const;
   void calculateZeroInit();
   CharUnits calculateTailClippingOffset(bool isNonVirtualBaseType) const;
   void checkBitfieldClipping(bool isNonVirtualBaseType) const;
@@ -219,24 +215,24 @@ CGRecordLowering::CGRecordLowering(CodeGenTypes &Types, const RecordDecl *D,
 
 void CGRecordLowering::setBitFieldInfo(
     const FieldDecl *FD, CharUnits StartOffset, llvm::Type *StorageType) {
-  CGBitFieldInfo &Info = BitFields[FD->getCanonicalDecl()];
-  Info.IsSigned = FD->getType()->isSignedIntegerOrEnumerationType();
-  Info.Offset = (unsigned)(getFieldBitOffset(FD) - Context.toBits(StartOffset));
-  Info.Size = FD->getBitWidthValue();
-  Info.StorageSize = (unsigned)DataLayout.getTypeAllocSizeInBits(StorageType);
-  Info.StorageOffset = StartOffset;
-  if (Info.Size > Info.StorageSize)
-    Info.Size = Info.StorageSize;
+  uint64_t Offset = getFieldBitOffset(FD) - Context.toBits(StartOffset);
+  uint64_t StorageSize =
+      DataLayout.getTypeAllocSizeInBits(StorageType).getFixedValue();
+  // CGBitFieldInfo::MakeInfo does the same clamp
+  llvm::Type *FieldType = Types.ConvertTypeForMem(FD->getType());
+  uint64_t Size =
+      std::min({uint64_t(FD->getBitWidthValue()), StorageSize,
+                DataLayout.getTypeAllocSizeInBits(FieldType).getFixedValue()});
   // Reverse the bit offsets for big endian machines. Because we represent
   // a bitfield as a single large integer load, we can imagine the bits
   // counting from the most-significant-bit instead of the
   // least-significant-bit.
   if (DataLayout.isBigEndian())
-    Info.Offset = Info.StorageSize - (Info.Offset + Info.Size);
+    Offset = StorageSize - (Offset + Size);
 
-  Info.VolatileStorageSize = 0;
-  Info.VolatileOffset = 0;
-  Info.VolatileStorageOffset = CharUnits::Zero();
+  BitFields[FD->getCanonicalDecl()] = CGBitFieldInfo(
+      Offset, Size, FD->getType()->isSignedIntegerOrEnumerationType(),
+      StorageSize, StartOffset);
 }
 
 void CGRecordLowering::lower(bool NVBaseType) {
@@ -838,14 +834,12 @@ void CGRecordLowering::computeVolatileBitfields() {
 }
 
 void CGRecordLowering::accumulateVPtrs() {
+  llvm::Type *VPtrTy = Types.getCGM().GlobalsInt8PtrTy;
   if (Layout.hasOwnVFPtr())
-    Members.push_back(
-        MemberInfo(CharUnits::Zero(), MemberInfo::VFPtr,
-                   llvm::PointerType::getUnqual(Types.getLLVMContext())));
+    Members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::VFPtr, VPtrTy));
   if (Layout.hasOwnVBPtr())
     Members.push_back(
-        MemberInfo(Layout.getVBPtrOffset(), MemberInfo::VBPtr,
-                   llvm::PointerType::getUnqual(Types.getLLVMContext())));
+        MemberInfo(Layout.getVBPtrOffset(), MemberInfo::VBPtr, VPtrTy));
 }
 
 CharUnits
@@ -865,7 +859,8 @@ CGRecordLowering::calculateTailClippingOffset(bool isNonVirtualBaseType) const {
         continue;
       // If the vbase is a primary virtual base of some base, then it doesn't
       // get its own storage location but instead lives inside of that base.
-      if (Context.isNearlyEmpty(BaseDecl) && !hasOwnStorage(RD, BaseDecl))
+      if (Context.isNearlyEmpty(BaseDecl) &&
+          !CodeGenUtils::hasOwnStorage(Context, RD, BaseDecl))
         continue;
       ScissorOffset = std::min(ScissorOffset,
                                Layout.getVBaseClassOffset(BaseDecl));
@@ -883,7 +878,8 @@ void CGRecordLowering::accumulateVBases() {
     // If the vbase is a primary virtual base of some base, then it doesn't
     // get its own storage location but instead lives inside of that base.
     if (CodeGenUtils::isOverlappingVBaseABI(Context) &&
-        Context.isNearlyEmpty(BaseDecl) && !hasOwnStorage(RD, BaseDecl)) {
+        Context.isNearlyEmpty(BaseDecl) &&
+        !CodeGenUtils::hasOwnStorage(Context, RD, BaseDecl)) {
       Members.push_back(MemberInfo(Offset, MemberInfo::VBase, nullptr,
                                    BaseDecl));
       continue;
@@ -895,17 +891,6 @@ void CGRecordLowering::accumulateVBases() {
     Members.push_back(MemberInfo(Offset, MemberInfo::VBase,
                                  getStorageType(BaseDecl), BaseDecl));
   }
-}
-
-bool CGRecordLowering::hasOwnStorage(const CXXRecordDecl *Decl,
-                                     const CXXRecordDecl *Query) const {
-  const ASTRecordLayout &DeclLayout = Context.getASTRecordLayout(Decl);
-  if (DeclLayout.isPrimaryBaseVirtual() && DeclLayout.getPrimaryBase() == Query)
-    return false;
-  for (const auto &Base : Decl->bases())
-    if (!hasOwnStorage(Base.getType()->getAsCXXRecordDecl(), Query))
-      return false;
-  return true;
 }
 
 void CGRecordLowering::calculateZeroInit() {

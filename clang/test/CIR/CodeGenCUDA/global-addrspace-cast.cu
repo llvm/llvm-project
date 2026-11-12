@@ -10,10 +10,10 @@
 // RUN:   -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -fclangir -emit-llvm %s -o %t-cir-amdgcn.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir-amdgcn.ll %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -emit-llvm %s -o %t-amdgcn.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t-amdgcn.ll %s
 

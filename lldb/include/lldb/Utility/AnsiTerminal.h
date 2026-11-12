@@ -303,7 +303,8 @@ inline std::string TrimAtWordBoundary(llvm::StringRef str,
     if (result_visible_length + column_width <= visible_length) {
       result.append(left).append(escape);
       result_visible_length += column_width;
-      at_word_boundary = right.empty() || std::isspace(right[0]);
+      at_word_boundary =
+          right.empty() || std::isspace(static_cast<unsigned char>(right[0]));
 
       continue;
     }
@@ -332,8 +333,10 @@ inline std::string TrimAtWordBoundary(llvm::StringRef str,
            visible_length)) {
         result.append(trimmed);
         result_visible_length += trimmed_width;
-        at_word_boundary = std::isspace(trimmed.back()) ||
-                           (following_char && std::isspace(*following_char));
+        at_word_boundary =
+            std::isspace(static_cast<unsigned char>(trimmed.back())) ||
+            (following_char &&
+             std::isspace(static_cast<unsigned char>(*following_char)));
 
         break;
       }

@@ -5,88 +5,68 @@
 ; Guard for the vXi64 MULHU lowering. The `zext to i128 / mul / lshr 64 /
 ; trunc` idiom below is exactly what the loop vectorizer emits for a full
 ; 128-bit product (e.g. a wyhash-style `lo ^ hi` mix). When BOTH halves are
-; used (UMUL_LOHI), vectorizing the high half via the vpmuludq schoolbook loses
+; used (a UMUL_LOHI pattern), vectorizing the high half via the vpmuludq schoolbook loses
 ; to scalar codegen, where one multiply yields both halves; the lowering must
 ; back off and let it scalarize. When only the high half is used (the
 ; divide-by-constant case), it must still vectorize.
 
 ; Both halves used -> must scalarize (no vpmuludq schoolbook for the high half).
 define <4 x i64> @umul_lohi_both_halves(<4 x i64> %a, <4 x i64> %b, ptr %plo) nounwind {
-;
 ; V3-LABEL: umul_lohi_both_halves:
 ; V3:       # %bb.0:
-; V3-NEXT:    pushq %rbx
-; V3-NEXT:    vpextrq $1, %xmm0, %rax
 ; V3-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; V3-NEXT:    vpextrq $1, %xmm2, %rcx
-; V3-NEXT:    vpextrq $1, %xmm1, %r8
-; V3-NEXT:    vmovq %xmm2, %rdx
+; V3-NEXT:    vpextrq $1, %xmm2, %rax
+; V3-NEXT:    vmovq %xmm2, %rcx
+; V3-NEXT:    vpextrq $1, %xmm0, %rdx
 ; V3-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; V3-NEXT:    vpextrq $1, %xmm2, %r9
-; V3-NEXT:    vmovq %xmm2, %rsi
-; V3-NEXT:    mulxq %rsi, %r11, %r10
+; V3-NEXT:    vpextrq $1, %xmm2, %r8
+; V3-NEXT:    vpextrq $1, %xmm1, %r9
 ; V3-NEXT:    vmovq %xmm0, %rsi
-; V3-NEXT:    movq %rcx, %rdx
-; V3-NEXT:    mulxq %r9, %r9, %rcx
-; V3-NEXT:    vmovq %xmm1, %rbx
+; V3-NEXT:    mulxq %r9, %r10, %r9
+; V3-NEXT:    vmovq %xmm1, %r11
 ; V3-NEXT:    movq %rsi, %rdx
-; V3-NEXT:    mulxq %rbx, %rbx, %rsi
+; V3-NEXT:    mulxq %r11, %rdx, %rsi
+; V3-NEXT:    vmovq %xmm2, %r11
+; V3-NEXT:    vmovq %r10, %xmm0
+; V3-NEXT:    vmovq %rdx, %xmm1
+; V3-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; V3-NEXT:    movq %rax, %rdx
 ; V3-NEXT:    mulxq %r8, %rdx, %rax
 ; V3-NEXT:    vmovq %rdx, %xmm0
-; V3-NEXT:    vmovq %rbx, %xmm1
-; V3-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; V3-NEXT:    vmovq %r9, %xmm0
-; V3-NEXT:    vmovq %r11, %xmm2
+; V3-NEXT:    movq %rcx, %rdx
+; V3-NEXT:    mulxq %r11, %rdx, %rcx
+; V3-NEXT:    vmovq %rdx, %xmm2
 ; V3-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; V3-NEXT:    vmovq %rcx, %xmm0
-; V3-NEXT:    vmovq %r10, %xmm3
+; V3-NEXT:    vmovq %rax, %xmm0
+; V3-NEXT:    vmovq %rcx, %xmm3
 ; V3-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm3[0],xmm0[0]
-; V3-NEXT:    vmovq %rax, %xmm3
+; V3-NEXT:    vmovq %r9, %xmm3
 ; V3-NEXT:    vmovq %rsi, %xmm4
 ; V3-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
 ; V3-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
 ; V3-NEXT:    vmovdqa %xmm2, 16(%rdi)
 ; V3-NEXT:    vmovdqa %xmm1, (%rdi)
-; V3-NEXT:    popq %rbx
 ; V3-NEXT:    retq
 ;
 ; V4-LABEL: umul_lohi_both_halves:
 ; V4:       # %bb.0:
-; V4-NEXT:    pushq %rbx
-; V4-NEXT:    vpextrq $1, %xmm0, %rax
-; V4-NEXT:    vmovq %xmm0, %rcx
-; V4-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; V4-NEXT:    vpextrq $1, %xmm0, %rsi
-; V4-NEXT:    vpextrq $1, %xmm1, %r8
-; V4-NEXT:    vmovq %xmm0, %rdx
-; V4-NEXT:    vmovq %xmm1, %r9
-; V4-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; V4-NEXT:    vpextrq $1, %xmm0, %r10
-; V4-NEXT:    vmovq %xmm0, %r11
-; V4-NEXT:    mulxq %r11, %rbx, %r11
-; V4-NEXT:    movq %rsi, %rdx
-; V4-NEXT:    mulxq %r10, %r10, %rsi
-; V4-NEXT:    movq %rcx, %rdx
-; V4-NEXT:    mulxq %r9, %r9, %rcx
-; V4-NEXT:    movq %rax, %rdx
-; V4-NEXT:    mulxq %r8, %rdx, %rax
-; V4-NEXT:    vmovq %rdx, %xmm0
-; V4-NEXT:    vmovq %r9, %xmm1
-; V4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; V4-NEXT:    vmovq %r10, %xmm0
-; V4-NEXT:    vmovq %rbx, %xmm2
-; V4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; V4-NEXT:    vmovq %rsi, %xmm0
-; V4-NEXT:    vmovq %r11, %xmm3
-; V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm3[0],xmm0[0]
-; V4-NEXT:    vmovq %rax, %xmm3
-; V4-NEXT:    vmovq %rcx, %xmm4
-; V4-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
-; V4-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
-; V4-NEXT:    vmovdqa %xmm2, 16(%rdi)
-; V4-NEXT:    vmovdqa %xmm1, (%rdi)
-; V4-NEXT:    popq %rbx
+; V4-NEXT:    vpmullq %ymm1, %ymm0, %ymm2
+; V4-NEXT:    vpsrlq $32, %ymm0, %ymm3
+; V4-NEXT:    vpmuludq %ymm1, %ymm3, %ymm4
+; V4-NEXT:    vpmuludq %ymm1, %ymm0, %ymm5
+; V4-NEXT:    vpsrlq $32, %ymm5, %ymm5
+; V4-NEXT:    vpaddq %ymm5, %ymm4, %ymm4
+; V4-NEXT:    vpsrlq $32, %ymm4, %ymm5
+; V4-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; V4-NEXT:    vpblendd {{.*#+}} ymm4 = ymm4[0],ymm6[1],ymm4[2],ymm6[3],ymm4[4],ymm6[5],ymm4[6],ymm6[7]
+; V4-NEXT:    vpsrlq $32, %ymm1, %ymm1
+; V4-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
+; V4-NEXT:    vpaddq %ymm4, %ymm0, %ymm0
+; V4-NEXT:    vpsrlq $32, %ymm0, %ymm0
+; V4-NEXT:    vpmuludq %ymm1, %ymm3, %ymm1
+; V4-NEXT:    vpaddq %ymm5, %ymm1, %ymm1
+; V4-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
+; V4-NEXT:    vmovdqa %ymm2, (%rdi)
 ; V4-NEXT:    retq
   %za = zext <4 x i64> %a to <4 x i128>
   %zb = zext <4 x i64> %b to <4 x i128>
@@ -100,7 +80,6 @@ define <4 x i64> @umul_lohi_both_halves(<4 x i64> %a, <4 x i64> %b, ptr %plo) no
 
 ; Only the high half used -> MULHU should still vectorize (vpmuludq schoolbook).
 define <4 x i64> @mulhu_high_only(<4 x i64> %a, <4 x i64> %b) nounwind {
-;
 ; CHECK-LABEL: mulhu_high_only:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsrlq $32, %ymm0, %ymm2

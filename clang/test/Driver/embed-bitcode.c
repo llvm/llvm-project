@@ -60,3 +60,22 @@
 // RUN: not %clang -target armv7-apple-darwin -miphoneos-version-min=5.0 %s -fembed-bitcode -### 2>&1 | \
 // RUN:   FileCheck %s -check-prefix=CHECK-PLATFORM-NOTSUPPORTED
 // CHECK-PLATFORM-NOTSUPPORTED: -fembed-bitcode is not supported on versions of iOS prior to 6.0
+
+// RUN: %clang -### -x hip --target=x86_64-unknown-linux-gnu --offload-arch=gfx90a \
+// RUN:   --rocm-path=%S/Inputs/rocm -nogpulib -fno-offload-lto -fembed-bitcode=all -c %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-HIP-NO-LTO
+// CHECK-HIP-NO-LTO: "-cc1" "-triple" "{{amdgcn|amdgpu}}{{.*}}" "-emit-llvm-bc"
+// CHECK-HIP-NO-LTO-NOT: "-disable-llvm-passes"
+// CHECK-HIP-NO-LTO-SAME: "-include" "__clang_hip_runtime_wrapper.h"
+// CHECK-HIP-NO-LTO-SAME: "-x" "hip"
+// CHECK-HIP-NO-LTO-NEXT: "-cc1" "-triple" "{{amdgcn|amdgpu}}{{.*}}" "-emit-obj" "-fembed-bitcode=all"
+// CHECK-HIP-NO-LTO-SAME: "-disable-llvm-passes"
+// CHECK-HIP-NO-LTO-SAME: "-x" "ir"
+
+// RUN: %clang -### -x hip --target=x86_64-unknown-linux-gnu --offload-arch=gfx90a \
+// RUN:   -nogpulib -nogpuinc -fembed-bitcode=all -c %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-HIP-LTO
+// CHECK-HIP-LTO: "-cc1" "-triple" "{{amdgcn|amdgpu}}{{.*}}" "-emit-llvm-bc"
+// CHECK-HIP-LTO-SAME: "-flto=full"
+// CHECK-HIP-LTO-SAME: "-x" "hip"
+// CHECK-HIP-LTO-NEXT: llvm-offload-binary

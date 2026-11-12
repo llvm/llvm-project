@@ -10,6 +10,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace FormatterBytecode;
+using llvm::Failed;
 using llvm::FailedWithMessage;
 using llvm::StringRef;
 
@@ -35,12 +36,13 @@ static bool Interpret(std::vector<uint8_t> code, DataStack &data,
 
 /// Like Interpret() above, but returns (instead of discarding) the Error,
 /// allowing tests to assert on the error message.
-static llvm::Error InterpretFail(std::vector<uint8_t> code) {
+static llvm::Error InterpretFail(std::vector<uint8_t> code,
+                                 uint32_t version = 1) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
   DataStack data;
-  return Interpret(control, data, sig_summary, /*version=*/1);
+  return Interpret(control, data, sig_summary, version);
 }
 
 TEST_F(FormatterBytecodeTest, StackOps) {
@@ -502,11 +504,101 @@ TEST_F(FormatterBytecodeTest, CallOps) {
     data.Push(std::string{"{1}{0}"});
     ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
     ASSERT_EQ(data.Pop<std::string>(), "BA");
+    // The arguments are consumed.
+    ASSERT_TRUE(data.empty());
+  }
+  {
+    // Only the arguments are consumed, not values below them.
+    DataStack data;
+    data.Push(std::string{"below"});
+    data.Push(std::string{"x"});
+    data.Push(std::string{"<{}>"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+    ASSERT_EQ(data.Pop<std::string>(), "<x>");
+    ASSERT_EQ(data.size(), 1u);
+    ASSERT_EQ(data.Pop<std::string>(), "below");
+  }
+  {
+    // A format string without replacements consumes nothing else.
+    DataStack data;
+    data.Push(std::string{"below"});
+    data.Push(std::string{"plain"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+    ASSERT_EQ(data.Pop<std::string>(), "plain");
+    ASSERT_EQ(data.Pop<std::string>(), "below");
   }
   {
     DataStack data;
     data.Push(std::string{"{0}"});
     ASSERT_FALSE(Interpret({op_lit_selector, sel_fmt, op_call}, data));
+  }
+}
+
+TEST_F(FormatterBytecodeTest, FormatVersion2) {
+  auto fmt = [](std::vector<std::string> args, std::string fmt) {
+    DataStack data;
+    for (auto &arg : args)
+      data.Push(arg);
+    data.Push(fmt);
+    EXPECT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data,
+                          /*version=*/2));
+    EXPECT_EQ(data.size(), 1u);
+    return data.Pop<std::string>();
+  };
+  // Replacements are automatically indexed, in stack order.
+  EXPECT_EQ(fmt({"A", "B"}, "{}{}"), "AB");
+  EXPECT_EQ(fmt({"A"}, "<{}>"), "<A>");
+  EXPECT_EQ(fmt({}, "plain"), "plain");
+  // "{{" is a literal "{", and "}" is a literal.
+  EXPECT_EQ(fmt({"A"}, "{{{}}"), "{A}");
+  EXPECT_EQ(fmt({}, "a}b"), "a}b");
+  // A "}" outside of a replacement is always a literal, even if it follows a
+  // replacement, or another "}". Unlike "{{", "}}" is not an escape.
+  EXPECT_EQ(fmt({}, "}"), "}");
+  EXPECT_EQ(fmt({"A"}, "{}}"), "A}");
+  EXPECT_EQ(fmt({}, "}}"), "}}");
+
+  // Layouts and options are accepted, but not yet supported, so they are
+  // ignored and format the same as "{}".
+  EXPECT_EQ(fmt({"ab"}, "[{,8}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{,*=8}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{:x}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{,8:x}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab"}, "[{:a:b,c}]"), "[ab]");
+  EXPECT_EQ(fmt({"ab", "cd"}, "[{,}{:}]"), "[abcd]");
+  // Layouts and options don't change the automatic indexing.
+  EXPECT_EQ(fmt({"A", "B", "C"}, "{}{,8}{:x}"), "ABC");
+
+  // Error: explicit indexes and malformed replacements.
+  auto fmt_error = [](std::string fmt) {
+    std::vector<uint8_t> code = {op_lit_string, uint8_t(fmt.size())};
+    code.insert(code.end(), fmt.begin(), fmt.end());
+    code.insert(code.end(), {op_lit_selector, sel_fmt, op_call});
+    return InterpretFail(code, /*version=*/2);
+  };
+  EXPECT_THAT_ERROR(
+      fmt_error("{0}"),
+      FailedWithMessage("invalid replacement in format string at offset 0"));
+  EXPECT_THAT_ERROR(
+      fmt_error("ab{1,8}"),
+      FailedWithMessage("invalid replacement in format string at offset 2"));
+  EXPECT_THAT_ERROR(fmt_error("{x}"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{{{"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{,8"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{:x"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{,a{}"), Failed());
+  EXPECT_THAT_ERROR(fmt_error("{:a{}"), Failed());
+
+  // Version 1 still supports explicit indexes.
+  {
+    DataStack data;
+    data.Push(std::string{"A"});
+    data.Push(std::string{"B"});
+    data.Push(std::string{"{1}{0}"});
+    ASSERT_TRUE(Interpret({op_lit_selector, sel_fmt, op_call}, data,
+                          /*version=*/1));
+    ASSERT_EQ(data.Pop<std::string>(), "BA");
   }
 }
 

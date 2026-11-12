@@ -80,7 +80,7 @@ end subroutine
 subroutine paren_derived_named_const()
   use types
   ! Parenthesized derived named constant: the parentheses wrap a
-  ! Constant<SomeDerived> rather than a structure constructor.
+  ! Constant<Type<TypeCategory::Derived>> rather than a structure constructor.
   type(t), parameter :: tp = t(3)
   type(t), save :: pt2 = (tp)
 end subroutine

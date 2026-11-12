@@ -8,24 +8,20 @@ target triple = "thumbv5e-none-linux-gnueabi"
 define void @f(i32,i32,i32,i32,ptr %x4p, ptr %x5p, ptr %x6p) {
 ; CHECK-LABEL: f:
 ; CHECK:       @ %bb.0: @ %if.end
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    str r3, [sp] @ 4-byte Spill
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    ldr r3, [sp, #32]
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    ldr r5, [sp, #24]
+; CHECK-NEXT:    adds r2, r3, r2
 ; CHECK-NEXT:  .LBB0_1: @ %while.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r4, [sp] @ 4-byte Reload
-; CHECK-NEXT:    adds r6, r4, r2
-; CHECK-NEXT:    adds r7, r1, r0
-; CHECK-NEXT:    mov r12, r5
-; CHECK-NEXT:    mov r4, r12
-; CHECK-NEXT:    adcs r4, r5
-; CHECK-NEXT:    adds r7, r7, r5
-; CHECK-NEXT:    adcs r4, r6
-; CHECK-NEXT:    str r4, [r3]
+; CHECK-NEXT:    adds r3, r1, r0
+; CHECK-NEXT:    mov r12, r4
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:    adcs r6, r4
+; CHECK-NEXT:    adds r3, r3, r4
+; CHECK-NEXT:    adcs r6, r2
+; CHECK-NEXT:    str r6, [r5]
 ; CHECK-NEXT:    b .LBB0_1
 if.end:
   br label %while.body

@@ -135,6 +135,52 @@ class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @skipIfWindows
+    @skipIfRemote
+    @add_test_categories(["llgs"])
+    def test_platform_file_pwrite_pipe(self):
+        """A pipe cannot seek, so lldb-server writes at its end, whatever the
+        offset."""
+        server = self.connect_to_debug_monitor()
+        self.assertIsNotNone(server)
+
+        fifo_path = self.getBuildArtifact("fifo")
+        os.mkfifo(fifo_path)
+        # With the read end open, lldb-server opens the write end at once.
+        reader = os.open(fifo_path, os.O_RDONLY | os.O_NONBLOCK)
+        self.addTearDownHook(lambda: os.close(reader))
+
+        self.do_handshake()
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vFile:open:%s,1,0#00"
+                % (binascii.b2a_hex(fifo_path.encode()).decode(),),
+                {
+                    "direction": "send",
+                    "regex": r"^\$F([0-9a-fA-F]+)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "fd"},
+                },
+            ],
+            True,
+        )
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        fd = int(context["fd"], 16)
+
+        self.reset_test_sequence()
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vFile:pwrite:%x,10,somedata#00" % (fd,),
+                "send packet: $F8#00",
+                "read packet: $vFile:close:%x#00" % (fd,),
+                "send packet: $F0#00",
+            ],
+            True,
+        )
+        self.expect_gdbremote_sequence()
+        # Ask for more than was sent, so that any extra bytes fail the check.
+        self.assertEqual(os.read(reader, 64), b"somedata")
+
+    @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_size(self):
         server = self.connect_to_debug_monitor()

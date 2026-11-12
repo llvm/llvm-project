@@ -5,8 +5,11 @@
 name:            or_i8
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: or_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
@@ -25,8 +28,11 @@ body:             |
 name:            or_i15
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: or_i15
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
@@ -45,8 +51,11 @@ body:             |
 name:            or_i16
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: or_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
@@ -65,8 +74,11 @@ body:             |
 name:            or_i32
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: or_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
@@ -85,8 +97,11 @@ body:             |
 name:            or_i64
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: or_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
@@ -102,8 +117,11 @@ body:             |
 name:            or_i72
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: or_i72
-    ; CHECK: %x00:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x00:_(s64) = COPY $x10
     ; CHECK-NEXT: %x01:_(s64) = COPY $x11
     ; CHECK-NEXT: %y00:_(s64) = COPY $x12
     ; CHECK-NEXT: %y01:_(s64) = COPY $x13
@@ -132,8 +150,11 @@ body:             |
 name:            or_i128
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: or_i128
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x11
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x12
     ; CHECK-NEXT: %hi2:_(s64) = COPY $x13
@@ -159,8 +180,11 @@ body:             |
 name:            or_i192
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15
     ; CHECK-LABEL: name: or_i192
-    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %mid1:_(s64) = COPY $x11
     ; CHECK-NEXT: %hi1:_(s64) = COPY $x12
     ; CHECK-NEXT: %lo2:_(s64) = COPY $x13

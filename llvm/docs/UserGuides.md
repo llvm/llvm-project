@@ -26,7 +26,7 @@ StackSafetyAnalysis
 MergeFunctions
 AliasAnalysis
 MemorySSA
-MemProf
+MemPGO
 LoopTerminology
 CycleTerminology
 Vectorizers
@@ -36,6 +36,7 @@ GoldPlugin
 Remarks
 SourceLevelDebugging
 HowToUpdateDebugInfo
+HowToUpdateUnicodeTables
 Instrumentor
 InstrRefDebugInfo
 RemoveDIsDebugInfo
@@ -173,9 +174,9 @@ yaml2obj
 
   Information about the MemorySSA utility in LLVM, as well as how to use it.
 
-- {doc}`MemProf`
+- {doc}`MemPGO`
 
-  User guide and internals of MemProf, profile guided optimizations for memory.
+  User guide and internals of MemPGO (Profile-Guided Memory Optimization) and MemProf (Memory Profiling).
 
 - {doc}`LoopTerminology`
 
@@ -217,6 +218,11 @@ yaml2obj
 
   This document specifies how to correctly update debug info in various kinds
   of code transformations.
+
+- {doc}`How to Update Unicode Tables <HowToUpdateUnicodeTables>`
+
+  How to regenerate LLVM and Clang Unicode character tables from the Unicode
+  Character Database.
 
 - {doc}`InstrRefDebugInfo`
 

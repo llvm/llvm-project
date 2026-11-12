@@ -21,30 +21,30 @@ namespace arg_origins {
 void from_local() {
   Vector<char> vec;
   process(vec[0]);
-  // expected-warning@-1{{Function argument 'vec[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void from_parameter(Vector<char> &vec) {
   process(vec[0]);
-  // expected-warning@-1{{Function argument 'vec[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void from_global() {
   process(globalVector[0]);
-  // expected-warning@-1{{Function argument 'globalVector[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'globalVector[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void from_static_local() {
   static Vector<char> cache;
   process(cache[0]);
-  // expected-warning@-1{{Function argument 'cache[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'cache[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 class Holder {
 public:
   void from_member() {
     process(m_vector[0]);
-    // expected-warning@-1{{Function argument 'this->m_vector[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+    // expected-warning@-1{{Function argument 'this->m_vector[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
   }
 
 private:
@@ -55,21 +55,26 @@ void from_call_result() {
   process(makeVector()[0]);
 }
 
+void from_const_local() {
+  const Vector<char> vec = makeVector();
+  processConst(vec[0]);
+}
+
 void from_returned_reference() {
   process(getVectorRef()[0]);
-  // expected-warning@-1{{Function argument 'getVectorRef()[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'getVectorRef()[0]' (to 'process') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void buffer_pointer() {
   Vector<char> vec;
   takePtr(vec.data());
-  // expected-warning@-1{{Function argument 'vec.data()' (to 'takePtr') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec.data()' (to 'takePtr') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void const_parameter() {
   Vector<char> vec;
   processConst(vec[0]);
-  // expected-warning@-1{{Function argument 'vec[0]' (to 'processConst') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec[0]' (to 'processConst') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 } // namespace arg_origins
@@ -79,20 +84,20 @@ namespace implicit_object_arg {
 void mutating_method() {
   Vector<Element> vec;
   vec[0].mutate();
-  // expected-warning@-1{{Function argument 'vec[0]' (parameter 'this' to 'Element::mutate') is a loan on CanBorrow type 'Vector<Element>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec[0]' (parameter 'this' to 'Element::mutate') is a loan on CanBorrow type 'Vector<Element>' that is not guarded by const or a Borrow}}
 }
 
 void const_method() {
   Vector<Element> vec;
   vec[0].inspect();
-  // expected-warning@-1{{Function argument 'vec[0]' (parameter 'this' to 'Element::inspect') is a loan on CanBorrow type 'Vector<Element>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec[0]' (parameter 'this' to 'Element::inspect') is a loan on CanBorrow type 'Vector<Element>' that is not guarded by const or a Borrow}}
 }
 
 class Holder {
 public:
   void from_member() {
     m_elements[0].mutate();
-    // expected-warning@-1{{Function argument 'this->m_elements[0]' (parameter 'this' to 'Element::mutate') is a loan on CanBorrow type 'Vector<Element>' that is not guarded by a Borrow}}
+    // expected-warning@-1{{Function argument 'this->m_elements[0]' (parameter 'this' to 'Element::mutate') is a loan on CanBorrow type 'Vector<Element>' that is not guarded by const or a Borrow}}
   }
 
 private:
@@ -102,7 +107,7 @@ private:
 void nested_container() {
   Vector<Vector<char>> outer;
   outer[0].append('x');
-  // expected-warning@-1{{Function argument 'outer[0]' (parameter 'this' to 'Vector<char>::append') is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'outer[0]' (parameter 'this' to 'Vector<char>::append') is a loan on CanBorrow type 'Vector<Vector<char>>' that is not guarded by const or a Borrow}}
 }
 
 } // namespace implicit_object_arg
@@ -173,15 +178,15 @@ namespace nested_calls {
 void annotated_intermediate() {
   Vector<char> vec;
   takeView(makeView(vec.data()));
-  // expected-warning@-1{{Function argument 'makeView(vec.data())' (to 'takeView') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
-  // expected-warning@-2{{Function argument 'vec.data()' (parameter 'data' to 'makeView') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'makeView(vec.data())' (to 'takeView') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
+  // expected-warning@-2{{Function argument 'vec.data()' (parameter 'data' to 'makeView') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 void two_loans_one_call() {
   Vector<char> vec;
   pick(vec.data(), vec.data());
-  // expected-warning@-1{{Function argument 'vec.data()' (parameter 'a' to 'pick') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
-  // expected-warning@-2{{Function argument 'vec.data()' (parameter 'b' to 'pick') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow}}
+  // expected-warning@-1{{Function argument 'vec.data()' (parameter 'a' to 'pick') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
+  // expected-warning@-2{{Function argument 'vec.data()' (parameter 'b' to 'pick') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow}}
 }
 
 } // namespace nested_calls
@@ -191,7 +196,7 @@ namespace known_gaps {
 void unannotated_intermediate() {
   Vector<char> vec;
   takeSpan(makeSpanUnannotated(vec));
-  // expected-warning@-1{{Function argument 'makeSpanUnannotated(vec)' (to 'takeSpan') is a loan on CanBorrow type 'Vector<char>' that is not guarded by a Borrow [alpha.webkit.UnborrowedCallArgsChecker]}}
+  // expected-warning@-1{{Function argument 'makeSpanUnannotated(vec)' (to 'takeSpan') is a loan on CanBorrow type 'Vector<char>' that is not guarded by const or a Borrow [alpha.webkit.UnborrowedCallArgsChecker]}}
 }
 
 inline void trivialSink(char &c) {}

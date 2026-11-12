@@ -190,6 +190,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
   MCSymbol *SignInstrLabel = nullptr;
 
+  /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
+  enum class SignReturnAddressHardeningKind { None, LoadReturnAddress };
+
+  SignReturnAddressHardeningKind SignReturnAddressHardening =
+      SignReturnAddressHardeningKind::None;
+
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
@@ -204,6 +210,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// bit 60 of the in-memory FP will be 1 to enable other tools to detect the
   /// extended record.
   bool HasSwiftAsyncContext = false;
+
+  /// Whether this function makes a non-tail call, on Windows, to a function
+  /// that pops its own stack arguments. The unwinder gives the SP after that
+  /// pop, which isn't the SP our unwind info describes if we reserved the
+  /// argument area in the prologue, so we must be found via the frame pointer.
+  bool HasWinCallToCalleePopFunction = false;
 
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
@@ -581,6 +593,10 @@ public:
 
   bool isMTETagged() const { return IsMTETagged; }
 
+  bool shouldHardenSignReturnAddress() const {
+    return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
+  }
+
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
   bool branchProtectionPAuthLR() const { return BranchProtectionPAuthLR; }
@@ -589,6 +605,13 @@ public:
     HasSwiftAsyncContext = HasContext;
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setHasWinCallToCalleePopFunction(bool Has) {
+    HasWinCallToCalleePopFunction = Has;
+  }
+  bool hasWinCallToCalleePopFunction() const {
+    return HasWinCallToCalleePopFunction;
+  }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;

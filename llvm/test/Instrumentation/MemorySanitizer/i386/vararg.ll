@@ -37,13 +37,12 @@ define void @VaStart(ptr %s, ...) {
 ; KERNEL-LABEL: define void @VaStart(
 ; KERNEL-SAME: ptr [[S:%.*]], ...) {
 ; KERNEL-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state()
-; KERNEL-NEXT:    [[PARAM_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 0
-; KERNEL-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 1
-; KERNEL-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 2
-; KERNEL-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 3
-; KERNEL-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
-; KERNEL-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
-; KERNEL-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
+; KERNEL-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 800
+; KERNEL-NEXT:    [[VA_ARG_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1600
+; KERNEL-NEXT:    [[VA_ARG_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2400
+; KERNEL-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3200
+; KERNEL-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3208
+; KERNEL-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4008
 ; KERNEL-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VA_ARG_OVERFLOW_SIZE]], align 4
 ; KERNEL-NEXT:    [[TMP3:%.*]] = alloca i8, i32 [[TMP2]], align 8
 ; KERNEL-NEXT:    call void @llvm.memset.p0.i32(ptr align 8 [[TMP3]], i8 0, i32 [[TMP2]], i1 false)

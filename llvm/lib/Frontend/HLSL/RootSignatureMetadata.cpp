@@ -138,7 +138,7 @@ MDNode *MetadataBuilder::BuildRootSignature() {
 }
 
 MDNode *MetadataBuilder::BuildRootFlags(const dxbc::RootFlags &Flags) {
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   Metadata *Operands[] = {
       MDString::get(Ctx, "RootFlags"),
       ConstantAsMetadata::get(Builder.getInt32(to_underlying(Flags))),
@@ -147,7 +147,7 @@ MDNode *MetadataBuilder::BuildRootFlags(const dxbc::RootFlags &Flags) {
 }
 
 MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   Metadata *Operands[] = {
       MDString::get(Ctx, "RootConstants"),
       ConstantAsMetadata::get(
@@ -160,7 +160,7 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 }
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   StringRef ResName = dxil::getResourceClassName(Descriptor.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
@@ -177,7 +177,7 @@ MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   SmallVector<Metadata *> TableOperands;
   // Set the mandatory arguments
   TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
@@ -200,7 +200,7 @@ MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
 
 MDNode *MetadataBuilder::BuildDescriptorTableClause(
     const DescriptorTableClause &Clause) {
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   StringRef ResName = dxil::getResourceClassName(Clause.Type);
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
@@ -215,7 +215,7 @@ MDNode *MetadataBuilder::BuildDescriptorTableClause(
 }
 
 MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(M);
   Metadata *Operands[] = {
       MDString::get(Ctx, "StaticSampler"),
       ConstantAsMetadata::get(Builder.getInt32(to_underlying(Sampler.Filter))),

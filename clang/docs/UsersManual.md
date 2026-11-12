@@ -5611,7 +5611,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -fmacro-backtrace-limit=<value>
 >                           Set the maximum number of entries to print in a macro expansion backtrace (0 = no limit)
 >   -fmemory-profile-use=<pathname>
->                           Use memory profile for profile-guided memory optimization
+>                           Use memory profile for profile-guided memory optimization (MemPGO)
 >   -fmerge-all-constants   Allow merging of constants
 >   -fmodule-file=[<name>=]<file>
 >                           Specify the mapping of module name to precompiled module file, or load a module file if name is omitted.

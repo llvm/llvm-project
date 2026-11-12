@@ -46,8 +46,8 @@ define i32 @udiv_i32(i32 %a, i32 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   $eax = COPY [[COPY2]]
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   $edx = COPY [[MOV32r0_]]
@@ -66,8 +66,8 @@ define i64 @srem_i64(i64 %a, i64 %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-NEXT:   $rax = COPY [[COPY2]]
   ; CHECK-NEXT:   CQO implicit-def $rax, implicit-def $rdx, implicit $rax
   ; CHECK-NEXT:   IDIV64r [[COPY3]], implicit-def dead $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax, implicit $rdx

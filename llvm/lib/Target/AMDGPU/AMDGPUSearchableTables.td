@@ -328,6 +328,19 @@ def : SourceOfDivergence<int_amdgcn_permlane_up>;
 def : SourceOfDivergence<int_amdgcn_permlane_down>;
 def : SourceOfDivergence<int_amdgcn_permlane_xor>;
 def : SourceOfDivergence<int_amdgcn_permlane_idx_gen>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_sum_i32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_sum_u32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_xor_b32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_or_b32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_and_b32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_min_i16>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_min_u16>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_min_i32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_min_u32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_max_i16>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_max_u16>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_max_i32>;
+def : SourceOfDivergence<int_amdgcn_exclusive_scan_max_u32>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
@@ -429,3 +442,31 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
 }
+
+def LDSDMAIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPULDSDMAIntrinsic";
+  let CppTypeName = "LDSDMAIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupLDSDMAIntrinsic";
+}
+
+class ExponentOnlyScaleIntrinsic<AMDGPUExponentOnlyScale intr> {
+  Intrinsic Intr = !cast<Intrinsic>(intr);
+  bits<8> ScaleArg = intr.ScaleArg;
+  assert !eq(Intr.ParamTypes[intr.ScaleArg], llvm_float_ty),
+    "scale argument of " # !cast<string>(intr) # " must be f32";
+}
+
+def ExponentOnlyScaleIntrinsics : GenericTable {
+  let FilterClass = "ExponentOnlyScaleIntrinsic";
+  let Fields = ["Intr", "ScaleArg"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupExponentOnlyScaleIntrinsic";
+  let PrimaryKeyEarlyOut = 1;
+}
+
+foreach intr = !instances<AMDGPUExponentOnlyScale>() in
+  def : ExponentOnlyScaleIntrinsic<intr>;

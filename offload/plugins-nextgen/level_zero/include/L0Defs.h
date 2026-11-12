@@ -23,6 +23,9 @@ enum class AllocOptionTy : int32_t {
   ALLOC_OPT_SLM = 4,
 };
 
+// Level Zero debug types
+constexpr const char *OLDT_ZeDispatcher = "ZeDispatcher";
+
 namespace llvm::omp::target::plugin {
 
 /// Default alignmnet for allocation.

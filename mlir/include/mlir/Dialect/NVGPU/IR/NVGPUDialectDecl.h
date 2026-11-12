@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPUDIALECTDECL_H
 #define MLIR_DIALECT_NVGPU_IR_NVGPUDIALECTDECL_H
 
-#include "mlir/IR/Dialect.h"
-
 namespace mlir {
 class MemRefType;
 } // namespace mlir

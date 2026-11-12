@@ -22,9 +22,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "OffloadAPI.h"
+#include "OffloadError.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
-#include "omptarget.h"
 
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -34,7 +35,7 @@ using namespace llvm::offload::debug;
 
 namespace llvm {
 
-/// Base class of per-device allocator.
+/// Base class of the allocator a memory manager pools the memory of.
 class DeviceAllocatorTy {
 public:
   virtual ~DeviceAllocatorTy() = default;
@@ -42,17 +43,17 @@ public:
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
   virtual Expected<void *> allocate(size_t Size, void *HstPtr,
-                                    TargetAllocTy Kind = TARGET_ALLOC_DEFAULT,
+                                    ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE,
                                     size_t Alignment = 0) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
   virtual Error free(void *TgtPtr,
-                     TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+                     ol_alloc_type_t Kind = OL_ALLOC_TYPE_DEVICE) = 0;
 };
 
-/// Class of memory manager. The memory manager is per-device by using
-/// per-device allocator. Therefore, each plugin using memory manager should
-/// have an allocator for each device.
+/// Class of memory manager. A manager pools the memory of a single allocator,
+/// so there is one manager per allocator, e.g. one per context, device and
+/// kind of memory.
 class MemoryManagerTy {
   static constexpr const size_t BucketSize[] = {
       0,       1U << 2, 1U << 3,  1U << 4,  1U << 5,  1U << 6, 1U << 7,
@@ -144,7 +145,7 @@ class MemoryManagerTy {
   /// The reference to a device allocator
   DeviceAllocatorTy &DeviceAllocator;
   /// The kind of device for which the memory manager is allocated
-  TargetAllocTy DeviceKind;
+  ol_alloc_type_t DeviceKind;
 
   /// The threshold to manage memory using memory manager. If the request size
   /// is larger than \p SizeThreshold, the allocation will not be managed by the
@@ -237,7 +238,7 @@ public:
   /// Constructor. If \p Threshold is non-zero, then the default threshold will
   /// be overwritten by \p Threshold.
   MemoryManagerTy(DeviceAllocatorTy &DeviceAllocator, size_t Threshold = 0,
-                  TargetAllocTy DeviceKind = TARGET_ALLOC_DEVICE)
+                  ol_alloc_type_t DeviceKind = OL_ALLOC_TYPE_DEVICE)
       : FreeLists(NumBuckets), FreeListLocks(NumBuckets),
         DeviceAllocator(DeviceAllocator), DeviceKind(DeviceKind) {
     if (Threshold)

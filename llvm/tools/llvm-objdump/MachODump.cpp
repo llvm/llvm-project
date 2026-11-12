@@ -1366,6 +1366,8 @@ static void PrintDyldInfo(MachOObjectFile *O) {
   auto HexLength = [](uint64_t Num) {
     return Num ? (size_t)divideCeil(Log2_64(Num), 4) : 1;
   };
+  // arm64e images get columns for the signing schema of authenticated fixups.
+  bool HasAuthColumns = false;
   for (const object::MachOChainedFixupEntry &Entry : O->fixupTable(Err)) {
     SegmentWidth = std::max(SegmentWidth, Entry.segmentName().size());
     SectionWidth = std::max(SectionWidth, Entry.sectionName().size());
@@ -1374,6 +1376,9 @@ static void PrintDyldInfo(MachOObjectFile *O) {
       AddendWidth = std::max(AddendWidth, HexLength(Entry.addend()) + 2);
       DylibWidth = std::max(DylibWidth, Entry.symbolName().size());
     }
+    HasAuthColumns |=
+        Entry.pointerFormat() == MachO::DYLD_CHAINED_PTR_ARM64E ||
+        Entry.pointerFormat() == MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND24;
   }
   // Errors will be handled when printing the table.
   if (Err)
@@ -1383,17 +1388,27 @@ static void PrintDyldInfo(MachOObjectFile *O) {
   outs() << left_justify("segment", SegmentWidth) << ' '
          << left_justify("section", SectionWidth) << ' '
          << left_justify("address", AddressWidth) << ' '
-         << left_justify("pointer", PointerWidth) << " type   "
-         << left_justify("addend", AddendWidth) << ' '
+         << left_justify("pointer", PointerWidth) << " type   ";
+  if (HasAuthColumns)
+    outs() << "div    addr  key ";
+  outs() << left_justify("addend", AddendWidth) << ' '
          << left_justify("dylib", DylibWidth) << " symbol/vm address\n";
   for (const object::MachOChainedFixupEntry &Entry : O->fixupTable(Err)) {
     outs() << left_justify(Entry.segmentName(), SegmentWidth) << ' '
            << left_justify(Entry.sectionName(), SectionWidth) << ' ' << "0x"
            << left_justify(utohexstr(Entry.address()), AddressWidth - 2) << ' '
            << format_hex(Entry.rawValue(), PointerWidth, true) << ' ';
+    outs() << (Entry.isBind() ? "bind   " : "rebase ");
+    if (HasAuthColumns && Entry.isAuthenticated()) {
+      static const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
+      outs() << format("0x%04X ", Entry.diversity())
+             << left_justify(Entry.hasAddressDiversity() ? "true" : "false", 5)
+             << ' ' << left_justify(KeyNames[Entry.key()], 3) << ' ';
+    } else if (HasAuthColumns) {
+      outs().indent(17);
+    }
     if (Entry.isBind()) {
-      outs() << "bind   "
-             << "0x" << left_justify(utohexstr(Entry.addend()), AddendWidth - 2)
+      outs() << "0x" << left_justify(utohexstr(Entry.addend()), AddendWidth - 2)
              << ' ' << left_justify(ordinalName(O, Entry.ordinal()), DylibWidth)
              << ' ' << Entry.symbolName();
       if (Entry.flags() & MachO::BIND_SYMBOL_FLAGS_WEAK_IMPORT)
@@ -1401,8 +1416,7 @@ static void PrintDyldInfo(MachOObjectFile *O) {
       outs() << '\n';
     } else {
       assert(Entry.isRebase());
-      outs() << "rebase";
-      outs().indent(AddendWidth + DylibWidth + 2);
+      outs().indent(AddendWidth + DylibWidth + 1);
       outs() << format("0x%" PRIX64, Entry.pointerValue()) << '\n';
     }
   }

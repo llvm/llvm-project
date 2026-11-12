@@ -14,6 +14,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -94,7 +95,8 @@ void SBAttachInfo::SetResumeCount(uint32_t c) {
 const char *SBAttachInfo::GetProcessPluginName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetProcessPluginName()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetProcessPluginName());
 }
 
 void SBAttachInfo::SetProcessPluginName(const char *plugin_name) {
