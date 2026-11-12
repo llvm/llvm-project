@@ -728,10 +728,6 @@ void Function::addDereferenceableParamAttr(unsigned ArgNo, uint64_t Bytes) {
       AttributeSets.addDereferenceableParamAttr(getContext(), ArgNo, Bytes);
 }
 
-bool Function::hasFnAttribute(Attribute::AttrKind Kind) const {
-  return AttributeSets.hasFnAttr(Kind);
-}
-
 bool Function::hasFnAttribute(StringRef Kind) const {
   return AttributeSets.hasFnAttr(Kind);
 }

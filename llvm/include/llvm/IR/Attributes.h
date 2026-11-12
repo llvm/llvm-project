@@ -40,6 +40,7 @@ class AttrBuilder;
 class AttributeMask;
 class AttributeImpl;
 class AttributeListImpl;
+class AttributeSet;
 class AttributeSetNode;
 class ConstantRange;
 class ConstantRangeList;
@@ -426,13 +427,19 @@ public:
   }
 };
 
-/// The enum function attributes available in an AttributeListImpl, so that
-/// AttributeList can query them inline.
+/// The attribute sets and enum function attributes of an AttributeListImpl,
+/// so that AttributeList can query them inline.
 class AttributeListImplBase {
 protected:
+  /// The attribute sets, which are stored after the AttributeListImpl.
+  const AttributeSet *AttrSets = nullptr;
+  unsigned NumAttrSets = 0; ///< Number of entries in this set.
   AttributeBitSet AvailableFunctionAttrs;
 
 public:
+  const AttributeSet *getAttrSets() const { return AttrSets; }
+  unsigned getNumAttrSets() const { return NumAttrSets; }
+
   /// Return true if the function has an enum attribute of the given kind.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
     return AvailableFunctionAttrs.hasAttribute(Kind);
@@ -627,6 +634,9 @@ private:
 
   /// Return the implementation of this list.
   AttributeListImpl *getListImpl() const;
+
+  /// Map an attribute index to the index of its set in the list.
+  static unsigned attrIdxToArrayIdx(unsigned Index) { return Index + 1; }
 
 public:
   /// Create an AttributeList with the specified parameters in it.
@@ -952,17 +962,24 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// The attributes for the specified index are returned.
-  LLVM_ABI AttributeSet getAttributes(unsigned Index) const;
+  AttributeSet getAttributes(unsigned Index) const {
+    Index = attrIdxToArrayIdx(Index);
+    if (!pImpl || Index >= pImpl->getNumAttrSets())
+      return {};
+    return pImpl->getAttrSets()[Index];
+  }
 
   /// The attributes for the argument or parameter at the given index are
   /// returned.
-  LLVM_ABI AttributeSet getParamAttrs(unsigned ArgNo) const;
+  AttributeSet getParamAttrs(unsigned ArgNo) const {
+    return getAttributes(ArgNo + FirstArgIndex);
+  }
 
   /// The attributes for the ret value are returned.
-  LLVM_ABI AttributeSet getRetAttrs() const;
+  AttributeSet getRetAttrs() const { return getAttributes(ReturnIndex); }
 
   /// The function attributes are returned.
-  LLVM_ABI AttributeSet getFnAttrs() const;
+  AttributeSet getFnAttrs() const { return getAttributes(FunctionIndex); }
 
   /// Return true if the attribute exists at the given index.
   LLVM_ABI bool hasAttributeAtIndex(unsigned Index,
@@ -1135,7 +1152,9 @@ public:
   LLVM_ABI iterator begin() const;
   LLVM_ABI iterator end() const;
 
-  LLVM_ABI unsigned getNumAttrSets() const;
+  unsigned getNumAttrSets() const {
+    return pImpl ? pImpl->getNumAttrSets() : 0;
+  }
 
   // Implementation of indexes(). Produces iterators that wrap an index. Mostly
   // to hide the awkwardness of unsigned wrapping when iterating over valid

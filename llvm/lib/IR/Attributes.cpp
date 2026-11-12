@@ -1517,20 +1517,18 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 
 /// Map from AttributeList index to the internal array index. Adding one happens
 /// to work, because -1 wraps around to 0.
-static unsigned attrIdxToArrayIdx(unsigned Index) {
-  return Index + 1;
-}
-
-AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
-    : NumAttrSets(Sets.size()) {
+AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets) {
   assert(!Sets.empty() && "pointless AttributeListImpl");
 
   // There's memory after the node where we can store the entries in.
   llvm::copy(Sets, getTrailingObjects());
+  AttrSets = getTrailingObjects();
+  NumAttrSets = Sets.size();
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.
-  for (const auto &I : Sets[attrIdxToArrayIdx(AttributeList::FunctionIndex)])
+  for (const auto &I :
+       Sets[AttributeList::attrIdxToArrayIdx(AttributeList::FunctionIndex)])
     if (!I.isStringAttribute())
       AvailableFunctionAttrs.addAttribute(I.getKindAsEnum());
 
@@ -1960,18 +1958,6 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
 // AttributeList Accessor Methods
 //===----------------------------------------------------------------------===//
 
-AttributeSet AttributeList::getParamAttrs(unsigned ArgNo) const {
-  return getAttributes(ArgNo + FirstArgIndex);
-}
-
-AttributeSet AttributeList::getRetAttrs() const {
-  return getAttributes(ReturnIndex);
-}
-
-AttributeSet AttributeList::getFnAttrs() const {
-  return getAttributes(FunctionIndex);
-}
-
 bool AttributeList::hasAttributeAtIndex(unsigned Index,
                                         Attribute::AttrKind Kind) const {
   return getAttributes(Index).hasAttribute(Kind);
@@ -2102,13 +2088,6 @@ std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {
   return getAttributes(Index).getAsString(InAttrGrp);
 }
 
-AttributeSet AttributeList::getAttributes(unsigned Index) const {
-  Index = attrIdxToArrayIdx(Index);
-  if (!pImpl || Index >= getNumAttrSets())
-    return {};
-  return getListImpl()->begin()[Index];
-}
-
 bool AttributeList::hasParentContext(LLVMContext &C) const {
   assert(!isEmpty() && "an empty attribute list has no parent context");
   FoldingSetInsertToken Token;
@@ -2126,10 +2105,6 @@ AttributeList::iterator AttributeList::end() const {
 //===----------------------------------------------------------------------===//
 // AttributeList Introspection Methods
 //===----------------------------------------------------------------------===//
-
-unsigned AttributeList::getNumAttrSets() const {
-  return pImpl ? getListImpl()->NumAttrSets : 0;
-}
 
 void AttributeList::print(raw_ostream &O) const {
   O << "AttributeList[\n";
