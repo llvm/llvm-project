@@ -463,12 +463,14 @@ define void @fcvt_v1f64_v1bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-BASE-LABEL: fcvt_v1f64_v1bf16:
 ; CHECK-BASE:       // %bb.0:
 ; CHECK-BASE-NEXT:    ldr d0, [x0]
-; CHECK-BASE-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-BASE-NEXT:    mov w10, #32767 // =0x7fff
 ; CHECK-BASE-NEXT:    fcvtxn s0, d0
-; CHECK-BASE-NEXT:    fmov w9, s0
-; CHECK-BASE-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-BASE-NEXT:    add w8, w9, w8
-; CHECK-BASE-NEXT:    add w8, w10, w8
+; CHECK-BASE-NEXT:    fmov w8, s0
+; CHECK-BASE-NEXT:    fcmp s0, s0
+; CHECK-BASE-NEXT:    ubfx w9, w8, #16, #1
+; CHECK-BASE-NEXT:    add w9, w9, w10
+; CHECK-BASE-NEXT:    csel w9, wzr, w9, vs
+; CHECK-BASE-NEXT:    add w8, w8, w9
 ; CHECK-BASE-NEXT:    lsr w8, w8, #16
 ; CHECK-BASE-NEXT:    fmov s0, w8
 ; CHECK-BASE-NEXT:    str h0, [x1]

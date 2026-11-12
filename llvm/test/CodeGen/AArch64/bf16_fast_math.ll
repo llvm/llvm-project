@@ -21,13 +21,16 @@ define bfloat @normal_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY3]], [[COPY2]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY4]], 16, 16
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[COPY4]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[ADDWrr]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   nofpexcept FCMPSrr [[FADDSrr]], [[FADDSrr]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK-NOBF16-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY5]], [[ADDWrr]], 6, implicit $nzcv
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[COPY4]], [[CSELWr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr16 = COPY [[COPY5]].hsub
-  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY6]]
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
+  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY7]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
   ;
   ; CHECK-BF16-LABEL: name: normal_fadd
@@ -113,13 +116,16 @@ define bfloat @ninf_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[COPY3]], [[COPY2]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY4]], 16, 16
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[COPY4]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[ADDWrr]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   nofpexcept FCMPSrr [[FADDSrr]], [[FADDSrr]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK-NOBF16-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY5]], [[ADDWrr]], 6, implicit $nzcv
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[COPY4]], [[CSELWr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr16 = COPY [[COPY5]].hsub
-  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY6]]
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
+  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY7]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
   ;
   ; CHECK-BF16-LABEL: name: ninf_fadd
@@ -163,27 +169,32 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY4]], [[COPY3]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY5]], 16, 16
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[COPY5]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[ADDWrr]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   nofpexcept FCMPSrr [[FADDSrr]], [[FADDSrr]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK-NOBF16-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY6]], [[ADDWrr]], 6, implicit $nzcv
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[COPY5]], [[CSELWr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
-  ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
-  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG [[COPY7]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr16 = COPY [[COPY7]].hsub
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG [[COPY8]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 [[SUBREG_TO_REG2]]
-  ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
+  ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
   ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG [[COPY]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 [[SUBREG_TO_REG3]]
-  ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
-  ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY8]], [[COPY9]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
-  ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY10]], 16, 16
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri2]], [[COPY10]]
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr [[ADDWrr2]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
+  ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr [[COPY9]], [[COPY10]], implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
+  ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY11]], 16, 16
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri2]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   nofpexcept FCMPSrr [[FADDSrr1]], [[FADDSrr1]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY6]], [[ADDWrr2]], 6, implicit $nzcv
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr [[COPY11]], [[CSELWr1]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri3:%[0-9]+]]:gpr32 = UBFMWri [[ADDWrr3]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
-  ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr16 = COPY [[COPY11]].hsub
-  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY12]]
+  ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
+  ; CHECK-NOBF16-NEXT:   [[COPY13:%[0-9]+]]:fpr16 = COPY [[COPY12]].hsub
+  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY13]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
   ;
   ; CHECK-BF16-LABEL: name: normal_fadd_sequence
@@ -301,27 +312,32 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[COPY4]], [[COPY3]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY5]], 16, 16
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[COPY5]]
   ; CHECK-NOBF16-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 32767
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[ADDWrr]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   nofpexcept FCMPSrr [[FADDSrr]], [[FADDSrr]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK-NOBF16-NEXT:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY6]], [[ADDWrr]], 6, implicit $nzcv
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[COPY5]], [[CSELWr]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[ADDWrr1]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
-  ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
-  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG [[COPY7]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+  ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr16 = COPY [[COPY7]].hsub
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG [[COPY8]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 [[SUBREG_TO_REG2]]
-  ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
+  ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
   ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG [[COPY]], %subreg.hsub
   ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 [[SUBREG_TO_REG3]]
-  ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
-  ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[COPY8]], [[COPY9]], implicit $fpcr
-  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
-  ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY10]], 16, 16
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri2]], [[COPY10]]
-  ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr [[ADDWrr2]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
+  ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr [[COPY9]], [[COPY10]], implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
+  ; CHECK-NOBF16-NEXT:   [[UBFMWri2:%[0-9]+]]:gpr32 = UBFMWri [[COPY11]], 16, 16
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr2:%[0-9]+]]:gpr32 = ADDWrr [[UBFMWri2]], [[MOVi32imm]]
+  ; CHECK-NOBF16-NEXT:   nofpexcept FCMPSrr [[FADDSrr1]], [[FADDSrr1]], implicit-def $nzcv, implicit $fpcr
+  ; CHECK-NOBF16-NEXT:   [[CSELWr1:%[0-9]+]]:gpr32 = CSELWr [[COPY6]], [[ADDWrr2]], 6, implicit $nzcv
+  ; CHECK-NOBF16-NEXT:   [[ADDWrr3:%[0-9]+]]:gpr32 = ADDWrr [[COPY11]], [[CSELWr1]]
   ; CHECK-NOBF16-NEXT:   [[UBFMWri3:%[0-9]+]]:gpr32 = UBFMWri [[ADDWrr3]], 16, 31
-  ; CHECK-NOBF16-NEXT:   [[COPY11:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
-  ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr16 = COPY [[COPY11]].hsub
-  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY12]]
+  ; CHECK-NOBF16-NEXT:   [[COPY12:%[0-9]+]]:fpr32 = COPY [[UBFMWri3]]
+  ; CHECK-NOBF16-NEXT:   [[COPY13:%[0-9]+]]:fpr16 = COPY [[COPY12]].hsub
+  ; CHECK-NOBF16-NEXT:   $h0 = COPY [[COPY13]]
   ; CHECK-NOBF16-NEXT:   RET_ReallyLR implicit $h0
   ;
   ; CHECK-BF16-LABEL: name: ninf_fadd_sequence

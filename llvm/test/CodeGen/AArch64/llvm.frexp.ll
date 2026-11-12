@@ -349,12 +349,14 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; WINDOWS-NEXT:    fcvt d0, s0
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    fcvtxn s0, d0
-; WINDOWS-NEXT:    mov w8, #32767 // =0x7fff
+; WINDOWS-NEXT:    mov w10, #32767 // =0x7fff
 ; WINDOWS-NEXT:    ldr w0, [sp, #12]
-; WINDOWS-NEXT:    fmov w9, s0
-; WINDOWS-NEXT:    ubfx w10, w9, #16, #1
-; WINDOWS-NEXT:    add w8, w9, w8
-; WINDOWS-NEXT:    add w8, w10, w8
+; WINDOWS-NEXT:    fmov w8, s0
+; WINDOWS-NEXT:    fcmp s0, s0
+; WINDOWS-NEXT:    ubfx w9, w8, #16, #1
+; WINDOWS-NEXT:    add w9, w9, w10
+; WINDOWS-NEXT:    csel w9, wzr, w9, vs
+; WINDOWS-NEXT:    add w8, w8, w9
 ; WINDOWS-NEXT:    lsr w8, w8, #16
 ; WINDOWS-NEXT:    fmov s0, w8
 ; WINDOWS-NEXT:    // kill: def $h0 killed $h0 killed $s0

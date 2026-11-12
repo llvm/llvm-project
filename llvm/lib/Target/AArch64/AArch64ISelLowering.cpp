@@ -5094,10 +5094,15 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
     SDLoc DL(Op);
     SDValue Narrow = SrcVal;
     SDValue NaN;
+    // Whether the value can be a quiet NaN but not a signalling one, and the
+    // single-precision value that is a NaN if it is.
+    bool QuietNaN = false;
+    SDValue NaNTest = SrcVal;
     EVT I32 = SrcVT.changeElementType(*DAG.getContext(), MVT::i32);
     EVT F32 = SrcVT.changeElementType(*DAG.getContext(), MVT::f32);
     if (SrcVT.getScalarType() == MVT::f32) {
       bool NeverSNaN = DAG.isKnownNeverSNaN(Narrow);
+      QuietNaN = NeverSNaN && !DAG.isKnownNeverNaN(Narrow);
       Narrow = DAG.getNode(ISD::BITCAST, DL, I32, Narrow);
       if (!NeverSNaN) {
         // Set the quiet bit.
@@ -5105,7 +5110,10 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
                           DAG.getConstant(0x400000, DL, I32));
       }
     } else if (SrcVT.getScalarType() == MVT::f64) {
+      // FCVTXN gives a quiet NaN for a NaN.
+      QuietNaN = !DAG.isKnownNeverNaN(Narrow);
       Narrow = DAG.getNode(AArch64ISD::FCVTXN, DL, F32, Narrow);
+      NaNTest = Narrow;
       Narrow = DAG.getNode(ISD::BITCAST, DL, I32, Narrow);
     } else {
       return SDValue();
@@ -5117,6 +5125,15 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
       Lsb = DAG.getNode(ISD::AND, DL, I32, Lsb, One);
       SDValue RoundingBias =
           DAG.getNode(ISD::ADD, DL, I32, DAG.getConstant(0x7fff, DL, I32), Lsb);
+      // A quiet NaN is not rounded either, as one whose payload is all ones
+      // would carry into the sign bit.
+      if (QuietNaN) {
+        EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                      NaNTest.getValueType());
+        SDValue IsNaN = DAG.getSetCC(DL, CCVT, NaNTest, NaNTest, ISD::SETUO);
+        RoundingBias = DAG.getSelect(DL, I32, IsNaN,
+                                     DAG.getConstant(0, DL, I32), RoundingBias);
+      }
       Narrow = DAG.getNode(ISD::ADD, DL, I32, Narrow, RoundingBias);
     }
 

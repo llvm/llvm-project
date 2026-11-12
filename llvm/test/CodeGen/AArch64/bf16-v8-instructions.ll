@@ -68,17 +68,21 @@ define <8 x bfloat> @test_fadd(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v2.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fadd v3.4s, v4.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fadd v1.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v3.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v1.4s, #16
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    and v2.16b, v4.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v2.16b, v5.16b, v2.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v2.16b, v2.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v3.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fadd:
@@ -241,17 +245,21 @@ define <8 x bfloat> @test_fsub(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v2.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fsub v3.4s, v4.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fsub v1.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v3.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v1.4s, #16
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    and v2.16b, v4.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v2.16b, v5.16b, v2.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v2.16b, v2.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v3.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fsub:
@@ -333,17 +341,21 @@ define <8 x bfloat> @test_fmul(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v2.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fmul v3.4s, v4.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fmul v1.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v3.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v1.4s, #16
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    and v2.16b, v4.16b, v2.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v2.16b, v5.16b, v2.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v2.4s, v2.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v2.16b, v2.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v3.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fmul:
@@ -557,18 +569,22 @@ define <8 x bfloat> @test_fdiv(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-CVT-SD-NEXT:    shll v3.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fdiv v2.4s, v3.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    fdiv v1.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    movi v0.4s, #1
 ; CHECK-CVT-SD-NEXT:    ushr v3.4s, v2.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v3.16b, v3.16b, v0.16b
-; CHECK-CVT-SD-NEXT:    add v2.4s, v3.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v1.4s, #16
-; CHECK-CVT-SD-NEXT:    and v3.16b, v4.16b, v0.16b
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v3.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    add v3.4s, v3.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v3.16b, v3.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    and v0.16b, v5.16b, v0.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    add v4.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    and v2.16b, v4.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fdiv:
@@ -656,10 +672,12 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
@@ -670,15 +688,17 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldp q1, q2, [sp, #16] // 32-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
 ; CHECK-CVT-SD-NEXT:    mov h1, v1.h[2]
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -687,10 +707,12 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -704,10 +726,12 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -721,10 +745,12 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -738,10 +764,12 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -755,10 +783,12 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -772,11 +802,13 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl fmodf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -4561,65 +4593,81 @@ define <8 x bfloat> @test_sqrt(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v6.4s, v6.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v7.4s, v7.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov w10, s2
-; CHECK-CVT-SD-NEXT:    ubfx w12, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    add w10, w10, w8
-; CHECK-CVT-SD-NEXT:    add w10, w12, w10
-; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    fmov w11, s2
+; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    add w12, w12, w8
 ; CHECK-CVT-SD-NEXT:    fsqrt s1, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
-; CHECK-CVT-SD-NEXT:    ubfx w11, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
+; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s2, s2
 ; CHECK-CVT-SD-NEXT:    fsqrt s3, s3
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    csel w12, wzr, w12, vs
+; CHECK-CVT-SD-NEXT:    add w10, w11, w12
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
-; CHECK-CVT-SD-NEXT:    fmov w11, s3
-; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w11, w8
+; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    fmov w13, s3
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
+; CHECK-CVT-SD-NEXT:    ubfx w14, w13, #16, #1
+; CHECK-CVT-SD-NEXT:    add w11, w14, w8
+; CHECK-CVT-SD-NEXT:    csel w11, wzr, w11, vs
+; CHECK-CVT-SD-NEXT:    fsqrt s4, s4
+; CHECK-CVT-SD-NEXT:    fmov w12, s4
+; CHECK-CVT-SD-NEXT:    fcmp s4, s4
+; CHECK-CVT-SD-NEXT:    ubfx w9, w12, #16, #1
+; CHECK-CVT-SD-NEXT:    add w9, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    fsqrt s5, s5
 ; CHECK-CVT-SD-NEXT:    add w9, w12, w9
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    fsqrt s4, s4
-; CHECK-CVT-SD-NEXT:    fsqrt s5, s5
+; CHECK-CVT-SD-NEXT:    fcmp s5, s5
 ; CHECK-CVT-SD-NEXT:    fsqrt s6, s6
+; CHECK-CVT-SD-NEXT:    fmov w12, s6
 ; CHECK-CVT-SD-NEXT:    fsqrt s7, s7
 ; CHECK-CVT-SD-NEXT:    fsqrt s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov s0, w10
-; CHECK-CVT-SD-NEXT:    fmov w10, s4
+; CHECK-CVT-SD-NEXT:    add w10, w13, w11
+; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    fmov w11, s5
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    fmov s2, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s5
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    fmov s2, w10
+; CHECK-CVT-SD-NEXT:    ubfx w10, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s6, s6
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s6
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    ubfx w9, w12, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w11, w10
+; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    fmov w11, s7
+; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[3], v2.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    fmov s2, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s7
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    fmov s2, w10
+; CHECK-CVT-SD-NEXT:    add w9, w12, w9
+; CHECK-CVT-SD-NEXT:    ubfx w10, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    fcmp s7, s7
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    mov v0.h[4], v2.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    add w9, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
 ; CHECK-CVT-SD-NEXT:    add w9, w11, w9
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    mov v0.h[5], v2.h[0]
 ; CHECK-CVT-SD-NEXT:    fmov w10, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w10, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[6], v1.h[0]
 ; CHECK-CVT-SD-NEXT:    add w8, w11, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w10, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -4765,11 +4813,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w20, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -4778,11 +4828,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -4793,11 +4845,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -4808,11 +4862,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -4823,11 +4879,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -4838,11 +4896,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -4853,11 +4913,13 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    mov w0, w19
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -4868,12 +4930,14 @@ define <8 x bfloat> @test_powi(<8 x bfloat> %a, i32 %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl __powisf2
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w20
+; CHECK-CVT-SD-NEXT:    add w9, w9, w20
 ; CHECK-CVT-SD-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -5279,10 +5343,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -5291,10 +5357,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -5305,10 +5373,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -5319,10 +5389,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -5333,10 +5405,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -5347,10 +5421,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -5361,10 +5437,12 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -5375,11 +5453,13 @@ define <8 x bfloat> @test_sin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -5753,10 +5833,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -5765,10 +5847,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -5779,10 +5863,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -5793,10 +5879,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -5807,10 +5895,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -5821,10 +5911,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -5835,10 +5927,12 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -5849,11 +5943,13 @@ define <8 x bfloat> @test_cos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl cosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -6227,10 +6323,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -6239,10 +6337,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -6253,10 +6353,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -6267,10 +6369,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -6281,10 +6385,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -6295,10 +6401,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -6309,10 +6417,12 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -6323,11 +6433,13 @@ define <8 x bfloat> @test_tan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -6701,10 +6813,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -6713,10 +6827,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -6727,10 +6843,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -6741,10 +6859,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -6755,10 +6875,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -6769,10 +6891,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -6783,10 +6907,12 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -6797,11 +6923,13 @@ define <8 x bfloat> @test_acos(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl acosf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -7175,10 +7303,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -7187,10 +7317,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -7201,10 +7333,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -7215,10 +7349,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -7229,10 +7365,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -7243,10 +7381,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -7257,10 +7397,12 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -7271,11 +7413,13 @@ define <8 x bfloat> @test_asin(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl asinf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -7649,10 +7793,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -7661,10 +7807,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -7675,10 +7823,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -7689,10 +7839,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -7703,10 +7855,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -7717,10 +7871,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -7731,10 +7887,12 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -7745,11 +7903,13 @@ define <8 x bfloat> @test_atan(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atanf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -8126,10 +8286,12 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
@@ -8140,15 +8302,17 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldp q1, q2, [sp, #16] // 32-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
 ; CHECK-CVT-SD-NEXT:    mov h1, v1.h[2]
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -8157,10 +8321,12 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -8174,10 +8340,12 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -8191,10 +8359,12 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -8208,10 +8378,12 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -8225,10 +8397,12 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -8242,11 +8416,13 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl atan2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -8739,10 +8915,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -8751,10 +8929,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -8765,10 +8945,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -8779,10 +8961,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -8793,10 +8977,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -8807,10 +8993,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -8821,10 +9009,12 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -8835,11 +9025,13 @@ define <8 x bfloat> @test_cosh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl coshf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -9213,10 +9405,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -9225,10 +9419,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -9239,10 +9435,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -9253,10 +9451,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -9267,10 +9467,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -9281,10 +9483,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -9295,10 +9499,12 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -9309,11 +9515,13 @@ define <8 x bfloat> @test_sinh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl sinhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -9687,10 +9895,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -9699,10 +9909,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -9713,10 +9925,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -9727,10 +9941,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -9741,10 +9957,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -9755,10 +9973,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -9769,10 +9989,12 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -9783,11 +10005,13 @@ define <8 x bfloat> @test_tanh(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl tanhf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -10164,10 +10388,12 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
@@ -10178,15 +10404,17 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldp q1, q2, [sp, #16] // 32-byte Folded Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
 ; CHECK-CVT-SD-NEXT:    mov h1, v1.h[2]
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #32] // 16-byte Spill
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -10195,10 +10423,12 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -10212,10 +10442,12 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -10229,10 +10461,12 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -10246,10 +10480,12 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -10263,10 +10499,12 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -10280,11 +10518,13 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s1 killed $s1 killed $q1
 ; CHECK-CVT-SD-NEXT:    bl powf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -10777,10 +11017,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -10789,10 +11031,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -10803,10 +11047,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -10817,10 +11063,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -10831,10 +11079,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -10845,10 +11095,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -10859,10 +11111,12 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -10873,11 +11127,13 @@ define <8 x bfloat> @test_exp(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl expf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -11251,10 +11507,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -11263,10 +11521,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -11277,10 +11537,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -11291,10 +11553,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -11305,10 +11569,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -11319,10 +11585,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -11333,10 +11601,12 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -11347,11 +11617,13 @@ define <8 x bfloat> @test_exp2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl exp2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -11725,10 +11997,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -11737,10 +12011,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -11751,10 +12027,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -11765,10 +12043,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -11779,10 +12059,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -11793,10 +12075,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -11807,10 +12091,12 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -11821,11 +12107,13 @@ define <8 x bfloat> @test_log(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl logf
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -12199,10 +12487,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -12211,10 +12501,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -12225,10 +12517,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -12239,10 +12533,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -12253,10 +12549,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -12267,10 +12565,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -12281,10 +12581,12 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -12295,11 +12597,13 @@ define <8 x bfloat> @test_log10(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log10f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -12673,10 +12977,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov w19, #32767 // =0x7fff
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
@@ -12685,10 +12991,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[1], v1.h[0]
@@ -12699,10 +13007,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[2], v0.h[0]
@@ -12713,10 +13023,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[3], v0.h[0]
@@ -12727,10 +13039,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[4], v0.h[0]
@@ -12741,10 +13055,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[5], v0.h[0]
@@ -12755,10 +13071,12 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v1.h[6], v0.h[0]
@@ -12769,11 +13087,13 @@ define <8 x bfloat> @test_log2(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-CVT-SD-NEXT:    bl log2f
 ; CHECK-CVT-SD-NEXT:    fmov w8, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-CVT-SD-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w8, w19
+; CHECK-CVT-SD-NEXT:    add w9, w9, w19
 ; CHECK-CVT-SD-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    add w8, w8, w9
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w8
 ; CHECK-CVT-SD-NEXT:    mov v0.h[7], v1.h[0]
@@ -13149,103 +13469,119 @@ define <8 x bfloat> @test_fma(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bfloat> %c)
 ; CHECK-CVT-SD-NEXT:    mov h17, v2.h[2]
 ; CHECK-CVT-SD-NEXT:    mov h18, v1.h[2]
 ; CHECK-CVT-SD-NEXT:    mov h19, v0.h[2]
-; CHECK-CVT-SD-NEXT:    mov h20, v2.h[3]
-; CHECK-CVT-SD-NEXT:    mov h21, v1.h[3]
+; CHECK-CVT-SD-NEXT:    mov h20, v0.h[5]
 ; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v4.4s, v4.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h22, v0.h[3]
-; CHECK-CVT-SD-NEXT:    fmadd s6, s16, s7, s6
 ; CHECK-CVT-SD-NEXT:    shll v5.4s, v5.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v7.4s, v17.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v16.4s, v18.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v17.4s, v19.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v18.4s, v20.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v19.4s, v21.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmadd s3, s5, s4, s3
-; CHECK-CVT-SD-NEXT:    shll v20.4s, v22.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h21, v2.h[4]
-; CHECK-CVT-SD-NEXT:    fmov w9, s6
-; CHECK-CVT-SD-NEXT:    mov h22, v1.h[4]
-; CHECK-CVT-SD-NEXT:    mov h6, v0.h[4]
-; CHECK-CVT-SD-NEXT:    fmadd s4, s17, s16, s7
-; CHECK-CVT-SD-NEXT:    mov h17, v2.h[5]
-; CHECK-CVT-SD-NEXT:    fmadd s5, s20, s19, s18
-; CHECK-CVT-SD-NEXT:    mov h18, v1.h[5]
-; CHECK-CVT-SD-NEXT:    mov h19, v0.h[5]
+; CHECK-CVT-SD-NEXT:    fmadd s5, s16, s7, s6
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v17.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v6.4s, v18.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v7.4s, v19.4h, #16
+; CHECK-CVT-SD-NEXT:    mov h16, v1.h[4]
+; CHECK-CVT-SD-NEXT:    mov h17, v0.h[4]
+; CHECK-CVT-SD-NEXT:    mov h18, v2.h[5]
+; CHECK-CVT-SD-NEXT:    mov h19, v1.h[5]
+; CHECK-CVT-SD-NEXT:    fmov w9, s3
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
+; CHECK-CVT-SD-NEXT:    mov h3, v2.h[3]
+; CHECK-CVT-SD-NEXT:    fmadd s4, s7, s6, s4
+; CHECK-CVT-SD-NEXT:    mov h6, v0.h[3]
+; CHECK-CVT-SD-NEXT:    mov h7, v2.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    fmov w11, s3
-; CHECK-CVT-SD-NEXT:    shll v7.4s, v21.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v16.4s, v22.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v3.4s, v6.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
-; CHECK-CVT-SD-NEXT:    shll v6.4s, v17.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h17, v1.h[6]
-; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w10, w11, w8
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    fmov w13, s4
+; CHECK-CVT-SD-NEXT:    csel w11, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fmov w10, s5
+; CHECK-CVT-SD-NEXT:    fcmp s5, s5
+; CHECK-CVT-SD-NEXT:    mov h5, v1.h[3]
+; CHECK-CVT-SD-NEXT:    add w9, w9, w11
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    fmov w11, s4
-; CHECK-CVT-SD-NEXT:    fmadd s4, s3, s16, s7
-; CHECK-CVT-SD-NEXT:    shll v7.4s, v18.4h, #16
-; CHECK-CVT-SD-NEXT:    add w10, w12, w10
-; CHECK-CVT-SD-NEXT:    fmov s3, w9
-; CHECK-CVT-SD-NEXT:    fmov w9, s5
-; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
-; CHECK-CVT-SD-NEXT:    shll v16.4s, v19.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h18, v0.h[6]
-; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w11, w11, w8
-; CHECK-CVT-SD-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-SD-NEXT:    fmov s5, w10
-; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-SD-NEXT:    add w11, w12, w11
-; CHECK-CVT-SD-NEXT:    fmov w12, s4
-; CHECK-CVT-SD-NEXT:    fmadd s6, s16, s7, s6
-; CHECK-CVT-SD-NEXT:    lsr w10, w11, #16
-; CHECK-CVT-SD-NEXT:    ubfx w11, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    mov v3.h[1], v5.h[0]
-; CHECK-CVT-SD-NEXT:    mov h5, v2.h[6]
-; CHECK-CVT-SD-NEXT:    shll v7.4s, v18.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov s4, w10
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
-; CHECK-CVT-SD-NEXT:    mov h2, v2.h[7]
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    ubfx w10, w12, #16, #1
-; CHECK-CVT-SD-NEXT:    fmov w11, s6
-; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    mov v3.h[2], v4.h[0]
+; CHECK-CVT-SD-NEXT:    ubfx w11, w13, #16, #1
+; CHECK-CVT-SD-NEXT:    ubfx w12, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    add w12, w12, w8
+; CHECK-CVT-SD-NEXT:    csel w12, wzr, w12, vs
+; CHECK-CVT-SD-NEXT:    fcmp s4, s4
 ; CHECK-CVT-SD-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v17.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov s16, w9
-; CHECK-CVT-SD-NEXT:    add w9, w12, w8
-; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
-; CHECK-CVT-SD-NEXT:    ubfx w10, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    fmadd s4, s7, s5, s4
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v6.4s, v7.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v7.4s, v16.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v16.4s, v17.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w12
+; CHECK-CVT-SD-NEXT:    shll v17.4s, v18.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v18.4s, v19.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v19.4s, v20.4h, #16
+; CHECK-CVT-SD-NEXT:    fmadd s5, s5, s4, s3
+; CHECK-CVT-SD-NEXT:    fmadd s4, s16, s7, s6
+; CHECK-CVT-SD-NEXT:    fmov s6, w9
+; CHECK-CVT-SD-NEXT:    lsr w9, w10, #16
+; CHECK-CVT-SD-NEXT:    add w10, w11, w8
+; CHECK-CVT-SD-NEXT:    mov h7, v2.h[6]
+; CHECK-CVT-SD-NEXT:    fmadd s16, s19, s18, s17
+; CHECK-CVT-SD-NEXT:    fmov s3, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    mov h17, v1.h[6]
+; CHECK-CVT-SD-NEXT:    fmov w10, s5
+; CHECK-CVT-SD-NEXT:    fcmp s5, s5
+; CHECK-CVT-SD-NEXT:    add w9, w13, w9
+; CHECK-CVT-SD-NEXT:    mov h5, v0.h[6]
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v3.h[3], v16.h[0]
-; CHECK-CVT-SD-NEXT:    fmadd s0, s0, s1, s2
-; CHECK-CVT-SD-NEXT:    fmov s5, w9
-; CHECK-CVT-SD-NEXT:    add w9, w11, w8
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
-; CHECK-CVT-SD-NEXT:    fmov w10, s4
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v3.h[4], v5.h[0]
-; CHECK-CVT-SD-NEXT:    fmov s1, w9
+; CHECK-CVT-SD-NEXT:    mov h2, v2.h[7]
+; CHECK-CVT-SD-NEXT:    mov v3.h[1], v6.h[0]
+; CHECK-CVT-SD-NEXT:    mov h1, v1.h[7]
+; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
+; CHECK-CVT-SD-NEXT:    shll v6.4s, v7.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v7.4s, v17.4h, #16
+; CHECK-CVT-SD-NEXT:    add w11, w11, w8
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-CVT-SD-NEXT:    csel w11, wzr, w11, vs
+; CHECK-CVT-SD-NEXT:    fcmp s4, s4
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w11
+; CHECK-CVT-SD-NEXT:    fmov w11, s4
+; CHECK-CVT-SD-NEXT:    fmov s4, w9
+; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    fmadd s5, s5, s7, s6
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    ubfx w9, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    mov v3.h[2], v4.h[0]
+; CHECK-CVT-SD-NEXT:    fmov s4, w10
+; CHECK-CVT-SD-NEXT:    fmov w10, s16
+; CHECK-CVT-SD-NEXT:    fmadd s0, s0, s1, s2
+; CHECK-CVT-SD-NEXT:    add w9, w9, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    fcmp s16, s16
+; CHECK-CVT-SD-NEXT:    add w9, w11, w9
+; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    mov v3.h[3], v4.h[0]
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    add w11, w11, w8
+; CHECK-CVT-SD-NEXT:    fmov s1, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w11, vs
+; CHECK-CVT-SD-NEXT:    fmov w11, s5
+; CHECK-CVT-SD-NEXT:    fcmp s5, s5
+; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    ubfx w10, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    mov v3.h[4], v1.h[0]
+; CHECK-CVT-SD-NEXT:    fmov s1, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w10, vs
 ; CHECK-CVT-SD-NEXT:    fmov w10, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    add w9, w11, w9
 ; CHECK-CVT-SD-NEXT:    mov v3.h[5], v1.h[0]
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w10, w8
 ; CHECK-CVT-SD-NEXT:    fmov s0, w9
 ; CHECK-CVT-SD-NEXT:    add w8, w11, w8
-; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w10, w8
 ; CHECK-CVT-SD-NEXT:    mov v3.h[6], v0.h[0]
+; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v3.h[7], v0.h[0]
 ; CHECK-CVT-SD-NEXT:    mov v0.16b, v3.16b
@@ -13512,95 +13848,111 @@ define <8 x bfloat> @test_minnum(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    mov h2, v1.h[1]
 ; CHECK-CVT-SD-NEXT:    mov h3, v0.h[1]
 ; CHECK-CVT-SD-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-CVT-SD-NEXT:    shll v4.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h6, v1.h[2]
-; CHECK-CVT-SD-NEXT:    mov h7, v0.h[2]
-; CHECK-CVT-SD-NEXT:    mov h16, v1.h[3]
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    mov h5, v1.h[2]
+; CHECK-CVT-SD-NEXT:    mov h6, v0.h[2]
+; CHECK-CVT-SD-NEXT:    mov h7, v1.h[3]
+; CHECK-CVT-SD-NEXT:    mov h16, v0.h[3]
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-CVT-SD-NEXT:    fminnm s4, s5, s4
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v6.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v6.4s, v7.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h7, v1.h[4]
+; CHECK-CVT-SD-NEXT:    shll v7.4s, v7.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v16.4s, v16.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s2, s3, s2
-; CHECK-CVT-SD-NEXT:    mov h3, v0.h[3]
-; CHECK-CVT-SD-NEXT:    fmov w9, s4
-; CHECK-CVT-SD-NEXT:    mov h4, v0.h[4]
-; CHECK-CVT-SD-NEXT:    fminnm s5, s6, s5
-; CHECK-CVT-SD-NEXT:    shll v6.4s, v7.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov w11, s2
-; CHECK-CVT-SD-NEXT:    shll v2.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    fminnm s7, s16, s7
+; CHECK-CVT-SD-NEXT:    mov h16, v1.h[6]
+; CHECK-CVT-SD-NEXT:    fminnm s3, s4, s3
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-CVT-SD-NEXT:    fmov w9, s2
+; CHECK-CVT-SD-NEXT:    fcmp s2, s2
+; CHECK-CVT-SD-NEXT:    mov h2, v1.h[4]
+; CHECK-CVT-SD-NEXT:    mov h6, v0.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    mov h3, v1.h[5]
-; CHECK-CVT-SD-NEXT:    shll v4.4s, v4.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
-; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w10, w11, w8
-; CHECK-CVT-SD-NEXT:    fminnm s7, s2, s16
-; CHECK-CVT-SD-NEXT:    fmov w11, s5
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov h5, v0.h[5]
-; CHECK-CVT-SD-NEXT:    add w10, w12, w10
-; CHECK-CVT-SD-NEXT:    fminnm s4, s4, s6
-; CHECK-CVT-SD-NEXT:    mov h6, v1.h[6]
-; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
-; CHECK-CVT-SD-NEXT:    fmov s2, w9
-; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-CVT-SD-NEXT:    ubfx w9, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w11, w11, w8
-; CHECK-CVT-SD-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-SD-NEXT:    fmov s16, w10
-; CHECK-CVT-SD-NEXT:    fmov w10, s7
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v5.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w9, w11
-; CHECK-CVT-SD-NEXT:    mov h7, v0.h[6]
-; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    mov v2.h[1], v16.h[0]
+; CHECK-CVT-SD-NEXT:    fmov w11, s3
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    add w10, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov s16, w9
-; CHECK-CVT-SD-NEXT:    fminnm s3, s5, s3
-; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w11, w10
-; CHECK-CVT-SD-NEXT:    fmov w10, s4
-; CHECK-CVT-SD-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v7.4h, #16
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[2], v16.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    fmov s6, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s3
+; CHECK-CVT-SD-NEXT:    shll v6.4s, v6.4h, #16
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
 ; CHECK-CVT-SD-NEXT:    fminnm s3, s5, s4
+; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    mov h4, v1.h[5]
+; CHECK-CVT-SD-NEXT:    mov h5, v0.h[5]
+; CHECK-CVT-SD-NEXT:    fminnm s6, s6, s2
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
+; CHECK-CVT-SD-NEXT:    mov h1, v1.h[7]
+; CHECK-CVT-SD-NEXT:    add w12, w12, w8
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    fmov w13, s3
+; CHECK-CVT-SD-NEXT:    csel w12, wzr, w12, vs
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v4.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-CVT-SD-NEXT:    add w11, w11, w12
+; CHECK-CVT-SD-NEXT:    fmov w12, s7
+; CHECK-CVT-SD-NEXT:    lsr w11, w11, #16
+; CHECK-CVT-SD-NEXT:    mov h3, v0.h[6]
+; CHECK-CVT-SD-NEXT:    ubfx w10, w13, #16, #1
+; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    fmov s2, w11
+; CHECK-CVT-SD-NEXT:    fminnm s4, s5, s4
+; CHECK-CVT-SD-NEXT:    fmov w11, s6
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v16.4h, #16
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s7, s7
+; CHECK-CVT-SD-NEXT:    fmov s7, w9
+; CHECK-CVT-SD-NEXT:    ubfx w9, w12, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w13, w10
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    ubfx w13, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    add w9, w9, w8
+; CHECK-CVT-SD-NEXT:    mov v2.h[1], v7.h[0]
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    fcmp s6, s6
+; CHECK-CVT-SD-NEXT:    fmov s6, w10
+; CHECK-CVT-SD-NEXT:    add w9, w12, w9
+; CHECK-CVT-SD-NEXT:    fmov w12, s4
+; CHECK-CVT-SD-NEXT:    add w10, w13, w8
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    fminnm s3, s3, s5
 ; CHECK-CVT-SD-NEXT:    fminnm s0, s0, s1
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[3], v6.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s4, s4
+; CHECK-CVT-SD-NEXT:    mov v2.h[2], v6.h[0]
 ; CHECK-CVT-SD-NEXT:    fmov s4, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s3
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
+; CHECK-CVT-SD-NEXT:    add w9, w11, w10
+; CHECK-CVT-SD-NEXT:    ubfx w10, w12, #16, #1
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[4], v4.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s0
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fmov w10, s3
+; CHECK-CVT-SD-NEXT:    mov v2.h[3], v4.h[0]
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
+; CHECK-CVT-SD-NEXT:    add w9, w12, w9
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[5], v1.h[0]
 ; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    add w11, w11, w8
+; CHECK-CVT-SD-NEXT:    mov v2.h[4], v1.h[0]
+; CHECK-CVT-SD-NEXT:    fmov s1, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w11, vs
+; CHECK-CVT-SD-NEXT:    fmov w11, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
+; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    ubfx w10, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    mov v2.h[5], v1.h[0]
 ; CHECK-CVT-SD-NEXT:    fmov s0, w9
+; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
 ; CHECK-CVT-SD-NEXT:    add w8, w11, w8
-; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    mov v2.h[6], v0.h[0]
+; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v2.h[7], v0.h[0]
 ; CHECK-CVT-SD-NEXT:    mov v0.16b, v2.16b
@@ -13775,95 +14127,111 @@ define <8 x bfloat> @test_maxnum(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    mov h2, v1.h[1]
 ; CHECK-CVT-SD-NEXT:    mov h3, v0.h[1]
 ; CHECK-CVT-SD-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-CVT-SD-NEXT:    shll v4.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h6, v1.h[2]
-; CHECK-CVT-SD-NEXT:    mov h7, v0.h[2]
-; CHECK-CVT-SD-NEXT:    mov h16, v1.h[3]
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    mov h5, v1.h[2]
+; CHECK-CVT-SD-NEXT:    mov h6, v0.h[2]
+; CHECK-CVT-SD-NEXT:    mov h7, v1.h[3]
+; CHECK-CVT-SD-NEXT:    mov h16, v0.h[3]
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-CVT-SD-NEXT:    fmaxnm s4, s5, s4
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v6.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v6.4s, v7.4h, #16
-; CHECK-CVT-SD-NEXT:    mov h7, v1.h[4]
+; CHECK-CVT-SD-NEXT:    shll v7.4s, v7.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v16.4s, v16.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s2, s3, s2
-; CHECK-CVT-SD-NEXT:    mov h3, v0.h[3]
-; CHECK-CVT-SD-NEXT:    fmov w9, s4
-; CHECK-CVT-SD-NEXT:    mov h4, v0.h[4]
-; CHECK-CVT-SD-NEXT:    fmaxnm s5, s6, s5
-; CHECK-CVT-SD-NEXT:    shll v6.4s, v7.4h, #16
-; CHECK-CVT-SD-NEXT:    fmov w11, s2
-; CHECK-CVT-SD-NEXT:    shll v2.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    fmaxnm s7, s16, s7
+; CHECK-CVT-SD-NEXT:    mov h16, v1.h[6]
+; CHECK-CVT-SD-NEXT:    fmaxnm s3, s4, s3
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-CVT-SD-NEXT:    fmov w9, s2
+; CHECK-CVT-SD-NEXT:    fcmp s2, s2
+; CHECK-CVT-SD-NEXT:    mov h2, v1.h[4]
+; CHECK-CVT-SD-NEXT:    mov h6, v0.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    mov h3, v1.h[5]
-; CHECK-CVT-SD-NEXT:    shll v4.4s, v4.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
-; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w10, w11, w8
-; CHECK-CVT-SD-NEXT:    fmaxnm s7, s2, s16
-; CHECK-CVT-SD-NEXT:    fmov w11, s5
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov h5, v0.h[5]
-; CHECK-CVT-SD-NEXT:    add w10, w12, w10
-; CHECK-CVT-SD-NEXT:    fmaxnm s4, s4, s6
-; CHECK-CVT-SD-NEXT:    mov h6, v1.h[6]
-; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
-; CHECK-CVT-SD-NEXT:    fmov s2, w9
-; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
-; CHECK-CVT-SD-NEXT:    ubfx w9, w11, #16, #1
-; CHECK-CVT-SD-NEXT:    add w11, w11, w8
-; CHECK-CVT-SD-NEXT:    mov h1, v1.h[7]
-; CHECK-CVT-SD-NEXT:    fmov s16, w10
-; CHECK-CVT-SD-NEXT:    fmov w10, s7
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v5.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w9, w11
-; CHECK-CVT-SD-NEXT:    mov h7, v0.h[6]
-; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    mov v2.h[1], v16.h[0]
+; CHECK-CVT-SD-NEXT:    fmov w11, s3
+; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    add w10, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov s16, w9
-; CHECK-CVT-SD-NEXT:    fmaxnm s3, s5, s3
-; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w11, w10
-; CHECK-CVT-SD-NEXT:    fmov w10, s4
-; CHECK-CVT-SD-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-CVT-SD-NEXT:    shll v5.4s, v7.4h, #16
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[2], v16.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    fmov s6, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s3
+; CHECK-CVT-SD-NEXT:    shll v6.4s, v6.4h, #16
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
 ; CHECK-CVT-SD-NEXT:    fmaxnm s3, s5, s4
+; CHECK-CVT-SD-NEXT:    ubfx w12, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    mov h4, v1.h[5]
+; CHECK-CVT-SD-NEXT:    mov h5, v0.h[5]
+; CHECK-CVT-SD-NEXT:    fmaxnm s6, s6, s2
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
+; CHECK-CVT-SD-NEXT:    mov h1, v1.h[7]
+; CHECK-CVT-SD-NEXT:    add w12, w12, w8
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    fmov w13, s3
+; CHECK-CVT-SD-NEXT:    csel w12, wzr, w12, vs
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
+; CHECK-CVT-SD-NEXT:    shll v4.4s, v4.4h, #16
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-CVT-SD-NEXT:    add w11, w11, w12
+; CHECK-CVT-SD-NEXT:    fmov w12, s7
+; CHECK-CVT-SD-NEXT:    lsr w11, w11, #16
+; CHECK-CVT-SD-NEXT:    mov h3, v0.h[6]
+; CHECK-CVT-SD-NEXT:    ubfx w10, w13, #16, #1
+; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    fmov s2, w11
+; CHECK-CVT-SD-NEXT:    fmaxnm s4, s5, s4
+; CHECK-CVT-SD-NEXT:    fmov w11, s6
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    shll v5.4s, v16.4h, #16
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s7, s7
+; CHECK-CVT-SD-NEXT:    fmov s7, w9
+; CHECK-CVT-SD-NEXT:    ubfx w9, w12, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w13, w10
+; CHECK-CVT-SD-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-CVT-SD-NEXT:    lsr w10, w10, #16
+; CHECK-CVT-SD-NEXT:    ubfx w13, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    add w9, w9, w8
+; CHECK-CVT-SD-NEXT:    mov v2.h[1], v7.h[0]
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w9, vs
+; CHECK-CVT-SD-NEXT:    fcmp s6, s6
+; CHECK-CVT-SD-NEXT:    fmov s6, w10
+; CHECK-CVT-SD-NEXT:    add w9, w12, w9
+; CHECK-CVT-SD-NEXT:    fmov w12, s4
+; CHECK-CVT-SD-NEXT:    add w10, w13, w8
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    fmaxnm s3, s3, s5
 ; CHECK-CVT-SD-NEXT:    fmaxnm s0, s0, s1
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
-; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[3], v6.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fcmp s4, s4
+; CHECK-CVT-SD-NEXT:    mov v2.h[2], v6.h[0]
 ; CHECK-CVT-SD-NEXT:    fmov s4, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s3
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
+; CHECK-CVT-SD-NEXT:    add w9, w11, w10
+; CHECK-CVT-SD-NEXT:    ubfx w10, w12, #16, #1
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[4], v4.h[0]
-; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
-; CHECK-CVT-SD-NEXT:    add w9, w10, w8
-; CHECK-CVT-SD-NEXT:    fmov w10, s0
-; CHECK-CVT-SD-NEXT:    add w9, w11, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    fmov w10, s3
+; CHECK-CVT-SD-NEXT:    mov v2.h[3], v4.h[0]
+; CHECK-CVT-SD-NEXT:    fcmp s3, s3
+; CHECK-CVT-SD-NEXT:    add w9, w12, w9
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
-; CHECK-CVT-SD-NEXT:    mov v2.h[5], v1.h[0]
 ; CHECK-CVT-SD-NEXT:    ubfx w11, w10, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    add w11, w11, w8
+; CHECK-CVT-SD-NEXT:    mov v2.h[4], v1.h[0]
+; CHECK-CVT-SD-NEXT:    fmov s1, w9
+; CHECK-CVT-SD-NEXT:    csel w9, wzr, w11, vs
+; CHECK-CVT-SD-NEXT:    fmov w11, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
+; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
+; CHECK-CVT-SD-NEXT:    ubfx w10, w11, #16, #1
+; CHECK-CVT-SD-NEXT:    mov v2.h[5], v1.h[0]
 ; CHECK-CVT-SD-NEXT:    fmov s0, w9
+; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
 ; CHECK-CVT-SD-NEXT:    add w8, w11, w8
-; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    mov v2.h[6], v0.h[0]
+; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    mov v2.h[7], v0.h[0]
 ; CHECK-CVT-SD-NEXT:    mov v0.16b, v2.16b
@@ -14112,17 +14480,21 @@ define <8 x bfloat> @test_floor(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frintm v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frintm v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_floor:
@@ -14194,17 +14566,21 @@ define <8 x bfloat> @test_ceil(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frintp v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frintp v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_ceil:
@@ -14276,17 +14652,21 @@ define <8 x bfloat> @test_trunc(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frintz v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frintz v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_trunc:
@@ -14358,17 +14738,21 @@ define <8 x bfloat> @test_rint(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frintx v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frintx v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_rint:
@@ -14440,17 +14824,21 @@ define <8 x bfloat> @test_nearbyint(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frinti v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frinti v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_nearbyint:
@@ -14522,17 +14910,21 @@ define <8 x bfloat> @test_round(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frinta v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frinta v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_round:
@@ -14604,17 +14996,21 @@ define <8 x bfloat> @test_roundeven(<8 x bfloat> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    frintn v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    frintn v3.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v5.4s, v3.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v2.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v2.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v3.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_roundeven:
@@ -14687,32 +15083,40 @@ define <8 x bfloat> @test_fmuladd(<8 x bfloat> %a, <8 x bfloat> %b, <8 x bfloat>
 ; CHECK-CVT-SD-NEXT:    shll v4.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v1.4s, v1.8h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-CVT-SD-NEXT:    movi v6.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    movi v5.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fmul v3.4s, v4.4s, v3.4s
 ; CHECK-CVT-SD-NEXT:    movi v4.4s, #1
 ; CHECK-CVT-SD-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ushr v1.4s, v3.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v5.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v7.4s, v3.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    ushr v6.4s, v0.4s, #16
 ; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    and v3.16b, v5.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    addhn v1.4h, v1.4s, v6.4s
-; CHECK-CVT-SD-NEXT:    add v0.4s, v3.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    and v6.16b, v6.16b, v4.16b
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    add v6.4s, v6.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v1.16b, v7.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v7.4s, v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    addhn v1.4h, v3.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    and v3.16b, v6.16b, v7.16b
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll v3.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    shll2 v2.4s, v2.8h, #16
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v6.4s
-; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd v1.4s, v1.4s, v3.4s
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd v2.4s, v0.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    ushr v0.4s, v1.4s, #16
+; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v1.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v4.16b
 ; CHECK-CVT-SD-NEXT:    ushr v3.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-CVT-SD-NEXT:    add v0.4s, v0.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    and v3.16b, v3.16b, v4.16b
+; CHECK-CVT-SD-NEXT:    fcmeq v4.4s, v2.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    and v0.16b, v0.16b, v6.16b
+; CHECK-CVT-SD-NEXT:    add v3.4s, v3.4s, v5.4s
+; CHECK-CVT-SD-NEXT:    addhn v0.4h, v1.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    and v1.16b, v3.16b, v4.16b
-; CHECK-CVT-SD-NEXT:    addhn v0.4h, v0.4s, v6.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v1.4s, v6.4s
+; CHECK-CVT-SD-NEXT:    addhn2 v0.8h, v2.4s, v1.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-SD-LABEL: test_fmuladd:
@@ -14842,79 +15246,95 @@ define bfloat @test_reduce_fadd(bfloat %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s0, s2
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[1]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[2]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[3]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[5]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[6]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fadd s0, s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -15154,79 +15574,95 @@ define bfloat @test_reduce_fmul(bfloat %a, <8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s0, s2
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[1]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[2]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[3]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[5]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[6]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    mov h0, v1.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmul s0, s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -15473,69 +15909,83 @@ define bfloat @test_reduce_fmin(<8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[3]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[5]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[6]
 ; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fminnm s0, s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -15659,69 +16109,83 @@ define bfloat @test_reduce_fmax(<8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[3]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[5]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[6]
 ; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmaxnm s0, s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -15845,69 +16309,83 @@ define bfloat @test_reduce_fminimum(<8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[3]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[5]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[6]
 ; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmin s0, s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -16031,69 +16509,83 @@ define bfloat @test_reduce_fmaximum(<8 x bfloat> %b) #0 {
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[2]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[3]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[4]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[5]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    mov h1, v0.h[6]
 ; CHECK-CVT-SD-NEXT:    mov h0, v0.h[7]
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
 ; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s2, w9
 ; CHECK-CVT-SD-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s1, s2, s1
 ; CHECK-CVT-SD-NEXT:    fmov w9, s1
+; CHECK-CVT-SD-NEXT:    fcmp s1, s1
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w9, w9, w8
-; CHECK-CVT-SD-NEXT:    add w9, w10, w9
+; CHECK-CVT-SD-NEXT:    add w10, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w10, wzr, w10, vs
+; CHECK-CVT-SD-NEXT:    add w9, w9, w10
 ; CHECK-CVT-SD-NEXT:    lsr w9, w9, #16
 ; CHECK-CVT-SD-NEXT:    fmov s1, w9
 ; CHECK-CVT-SD-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-SD-NEXT:    fmax s0, s1, s0
 ; CHECK-CVT-SD-NEXT:    fmov w9, s0
+; CHECK-CVT-SD-NEXT:    fcmp s0, s0
 ; CHECK-CVT-SD-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    add w8, w10, w8
+; CHECK-CVT-SD-NEXT:    csel w8, wzr, w8, vs
+; CHECK-CVT-SD-NEXT:    add w8, w9, w8
 ; CHECK-CVT-SD-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-SD-NEXT:    fmov s0, w8
 ; CHECK-CVT-SD-NEXT:    // kill: def $h0 killed $h0 killed $s0

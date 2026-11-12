@@ -192,9 +192,11 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    shll v2.4s, v0.4h, #16
 ; NOLSE-NEXT:    fadd s2, s2, s1
 ; NOLSE-NEXT:    fmov w9, s2
+; NOLSE-NEXT:    fcmp s2, s2
 ; NOLSE-NEXT:    ubfx w10, w9, #16, #1
-; NOLSE-NEXT:    add w9, w9, w8
-; NOLSE-NEXT:    add w9, w10, w9
+; NOLSE-NEXT:    add w10, w10, w8
+; NOLSE-NEXT:    csel w10, wzr, w10, vs
+; NOLSE-NEXT:    add w9, w9, w10
 ; NOLSE-NEXT:    lsr w9, w9, #16
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB2_1
@@ -213,9 +215,11 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; LSE-NEXT:    shll v2.4s, v0.4h, #16
 ; LSE-NEXT:    fadd s2, s2, s1
 ; LSE-NEXT:    fmov w9, s2
+; LSE-NEXT:    fcmp s2, s2
 ; LSE-NEXT:    ubfx w10, w9, #16, #1
-; LSE-NEXT:    add w9, w9, w8
-; LSE-NEXT:    add w9, w10, w9
+; LSE-NEXT:    add w10, w10, w8
+; LSE-NEXT:    csel w10, wzr, w10, vs
+; LSE-NEXT:    add w9, w9, w10
 ; LSE-NEXT:    lsr w9, w9, #16
 ; LSE-NEXT:    fmov s2, w9
 ; LSE-NEXT:    fmov w9, s0
@@ -286,9 +290,11 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    shll v2.4s, v0.4h, #16
 ; NOLSE-NEXT:    fadd s2, s2, s1
 ; NOLSE-NEXT:    fmov w9, s2
+; NOLSE-NEXT:    fcmp s2, s2
 ; NOLSE-NEXT:    ubfx w10, w9, #16, #1
-; NOLSE-NEXT:    add w9, w9, w8
-; NOLSE-NEXT:    add w9, w10, w9
+; NOLSE-NEXT:    add w10, w10, w8
+; NOLSE-NEXT:    csel w10, wzr, w10, vs
+; NOLSE-NEXT:    add w9, w9, w10
 ; NOLSE-NEXT:    lsr w9, w9, #16
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB3_1
@@ -307,9 +313,11 @@ define bfloat @test_atomicrmw_fadd_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; LSE-NEXT:    shll v2.4s, v0.4h, #16
 ; LSE-NEXT:    fadd s2, s2, s1
 ; LSE-NEXT:    fmov w9, s2
+; LSE-NEXT:    fcmp s2, s2
 ; LSE-NEXT:    ubfx w10, w9, #16, #1
-; LSE-NEXT:    add w9, w9, w8
-; LSE-NEXT:    add w9, w10, w9
+; LSE-NEXT:    add w10, w10, w8
+; LSE-NEXT:    csel w10, wzr, w10, vs
+; LSE-NEXT:    add w9, w9, w10
 ; LSE-NEXT:    lsr w9, w9, #16
 ; LSE-NEXT:    fmov s2, w9
 ; LSE-NEXT:    fmov w9, s0
@@ -770,9 +778,11 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; NOLSE-NEXT:    shll v3.4s, v3.4h, #16
 ; NOLSE-NEXT:    fadd v3.4s, v3.4s, v0.4s
 ; NOLSE-NEXT:    ushr v4.4s, v3.4s, #16
+; NOLSE-NEXT:    fcmeq v5.4s, v3.4s, v3.4s
 ; NOLSE-NEXT:    and v4.16b, v4.16b, v1.16b
-; NOLSE-NEXT:    add v3.4s, v4.4s, v3.4s
-; NOLSE-NEXT:    addhn v3.4h, v3.4s, v2.4s
+; NOLSE-NEXT:    add v4.4s, v4.4s, v2.4s
+; NOLSE-NEXT:    and v4.16b, v4.16b, v5.16b
+; NOLSE-NEXT:    addhn v3.4h, v3.4s, v4.4s
 ; NOLSE-NEXT:    fmov w9, s3
 ; NOLSE-NEXT:    stlxr w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB8_1
@@ -793,9 +803,11 @@ define <2 x bfloat> @test_atomicrmw_fadd_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; LSE-NEXT:    fadd v4.4s, v4.4s, v3.4s
 ; LSE-NEXT:    mov w10, w8
 ; LSE-NEXT:    ushr v5.4s, v4.4s, #16
+; LSE-NEXT:    fcmeq v6.4s, v4.4s, v4.4s
 ; LSE-NEXT:    and v5.16b, v5.16b, v1.16b
-; LSE-NEXT:    add v4.4s, v5.4s, v4.4s
-; LSE-NEXT:    addhn v4.4h, v4.4s, v2.4s
+; LSE-NEXT:    add v5.4s, v5.4s, v2.4s
+; LSE-NEXT:    and v5.16b, v5.16b, v6.16b
+; LSE-NEXT:    addhn v4.4h, v4.4s, v5.4s
 ; LSE-NEXT:    fmov w9, s4
 ; LSE-NEXT:    casal w10, w9, [x0]
 ; LSE-NEXT:    fmov s0, w10

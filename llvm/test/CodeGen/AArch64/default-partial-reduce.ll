@@ -637,13 +637,15 @@ define <2 x bfloat> @pr_2xbfloat(<2 x bfloat> %in, <2 x bfloat> %acc) {
 ; NEON-NOBF16:       // %bb.0:
 ; NEON-NOBF16-NEXT:    shll v0.4s, v0.4h, #16
 ; NEON-NOBF16-NEXT:    shll v1.4s, v1.4h, #16
+; NEON-NOBF16-NEXT:    movi v3.4s, #127, msl #8
 ; NEON-NOBF16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; NEON-NOBF16-NEXT:    movi v1.4s, #1
 ; NEON-NOBF16-NEXT:    ushr v2.4s, v0.4s, #16
 ; NEON-NOBF16-NEXT:    and v1.16b, v2.16b, v1.16b
-; NEON-NOBF16-NEXT:    movi v2.4s, #127, msl #8
-; NEON-NOBF16-NEXT:    add v0.4s, v1.4s, v0.4s
-; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; NEON-NOBF16-NEXT:    fcmeq v2.4s, v0.4s, v0.4s
+; NEON-NOBF16-NEXT:    add v1.4s, v1.4s, v3.4s
+; NEON-NOBF16-NEXT:    and v1.16b, v1.16b, v2.16b
+; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v1.4s
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_2xbfloat:
@@ -671,13 +673,15 @@ define <4 x bfloat> @pr_4xbfloat(<4 x bfloat> %in, <4 x bfloat> %acc) {
 ; NEON-NOBF16:       // %bb.0:
 ; NEON-NOBF16-NEXT:    shll v0.4s, v0.4h, #16
 ; NEON-NOBF16-NEXT:    shll v1.4s, v1.4h, #16
+; NEON-NOBF16-NEXT:    movi v3.4s, #127, msl #8
 ; NEON-NOBF16-NEXT:    fadd v0.4s, v1.4s, v0.4s
 ; NEON-NOBF16-NEXT:    movi v1.4s, #1
 ; NEON-NOBF16-NEXT:    ushr v2.4s, v0.4s, #16
 ; NEON-NOBF16-NEXT:    and v1.16b, v2.16b, v1.16b
-; NEON-NOBF16-NEXT:    movi v2.4s, #127, msl #8
-; NEON-NOBF16-NEXT:    add v0.4s, v1.4s, v0.4s
-; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v2.4s
+; NEON-NOBF16-NEXT:    fcmeq v2.4s, v0.4s, v0.4s
+; NEON-NOBF16-NEXT:    add v1.4s, v1.4s, v3.4s
+; NEON-NOBF16-NEXT:    and v1.16b, v1.16b, v2.16b
+; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v1.4s
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_4xbfloat:
@@ -708,17 +712,21 @@ define <8 x bfloat> @pr_8xbfloat(<8 x bfloat> %in, <8 x bfloat> %acc) {
 ; NEON-NOBF16-NEXT:    shll2 v0.4s, v0.8h, #16
 ; NEON-NOBF16-NEXT:    shll2 v1.4s, v1.8h, #16
 ; NEON-NOBF16-NEXT:    movi v2.4s, #1
-; NEON-NOBF16-NEXT:    movi v5.4s, #127, msl #8
 ; NEON-NOBF16-NEXT:    fadd v3.4s, v4.4s, v3.4s
+; NEON-NOBF16-NEXT:    movi v4.4s, #127, msl #8
 ; NEON-NOBF16-NEXT:    fadd v1.4s, v1.4s, v0.4s
 ; NEON-NOBF16-NEXT:    ushr v0.4s, v3.4s, #16
-; NEON-NOBF16-NEXT:    ushr v4.4s, v1.4s, #16
+; NEON-NOBF16-NEXT:    fcmeq v6.4s, v3.4s, v3.4s
+; NEON-NOBF16-NEXT:    ushr v5.4s, v1.4s, #16
 ; NEON-NOBF16-NEXT:    and v0.16b, v0.16b, v2.16b
-; NEON-NOBF16-NEXT:    and v2.16b, v4.16b, v2.16b
-; NEON-NOBF16-NEXT:    add v0.4s, v0.4s, v3.4s
-; NEON-NOBF16-NEXT:    add v1.4s, v2.4s, v1.4s
-; NEON-NOBF16-NEXT:    addhn v0.4h, v0.4s, v5.4s
-; NEON-NOBF16-NEXT:    addhn2 v0.8h, v1.4s, v5.4s
+; NEON-NOBF16-NEXT:    and v2.16b, v5.16b, v2.16b
+; NEON-NOBF16-NEXT:    fcmeq v5.4s, v1.4s, v1.4s
+; NEON-NOBF16-NEXT:    add v0.4s, v0.4s, v4.4s
+; NEON-NOBF16-NEXT:    add v2.4s, v2.4s, v4.4s
+; NEON-NOBF16-NEXT:    and v0.16b, v0.16b, v6.16b
+; NEON-NOBF16-NEXT:    and v2.16b, v2.16b, v5.16b
+; NEON-NOBF16-NEXT:    addhn v0.4h, v3.4s, v0.4s
+; NEON-NOBF16-NEXT:    addhn2 v0.8h, v1.4s, v2.4s
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_8xbfloat:
@@ -756,28 +764,36 @@ define <16 x bfloat> @pr_16xbfloat(<16 x bfloat> %in, <16 x bfloat> %acc) {
 ; NEON-NOBF16-NEXT:    shll2 v2.4s, v2.8h, #16
 ; NEON-NOBF16-NEXT:    shll2 v1.4s, v1.8h, #16
 ; NEON-NOBF16-NEXT:    shll2 v3.4s, v3.8h, #16
-; NEON-NOBF16-NEXT:    movi v17.4s, #127, msl #8
 ; NEON-NOBF16-NEXT:    fadd v4.4s, v4.4s, v5.4s
 ; NEON-NOBF16-NEXT:    fadd v5.4s, v7.4s, v6.4s
+; NEON-NOBF16-NEXT:    movi v6.4s, #1
 ; NEON-NOBF16-NEXT:    fadd v2.4s, v2.4s, v0.4s
-; NEON-NOBF16-NEXT:    movi v0.4s, #1
 ; NEON-NOBF16-NEXT:    fadd v3.4s, v3.4s, v1.4s
-; NEON-NOBF16-NEXT:    ushr v6.4s, v4.4s, #16
-; NEON-NOBF16-NEXT:    ushr v1.4s, v5.4s, #16
-; NEON-NOBF16-NEXT:    ushr v7.4s, v2.4s, #16
-; NEON-NOBF16-NEXT:    ushr v16.4s, v3.4s, #16
-; NEON-NOBF16-NEXT:    and v6.16b, v6.16b, v0.16b
-; NEON-NOBF16-NEXT:    and v1.16b, v1.16b, v0.16b
-; NEON-NOBF16-NEXT:    add v4.4s, v6.4s, v4.4s
-; NEON-NOBF16-NEXT:    and v6.16b, v16.16b, v0.16b
-; NEON-NOBF16-NEXT:    add v1.4s, v1.4s, v5.4s
-; NEON-NOBF16-NEXT:    and v5.16b, v7.16b, v0.16b
-; NEON-NOBF16-NEXT:    addhn v0.4h, v4.4s, v17.4s
-; NEON-NOBF16-NEXT:    add v3.4s, v6.4s, v3.4s
-; NEON-NOBF16-NEXT:    addhn v1.4h, v1.4s, v17.4s
-; NEON-NOBF16-NEXT:    add v2.4s, v5.4s, v2.4s
-; NEON-NOBF16-NEXT:    addhn2 v0.8h, v2.4s, v17.4s
-; NEON-NOBF16-NEXT:    addhn2 v1.8h, v3.4s, v17.4s
+; NEON-NOBF16-NEXT:    movi v1.4s, #127, msl #8
+; NEON-NOBF16-NEXT:    ushr v7.4s, v4.4s, #16
+; NEON-NOBF16-NEXT:    fcmeq v17.4s, v4.4s, v4.4s
+; NEON-NOBF16-NEXT:    ushr v0.4s, v5.4s, #16
+; NEON-NOBF16-NEXT:    ushr v16.4s, v2.4s, #16
+; NEON-NOBF16-NEXT:    fcmeq v19.4s, v5.4s, v5.4s
+; NEON-NOBF16-NEXT:    ushr v18.4s, v3.4s, #16
+; NEON-NOBF16-NEXT:    and v7.16b, v7.16b, v6.16b
+; NEON-NOBF16-NEXT:    and v0.16b, v0.16b, v6.16b
+; NEON-NOBF16-NEXT:    and v16.16b, v16.16b, v6.16b
+; NEON-NOBF16-NEXT:    and v6.16b, v18.16b, v6.16b
+; NEON-NOBF16-NEXT:    add v7.4s, v7.4s, v1.4s
+; NEON-NOBF16-NEXT:    add v0.4s, v0.4s, v1.4s
+; NEON-NOBF16-NEXT:    add v16.4s, v16.4s, v1.4s
+; NEON-NOBF16-NEXT:    add v6.4s, v6.4s, v1.4s
+; NEON-NOBF16-NEXT:    and v7.16b, v7.16b, v17.16b
+; NEON-NOBF16-NEXT:    fcmeq v17.4s, v2.4s, v2.4s
+; NEON-NOBF16-NEXT:    and v18.16b, v0.16b, v19.16b
+; NEON-NOBF16-NEXT:    fcmeq v19.4s, v3.4s, v3.4s
+; NEON-NOBF16-NEXT:    addhn v0.4h, v4.4s, v7.4s
+; NEON-NOBF16-NEXT:    addhn v1.4h, v5.4s, v18.4s
+; NEON-NOBF16-NEXT:    and v4.16b, v16.16b, v17.16b
+; NEON-NOBF16-NEXT:    and v5.16b, v6.16b, v19.16b
+; NEON-NOBF16-NEXT:    addhn2 v0.8h, v2.4s, v4.4s
+; NEON-NOBF16-NEXT:    addhn2 v1.8h, v3.4s, v5.4s
 ; NEON-NOBF16-NEXT:    ret
 ;
 ; NEON-BF16-LABEL: pr_16xbfloat:

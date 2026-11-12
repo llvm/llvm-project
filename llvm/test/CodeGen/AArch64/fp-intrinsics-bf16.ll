@@ -274,12 +274,14 @@ define bfloat @sitofp_bf16_i32(i32 %x) #0 {
 ; CHECK-NOBF16-LABEL: sitofp_bf16_i32:
 ; CHECK-NOBF16:       // %bb.0:
 ; CHECK-NOBF16-NEXT:    scvtf d0, w0
-; CHECK-NOBF16-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NOBF16-NEXT:    mov w10, #32767 // =0x7fff
 ; CHECK-NOBF16-NEXT:    fcvtxn s0, d0
-; CHECK-NOBF16-NEXT:    fmov w9, s0
-; CHECK-NOBF16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-NOBF16-NEXT:    add w8, w9, w8
-; CHECK-NOBF16-NEXT:    add w8, w10, w8
+; CHECK-NOBF16-NEXT:    fmov w8, s0
+; CHECK-NOBF16-NEXT:    fcmp s0, s0
+; CHECK-NOBF16-NEXT:    ubfx w9, w8, #16, #1
+; CHECK-NOBF16-NEXT:    add w9, w9, w10
+; CHECK-NOBF16-NEXT:    csel w9, wzr, w9, vs
+; CHECK-NOBF16-NEXT:    add w8, w8, w9
 ; CHECK-NOBF16-NEXT:    lsr w8, w8, #16
 ; CHECK-NOBF16-NEXT:    fmov s0, w8
 ; CHECK-NOBF16-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -299,12 +301,14 @@ define bfloat @uitofp_bf16_i32(i32 %x) #0 {
 ; CHECK-NOBF16-LABEL: uitofp_bf16_i32:
 ; CHECK-NOBF16:       // %bb.0:
 ; CHECK-NOBF16-NEXT:    ucvtf d0, w0
-; CHECK-NOBF16-NEXT:    mov w8, #32767 // =0x7fff
+; CHECK-NOBF16-NEXT:    mov w10, #32767 // =0x7fff
 ; CHECK-NOBF16-NEXT:    fcvtxn s0, d0
-; CHECK-NOBF16-NEXT:    fmov w9, s0
-; CHECK-NOBF16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-NOBF16-NEXT:    add w8, w9, w8
-; CHECK-NOBF16-NEXT:    add w8, w10, w8
+; CHECK-NOBF16-NEXT:    fmov w8, s0
+; CHECK-NOBF16-NEXT:    fcmp s0, s0
+; CHECK-NOBF16-NEXT:    ubfx w9, w8, #16, #1
+; CHECK-NOBF16-NEXT:    add w9, w9, w10
+; CHECK-NOBF16-NEXT:    csel w9, wzr, w9, vs
+; CHECK-NOBF16-NEXT:    add w8, w8, w9
 ; CHECK-NOBF16-NEXT:    lsr w8, w8, #16
 ; CHECK-NOBF16-NEXT:    fmov s0, w8
 ; CHECK-NOBF16-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -324,26 +328,28 @@ define bfloat @sitofp_bf16_i64(i64 %x) #0 {
 ; CHECK-NOBF16-LABEL: sitofp_bf16_i64:
 ; CHECK-NOBF16:       // %bb.0:
 ; CHECK-NOBF16-NEXT:    cmp x0, #0
-; CHECK-NOBF16-NEXT:    and x11, x0, #0x8000000000000000
-; CHECK-NOBF16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NOBF16-NEXT:    cneg x9, x0, mi
-; CHECK-NOBF16-NEXT:    lsr x10, x9, #53
-; CHECK-NOBF16-NEXT:    cmp x10, #0
-; CHECK-NOBF16-NEXT:    and x10, x9, #0xfffffffffffff000
-; CHECK-NOBF16-NEXT:    csel x10, x10, x9, ne
-; CHECK-NOBF16-NEXT:    scvtf d0, x10
-; CHECK-NOBF16-NEXT:    cset w10, ne
-; CHECK-NOBF16-NEXT:    tst x9, #0xfff
-; CHECK-NOBF16-NEXT:    csel w10, wzr, w10, eq
+; CHECK-NOBF16-NEXT:    cneg x8, x0, mi
+; CHECK-NOBF16-NEXT:    lsr x9, x8, #53
+; CHECK-NOBF16-NEXT:    and x10, x8, #0xfffffffffffff000
+; CHECK-NOBF16-NEXT:    cmp x9, #0
+; CHECK-NOBF16-NEXT:    csel x9, x10, x8, ne
+; CHECK-NOBF16-NEXT:    and x10, x0, #0x8000000000000000
+; CHECK-NOBF16-NEXT:    cset w11, ne
+; CHECK-NOBF16-NEXT:    scvtf d0, x9
+; CHECK-NOBF16-NEXT:    tst x8, #0xfff
 ; CHECK-NOBF16-NEXT:    fmov x9, d0
-; CHECK-NOBF16-NEXT:    orr x9, x9, x11
-; CHECK-NOBF16-NEXT:    orr x9, x9, x10
-; CHECK-NOBF16-NEXT:    fmov d0, x9
+; CHECK-NOBF16-NEXT:    orr x8, x9, x10
+; CHECK-NOBF16-NEXT:    csel w9, wzr, w11, eq
+; CHECK-NOBF16-NEXT:    mov w10, #32767 // =0x7fff
+; CHECK-NOBF16-NEXT:    orr x8, x8, x9
+; CHECK-NOBF16-NEXT:    fmov d0, x8
 ; CHECK-NOBF16-NEXT:    fcvtxn s0, d0
-; CHECK-NOBF16-NEXT:    fmov w9, s0
-; CHECK-NOBF16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-NOBF16-NEXT:    add w8, w9, w8
-; CHECK-NOBF16-NEXT:    add w8, w10, w8
+; CHECK-NOBF16-NEXT:    fmov w8, s0
+; CHECK-NOBF16-NEXT:    fcmp s0, s0
+; CHECK-NOBF16-NEXT:    ubfx w9, w8, #16, #1
+; CHECK-NOBF16-NEXT:    add w9, w9, w10
+; CHECK-NOBF16-NEXT:    csel w9, wzr, w9, vs
+; CHECK-NOBF16-NEXT:    add w8, w8, w9
 ; CHECK-NOBF16-NEXT:    lsr w8, w8, #16
 ; CHECK-NOBF16-NEXT:    fmov s0, w8
 ; CHECK-NOBF16-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -376,23 +382,25 @@ define bfloat @sitofp_bf16_i64(i64 %x) #0 {
 define bfloat @uitofp_bf16_i64(i64 %x) #0 {
 ; CHECK-NOBF16-LABEL: uitofp_bf16_i64:
 ; CHECK-NOBF16:       // %bb.0:
-; CHECK-NOBF16-NEXT:    lsr x9, x0, #53
-; CHECK-NOBF16-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NOBF16-NEXT:    cmp x9, #0
+; CHECK-NOBF16-NEXT:    lsr x8, x0, #53
 ; CHECK-NOBF16-NEXT:    and x9, x0, #0xfffffffffffff000
-; CHECK-NOBF16-NEXT:    csel x9, x9, x0, ne
-; CHECK-NOBF16-NEXT:    ucvtf d0, x9
-; CHECK-NOBF16-NEXT:    cset w9, ne
+; CHECK-NOBF16-NEXT:    mov w10, #32767 // =0x7fff
+; CHECK-NOBF16-NEXT:    cmp x8, #0
+; CHECK-NOBF16-NEXT:    csel x8, x9, x0, ne
+; CHECK-NOBF16-NEXT:    ucvtf d0, x8
+; CHECK-NOBF16-NEXT:    cset w8, ne
 ; CHECK-NOBF16-NEXT:    tst x0, #0xfff
-; CHECK-NOBF16-NEXT:    csel w9, wzr, w9, eq
-; CHECK-NOBF16-NEXT:    fmov x10, d0
-; CHECK-NOBF16-NEXT:    orr x9, x10, x9
-; CHECK-NOBF16-NEXT:    fmov d0, x9
+; CHECK-NOBF16-NEXT:    csel w8, wzr, w8, eq
+; CHECK-NOBF16-NEXT:    fmov x9, d0
+; CHECK-NOBF16-NEXT:    orr x8, x9, x8
+; CHECK-NOBF16-NEXT:    fmov d0, x8
 ; CHECK-NOBF16-NEXT:    fcvtxn s0, d0
-; CHECK-NOBF16-NEXT:    fmov w9, s0
-; CHECK-NOBF16-NEXT:    ubfx w10, w9, #16, #1
-; CHECK-NOBF16-NEXT:    add w8, w9, w8
-; CHECK-NOBF16-NEXT:    add w8, w10, w8
+; CHECK-NOBF16-NEXT:    fmov w8, s0
+; CHECK-NOBF16-NEXT:    fcmp s0, s0
+; CHECK-NOBF16-NEXT:    ubfx w9, w8, #16, #1
+; CHECK-NOBF16-NEXT:    add w9, w9, w10
+; CHECK-NOBF16-NEXT:    csel w9, wzr, w9, vs
+; CHECK-NOBF16-NEXT:    add w8, w8, w9
 ; CHECK-NOBF16-NEXT:    lsr w8, w8, #16
 ; CHECK-NOBF16-NEXT:    fmov s0, w8
 ; CHECK-NOBF16-NEXT:    // kill: def $h0 killed $h0 killed $s0
