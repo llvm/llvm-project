@@ -53,19 +53,17 @@ class PersistentVariablesTestCase(TestBase):
 
         # Try redeclaring the persistent variable with the same type.
         # This should be rejected as we treat them as if they are globals.
-        self.expect(
-            "expr int $i = 123",
-            error=True,
-            substrs=["redefinition of persistent variable '$i'"],
+        self.assertEqual(
+            lldbutil.get_expr_error_messages(self, self.frame(), "int $i = 123"),
+            ["redefinition of persistent variable '$i'"],
         )
         self.expect_expr("$i", result_type="int", result_value="5")
 
         # Try redeclaring the persistent variable with another type. Should
         # also be rejected.
-        self.expect(
-            "expr long $i = 123",
-            error=True,
-            substrs=["redefinition of persistent variable '$i'"],
+        self.assertEqual(
+            lldbutil.get_expr_error_messages(self, self.frame(), "long $i = 123"),
+            ["redefinition of persistent variable '$i'"],
         )
         self.expect_expr("$i", result_type="int", result_value="5")
 
