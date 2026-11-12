@@ -256,8 +256,13 @@ bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
       count_if(MRI->use_nodbg_instructions(DstReg), IsSCCRestore);
   // True while SCC holds the result.
   bool SCCValid = false;
+  // Restores past the limit keep the saved SCC.
+  constexpr unsigned MaxInstScan = 64;
+  unsigned NumInst = 0;
   for (auto It = std::next(MachineBasicBlock::iterator(I)); NumRestores;) {
     MachineInstr &MI = *It++;
+    if (!MI.isDebugInstr() && ++NumInst > MaxInstScan)
+      break;
     if (IsSCCRestore(MI)) {
       // Reconvert only if SCC changed since the last conversion.
       if (!SCCValid)
@@ -615,8 +620,13 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO_UADDE_USUBE(
         count_if(MRI->use_nodbg_instructions(Dst1Reg), IsSCCRestore);
     // True while SCC holds the carry, as it does right after CarryInst.
     bool SCCValid = true;
+    // Restores past the limit keep the saved carry.
+    constexpr unsigned MaxInstScan = 64;
+    unsigned NumInst = 0;
     for (auto It = std::next(MachineBasicBlock::iterator(I)); NumRestores;) {
       MachineInstr &MI = *It++;
+      if (!MI.isDebugInstr() && ++NumInst > MaxInstScan)
+        break;
       if (IsSCCRestore(MI)) {
         if (!SCCValid) {
           Register DeadDst =
