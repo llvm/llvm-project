@@ -1,4 +1,4 @@
-//===-- RustVector.cpp ----------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,12 +36,14 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
+  // m_start and m_len need to stay around because they are child objects
+  // who will follow their parent's life cycle; don't delete them in the
+  // destructor.
   ValueObject *m_start = nullptr;
-
   ValueObject *m_len = nullptr;
-  enum class VectorLayout : bool { Pointer, Size };
+
   CompilerType m_element_type;
-  uint32_t m_element_size = 0;
+  uint64_t m_element_size = 0;
 };
 
 } // namespace formatters
@@ -50,17 +52,11 @@ private:
 lldb_private::formatters::RustVectorSyntheticFrontEnd::
     RustVectorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type() {
-  if (valobj_sp)
-    Update();
+  Update();
 }
 
 lldb_private::formatters::RustVectorSyntheticFrontEnd::
-    ~RustVectorSyntheticFrontEnd() {
-  // these need to stay around because they are child objects who will follow
-  // their parent's life cycle
-  // delete m_start;
-  // delete m_len;
-}
+    ~RustVectorSyntheticFrontEnd() {}
 
 llvm::Expected<uint32_t>
 lldb_private::formatters::RustVectorSyntheticFrontEnd::CalculateNumChildren() {
@@ -80,7 +76,7 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::GetChildAtIndex(
 
   uint64_t offset = m_start->GetValueAsUnsigned(0) + idx * m_element_size;
   StreamString name;
-  name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+  name << llvm::formatv("[{0}]", idx);
   return CreateChildValueObjectFromAddress(name.GetString(), offset,
                                            m_backend.GetExecutionContextRef(),
                                            m_element_type);
@@ -100,7 +96,6 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::Update() {
   if (!m_start)
     m_start =
         m_backend.GetChildAtNamePath({"buf", "inner", "ptr", "pointer"}).get();
-
 
   m_len = m_backend.GetChildMemberWithName("len").get();
 
@@ -129,9 +124,9 @@ lldb_private::formatters::RustVectorSyntheticFrontEnd::GetIndexOfChildWithName(
   if (!m_start || !m_len)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   auto optional_idx = formatters::ExtractIndexFromString(name);
-  if (!optional_idx) {
+  if (!optional_idx)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  }
+
   return *optional_idx;
 }
 

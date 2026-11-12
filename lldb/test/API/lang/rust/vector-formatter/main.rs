@@ -7,14 +7,14 @@
 /// rustc -g --crate-type=bin -C panic=abort main.rs
 ///
 /// To generate core file:
-/// lldb main -o "br set -f main.rs -l 16" -o "run" -o "process save-core -s modified-memory main.core" -o "quit"
+/// lldb main -o "br set -f main.rs -l 15" -o "run" -o "process save-core -s modified-memory main.core" -o "quit"
 
 fn main() {
     let vector = vec![1, 2, 3];
 
-    if vector[0] == 17 { // Set breakpoint here (line 16)
-	println!("condition was true");
+    if vector[0] == 17 { // Set breakpoint here (line 15)
+        println!("condition was true");
     } else {
-	println!("condition was false");
+        println!("condition was false");
     }
 }

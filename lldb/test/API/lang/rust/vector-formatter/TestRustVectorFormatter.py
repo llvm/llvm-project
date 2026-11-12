@@ -18,25 +18,22 @@ class TestRustVectorFormatter(TestBase):
         process = target.LoadCore(self.getBuildArtifact("main.core"))
         self.assertTrue(process.IsValid())
 
-        self.expect(
-            "frame variable vector",
-            substrs=[
-                "vector = size=3",
-                "[0] = 1",
-                "[1] = 2",
-                "[2] = 3",
-                "}",
+        self.expect_var_path(
+            "vector",
+            summary="size=3",
+            children=[
+                ValueCheck(name="[0]", value="1"),
+                ValueCheck(name="[1]", value="2"),
+                ValueCheck(name="[2]", value="3")
             ],
         )
 
-        self.expect(
-            "expression vector",
-            substrs=[
-                "$",
-                "size=3",
-                "[0] = 1",
-                "[1] = 2",
-                "[2] = 3",
-                "}",
+        self.expect_expr(
+            "vector",
+            result_summary="size=3",
+            result_children=[
+                ValueCheck(name="[0]", value="1"),
+                ValueCheck(name="[1]", value="2"),
+                ValueCheck(name="[2]", value="3")
             ],
         )
