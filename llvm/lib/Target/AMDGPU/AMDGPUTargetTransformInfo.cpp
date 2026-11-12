@@ -527,7 +527,8 @@ static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    ArrayRef<const Value *> Scalars) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -539,6 +540,19 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     LT.second.getVectorNumElements() : 1;
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+  // A vector operation has a property of its context instruction only if all
+  // lanes of the same opcode have it.
+  auto AllLanes = [&](function_ref<bool(const Instruction *)> Pred) {
+    if (!CtxI)
+      return false;
+    if (Scalars.empty())
+      return Pred(CtxI);
+    return all_of(Scalars, [&](const Value *V) {
+      const auto *I = dyn_cast<Instruction>(V);
+      return !I || I->getOpcode() != CtxI->getOpcode() || Pred(I);
+    });
+  };
 
   switch (ISD) {
   case ISD::SHL:
@@ -587,16 +601,19 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation. A vector fmul priced with a scalar context fuses with
     // the scalar fadd|fsub only when it is emitted lane by lane.
-    if (CtxI && CtxI->hasOneUse() &&
+    if (CtxI &&
         (CtxI->getType() == Ty ||
-         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1)) {
-      const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
-      if (FAddSub &&
-          (FAddSub->getOpcode() == Instruction::FAdd ||
-           FAddSub->getOpcode() == Instruction::FSub) &&
-          isFusedFMul(*TLI, Ty, CtxI, FAddSub))
-        return TargetTransformInfo::TCC_Free;
-    }
+         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1) &&
+        AllLanes([&](const Instruction *FMul) {
+          if (!FMul->hasOneUse())
+            return false;
+          const auto *FAddSub = dyn_cast<BinaryOperator>(*FMul->user_begin());
+          return FAddSub &&
+                 (FAddSub->getOpcode() == Instruction::FAdd ||
+                  FAddSub->getOpcode() == Instruction::FSub) &&
+                 isFusedFMul(*TLI, Ty, FMul, FAddSub);
+        }))
+      return TargetTransformInfo::TCC_Free;
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
@@ -649,7 +666,8 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && (CtxI && CtxI->hasApproxFunc())) {
+    if (SLT == MVT::f32 &&
+        AllLanes([](const Instruction *I) { return I->hasApproxFunc(); })) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
@@ -679,7 +697,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI);
+                                       Args, CtxI, Scalars);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16

@@ -9,17 +9,24 @@ define void @fdiv_mixed(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: define void @fdiv_mixed(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
-; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 2
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; CHECK-NEXT:    [[D0:%.*]] = fdiv afn float [[A0]], [[B0]]
+; CHECK-NEXT:    [[D3:%.*]] = fdiv float [[A3]], [[B3]]
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[AP1]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[BP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <2 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[OUT]], align 4
+; CHECK-NEXT:    store float [[D0]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[O1]], align 4
+; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store float [[D3]], ptr [[O3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
