@@ -11154,6 +11154,15 @@ void llvm::findValuesAffectedByCondition(
         AddAffected(A);
         if (IsAssume)
           AddAffected(B);
+
+        // If the remainder is zero, then the division is exact.
+        Value *RemLHS, *RemRHS;
+        if (match(B, m_Zero()) &&
+            match(A, m_IRem(m_Value(RemLHS), m_Value(RemRHS)))) {
+          AddAffected(RemLHS);
+          AddAffected(RemRHS);
+        }
+
         if (HasRHSC) {
           Value *Y;
           // (X << C) or (X >>_s C) or (X >>_u C).
