@@ -886,8 +886,7 @@ static Address EmitValToTemp(CodeGenFunction &CGF, Expr *E,
     CGF.Builder.CreateStore(CGF.EmitPointerAuthQualify(PtrAuth, E, Ptr),
                             DeclPtr);
   else
-    CGF.EmitAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
-                         /*Init*/ true);
+    CGF.EmitAnyExprToMem(E, DeclPtr, Qualifiers(), /*Init*/ true);
   return DeclPtr;
 }
 
