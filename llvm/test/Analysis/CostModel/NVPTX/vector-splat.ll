@@ -1,8 +1,6 @@
-; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_100 < %s | FileCheck %s --check-prefixes=CHECK,SM100
-; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_90 < %s | FileCheck %s --check-prefix=SM90
-; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mcpu=sm_100 < %s | FileCheck %s --check-prefix=SIZE
-
-target triple = "nvptx64-nvidia-cuda"
+; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_100 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s --check-prefixes=CHECK,SM100
+; RUN: opt -passes="print<cost-model>" -cost-kind=throughput 2>&1 -disable-output -mcpu=sm_90 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s --check-prefix=SM90
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mcpu=sm_100 < %s -mtriple=nvptx64-nvidia-cuda | FileCheck %s --check-prefix=SIZE
 
 define <2 x float> @f32x2_splat(float %x) {
 ; CHECK-LABEL: 'f32x2_splat'
