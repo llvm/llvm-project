@@ -143,3 +143,44 @@ func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg
   }
   return
 }
+
+// The innermost loop runs once and no index uses it, so it is parallel and is
+// matched as an inner loop just like %i1. The match rooted at %i0 used to map
+// %i1 and %i2 to the same vector dimension and crash on the load.
+// VECT-LABEL: func @vectorize_nested_parallel_loops
+//      VECT:   affine.for %[[I0:.*]] = 0 to 8 step 4 {
+// VECT-NEXT:     affine.for %[[I1:.*]] = 0 to 64 step 8 {
+// VECT-NEXT:       affine.for %{{.*}} = 0 to 1 {
+//      VECT:         %[[LD:.*]] = vector.transfer_read %{{.*}}[%[[I0]], %[[I1]]], %{{.*}} {{.*}}: memref<8x64xf32>, vector<4x8xf32>
+// VECT-NEXT:         %[[ADD:.*]] = arith.addf %[[LD]], %[[LD]] : vector<4x8xf32>
+// VECT-NEXT:         vector.transfer_write %[[ADD]], %{{.*}}[%[[I0]], %[[I1]]] {{.*}}: vector<4x8xf32>, memref<8x64xf32>
+func.func @vectorize_nested_parallel_loops(%A : memref<8x64xf32>) {
+  affine.for %i0 = 0 to 8 {
+    affine.for %i1 = 0 to 64 {
+      affine.for %i2 = 0 to 1 {
+        %0 = affine.load %A[%i0, %i1] : memref<8x64xf32>
+        %1 = arith.addf %0, %0 : f32
+        affine.store %1, %A[%i0, %i1] : memref<8x64xf32>
+      }
+    }
+  }
+  return
+}
+
+// The memory ops are only nested in %i0, but the match rooted at %i0 assigns
+// the second vector dimension to %i1, so their permutation maps have a single
+// result for a 2-D vector. Vectorization must fail instead of asserting.
+// VECT-LABEL: func @vectorize_memory_ops_outside_inner_loop
+//  VECT-NOT:   vector.transfer_read
+//  VECT-NOT:   vector.transfer_write
+func.func @vectorize_memory_ops_outside_inner_loop(%A : memref<8xf32>, %B : memref<8xf32>) {
+  affine.for %i0 = 0 to 8 {
+    %0 = affine.load %A[%i0] : memref<8xf32>
+    affine.store %0, %B[%i0] : memref<8xf32>
+    affine.for %i1 = 0 to 64 {
+      %c1 = arith.constant 1 : index
+      %1 = arith.addi %i1, %c1 : index
+    }
+  }
+  return
+}
