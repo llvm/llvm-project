@@ -1624,6 +1624,16 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
     Value *FloatVal = Builder.CreateFPExt(Src, Builder.getFloatTy(), "fpext");
     return Builder.CreateFPTrunc(FloatVal, DstTy, "fptrunc");
   }
+  // fptrunc and fpext only convert between formats of different widths, and
+  // fp128 and ppc_fp128 have 128 bits each: PowerPC has intrinsics for that.
+  if (SrcElementTy->isFP128Ty() && DstElementTy->isPPC_FP128Ty())
+    return Builder.CreateCall(
+        CGF.CGM.getIntrinsic(llvm::Intrinsic::ppc_convert_f128_to_ppcf128), Src,
+        "conv");
+  if (SrcElementTy->isPPC_FP128Ty() && DstElementTy->isFP128Ty())
+    return Builder.CreateCall(
+        CGF.CGM.getIntrinsic(llvm::Intrinsic::ppc_convert_ppcf128_to_f128), Src,
+        "conv");
   if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
     return Builder.CreateFPTrunc(Src, DstTy, "conv");
   return Builder.CreateFPExt(Src, DstTy, "conv");
