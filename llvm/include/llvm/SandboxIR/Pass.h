@@ -13,6 +13,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+class PassManagerTest_FunctionPassReturnValue_Test;
+class PassManagerTest_RegionPassReturnValue_Test;
+
 namespace llvm {
 
 class AAResults;
@@ -30,6 +33,9 @@ class Analyses {
   TargetTransformInfo *TTI = nullptr;
 
   Analyses() = default;
+  // Friends for default constructor in tests.
+  friend class ::PassManagerTest_FunctionPassReturnValue_Test;
+  friend class ::PassManagerTest_RegionPassReturnValue_Test;
 
 public:
   Analyses(AAResults &AA, ScalarEvolution &SE, TargetTransformInfo &TTI)
