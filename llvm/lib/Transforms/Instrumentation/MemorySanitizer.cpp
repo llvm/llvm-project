@@ -2953,31 +2953,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // multiplication by 0, which may occur in some elements of a vector operand.
   void handleMulByConstant(BinaryOperator &I, Constant *ConstArg,
                            Value *OtherArg) {
-    Constant *ShadowMul;
-    Type *Ty = ConstArg->getType();
-    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-      unsigned NumElements = cast<FixedVectorType>(VTy)->getNumElements();
-      Type *EltTy = VTy->getElementType();
-      SmallVector<Constant *, 16> Elements;
-      for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
-        if (ConstantInt *Elt =
-                dyn_cast<ConstantInt>(ConstArg->getAggregateElement(Idx))) {
-          const APInt &V = Elt->getValue();
-          APInt V2 = APInt(V.getBitWidth(), 1) << V.countr_zero();
-          Elements.push_back(ConstantInt::get(EltTy, V2));
-        } else {
-          Elements.push_back(ConstantInt::get(EltTy, 1));
-        }
-      }
-      ShadowMul = ConstantVector::get(Elements);
-    } else {
-      if (ConstantInt *Elt = dyn_cast<ConstantInt>(ConstArg)) {
+    auto GetShadowMul = [](Constant *C, Type *Ty) -> Constant * {
+      if (auto *Elt = dyn_cast_or_null<ConstantInt>(C)) {
         const APInt &V = Elt->getValue();
         APInt V2 = APInt(V.getBitWidth(), 1) << V.countr_zero();
-        ShadowMul = ConstantInt::get(Ty, V2);
-      } else {
-        ShadowMul = ConstantInt::get(Ty, 1);
+        return ConstantInt::get(Ty, V2);
       }
+      return ConstantInt::get(Ty, 1);
+    };
+    Constant *ShadowMul;
+    Type *Ty = ConstArg->getType();
+    if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
+      SmallVector<Constant *, 16> Elements;
+      for (unsigned Idx = 0, E = VTy->getNumElements(); Idx < E; ++Idx)
+        Elements.push_back(GetShadowMul(ConstArg->getAggregateElement(Idx),
+                                        VTy->getElementType()));
+      ShadowMul = ConstantVector::get(Elements);
+    } else {
+      ShadowMul = GetShadowMul(
+          Ty->isVectorTy() ? ConstArg->getSplatValue() : ConstArg, Ty);
     }
 
     IRBuilder<> IRB(&I);
