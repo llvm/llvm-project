@@ -69,7 +69,7 @@ while buffer != "":
             # if this name is for the current node, add the dot variable name
             # for the node (it will be Node(hex number)) to our set of nodes
             if regexp.search(buffer):
-                node_set |= set([re.split("\s+", buffer, 2)[1]])
+                node_set |= set([re.split(r"\s+", buffer, 2)[1]])
                 break
     buffer = input.readline()
 
@@ -105,7 +105,7 @@ while buffer != "":
         if nodes[0][:13] in node_set and nodes[1][:13] in node_set:
             output.write(buffer)
     elif nodeexp.search(buffer):  # this is a node line
-        node = re.split("\s+", buffer, 2)[1]
+        node = re.split(r"\s+", buffer, 2)[1]
         if node in node_set:
             output.write(buffer)
     else:  # this is a support line
