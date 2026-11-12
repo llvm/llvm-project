@@ -39,7 +39,7 @@ uint32_t pointer_overflow() __attribute__((no_sanitize("address"))) {
 
 uint32_t vla_bound(_BitInt(37) x) {
   _BitInt(37) a[x - 1];
-  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:17: runtime error: variable length array bound evaluates to non-positive value
+  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:17: runtime error: variable length array bound evaluates to non-positive value 0
   return 0;
 }
 
@@ -65,7 +65,7 @@ uint32_t float_cast_overflow() {
 
 uint32_t implicit_integer_sign_change(unsigned _BitInt(37) x) {
   _BitInt(37) r = x;
-  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:19: runtime error: implicit conversion from type '{{[^']+}}' of value
+  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:19: runtime error: implicit conversion from type '{{[^']+}}' of value {{[0-9]+}} (37-bit, unsigned)
   return r & 0xFFFFFFFF;
 }
 
@@ -131,6 +131,27 @@ uint32_t negative_shift5(unsigned _BitInt(37) x)
   // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:12: runtime error: shift exponent -2 is negative
 }
 
+uint32_t shift_exponent_too_big1(_BitInt(27) x)
+    __attribute__((no_sanitize("memory"))) {
+  unsigned _BitInt(24) c = 27;
+  return (uint32_t)(x << c) & 0xFF;
+  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:23: runtime error: shift exponent 27 is too large for 27-bit type '_BitInt(27)'
+}
+
+uint32_t shift_exponent_too_big2(_BitInt(27) x)
+    __attribute__((no_sanitize("memory"))) {
+  _BitInt(24) c = 29;
+  return (uint32_t)(x << c) & 0xFF;
+  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:23: runtime error: shift exponent 29 is too large for 27-bit type '_BitInt(27)'
+}
+
+uint32_t shift_result_too_big1(_BitInt(27) x)
+    __attribute__((no_sanitize("memory"))) {
+  _BitInt(24) c = 26;
+  return (uint32_t)(x << c) & 0xFF;
+  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:23: runtime error: left shift of 5 by 26 places cannot be represented in type '_BitInt(27)'
+}
+
 uint32_t unsigned_integer_overflow() __attribute__((no_sanitize("memory"))) {
   unsigned _BitInt(37) x = ~0U;
   ++x;
@@ -165,6 +186,9 @@ int main(int argc, char **argv) {
       negative_shift3(5) +
       negative_shift4(5) +
       negative_shift5(5) +
+      shift_exponent_too_big1(5) +
+      shift_exponent_too_big2(5) +
+      shift_result_too_big1(5) +
       unsigned_integer_overflow() +
       signed_integer_overflow();
   // clang-format on
