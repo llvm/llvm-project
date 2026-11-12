@@ -3953,9 +3953,9 @@ def : GCNPat <
 >;
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
-  (fma (f16 (VOP3NoOpSelMods f16:$src0)),
-       (f16 (VOP3NoOpSelMods f16:$src1)),
-       (f16 (VOP3NoOpSelMods f16:$src2))),
+  (fma (f16 (VOP3NoMods f16:$src0)),
+       (f16 (VOP3NoMods f16:$src1)),
+       (f16 (VOP3NoMods f16:$src2))),
   (V_FMAC_F16_t16_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
                   SRCMODS.NONE, $src2)
 >;
