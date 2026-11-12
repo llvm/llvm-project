@@ -191,10 +191,11 @@ struct TransferWriteOpMemOpModel
 };
 
 /// Returns the operation wrapped by the `vector.mask` `op`.
-static PromotableMemOpInterface getWrappedMemOp(Operation *op) {
+PromotableMemOpInterface getWrappedMemOp(Operation *op) {
   Operation *maskableOp = cast<vector::MaskOp>(op).getMaskableOp();
-  if (!isa_and_nonnull<vector::TransferReadOp, vector::TransferWriteOp>(
-          maskableOp))
+  if (!maskableOp)
+    return {};
+  if (!isa<vector::TransferReadOp, vector::TransferWriteOp>(maskableOp))
     return {};
   return cast<PromotableMemOpInterface>(maskableOp);
 }
