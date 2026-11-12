@@ -426,12 +426,12 @@ fir::StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   // through the function because otherwise the allocation may have an intende
   // lifetime longer than the current stack frame (e.g. a heap allocation which
   // is then freed by another function).
-  llvm::DenseMap<mlir::Block *, bool> blockCanSaveRestore;
+  fir::BlockStackScopesMap blockStackScopes;
   for (mlir::Value freedValue : freedValues) {
     fir::AllocMemOp allocmem = freedValue.getDefiningOp<fir::AllocMemOp>();
     InsertionPoint insertionPoint =
         AllocMemConversion::findAllocaInsertionPoint(
-            allocmem, allocToFreeMemMap[allocmem], blockCanSaveRestore);
+            allocmem, allocToFreeMemMap[allocmem], blockStackScopes);
     if (insertionPoint)
       candidateOps.insert({allocmem, insertionPoint});
   }
@@ -550,7 +550,7 @@ static bool isInStackGrowingLoop(mlir::Operation *op) {
 fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
     fir::AllocMemOp &oldAlloc,
     const llvm::SmallVector<mlir::Operation *> &freeOps,
-    llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore) {
+    fir::BlockStackScopesMap &blockStackScopes) {
   // Ideally the alloca should be inserted at the end of the function entry
   // block so that we do not allocate stack space in a loop. However,
   // the operands to the alloca may not be available that early, so insert it
@@ -571,7 +571,7 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
         // where we want to put it is in a loop, and even the old location is in
         // a loop. Give up.
         return findAllocaLoopInsertionPoint(oldAlloc, freeOps,
-                                            blockCanSaveRestore);
+                                            blockStackScopes);
       }
       return {oldAllocOp};
     }
@@ -659,34 +659,76 @@ fir::InsertionPoint fir::AllocMemConversion::findAllocaInsertionPoint(
   return checkReturn(allocaBlock);
 }
 
+/// Find whether a stack scope covering the whole \p block can be added without
+/// reclaiming pre-existing stack storage or interfering with another stack
+/// scope. The stack storage allocated inside an llvm.stacksave/
+/// llvm.stackrestore pair of the block, like the ones lowering emits around
+/// calls with a runtime-sized result, is reclaimed by that pair, assuming that
+/// the pairs are properly nested. These pairs are added to \p pairs when
+/// provided. Nested heap allocations are analyzed independently and either
+/// stay on the heap or receive a safe allocation scope of their own.
+static bool canAddBlockStackScope(
+    mlir::Block &block,
+    llvm::SmallVectorImpl<std::pair<mlir::Operation *, mlir::Operation *>>
+        *pairs = nullptr) {
+  for (auto it = block.begin(), end = block.end(); it != end; ++it) {
+    mlir::Operation *op = &*it;
+    if (mlir::isa<fir::AllocaOp, mlir::LLVM::AllocaOp,
+                  mlir::LLVM::StackRestoreOp>(op))
+      return false;
+    if (mlir::isa<mlir::LLVM::StackSaveOp>(op)) {
+      if (!op->hasOneUse())
+        return false;
+      mlir::Operation *restore = *op->user_begin();
+      if (!mlir::isa<mlir::LLVM::StackRestoreOp>(restore) ||
+          restore->getBlock() != &block)
+        return false;
+      if (pairs)
+        pairs->push_back({op, restore});
+      it = mlir::Block::iterator(restore);
+      continue;
+    }
+    if (op->hasTrait<mlir::OpTrait::AutomaticAllocationScope>())
+      continue;
+    for (mlir::Region &region : op->getRegions())
+      for (mlir::Block &nested : region)
+        if (!canAddBlockStackScope(nested))
+          return false;
+  }
+  return true;
+}
+
 fir::InsertionPoint fir::AllocMemConversion::findAllocaLoopInsertionPoint(
     fir::AllocMemOp &oldAlloc,
     const llvm::SmallVector<mlir::Operation *> &freeOps,
-    llvm::DenseMap<mlir::Block *, bool> &blockCanSaveRestore) {
+    fir::BlockStackScopesMap &blockStackScopes) {
   mlir::Block *block = oldAlloc->getBlock();
   assert(!freeOps.empty() && "DFA should only return freed memory");
   // A single block scope reclaims every promoted allocation together,
-  // regardless of whether the individual lifetimes are nested or crossing.
+  // regardless of whether the individual lifetimes are nested or crossing. The
+  // stack space used by the block is then the sum of these allocations.
   for (mlir::Operation *free : freeOps)
     if (free->getBlock() != block)
       return {nullptr};
 
-  auto [it, inserted] = blockCanSaveRestore.try_emplace(block, false);
-  if (inserted) {
-    // Do not reclaim pre-existing stack storage or interfere with another
-    // stack scope. Nested heap allocations are analyzed independently and
-    // either stay on the heap or receive a safe allocation scope of their own.
-    auto walkResult = block->walk([&](mlir::Operation *op) {
-      return mlir::isa<fir::AllocaOp, mlir::LLVM::AllocaOp,
-                       mlir::LLVM::StackSaveOp, mlir::LLVM::StackRestoreOp>(op)
-                 ? mlir::WalkResult::interrupt()
-                 : mlir::WalkResult::advance();
-    });
-    it->second = !walkResult.wasInterrupted();
-  }
-  if (!it->second)
+  auto [it, inserted] = blockStackScopes.try_emplace(block);
+  if (inserted)
+    it->second.canSaveRestore =
+        canAddBlockStackScope(*block, &it->second.pairs);
+  if (!it->second.canSaveRestore)
     return {nullptr};
-  return InsertionPoint{oldAlloc.getOperation(), /*saveRestoreStack=*/true};
+  // An existing stack scope reclaims the allocations made inside it, so an
+  // allocation made inside one must be freed before the scope ends, and does
+  // not need a scope of its own.
+  bool saveRestoreStack = true;
+  for (auto [save, restore] : it->second.pairs)
+    if (save->isBeforeInBlock(oldAlloc) && oldAlloc->isBeforeInBlock(restore)) {
+      for (mlir::Operation *free : freeOps)
+        if (!free->isBeforeInBlock(restore))
+          return {nullptr};
+      saveRestoreStack = false;
+    }
+  return InsertionPoint{oldAlloc.getOperation(), saveRestoreStack};
 }
 
 std::optional<fir::AllocaOp>

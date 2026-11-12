@@ -47,8 +47,8 @@ end subroutine charconvert2
 ! CHECK:   %[[VAL_9:.*]] = hlfir.as_expr %[[VAL_0]] move %[[FALSE]] : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
 ! CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
 ! CHECK:   %[[ASSOC:.*]]:3 = hlfir.associate %[[VAL_9]]
-! CHECK:   %[[VAL_10:.*]] = fir.alloca !fir.char<4,?>(%[[C1_0]] : index)
-! CHECK:   fir.char_convert %[[ASSOC]]#0 for %[[C1_0]] to %[[VAL_10]] : !fir.ref<!fir.char<1>>, index, !fir.ref<!fir.char<4,?>>
+! CHECK:   %[[VAL_10:.*]] = fir.allocmem !fir.char<4,?>(%[[C1_0]] : index)
+! CHECK:   fir.char_convert %[[ASSOC]]#0 for %[[C1_0]] to %[[VAL_10]] : !fir.ref<!fir.char<1>>, index, !fir.heap<!fir.char<4,?>>
 
 subroutine charconvert3(c, c4)
   character(kind=1, len=*) :: c

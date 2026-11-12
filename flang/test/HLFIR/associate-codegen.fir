@@ -464,3 +464,28 @@ func.func @_QPtest(%arg0: index, %arg1: index, %arg2 : i32) {
   hlfir.destroy %4 : !hlfir.expr<?x?xi32>
   return
 }
+
+// The operand of the no_reassoc is used after the end_associate, so the
+// associate copies the shared storage instead of taking it over.
+func.func @associate_char_shared_no_reassoc(%arg0: !fir.boxchar<1>) {
+  %c1 = arith.constant 1 : index
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  %1:2 = hlfir.declare %0#0 typeparams %0#1 uniq_name("x") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %2 = arith.addi %0#1, %c1 : index
+  %3 = hlfir.concat %1#0, %1#0 len %2 : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
+  %4 = hlfir.no_reassoc %3 : !hlfir.expr<!fir.char<1,?>>
+  %5:3 = hlfir.associate %4 typeparams %2 uniq_name("x") : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+  fir.call @take_c(%5#0) : (!fir.boxchar<1>) -> ()
+  hlfir.end_associate %5#1, %5#2 : !fir.ref<!fir.char<1,?>>, i1
+  hlfir.assign %3 to %1#0 : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
+  hlfir.destroy %3 : !hlfir.expr<!fir.char<1,?>>
+  return
+}
+// CHECK-LABEL: func.func @associate_char_shared_no_reassoc(
+// CHECK: fir.allocmem !fir.char<1,?>({{.*}}) <{bindc_name = ".chrtmp"
+// CHECK: fir.allocmem !fir.char<1,?>({{.*}}) <{bindc_name = ".tmp"
+// CHECK: fir.call @take_c
+// CHECK: fir.freemem
+// CHECK: hlfir.assign
+// CHECK: fir.freemem
+// CHECK: return

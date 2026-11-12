@@ -7535,7 +7535,7 @@ Fortran::lower::LoweringBridge::~LoweringBridge() {
 void Fortran::lower::genCleanUpInRegionIfAny(
     mlir::Location loc, fir::FirOpBuilder &builder, mlir::Region &region,
     Fortran::lower::StatementContext &context) {
-  if (!context.hasCode())
+  if (!context.hasCodeInCurrentScope())
     return;
   mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
   if (region.empty())
