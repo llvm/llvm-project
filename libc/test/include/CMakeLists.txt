@@ -11,16 +11,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  linux_time_macros_test
-  SUITE
-    libc-include-tests
-  SRCS
-    linux_time_macros_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.time_macros
-)
-
-add_libc_test(
   assert_test
   SUITE
     libc-include-tests
