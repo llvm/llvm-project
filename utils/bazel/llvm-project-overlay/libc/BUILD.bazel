@@ -2118,6 +2118,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_unique_ptr",
+    hdrs = ["src/__support/CPP/unique_ptr.h"],
+    deps = [
+        ":__support_cpp_new",
+        ":__support_cpp_nullptr_t",
+        ":__support_cpp_type_traits",
+        ":__support_cpp_utility",
+        ":__support_libc_assert",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":types_size_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_atomic",
     hdrs = ["src/__support/CPP/atomic.h"],
     deps = [
@@ -2583,6 +2598,22 @@ libc_support_library(
         ":__support_macros_properties_os",
         ":func_aligned_alloc",
         ":func_malloc",
+        ":types_size_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_checked_ptr",
+    hdrs = ["src/__support/checked_ptr.h"],
+    deps = [
+        ":__support_alloc_checker",
+        ":__support_cpp_nullptr_t",
+        ":__support_cpp_type_traits",
+        ":__support_cpp_unique_ptr",
+        ":__support_cpp_utility",
+        ":__support_libc_assert",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
         ":types_size_t",
     ],
 )
@@ -17876,9 +17907,7 @@ libc_support_library(
     name = "allocating_string_utils",
     hdrs = ["src/string/allocating_string_utils.h"],
     deps = [
-        ":__support_alloc_checker",
-        ":__support_cpp_new",
-        ":__support_cpp_optional",
+        ":__support_checked_ptr",
         ":__support_macros_config",
         ":string_memory_utils",
         ":string_utils",
@@ -18815,8 +18844,8 @@ libc_function(
     srcs = ["src/unistd/linux/getcwd.cpp"],
     hdrs = ["src/unistd/getcwd.h"],
     deps = [
+        ":__support_checked_ptr",
         ":__support_common",
-        ":__support_cpp_optional",
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_getcwd",
