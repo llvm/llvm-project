@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "LoopVectorizationPlanner.h"
 #include "VectorizeOptions.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -1448,6 +1449,28 @@ bool LoopVectorizationLegality::blockCanBePredicated(
   }
 
   return true;
+}
+
+unsigned LoopVectorizationLegality::GEPAccessDenseMapInfo::getHashValue(
+    const Value *Ptr) {
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  if (!GEP)
+    return DenseMapInfo<Value *>::getHashValue(Ptr);
+  return hash_combine(GEP->getSourceElementType(),
+                      hash_combine_range(GEP->operand_values()));
+}
+
+bool LoopVectorizationLegality::GEPAccessDenseMapInfo::isEqual(
+    const Value *LHS, const Value *RHS) {
+  if (LHS == RHS)
+    return true;
+  auto *LHSGEP = dyn_cast<GetElementPtrInst>(LHS);
+  if (!LHSGEP)
+    return false;
+  auto *RHSGEP = dyn_cast<GetElementPtrInst>(RHS);
+  // An unconditional access through an identical GEP proves both addresses
+  // non-poison, even if their shared operands are defined outside the loop.
+  return RHSGEP && LHSGEP->isIdenticalTo(RHSGEP);
 }
 
 bool LoopVectorizationLegality::canVectorizeWithIfConvert() {

@@ -680,8 +680,16 @@ private:
     Align MaxAlign = Align(1);
   };
 
+  struct GEPAccessDenseMapInfo {
+    LLVM_ABI static unsigned getHashValue(const Value *Ptr);
+    LLVM_ABI static bool isEqual(const Value *LHS, const Value *RHS);
+  };
+
   /// Maps a pointer to its maximum fixed access size and safe alignment.
-  using SafeAccessesTy = SmallDenseMap<Value *, SafeAccessInfo, 8>;
+  /// GEPs with identical operands, source element type and flags share an
+  /// entry.
+  using SafeAccessesTy =
+      SmallDenseMap<Value *, SafeAccessInfo, 8, GEPAccessDenseMapInfo>;
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.
