@@ -29,6 +29,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/RegAllocPBQP.h"
+#include "RegAllocBase.h"
 #include "RegisterCoalescer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
@@ -56,6 +57,7 @@
 #include "llvm/CodeGen/PBQP/Solution.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/Spiller.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -144,6 +146,9 @@ private:
 
   RegSet VRegsToAlloc, EmptyIntervalVRegs;
 
+  /// The allocation orders that failVReg() picks a register from.
+  RegisterClassInfo *RegClassInfo = nullptr;
+
   /// Inst which is a def of an original reg and whose defs are already all
   /// dead after remat is saved in DeadRemats. The deletion of such inst is
   /// postponed till all the allocations are done, so its remat expr is
@@ -160,6 +165,12 @@ private:
   void spillVReg(Register VReg, SmallVectorImpl<Register> &NewIntervals,
                  MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
                  Spiller &VRegSpiller);
+
+  /// Report that VReg, which can't be spilled, has no register, e.g. because
+  /// an inline asm needs more registers than are available, and assign it one
+  /// anyway, as the other allocators do.
+  void failVReg(Register VReg, MachineFunction &MF, LiveIntervals &LIS,
+                VirtRegMap &VRM);
 
   /// Given a solved PBQP problem maps this solution back to a register
   /// assignment.
@@ -542,6 +553,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(RegAllocPBQP, "regallocpbqp", "PBQP Register Allocator",
                     false, false)
 
@@ -563,6 +575,7 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<MachineDominatorTreeWrapperPass>();
   au.addRequired<VirtRegMapWrapperLegacy>();
   au.addPreserved<VirtRegMapWrapperLegacy>();
+  au.addRequired<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(au);
 }
 
@@ -652,6 +665,11 @@ void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
     // Check for vregs that have no allowed registers. These should be
     // pre-spilled and the new vregs added to the worklist.
     if (VRegAllowed.empty()) {
+      if (!VRegLI.isSpillable()) {
+        failVReg(VReg, MF, LIS, VRM);
+        continue;
+      }
+
       SmallVector<Register, 8> NewVRegs;
       spillVReg(VReg, NewVRegs, MF, LIS, VRM, VRegSpiller);
       llvm::append_range(Worklist, NewVRegs);
@@ -715,6 +733,16 @@ void RegAllocPBQP::spillVReg(Register VReg,
   LLVM_DEBUG(dbgs() << ")\n");
 }
 
+void RegAllocPBQP::failVReg(Register VReg, MachineFunction &MF,
+                            LiveIntervals &LIS, VirtRegMap &VRM) {
+  VRegsToAlloc.erase(VReg);
+  MCRegister PReg = assignFailedVirtReg(VReg, *RegClassInfo, LIS, VRM);
+  (void)PReg;
+  LLVM_DEBUG(dbgs() << "VREG " << printReg(VReg) << " -> FAILED, rewritten to "
+                    << printReg(PReg, MF.getSubtarget().getRegisterInfo())
+                    << "\n");
+}
+
 bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
                                      const PBQP::Solution &Solution,
                                      VirtRegMap &VRM,
@@ -742,6 +770,10 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
                         << TRI.getName(PReg) << "\n");
       assert(PReg != 0 && "Invalid preg selected.");
       VRM.assignVirt2Phys(VReg, PReg);
+    } else if (!LIS.getInterval(VReg).isSpillable()) {
+      // Only a problem with no solution of finite cost spills a register that
+      // can't be spilled.
+      failVReg(VReg, MF, LIS, VRM);
     } else {
       // Spill VReg. If this introduces new intervals we'll need another round
       // of allocation.
@@ -817,6 +849,10 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
+
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  RegClassInfo->updateReservedRegs(MF.getRegInfo().getReservedRegs());
 
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 
