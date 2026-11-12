@@ -128,7 +128,7 @@ define void @narrower_zext_bounded_by_operand(i32 %m, i8 %k) {
 ; CHECK-LABEL: 'narrower_zext_bounded_by_operand'
 ; CHECK-NEXT:  Determining loop execution counts for: @narrower_zext_bounded_by_operand
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 8589934589
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 509
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 2
 ;
@@ -152,3 +152,82 @@ loop:
 exit:
   ret void
 }
+
+; Same as above, but the guard has the same width as the loop. The rewrite of
+; zext(%k) to i32 must not be wider than the range of %k.
+define void @same_width_zext_bounded_by_operand(i32 %m, i8 %k) {
+; CHECK-LABEL: 'same_width_zext_bounded_by_operand'
+; CHECK-NEXT:  Determining loop execution counts for: @same_width_zext_bounded_by_operand
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (2 * (zext i8 %k to i32))<nuw><nsw>)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 509
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (2 * (zext i8 %k to i32))<nuw><nsw>)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2
+;
+entry:
+  %k.32 = zext i8 %k to i32
+  %m.1 = add nuw i32 %m, 1
+  %k.uge = icmp uge i32 %k.32, %m.1
+  call void @llvm.assume(i1 %k.uge)
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  %tc = add i32 %k.32, %k.32
+  %ec = icmp ne i32 %iv.next, %tc
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The guard zext(%k) to i32 u>= %m + 1 only provides a lower bound for %k.
+define void @narrower_zext_provides_lower_bound(i32 %m, i8 %k) {
+; CHECK-LABEL: 'narrower_zext_provides_lower_bound'
+; CHECK-NEXT:  Determining loop execution counts for: @narrower_zext_provides_lower_bound
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 509
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (2 * (zext i8 %k to i64))<nuw><nsw>)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 2
+;
+entry:
+  %k.32 = zext i8 %k to i32
+  %m.1 = add nuw i32 %m, 1
+  %k.uge = icmp uge i32 %k.32, %m.1
+  call void @llvm.assume(i1 %k.uge)
+  %k.64 = zext i8 %k to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %tc = add i64 %k.64, %k.64
+  %ec = icmp ne i64 %iv.next, %tc
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @ptr_guard_rhs_range_exceeds_lhs(ptr align 8 %start, ptr %end) {
+; CHECK-LABEL: 'ptr_guard_rhs_range_exceeds_lhs'
+; CHECK-NEXT:  Determining loop execution counts for: @ptr_guard_rhs_range_exceeds_lhs
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  %pre = icmp ugt ptr %start, %end
+  br i1 %pre, label %loop, label %exit
+
+loop:
+  %iv = phi ptr [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = getelementptr i8, ptr %iv, i64 -8
+  %ec = icmp ugt ptr %iv.next, %end
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+attributes #0 = { mustprogress }

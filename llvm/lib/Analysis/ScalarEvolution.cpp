@@ -15901,11 +15901,20 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           EnqueueOperands(SMax);
         break;
       case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_UGE:
-        To = SE.getUMaxExpr(FromRewritten, RHS);
+      case CmpInst::ICMP_UGE: {
+        const SCEV *ClampedRHS = RHS;
+        if (!RHS->getType()->isPointerTy()) {
+          APInt FromMax = SE.getUnsignedRangeMax(FromRewritten);
+          ConstantRange RHSRange = SE.getUnsignedRange(RHS);
+          if (RHSRange.getUnsignedMax().ugt(FromMax) &&
+              RHSRange.getUnsignedMin().ule(FromMax))
+            ClampedRHS = SE.getUMinExpr(RHS, SE.getConstant(FromMax));
+        }
+        To = SE.getUMaxExpr(FromRewritten, ClampedRHS);
         if (auto *UMin = dyn_cast<SCEVUMinExpr>(FromRewritten))
           EnqueueOperands(UMin);
         break;
+      }
       case CmpInst::ICMP_SGT:
       case CmpInst::ICMP_SGE: {
         // From s>= RHS s>= 0 implies From u>= RHS, so an earlier
