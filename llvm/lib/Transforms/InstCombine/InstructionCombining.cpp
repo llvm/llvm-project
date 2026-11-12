@@ -1381,15 +1381,11 @@ bool InstCombinerImpl::tryReassociateAndFoldSymmetricPair(
 
 /// Distribute a binop over a select:
 ///   (Cond ? TVal : FVal) op Other --> Cond ? (TVal op Other) : (FVal op Other)
-/// (or with the operands swapped if \p SelIsLHS is false). \p Other is the
-/// non-distributed operand. If it is itself a select,
-///   Other = OtherCond ? OtherT : OtherF
-/// and Cond implies OtherCond (or its negation), then Other is first replaced
-/// by the arm it must take when Cond is true / false:
-///   Cond ? (TVal op OtherT') : (FVal op OtherF')
-/// where OtherT'/OtherF' are the resolved values of Other under Cond / !Cond.
-/// \p True and \p False return the simplified arms, or null if an arm did not
-/// simplify.
+/// (or with the operands swapped if \p SelIsLHS is false).
+/// If \p Other is a select whose condition is implied by Cond (or its
+/// negation), it is resolved to the corresponding arm on that side first.
+/// \p True and \p False are set to the simplified arms, or null if an arm did
+/// not simplify.
 static void distributeBinOpOverSelect(InstCombinerImpl &IC,
                                       Instruction::BinaryOps Opcode,
                                       SelectInst *Sel, Value *Other,
@@ -1497,9 +1493,10 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       if (Value *NewSel = foldAddNegate(B, C, RHS))
         return NewSel;
     }
-    // If distributing over the LHS select was not possible, or did not fold,
-    // try the RHS select.
-    if ((!True || !False) && RHSIsSelect && RHS->hasOneUse()) {
+
+    bool Folded = True && False;
+    if (!Folded && RHSIsSelect && RHS->hasOneUse()) {
+      // The LHS select did not fold, or there was none. Try the RHS one.
       SI = cast<SelectInst>(RHS);
       Cond = D;
       distributeBinOpOverSelect(*this, Opcode, SI, LHS, /*SelIsLHS=*/false, FMF,
