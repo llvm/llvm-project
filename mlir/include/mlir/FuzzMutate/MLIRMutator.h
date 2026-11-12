@@ -17,6 +17,9 @@
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <memory>
@@ -26,72 +29,75 @@
 namespace mlir {
 class MLIRContext;
 
-/// Random source for mutation strategies. Starts minimal (a seeded RNG)
-/// and grows with the strategies that need more from it.
 class RandomMLIRBuilder {
 public:
-  RandomMLIRBuilder(int Seed) : Rand(Seed) {}
+  RandomMLIRBuilder(int Seed, ModuleOp root);
   std::mt19937 &getRand() { return Rand; }
 
+  using AlleleMenu = llvm::DenseMap<Type, llvm::SmallVector<Value>>;
+  AlleleMenu collectAlleles(Operation *at);
+
+  Operation *findSameGene(Operation *exemplar);
+
+  Operation *findDiffGene(Operation *exemplar);
+
+  llvm::ArrayRef<Operation *> bases();
+
+  Value pickAllele(const AlleleMenu &alleles, Type ty);
+
 private:
+  Type getSignature(Operation *op);
+
   std::mt19937 Rand;
+  ModuleOp root;
+  llvm::SmallVector<Operation *> genes;
+  llvm::DenseMap<Type, llvm::SmallVector<Operation *>> geneBuckets;
 };
 
-/// Base class for describing how to mutate a module.
-class MLIRMutationStrategy {
+class MLIRGeneMutationStrategy {
 public:
-  virtual ~MLIRMutationStrategy() = default;
+  virtual ~MLIRGeneMutationStrategy() = default;
 
-  /// Provide a weight to bias towards choosing this strategy for a
-  /// mutation.
-  ///
-  /// The value of the weight is arbitrary, but a good default is "the
-  /// number of distinct ways in which this strategy can mutate a unit".
   virtual uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
                              uint64_t CurrentWeight) = 0;
 
-  /// Mutate the top-level structure of the module in place.
   virtual void mutate(ModuleOp module, RandomMLIRBuilder &IB) = 0;
 };
 
-/// Entry point for configuring and running MLIR mutations.
 class MLIRMutator {
 public:
-  MLIRMutator(std::vector<std::unique_ptr<MLIRMutationStrategy>> &&Strategies)
+  MLIRMutator(std::vector<std::unique_ptr<MLIRGeneMutationStrategy>> &&Strategies)
       : Strategies(std::move(Strategies)) {}
 
-  /// Mutate given module. No change will be made if no strategy is
-  /// selected.
-  ///
-  /// \param module  module to mutate
-  /// \param Seed    seed for random mutation
-  /// \param MaxSize max size of the mutated module's textual form
   void mutateModule(ModuleOp module, int Seed, size_t MaxSize);
 
 private:
-  std::vector<std::unique_ptr<MLIRMutationStrategy>> Strategies;
+  std::vector<std::unique_ptr<MLIRGeneMutationStrategy>> Strategies;
 };
 
-/// Strategy that duplicates a top-level op of the module — an
-/// always-valid structural edit.
-class TopLevelOpDuplicationStrategy : public MLIRMutationStrategy {
+class NonsenseMutationStrategy : public MLIRGeneMutationStrategy {
 public:
   uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
                      uint64_t CurrentWeight) override;
   void mutate(ModuleOp module, RandomMLIRBuilder &IB) override;
 };
 
-/// Strategy that appends a standalone ub.poison op — corpus novelty,
-/// always-valid IR.
-class PoisonAppendStrategy : public MLIRMutationStrategy {
+class SynonymousMutationStrategy : public MLIRGeneMutationStrategy {
 public:
   uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
                      uint64_t CurrentWeight) override;
   void mutate(ModuleOp module, RandomMLIRBuilder &IB) override;
 };
 
-/// Try to parse the input as a module and verify it.
-/// \return the module, or null on failure.
+class MissenseMutationStrategy : public MLIRGeneMutationStrategy {
+public:
+  uint64_t getWeight(size_t CurrentSize, size_t MaxSize,
+                     uint64_t CurrentWeight) override;
+  void mutate(ModuleOp module, RandomMLIRBuilder &IB) override;
+};
+
+class MLIRStructureMutationStrategy {};
+
 OwningOpRef<ModuleOp> parseAndVerify(llvm::StringRef text,
                                      MLIRContext &context);
 } // namespace mlir

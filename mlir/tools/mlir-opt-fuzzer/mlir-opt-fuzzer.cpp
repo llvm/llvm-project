@@ -46,9 +46,10 @@ static llvm::cl::opt<std::string> PipelineSlug(
 static std::unique_ptr<MLIRMutator> Mutator;
 
 static std::unique_ptr<MLIRMutator> createMutator() {
-  std::vector<std::unique_ptr<MLIRMutationStrategy>> Strategies;
-  Strategies.push_back(std::make_unique<TopLevelOpDuplicationStrategy>());
-  Strategies.push_back(std::make_unique<PoisonAppendStrategy>());
+  std::vector<std::unique_ptr<MLIRGeneMutationStrategy>> Strategies;
+  //Strategies.push_back(std::make_unique<NonsenseMutationStrategy>());
+  Strategies.push_back(std::make_unique<SynonymousMutationStrategy>());
+  //Strategies.push_back(std::make_unique<MissenseMutationStrategy>());
   return std::make_unique<MLIRMutator>(std::move(Strategies));
 }
 
