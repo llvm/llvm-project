@@ -1,0 +1,3 @@
+find -name default.profraw -execdir llvm-profdata merge -sparse default.profraw -o default.profdata \; -execdir sh -c "llvm-cov export ./t.tmp.exe -object $SHARED_LIB -instr-profile=default.profdata --include-filename-regex=this-does-not-match-anything > coverage.json" \;
+find -name coverage.json > coverage_jsons.txt
+$MERGE_COVERAGE coverage_jsons.txt > coverage.json
