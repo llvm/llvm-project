@@ -705,6 +705,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Clang now rejects nested or unterminated assembler dialect alternatives
+  (`{att|intel}`) in an inline asm string, instead of producing a backend fatal
+  error or silently emitting the wrong dialect. (#GH204773)
+
 - Added `-Wstringop-overread` to warn when `memcpy`, `memmove`, `memcmp`,
   and related builtins read more bytes than the source buffer size (#GH83728).
 
