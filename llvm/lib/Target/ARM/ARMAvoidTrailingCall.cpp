@@ -50,7 +50,7 @@ bool ARMAvoidTrailingCall::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
-  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  const ARMBaseInstrInfo &TII = *STI.getInstrInfo();
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock *Next = MBB.getNextNode();
