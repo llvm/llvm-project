@@ -611,11 +611,7 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
   std::vector<GlobalValue*> DeadGVs;
 
   for (auto &GV : Mod.global_values()) {
-    auto GUID = GV.getGUIDIfAssigned();
-    if (!GUID)
-      continue;
-
-    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(*GUID))
+    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUIDOrFallback()))
       if (!Index.isGlobalValueLive(GVS)) {
         DeadGVs.push_back(&GV);
         convertToDeclaration(GV);
