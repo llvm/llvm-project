@@ -253,6 +253,11 @@ infrastructure are described first, followed by tool-specific sections.
     available. This leads to faster analysis, but the trade-off is more false
     positives (when has value checks involve correlated variables or ORs).
 
+- Improved {doc}`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by no longer reporting
+  uses of other fields after only one field was moved or forwarded, as in
+  `std::forward<T>(t).b`.
+
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
   unforwarded `auto&&` parameters in C++20 abbreviated function templates.
