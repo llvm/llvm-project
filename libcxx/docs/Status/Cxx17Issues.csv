@@ -184,7 +184,7 @@
 "`LWG2166 <https://wg21.link/LWG2166>`__","Heap property underspecified?","2016-11 (Issaquah)","|Nothing To Do|","","`#99969 <https://github.com/llvm/llvm-project/issues/99969>`__",""
 "`LWG2221 <https://wg21.link/LWG2221>`__","No formatted output operator for nullptr","2016-11 (Issaquah)","|Complete|","","`#103432 <https://github.com/llvm/llvm-project/issues/103432>`__",""
 "`LWG2223 <https://wg21.link/LWG2223>`__","shrink_to_fit effect on iterator validity","2016-11 (Issaquah)","|Complete|","","`#103433 <https://github.com/llvm/llvm-project/issues/103433>`__",""
-"`LWG2261 <https://wg21.link/LWG2261>`__","Are containers required to use their 'pointer' type internally?","2016-11 (Issaquah)","","","`#99970 <https://github.com/llvm/llvm-project/issues/99970>`__",""
+"`LWG2261 <https://wg21.link/LWG2261>`__","Are containers required to use their 'pointer' type internally?","2016-11 (Issaquah)","|Nothing To Do|","","`#99970 <https://github.com/llvm/llvm-project/issues/99970>`__",""
 "`LWG2394 <https://wg21.link/LWG2394>`__","locale::name specification unclear - what is implementation-defined?","2016-11 (Issaquah)","|Complete|","","`#103434 <https://github.com/llvm/llvm-project/issues/103434>`__",""
 "`LWG2460 <https://wg21.link/LWG2460>`__","LWG issue 2408 and value categories","2016-11 (Issaquah)","|Complete|","","`#103435 <https://github.com/llvm/llvm-project/issues/103435>`__",""
 "`LWG2468 <https://wg21.link/LWG2468>`__","Self-move-assignment of library types","2016-11 (Issaquah)","","","`#99971 <https://github.com/llvm/llvm-project/issues/99971>`__",""
