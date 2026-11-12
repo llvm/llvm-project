@@ -367,13 +367,13 @@ def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
   let parameters = ( ins
     "SpecificationVersion": $specification_version,
     "Level": $level,
-    ArrayRefParameter<"Profile">: $profiles,
-    ArrayRefParameter<"Extension">: $extensions
+    OptionalArrayRefParameter<"Profile">: $profiles,
+    OptionalArrayRefParameter<"Extension">: $extensions
   );
 
   let assemblyFormat = "`<` `specification_version` `=` $specification_version `,` "
-                       "`level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
-                       "`extensions` `=` `[` $extensions `]` `>`";
+                       "`level` `=` $level `,` `profiles` `=` `[` (`]`) : ($profiles^ `]`)? `,` "
+                       "`extensions` `=` `[` (`]`) : ($extensions^ `]`)? `>`";
 }
 
 //===----------------------------------------------------------------------===//
