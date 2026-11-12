@@ -6696,10 +6696,11 @@ private:
 
   /// Give line 0 to everything in \p body that is not execution part so that it
   /// does not take part in line table calculation unless it has
-  /// FortranVariableOpInterface.
+  /// FortranVariableOpInterface or is a fir.dummy_scope, whose location is
+  /// used to report the function/entry's own position.
   static void setNonExecutionPartLocations(mlir::Region &body) {
     body.walk([](mlir::Operation *op) {
-      if (mlir::isa<fir::FortranVariableOpInterface>(op))
+      if (mlir::isa<fir::FortranVariableOpInterface, fir::DummyScopeOp>(op))
         return;
       if (auto fileLoc = op->getLoc()->findInstanceOf<mlir::FileLineColLoc>())
         op->setLoc(mlir::FileLineColLoc::get(fileLoc.getFilename(),
