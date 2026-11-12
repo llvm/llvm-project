@@ -101,6 +101,69 @@ static inline RT_API_ATTRS void SwapEndianness(
   }
 }
 
+static constexpr std::size_t kRecMarkSize{4};
+static constexpr std::int32_t kMaxSubrecPayload{0x7fffffff - 8};
+// Transfers at least this large bypass the frame and are read directly.
+static constexpr std::size_t kStreamWindow{65536};
+
+static inline RT_API_ATTRS std::size_t SubrecordPayloadBytes(
+    std::int32_t marker) {
+  std::int64_t m{marker};
+  return static_cast<std::size_t>(m < 0 ? -m : m);
+}
+
+static inline RT_API_ATTRS std::int32_t SignedRecordMarker(
+    std::int32_t length, bool negative) {
+  return negative ? -length : length;
+}
+
+static inline RT_API_ATTRS void StoreRecordMarker(
+    char *p, std::int32_t value, bool swapEndianness) {
+  runtime::memcpy(p, &value, kRecMarkSize);
+  if (swapEndianness) {
+    SwapEndianness(p, kRecMarkSize, kRecMarkSize);
+  }
+}
+
+static inline RT_API_ATTRS std::int32_t LoadRecordMarker(
+    const char *p, bool swapEndianness) {
+  std::int32_t word;
+  runtime::memcpy(&word, p, kRecMarkSize);
+  if (swapEndianness) {
+    SwapEndianness(reinterpret_cast<char *>(&word), kRecMarkSize, kRecMarkSize);
+  }
+  return word;
+}
+
+static inline RT_API_ATTRS std::size_t MaxSubrecordPayload() {
+  std::size_t limit{static_cast<std::size_t>(kMaxSubrecPayload)};
+  std::size_t configured{executionEnvironment.maxSubrecordLength};
+  return configured > 0 && configured < limit ? configured : limit;
+}
+
+static RT_API_ATTRS void LayoutBufferedSubrecords(char *base,
+    std::size_t payload, std::size_t maxChunk, bool swapEndianness) {
+  std::size_t subrecords{(payload + maxChunk - 1) / maxChunk};
+  for (std::size_t i{subrecords}; i-- > 0;) {
+    std::size_t chunk{i + 1 < subrecords ? maxChunk : payload - i * maxChunk};
+    std::size_t src{kRecMarkSize + i * maxChunk};
+    std::size_t dst{kRecMarkSize + i * (maxChunk + 2 * kRecMarkSize)};
+    if (dst != src && chunk > 0) {
+      runtime::memmove(base + dst, base + src, chunk);
+    }
+    std::int32_t length{static_cast<std::int32_t>(chunk)};
+    StoreRecordMarker(base + dst - kRecMarkSize,
+        SignedRecordMarker(length, i + 1 < subrecords), swapEndianness);
+    StoreRecordMarker(
+        base + dst + chunk, SignedRecordMarker(length, i > 0), swapEndianness);
+  }
+}
+
+void ExternalFileUnit::ResetSequentialUnformattedStream() {
+  streamRead_ = false;
+  streamReadRemain_ = 0;
+}
+
 bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
     std::size_t elementBytes, IoErrorHandler &handler) {
   auto furthestAfter{std::max(furthestPositionInRecord,
@@ -172,6 +235,50 @@ bool ExternalFileUnit::Receive(char *data, std::size_t bytes,
         bytes, static_cast<std::intmax_t>(positionInRecord),
         static_cast<std::intmax_t>(*recordLength));
     return false;
+  }
+  if (streamRead_) {
+    std::size_t copied{0};
+    while (copied < bytes) {
+      if (streamReadRemain_ == 0) {
+        streamReadPos_ += kRecMarkSize;
+        if (ReadFrame(streamReadPos_, kRecMarkSize, handler) < kRecMarkSize) {
+          HitEndOnRead(handler);
+          return false;
+        }
+        streamReadRemain_ =
+            SubrecordPayloadBytes(LoadRecordMarker(Frame(), swapEndianness_));
+        streamReadPos_ += kRecMarkSize;
+      }
+      std::size_t chunk{bytes - copied};
+      if (chunk > streamReadRemain_) {
+        chunk = streamReadRemain_;
+      }
+      if (chunk >= kStreamWindow) {
+        if (Read(streamReadPos_, data + copied, chunk, chunk, handler) <
+            chunk) {
+          HitEndOnRead(handler);
+          return false;
+        }
+      } else {
+        if (ReadFrame(streamReadPos_, chunk, handler) < chunk) {
+          HitEndOnRead(handler);
+          return false;
+        }
+        runtime::memcpy(data + copied, Frame(), chunk);
+      }
+      streamReadPos_ += static_cast<std::int64_t>(chunk);
+      streamReadRemain_ -= chunk;
+      copied += chunk;
+      positionInRecord += static_cast<std::int64_t>(chunk);
+    }
+    // Swap over the assembled buffer so that elements split across a
+    // subrecord boundary are byte-reversed as a whole.
+    if (swapEndianness_) {
+      SwapEndianness(data, bytes, elementBytes);
+    }
+    furthestPositionInRecord =
+        std::max(furthestPositionInRecord, positionInRecord);
+    return true;
   }
   auto need{recordOffsetInFrame_ + furthestAfter};
   auto got{ReadFrame(frameOffsetInFile_, need, handler)};
@@ -325,9 +432,9 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
       RUNTIME_CHECK(handler, isUnformatted.has_value());
       recordLength.reset();
       if (isUnformatted.value_or(false)) {
-        // Retain footer in frame for more efficient BACKSPACE
-        frameOffsetInFile_ += recordOffsetInFrame_;
-        recordOffsetInFrame_ = sizeof(std::uint32_t);
+        frameOffsetInFile_ += unformattedDiskExtent_;
+        unformattedDiskExtent_ = 0;
+        recordOffsetInFrame_ = 0;
       } else { // formatted
         if (FrameLength() > recordOffsetInFrame_ &&
             Frame()[recordOffsetInFrame_] == '\r') {
@@ -351,6 +458,7 @@ void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
     recordOffsetInFrame_ = 0;
   }
   BeginRecord();
+  ResetSequentialUnformattedStream();
   leftTabLimit.reset();
 }
 
@@ -376,21 +484,35 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
       }
     } else if (*isUnformatted) {
       if (access == Access::Sequential) {
-        // Append the length of a sequential unformatted variable-length record
-        // as its footer, then overwrite the reserved first four bytes of the
-        // record with its length as its header.  These four bytes were skipped
-        // over in BeginUnformattedIO<Output>().
-        // TODO: Break very large records up into subrecords with negative
-        // headers &/or footers
-        std::uint32_t length;
-        length = furthestPositionInRecord - sizeof length;
-        ok = ok &&
-            Emit(reinterpret_cast<const char *>(&length), sizeof length,
-                sizeof length, handler);
-        positionInRecord = 0;
-        ok = ok &&
-            Emit(reinterpret_cast<const char *>(&length), sizeof length,
-                sizeof length, handler);
+        std::size_t payload{
+            static_cast<std::size_t>(furthestPositionInRecord - kRecMarkSize)};
+        std::size_t maxChunk{MaxSubrecordPayload()};
+        if (payload <= maxChunk) {
+          std::int32_t length{static_cast<std::int32_t>(payload)};
+          ok = ok &&
+              Emit(reinterpret_cast<const char *>(&length), kRecMarkSize,
+                  kRecMarkSize, handler);
+          positionInRecord = 0;
+          ok = ok &&
+              Emit(reinterpret_cast<const char *>(&length), kRecMarkSize,
+                  kRecMarkSize, handler);
+        } else {
+          if (openRecl && payload > static_cast<std::size_t>(*openRecl)) {
+            handler.SignalError(IostatRecordWriteOverrun,
+                "Attempt to write %zd bytes to position 0 in a fixed-size "
+                "record of %jd bytes",
+                payload, static_cast<std::intmax_t>(*openRecl));
+            return false;
+          }
+          std::size_t subrecords{(payload + maxChunk - 1) / maxChunk};
+          std::size_t diskExtent{payload + 2 * subrecords * kRecMarkSize};
+          WriteFrame(
+              frameOffsetInFile_, recordOffsetInFrame_ + diskExtent, handler);
+          char *base{Frame() + recordOffsetInFrame_};
+          LayoutBufferedSubrecords(base, payload, maxChunk, swapEndianness_);
+          furthestPositionInRecord = static_cast<std::int64_t>(diskExtent);
+          positionInRecord = furthestPositionInRecord;
+        }
       } else {
         // Unformatted stream: nothing to do
       }
@@ -516,6 +638,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
 void ExternalFileUnit::SetPosition(std::int64_t pos) {
   frameOffsetInFile_ = pos;
   recordOffsetInFrame_ = 0;
+  ResetSequentialUnformattedStream();
   if (access == Access::Direct) {
     directAccessRecWasSet_ = true;
   }
@@ -607,67 +730,145 @@ void ExternalFileUnit::EndIoStatement() {
 void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
     IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, access == Access::Sequential);
-  std::uint32_t header{0}, footer{0};
-  std::size_t need{recordOffsetInFrame_ + sizeof header};
+  unformattedDiskExtent_ = 0;
+  streamRead_ = false;
+  std::int64_t recordStart{
+      frameOffsetInFile_ + static_cast<std::int64_t>(recordOffsetInFrame_)};
+  std::size_t need{recordOffsetInFrame_ + kRecMarkSize};
   std::size_t got{ReadFrame(frameOffsetInFile_, need, handler)};
-  // Try to emit informative errors to help debug corrupted files.
-  const char *error{nullptr};
+  positionInRecord = kRecMarkSize;
   if (got < need) {
-    if (got == recordOffsetInFrame_) {
+    if (got <= recordOffsetInFrame_) {
       HitEndOnRead(handler);
     } else {
-      error = "Unformatted variable-length sequential file input failed at "
-              "record #%jd (file offset %jd): truncated record header";
+      handler.SignalError(
+          "Unformatted variable-length sequential file input failed at "
+          "record #%jd (file offset %jd): truncated record header",
+          static_cast<std::intmax_t>(currentRecordNumber),
+          static_cast<std::intmax_t>(recordStart));
     }
+    return;
+  }
+  std::int32_t header{
+      LoadRecordMarker(Frame() + recordOffsetInFrame_, swapEndianness_)};
+
+  // A negative header within the subrecord-length limit begins a gfortran
+  // subrecord chain.  Legacy 2–4 GiB single-marker records also have a
+  // negative int32 header, but their magnitude exceeds kMaxSubrecPayload and
+  // fall through to the unsigned path below.  Chain walk requires seeking.
+  if (mayPosition() && header < 0 &&
+      SubrecordPayloadBytes(header) <=
+          static_cast<std::size_t>(kMaxSubrecPayload)) {
+    auto readMarkerAt = [&](std::int64_t &pos, std::int32_t &marker) {
+      char buf[kRecMarkSize];
+      if (Read(pos, buf, kRecMarkSize, kRecMarkSize, handler) < kRecMarkSize) {
+        return false;
+      }
+      pos += kRecMarkSize;
+      marker = LoadRecordMarker(buf, swapEndianness_);
+      return true;
+    };
+    std::size_t totalPayload{0};
+    std::int64_t filePos{recordStart + static_cast<std::int64_t>(kRecMarkSize)};
+    std::int32_t marker{header};
+    bool ok{true};
+    bool isFirstSubrecord{true};
+    while (true) {
+      totalPayload += SubrecordPayloadBytes(marker);
+      filePos += static_cast<std::int64_t>(SubrecordPayloadBytes(marker));
+      std::int32_t subrecordFooter{0};
+      if (!readMarkerAt(filePos, subrecordFooter) ||
+          SubrecordPayloadBytes(subrecordFooter) !=
+              SubrecordPayloadBytes(marker) ||
+          (isFirstSubrecord && subrecordFooter < 0)) {
+        ok = false;
+        break;
+      }
+      isFirstSubrecord = false;
+      if (marker >= 0) {
+        break;
+      }
+      if (!readMarkerAt(filePos, marker)) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) {
+      recordLength = static_cast<std::int64_t>(kRecMarkSize + totalPayload);
+      unformattedDiskExtent_ = filePos - recordStart;
+      streamRead_ = true;
+      streamReadPos_ = recordStart + static_cast<std::int64_t>(kRecMarkSize);
+      streamReadRemain_ = SubrecordPayloadBytes(header);
+      return;
+    }
+  }
+
+  // Single header/footer pair.  Treat the marker as unsigned so that legacy
+  // records with lengths in 2–4 GiB remain readable.
+  std::uint32_t length{static_cast<std::uint32_t>(header)};
+  recordLength = static_cast<std::int64_t>(kRecMarkSize + length);
+  unformattedDiskExtent_ =
+      static_cast<std::int64_t>(kRecMarkSize + length + kRecMarkSize);
+  // For large records on seekable files peek at just the footer to avoid
+  // buffering gigabytes; non-seekable files fall through to ReadFrame.
+  std::uint32_t footer{0};
+  bool footerOk{false};
+  need = recordOffsetInFrame_ + static_cast<std::size_t>(*recordLength) +
+      kRecMarkSize;
+  if (length > static_cast<std::uint32_t>(kMaxSubrecPayload) && mayPosition()) {
+    char footerBuf[kRecMarkSize];
+    std::int64_t footerPos{
+        recordStart + static_cast<std::int64_t>(kRecMarkSize + length)};
+    if (Read(footerPos, footerBuf, kRecMarkSize, kRecMarkSize, handler) ==
+        kRecMarkSize) {
+      footer = static_cast<std::uint32_t>(
+          LoadRecordMarker(footerBuf, swapEndianness_));
+      footerOk = true;
+    }
+    got = footerOk ? need : 0;
   } else {
-    header = ReadHeaderOrFooter(recordOffsetInFrame_);
-    recordLength = sizeof header + header; // does not include footer
-    need = recordOffsetInFrame_ + *recordLength + sizeof footer;
     got = ReadFrame(frameOffsetInFile_, need, handler);
     if (got >= need) {
-      footer = ReadHeaderOrFooter(recordOffsetInFrame_ + *recordLength);
+      footer = static_cast<std::uint32_t>(LoadRecordMarker(
+          Frame() + recordOffsetInFrame_ + *recordLength, swapEndianness_));
+      footerOk = true;
     }
-    if (frameOffsetInFile_ == 0 && recordOffsetInFrame_ == 0 &&
-        (got < need || footer != header)) {
-      // Maybe an omitted or incorrect byte swap flag setting?
-      // Try it the other way, since this is the first record.
-      // (N.B. Won't work on files starting with empty records, but there's
-      // no good way to know later if all preceding records were empty.)
-      swapEndianness_ = !swapEndianness_;
-      std::uint32_t header2{ReadHeaderOrFooter(0)};
-      std::size_t recordLength2{sizeof header2 + header2};
-      std::size_t need2{recordLength2 + sizeof footer};
-      std::size_t got2{ReadFrame(0, need2, handler)};
-      if (got2 >= need2) {
-        std::uint32_t footer2{ReadHeaderOrFooter(recordLength2)};
-        if (footer2 == header2) {
-          error = "Unformatted variable-length sequential file input "
-                  "failed on the first record, probably due to a need "
-                  "for byte order data conversion; consider adding "
-                  "CONVERT='SWAP' to the OPEN statement or adding "
-                  "FORT_CONVERT=SWAP to the execution environment";
-        }
-      }
-      swapEndianness_ = !swapEndianness_;
-    }
-    if (error) {
-    } else if (got < need) {
-      error = "Unformatted variable-length sequential file input failed at "
-              "record #%jd (file offset %jd): hit EOF reading record with "
-              "length %jd bytes";
-    } else if (footer != header) {
-      error = "Unformatted variable-length sequential file input failed at "
-              "record #%jd (file offset %jd): record header has length %jd "
-              "that does not match record footer (%jd)";
+  }
+  const char *error{nullptr};
+  if (frameOffsetInFile_ == 0 && recordOffsetInFrame_ == 0 &&
+      length <= static_cast<std::uint32_t>(kMaxSubrecPayload) &&
+      (got < need || footer != length)) {
+    // Maybe an omitted or incorrect byte swap flag setting?
+    // Try it the other way, since this is the first record.
+    std::uint32_t swapped{static_cast<std::uint32_t>(
+        LoadRecordMarker(Frame(), !swapEndianness_))};
+    std::size_t length2{kRecMarkSize + swapped};
+    std::size_t need2{length2 + kRecMarkSize};
+    if (ReadFrame(0, need2, handler) >= need2 &&
+        static_cast<std::uint32_t>(
+            LoadRecordMarker(Frame() + length2, !swapEndianness_)) == swapped) {
+      error = "Unformatted variable-length sequential file input failed on the "
+              "first record, probably due to a need for byte order data "
+              "conversion; consider adding CONVERT='SWAP' to the OPEN "
+              "statement or adding FORT_CONVERT=SWAP to the execution "
+              "environment";
     }
   }
   if (error) {
-    handler.SignalError(error, static_cast<std::intmax_t>(currentRecordNumber),
-        static_cast<std::intmax_t>(frameOffsetInFile_),
-        static_cast<std::intmax_t>(header), static_cast<std::intmax_t>(footer));
-    // TODO: error recovery
+  } else if (got < need) {
+    error = "Unformatted variable-length sequential file input failed at "
+            "record #%jd (file offset %jd): hit EOF reading record with "
+            "length %jd bytes";
+  } else if (footer != length) {
+    error = "Unformatted variable-length sequential file input failed at "
+            "record #%jd (file offset %jd): record header has length %jd "
+            "that does not match record footer (%jd)";
   }
-  positionInRecord = sizeof header;
+  if (error) {
+    handler.SignalError(error, static_cast<std::intmax_t>(currentRecordNumber),
+        static_cast<std::intmax_t>(recordStart),
+        static_cast<std::intmax_t>(length), static_cast<std::intmax_t>(footer));
+  }
 }
 
 void ExternalFileUnit::BeginVariableFormattedInputRecord(
@@ -710,40 +911,98 @@ void ExternalFileUnit::BackspaceFixedRecord(IoErrorHandler &handler) {
 
 void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     IoErrorHandler &handler) {
-  std::uint32_t header{0};
-  auto headerBytes{static_cast<std::int64_t>(sizeof header)};
   frameOffsetInFile_ += recordOffsetInFrame_;
   recordOffsetInFrame_ = 0;
-  if (frameOffsetInFile_ <= headerBytes) {
+  if (frameOffsetInFile_ <= static_cast<std::int64_t>(kRecMarkSize)) {
     handler.SignalError(IostatBackspaceAtFirstRecord);
     return;
   }
-  // Error conditions here cause crashes, not file format errors, because the
-  // validity of the file structure before the current record will have been
-  // checked informatively in NextSequentialVariableUnformattedInputRecord().
-  std::size_t got{
-      ReadFrame(frameOffsetInFile_ - headerBytes, headerBytes, handler)};
-  if (static_cast<std::int64_t>(got) < headerBytes) {
+  if (ReadFrame(frameOffsetInFile_ - kRecMarkSize, kRecMarkSize, handler) <
+      kRecMarkSize) {
     handler.SignalError(IostatShortRead);
     return;
   }
-  recordLength = ReadHeaderOrFooter(0);
-  if (frameOffsetInFile_ < *recordLength + 2 * headerBytes) {
-    handler.SignalError(IostatBadUnformattedRecord);
-    return;
+  std::int32_t trailingMarker{LoadRecordMarker(Frame(), swapEndianness_)};
+
+  // Use the unsigned bit pattern as the step: for a legacy 2–4 GiB
+  // single-marker record it equals the true payload; for a gfortran chain
+  // footer it wraps past the file size, making singleMarkerStart negative.
+  std::uint32_t trailingPayloadUnsigned{
+      static_cast<std::uint32_t>(trailingMarker)};
+  std::int64_t singleMarkerStart{frameOffsetInFile_ -
+      static_cast<std::int64_t>(
+          static_cast<std::uint64_t>(trailingPayloadUnsigned) +
+          2 * kRecMarkSize)};
+
+  bool isSingleMarker{false};
+  if (trailingMarker >= 0) {
+    isSingleMarker = true; // positive footer is always single-marker
+  } else if (singleMarkerStart >= 0) {
+    char hbuf[kRecMarkSize];
+    if (Read(singleMarkerStart, hbuf, kRecMarkSize, kRecMarkSize, handler) ==
+        kRecMarkSize) {
+      isSingleMarker =
+          static_cast<std::uint32_t>(LoadRecordMarker(hbuf, swapEndianness_)) ==
+          static_cast<std::uint32_t>(trailingMarker);
+    }
   }
-  frameOffsetInFile_ -= *recordLength + 2 * headerBytes;
-  auto need{static_cast<std::size_t>(
-      recordOffsetInFrame_ + sizeof header + *recordLength)};
-  got = ReadFrame(frameOffsetInFile_, need, handler);
-  if (got < need) {
+
+  std::int32_t marker{trailingMarker};
+  if (isSingleMarker) {
+    if (trailingMarker >= 0) {
+      std::size_t payload{SubrecordPayloadBytes(trailingMarker)};
+      if (payload > static_cast<std::size_t>(kMaxSubrecPayload) ||
+          frameOffsetInFile_ <
+              static_cast<std::int64_t>(payload + 2 * kRecMarkSize)) {
+        handler.SignalError(IostatBadUnformattedRecord);
+        return;
+      }
+      frameOffsetInFile_ -=
+          static_cast<std::int64_t>(payload + 2 * kRecMarkSize);
+    } else {
+      frameOffsetInFile_ = singleMarkerStart; // unsigned step, already verified
+    }
+  } else {
+    // gfortran chain: walk backward; first subrecord's footer is non-negative.
+    auto payload{SubrecordPayloadBytes(marker)};
+    if (frameOffsetInFile_ <
+        static_cast<std::int64_t>(payload + 2 * kRecMarkSize)) {
+      handler.SignalError(IostatBadUnformattedRecord);
+      return;
+    }
+    frameOffsetInFile_ -= static_cast<std::int64_t>(payload + 2 * kRecMarkSize);
+    while (marker < 0) {
+      if (ReadFrame(frameOffsetInFile_ - kRecMarkSize, kRecMarkSize, handler) <
+          kRecMarkSize) {
+        handler.SignalError(IostatShortRead);
+        return;
+      }
+      marker = LoadRecordMarker(Frame(), swapEndianness_);
+      payload = SubrecordPayloadBytes(marker);
+      if (frameOffsetInFile_ <
+          static_cast<std::int64_t>(payload + 2 * kRecMarkSize)) {
+        handler.SignalError(IostatBadUnformattedRecord);
+        return;
+      }
+      frameOffsetInFile_ -=
+          static_cast<std::int64_t>(payload + 2 * kRecMarkSize);
+    }
+  }
+  if (ReadFrame(frameOffsetInFile_, kRecMarkSize, handler) < kRecMarkSize) {
     handler.SignalError(IostatShortRead);
     return;
   }
-  header = ReadHeaderOrFooter(recordOffsetInFrame_);
-  if (header != *recordLength) {
-    handler.SignalError(IostatBadUnformattedRecord);
-    return;
+  std::int32_t firstHeader{LoadRecordMarker(Frame(), swapEndianness_)};
+  if (isSingleMarker) {
+    if (static_cast<std::uint32_t>(firstHeader) !=
+        static_cast<std::uint32_t>(trailingMarker)) {
+      handler.SignalError(IostatBadUnformattedRecord);
+    }
+  } else {
+    // marker is the first subrecord's footer after the backward walk.
+    if (SubrecordPayloadBytes(firstHeader) != SubrecordPayloadBytes(marker)) {
+      handler.SignalError(IostatBadUnformattedRecord);
+    }
   }
 }
 
@@ -911,16 +1170,6 @@ void ExternalFileUnit::PopChildIo(ChildIo &child) {
   child_->~ChildIo(); // delete top child
   FreeMemory(child_);
   child_ = previous;
-}
-
-std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
-  std::uint32_t word;
-  char *wordPtr{reinterpret_cast<char *>(&word)};
-  runtime::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
-  if (swapEndianness_) {
-    SwapEndianness(wordPtr, sizeof word, sizeof word);
-  }
-  return word;
 }
 
 void ChildIo::EndIoStatement() {
