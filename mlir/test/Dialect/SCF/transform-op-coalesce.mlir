@@ -161,7 +161,7 @@ func.func @tensor_loops_first_two(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf3
   %0:2 = scf.for %i = %lb0 to %ub0 step %step0 iter_args(%arg2 = %arg0, %arg3 = %arg1) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
     %1:2 = scf.for %j = %lb1 to %ub1 step %step1 iter_args(%arg4 = %arg2, %arg5 = %arg3) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
       %2:2 = scf.for %k = %lb2 to %ub2 step %step2 iter_args(%arg6 = %arg5, %arg7 = %arg4) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-        %3:2 = "use"(%arg3, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
+        %3:2 = "use"(%arg6, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
         scf.yield %3#0, %3#1 : tensor<?x?xf32>, tensor<?x?xf32>
       }
       scf.yield %2#0, %2#1 : tensor<?x?xf32>, tensor<?x?xf32>
@@ -204,7 +204,7 @@ func.func @tensor_loops_first_two_2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?x
   %0:2 = scf.for %i = %lb0 to %ub0 step %step0 iter_args(%arg2 = %arg0, %arg3 = %arg1) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
     %1:2 = scf.for %j = %lb1 to %ub1 step %step1 iter_args(%arg4 = %arg2, %arg5 = %arg3) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
       %2:2 = scf.for %k = %lb2 to %ub2 step %step2 iter_args(%arg6 = %arg4, %arg7 = %arg5) -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-        %3:2 = "use"(%arg3, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
+        %3:2 = "use"(%arg6, %i, %j, %k) : (tensor<?x?xf32>, index, index, index) -> (tensor<?x?xf32>, tensor<?x?xf32>)
         scf.yield %3#0, %3#1 : tensor<?x?xf32>, tensor<?x?xf32>
       }
       scf.yield %2#1, %2#0 : tensor<?x?xf32>, tensor<?x?xf32>
@@ -414,3 +414,33 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:     scf.yield %[[UPDATED]]
 //       CHECK:   }
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// A read of the outer iteration argument between the two loops also blocks
+// coalescing.
+
+func.func @no_coalesce_outer_iter_arg_read_between_loops(%init: f32) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %result = scf.for %i = %c0 to %c3 step %c1 iter_args(%outer = %init) -> (f32) {
+    %read = "use"(%outer) : (f32) -> f32
+    %inner_result = scf.for %j = %c0 to %c3 step %c1 iter_args(%inner = %outer) -> (f32) {
+      %updated = "use"(%inner, %read) : (f32, f32) -> f32
+      scf.yield %updated : f32
+    }
+    scf.yield %inner_result : f32
+  } {coalesce_nested}
+  return %result : f32
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce_nested} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
+    // expected-error @below {{failed to coalesce}}
+    %2 = transform.loop.coalesce_nested %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
+    transform.yield
+  }
+}
