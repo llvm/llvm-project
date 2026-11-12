@@ -103,7 +103,11 @@ public:
 
   // Process items on the queue until the queue is stopped.
   // If the queue becomes empty, OnIdle will be called (on one worker).
-  void work(std::function<void()> OnIdle = nullptr);
+  // After OnIdle returns, each worker that still finds the queue empty calls
+  // OnWorkerIdle once, e.g. to release per-thread resources. Other workers
+  // may already run new tasks at that time.
+  void work(std::function<void()> OnIdle = nullptr,
+            std::function<void()> OnWorkerIdle = nullptr);
 
   // Stop processing new tasks, allowing all work() calls to return soon.
   void stop();

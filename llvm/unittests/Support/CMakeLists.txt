@@ -156,6 +156,12 @@ endif()
 # ManagedStatic.cpp uses <pthread>.
 target_link_libraries(SupportTests PRIVATE LLVMTestingSupport ${LLVM_PTHREAD_LIB})
 
+# ProcessTest.cpp checks that Process::releaseHeapCaches() returns memory to the
+# OS, which it only does with the in-tree rpmalloc.
+if(LLVM_ENABLE_RPMALLOC)
+  target_compile_definitions(SupportTests PRIVATE LLVM_ENABLE_RPMALLOC)
+endif()
+
 if(NOT LLVM_INTEGRATED_CRT_ALLOC)
   # The test doesn't pass when using a custom allocator, PR47881.
   add_subdirectory(DynamicLibrary)

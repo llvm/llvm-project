@@ -134,6 +134,11 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="rpmalloc")
+    if(LLVM_ENABLE_RPMALLOC)
+      # sys::Process::releaseHeapCaches() needs functions that an external
+      # rpmalloc may not have.
+      add_compile_definitions(LLVM_ENABLE_RPMALLOC)
+    endif()
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
     list(APPEND delayload_flags "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
