@@ -4242,6 +4242,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
   case LibFunc_scalbn:
   case LibFunc_scalbnf:
   case LibFunc_scalbnl:

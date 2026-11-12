@@ -86,7 +86,6 @@
 ...
 ---
 name:            test_sub_reg
-tracksRegLiveness: true
 callSites:
   - { bb: '%bb.0', offset: 3 }
   - { bb: '%bb.0', offset: 7, fwdArgRegs:

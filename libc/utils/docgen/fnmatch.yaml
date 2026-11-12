@@ -1,0 +1,19 @@
+posix: posix-2024
+functions:
+  fnmatch:
+    in-latest-posix: ''
+macros:
+  FNM_CASEFOLD:
+    in-latest-posix: ''
+  FNM_IGNORECASE:
+    in-latest-posix: ''
+  FNM_NOESCAPE:
+    in-latest-posix: ''
+  FNM_NOMATCH:
+    in-latest-posix: ''
+  FNM_NOSYS:
+    removed-in-posix-2008: ''
+  FNM_PATHNAME:
+    in-latest-posix: ''
+  FNM_PERIOD:
+    in-latest-posix: ''

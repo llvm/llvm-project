@@ -144,17 +144,25 @@ void *calloc(size_t num, size_t size) {
 
 } // extern "C"
 
-void *operator new([[maybe_unused]] size_t size, void *ptr) { return ptr; }
+void *operator new([[maybe_unused]] size_t size, void *ptr) noexcept {
+  return ptr;
+}
+
+void *operator new[]([[maybe_unused]] size_t size, void *ptr) noexcept {
+  return ptr;
+}
 
 void *operator new(size_t size) { return malloc(size); }
 
 void *operator new[](size_t size) { return malloc(size); }
 
-void operator delete(void *ptr) { free(ptr); }
+void operator delete(void *ptr) noexcept { free(ptr); }
 
-void operator delete[](void *ptr) { free(ptr); }
+void operator delete(void *ptr, size_t) noexcept { free(ptr); }
 
-void operator delete(void *ptr, size_t) { free(ptr); }
+void operator delete[](void *ptr) noexcept { free(ptr); }
+
+void operator delete[](void *ptr, size_t) noexcept { free(ptr); }
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -163,8 +171,22 @@ namespace std {
 enum class align_val_t : size_t {};
 } // namespace std
 
+void *operator new(size_t size, std::align_val_t align) {
+  return aligned_alloc(static_cast<size_t>(align), size);
+}
+
+void *operator new[](size_t size, std::align_val_t align) {
+  return aligned_alloc(static_cast<size_t>(align), size);
+}
+
 void operator delete(void *ptr, std::align_val_t) noexcept { free(ptr); }
 
 void operator delete(void *ptr, size_t, std::align_val_t) noexcept {
+  free(ptr);
+}
+
+void operator delete[](void *ptr, std::align_val_t) noexcept { free(ptr); }
+
+void operator delete[](void *ptr, size_t, std::align_val_t) noexcept {
   free(ptr);
 }

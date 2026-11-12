@@ -25,7 +25,6 @@
 ---
 name:            debug_use
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 stack:
