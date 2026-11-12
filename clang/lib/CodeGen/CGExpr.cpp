@@ -1407,16 +1407,15 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  QualType T = infer_alloc::inferPossibleType(E, getContext(), CurCast);
-  // A placement new into the result is stronger evidence than a cast to a raw
-  // storage pointer (void *, char *, ...) or a sizeof(char)-based size.
-  if (T.isNull() || infer_alloc::isRawStorageType(T)) {
-    if (!AllocTokenPlacementTypes)
-      AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
-          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
-    if (QualType PT = AllocTokenPlacementTypes->lookup(E); !PT.isNull())
-      T = PT;
-  }
+  // A placement new into the result is the strongest evidence of the allocated
+  // type: it names the object actually constructed, whereas a sizeof or a cast
+  // may only describe the raw storage (e.g. a char buffer or a base class).
+  if (!AllocTokenPlacementTypes)
+    AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
+        CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+  QualType T = AllocTokenPlacementTypes->lookup(E);
+  if (T.isNull())
+    T = infer_alloc::inferPossibleType(E, getContext(), CurCast);
   return buildAllocToken(T);
 }
 

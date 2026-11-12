@@ -187,10 +187,6 @@ QualType infer_alloc::inferPossibleType(const CallExpr *E,
   return AllocType;
 }
 
-bool infer_alloc::isRawStorageType(QualType T) {
-  return T->isVoidType() || T->isCharType() || T->isStdByteType();
-}
-
 namespace {
 /// Strips the wrappers a placement argument may have around the expression
 /// that produced the storage: parentheses, casts, and non-static member

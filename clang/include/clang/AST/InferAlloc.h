@@ -30,16 +30,12 @@ namespace infer_alloc {
 QualType inferPossibleType(const CallExpr *E, const ASTContext &Ctx,
                            const CastExpr *CastE);
 
-/// Returns true if \p T only names raw storage rather than an object type:
-/// void, the character types, and std::byte. For such a result, a placement
-/// new into the allocation is stronger evidence of the allocated type.
-bool isRawStorageType(QualType T);
-
 /// Maps the allocation calls in \p Body whose result is used as placement-new
 /// storage, directly or via a local variable initialized with it, to the type
 /// constructed (null if different types are constructed into the same
 /// storage). This covers the "allocate raw storage, then construct in place"
-/// idiom, where neither a sizeof nor a cast names the type:
+/// idiom; the constructed type is more precise than a sizeof or a cast, which
+/// may only describe the storage (a char buffer, a base class):
 ///
 ///   void *mem = alloc(size);
 ///   MyType *obj = new (mem) MyType();  // infers 'MyType' for alloc(size)

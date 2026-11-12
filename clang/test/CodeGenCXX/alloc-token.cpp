@@ -201,9 +201,10 @@ PlacedNoPtr *test_placement_new_array() {
   return new (mem) PlacedNoPtr[10];
 }
 
-// A sizeof in the size argument or a cast of the result still takes precedence.
+// The placement new names the constructed object and takes precedence over a
+// sizeof in the size argument, which may only describe the storage.
 // CHECK-LABEL: define dso_local noundef ptr @_Z34test_placement_new_sizeof_prevailsv(
-// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDNOPTR]]
 PlacedNoPtr *test_placement_new_sizeof_prevails() {
   void *mem = malloc(sizeof(PlacedWithPtr));
   return new (mem) PlacedNoPtr();
@@ -284,14 +285,17 @@ void test_placement_new_indirect() {
   sink = new (span.storage) PlacedNoPtr();
 }
 
-// A cast to a raw storage pointer (void *, char *, ...) is weaker evidence
-// than the placement new, which prevails; a cast to an object type does not.
+// Likewise over a cast of the result, whether to a raw storage pointer
+// (void *, char *, ...) or to a base class of the constructed type.
+struct DerivedWithPtr : PlacedNoPtr {
+  void *next;
+};
 // CHECK-LABEL: define dso_local void @_Z30test_placement_new_raw_storagev(
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
 // CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
 // CHECK: call noalias ptr @malloc(i64 noundef 64){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
-// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+// CHECK: call noalias ptr @malloc(i64 noundef 32){{.*}} !alloc_token [[META_DERIVEDWITHPTR:![0-9]+]]
 void test_placement_new_raw_storage() {
   char *p1 = static_cast<char *>(malloc(64));
   sink = new (p1) PlacedWithPtr();
@@ -301,8 +305,8 @@ void test_placement_new_raw_storage() {
   sink = new (__size_returning_new(64).p) PlacedWithPtr();
   void *p3 = malloc(sizeof(char) * 64);
   sink = new (p3) PlacedWithPtr();
-  auto *p4 = (PlacedWithPtr *)malloc(16);
-  sink = new (p4) PlacedNoPtr();
+  auto *base = static_cast<PlacedNoPtr *>(malloc(32));
+  sink = new (base) DerivedWithPtr();
 }
 
 // Non-generic lambdas use the captured variable; a generic lambda's dependent
@@ -345,3 +349,4 @@ void test_placement_new_template() {
 // CHECK: [[META_PLACEDNOPTR]] = !{!"PlacedNoPtr", i1 false}
 // CHECK: [[META_PLACEDWITHPTR]] = !{!"PlacedWithPtr", i1 true}
 // CHECK: [[META_CLASSPLACEMENT]] = !{!"ClassPlacement", i1 true}
+// CHECK: [[META_DERIVEDWITHPTR]] = !{!"DerivedWithPtr", i1 true}
