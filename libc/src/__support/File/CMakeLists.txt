@@ -63,8 +63,7 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.unique_ptr
-    libc.src.__support.CPP.utility
-    libc.src.__support.alloc_checker
+    libc.src.__support.checked_ptr
     libc.src.__support.error_or
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config

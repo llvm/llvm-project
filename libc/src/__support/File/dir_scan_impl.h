@@ -20,9 +20,8 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/unique_ptr.h"
-#include "src/__support/CPP/utility/move.h"
 #include "src/__support/File/dir_scan_result.h"
-#include "src/__support/alloc-checker.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -44,7 +43,7 @@ template <typename DirType> struct DirCloser {
 
 // TODO: Replace with a dynamic array container once available.
 class ScannedEntries {
-  struct dirent **entries = nullptr;
+  cpp::unique_ptr<struct dirent *[]> entries;
   size_t count = 0;
   size_t capacity = 0;
 
@@ -60,18 +59,17 @@ class ScannedEntries {
 
     size_t new_capacity = (capacity == 0) ? INITIAL_CAPACITY : capacity * 2;
 
-    AllocChecker ac;
-    struct dirent **bigger_buffer = new (ac) struct dirent *[new_capacity];
-    if (LIBC_UNLIKELY(!ac))
+    CheckedPtr<struct dirent *[]> bigger_buffer =
+        make_unique_for_overwrite<struct dirent *[]>(new_capacity);
+    if (LIBC_UNLIKELY(!bigger_buffer))
       return false;
 
-    if (entries != nullptr) {
-      inline_memcpy(bigger_buffer, entries, count * sizeof(struct dirent *));
-      delete[] entries;
-    }
+    if (entries)
+      inline_memcpy(bigger_buffer.get(), entries.get(),
+                    count * sizeof(struct dirent *));
 
     capacity = new_capacity;
-    entries = bigger_buffer;
+    entries = bigger_buffer.take_unique();
     return true;
   }
 
@@ -83,18 +81,13 @@ public:
   ScannedEntries &operator=(ScannedEntries &&) = delete;
 
   LIBC_INLINE ~ScannedEntries() {
-    if (entries == nullptr)
-      return;
-
     // Match the uint8_t[] dynamic allocation type when freeing entries.
     for (size_t i = 0; i < count; ++i)
       delete[] reinterpret_cast<uint8_t *>(entries[i]);
-
-    delete[] entries;
   }
 
   LIBC_INLINE constexpr size_t size() const { return count; }
-  LIBC_INLINE constexpr struct dirent **data() const { return entries; }
+  LIBC_INLINE constexpr struct dirent **data() const { return entries.get(); }
 
   [[nodiscard]] LIBC_INLINE bool
   push_back(cpp::unique_ptr<uint8_t[]> entry_buf) {
@@ -106,11 +99,9 @@ public:
   }
 
   LIBC_INLINE struct dirent **release() {
-    struct dirent **res = entries;
-    entries = nullptr;
     count = 0;
     capacity = 0;
-    return res;
+    return entries.release();
   }
 };
 
@@ -146,16 +137,16 @@ LIBC_INLINE ErrorOr<DirScanResult> scan_impl(
       return LIBC_NAMESPACE::Error(EOVERFLOW);
 
     const size_t reclen = DirType::reclen(entry);
-    AllocChecker ac;
     // Allocate only the variable-length record size (reclen) to save memory
     // whilst heap allocation guarantees max_align_t alignment for struct
     // dirent.
-    cpp::unique_ptr<uint8_t[]> new_entry_buf(new (ac) uint8_t[reclen]);
-    if (LIBC_UNLIKELY(!ac))
+    CheckedPtr<uint8_t[]> new_entry_buf =
+        make_unique_for_overwrite<uint8_t[]>(reclen);
+    if (LIBC_UNLIKELY(!new_entry_buf))
       return LIBC_NAMESPACE::Error(ENOMEM);
 
     inline_memcpy(new_entry_buf.get(), entry, reclen);
-    if (LIBC_UNLIKELY(!entries.push_back(cpp::move(new_entry_buf))))
+    if (LIBC_UNLIKELY(!entries.push_back(new_entry_buf.take_unique())))
       return LIBC_NAMESPACE::Error(ENOMEM);
   }
 

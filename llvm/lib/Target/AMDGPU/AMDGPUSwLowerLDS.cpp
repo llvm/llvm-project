@@ -164,9 +164,7 @@ struct FunctionsAndLDSAccess {
 class AMDGPUSwLowerLDS {
 public:
   AMDGPUSwLowerLDS(Module &Mod, DomTreeCallback Callback)
-      : M(Mod), IRB(M), DTCallback(Callback) {
-    IRB.disableGEPCanonicalization();
-  }
+      : M(Mod), IRB(M), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSInstructions(const CallGraph &CG);

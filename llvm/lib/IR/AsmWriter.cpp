@@ -3372,6 +3372,24 @@ void AssemblyWriter::printModuleSummaryIndex() {
     Out << ") ; guid = " << GUID << "\n";
   }
 
+  // Print the CFI function entries (the names of the functions with jump
+  // table entries, with the GUIDs that ThinLTO uses for them).
+  auto PrintCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                               StringRef EntryName) {
+    if (CfiIndex.empty())
+      return;
+    Out << "^" << NumSlots++ << " = " << EntryName << ": (";
+    ListSeparator FS;
+    for (const auto &[Name, GUID] : CfiIndex.getSortedSymbols()) {
+      Out << FS << "(guid: " << GUID << ", name: \"";
+      printEscapedString(Name, Out);
+      Out << "\")";
+    }
+    Out << ")\n";
+  };
+  PrintCfiFunctions(TheIndex->cfiFunctionDefs(), "cfiFunctionDefs");
+  PrintCfiFunctions(TheIndex->cfiFunctionDecls(), "cfiFunctionDecls");
+
   // Don't emit flags when it's not really needed (value is zero by default).
   if (TheIndex->getFlags()) {
     Out << "^" << NumSlots << " = flags: " << TheIndex->getFlags() << "\n";

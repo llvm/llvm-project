@@ -9581,13 +9581,21 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       // For NON_EXTLOAD, generic code in getLoad assert(ValVT == MemVT)
       ISD::LoadExtType ExtType = ISD::NON_EXTLOAD;
       MVT MemVT = VA.getValVT();
+      MVT LoadVT = VA.getLocVT();
 
       switch (VA.getLocInfo()) {
       default:
         break;
       case CCValAssign::Trunc:
+        MemVT = VA.getLocVT();
+        break;
       case CCValAssign::BCvt:
         MemVT = VA.getLocVT();
+        if (Ins[i].isOrigArg() && Ins[i].ArgVT.isVector() &&
+            Ins[i].ArgVT.getSizeInBits() < VA.getValVT().getSizeInBits()) {
+          MemVT = VA.getValVT();
+          LoadVT = MemVT;
+        }
         break;
       case CCValAssign::Indirect:
         assert(
@@ -9606,8 +9614,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         break;
       }
 
-      ArgValue = DAG.getExtLoad(ExtType, DL, VA.getLocVT(), Chain, FIN, PtrInfo,
-                                MemVT);
+      ArgValue =
+          DAG.getExtLoad(ExtType, DL, LoadVT, Chain, FIN, PtrInfo, MemVT);
     }
 
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -32033,15 +32041,21 @@ static SDValue performVectorDeinterleaveCombine(
   if (isDeinterleave4ForWideningUToFP(N))
     return SDValue();
 
-  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  bool UseFixedSVE =
+      !IsScalable && Subtarget.useSVEForFixedLengthVectors(SubVecTy);
+  EVT LoadVT =
+      UseFixedSVE ? getContainerForFixedLengthVector(DAG, SubVecTy) : SubVecTy;
+  SmallVector<EVT, 5> ResVTs(NumParts, LoadVT);
   ResVTs.push_back(MVT::Other);
   SDVTList ResVTList = DAG.getVTList(ResVTs);
 
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
-  if (IsScalable) {
+  if (IsScalable || UseFixedSVE) {
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
+      if (UseFixedSVE)
+        return SDValue();
       // Bail out if the masked load has an unexpected number of uses, since we
       // want to avoid a situation where we have both deinterleaving loads and
       // normal loads in the same block. Also, discard masked loads that are
@@ -32067,8 +32081,7 @@ static SDValue performVectorDeinterleaveCombine(
           !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
         return SDValue();
 
-      EVT PredVT = SubVecTy.changeVectorElementType(*DAG.getContext(), MVT::i1);
-      Pred = DAG.getConstant(1, DL, PredVT);
+      Pred = getPredicateForVector(DAG, DL, SubVecTy);
       Chain = Load->getChain();
       BasePtr = Load->getBasePtr();
     }
@@ -32112,7 +32125,9 @@ static SDValue performVectorDeinterleaveCombine(
   }
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; ++Idx)
-    ResOps[Idx] = Res.getValue(Idx);
+    ResOps[Idx] = UseFixedSVE ? convertFromScalableVector(DAG, SubVecTy,
+                                                          Res.getValue(Idx))
+                              : Res.getValue(Idx);
   // Replace uses of the original chain result with the new chain result.
   DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1),
                                 SDValue(Res.getNode(), NumParts));
@@ -34197,14 +34212,12 @@ void AArch64TargetLowering::insertSSPDeclarations(
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::Win64);
       F->addParamAttr(0, Attribute::AttrKind::InReg);

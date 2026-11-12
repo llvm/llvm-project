@@ -431,7 +431,6 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
 
     // Fill MainLoopBB
     IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
-    MainLoopBuilder.disableGEPCanonicalization();
     Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
     Align PartSrcAlign(commonAlignment(SrcAlign, LoopOpSize));
 
@@ -471,7 +470,6 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
     return;
 
   IRBuilder<> RBuilder(InsertBefore);
-  RBuilder.disableGEPCanonicalization();
   SmallVector<Type *, 5> RemainingOps;
   TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
                                         SrcAS, DstAS, SrcAlign, DstAlign,
@@ -555,7 +553,6 @@ void llvm::createMemCpyLoopUnknownSize(
 
   // Fill MainLoopBB
   IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
-  MainLoopBuilder.disableGEPCanonicalization();
   Align PartSrcAlign(commonAlignment(SrcAlign, LoopOpSize));
   Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
 
@@ -592,7 +589,6 @@ void llvm::createMemCpyLoopUnknownSize(
   Align ResDstAlign(commonAlignment(PartDstAlign, ResidualLoopOpSize));
 
   IRBuilder<> ResLoopBuilder(LEI.ResidualLoopIP);
-  ResLoopBuilder.disableGEPCanonicalization();
   Value *ResSrcGEP = ResLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
                                                       LEI.ResidualLoopIndex);
   LoadInst *ResLoad = ResLoopBuilder.CreateAlignedLoad(
@@ -788,7 +784,6 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       BasicBlock *ResidualLoopBB = BasicBlock::Create(
           F->getContext(), "memmove_bwd_residual_loop", F, MainLoopBB);
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
-      ResidualLoopBuilder.disableGEPCanonicalization();
       ResidualLoopBuilder.SetCurrentDebugLocation(DbgLoc);
       PHINode *ResidualLoopPhi = ResidualLoopBuilder.CreatePHI(ILengthType, 0);
       Value *ResidualIndex = ResidualLoopBuilder.CreateSub(
@@ -833,7 +828,6 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
     // main loop
     IRBuilder<> MainLoopBuilder(MainLoopBB);
-    MainLoopBuilder.disableGEPCanonicalization();
     MainLoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *MainLoopPhi = MainLoopBuilder.CreatePHI(ILengthType, 0);
     Value *MainIndex =
@@ -865,7 +859,6 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
     BasicBlock *MainLoopBB =
         BasicBlock::Create(F->getContext(), "memmove_fwd_main_loop", F, ExitBB);
     IRBuilder<> MainLoopBuilder(MainLoopBB);
-    MainLoopBuilder.disableGEPCanonicalization();
     MainLoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *MainLoopPhi =
         MainLoopBuilder.CreatePHI(ILengthType, 0, "fwd_main_index");
@@ -910,7 +903,6 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
       // Residual loop
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
-      ResidualLoopBuilder.disableGEPCanonicalization();
       ResidualLoopBuilder.SetCurrentDebugLocation(DbgLoc);
       PHINode *ResidualLoopPhi =
           ResidualLoopBuilder.CreatePHI(ILengthType, 0, "fwd_residual_index");
@@ -1025,7 +1017,6 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // load/store pair so that each one is inserted before the previous one
     // instead of after it.
     IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHIIt());
-    BwdResBuilder.disableGEPCanonicalization();
     BwdResBuilder.SetCurrentDebugLocation(DbgLoc);
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
@@ -1049,7 +1040,6 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
       CopyBackwardsBB->setName("memmove_bwd_loop");
     }
     IRBuilder<> LoopBuilder(LoopBB->getTerminator());
-    LoopBuilder.disableGEPCanonicalization();
     LoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0);
     Value *Index = LoopBuilder.CreateSub(LoopPhi, CILoopOpSize, "bwd_index");
@@ -1084,7 +1074,6 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
       FwdResidualBB = SuccBB;
     }
     IRBuilder<> LoopBuilder(LoopBB->getTerminator());
-    LoopBuilder.disableGEPCanonicalization();
     LoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0, "fwd_index");
     Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopPhi);
@@ -1110,7 +1099,6 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // Residual code is required to move the remaining bytes. In the forward
     // case, we emit it in the normal order.
     IRBuilder<> FwdResBuilder(FwdResidualBB->getTerminator());
-    FwdResBuilder.disableGEPCanonicalization();
     FwdResBuilder.SetCurrentDebugLocation(DbgLoc);
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
@@ -1216,7 +1204,6 @@ createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
 
     // Fill MainLoopBB
     IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
-    MainLoopBuilder.disableGEPCanonicalization();
     Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
 
     Value *DstGEP =
@@ -1235,7 +1222,6 @@ createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
     return;
 
   IRBuilder<> RBuilder(InsertBefore);
-  RBuilder.disableGEPCanonicalization();
 
   assert(TTI && "there cannot be a residual loop without TTI");
   SmallVector<Type *, 5> RemainingOps;
@@ -1307,7 +1293,6 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
 
   // Fill MainLoopBB
   IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
-  MainLoopBuilder.disableGEPCanonicalization();
   Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
 
   Value *DstGEP =
@@ -1322,7 +1307,6 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
   Align ResDstAlign(commonAlignment(PartDstAlign, ResidualLoopOpSize));
 
   IRBuilder<> ResLoopBuilder(LEI.ResidualLoopIP);
-  ResLoopBuilder.disableGEPCanonicalization();
 
   Value *ResDstGEP = ResLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
                                                       LEI.ResidualLoopIndex);
@@ -1409,7 +1393,6 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
 
     // Fill MainLoopBB
     IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
-    MainLoopBuilder.disableGEPCanonicalization();
     Value *DstGEP = MainLoopBuilder.CreateInBoundsGEP(MainLoopType, DstAddr,
                                                       LEI.MainLoopIndex);
     MainLoopBuilder.CreateAlignedStore(MainLoopSetValue, DstGEP, PartDstAlign,
@@ -1424,7 +1407,6 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
       commonAlignment(PartDstAlign, DL.getTypeAllocSize(ResidualLoopType)));
 
   IRBuilder<> ResLoopBuilder(LEI.ResidualLoopIP);
-  ResLoopBuilder.disableGEPCanonicalization();
   Value *ResDstGEP = ResLoopBuilder.CreateInBoundsGEP(ResidualLoopType, DstAddr,
                                                       LEI.ResidualLoopIndex);
   ResLoopBuilder.CreateAlignedStore(SetValue, ResDstGEP, ResDstAlign,
