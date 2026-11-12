@@ -184,7 +184,7 @@
 # helper1.cpp
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_skeleton_unit [12]
-# POSTCHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]  (0x000000fe)
+# POSTCHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]  (0x000000fa)
 # POSTCHECK-NEXT: DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x00000018)
 # POSTCHECK-NEXT: DW_AT_comp_dir [DW_FORM_strx1]  (indexed (00000000) string = ".")
 # POSTCHECK-NEXT: DW_AT_GNU_pubnames [DW_FORM_flag_present] (true)
