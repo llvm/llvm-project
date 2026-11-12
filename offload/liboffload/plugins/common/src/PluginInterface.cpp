@@ -702,6 +702,18 @@ Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
   return Err;
 }
 
+Error GenericDeviceTy::dataMemcpy3D(const Copy3DTy &Copy,
+                                    __tgt_async_info *AsyncInfo) {
+  if (Copy.Extent[0] == 0 || Copy.Extent[1] == 0 || Copy.Extent[2] == 0)
+    return Plugin::success();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataMemcpy3DImpl(Copy, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
                                     void *DstPtr, int64_t Size,
                                     __tgt_async_info *AsyncInfo,

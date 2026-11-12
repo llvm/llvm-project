@@ -51,6 +51,7 @@ DLWRAP(cuMemAllocManaged, 3)
 DLWRAP(cuMemAllocAsync, 3)
 
 DLWRAP(cuMemcpyAsync, 4)
+DLWRAP(cuMemcpy3DAsync, 2)
 DLWRAP(cuMemcpyDtoDAsync, 4)
 DLWRAP(cuMemcpyDtoH, 3)
 DLWRAP(cuMemcpyDtoHAsync, 4)
@@ -138,6 +139,7 @@ static bool resolveSymbols(llvm::sys::DynamicLibrary &Lib, const char *Name) {
       {"cuStreamDestroy", "cuStreamDestroy_v2"},
       {"cuModuleGetGlobal", "cuModuleGetGlobal_v2"},
       {"cuMemcpyAsync", "cuMemcpyAsync_v2"},
+      {"cuMemcpy3DAsync", "cuMemcpy3DAsync_v2"},
       {"cuMemcpyDtoHAsync", "cuMemcpyDtoHAsync_v2"},
       {"cuMemcpyDtoDAsync", "cuMemcpyDtoDAsync_v2"},
       {"cuMemcpyHtoDAsync", "cuMemcpyHtoDAsync_v2"},

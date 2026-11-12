@@ -232,6 +232,44 @@ def olMemcpy : Function {
     let returns = [];
 }
 
+def ol_memcpy3d_layout_t : Struct {
+  let desc = "Placement of a 2D or 3D region within a pitched allocation.";
+  let members = [
+    StructMember<"ol_dimensions_t", "Offset", "offset of the region from the start of the allocation (x in bytes, y in rows, z in slices)">,
+    StructMember<"size_t", "Pitch", "distance in bytes between consecutive rows">,
+    StructMember<"size_t", "SlicePitch", "distance in bytes between consecutive slices">,
+  ];
+}
+
+def olMemcpy3D : Function {
+    let desc = "Enqueue a copy of a 2D or 3D region between two pitched memory layouts.";
+    let details = [
+        "Offsets and pitches are in bytes for the x dimension; y counts rows and z counts slices.",
+        "Size.x is the width of the copied region in bytes, Size.y the number of rows and Size.z the number of slices.",
+        "Pitch is the distance in bytes between consecutive rows; SlicePitch the distance in bytes between consecutive slices.",
+        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform, or pass NULL.",
+        "Two non-host devices must be able to exchange data directly.",
+        "The copy is performed by the destination device for a host-to-device copy, and by the source device otherwise (as for olMemcpy). The queue, if given, must belong to that device.",
+        "SlicePitch must be a multiple of Pitch and large enough to hold the rows copied; it is ignored for a single-slice copy at z offset 0.",
+        "If a queue is not specified, the copy happens synchronously"
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
+        Param<"void*", "DstPtr", "pointer to the base of the destination allocation", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to, or NULL if DstPtr is host memory", PARAM_IN_OPTIONAL>,
+        Param<"const ol_memcpy3d_layout_t*", "DstLayout", "layout of the destination region", PARAM_IN>,
+        Param<"const void*", "SrcPtr", "pointer to the base of the source allocation", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to, or NULL if SrcPtr is host memory", PARAM_IN_OPTIONAL>,
+        Param<"const ol_memcpy3d_layout_t*", "SrcLayout", "layout of the source region", PARAM_IN>,
+        Param<"ol_dimensions_t", "Size", "extent of the region (x in bytes, y in rows, z in slices)", PARAM_IN>,
+    ];
+    let returns = [
+        Return<"OL_ERRC_INVALID_SIZE", ["a pitch is smaller than the extent it must cover, or a value exceeds what the backend supports"]>,
+        Return<"OL_ERRC_INVALID_QUEUE", ["`Queue` does not belong to the device performing the copy"]>,
+        Return<"OL_ERRC_UNSUPPORTED", ["the backend does not support 2D or 3D copies, or the devices cannot exchange data directly"]>
+    ];
+}
+
 def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
