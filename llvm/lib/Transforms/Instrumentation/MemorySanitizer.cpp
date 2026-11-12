@@ -5206,7 +5206,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Mask = I.getOperand(2);
 
     assert(P->getType()->isPointerTy());
-    insertCheckShadowOf(P, &I);
+    if (Opts.msan_check_access_address)
+      insertCheckShadowOf(P, &I);
 
     assert(isFixedIntVector(A));
 
@@ -5218,13 +5219,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     auto [PShadowPtr, POriginPtr] = getShadowOriginPtr(
         P, IRB, ShadowTy, kMinOriginAlignment, /*isStore*/ true);
 
-    Value *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                    {PShadowPtr, getShadow(A), Mask});
-    setShadow(&I, CI);
+    IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                        {PShadowPtr, getShadow(A), Mask});
 
-    // Since P and Mask have already been checked to be initialized, this will
-    // use only the origin from A.
-    setOriginForNaryOp(I);
+    // This is correct even if !MS.TrackOrigins or if P is already checked
+    OriginCombiner OC(this, IRB);
+    OC.Add(P);
+    OC.Add(A);
+    // Mask has already been checked to be initialized
+
+    const DataLayout &DL = F.getDataLayout();
+    OC.DoneAndStoreOrigin(DL.getTypeStoreSize(ShadowTy), POriginPtr);
   }
 
   // Handle llvm.x86.avx512.* instructions that take vector(s) of floating-point
