@@ -5214,6 +5214,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                  !match(UI, m_BinOp(m_Not(m_Value()), m_Not(m_Value())));
         }))
       return 0;
+
+    // A right shift by a uniform constant is folded into the SSRA/USRA of its
+    // add user.
+    if (Op2Info.isUniform() && Op2Info.isConstant() &&
+        match(CtxI, m_OneUse(m_Shr(m_Value(), m_Constant()))) &&
+        match(CtxI->user_back(), m_c_Add(m_Specific(CtxI), m_Value())))
+      return 0;
   }
 
   // Legalize the type.
