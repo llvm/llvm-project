@@ -147,3 +147,71 @@ func.func @concat_chained(%arg0: !fir.boxchar<1>, %arg1: !fir.boxchar<1>, %arg2:
 // CHECK:           fir.freemem %[[VAL_57]] : !fir.heap<!fir.char<1,?>>
 // CHECK:           return
 // CHECK:         }
+
+// When every operand has a compile-time length, the buffer is on the stack.
+func.func @concat_constant_len(%arg0: !fir.ref<!fir.char<1,3>>, %arg1: !fir.ref<!fir.char<1,2>>, %arg2: !fir.ref<!fir.char<1,5>>) {
+  %c5 = arith.constant 5 : index
+  %0 = hlfir.concat %arg0, %arg1 len %c5 : (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,2>>, index) -> !hlfir.expr<!fir.char<1,5>>
+  hlfir.assign %0 to %arg2 : !hlfir.expr<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+  hlfir.destroy %0 : !hlfir.expr<!fir.char<1,5>>
+  return
+}
+// CHECK-LABEL:   func.func @concat_constant_len(
+// CHECK-SAME:                                   %[[ARG0:.*]]: !fir.ref<!fir.char<1,3>>, %[[ARG1:.*]]: !fir.ref<!fir.char<1,2>>, %[[ARG2:.*]]: !fir.ref<!fir.char<1,5>>) {
+// CHECK-NOT:       fir.allocmem
+// CHECK:           %[[TEMP:.*]] = fir.alloca !fir.char<1,5> <{bindc_name = ".chrtmp"}>
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[LEN0:.*]] = fir.convert %[[C3]] : (index) -> i64
+// CHECK:           %[[SIZE0:.*]] = arith.muli %{{.*}}, %[[LEN0]] : i64
+// CHECK:           %[[SRC0:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.char<1,3>>) -> !llvm.ptr
+// CHECK:           "llvm.intr.memmove"(%{{.*}}, %[[SRC0]], %[[SIZE0]])
+// CHECK:           %[[OFFSET:.*]] = arith.addi %{{.*}}, %[[C3]] : index
+// CHECK:           %[[C2:.*]] = arith.constant 2 : index
+// CHECK:           %[[LOWER:.*]] = arith.addi %[[OFFSET]], %{{.*}} : index
+// CHECK:           %[[INDEX:.*]] = arith.subi %[[LOWER]], %{{.*}} : index
+// CHECK:           %[[ARRAY:.*]] = fir.convert %[[TEMP]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.array<5x!fir.char<1>>>
+// CHECK:           fir.coordinate_of %[[ARRAY]], %[[INDEX]]
+// CHECK:           %[[LEN1:.*]] = fir.convert %[[C2]] : (index) -> i64
+// CHECK:           %[[SIZE1:.*]] = arith.muli %{{.*}}, %[[LEN1]] : i64
+// CHECK:           %[[SRC1:.*]] = fir.convert %[[ARG1]] : (!fir.ref<!fir.char<1,2>>) -> !llvm.ptr
+// CHECK:           "llvm.intr.memmove"(%{{.*}}, %[[SRC1]], %[[SIZE1]])
+// CHECK:           %[[RES:.*]]:2 = hlfir.declare %[[TEMP]] typeparams %{{.*}} uniq_name("tmp") : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+// CHECK:           %[[FALSE:.*]] = arith.constant false
+// CHECK:           fir.insert_value %{{.*}}, %[[FALSE]], [1 : index]
+// CHECK:           hlfir.assign %[[RES]]#0 to %[[ARG2]] : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
+// CHECK-NOT:       fir.freemem
+// CHECK:           return
+
+// Offsets are in characters, copy sizes are in bytes.
+func.func @concat_kind4(%arg0: !fir.boxchar<4>, %arg1: !fir.boxchar<4>, %arg2: !fir.boxchar<4>) {
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
+  %1:2 = fir.unboxchar %arg1 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
+  %2 = arith.addi %0#1, %1#1 : index
+  %3 = hlfir.concat %arg0, %arg1 len %2 : (!fir.boxchar<4>, !fir.boxchar<4>, index) -> !hlfir.expr<!fir.char<4,?>>
+  hlfir.assign %3 to %arg2 : !hlfir.expr<!fir.char<4,?>>, !fir.boxchar<4>
+  hlfir.destroy %3 : !hlfir.expr<!fir.char<4,?>>
+  return
+}
+// CHECK-LABEL:   func.func @concat_kind4(
+// CHECK:           %[[LEN:.*]] = arith.addi %{{.*}}, %{{.*}} : index
+// CHECK:           %[[TEMP:.*]] = fir.allocmem !fir.char<4,?>(%[[LEN]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
+// CHECK:           %[[STR0:.*]]:2 = fir.unboxchar %{{.*}} : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
+// CHECK:           %[[ARRAY0:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x!fir.char<4>>>
+// CHECK:           fir.coordinate_of %[[ARRAY0]], %{{.*}} : (!fir.ref<!fir.array<?x!fir.char<4>>>, index) -> !fir.ref<!fir.char<4>>
+// CHECK:           %[[KIND0:.*]] = arith.constant 4 : i64
+// CHECK:           %[[LEN0:.*]] = fir.convert %[[STR0]]#1 : (index) -> i64
+// CHECK:           %[[SIZE0:.*]] = arith.muli %[[KIND0]], %[[LEN0]] : i64
+// CHECK:           "llvm.intr.memmove"(%{{.*}}, %{{.*}}, %[[SIZE0]])
+// CHECK:           %[[OFFSET:.*]] = arith.addi %{{.*}}, %[[STR0]]#1 : index
+// CHECK:           %[[STR1:.*]]:2 = fir.unboxchar %{{.*}} : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
+// CHECK:           %[[LOWER:.*]] = arith.addi %[[OFFSET]], %{{.*}} : index
+// CHECK:           %[[INDEX:.*]] = arith.subi %[[LOWER]], %{{.*}} : index
+// CHECK:           %[[ARRAY1:.*]] = fir.convert %[[TEMP]] : (!fir.heap<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x!fir.char<4>>>
+// CHECK:           fir.coordinate_of %[[ARRAY1]], %[[INDEX]] : (!fir.ref<!fir.array<?x!fir.char<4>>>, index) -> !fir.ref<!fir.char<4>>
+// CHECK:           %[[KIND1:.*]] = arith.constant 4 : i64
+// CHECK:           %[[LEN1:.*]] = fir.convert %[[STR1]]#1 : (index) -> i64
+// CHECK:           %[[SIZE1:.*]] = arith.muli %[[KIND1]], %[[LEN1]] : i64
+// CHECK:           "llvm.intr.memmove"(%{{.*}}, %{{.*}}, %[[SIZE1]])
+// CHECK:           hlfir.declare %{{.*}} typeparams %[[LEN]] uniq_name("tmp") : (!fir.ref<!fir.char<4,?>>, index) -> (!fir.boxchar<4>, !fir.ref<!fir.char<4,?>>)
+// CHECK:           fir.freemem
+// CHECK:           return

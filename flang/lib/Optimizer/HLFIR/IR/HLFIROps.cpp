@@ -798,7 +798,8 @@ getCharacterLengthIfStatic(mlir::Type t) {
 namespace {
 /// Fuse single-use concatenations before allocating their buffers. The reads
 /// of the inner operands move to the outer concatenation, so do not cross any
-/// operation that may change or release their storage.
+/// operation that may change or release their storage. Allocations, like the
+/// hlfir.declare of a literal operand, are fine to cross.
 struct InlineConcat : public mlir::OpRewritePattern<hlfir::ConcatOp> {
   using OpRewritePattern::OpRewritePattern;
   llvm::LogicalResult
@@ -823,7 +824,8 @@ struct InlineConcat : public mlir::OpRewritePattern<hlfir::ConcatOp> {
            op = op->getNextNode()) {
         auto effects = mlir::getEffectsRecursively(op);
         if (!effects || llvm::any_of(*effects, [](const auto &effect) {
-              return !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect());
+              return mlir::isa<mlir::MemoryEffects::Write,
+                               mlir::MemoryEffects::Free>(effect.getEffect());
             })) {
           canMove = false;
           break;

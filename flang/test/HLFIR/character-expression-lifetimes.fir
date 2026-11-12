@@ -29,6 +29,33 @@ func.func @chain(%a: !fir.boxchar<1>, %b: !fir.boxchar<1>, %c: !fir.boxchar<1>, 
   return
 }
 
+// The declaration of a literal operand between the concatenations does not
+// prevent fusion.
+// CANON-LABEL: func.func @chain_literal
+// CANON: %[[LIT:.*]]:2 = hlfir.declare
+// CANON: %[[JOINED:.*]] = hlfir.concat %arg0, %arg1, %[[LIT]]#0
+// CANON-NOT: hlfir.concat
+// CANON: hlfir.assign %[[JOINED]]
+// CHECK-LABEL: func.func @chain_literal
+// CHECK: fir.allocmem !fir.char<1,?>
+// CHECK-NOT: fir.allocmem
+// CHECK: return
+func.func @chain_literal(%a: !fir.boxchar<1>, %b: !fir.boxchar<1>, %out: !fir.boxchar<1>, %n: index, %m: index) {
+  %c1 = arith.constant 1 : index
+  %x = hlfir.concat %a, %b len %n : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
+  %addr = fir.address_of(@_QQclX21) : !fir.ref<!fir.char<1>>
+  %lit:2 = hlfir.declare %addr typeparams %c1 uniq_name("_QQclX21") fortran_attrs<parameter> : (!fir.ref<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
+  %y = hlfir.concat %x, %lit#0 len %m : (!hlfir.expr<!fir.char<1,?>>, !fir.ref<!fir.char<1>>, index) -> !hlfir.expr<!fir.char<1,?>>
+  hlfir.assign %y to %out : !hlfir.expr<!fir.char<1,?>>, !fir.boxchar<1>
+  hlfir.destroy %y : !hlfir.expr<!fir.char<1,?>>
+  hlfir.destroy %x : !hlfir.expr<!fir.char<1,?>>
+  return
+}
+fir.global linkonce @_QQclX21 constant : !fir.char<1> {
+  %0 = fir.string_lit "!"(1) : !fir.char<1>
+  fir.has_value %0 : !fir.char<1>
+}
+
 // Fusion must not postpone reading A past a call that may modify A.
 // CANON-LABEL: func.func @snapshot
 // CANON: hlfir.concat
