@@ -9,7 +9,7 @@ define dso_local i32 @srem_to_urem(i32 noundef %x) #0 !dbg !9 {
 ; CHECK:      [[X_NONNEG:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT: [[REM1:%.*]] = urem i32 [[X_NONNEG]], 42
 ; CHECK-NEXT: [[REM1_NEG:%.*]] = sub i32 0, [[REM1]]
-; CHECK-NEXT: #dbg_value(i32 [[X]], [[META1:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META2:![0-9]+]])
+; CHECK-NEXT: #dbg_value(i32 poison, [[META1:![0-9]+]], !DIExpression(), [[META2:![0-9]+]])
 ;
 entry:
   %rem = srem i32 %x, 42
@@ -23,7 +23,7 @@ define dso_local i32 @sdiv_to_udiv(i32 noundef %x) #0 !dbg !21 {
 ; CHECK:      [[X_NONNEG:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT: [[DIV1:%.*]] = udiv i32 [[X_NONNEG]], 42
 ; CHECK-NEXT: [[DIV1_NEG:%.*]] = sub i32 0, [[DIV1]]
-; CHECK-NEXT: #dbg_value(i32 [[X]], [[META4:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_div, DW_OP_stack_value), [[META5:![0-9]+]])
+; CHECK-NEXT: #dbg_value(i32 poison, [[META4:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
 ;
 entry:
   %div = sdiv i32 %x, 42

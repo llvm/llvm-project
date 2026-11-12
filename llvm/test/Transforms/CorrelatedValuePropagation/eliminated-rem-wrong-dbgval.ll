@@ -5,7 +5,7 @@
 ; See issues #218631 and #218633
 
 define dso_local i32 @srem_elide(i32 noundef %x) #0 !dbg !9 {
-; CHECK:      #dbg_value(i32 %x, [[META2:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META1:![0-9]+]])
+; CHECK:      #dbg_value(i32 poison, [[META2:![0-9]+]], !DIExpression(), [[META1:![0-9]+]])
 ; CHECK-NEXT: %0 = add i32 %x, 41
 ;
 entry:
@@ -18,7 +18,7 @@ entry:
 }
 
 define dso_local i32 @urem_elide(i32 noundef %x) #0 !dbg !23 {
-; CHECK:      #dbg_value(i32 poison, [[META4:![0-9]+]], !DIExpression(), [[META3:![0-9]+]])
+; CHECK:      #dbg_value(i32 %x, [[META4:![0-9]+]], !DIExpression(DW_OP_constu, 42, DW_OP_mod, DW_OP_stack_value), [[META3:![0-9]+]])
 ; CHECK-NEXT: %cmp = icmp ult i32 %x, 42
 ;
 entry:
