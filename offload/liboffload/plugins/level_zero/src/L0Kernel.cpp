@@ -80,8 +80,10 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
     Properties.UsesDynamicSharedMem = true;
   }
 
-  // When checking that dynamic SLM arguments fit, the driver counts static
-  // SLM in 1 KiB units
+  // The driver rounds the SLM size up to 1 KiB when checking the limit,
+  // see KernelImp::setArgSlm in
+  // https://github.com/intel/compute-runtime/blob/ebd873802bb1decf53260728cce9e6048e25bc99/level_zero/core/source/kernel/kernel_imp.cpp#L917
+  // Rounding the static size up gives the same or a stricter check.
   StaticBlockMemSize = alignTo(getProperties().LocalMemSize, 1024);
 
   return Plugin::success();
