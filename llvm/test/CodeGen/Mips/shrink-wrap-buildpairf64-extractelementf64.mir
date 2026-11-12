@@ -30,6 +30,7 @@
 ...
 ---
 name: testBuildPairF64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -47,6 +48,7 @@ body: |
 ...
 ---
 name: testBuildPairF64_64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64_64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -63,6 +65,7 @@ body: |
 ...
 ---
 name: testBuildPairF64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -79,6 +82,7 @@ body: |
 ...
 ---
 name: testBuildPairF64_64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testBuildPairF64_64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -95,6 +99,7 @@ body: |
 ...
 ---
 name: testExtractElementF64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -111,6 +116,7 @@ body: |
 ...
 ---
 name: testExtractElementF64_64
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64_64
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -127,6 +133,7 @@ body: |
 ...
 ---
 name: testExtractElementF64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors
@@ -143,6 +150,7 @@ body: |
 ...
 ---
 name: testExtractElementF64_64implicitSp
+tracksRegLiveness: false
 # CHECK-LABEL: name: testExtractElementF64_64implicitSp
 # CHECK: bb.0
 # CHECK-NEXT: successors

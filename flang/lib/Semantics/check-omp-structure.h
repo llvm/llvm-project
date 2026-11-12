@@ -274,9 +274,11 @@ private:
       bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
-      std::string_view name, bool checkTypeOnPointer = true);
+      std::string_view what, std::string_view name,
+      bool checkTypeOnPointer = true);
   void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
-      parser::CharBlock, bool checkTypeOnPointer = true);
+      parser::CharBlock, bool checkTypeOnPointer = true,
+      bool isCapture = false);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
@@ -487,6 +489,7 @@ private:
   void CheckIndividualAllocateDirective(
       const parser::OmpAllocateDirective &x, bool isExecutable);
   void CheckExecutableAllocateDirective(const parser::OmpAllocateDirective &x);
+  void CheckDeclareReduction(const parser::OmpDirectiveSpecification &x);
 
   void CheckUsesAllocatorsSpec(
       const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
@@ -505,10 +508,12 @@ private:
       const std::optional<parser::OmpClauseList> &maybeClauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
-  void CheckReductionObjects(
-      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   void CheckSubstring(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  void CheckReductionObjects(
+      const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
+  bool CheckReductionIntrinsicOperator(
+      parser::DefinedOperator::IntrinsicOperator op, parser::CharBlock source);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
       parser::CharBlock source, llvm::omp::Clause clauseId);
   void CheckReductionObjectTypes(const parser::OmpObjectList &objects,

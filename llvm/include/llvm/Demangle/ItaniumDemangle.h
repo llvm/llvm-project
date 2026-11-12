@@ -4914,10 +4914,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return make<StringLiteral>(T);
     return nullptr;
   }
-  case 'D':
-    if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
-      return make<NameType>("nullptr");
-    return nullptr;
   case 'T':
     // Invalid mangled name per
     //   http://sourcerytools.com/pipermail/cxx-abi-dev/2011-August/002422.html
@@ -4931,6 +4927,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return nullptr;
     return make<LambdaExpr>(T);
   }
+  case 'D':
+    if (look(1) == 'n') {
+      if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
+        return make<NameType>("nullptr");
+      return nullptr;
+    }
+    // Other D-prefixed types (DB<n>_, Du, Di, Ds, ...) are ordinary types.
+    DEMANGLE_FALLTHROUGH;
   default: {
     // might be named type
     Node *T = getDerived().parseType();

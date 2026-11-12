@@ -105,12 +105,12 @@ public:
   void print(raw_ostream &OS, const Module *M) const override;
 };
 
-class SignatureAnalysisPrinter
-    : public OptionalPassInfoMixin<SignatureAnalysisPrinter> {
+class SignatureAnalysisPrinterPass
+    : public OptionalPassInfoMixin<SignatureAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit SignatureAnalysisPrinter(raw_ostream &OS) : OS(OS) {}
+  explicit SignatureAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

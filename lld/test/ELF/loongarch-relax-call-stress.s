@@ -19,7 +19,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax %s -o %t.o
 # RUN: ld.lld -e _start -Ttext=0x10000 %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
 ## The two short-range sites in .text.a are always relaxed.

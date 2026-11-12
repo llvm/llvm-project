@@ -152,7 +152,7 @@ void macho::reportRangeError(void *loc, const Relocation &r, const Twine &v,
   uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;
   const InputSection *isec = offsetToInputSection(&off);
   std::string locStr = isec ? isec->getLocation(off) : "(invalid location)";
-  if (auto *sym = r.referent.dyn_cast<Symbol *>())
+  if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent))
     hint = "; references " + toString(*sym);
   error(locStr + ": relocation " + target->getRelocAttrs(r.type).name +
         " is out of range: " + v + " is not in [" + Twine(min) + ", " +

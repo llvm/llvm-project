@@ -288,7 +288,8 @@ private:
   bool propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS);
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
-  bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
+  bool deleteDeadInstructions(AllocaInst *AI,
+                              SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
   bool promoteAllocas();
 };
 
@@ -3463,9 +3464,10 @@ private:
     // Strip any SROA suffixes as well.
     OldName = OldName.substr(0, OldName.find(".sroa_"));
 
-    return getAdjustedPtr(IRB, DL, &NewAI,
-                          APInt(DL.getIndexTypeSizeInBits(PointerTy), Offset),
-                          PointerTy, Twine(OldName) + ".");
+    return getAdjustedPtr(
+        IRB, DL, &NewAI,
+        APInt(DL.getIndexTypeSizeInBits(NewAI.getType()), Offset), PointerTy,
+        Twine(OldName) + ".");
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -5356,6 +5358,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // From here on, we can't fail and will be building new accesses, so rig up
   // an IR builder.
   IRBuilderTy IRB(&AI);
+  IRB.disableGEPCanonicalization();
 
   // Collect the new slices which we will merge into the alloca slices.
   SmallVector<Slice, 4> NewSlices;
@@ -6414,7 +6417,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
 
   // Special case dead allocas, as they're trivial.
   if (AI.use_empty()) {
-    AI.eraseFromParent();
+    DeadInsts.push_back(&AI);
     Changed = true;
     return {Changed, CFGChanged};
   }
@@ -6428,6 +6431,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
+  IRB.disableGEPCanonicalization();
   AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
 
@@ -6499,7 +6503,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
 /// We also record the alloca instructions deleted here so that they aren't
 /// subsequently handed to mem2reg to promote.
 bool SROA::deleteDeadInstructions(
-    SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
+    AllocaInst *AI, SmallPtrSetImpl<AllocaInst *> &DeletedAllocas) {
   bool Changed = false;
   while (!DeadInsts.empty()) {
     Instruction *I = dyn_cast_or_null<Instruction>(DeadInsts.pop_back_val());
@@ -6531,6 +6535,17 @@ bool SROA::deleteDeadInstructions(
     I->eraseFromParent();
     Changed = true;
   }
+
+  if (!DeletedAllocas.contains(AI) && AI->hasNUndroppableUses(0)) {
+    DeletedAllocas.insert(AI);
+    AI->dropDroppableUses();
+    for (DbgVariableRecord *OldDII : findDVRDeclares(AI))
+      OldDII->eraseFromParent();
+    ++NumDeleted;
+    AI->eraseFromParent();
+    Changed = true;
+  }
+
   return Changed;
 }
 /// Promote the allocas, using the best available technique.
@@ -6578,12 +6593,12 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
 
   do {
     while (!Worklist.empty()) {
-      auto [IterationChanged, IterationCFGChanged] =
-          runOnAlloca(*Worklist.pop_back_val());
+      AllocaInst *AI = Worklist.pop_back_val();
+      auto [IterationChanged, IterationCFGChanged] = runOnAlloca(*AI);
       Changed |= IterationChanged;
       CFGChanged |= IterationCFGChanged;
 
-      Changed |= deleteDeadInstructions(DeletedAllocas);
+      Changed |= deleteDeadInstructions(AI, DeletedAllocas);
 
       // Remove the deleted allocas from various lists so that we don't try to
       // continue processing them.

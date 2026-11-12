@@ -2,6 +2,7 @@
 // heap allocations, while a function without a policy of its own is unaffected.
 
 // RUN: fir-opt --stack-arrays %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="legacy=true stack-arrays=true" %s | FileCheck %s
 
 // CHECK-LABEL: func.func @opted_out
 // CHECK: fir.allocmem !fir.array<42xi32>

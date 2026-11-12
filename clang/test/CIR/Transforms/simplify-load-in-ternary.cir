@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -cir-simplify | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+// The load inside the true branch folds to the stored constant, which leaves
+// a branch that only yields, so the ternary then simplifies to a select. The
+// second rewrite depends on the first, so both must run in the same driver.
+cir.func @load_in_ternary_branch(%cond: !cir.bool, %other: !s32i) -> !s32i {
+  %x = cir.alloca "x" align(4) init const : !cir.ptr<!s32i>
+  %init = cir.const #cir.int<42> : !s32i
+  cir.store %init, %x : !s32i, !cir.ptr<!s32i>
+  %r = cir.ternary(%cond, true {
+    %v = cir.load %x : !cir.ptr<!s32i>, !s32i
+    cir.yield %v : !s32i
+  }, false {
+    cir.yield %other : !s32i
+  }) : (!cir.bool) -> !s32i
+  cir.return %r : !s32i
+}
+
+// CHECK-LABEL: cir.func @load_in_ternary_branch
+// CHECK-SAME: (%[[COND:.*]]: !cir.bool, %[[OTHER:.*]]: !s32i)
+// CHECK: %[[INIT:.*]] = cir.const #cir.int<42> : !s32i
+// CHECK-NOT: cir.ternary
+// CHECK-NOT: cir.load
+// CHECK: %[[R:.*]] = cir.select if %[[COND]] then %[[INIT]] else %[[OTHER]] : (!cir.bool, !s32i, !s32i) -> !s32i
+// CHECK: cir.return %[[R]] : !s32i

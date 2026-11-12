@@ -257,27 +257,29 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
       case TypeCategory::Unsigned:
       case TypeCategory::Real:
       case TypeCategory::Complex:
-        return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});
+        return &MakeNumericType(
+            dyType->category(), MakeKindExpr(dyType->kind()));
       case TypeCategory::Character:
         if (const ParamValue * lenParam{dyType->charLengthParamValue()}) {
           return &MakeCharacterType(
-              ParamValue{*lenParam}, KindExpr{dyType->kind()});
+              ParamValue{*lenParam}, MakeKindExpr(dyType->kind()));
         } else {
           auto lenExpr{dyType->GetCharLength()};
           if (!lenExpr) {
-            lenExpr =
-                std::get<evaluate::Expr<evaluate::SomeCharacter>>(expr.u).LEN();
+            lenExpr = std::get<evaluate::Expr<
+                evaluate::Type<common::TypeCategory::Character>>>(expr.u)
+                          .LEN();
           }
           if (lenExpr) {
             return &MakeCharacterType(
                 ParamValue{SomeIntExpr{std::move(*lenExpr)},
                     common::TypeParamAttr::Len},
-                KindExpr{dyType->kind()});
+                MakeKindExpr(dyType->kind()));
           }
         }
         break;
       case TypeCategory::Logical:
-        return &MakeLogicalType(KindExpr{dyType->kind()});
+        return &MakeLogicalType(MakeKindExpr(dyType->kind()));
       case TypeCategory::Derived:
         return &MakeDerivedType(dyType->IsPolymorphic()
                 ? DeclTypeSpec::ClassDerived

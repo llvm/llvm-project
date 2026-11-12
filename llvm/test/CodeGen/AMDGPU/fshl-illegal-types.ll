@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
-; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck %s --implicit-check-not=s_swappc_b64
 
 ; The generated remainder and funnel-shift expansions are long and subject to
 ; frequent changes. Check that SelectionDAG can lower variable funnel shifts
