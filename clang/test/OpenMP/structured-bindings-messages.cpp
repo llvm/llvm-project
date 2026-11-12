@@ -185,6 +185,8 @@ auto [ga, gb] = std::make_pair(1, 2);
 void test_pair_global() {
 #pragma omp parallel private(ga)
   use(ga);
+#pragma omp task
+  use(ga);
 #pragma omp task firstprivate(ga)
   {
     use(ga);

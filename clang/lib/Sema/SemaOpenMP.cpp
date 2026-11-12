@@ -1350,19 +1350,24 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   const auto *FD = dyn_cast<FieldDecl>(D);
   DSAVarData DVar;
   if (Iter == end()) {
+    // A binding has the storage of the variable it decomposes.
+    const VarDecl *StorageVD = VD;
+    if (const auto *BD = dyn_cast<BindingDecl>(D))
+      StorageVD = BD->getDecomposedDecl();
     // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
     // in a region but not in construct]
     //  File-scope or namespace-scope variables referenced in called routines
     //  in the region are shared unless they appear in a threadprivate
     //  directive.
-    if (VD && !VD->isFunctionOrMethodVarDecl() && !isa<ParmVarDecl>(VD))
+    if (StorageVD && !StorageVD->isFunctionOrMethodVarDecl() &&
+        !isa<ParmVarDecl>(StorageVD))
       DVar.CKind = OMPC_shared;
 
     // OpenMP [2.9.1.2, Data-sharing Attribute Rules for Variables Referenced
     // in a region but not in construct]
     //  Variables with static storage duration that are declared in called
     //  routines in the region are shared.
-    if (VD && VD->hasGlobalStorage())
+    if (StorageVD && StorageVD->hasGlobalStorage())
       DVar.CKind = OMPC_shared;
 
     // Non-static data members are shared by default.
