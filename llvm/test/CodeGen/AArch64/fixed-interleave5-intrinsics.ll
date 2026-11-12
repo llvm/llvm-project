@@ -4,92 +4,42 @@
 define void @interleave5_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q2, [x0, #48]
-; CHECK-NEXT:    ldr q7, [x0]
-; CHECK-NEXT:    ldp q16, q0, [x0, #16]
-; CHECK-NEXT:    mov v17.16b, v7.16b
-; CHECK-NEXT:    dup v4.16b, v2.b[12]
-; CHECK-NEXT:    dup v3.16b, v1.b[9]
-; CHECK-NEXT:    dup v5.16b, v0.b[6]
-; CHECK-NEXT:    dup v6.16b, v16.b[3]
-; CHECK-NEXT:    mov v17.b[1], v16.b[0]
-; CHECK-NEXT:    mov v4.b[1], v7.b[13]
-; CHECK-NEXT:    mov v3.b[1], v2.b[9]
-; CHECK-NEXT:    mov v5.b[1], v1.b[6]
-; CHECK-NEXT:    mov v6.b[1], v0.b[3]
-; CHECK-NEXT:    mov v17.b[2], v0.b[0]
-; CHECK-NEXT:    mov v4.b[2], v16.b[13]
-; CHECK-NEXT:    mov v3.b[2], v7.b[10]
-; CHECK-NEXT:    mov v5.b[2], v2.b[6]
-; CHECK-NEXT:    mov v6.b[2], v1.b[3]
-; CHECK-NEXT:    mov v17.b[3], v1.b[0]
-; CHECK-NEXT:    mov v4.b[3], v0.b[13]
-; CHECK-NEXT:    mov v3.b[3], v16.b[10]
-; CHECK-NEXT:    mov v5.b[3], v7.b[7]
-; CHECK-NEXT:    mov v6.b[3], v2.b[3]
-; CHECK-NEXT:    mov v17.b[4], v2.b[0]
-; CHECK-NEXT:    mov v4.b[4], v1.b[13]
-; CHECK-NEXT:    mov v3.b[4], v0.b[10]
-; CHECK-NEXT:    mov v5.b[4], v16.b[7]
-; CHECK-NEXT:    mov v6.b[4], v7.b[4]
-; CHECK-NEXT:    mov v17.b[5], v7.b[1]
-; CHECK-NEXT:    mov v4.b[5], v2.b[13]
-; CHECK-NEXT:    mov v3.b[5], v1.b[10]
-; CHECK-NEXT:    mov v5.b[5], v0.b[7]
-; CHECK-NEXT:    mov v6.b[5], v16.b[4]
-; CHECK-NEXT:    mov v17.b[6], v16.b[1]
-; CHECK-NEXT:    mov v4.b[6], v7.b[14]
-; CHECK-NEXT:    mov v3.b[6], v2.b[10]
-; CHECK-NEXT:    mov v5.b[6], v1.b[7]
-; CHECK-NEXT:    mov v6.b[6], v0.b[4]
-; CHECK-NEXT:    mov v17.b[7], v0.b[1]
-; CHECK-NEXT:    mov v4.b[7], v16.b[14]
-; CHECK-NEXT:    mov v3.b[7], v7.b[11]
-; CHECK-NEXT:    mov v5.b[7], v2.b[7]
-; CHECK-NEXT:    mov v6.b[7], v1.b[4]
-; CHECK-NEXT:    mov v17.b[8], v1.b[1]
-; CHECK-NEXT:    mov v4.b[8], v0.b[14]
-; CHECK-NEXT:    mov v3.b[8], v16.b[11]
-; CHECK-NEXT:    mov v5.b[8], v7.b[8]
-; CHECK-NEXT:    mov v6.b[8], v2.b[4]
-; CHECK-NEXT:    mov v17.b[9], v2.b[1]
-; CHECK-NEXT:    mov v4.b[9], v1.b[14]
-; CHECK-NEXT:    mov v3.b[9], v0.b[11]
-; CHECK-NEXT:    mov v5.b[9], v16.b[8]
-; CHECK-NEXT:    mov v6.b[9], v7.b[5]
-; CHECK-NEXT:    mov v17.b[10], v7.b[2]
-; CHECK-NEXT:    mov v4.b[10], v2.b[14]
-; CHECK-NEXT:    mov v3.b[10], v1.b[11]
-; CHECK-NEXT:    mov v5.b[10], v0.b[8]
-; CHECK-NEXT:    mov v6.b[10], v16.b[5]
-; CHECK-NEXT:    mov v17.b[11], v16.b[2]
-; CHECK-NEXT:    mov v4.b[11], v7.b[15]
-; CHECK-NEXT:    mov v3.b[11], v2.b[11]
-; CHECK-NEXT:    mov v5.b[11], v1.b[8]
-; CHECK-NEXT:    mov v6.b[11], v0.b[5]
-; CHECK-NEXT:    mov v17.b[12], v0.b[2]
-; CHECK-NEXT:    mov v4.b[12], v16.b[15]
-; CHECK-NEXT:    mov v3.b[12], v7.b[12]
-; CHECK-NEXT:    mov v5.b[12], v2.b[8]
-; CHECK-NEXT:    mov v6.b[12], v1.b[5]
-; CHECK-NEXT:    mov v17.b[13], v1.b[2]
-; CHECK-NEXT:    mov v4.b[13], v0.b[15]
-; CHECK-NEXT:    mov v3.b[13], v16.b[12]
-; CHECK-NEXT:    mov v5.b[13], v7.b[9]
-; CHECK-NEXT:    mov v6.b[13], v2.b[5]
-; CHECK-NEXT:    mov v17.b[14], v2.b[2]
-; CHECK-NEXT:    mov v4.b[14], v1.b[15]
-; CHECK-NEXT:    mov v3.b[14], v0.b[12]
-; CHECK-NEXT:    mov v5.b[14], v16.b[9]
-; CHECK-NEXT:    mov v6.b[14], v7.b[6]
-; CHECK-NEXT:    mov v17.b[15], v7.b[3]
-; CHECK-NEXT:    mov v4.b[15], v2.b[15]
-; CHECK-NEXT:    mov v3.b[15], v1.b[12]
-; CHECK-NEXT:    mov v5.b[15], v0.b[9]
-; CHECK-NEXT:    mov v6.b[15], v16.b[6]
-; CHECK-NEXT:    str q17, [x1]
-; CHECK-NEXT:    stp q3, q4, [x1, #48]
-; CHECK-NEXT:    stp q6, q5, [x1, #16]
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    adrp x8, .LCPI0_8
+; CHECK-NEXT:    adrp x9, .LCPI0_4
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI0_8]
+; CHECK-NEXT:    adrp x8, .LCPI0_6
+; CHECK-NEXT:    ldr q6, [x9, :lo12:.LCPI0_4]
+; CHECK-NEXT:    ldr q16, [x0, #64]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI0_6]
+; CHECK-NEXT:    adrp x8, .LCPI0_2
+; CHECK-NEXT:    adrp x9, .LCPI0_9
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI0_2]
+; CHECK-NEXT:    adrp x8, .LCPI0_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_7]
+; CHECK-NEXT:    adrp x8, .LCPI0_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI0_5]
+; CHECK-NEXT:    adrp x8, .LCPI0_3
+; CHECK-NEXT:    ldr q18, [x9, :lo12:.LCPI0_9]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI0_3]
+; CHECK-NEXT:    adrp x8, .LCPI0_1
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI0_1]
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v18.16b
+; CHECK-NEXT:    tbx v6.16b, { v16.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v3.16b
+; CHECK-NEXT:    tbx v4.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    stp q7, q5, [x1, #48]
+; CHECK-NEXT:    stp q0, q6, [x1, #16]
+; CHECK-NEXT:    str q4, [x1]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 16
   %p2 = getelementptr i8, ptr %src, i64 32
@@ -108,93 +58,42 @@ define void @interleave5_i8(ptr %src, ptr %dst) {
 define void @deinterleave5_i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q6, [x0]
-; CHECK-NEXT:    dup v2.16b, v0.b[1]
-; CHECK-NEXT:    dup v1.16b, v0.b[2]
-; CHECK-NEXT:    mov v5.16b, v0.16b
-; CHECK-NEXT:    dup v3.16b, v0.b[3]
-; CHECK-NEXT:    dup v4.16b, v0.b[4]
-; CHECK-NEXT:    mov v5.b[1], v0.b[5]
-; CHECK-NEXT:    mov v2.b[1], v0.b[6]
-; CHECK-NEXT:    mov v1.b[1], v0.b[7]
-; CHECK-NEXT:    mov v3.b[1], v0.b[8]
-; CHECK-NEXT:    mov v4.b[1], v0.b[9]
-; CHECK-NEXT:    mov v5.b[2], v0.b[10]
-; CHECK-NEXT:    mov v2.b[2], v0.b[11]
-; CHECK-NEXT:    mov v1.b[2], v0.b[12]
-; CHECK-NEXT:    mov v3.b[2], v0.b[13]
-; CHECK-NEXT:    mov v4.b[2], v0.b[14]
-; CHECK-NEXT:    mov v5.b[3], v0.b[15]
-; CHECK-NEXT:    mov v2.b[3], v6.b[0]
-; CHECK-NEXT:    mov v1.b[3], v6.b[1]
-; CHECK-NEXT:    mov v3.b[3], v6.b[2]
-; CHECK-NEXT:    mov v4.b[3], v6.b[3]
-; CHECK-NEXT:    ldr q0, [x0, #32]
-; CHECK-NEXT:    mov v5.b[4], v6.b[4]
-; CHECK-NEXT:    mov v2.b[4], v6.b[5]
-; CHECK-NEXT:    mov v1.b[4], v6.b[6]
-; CHECK-NEXT:    mov v3.b[4], v6.b[7]
-; CHECK-NEXT:    mov v4.b[4], v6.b[8]
-; CHECK-NEXT:    mov v5.b[5], v6.b[9]
-; CHECK-NEXT:    mov v2.b[5], v6.b[10]
-; CHECK-NEXT:    mov v1.b[5], v6.b[11]
-; CHECK-NEXT:    mov v3.b[5], v6.b[12]
-; CHECK-NEXT:    mov v4.b[5], v6.b[13]
-; CHECK-NEXT:    mov v5.b[6], v6.b[14]
-; CHECK-NEXT:    mov v2.b[6], v6.b[15]
-; CHECK-NEXT:    mov v1.b[6], v0.b[0]
-; CHECK-NEXT:    mov v3.b[6], v0.b[1]
-; CHECK-NEXT:    mov v4.b[6], v0.b[2]
-; CHECK-NEXT:    ldr q6, [x0, #48]
-; CHECK-NEXT:    mov v5.b[7], v0.b[3]
-; CHECK-NEXT:    mov v2.b[7], v0.b[4]
-; CHECK-NEXT:    mov v1.b[7], v0.b[5]
-; CHECK-NEXT:    mov v3.b[7], v0.b[6]
-; CHECK-NEXT:    mov v4.b[7], v0.b[7]
-; CHECK-NEXT:    mov v5.b[8], v0.b[8]
-; CHECK-NEXT:    mov v2.b[8], v0.b[9]
-; CHECK-NEXT:    mov v1.b[8], v0.b[10]
-; CHECK-NEXT:    mov v3.b[8], v0.b[11]
-; CHECK-NEXT:    mov v4.b[8], v0.b[12]
-; CHECK-NEXT:    mov v5.b[9], v0.b[13]
-; CHECK-NEXT:    mov v2.b[9], v0.b[14]
-; CHECK-NEXT:    mov v1.b[9], v0.b[15]
-; CHECK-NEXT:    mov v3.b[9], v6.b[0]
-; CHECK-NEXT:    mov v4.b[9], v6.b[1]
-; CHECK-NEXT:    ldr q0, [x0, #64]
-; CHECK-NEXT:    mov v5.b[10], v6.b[2]
-; CHECK-NEXT:    mov v2.b[10], v6.b[3]
-; CHECK-NEXT:    mov v1.b[10], v6.b[4]
-; CHECK-NEXT:    mov v3.b[10], v6.b[5]
-; CHECK-NEXT:    mov v4.b[10], v6.b[6]
-; CHECK-NEXT:    mov v5.b[11], v6.b[7]
-; CHECK-NEXT:    mov v2.b[11], v6.b[8]
-; CHECK-NEXT:    mov v1.b[11], v6.b[9]
-; CHECK-NEXT:    mov v3.b[11], v6.b[10]
-; CHECK-NEXT:    mov v4.b[11], v6.b[11]
-; CHECK-NEXT:    mov v5.b[12], v6.b[12]
-; CHECK-NEXT:    mov v2.b[12], v6.b[13]
-; CHECK-NEXT:    mov v1.b[12], v6.b[14]
-; CHECK-NEXT:    mov v3.b[12], v6.b[15]
-; CHECK-NEXT:    mov v4.b[12], v0.b[0]
-; CHECK-NEXT:    mov v5.b[13], v0.b[1]
-; CHECK-NEXT:    mov v2.b[13], v0.b[2]
-; CHECK-NEXT:    mov v1.b[13], v0.b[3]
-; CHECK-NEXT:    mov v3.b[13], v0.b[4]
-; CHECK-NEXT:    mov v4.b[13], v0.b[5]
-; CHECK-NEXT:    mov v5.b[14], v0.b[6]
-; CHECK-NEXT:    mov v2.b[14], v0.b[7]
-; CHECK-NEXT:    mov v1.b[14], v0.b[8]
-; CHECK-NEXT:    mov v3.b[14], v0.b[9]
-; CHECK-NEXT:    mov v4.b[14], v0.b[10]
-; CHECK-NEXT:    mov v5.b[15], v0.b[11]
-; CHECK-NEXT:    mov v2.b[15], v0.b[12]
-; CHECK-NEXT:    mov v1.b[15], v0.b[13]
-; CHECK-NEXT:    mov v3.b[15], v0.b[14]
-; CHECK-NEXT:    mov v4.b[15], v0.b[15]
-; CHECK-NEXT:    stp q5, q2, [x1]
-; CHECK-NEXT:    stp q1, q3, [x1, #32]
-; CHECK-NEXT:    str q4, [x1, #64]
+; CHECK-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    adrp x8, .LCPI1_8
+; CHECK-NEXT:    adrp x9, .LCPI1_2
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI1_8]
+; CHECK-NEXT:    adrp x8, .LCPI1_6
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q17, [x9, :lo12:.LCPI1_2]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI1_6]
+; CHECK-NEXT:    adrp x8, .LCPI1_4
+; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI1_4]
+; CHECK-NEXT:    adrp x8, .LCPI1_9
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI1_9]
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    adrp x8, .LCPI1_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_7]
+; CHECK-NEXT:    adrp x8, .LCPI1_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI1_5]
+; CHECK-NEXT:    adrp x8, .LCPI1_3
+; CHECK-NEXT:    tbx v6.16b, { v4.16b }, v18.16b
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI1_3]
+; CHECK-NEXT:    adrp x8, .LCPI1_1
+; CHECK-NEXT:    tbx v7.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_1]
+; CHECK-NEXT:    tbx v16.16b, { v4.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v3.16b
+; CHECK-NEXT:    tbx v5.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q6, q7, [x1]
+; CHECK-NEXT:    stp q16, q0, [x1, #32]
+; CHECK-NEXT:    str q5, [x1, #64]
 ; CHECK-NEXT:    ret
   %wide = load <80 x i8>, ptr %src, align 16
   %parts = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.vector.deinterleave5.v80i8(<80 x i8> %wide)
@@ -218,51 +117,22 @@ define void @deinterleave5_i8(ptr %src, ptr %dst) {
 define void @interleave5_v8i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp d1, d0, [x0]
-; CHECK-NEXT:    ldr d6, [x0, #32]
-; CHECK-NEXT:    ldp d3, d5, [x0, #16]
-; CHECK-NEXT:    dup v2.16b, v0.b[3]
-; CHECK-NEXT:    mov v4.16b, v1.16b
-; CHECK-NEXT:    dup v7.16b, v3.b[6]
-; CHECK-NEXT:    mov v4.b[1], v0.b[0]
-; CHECK-NEXT:    mov v2.b[1], v3.b[3]
-; CHECK-NEXT:    mov v7.b[1], v5.b[6]
-; CHECK-NEXT:    mov v4.b[2], v3.b[0]
-; CHECK-NEXT:    mov v2.b[2], v5.b[3]
-; CHECK-NEXT:    mov v7.b[2], v6.b[6]
-; CHECK-NEXT:    mov v4.b[3], v5.b[0]
-; CHECK-NEXT:    mov v2.b[3], v6.b[3]
-; CHECK-NEXT:    mov v7.b[3], v1.b[7]
-; CHECK-NEXT:    mov v4.b[4], v6.b[0]
-; CHECK-NEXT:    mov v2.b[4], v1.b[4]
-; CHECK-NEXT:    mov v7.b[4], v0.b[7]
-; CHECK-NEXT:    mov v4.b[5], v1.b[1]
-; CHECK-NEXT:    mov v2.b[5], v0.b[4]
-; CHECK-NEXT:    mov v7.b[5], v3.b[7]
-; CHECK-NEXT:    mov v4.b[6], v0.b[1]
-; CHECK-NEXT:    mov v2.b[6], v3.b[4]
-; CHECK-NEXT:    mov v7.b[6], v5.b[7]
-; CHECK-NEXT:    mov v4.b[7], v3.b[1]
-; CHECK-NEXT:    mov v2.b[7], v5.b[4]
-; CHECK-NEXT:    mov v7.b[7], v6.b[7]
-; CHECK-NEXT:    mov v4.b[8], v5.b[1]
-; CHECK-NEXT:    mov v2.b[8], v6.b[4]
-; CHECK-NEXT:    str d7, [x1, #32]
-; CHECK-NEXT:    mov v4.b[9], v6.b[1]
-; CHECK-NEXT:    mov v2.b[9], v1.b[5]
-; CHECK-NEXT:    mov v4.b[10], v1.b[2]
-; CHECK-NEXT:    mov v2.b[10], v0.b[5]
-; CHECK-NEXT:    mov v4.b[11], v0.b[2]
-; CHECK-NEXT:    mov v2.b[11], v3.b[5]
-; CHECK-NEXT:    mov v4.b[12], v3.b[2]
-; CHECK-NEXT:    mov v2.b[12], v5.b[5]
-; CHECK-NEXT:    mov v4.b[13], v5.b[2]
-; CHECK-NEXT:    mov v2.b[13], v6.b[5]
-; CHECK-NEXT:    mov v4.b[14], v6.b[2]
-; CHECK-NEXT:    mov v2.b[14], v1.b[6]
-; CHECK-NEXT:    mov v4.b[15], v1.b[3]
-; CHECK-NEXT:    mov v2.b[15], v0.b[6]
-; CHECK-NEXT:    stp q4, q2, [x1]
+; CHECK-NEXT:    ldp d0, d3, [x0]
+; CHECK-NEXT:    adrp x8, .LCPI2_2
+; CHECK-NEXT:    ldp d1, d4, [x0, #16]
+; CHECK-NEXT:    ldr d2, [x0, #32]
+; CHECK-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI2_2]
+; CHECK-NEXT:    adrp x8, .LCPI2_1
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI2_1]
+; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    ldr d5, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    tbl v3.16b, { v0.16b, v1.16b, v2.16b }, v3.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b }, v4.16b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b }, v5.8b
+; CHECK-NEXT:    stp q4, q3, [x1]
+; CHECK-NEXT:    str d0, [x1, #32]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 8
   %p2 = getelementptr i8, ptr %src, i64 16
@@ -281,52 +151,26 @@ define void @interleave5_v8i8(ptr %src, ptr %dst) {
 define void @deinterleave5_v8i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q6, [x0]
-; CHECK-NEXT:    dup v1.8b, v0.b[2]
-; CHECK-NEXT:    dup v3.8b, v0.b[1]
-; CHECK-NEXT:    mov d5, v0.d[1]
-; CHECK-NEXT:    dup v2.8b, v0.b[4]
-; CHECK-NEXT:    dup v4.8b, v0.b[3]
-; CHECK-NEXT:    mov v1.b[1], v0.b[7]
-; CHECK-NEXT:    mov v3.b[1], v0.b[6]
-; CHECK-NEXT:    mov v0.b[1], v0.b[5]
-; CHECK-NEXT:    mov v4.b[1], v5.b[0]
-; CHECK-NEXT:    mov v2.b[1], v5.b[1]
-; CHECK-NEXT:    mov v0.b[2], v5.b[2]
-; CHECK-NEXT:    mov v3.b[2], v5.b[3]
-; CHECK-NEXT:    mov v1.b[2], v5.b[4]
-; CHECK-NEXT:    mov v4.b[2], v5.b[5]
-; CHECK-NEXT:    mov v2.b[2], v5.b[6]
-; CHECK-NEXT:    mov v0.b[3], v5.b[7]
-; CHECK-NEXT:    mov v3.b[3], v6.b[0]
-; CHECK-NEXT:    mov v1.b[3], v6.b[1]
-; CHECK-NEXT:    mov v4.b[3], v6.b[2]
-; CHECK-NEXT:    mov d5, v6.d[1]
-; CHECK-NEXT:    mov v2.b[3], v6.b[3]
-; CHECK-NEXT:    mov v0.b[4], v6.b[4]
-; CHECK-NEXT:    mov v3.b[4], v6.b[5]
-; CHECK-NEXT:    mov v1.b[4], v6.b[6]
-; CHECK-NEXT:    mov v4.b[4], v6.b[7]
-; CHECK-NEXT:    mov v2.b[4], v5.b[0]
-; CHECK-NEXT:    ldr d6, [x0, #32]
-; CHECK-NEXT:    mov v0.b[5], v5.b[1]
-; CHECK-NEXT:    mov v3.b[5], v5.b[2]
-; CHECK-NEXT:    mov v1.b[5], v5.b[3]
-; CHECK-NEXT:    mov v4.b[5], v5.b[4]
-; CHECK-NEXT:    mov v2.b[5], v5.b[5]
-; CHECK-NEXT:    mov v0.b[6], v5.b[6]
-; CHECK-NEXT:    mov v3.b[6], v5.b[7]
-; CHECK-NEXT:    mov v1.b[6], v6.b[0]
-; CHECK-NEXT:    mov v4.b[6], v6.b[1]
-; CHECK-NEXT:    mov v2.b[6], v6.b[2]
-; CHECK-NEXT:    mov v0.b[7], v6.b[3]
-; CHECK-NEXT:    mov v3.b[7], v6.b[4]
-; CHECK-NEXT:    mov v1.b[7], v6.b[5]
-; CHECK-NEXT:    mov v4.b[7], v6.b[6]
-; CHECK-NEXT:    mov v2.b[7], v6.b[7]
-; CHECK-NEXT:    stp d0, d3, [x1]
-; CHECK-NEXT:    stp d1, d4, [x1, #16]
-; CHECK-NEXT:    str d2, [x1, #32]
+; CHECK-NEXT:    adrp x8, .LCPI3_4
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI3_4]
+; CHECK-NEXT:    adrp x8, .LCPI3_3
+; CHECK-NEXT:    ldr d2, [x0, #32]
+; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI3_3]
+; CHECK-NEXT:    adrp x8, .LCPI3_2
+; CHECK-NEXT:    ldr d5, [x8, :lo12:.LCPI3_2]
+; CHECK-NEXT:    adrp x8, .LCPI3_1
+; CHECK-NEXT:    tbl v3.8b, { v0.16b, v1.16b, v2.16b }, v3.8b
+; CHECK-NEXT:    ldr d6, [x8, :lo12:.LCPI3_1]
+; CHECK-NEXT:    adrp x8, .LCPI3_0
+; CHECK-NEXT:    tbl v4.8b, { v0.16b, v1.16b, v2.16b }, v4.8b
+; CHECK-NEXT:    ldr d7, [x8, :lo12:.LCPI3_0]
+; CHECK-NEXT:    tbl v5.8b, { v0.16b, v1.16b, v2.16b }, v5.8b
+; CHECK-NEXT:    tbl v6.8b, { v0.16b, v1.16b, v2.16b }, v6.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b }, v7.8b
+; CHECK-NEXT:    stp d3, d4, [x1]
+; CHECK-NEXT:    stp d5, d6, [x1, #16]
+; CHECK-NEXT:    str d0, [x1, #32]
 ; CHECK-NEXT:    ret
   %wide = load <40 x i8>, ptr %src, align 8
   %parts = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave5.v40i8(<40 x i8> %wide)
@@ -350,52 +194,42 @@ define void @deinterleave5_v8i8(ptr %src, ptr %dst) {
 define void @interleave5_v8i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0, #16]
-; CHECK-NEXT:    ldr q6, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #48]
-; CHECK-NEXT:    mov v17.16b, v6.16b
-; CHECK-NEXT:    dup v4.8h, v0.h[6]
-; CHECK-NEXT:    dup v7.8h, v1.h[3]
-; CHECK-NEXT:    dup v5.8h, v3.h[4]
-; CHECK-NEXT:    dup v16.8h, v2.h[1]
-; CHECK-NEXT:    mov v17.h[1], v1.h[0]
-; CHECK-NEXT:    mov v4.h[1], v2.h[6]
-; CHECK-NEXT:    mov v7.h[1], v0.h[3]
-; CHECK-NEXT:    mov v5.h[1], v6.h[5]
-; CHECK-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-NEXT:    mov v17.h[2], v0.h[0]
-; CHECK-NEXT:    mov v4.h[2], v3.h[6]
-; CHECK-NEXT:    mov v7.h[2], v2.h[3]
-; CHECK-NEXT:    mov v5.h[2], v1.h[5]
-; CHECK-NEXT:    mov v16.h[2], v6.h[2]
-; CHECK-NEXT:    mov v17.h[3], v2.h[0]
-; CHECK-NEXT:    mov v4.h[3], v6.h[7]
-; CHECK-NEXT:    mov v7.h[3], v3.h[3]
-; CHECK-NEXT:    mov v5.h[3], v0.h[5]
-; CHECK-NEXT:    mov v16.h[3], v1.h[2]
-; CHECK-NEXT:    mov v17.h[4], v3.h[0]
-; CHECK-NEXT:    mov v4.h[4], v1.h[7]
-; CHECK-NEXT:    mov v7.h[4], v6.h[4]
-; CHECK-NEXT:    mov v5.h[4], v2.h[5]
-; CHECK-NEXT:    mov v16.h[4], v0.h[2]
-; CHECK-NEXT:    mov v17.h[5], v6.h[1]
-; CHECK-NEXT:    mov v4.h[5], v0.h[7]
-; CHECK-NEXT:    mov v7.h[5], v1.h[4]
-; CHECK-NEXT:    mov v5.h[5], v3.h[5]
-; CHECK-NEXT:    mov v16.h[5], v2.h[2]
-; CHECK-NEXT:    mov v17.h[6], v1.h[1]
-; CHECK-NEXT:    mov v4.h[6], v2.h[7]
-; CHECK-NEXT:    mov v7.h[6], v0.h[4]
-; CHECK-NEXT:    mov v5.h[6], v6.h[6]
-; CHECK-NEXT:    mov v16.h[6], v3.h[2]
-; CHECK-NEXT:    mov v17.h[7], v0.h[1]
-; CHECK-NEXT:    mov v4.h[7], v3.h[7]
-; CHECK-NEXT:    mov v7.h[7], v2.h[4]
-; CHECK-NEXT:    mov v5.h[7], v1.h[6]
-; CHECK-NEXT:    mov v16.h[7], v6.h[3]
-; CHECK-NEXT:    str q17, [x1]
-; CHECK-NEXT:    stp q16, q7, [x1, #16]
-; CHECK-NEXT:    stp q5, q4, [x1, #48]
+; CHECK-NEXT:    adrp x8, .LCPI4_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    adrp x8, .LCPI4_8
+; CHECK-NEXT:    adrp x9, .LCPI4_4
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI4_8]
+; CHECK-NEXT:    adrp x8, .LCPI4_6
+; CHECK-NEXT:    ldr q6, [x9, :lo12:.LCPI4_4]
+; CHECK-NEXT:    ldr q16, [x0, #64]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI4_6]
+; CHECK-NEXT:    adrp x8, .LCPI4_2
+; CHECK-NEXT:    adrp x9, .LCPI4_9
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI4_2]
+; CHECK-NEXT:    adrp x8, .LCPI4_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_7]
+; CHECK-NEXT:    adrp x8, .LCPI4_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_5]
+; CHECK-NEXT:    adrp x8, .LCPI4_3
+; CHECK-NEXT:    ldr q18, [x9, :lo12:.LCPI4_9]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI4_3]
+; CHECK-NEXT:    adrp x8, .LCPI4_1
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_1]
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v18.16b
+; CHECK-NEXT:    tbx v6.16b, { v16.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v3.16b
+; CHECK-NEXT:    tbx v4.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    stp q7, q5, [x1, #48]
+; CHECK-NEXT:    stp q0, q6, [x1, #16]
+; CHECK-NEXT:    str q4, [x1]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 16
   %p2 = getelementptr i8, ptr %src, i64 32
@@ -414,52 +248,42 @@ define void @interleave5_v8i16(ptr %src, ptr %dst) {
 define void @deinterleave5_v8i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q5, [x0]
-; CHECK-NEXT:    ldr q6, [x0, #32]
-; CHECK-NEXT:    dup v1.8h, v0.h[2]
-; CHECK-NEXT:    dup v3.8h, v0.h[1]
-; CHECK-NEXT:    dup v2.8h, v0.h[4]
-; CHECK-NEXT:    dup v4.8h, v0.h[3]
-; CHECK-NEXT:    mov v1.h[1], v0.h[7]
-; CHECK-NEXT:    mov v3.h[1], v0.h[6]
-; CHECK-NEXT:    mov v0.h[1], v0.h[5]
-; CHECK-NEXT:    mov v4.h[1], v5.h[0]
-; CHECK-NEXT:    mov v2.h[1], v5.h[1]
-; CHECK-NEXT:    mov v0.h[2], v5.h[2]
-; CHECK-NEXT:    mov v3.h[2], v5.h[3]
-; CHECK-NEXT:    mov v1.h[2], v5.h[4]
-; CHECK-NEXT:    mov v4.h[2], v5.h[5]
-; CHECK-NEXT:    mov v2.h[2], v5.h[6]
-; CHECK-NEXT:    mov v0.h[3], v5.h[7]
-; CHECK-NEXT:    mov v3.h[3], v6.h[0]
-; CHECK-NEXT:    mov v1.h[3], v6.h[1]
-; CHECK-NEXT:    mov v4.h[3], v6.h[2]
-; CHECK-NEXT:    mov v2.h[3], v6.h[3]
-; CHECK-NEXT:    ldr q5, [x0, #48]
-; CHECK-NEXT:    mov v0.h[4], v6.h[4]
-; CHECK-NEXT:    mov v3.h[4], v6.h[5]
-; CHECK-NEXT:    mov v1.h[4], v6.h[6]
-; CHECK-NEXT:    mov v4.h[4], v6.h[7]
-; CHECK-NEXT:    mov v2.h[4], v5.h[0]
-; CHECK-NEXT:    ldr q6, [x0, #64]
-; CHECK-NEXT:    mov v0.h[5], v5.h[1]
-; CHECK-NEXT:    mov v3.h[5], v5.h[2]
-; CHECK-NEXT:    mov v1.h[5], v5.h[3]
-; CHECK-NEXT:    mov v4.h[5], v5.h[4]
-; CHECK-NEXT:    mov v2.h[5], v5.h[5]
-; CHECK-NEXT:    mov v0.h[6], v5.h[6]
-; CHECK-NEXT:    mov v3.h[6], v5.h[7]
-; CHECK-NEXT:    mov v1.h[6], v6.h[0]
-; CHECK-NEXT:    mov v4.h[6], v6.h[1]
-; CHECK-NEXT:    mov v2.h[6], v6.h[2]
-; CHECK-NEXT:    mov v0.h[7], v6.h[3]
-; CHECK-NEXT:    mov v3.h[7], v6.h[4]
-; CHECK-NEXT:    mov v1.h[7], v6.h[5]
-; CHECK-NEXT:    mov v4.h[7], v6.h[6]
-; CHECK-NEXT:    mov v2.h[7], v6.h[7]
-; CHECK-NEXT:    stp q0, q3, [x1]
-; CHECK-NEXT:    stp q1, q4, [x1, #32]
-; CHECK-NEXT:    str q2, [x1, #64]
+; CHECK-NEXT:    adrp x8, .LCPI5_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    adrp x8, .LCPI5_8
+; CHECK-NEXT:    adrp x9, .LCPI5_2
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI5_8]
+; CHECK-NEXT:    adrp x8, .LCPI5_6
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q17, [x9, :lo12:.LCPI5_2]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI5_6]
+; CHECK-NEXT:    adrp x8, .LCPI5_4
+; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI5_4]
+; CHECK-NEXT:    adrp x8, .LCPI5_9
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI5_9]
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    adrp x8, .LCPI5_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI5_7]
+; CHECK-NEXT:    adrp x8, .LCPI5_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI5_5]
+; CHECK-NEXT:    adrp x8, .LCPI5_3
+; CHECK-NEXT:    tbx v6.16b, { v4.16b }, v18.16b
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI5_3]
+; CHECK-NEXT:    adrp x8, .LCPI5_1
+; CHECK-NEXT:    tbx v7.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI5_1]
+; CHECK-NEXT:    tbx v16.16b, { v4.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v3.16b
+; CHECK-NEXT:    tbx v5.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q6, q7, [x1]
+; CHECK-NEXT:    stp q16, q0, [x1, #32]
+; CHECK-NEXT:    str q5, [x1, #64]
 ; CHECK-NEXT:    ret
   %wide = load <40 x i16>, ptr %src, align 16
   %parts = call { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave5.v40i16(<40 x i16> %wide)
@@ -483,52 +307,42 @@ define void @deinterleave5_v8i16(ptr %src, ptr %dst) {
 define void @interleave5_v8f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0, #16]
-; CHECK-NEXT:    ldr q6, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #48]
-; CHECK-NEXT:    mov v17.16b, v6.16b
-; CHECK-NEXT:    dup v4.8h, v0.h[6]
-; CHECK-NEXT:    dup v7.8h, v1.h[3]
-; CHECK-NEXT:    dup v5.8h, v3.h[4]
-; CHECK-NEXT:    dup v16.8h, v2.h[1]
-; CHECK-NEXT:    mov v17.h[1], v1.h[0]
-; CHECK-NEXT:    mov v4.h[1], v2.h[6]
-; CHECK-NEXT:    mov v7.h[1], v0.h[3]
-; CHECK-NEXT:    mov v5.h[1], v6.h[5]
-; CHECK-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-NEXT:    mov v17.h[2], v0.h[0]
-; CHECK-NEXT:    mov v4.h[2], v3.h[6]
-; CHECK-NEXT:    mov v7.h[2], v2.h[3]
-; CHECK-NEXT:    mov v5.h[2], v1.h[5]
-; CHECK-NEXT:    mov v16.h[2], v6.h[2]
-; CHECK-NEXT:    mov v17.h[3], v2.h[0]
-; CHECK-NEXT:    mov v4.h[3], v6.h[7]
-; CHECK-NEXT:    mov v7.h[3], v3.h[3]
-; CHECK-NEXT:    mov v5.h[3], v0.h[5]
-; CHECK-NEXT:    mov v16.h[3], v1.h[2]
-; CHECK-NEXT:    mov v17.h[4], v3.h[0]
-; CHECK-NEXT:    mov v4.h[4], v1.h[7]
-; CHECK-NEXT:    mov v7.h[4], v6.h[4]
-; CHECK-NEXT:    mov v5.h[4], v2.h[5]
-; CHECK-NEXT:    mov v16.h[4], v0.h[2]
-; CHECK-NEXT:    mov v17.h[5], v6.h[1]
-; CHECK-NEXT:    mov v4.h[5], v0.h[7]
-; CHECK-NEXT:    mov v7.h[5], v1.h[4]
-; CHECK-NEXT:    mov v5.h[5], v3.h[5]
-; CHECK-NEXT:    mov v16.h[5], v2.h[2]
-; CHECK-NEXT:    mov v17.h[6], v1.h[1]
-; CHECK-NEXT:    mov v4.h[6], v2.h[7]
-; CHECK-NEXT:    mov v7.h[6], v0.h[4]
-; CHECK-NEXT:    mov v5.h[6], v6.h[6]
-; CHECK-NEXT:    mov v16.h[6], v3.h[2]
-; CHECK-NEXT:    mov v17.h[7], v0.h[1]
-; CHECK-NEXT:    mov v4.h[7], v3.h[7]
-; CHECK-NEXT:    mov v7.h[7], v2.h[4]
-; CHECK-NEXT:    mov v5.h[7], v1.h[6]
-; CHECK-NEXT:    mov v16.h[7], v6.h[3]
-; CHECK-NEXT:    str q17, [x1]
-; CHECK-NEXT:    stp q16, q7, [x1, #16]
-; CHECK-NEXT:    stp q5, q4, [x1, #48]
+; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    adrp x8, .LCPI6_8
+; CHECK-NEXT:    adrp x9, .LCPI6_4
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI6_8]
+; CHECK-NEXT:    adrp x8, .LCPI6_6
+; CHECK-NEXT:    ldr q6, [x9, :lo12:.LCPI6_4]
+; CHECK-NEXT:    ldr q16, [x0, #64]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI6_6]
+; CHECK-NEXT:    adrp x8, .LCPI6_2
+; CHECK-NEXT:    adrp x9, .LCPI6_9
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI6_2]
+; CHECK-NEXT:    adrp x8, .LCPI6_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_7]
+; CHECK-NEXT:    adrp x8, .LCPI6_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI6_5]
+; CHECK-NEXT:    adrp x8, .LCPI6_3
+; CHECK-NEXT:    ldr q18, [x9, :lo12:.LCPI6_9]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI6_3]
+; CHECK-NEXT:    adrp x8, .LCPI6_1
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_1]
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v18.16b
+; CHECK-NEXT:    tbx v6.16b, { v16.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v3.16b
+; CHECK-NEXT:    tbx v4.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    stp q7, q5, [x1, #48]
+; CHECK-NEXT:    stp q0, q6, [x1, #16]
+; CHECK-NEXT:    str q4, [x1]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 16
   %p2 = getelementptr i8, ptr %src, i64 32
@@ -547,52 +361,42 @@ define void @interleave5_v8f16(ptr %src, ptr %dst) {
 define void @deinterleave5_v8f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q5, [x0]
-; CHECK-NEXT:    ldr q6, [x0, #32]
-; CHECK-NEXT:    dup v1.8h, v0.h[2]
-; CHECK-NEXT:    dup v3.8h, v0.h[1]
-; CHECK-NEXT:    dup v2.8h, v0.h[4]
-; CHECK-NEXT:    dup v4.8h, v0.h[3]
-; CHECK-NEXT:    mov v1.h[1], v0.h[7]
-; CHECK-NEXT:    mov v3.h[1], v0.h[6]
-; CHECK-NEXT:    mov v0.h[1], v0.h[5]
-; CHECK-NEXT:    mov v4.h[1], v5.h[0]
-; CHECK-NEXT:    mov v2.h[1], v5.h[1]
-; CHECK-NEXT:    mov v0.h[2], v5.h[2]
-; CHECK-NEXT:    mov v3.h[2], v5.h[3]
-; CHECK-NEXT:    mov v1.h[2], v5.h[4]
-; CHECK-NEXT:    mov v4.h[2], v5.h[5]
-; CHECK-NEXT:    mov v2.h[2], v5.h[6]
-; CHECK-NEXT:    mov v0.h[3], v5.h[7]
-; CHECK-NEXT:    mov v3.h[3], v6.h[0]
-; CHECK-NEXT:    mov v1.h[3], v6.h[1]
-; CHECK-NEXT:    mov v4.h[3], v6.h[2]
-; CHECK-NEXT:    mov v2.h[3], v6.h[3]
-; CHECK-NEXT:    ldr q5, [x0, #48]
-; CHECK-NEXT:    mov v0.h[4], v6.h[4]
-; CHECK-NEXT:    mov v3.h[4], v6.h[5]
-; CHECK-NEXT:    mov v1.h[4], v6.h[6]
-; CHECK-NEXT:    mov v4.h[4], v6.h[7]
-; CHECK-NEXT:    mov v2.h[4], v5.h[0]
-; CHECK-NEXT:    ldr q6, [x0, #64]
-; CHECK-NEXT:    mov v0.h[5], v5.h[1]
-; CHECK-NEXT:    mov v3.h[5], v5.h[2]
-; CHECK-NEXT:    mov v1.h[5], v5.h[3]
-; CHECK-NEXT:    mov v4.h[5], v5.h[4]
-; CHECK-NEXT:    mov v2.h[5], v5.h[5]
-; CHECK-NEXT:    mov v0.h[6], v5.h[6]
-; CHECK-NEXT:    mov v3.h[6], v5.h[7]
-; CHECK-NEXT:    mov v1.h[6], v6.h[0]
-; CHECK-NEXT:    mov v4.h[6], v6.h[1]
-; CHECK-NEXT:    mov v2.h[6], v6.h[2]
-; CHECK-NEXT:    mov v0.h[7], v6.h[3]
-; CHECK-NEXT:    mov v3.h[7], v6.h[4]
-; CHECK-NEXT:    mov v1.h[7], v6.h[5]
-; CHECK-NEXT:    mov v4.h[7], v6.h[6]
-; CHECK-NEXT:    mov v2.h[7], v6.h[7]
-; CHECK-NEXT:    stp q0, q3, [x1]
-; CHECK-NEXT:    stp q1, q4, [x1, #32]
-; CHECK-NEXT:    str q2, [x1, #64]
+; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI7_0]
+; CHECK-NEXT:    adrp x8, .LCPI7_8
+; CHECK-NEXT:    adrp x9, .LCPI7_2
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI7_8]
+; CHECK-NEXT:    adrp x8, .LCPI7_6
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q17, [x9, :lo12:.LCPI7_2]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI7_6]
+; CHECK-NEXT:    adrp x8, .LCPI7_4
+; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI7_4]
+; CHECK-NEXT:    adrp x8, .LCPI7_9
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI7_9]
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    adrp x8, .LCPI7_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI7_7]
+; CHECK-NEXT:    adrp x8, .LCPI7_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI7_5]
+; CHECK-NEXT:    adrp x8, .LCPI7_3
+; CHECK-NEXT:    tbx v6.16b, { v4.16b }, v18.16b
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI7_3]
+; CHECK-NEXT:    adrp x8, .LCPI7_1
+; CHECK-NEXT:    tbx v7.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI7_1]
+; CHECK-NEXT:    tbx v16.16b, { v4.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v3.16b
+; CHECK-NEXT:    tbx v5.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q6, q7, [x1]
+; CHECK-NEXT:    stp q16, q0, [x1, #32]
+; CHECK-NEXT:    str q5, [x1, #64]
 ; CHECK-NEXT:    ret
   %wide = load <40 x half>, ptr %src, align 16
   %parts = call { <8 x half>, <8 x half>, <8 x half>, <8 x half>, <8 x half> } @llvm.vector.deinterleave5.v40f16(<40 x half> %wide)
@@ -616,52 +420,42 @@ define void @deinterleave5_v8f16(ptr %src, ptr %dst) {
 define void @interleave5_v8bf16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0, #16]
-; CHECK-NEXT:    ldr q6, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #48]
-; CHECK-NEXT:    mov v17.16b, v6.16b
-; CHECK-NEXT:    dup v4.8h, v0.h[6]
-; CHECK-NEXT:    dup v7.8h, v1.h[3]
-; CHECK-NEXT:    dup v5.8h, v3.h[4]
-; CHECK-NEXT:    dup v16.8h, v2.h[1]
-; CHECK-NEXT:    mov v17.h[1], v1.h[0]
-; CHECK-NEXT:    mov v4.h[1], v2.h[6]
-; CHECK-NEXT:    mov v7.h[1], v0.h[3]
-; CHECK-NEXT:    mov v5.h[1], v6.h[5]
-; CHECK-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-NEXT:    mov v17.h[2], v0.h[0]
-; CHECK-NEXT:    mov v4.h[2], v3.h[6]
-; CHECK-NEXT:    mov v7.h[2], v2.h[3]
-; CHECK-NEXT:    mov v5.h[2], v1.h[5]
-; CHECK-NEXT:    mov v16.h[2], v6.h[2]
-; CHECK-NEXT:    mov v17.h[3], v2.h[0]
-; CHECK-NEXT:    mov v4.h[3], v6.h[7]
-; CHECK-NEXT:    mov v7.h[3], v3.h[3]
-; CHECK-NEXT:    mov v5.h[3], v0.h[5]
-; CHECK-NEXT:    mov v16.h[3], v1.h[2]
-; CHECK-NEXT:    mov v17.h[4], v3.h[0]
-; CHECK-NEXT:    mov v4.h[4], v1.h[7]
-; CHECK-NEXT:    mov v7.h[4], v6.h[4]
-; CHECK-NEXT:    mov v5.h[4], v2.h[5]
-; CHECK-NEXT:    mov v16.h[4], v0.h[2]
-; CHECK-NEXT:    mov v17.h[5], v6.h[1]
-; CHECK-NEXT:    mov v4.h[5], v0.h[7]
-; CHECK-NEXT:    mov v7.h[5], v1.h[4]
-; CHECK-NEXT:    mov v5.h[5], v3.h[5]
-; CHECK-NEXT:    mov v16.h[5], v2.h[2]
-; CHECK-NEXT:    mov v17.h[6], v1.h[1]
-; CHECK-NEXT:    mov v4.h[6], v2.h[7]
-; CHECK-NEXT:    mov v7.h[6], v0.h[4]
-; CHECK-NEXT:    mov v5.h[6], v6.h[6]
-; CHECK-NEXT:    mov v16.h[6], v3.h[2]
-; CHECK-NEXT:    mov v17.h[7], v0.h[1]
-; CHECK-NEXT:    mov v4.h[7], v3.h[7]
-; CHECK-NEXT:    mov v7.h[7], v2.h[4]
-; CHECK-NEXT:    mov v5.h[7], v1.h[6]
-; CHECK-NEXT:    mov v16.h[7], v6.h[3]
-; CHECK-NEXT:    str q17, [x1]
-; CHECK-NEXT:    stp q16, q7, [x1, #16]
-; CHECK-NEXT:    stp q5, q4, [x1, #48]
+; CHECK-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    adrp x8, .LCPI8_8
+; CHECK-NEXT:    adrp x9, .LCPI8_4
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI8_8]
+; CHECK-NEXT:    adrp x8, .LCPI8_6
+; CHECK-NEXT:    ldr q6, [x9, :lo12:.LCPI8_4]
+; CHECK-NEXT:    ldr q16, [x0, #64]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI8_6]
+; CHECK-NEXT:    adrp x8, .LCPI8_2
+; CHECK-NEXT:    adrp x9, .LCPI8_9
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI8_2]
+; CHECK-NEXT:    adrp x8, .LCPI8_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v4.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI8_7]
+; CHECK-NEXT:    adrp x8, .LCPI8_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI8_5]
+; CHECK-NEXT:    adrp x8, .LCPI8_3
+; CHECK-NEXT:    ldr q18, [x9, :lo12:.LCPI8_9]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI8_3]
+; CHECK-NEXT:    adrp x8, .LCPI8_1
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI8_1]
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v18.16b
+; CHECK-NEXT:    tbx v6.16b, { v16.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v3.16b
+; CHECK-NEXT:    tbx v4.16b, { v16.16b }, v1.16b
+; CHECK-NEXT:    stp q7, q5, [x1, #48]
+; CHECK-NEXT:    stp q0, q6, [x1, #16]
+; CHECK-NEXT:    str q4, [x1]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 16
   %p2 = getelementptr i8, ptr %src, i64 32
@@ -680,52 +474,42 @@ define void @interleave5_v8bf16(ptr %src, ptr %dst) {
 define void @deinterleave5_v8bf16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q5, [x0]
-; CHECK-NEXT:    ldr q6, [x0, #32]
-; CHECK-NEXT:    dup v1.8h, v0.h[2]
-; CHECK-NEXT:    dup v3.8h, v0.h[1]
-; CHECK-NEXT:    dup v2.8h, v0.h[4]
-; CHECK-NEXT:    dup v4.8h, v0.h[3]
-; CHECK-NEXT:    mov v1.h[1], v0.h[7]
-; CHECK-NEXT:    mov v3.h[1], v0.h[6]
-; CHECK-NEXT:    mov v0.h[1], v0.h[5]
-; CHECK-NEXT:    mov v4.h[1], v5.h[0]
-; CHECK-NEXT:    mov v2.h[1], v5.h[1]
-; CHECK-NEXT:    mov v0.h[2], v5.h[2]
-; CHECK-NEXT:    mov v3.h[2], v5.h[3]
-; CHECK-NEXT:    mov v1.h[2], v5.h[4]
-; CHECK-NEXT:    mov v4.h[2], v5.h[5]
-; CHECK-NEXT:    mov v2.h[2], v5.h[6]
-; CHECK-NEXT:    mov v0.h[3], v5.h[7]
-; CHECK-NEXT:    mov v3.h[3], v6.h[0]
-; CHECK-NEXT:    mov v1.h[3], v6.h[1]
-; CHECK-NEXT:    mov v4.h[3], v6.h[2]
-; CHECK-NEXT:    mov v2.h[3], v6.h[3]
-; CHECK-NEXT:    ldr q5, [x0, #48]
-; CHECK-NEXT:    mov v0.h[4], v6.h[4]
-; CHECK-NEXT:    mov v3.h[4], v6.h[5]
-; CHECK-NEXT:    mov v1.h[4], v6.h[6]
-; CHECK-NEXT:    mov v4.h[4], v6.h[7]
-; CHECK-NEXT:    mov v2.h[4], v5.h[0]
-; CHECK-NEXT:    ldr q6, [x0, #64]
-; CHECK-NEXT:    mov v0.h[5], v5.h[1]
-; CHECK-NEXT:    mov v3.h[5], v5.h[2]
-; CHECK-NEXT:    mov v1.h[5], v5.h[3]
-; CHECK-NEXT:    mov v4.h[5], v5.h[4]
-; CHECK-NEXT:    mov v2.h[5], v5.h[5]
-; CHECK-NEXT:    mov v0.h[6], v5.h[6]
-; CHECK-NEXT:    mov v3.h[6], v5.h[7]
-; CHECK-NEXT:    mov v1.h[6], v6.h[0]
-; CHECK-NEXT:    mov v4.h[6], v6.h[1]
-; CHECK-NEXT:    mov v2.h[6], v6.h[2]
-; CHECK-NEXT:    mov v0.h[7], v6.h[3]
-; CHECK-NEXT:    mov v3.h[7], v6.h[4]
-; CHECK-NEXT:    mov v1.h[7], v6.h[5]
-; CHECK-NEXT:    mov v4.h[7], v6.h[6]
-; CHECK-NEXT:    mov v2.h[7], v6.h[7]
-; CHECK-NEXT:    stp q0, q3, [x1]
-; CHECK-NEXT:    stp q1, q4, [x1, #32]
-; CHECK-NEXT:    str q2, [x1, #64]
+; CHECK-NEXT:    adrp x8, .LCPI9_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    adrp x8, .LCPI9_8
+; CHECK-NEXT:    adrp x9, .LCPI9_2
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI9_8]
+; CHECK-NEXT:    adrp x8, .LCPI9_6
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q17, [x9, :lo12:.LCPI9_2]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI9_6]
+; CHECK-NEXT:    adrp x8, .LCPI9_4
+; CHECK-NEXT:    ldr q16, [x8, :lo12:.LCPI9_4]
+; CHECK-NEXT:    adrp x8, .LCPI9_9
+; CHECK-NEXT:    tbl v6.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI9_9]
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    adrp x8, .LCPI9_7
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v5.16b
+; CHECK-NEXT:    tbl v16.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v17.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_7]
+; CHECK-NEXT:    adrp x8, .LCPI9_5
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI9_5]
+; CHECK-NEXT:    adrp x8, .LCPI9_3
+; CHECK-NEXT:    tbx v6.16b, { v4.16b }, v18.16b
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI9_3]
+; CHECK-NEXT:    adrp x8, .LCPI9_1
+; CHECK-NEXT:    tbx v7.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_1]
+; CHECK-NEXT:    tbx v16.16b, { v4.16b }, v2.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v3.16b
+; CHECK-NEXT:    tbx v5.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q6, q7, [x1]
+; CHECK-NEXT:    stp q16, q0, [x1, #32]
+; CHECK-NEXT:    str q5, [x1, #64]
 ; CHECK-NEXT:    ret
   %wide = load <40 x bfloat>, ptr %src, align 16
   %parts = call { <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat>, <8 x bfloat> } @llvm.vector.deinterleave5.v40bf16(<40 x bfloat> %wide)
@@ -749,32 +533,24 @@ define void @deinterleave5_v8bf16(ptr %src, ptr %dst) {
 define void @interleave5_v4i16(ptr %dst, <4 x i16> %v0, <4 x i16> %v1, <4 x i16> %v2, <4 x i16> %v3, <4 x i16> %v4) {
 ; CHECK-LABEL: interleave5_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d4 killed $d4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v6.16b, v0.16b
+; CHECK-NEXT:    fmov d6, d4
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    adrp x8, .LCPI10_2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmov d5, d2
+; CHECK-NEXT:    fmov d4, d0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI10_2]
+; CHECK-NEXT:    adrp x8, .LCPI10_1
+; CHECK-NEXT:    mov v5.d[1], v3.d[0]
+; CHECK-NEXT:    mov v4.d[1], v1.d[0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI10_1]
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    dup v5.8h, v3.h[1]
-; CHECK-NEXT:    mov v6.h[1], v1.h[0]
-; CHECK-NEXT:    tbl v7.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v7.16b
-; CHECK-NEXT:    mov v5.h[1], v4.h[1]
-; CHECK-NEXT:    mov v6.h[2], v2.h[0]
-; CHECK-NEXT:    str d7, [x0, #32]
-; CHECK-NEXT:    mov v5.h[2], v0.h[2]
-; CHECK-NEXT:    mov v6.h[3], v3.h[0]
-; CHECK-NEXT:    mov v5.h[3], v1.h[2]
-; CHECK-NEXT:    mov v6.h[4], v4.h[0]
-; CHECK-NEXT:    mov v5.h[4], v2.h[2]
-; CHECK-NEXT:    mov v6.h[5], v0.h[1]
-; CHECK-NEXT:    mov v5.h[5], v3.h[2]
-; CHECK-NEXT:    mov v6.h[6], v1.h[1]
-; CHECK-NEXT:    mov v5.h[6], v4.h[2]
-; CHECK-NEXT:    mov v6.h[7], v2.h[1]
-; CHECK-NEXT:    mov v5.h[7], v0.h[3]
-; CHECK-NEXT:    stp q6, q5, [x0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b, v6.16b }, v0.16b
+; CHECK-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b }, v1.16b
+; CHECK-NEXT:    tbl v2.8b, { v4.16b, v5.16b, v6.16b }, v2.8b
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    str d2, [x0, #32]
 ; CHECK-NEXT:    ret
   %wide = call <20 x i16> @llvm.vector.interleave5.v20i16(<4 x i16> %v0, <4 x i16> %v1, <4 x i16> %v2, <4 x i16> %v3, <4 x i16> %v4)
   store <20 x i16> %wide, ptr %dst, align 8
@@ -784,31 +560,26 @@ define void @interleave5_v4i16(ptr %dst, <4 x i16> %v0, <4 x i16> %v1, <4 x i16>
 define void @deinterleave5_v4i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    dup v3.4h, v1.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
-; CHECK-NEXT:    mov d6, v0.d[1]
-; CHECK-NEXT:    mov v1.h[1], v2.h[1]
-; CHECK-NEXT:    mov v3.h[1], v2.h[2]
-; CHECK-NEXT:    mov v4.h[1], v2.h[3]
-; CHECK-NEXT:    mov v5.h[1], v0.h[0]
-; CHECK-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-NEXT:    mov v3.h[2], v0.h[3]
-; CHECK-NEXT:    mov v4.h[2], v6.h[0]
-; CHECK-NEXT:    mov v5.h[2], v6.h[1]
-; CHECK-NEXT:    mov v2.h[2], v6.h[2]
-; CHECK-NEXT:    ldr d0, [x0, #32]
-; CHECK-NEXT:    mov v1.h[3], v6.h[3]
-; CHECK-NEXT:    mov v3.h[3], v0.h[0]
-; CHECK-NEXT:    mov v4.h[3], v0.h[1]
-; CHECK-NEXT:    mov v5.h[3], v0.h[2]
-; CHECK-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-NEXT:    stp d1, d3, [x1]
-; CHECK-NEXT:    stp d4, d5, [x1, #16]
-; CHECK-NEXT:    str d2, [x1, #32]
+; CHECK-NEXT:    adrp x8, .LCPI11_4
+; CHECK-NEXT:    ldr d2, [x0, #32]
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI11_4]
+; CHECK-NEXT:    adrp x8, .LCPI11_3
+; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI11_3]
+; CHECK-NEXT:    adrp x8, .LCPI11_2
+; CHECK-NEXT:    ldr d5, [x8, :lo12:.LCPI11_2]
+; CHECK-NEXT:    adrp x8, .LCPI11_1
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr d6, [x8, :lo12:.LCPI11_1]
+; CHECK-NEXT:    adrp x8, .LCPI11_0
+; CHECK-NEXT:    ldr d7, [x8, :lo12:.LCPI11_0]
+; CHECK-NEXT:    tbl v3.8b, { v0.16b, v1.16b, v2.16b }, v3.8b
+; CHECK-NEXT:    tbl v4.8b, { v0.16b, v1.16b, v2.16b }, v4.8b
+; CHECK-NEXT:    tbl v5.8b, { v0.16b, v1.16b, v2.16b }, v5.8b
+; CHECK-NEXT:    tbl v6.8b, { v0.16b, v1.16b, v2.16b }, v6.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b }, v7.8b
+; CHECK-NEXT:    stp d3, d4, [x1]
+; CHECK-NEXT:    stp d5, d6, [x1, #16]
+; CHECK-NEXT:    str d0, [x1, #32]
 ; CHECK-NEXT:    ret
   %wide = load <20 x i16>, ptr %src, align 8
   %parts = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.vector.deinterleave5.v20i16(<20 x i16> %wide)
@@ -832,32 +603,24 @@ define void @deinterleave5_v4i16(ptr %src, ptr %dst) {
 define void @interleave5_v4f16(ptr %dst, <4 x half> %v0, <4 x half> %v1, <4 x half> %v2, <4 x half> %v3, <4 x half> %v4) {
 ; CHECK-LABEL: interleave5_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d4 killed $d4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v6.16b, v0.16b
+; CHECK-NEXT:    fmov d6, d4
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    adrp x8, .LCPI12_2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmov d5, d2
+; CHECK-NEXT:    fmov d4, d0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI12_2]
+; CHECK-NEXT:    adrp x8, .LCPI12_1
+; CHECK-NEXT:    mov v5.d[1], v3.d[0]
+; CHECK-NEXT:    mov v4.d[1], v1.d[0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI12_1]
 ; CHECK-NEXT:    adrp x8, .LCPI12_0
-; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI12_0]
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    dup v5.8h, v3.h[1]
-; CHECK-NEXT:    mov v6.h[1], v1.h[0]
-; CHECK-NEXT:    tbl v7.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v7.16b
-; CHECK-NEXT:    mov v5.h[1], v4.h[1]
-; CHECK-NEXT:    mov v6.h[2], v2.h[0]
-; CHECK-NEXT:    str d7, [x0, #32]
-; CHECK-NEXT:    mov v5.h[2], v0.h[2]
-; CHECK-NEXT:    mov v6.h[3], v3.h[0]
-; CHECK-NEXT:    mov v5.h[3], v1.h[2]
-; CHECK-NEXT:    mov v6.h[4], v4.h[0]
-; CHECK-NEXT:    mov v5.h[4], v2.h[2]
-; CHECK-NEXT:    mov v6.h[5], v0.h[1]
-; CHECK-NEXT:    mov v5.h[5], v3.h[2]
-; CHECK-NEXT:    mov v6.h[6], v1.h[1]
-; CHECK-NEXT:    mov v5.h[6], v4.h[2]
-; CHECK-NEXT:    mov v6.h[7], v2.h[1]
-; CHECK-NEXT:    mov v5.h[7], v0.h[3]
-; CHECK-NEXT:    stp q6, q5, [x0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI12_0]
+; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b, v6.16b }, v0.16b
+; CHECK-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b }, v1.16b
+; CHECK-NEXT:    tbl v2.8b, { v4.16b, v5.16b, v6.16b }, v2.8b
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    str d2, [x0, #32]
 ; CHECK-NEXT:    ret
   %wide = call <20 x half> @llvm.vector.interleave5.v20f16(<4 x half> %v0, <4 x half> %v1, <4 x half> %v2, <4 x half> %v3, <4 x half> %v4)
   store <20 x half> %wide, ptr %dst, align 8
@@ -867,31 +630,26 @@ define void @interleave5_v4f16(ptr %dst, <4 x half> %v0, <4 x half> %v1, <4 x ha
 define void @deinterleave5_v4f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    dup v3.4h, v1.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
-; CHECK-NEXT:    mov d6, v0.d[1]
-; CHECK-NEXT:    mov v1.h[1], v2.h[1]
-; CHECK-NEXT:    mov v3.h[1], v2.h[2]
-; CHECK-NEXT:    mov v4.h[1], v2.h[3]
-; CHECK-NEXT:    mov v5.h[1], v0.h[0]
-; CHECK-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-NEXT:    mov v3.h[2], v0.h[3]
-; CHECK-NEXT:    mov v4.h[2], v6.h[0]
-; CHECK-NEXT:    mov v5.h[2], v6.h[1]
-; CHECK-NEXT:    mov v2.h[2], v6.h[2]
-; CHECK-NEXT:    ldr d0, [x0, #32]
-; CHECK-NEXT:    mov v1.h[3], v6.h[3]
-; CHECK-NEXT:    mov v3.h[3], v0.h[0]
-; CHECK-NEXT:    mov v4.h[3], v0.h[1]
-; CHECK-NEXT:    mov v5.h[3], v0.h[2]
-; CHECK-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-NEXT:    stp d1, d3, [x1]
-; CHECK-NEXT:    stp d4, d5, [x1, #16]
-; CHECK-NEXT:    str d2, [x1, #32]
+; CHECK-NEXT:    adrp x8, .LCPI13_4
+; CHECK-NEXT:    ldr d2, [x0, #32]
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI13_4]
+; CHECK-NEXT:    adrp x8, .LCPI13_3
+; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI13_3]
+; CHECK-NEXT:    adrp x8, .LCPI13_2
+; CHECK-NEXT:    ldr d5, [x8, :lo12:.LCPI13_2]
+; CHECK-NEXT:    adrp x8, .LCPI13_1
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr d6, [x8, :lo12:.LCPI13_1]
+; CHECK-NEXT:    adrp x8, .LCPI13_0
+; CHECK-NEXT:    ldr d7, [x8, :lo12:.LCPI13_0]
+; CHECK-NEXT:    tbl v3.8b, { v0.16b, v1.16b, v2.16b }, v3.8b
+; CHECK-NEXT:    tbl v4.8b, { v0.16b, v1.16b, v2.16b }, v4.8b
+; CHECK-NEXT:    tbl v5.8b, { v0.16b, v1.16b, v2.16b }, v5.8b
+; CHECK-NEXT:    tbl v6.8b, { v0.16b, v1.16b, v2.16b }, v6.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b }, v7.8b
+; CHECK-NEXT:    stp d3, d4, [x1]
+; CHECK-NEXT:    stp d5, d6, [x1, #16]
+; CHECK-NEXT:    str d0, [x1, #32]
 ; CHECK-NEXT:    ret
   %wide = load <20 x half>, ptr %src, align 8
   %parts = call { <4 x half>, <4 x half>, <4 x half>, <4 x half>, <4 x half> } @llvm.vector.deinterleave5.v20f16(<20 x half> %wide)
@@ -915,32 +673,24 @@ define void @deinterleave5_v4f16(ptr %src, ptr %dst) {
 define void @interleave5_v4bf16(ptr %dst, <4 x bfloat> %v0, <4 x bfloat> %v1, <4 x bfloat> %v2, <4 x bfloat> %v3, <4 x bfloat> %v4) {
 ; CHECK-LABEL: interleave5_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d4 killed $d4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v6.16b, v0.16b
+; CHECK-NEXT:    fmov d6, d4
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    adrp x8, .LCPI14_2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmov d5, d2
+; CHECK-NEXT:    fmov d4, d0
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI14_2]
+; CHECK-NEXT:    adrp x8, .LCPI14_1
+; CHECK-NEXT:    mov v5.d[1], v3.d[0]
+; CHECK-NEXT:    mov v4.d[1], v1.d[0]
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_1]
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
-; CHECK-NEXT:    // kill: def $d3 killed $d3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI14_0]
-; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-NEXT:    dup v5.8h, v3.h[1]
-; CHECK-NEXT:    mov v6.h[1], v1.h[0]
-; CHECK-NEXT:    tbl v7.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v7.16b
-; CHECK-NEXT:    mov v5.h[1], v4.h[1]
-; CHECK-NEXT:    mov v6.h[2], v2.h[0]
-; CHECK-NEXT:    str d7, [x0, #32]
-; CHECK-NEXT:    mov v5.h[2], v0.h[2]
-; CHECK-NEXT:    mov v6.h[3], v3.h[0]
-; CHECK-NEXT:    mov v5.h[3], v1.h[2]
-; CHECK-NEXT:    mov v6.h[4], v4.h[0]
-; CHECK-NEXT:    mov v5.h[4], v2.h[2]
-; CHECK-NEXT:    mov v6.h[5], v0.h[1]
-; CHECK-NEXT:    mov v5.h[5], v3.h[2]
-; CHECK-NEXT:    mov v6.h[6], v1.h[1]
-; CHECK-NEXT:    mov v5.h[6], v4.h[2]
-; CHECK-NEXT:    mov v6.h[7], v2.h[1]
-; CHECK-NEXT:    mov v5.h[7], v0.h[3]
-; CHECK-NEXT:    stp q6, q5, [x0]
+; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    tbl v0.16b, { v4.16b, v5.16b, v6.16b }, v0.16b
+; CHECK-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b }, v1.16b
+; CHECK-NEXT:    tbl v2.8b, { v4.16b, v5.16b, v6.16b }, v2.8b
+; CHECK-NEXT:    stp q1, q0, [x0]
+; CHECK-NEXT:    str d2, [x0, #32]
 ; CHECK-NEXT:    ret
   %wide = call <20 x bfloat> @llvm.vector.interleave5.v20bf16(<4 x bfloat> %v0, <4 x bfloat> %v1, <4 x bfloat> %v2, <4 x bfloat> %v3, <4 x bfloat> %v4)
   store <20 x bfloat> %wide, ptr %dst, align 8
@@ -950,31 +700,26 @@ define void @interleave5_v4bf16(ptr %dst, <4 x bfloat> %v0, <4 x bfloat> %v1, <4
 define void @deinterleave5_v4bf16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov d2, v1.d[1]
-; CHECK-NEXT:    dup v3.4h, v1.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
-; CHECK-NEXT:    mov d6, v0.d[1]
-; CHECK-NEXT:    mov v1.h[1], v2.h[1]
-; CHECK-NEXT:    mov v3.h[1], v2.h[2]
-; CHECK-NEXT:    mov v4.h[1], v2.h[3]
-; CHECK-NEXT:    mov v5.h[1], v0.h[0]
-; CHECK-NEXT:    mov v2.h[1], v0.h[1]
-; CHECK-NEXT:    mov v1.h[2], v0.h[2]
-; CHECK-NEXT:    mov v3.h[2], v0.h[3]
-; CHECK-NEXT:    mov v4.h[2], v6.h[0]
-; CHECK-NEXT:    mov v5.h[2], v6.h[1]
-; CHECK-NEXT:    mov v2.h[2], v6.h[2]
-; CHECK-NEXT:    ldr d0, [x0, #32]
-; CHECK-NEXT:    mov v1.h[3], v6.h[3]
-; CHECK-NEXT:    mov v3.h[3], v0.h[0]
-; CHECK-NEXT:    mov v4.h[3], v0.h[1]
-; CHECK-NEXT:    mov v5.h[3], v0.h[2]
-; CHECK-NEXT:    mov v2.h[3], v0.h[3]
-; CHECK-NEXT:    stp d1, d3, [x1]
-; CHECK-NEXT:    stp d4, d5, [x1, #16]
-; CHECK-NEXT:    str d2, [x1, #32]
+; CHECK-NEXT:    adrp x8, .LCPI15_4
+; CHECK-NEXT:    ldr d2, [x0, #32]
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI15_4]
+; CHECK-NEXT:    adrp x8, .LCPI15_3
+; CHECK-NEXT:    ldr d4, [x8, :lo12:.LCPI15_3]
+; CHECK-NEXT:    adrp x8, .LCPI15_2
+; CHECK-NEXT:    ldr d5, [x8, :lo12:.LCPI15_2]
+; CHECK-NEXT:    adrp x8, .LCPI15_1
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr d6, [x8, :lo12:.LCPI15_1]
+; CHECK-NEXT:    adrp x8, .LCPI15_0
+; CHECK-NEXT:    ldr d7, [x8, :lo12:.LCPI15_0]
+; CHECK-NEXT:    tbl v3.8b, { v0.16b, v1.16b, v2.16b }, v3.8b
+; CHECK-NEXT:    tbl v4.8b, { v0.16b, v1.16b, v2.16b }, v4.8b
+; CHECK-NEXT:    tbl v5.8b, { v0.16b, v1.16b, v2.16b }, v5.8b
+; CHECK-NEXT:    tbl v6.8b, { v0.16b, v1.16b, v2.16b }, v6.8b
+; CHECK-NEXT:    tbl v0.8b, { v0.16b, v1.16b, v2.16b }, v7.8b
+; CHECK-NEXT:    stp d3, d4, [x1]
+; CHECK-NEXT:    stp d5, d6, [x1, #16]
+; CHECK-NEXT:    str d0, [x1, #32]
 ; CHECK-NEXT:    ret
   %wide = load <20 x bfloat>, ptr %src, align 8
   %parts = call { <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.vector.deinterleave5.v20bf16(<20 x bfloat> %wide)
@@ -998,176 +743,56 @@ define void @deinterleave5_v4bf16(ptr %src, ptr %dst) {
 define void @interleave5_v32i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0, #64]
-; CHECK-NEXT:    ldp q2, q4, [x0, #32]
-; CHECK-NEXT:    ldp q5, q16, [x0]
-; CHECK-NEXT:    ldp q17, q6, [x0, #96]
-; CHECK-NEXT:    dup v3.16b, v1.b[6]
-; CHECK-NEXT:    ldp q23, q18, [x0, #128]
-; CHECK-NEXT:    dup v7.16b, v2.b[3]
-; CHECK-NEXT:    mov v26.16b, v5.16b
-; CHECK-NEXT:    dup v20.16b, v4.b[3]
-; CHECK-NEXT:    mov v25.16b, v16.16b
-; CHECK-NEXT:    dup v19.16b, v17.b[9]
-; CHECK-NEXT:    dup v22.16b, v0.b[6]
-; CHECK-NEXT:    dup v24.16b, v6.b[9]
-; CHECK-NEXT:    dup v21.16b, v23.b[12]
-; CHECK-NEXT:    dup v27.16b, v18.b[12]
-; CHECK-NEXT:    mov v7.b[1], v1.b[3]
-; CHECK-NEXT:    mov v26.b[1], v2.b[0]
-; CHECK-NEXT:    mov v3.b[1], v17.b[6]
-; CHECK-NEXT:    mov v25.b[1], v4.b[0]
-; CHECK-NEXT:    mov v19.b[1], v23.b[9]
-; CHECK-NEXT:    mov v20.b[1], v0.b[3]
-; CHECK-NEXT:    mov v22.b[1], v6.b[6]
-; CHECK-NEXT:    mov v21.b[1], v5.b[13]
-; CHECK-NEXT:    mov v24.b[1], v18.b[9]
-; CHECK-NEXT:    mov v27.b[1], v16.b[13]
-; CHECK-NEXT:    mov v7.b[2], v17.b[3]
-; CHECK-NEXT:    mov v26.b[2], v1.b[0]
-; CHECK-NEXT:    mov v3.b[2], v23.b[6]
-; CHECK-NEXT:    mov v25.b[2], v0.b[0]
-; CHECK-NEXT:    mov v19.b[2], v5.b[10]
-; CHECK-NEXT:    mov v20.b[2], v6.b[3]
-; CHECK-NEXT:    mov v22.b[2], v18.b[6]
-; CHECK-NEXT:    mov v21.b[2], v2.b[13]
-; CHECK-NEXT:    mov v24.b[2], v16.b[10]
-; CHECK-NEXT:    mov v27.b[2], v4.b[13]
-; CHECK-NEXT:    mov v7.b[3], v23.b[3]
-; CHECK-NEXT:    mov v26.b[3], v17.b[0]
-; CHECK-NEXT:    mov v3.b[3], v5.b[7]
-; CHECK-NEXT:    mov v25.b[3], v6.b[0]
-; CHECK-NEXT:    mov v19.b[3], v2.b[10]
-; CHECK-NEXT:    mov v20.b[3], v18.b[3]
-; CHECK-NEXT:    mov v22.b[3], v16.b[7]
-; CHECK-NEXT:    mov v21.b[3], v1.b[13]
-; CHECK-NEXT:    mov v24.b[3], v4.b[10]
-; CHECK-NEXT:    mov v27.b[3], v0.b[13]
-; CHECK-NEXT:    mov v7.b[4], v5.b[4]
-; CHECK-NEXT:    mov v26.b[4], v23.b[0]
-; CHECK-NEXT:    mov v3.b[4], v2.b[7]
-; CHECK-NEXT:    mov v25.b[4], v18.b[0]
-; CHECK-NEXT:    mov v19.b[4], v1.b[10]
-; CHECK-NEXT:    mov v20.b[4], v16.b[4]
-; CHECK-NEXT:    mov v22.b[4], v4.b[7]
-; CHECK-NEXT:    mov v21.b[4], v17.b[13]
-; CHECK-NEXT:    mov v24.b[4], v0.b[10]
-; CHECK-NEXT:    mov v27.b[4], v6.b[13]
-; CHECK-NEXT:    mov v7.b[5], v2.b[4]
-; CHECK-NEXT:    mov v26.b[5], v5.b[1]
-; CHECK-NEXT:    mov v3.b[5], v1.b[7]
-; CHECK-NEXT:    mov v25.b[5], v16.b[1]
-; CHECK-NEXT:    mov v19.b[5], v17.b[10]
-; CHECK-NEXT:    mov v20.b[5], v4.b[4]
-; CHECK-NEXT:    mov v22.b[5], v0.b[7]
-; CHECK-NEXT:    mov v21.b[5], v23.b[13]
-; CHECK-NEXT:    mov v24.b[5], v6.b[10]
-; CHECK-NEXT:    mov v27.b[5], v18.b[13]
-; CHECK-NEXT:    mov v7.b[6], v1.b[4]
-; CHECK-NEXT:    mov v26.b[6], v2.b[1]
-; CHECK-NEXT:    mov v3.b[6], v17.b[7]
-; CHECK-NEXT:    mov v25.b[6], v4.b[1]
-; CHECK-NEXT:    mov v19.b[6], v23.b[10]
-; CHECK-NEXT:    mov v20.b[6], v0.b[4]
-; CHECK-NEXT:    mov v22.b[6], v6.b[7]
-; CHECK-NEXT:    mov v21.b[6], v5.b[14]
-; CHECK-NEXT:    mov v24.b[6], v18.b[10]
-; CHECK-NEXT:    mov v27.b[6], v16.b[14]
-; CHECK-NEXT:    mov v7.b[7], v17.b[4]
-; CHECK-NEXT:    mov v26.b[7], v1.b[1]
-; CHECK-NEXT:    mov v3.b[7], v23.b[7]
-; CHECK-NEXT:    mov v25.b[7], v0.b[1]
-; CHECK-NEXT:    mov v19.b[7], v5.b[11]
-; CHECK-NEXT:    mov v20.b[7], v6.b[4]
-; CHECK-NEXT:    mov v22.b[7], v18.b[7]
-; CHECK-NEXT:    mov v21.b[7], v2.b[14]
-; CHECK-NEXT:    mov v24.b[7], v16.b[11]
-; CHECK-NEXT:    mov v27.b[7], v4.b[14]
-; CHECK-NEXT:    mov v7.b[8], v23.b[4]
-; CHECK-NEXT:    mov v26.b[8], v17.b[1]
-; CHECK-NEXT:    mov v3.b[8], v5.b[8]
-; CHECK-NEXT:    mov v25.b[8], v6.b[1]
-; CHECK-NEXT:    mov v19.b[8], v2.b[11]
-; CHECK-NEXT:    mov v20.b[8], v18.b[4]
-; CHECK-NEXT:    mov v22.b[8], v16.b[8]
-; CHECK-NEXT:    mov v21.b[8], v1.b[14]
-; CHECK-NEXT:    mov v24.b[8], v4.b[11]
-; CHECK-NEXT:    mov v27.b[8], v0.b[14]
-; CHECK-NEXT:    mov v7.b[9], v5.b[5]
-; CHECK-NEXT:    mov v26.b[9], v23.b[1]
-; CHECK-NEXT:    mov v3.b[9], v2.b[8]
-; CHECK-NEXT:    mov v25.b[9], v18.b[1]
-; CHECK-NEXT:    mov v19.b[9], v1.b[11]
-; CHECK-NEXT:    mov v20.b[9], v16.b[5]
-; CHECK-NEXT:    mov v22.b[9], v4.b[8]
-; CHECK-NEXT:    mov v21.b[9], v17.b[14]
-; CHECK-NEXT:    mov v24.b[9], v0.b[11]
-; CHECK-NEXT:    mov v27.b[9], v6.b[14]
-; CHECK-NEXT:    mov v7.b[10], v2.b[5]
-; CHECK-NEXT:    mov v26.b[10], v5.b[2]
-; CHECK-NEXT:    mov v3.b[10], v1.b[8]
-; CHECK-NEXT:    mov v25.b[10], v16.b[2]
-; CHECK-NEXT:    mov v19.b[10], v17.b[11]
-; CHECK-NEXT:    mov v20.b[10], v4.b[5]
-; CHECK-NEXT:    mov v22.b[10], v0.b[8]
-; CHECK-NEXT:    mov v21.b[10], v23.b[14]
-; CHECK-NEXT:    mov v24.b[10], v6.b[11]
-; CHECK-NEXT:    mov v27.b[10], v18.b[14]
-; CHECK-NEXT:    mov v7.b[11], v1.b[5]
-; CHECK-NEXT:    mov v26.b[11], v2.b[2]
-; CHECK-NEXT:    mov v3.b[11], v17.b[8]
-; CHECK-NEXT:    mov v25.b[11], v4.b[2]
-; CHECK-NEXT:    mov v19.b[11], v23.b[11]
-; CHECK-NEXT:    mov v20.b[11], v0.b[5]
-; CHECK-NEXT:    mov v22.b[11], v6.b[8]
-; CHECK-NEXT:    mov v21.b[11], v5.b[15]
-; CHECK-NEXT:    mov v24.b[11], v18.b[11]
-; CHECK-NEXT:    mov v27.b[11], v16.b[15]
-; CHECK-NEXT:    mov v7.b[12], v17.b[5]
-; CHECK-NEXT:    mov v26.b[12], v1.b[2]
-; CHECK-NEXT:    mov v3.b[12], v23.b[8]
-; CHECK-NEXT:    mov v25.b[12], v0.b[2]
-; CHECK-NEXT:    mov v19.b[12], v5.b[12]
-; CHECK-NEXT:    mov v20.b[12], v6.b[5]
-; CHECK-NEXT:    mov v22.b[12], v18.b[8]
-; CHECK-NEXT:    mov v21.b[12], v2.b[15]
-; CHECK-NEXT:    mov v24.b[12], v16.b[12]
-; CHECK-NEXT:    mov v27.b[12], v4.b[15]
-; CHECK-NEXT:    mov v7.b[13], v23.b[5]
-; CHECK-NEXT:    mov v26.b[13], v17.b[2]
-; CHECK-NEXT:    mov v3.b[13], v5.b[9]
-; CHECK-NEXT:    mov v25.b[13], v6.b[2]
-; CHECK-NEXT:    mov v19.b[13], v2.b[12]
-; CHECK-NEXT:    mov v20.b[13], v18.b[5]
-; CHECK-NEXT:    mov v22.b[13], v16.b[9]
-; CHECK-NEXT:    mov v21.b[13], v1.b[15]
-; CHECK-NEXT:    mov v24.b[13], v4.b[12]
-; CHECK-NEXT:    mov v27.b[13], v0.b[15]
-; CHECK-NEXT:    mov v7.b[14], v5.b[6]
-; CHECK-NEXT:    mov v26.b[14], v23.b[2]
-; CHECK-NEXT:    mov v3.b[14], v2.b[9]
-; CHECK-NEXT:    mov v25.b[14], v18.b[2]
-; CHECK-NEXT:    mov v19.b[14], v1.b[12]
-; CHECK-NEXT:    mov v20.b[14], v16.b[6]
-; CHECK-NEXT:    mov v22.b[14], v4.b[9]
-; CHECK-NEXT:    mov v21.b[14], v17.b[15]
-; CHECK-NEXT:    mov v24.b[14], v0.b[12]
-; CHECK-NEXT:    mov v27.b[14], v6.b[15]
-; CHECK-NEXT:    mov v7.b[15], v2.b[6]
-; CHECK-NEXT:    mov v26.b[15], v5.b[3]
-; CHECK-NEXT:    mov v3.b[15], v1.b[9]
-; CHECK-NEXT:    mov v25.b[15], v16.b[3]
-; CHECK-NEXT:    mov v19.b[15], v17.b[12]
-; CHECK-NEXT:    mov v20.b[15], v4.b[6]
-; CHECK-NEXT:    mov v22.b[15], v0.b[9]
-; CHECK-NEXT:    mov v21.b[15], v23.b[15]
-; CHECK-NEXT:    mov v24.b[15], v6.b[12]
-; CHECK-NEXT:    mov v27.b[15], v18.b[15]
-; CHECK-NEXT:    stp q26, q7, [x1]
-; CHECK-NEXT:    stp q3, q19, [x1, #32]
-; CHECK-NEXT:    stp q21, q25, [x1, #64]
-; CHECK-NEXT:    stp q20, q22, [x1, #96]
-; CHECK-NEXT:    stp q24, q27, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI16_0
+; CHECK-NEXT:    ldp q4, q0, [x0]
+; CHECK-NEXT:    ldp q5, q1, [x0, #32]
+; CHECK-NEXT:    adrp x9, .LCPI16_8
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    adrp x8, .LCPI16_2
+; CHECK-NEXT:    ldr q19, [x9, :lo12:.LCPI16_8]
+; CHECK-NEXT:    ldp q6, q2, [x0, #64]
+; CHECK-NEXT:    adrp x9, .LCPI16_6
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI16_2]
+; CHECK-NEXT:    adrp x8, .LCPI16_4
+; CHECK-NEXT:    ldr q21, [x9, :lo12:.LCPI16_6]
+; CHECK-NEXT:    ldp q7, q3, [x0, #96]
+; CHECK-NEXT:    ldr q22, [x8, :lo12:.LCPI16_4]
+; CHECK-NEXT:    adrp x8, .LCPI16_3
+; CHECK-NEXT:    ldp q17, q16, [x0, #128]
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI16_3]
+; CHECK-NEXT:    adrp x8, .LCPI16_9
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI16_9]
+; CHECK-NEXT:    adrp x8, .LCPI16_7
+; CHECK-NEXT:    tbl v23.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v19.16b
+; CHECK-NEXT:    tbl v25.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v21.16b
+; CHECK-NEXT:    tbl v27.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v22.16b
+; CHECK-NEXT:    ldr q28, [x8, :lo12:.LCPI16_7]
+; CHECK-NEXT:    adrp x8, .LCPI16_5
+; CHECK-NEXT:    tbl v29.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v20.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v18.16b
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v19.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    tbl v19.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v22.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v18.16b
+; CHECK-NEXT:    ldr q30, [x8, :lo12:.LCPI16_5]
+; CHECK-NEXT:    adrp x8, .LCPI16_1
+; CHECK-NEXT:    tbx v23.16b, { v17.16b }, v26.16b
+; CHECK-NEXT:    tbx v25.16b, { v17.16b }, v28.16b
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI16_1]
+; CHECK-NEXT:    tbx v27.16b, { v17.16b }, v30.16b
+; CHECK-NEXT:    tbx v29.16b, { v17.16b }, v24.16b
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v26.16b
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v28.16b
+; CHECK-NEXT:    tbx v19.16b, { v16.16b }, v30.16b
+; CHECK-NEXT:    tbx v4.16b, { v17.16b }, v6.16b
+; CHECK-NEXT:    tbx v20.16b, { v16.16b }, v24.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v6.16b
+; CHECK-NEXT:    stp q23, q25, [x1]
+; CHECK-NEXT:    stp q27, q29, [x1, #32]
+; CHECK-NEXT:    stp q7, q19, [x1, #96]
+; CHECK-NEXT:    stp q4, q5, [x1, #64]
+; CHECK-NEXT:    stp q20, q0, [x1, #128]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 32
   %p2 = getelementptr i8, ptr %src, i64 64
@@ -1186,180 +811,57 @@ define void @interleave5_v32i8(ptr %src, ptr %dst) {
 define void @deinterleave5_v32i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q20, [x0]
-; CHECK-NEXT:    ldr q1, [x0, #80]
-; CHECK-NEXT:    ldr q21, [x0, #96]
-; CHECK-NEXT:    dup v4.16b, v1.b[1]
-; CHECK-NEXT:    mov v18.16b, v1.16b
-; CHECK-NEXT:    dup v5.16b, v1.b[2]
-; CHECK-NEXT:    dup v2.16b, v0.b[1]
-; CHECK-NEXT:    mov v16.16b, v0.16b
-; CHECK-NEXT:    dup v3.16b, v0.b[2]
-; CHECK-NEXT:    dup v6.16b, v0.b[3]
-; CHECK-NEXT:    dup v7.16b, v1.b[3]
-; CHECK-NEXT:    dup v17.16b, v0.b[4]
-; CHECK-NEXT:    dup v19.16b, v1.b[4]
-; CHECK-NEXT:    mov v18.b[1], v1.b[5]
-; CHECK-NEXT:    mov v4.b[1], v1.b[6]
-; CHECK-NEXT:    mov v16.b[1], v0.b[5]
-; CHECK-NEXT:    mov v2.b[1], v0.b[6]
-; CHECK-NEXT:    mov v3.b[1], v0.b[7]
-; CHECK-NEXT:    mov v5.b[1], v1.b[7]
-; CHECK-NEXT:    mov v6.b[1], v0.b[8]
-; CHECK-NEXT:    mov v7.b[1], v1.b[8]
-; CHECK-NEXT:    mov v17.b[1], v0.b[9]
-; CHECK-NEXT:    mov v19.b[1], v1.b[9]
-; CHECK-NEXT:    mov v18.b[2], v1.b[10]
-; CHECK-NEXT:    mov v4.b[2], v1.b[11]
-; CHECK-NEXT:    mov v16.b[2], v0.b[10]
-; CHECK-NEXT:    mov v2.b[2], v0.b[11]
-; CHECK-NEXT:    mov v3.b[2], v0.b[12]
-; CHECK-NEXT:    mov v5.b[2], v1.b[12]
-; CHECK-NEXT:    mov v6.b[2], v0.b[13]
-; CHECK-NEXT:    mov v7.b[2], v1.b[13]
-; CHECK-NEXT:    mov v17.b[2], v0.b[14]
-; CHECK-NEXT:    mov v19.b[2], v1.b[14]
-; CHECK-NEXT:    mov v18.b[3], v1.b[15]
-; CHECK-NEXT:    ldr q1, [x0, #112]
-; CHECK-NEXT:    mov v4.b[3], v21.b[0]
-; CHECK-NEXT:    mov v16.b[3], v0.b[15]
-; CHECK-NEXT:    ldr q0, [x0, #32]
-; CHECK-NEXT:    mov v2.b[3], v20.b[0]
-; CHECK-NEXT:    mov v3.b[3], v20.b[1]
-; CHECK-NEXT:    mov v5.b[3], v21.b[1]
-; CHECK-NEXT:    mov v6.b[3], v20.b[2]
-; CHECK-NEXT:    mov v7.b[3], v21.b[2]
-; CHECK-NEXT:    mov v17.b[3], v20.b[3]
-; CHECK-NEXT:    mov v19.b[3], v21.b[3]
-; CHECK-NEXT:    mov v18.b[4], v21.b[4]
-; CHECK-NEXT:    mov v4.b[4], v21.b[5]
-; CHECK-NEXT:    mov v16.b[4], v20.b[4]
-; CHECK-NEXT:    mov v2.b[4], v20.b[5]
-; CHECK-NEXT:    mov v3.b[4], v20.b[6]
-; CHECK-NEXT:    mov v5.b[4], v21.b[6]
-; CHECK-NEXT:    mov v6.b[4], v20.b[7]
-; CHECK-NEXT:    mov v7.b[4], v21.b[7]
-; CHECK-NEXT:    mov v17.b[4], v20.b[8]
-; CHECK-NEXT:    mov v19.b[4], v21.b[8]
-; CHECK-NEXT:    mov v18.b[5], v21.b[9]
-; CHECK-NEXT:    mov v4.b[5], v21.b[10]
-; CHECK-NEXT:    mov v16.b[5], v20.b[9]
-; CHECK-NEXT:    mov v2.b[5], v20.b[10]
-; CHECK-NEXT:    mov v3.b[5], v20.b[11]
-; CHECK-NEXT:    mov v5.b[5], v21.b[11]
-; CHECK-NEXT:    mov v6.b[5], v20.b[12]
-; CHECK-NEXT:    mov v7.b[5], v21.b[12]
-; CHECK-NEXT:    mov v17.b[5], v20.b[13]
-; CHECK-NEXT:    mov v19.b[5], v21.b[13]
-; CHECK-NEXT:    mov v18.b[6], v21.b[14]
-; CHECK-NEXT:    mov v4.b[6], v21.b[15]
-; CHECK-NEXT:    ldr q21, [x0, #128]
-; CHECK-NEXT:    mov v16.b[6], v20.b[14]
-; CHECK-NEXT:    mov v2.b[6], v20.b[15]
-; CHECK-NEXT:    ldr q20, [x0, #48]
-; CHECK-NEXT:    mov v3.b[6], v0.b[0]
-; CHECK-NEXT:    mov v5.b[6], v1.b[0]
-; CHECK-NEXT:    mov v6.b[6], v0.b[1]
-; CHECK-NEXT:    mov v7.b[6], v1.b[1]
-; CHECK-NEXT:    mov v17.b[6], v0.b[2]
-; CHECK-NEXT:    mov v19.b[6], v1.b[2]
-; CHECK-NEXT:    mov v18.b[7], v1.b[3]
-; CHECK-NEXT:    mov v4.b[7], v1.b[4]
-; CHECK-NEXT:    mov v16.b[7], v0.b[3]
-; CHECK-NEXT:    mov v2.b[7], v0.b[4]
-; CHECK-NEXT:    mov v3.b[7], v0.b[5]
-; CHECK-NEXT:    mov v5.b[7], v1.b[5]
-; CHECK-NEXT:    mov v6.b[7], v0.b[6]
-; CHECK-NEXT:    mov v7.b[7], v1.b[6]
-; CHECK-NEXT:    mov v17.b[7], v0.b[7]
-; CHECK-NEXT:    mov v19.b[7], v1.b[7]
-; CHECK-NEXT:    mov v18.b[8], v1.b[8]
-; CHECK-NEXT:    mov v4.b[8], v1.b[9]
-; CHECK-NEXT:    mov v16.b[8], v0.b[8]
-; CHECK-NEXT:    mov v2.b[8], v0.b[9]
-; CHECK-NEXT:    mov v3.b[8], v0.b[10]
-; CHECK-NEXT:    mov v5.b[8], v1.b[10]
-; CHECK-NEXT:    mov v6.b[8], v0.b[11]
-; CHECK-NEXT:    mov v7.b[8], v1.b[11]
-; CHECK-NEXT:    mov v17.b[8], v0.b[12]
-; CHECK-NEXT:    mov v19.b[8], v1.b[12]
-; CHECK-NEXT:    mov v18.b[9], v1.b[13]
-; CHECK-NEXT:    mov v4.b[9], v1.b[14]
-; CHECK-NEXT:    mov v16.b[9], v0.b[13]
-; CHECK-NEXT:    mov v2.b[9], v0.b[14]
-; CHECK-NEXT:    mov v3.b[9], v0.b[15]
-; CHECK-NEXT:    ldr q0, [x0, #64]
-; CHECK-NEXT:    mov v5.b[9], v1.b[15]
-; CHECK-NEXT:    ldr q1, [x0, #144]
-; CHECK-NEXT:    mov v6.b[9], v20.b[0]
-; CHECK-NEXT:    mov v7.b[9], v21.b[0]
-; CHECK-NEXT:    mov v17.b[9], v20.b[1]
-; CHECK-NEXT:    mov v19.b[9], v21.b[1]
-; CHECK-NEXT:    mov v18.b[10], v21.b[2]
-; CHECK-NEXT:    mov v16.b[10], v20.b[2]
-; CHECK-NEXT:    mov v2.b[10], v20.b[3]
-; CHECK-NEXT:    mov v4.b[10], v21.b[3]
-; CHECK-NEXT:    mov v3.b[10], v20.b[4]
-; CHECK-NEXT:    mov v5.b[10], v21.b[4]
-; CHECK-NEXT:    mov v6.b[10], v20.b[5]
-; CHECK-NEXT:    mov v7.b[10], v21.b[5]
-; CHECK-NEXT:    mov v17.b[10], v20.b[6]
-; CHECK-NEXT:    mov v19.b[10], v21.b[6]
-; CHECK-NEXT:    mov v18.b[11], v21.b[7]
-; CHECK-NEXT:    mov v16.b[11], v20.b[7]
-; CHECK-NEXT:    mov v2.b[11], v20.b[8]
-; CHECK-NEXT:    mov v4.b[11], v21.b[8]
-; CHECK-NEXT:    mov v3.b[11], v20.b[9]
-; CHECK-NEXT:    mov v5.b[11], v21.b[9]
-; CHECK-NEXT:    mov v6.b[11], v20.b[10]
-; CHECK-NEXT:    mov v7.b[11], v21.b[10]
-; CHECK-NEXT:    mov v17.b[11], v20.b[11]
-; CHECK-NEXT:    mov v19.b[11], v21.b[11]
-; CHECK-NEXT:    mov v18.b[12], v21.b[12]
-; CHECK-NEXT:    mov v16.b[12], v20.b[12]
-; CHECK-NEXT:    mov v2.b[12], v20.b[13]
-; CHECK-NEXT:    mov v4.b[12], v21.b[13]
-; CHECK-NEXT:    mov v3.b[12], v20.b[14]
-; CHECK-NEXT:    mov v5.b[12], v21.b[14]
-; CHECK-NEXT:    mov v6.b[12], v20.b[15]
-; CHECK-NEXT:    mov v7.b[12], v21.b[15]
-; CHECK-NEXT:    mov v17.b[12], v0.b[0]
-; CHECK-NEXT:    mov v19.b[12], v1.b[0]
-; CHECK-NEXT:    mov v18.b[13], v1.b[1]
-; CHECK-NEXT:    mov v16.b[13], v0.b[1]
-; CHECK-NEXT:    mov v2.b[13], v0.b[2]
-; CHECK-NEXT:    mov v4.b[13], v1.b[2]
-; CHECK-NEXT:    mov v3.b[13], v0.b[3]
-; CHECK-NEXT:    mov v5.b[13], v1.b[3]
-; CHECK-NEXT:    mov v6.b[13], v0.b[4]
-; CHECK-NEXT:    mov v7.b[13], v1.b[4]
-; CHECK-NEXT:    mov v17.b[13], v0.b[5]
-; CHECK-NEXT:    mov v19.b[13], v1.b[5]
-; CHECK-NEXT:    mov v18.b[14], v1.b[6]
-; CHECK-NEXT:    mov v16.b[14], v0.b[6]
-; CHECK-NEXT:    mov v2.b[14], v0.b[7]
-; CHECK-NEXT:    mov v4.b[14], v1.b[7]
-; CHECK-NEXT:    mov v3.b[14], v0.b[8]
-; CHECK-NEXT:    mov v5.b[14], v1.b[8]
-; CHECK-NEXT:    mov v6.b[14], v0.b[9]
-; CHECK-NEXT:    mov v7.b[14], v1.b[9]
-; CHECK-NEXT:    mov v17.b[14], v0.b[10]
-; CHECK-NEXT:    mov v19.b[14], v1.b[10]
-; CHECK-NEXT:    mov v18.b[15], v1.b[11]
-; CHECK-NEXT:    mov v16.b[15], v0.b[11]
-; CHECK-NEXT:    mov v2.b[15], v0.b[12]
-; CHECK-NEXT:    mov v4.b[15], v1.b[12]
-; CHECK-NEXT:    mov v3.b[15], v0.b[13]
-; CHECK-NEXT:    mov v5.b[15], v1.b[13]
-; CHECK-NEXT:    mov v6.b[15], v0.b[14]
-; CHECK-NEXT:    mov v7.b[15], v1.b[14]
-; CHECK-NEXT:    mov v17.b[15], v0.b[15]
-; CHECK-NEXT:    mov v19.b[15], v1.b[15]
-; CHECK-NEXT:    stp q16, q18, [x1]
-; CHECK-NEXT:    stp q2, q4, [x1, #32]
-; CHECK-NEXT:    stp q3, q5, [x1, #64]
-; CHECK-NEXT:    stp q6, q7, [x1, #96]
-; CHECK-NEXT:    stp q17, q19, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI17_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldp q19, q5, [x0, #128]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    adrp x8, .LCPI17_8
+; CHECK-NEXT:    ldp q17, q18, [x0, #96]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI17_8]
+; CHECK-NEXT:    adrp x8, .LCPI17_2
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q16, [x0, #80]
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI17_2]
+; CHECK-NEXT:    adrp x8, .LCPI17_6
+; CHECK-NEXT:    ldr q21, [x8, :lo12:.LCPI17_6]
+; CHECK-NEXT:    adrp x8, .LCPI17_4
+; CHECK-NEXT:    tbl v22.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v7.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v7.16b
+; CHECK-NEXT:    ldr q23, [x8, :lo12:.LCPI17_4]
+; CHECK-NEXT:    adrp x8, .LCPI17_9
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI17_9]
+; CHECK-NEXT:    adrp x8, .LCPI17_5
+; CHECK-NEXT:    tbl v25.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI17_5]
+; CHECK-NEXT:    adrp x8, .LCPI17_7
+; CHECK-NEXT:    tbl v21.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v21.16b
+; CHECK-NEXT:    ldr q27, [x8, :lo12:.LCPI17_7]
+; CHECK-NEXT:    tbl v28.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v23.16b
+; CHECK-NEXT:    tbx v22.16b, { v4.16b }, v24.16b
+; CHECK-NEXT:    adrp x8, .LCPI17_3
+; CHECK-NEXT:    tbl v23.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v23.16b
+; CHECK-NEXT:    tbx v7.16b, { v5.16b }, v24.16b
+; CHECK-NEXT:    tbl v24.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v20.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v16.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI17_3]
+; CHECK-NEXT:    adrp x8, .LCPI17_1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI17_1]
+; CHECK-NEXT:    tbx v25.16b, { v4.16b }, v27.16b
+; CHECK-NEXT:    tbx v21.16b, { v5.16b }, v27.16b
+; CHECK-NEXT:    tbx v28.16b, { v4.16b }, v26.16b
+; CHECK-NEXT:    tbx v23.16b, { v5.16b }, v26.16b
+; CHECK-NEXT:    stp q22, q7, [x1]
+; CHECK-NEXT:    tbx v20.16b, { v4.16b }, v17.16b
+; CHECK-NEXT:    tbx v24.16b, { v5.16b }, v17.16b
+; CHECK-NEXT:    tbx v16.16b, { v5.16b }, v1.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q25, q21, [x1, #32]
+; CHECK-NEXT:    stp q28, q23, [x1, #64]
+; CHECK-NEXT:    stp q20, q24, [x1, #96]
+; CHECK-NEXT:    stp q0, q16, [x1, #128]
 ; CHECK-NEXT:    ret
   %wide = load <160 x i8>, ptr %src, align 32
   %parts = call { <32 x i8>, <32 x i8>, <32 x i8>, <32 x i8>, <32 x i8> } @llvm.vector.deinterleave5.v160i8(<160 x i8> %wide)
@@ -1383,96 +885,56 @@ define void @deinterleave5_v32i8(ptr %src, ptr %dst) {
 define void @interleave5_v16i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q4, q2, [x0, #96]
-; CHECK-NEXT:    ldp q6, q1, [x0]
-; CHECK-NEXT:    ldp q5, q0, [x0, #32]
-; CHECK-NEXT:    ldp q3, q18, [x0, #128]
-; CHECK-NEXT:    dup v16.8h, v4.h[1]
-; CHECK-NEXT:    ldp q17, q27, [x0, #64]
-; CHECK-NEXT:    mov v25.16b, v6.16b
-; CHECK-NEXT:    dup v7.8h, v5.h[3]
-; CHECK-NEXT:    dup v19.8h, v2.h[1]
-; CHECK-NEXT:    mov v23.16b, v1.16b
-; CHECK-NEXT:    dup v21.8h, v3.h[4]
-; CHECK-NEXT:    dup v22.8h, v0.h[3]
-; CHECK-NEXT:    dup v24.8h, v18.h[4]
-; CHECK-NEXT:    dup v20.8h, v17.h[6]
-; CHECK-NEXT:    dup v26.8h, v27.h[6]
-; CHECK-NEXT:    mov v25.h[1], v5.h[0]
-; CHECK-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-NEXT:    mov v7.h[1], v17.h[3]
-; CHECK-NEXT:    mov v23.h[1], v0.h[0]
-; CHECK-NEXT:    mov v21.h[1], v6.h[5]
-; CHECK-NEXT:    mov v19.h[1], v18.h[1]
-; CHECK-NEXT:    mov v22.h[1], v27.h[3]
-; CHECK-NEXT:    mov v20.h[1], v4.h[6]
-; CHECK-NEXT:    mov v24.h[1], v1.h[5]
-; CHECK-NEXT:    mov v26.h[1], v2.h[6]
-; CHECK-NEXT:    mov v25.h[2], v17.h[0]
-; CHECK-NEXT:    mov v16.h[2], v6.h[2]
-; CHECK-NEXT:    mov v7.h[2], v4.h[3]
-; CHECK-NEXT:    mov v23.h[2], v27.h[0]
-; CHECK-NEXT:    mov v21.h[2], v5.h[5]
-; CHECK-NEXT:    mov v19.h[2], v1.h[2]
-; CHECK-NEXT:    mov v22.h[2], v2.h[3]
-; CHECK-NEXT:    mov v20.h[2], v3.h[6]
-; CHECK-NEXT:    mov v24.h[2], v0.h[5]
-; CHECK-NEXT:    mov v26.h[2], v18.h[6]
-; CHECK-NEXT:    mov v25.h[3], v4.h[0]
-; CHECK-NEXT:    mov v16.h[3], v5.h[2]
-; CHECK-NEXT:    mov v7.h[3], v3.h[3]
-; CHECK-NEXT:    mov v23.h[3], v2.h[0]
-; CHECK-NEXT:    mov v21.h[3], v17.h[5]
-; CHECK-NEXT:    mov v19.h[3], v0.h[2]
-; CHECK-NEXT:    mov v22.h[3], v18.h[3]
-; CHECK-NEXT:    mov v20.h[3], v6.h[7]
-; CHECK-NEXT:    mov v24.h[3], v27.h[5]
-; CHECK-NEXT:    mov v26.h[3], v1.h[7]
-; CHECK-NEXT:    mov v25.h[4], v3.h[0]
-; CHECK-NEXT:    mov v16.h[4], v17.h[2]
-; CHECK-NEXT:    mov v7.h[4], v6.h[4]
-; CHECK-NEXT:    mov v23.h[4], v18.h[0]
-; CHECK-NEXT:    mov v21.h[4], v4.h[5]
-; CHECK-NEXT:    mov v19.h[4], v27.h[2]
-; CHECK-NEXT:    mov v22.h[4], v1.h[4]
-; CHECK-NEXT:    mov v20.h[4], v5.h[7]
-; CHECK-NEXT:    mov v24.h[4], v2.h[5]
-; CHECK-NEXT:    mov v26.h[4], v0.h[7]
-; CHECK-NEXT:    mov v25.h[5], v6.h[1]
-; CHECK-NEXT:    mov v16.h[5], v4.h[2]
-; CHECK-NEXT:    mov v7.h[5], v5.h[4]
-; CHECK-NEXT:    mov v23.h[5], v1.h[1]
-; CHECK-NEXT:    mov v21.h[5], v3.h[5]
-; CHECK-NEXT:    mov v19.h[5], v2.h[2]
-; CHECK-NEXT:    mov v22.h[5], v0.h[4]
-; CHECK-NEXT:    mov v20.h[5], v17.h[7]
-; CHECK-NEXT:    mov v24.h[5], v18.h[5]
-; CHECK-NEXT:    mov v26.h[5], v27.h[7]
-; CHECK-NEXT:    mov v25.h[6], v5.h[1]
-; CHECK-NEXT:    mov v16.h[6], v3.h[2]
-; CHECK-NEXT:    mov v7.h[6], v17.h[4]
-; CHECK-NEXT:    mov v23.h[6], v0.h[1]
-; CHECK-NEXT:    mov v21.h[6], v6.h[6]
-; CHECK-NEXT:    mov v19.h[6], v18.h[2]
-; CHECK-NEXT:    mov v22.h[6], v27.h[4]
-; CHECK-NEXT:    mov v20.h[6], v4.h[7]
-; CHECK-NEXT:    mov v24.h[6], v1.h[6]
-; CHECK-NEXT:    mov v26.h[6], v2.h[7]
-; CHECK-NEXT:    mov v25.h[7], v17.h[1]
-; CHECK-NEXT:    mov v16.h[7], v6.h[3]
-; CHECK-NEXT:    mov v7.h[7], v4.h[4]
-; CHECK-NEXT:    mov v23.h[7], v27.h[1]
-; CHECK-NEXT:    mov v21.h[7], v5.h[6]
-; CHECK-NEXT:    mov v19.h[7], v1.h[3]
-; CHECK-NEXT:    mov v22.h[7], v2.h[4]
-; CHECK-NEXT:    mov v20.h[7], v3.h[7]
-; CHECK-NEXT:    mov v24.h[7], v0.h[6]
-; CHECK-NEXT:    mov v26.h[7], v18.h[7]
-; CHECK-NEXT:    stp q25, q16, [x1]
-; CHECK-NEXT:    stp q7, q21, [x1, #32]
-; CHECK-NEXT:    stp q20, q23, [x1, #64]
-; CHECK-NEXT:    stp q19, q22, [x1, #96]
-; CHECK-NEXT:    stp q24, q26, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NEXT:    ldp q4, q0, [x0]
+; CHECK-NEXT:    ldp q5, q1, [x0, #32]
+; CHECK-NEXT:    adrp x9, .LCPI18_8
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    adrp x8, .LCPI18_2
+; CHECK-NEXT:    ldr q19, [x9, :lo12:.LCPI18_8]
+; CHECK-NEXT:    ldp q6, q2, [x0, #64]
+; CHECK-NEXT:    adrp x9, .LCPI18_6
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI18_2]
+; CHECK-NEXT:    adrp x8, .LCPI18_4
+; CHECK-NEXT:    ldr q21, [x9, :lo12:.LCPI18_6]
+; CHECK-NEXT:    ldp q7, q3, [x0, #96]
+; CHECK-NEXT:    ldr q22, [x8, :lo12:.LCPI18_4]
+; CHECK-NEXT:    adrp x8, .LCPI18_3
+; CHECK-NEXT:    ldp q17, q16, [x0, #128]
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI18_3]
+; CHECK-NEXT:    adrp x8, .LCPI18_9
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI18_9]
+; CHECK-NEXT:    adrp x8, .LCPI18_7
+; CHECK-NEXT:    tbl v23.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v19.16b
+; CHECK-NEXT:    tbl v25.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v21.16b
+; CHECK-NEXT:    tbl v27.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v22.16b
+; CHECK-NEXT:    ldr q28, [x8, :lo12:.LCPI18_7]
+; CHECK-NEXT:    adrp x8, .LCPI18_5
+; CHECK-NEXT:    tbl v29.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v20.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v18.16b
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v19.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    tbl v19.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v22.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v18.16b
+; CHECK-NEXT:    ldr q30, [x8, :lo12:.LCPI18_5]
+; CHECK-NEXT:    adrp x8, .LCPI18_1
+; CHECK-NEXT:    tbx v23.16b, { v17.16b }, v26.16b
+; CHECK-NEXT:    tbx v25.16b, { v17.16b }, v28.16b
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI18_1]
+; CHECK-NEXT:    tbx v27.16b, { v17.16b }, v30.16b
+; CHECK-NEXT:    tbx v29.16b, { v17.16b }, v24.16b
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v26.16b
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v28.16b
+; CHECK-NEXT:    tbx v19.16b, { v16.16b }, v30.16b
+; CHECK-NEXT:    tbx v4.16b, { v17.16b }, v6.16b
+; CHECK-NEXT:    tbx v20.16b, { v16.16b }, v24.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v6.16b
+; CHECK-NEXT:    stp q23, q25, [x1]
+; CHECK-NEXT:    stp q27, q29, [x1, #32]
+; CHECK-NEXT:    stp q7, q19, [x1, #96]
+; CHECK-NEXT:    stp q4, q5, [x1, #64]
+; CHECK-NEXT:    stp q20, q0, [x1, #128]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 32
   %p2 = getelementptr i8, ptr %src, i64 64
@@ -1491,97 +953,57 @@ define void @interleave5_v16i16(ptr %src, ptr %dst) {
 define void @deinterleave5_v16i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q18, [x0]
-; CHECK-NEXT:    ldr q20, [x0, #112]
-; CHECK-NEXT:    ldp q1, q19, [x0, #80]
-; CHECK-NEXT:    ldr q21, [x0, #32]
-; CHECK-NEXT:    dup v2.8h, v0.h[2]
-; CHECK-NEXT:    dup v16.8h, v0.h[1]
-; CHECK-NEXT:    dup v4.8h, v0.h[4]
-; CHECK-NEXT:    dup v3.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v1.h[2]
-; CHECK-NEXT:    dup v17.8h, v1.h[1]
-; CHECK-NEXT:    dup v5.8h, v1.h[3]
-; CHECK-NEXT:    dup v7.8h, v0.h[3]
-; CHECK-NEXT:    mov v2.h[1], v0.h[7]
-; CHECK-NEXT:    mov v16.h[1], v0.h[6]
-; CHECK-NEXT:    mov v0.h[1], v0.h[5]
-; CHECK-NEXT:    mov v6.h[1], v1.h[7]
-; CHECK-NEXT:    mov v17.h[1], v1.h[6]
-; CHECK-NEXT:    mov v1.h[1], v1.h[5]
-; CHECK-NEXT:    mov v7.h[1], v18.h[0]
-; CHECK-NEXT:    mov v5.h[1], v19.h[0]
-; CHECK-NEXT:    mov v4.h[1], v18.h[1]
-; CHECK-NEXT:    mov v3.h[1], v19.h[1]
-; CHECK-NEXT:    mov v0.h[2], v18.h[2]
-; CHECK-NEXT:    mov v16.h[2], v18.h[3]
-; CHECK-NEXT:    mov v2.h[2], v18.h[4]
-; CHECK-NEXT:    mov v1.h[2], v19.h[2]
-; CHECK-NEXT:    mov v17.h[2], v19.h[3]
-; CHECK-NEXT:    mov v6.h[2], v19.h[4]
-; CHECK-NEXT:    mov v7.h[2], v18.h[5]
-; CHECK-NEXT:    mov v5.h[2], v19.h[5]
-; CHECK-NEXT:    mov v4.h[2], v18.h[6]
-; CHECK-NEXT:    mov v3.h[2], v19.h[6]
-; CHECK-NEXT:    mov v0.h[3], v18.h[7]
-; CHECK-NEXT:    mov v16.h[3], v21.h[0]
-; CHECK-NEXT:    ldr q18, [x0, #48]
-; CHECK-NEXT:    mov v1.h[3], v19.h[7]
-; CHECK-NEXT:    mov v17.h[3], v20.h[0]
-; CHECK-NEXT:    ldr q19, [x0, #128]
-; CHECK-NEXT:    mov v2.h[3], v21.h[1]
-; CHECK-NEXT:    mov v6.h[3], v20.h[1]
-; CHECK-NEXT:    mov v7.h[3], v21.h[2]
-; CHECK-NEXT:    mov v5.h[3], v20.h[2]
-; CHECK-NEXT:    mov v4.h[3], v21.h[3]
-; CHECK-NEXT:    mov v3.h[3], v20.h[3]
-; CHECK-NEXT:    mov v0.h[4], v21.h[4]
-; CHECK-NEXT:    mov v16.h[4], v21.h[5]
-; CHECK-NEXT:    mov v1.h[4], v20.h[4]
-; CHECK-NEXT:    mov v17.h[4], v20.h[5]
-; CHECK-NEXT:    mov v2.h[4], v21.h[6]
-; CHECK-NEXT:    mov v6.h[4], v20.h[6]
-; CHECK-NEXT:    mov v7.h[4], v21.h[7]
-; CHECK-NEXT:    ldr q21, [x0, #144]
-; CHECK-NEXT:    mov v5.h[4], v20.h[7]
-; CHECK-NEXT:    ldr q20, [x0, #64]
-; CHECK-NEXT:    mov v4.h[4], v18.h[0]
-; CHECK-NEXT:    mov v3.h[4], v19.h[0]
-; CHECK-NEXT:    mov v0.h[5], v18.h[1]
-; CHECK-NEXT:    mov v1.h[5], v19.h[1]
-; CHECK-NEXT:    mov v16.h[5], v18.h[2]
-; CHECK-NEXT:    mov v17.h[5], v19.h[2]
-; CHECK-NEXT:    mov v2.h[5], v18.h[3]
-; CHECK-NEXT:    mov v6.h[5], v19.h[3]
-; CHECK-NEXT:    mov v7.h[5], v18.h[4]
-; CHECK-NEXT:    mov v5.h[5], v19.h[4]
-; CHECK-NEXT:    mov v4.h[5], v18.h[5]
-; CHECK-NEXT:    mov v3.h[5], v19.h[5]
-; CHECK-NEXT:    mov v0.h[6], v18.h[6]
-; CHECK-NEXT:    mov v1.h[6], v19.h[6]
-; CHECK-NEXT:    mov v16.h[6], v18.h[7]
-; CHECK-NEXT:    mov v17.h[6], v19.h[7]
-; CHECK-NEXT:    mov v2.h[6], v20.h[0]
-; CHECK-NEXT:    mov v6.h[6], v21.h[0]
-; CHECK-NEXT:    mov v7.h[6], v20.h[1]
-; CHECK-NEXT:    mov v5.h[6], v21.h[1]
-; CHECK-NEXT:    mov v4.h[6], v20.h[2]
-; CHECK-NEXT:    mov v3.h[6], v21.h[2]
-; CHECK-NEXT:    mov v0.h[7], v20.h[3]
-; CHECK-NEXT:    mov v1.h[7], v21.h[3]
-; CHECK-NEXT:    mov v16.h[7], v20.h[4]
-; CHECK-NEXT:    mov v17.h[7], v21.h[4]
-; CHECK-NEXT:    mov v2.h[7], v20.h[5]
-; CHECK-NEXT:    mov v6.h[7], v21.h[5]
-; CHECK-NEXT:    mov v7.h[7], v20.h[6]
-; CHECK-NEXT:    mov v5.h[7], v21.h[6]
-; CHECK-NEXT:    mov v4.h[7], v20.h[7]
-; CHECK-NEXT:    mov v3.h[7], v21.h[7]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q16, q17, [x1, #32]
-; CHECK-NEXT:    stp q2, q6, [x1, #64]
-; CHECK-NEXT:    stp q7, q5, [x1, #96]
-; CHECK-NEXT:    stp q4, q3, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI19_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldp q19, q5, [x0, #128]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    adrp x8, .LCPI19_8
+; CHECK-NEXT:    ldp q17, q18, [x0, #96]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI19_8]
+; CHECK-NEXT:    adrp x8, .LCPI19_2
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q16, [x0, #80]
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI19_2]
+; CHECK-NEXT:    adrp x8, .LCPI19_6
+; CHECK-NEXT:    ldr q21, [x8, :lo12:.LCPI19_6]
+; CHECK-NEXT:    adrp x8, .LCPI19_4
+; CHECK-NEXT:    tbl v22.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v7.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v7.16b
+; CHECK-NEXT:    ldr q23, [x8, :lo12:.LCPI19_4]
+; CHECK-NEXT:    adrp x8, .LCPI19_9
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI19_9]
+; CHECK-NEXT:    adrp x8, .LCPI19_5
+; CHECK-NEXT:    tbl v25.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI19_5]
+; CHECK-NEXT:    adrp x8, .LCPI19_7
+; CHECK-NEXT:    tbl v21.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v21.16b
+; CHECK-NEXT:    ldr q27, [x8, :lo12:.LCPI19_7]
+; CHECK-NEXT:    tbl v28.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v23.16b
+; CHECK-NEXT:    tbx v22.16b, { v4.16b }, v24.16b
+; CHECK-NEXT:    adrp x8, .LCPI19_3
+; CHECK-NEXT:    tbl v23.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v23.16b
+; CHECK-NEXT:    tbx v7.16b, { v5.16b }, v24.16b
+; CHECK-NEXT:    tbl v24.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v20.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v16.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI19_3]
+; CHECK-NEXT:    adrp x8, .LCPI19_1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI19_1]
+; CHECK-NEXT:    tbx v25.16b, { v4.16b }, v27.16b
+; CHECK-NEXT:    tbx v21.16b, { v5.16b }, v27.16b
+; CHECK-NEXT:    tbx v28.16b, { v4.16b }, v26.16b
+; CHECK-NEXT:    tbx v23.16b, { v5.16b }, v26.16b
+; CHECK-NEXT:    stp q22, q7, [x1]
+; CHECK-NEXT:    tbx v20.16b, { v4.16b }, v17.16b
+; CHECK-NEXT:    tbx v24.16b, { v5.16b }, v17.16b
+; CHECK-NEXT:    tbx v16.16b, { v5.16b }, v1.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q25, q21, [x1, #32]
+; CHECK-NEXT:    stp q28, q23, [x1, #64]
+; CHECK-NEXT:    stp q20, q24, [x1, #96]
+; CHECK-NEXT:    stp q0, q16, [x1, #128]
 ; CHECK-NEXT:    ret
   %wide = load <80 x i16>, ptr %src, align 32
   %parts = call { <16 x i16>, <16 x i16>, <16 x i16>, <16 x i16>, <16 x i16> } @llvm.vector.deinterleave5.v80i16(<80 x i16> %wide)
@@ -1605,96 +1027,56 @@ define void @deinterleave5_v16i16(ptr %src, ptr %dst) {
 define void @interleave5_v16f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q4, q2, [x0, #96]
-; CHECK-NEXT:    ldp q6, q1, [x0]
-; CHECK-NEXT:    ldp q5, q0, [x0, #32]
-; CHECK-NEXT:    ldp q3, q18, [x0, #128]
-; CHECK-NEXT:    dup v16.8h, v4.h[1]
-; CHECK-NEXT:    ldp q17, q27, [x0, #64]
-; CHECK-NEXT:    mov v25.16b, v6.16b
-; CHECK-NEXT:    dup v7.8h, v5.h[3]
-; CHECK-NEXT:    dup v19.8h, v2.h[1]
-; CHECK-NEXT:    mov v23.16b, v1.16b
-; CHECK-NEXT:    dup v21.8h, v3.h[4]
-; CHECK-NEXT:    dup v22.8h, v0.h[3]
-; CHECK-NEXT:    dup v24.8h, v18.h[4]
-; CHECK-NEXT:    dup v20.8h, v17.h[6]
-; CHECK-NEXT:    dup v26.8h, v27.h[6]
-; CHECK-NEXT:    mov v25.h[1], v5.h[0]
-; CHECK-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-NEXT:    mov v7.h[1], v17.h[3]
-; CHECK-NEXT:    mov v23.h[1], v0.h[0]
-; CHECK-NEXT:    mov v21.h[1], v6.h[5]
-; CHECK-NEXT:    mov v19.h[1], v18.h[1]
-; CHECK-NEXT:    mov v22.h[1], v27.h[3]
-; CHECK-NEXT:    mov v20.h[1], v4.h[6]
-; CHECK-NEXT:    mov v24.h[1], v1.h[5]
-; CHECK-NEXT:    mov v26.h[1], v2.h[6]
-; CHECK-NEXT:    mov v25.h[2], v17.h[0]
-; CHECK-NEXT:    mov v16.h[2], v6.h[2]
-; CHECK-NEXT:    mov v7.h[2], v4.h[3]
-; CHECK-NEXT:    mov v23.h[2], v27.h[0]
-; CHECK-NEXT:    mov v21.h[2], v5.h[5]
-; CHECK-NEXT:    mov v19.h[2], v1.h[2]
-; CHECK-NEXT:    mov v22.h[2], v2.h[3]
-; CHECK-NEXT:    mov v20.h[2], v3.h[6]
-; CHECK-NEXT:    mov v24.h[2], v0.h[5]
-; CHECK-NEXT:    mov v26.h[2], v18.h[6]
-; CHECK-NEXT:    mov v25.h[3], v4.h[0]
-; CHECK-NEXT:    mov v16.h[3], v5.h[2]
-; CHECK-NEXT:    mov v7.h[3], v3.h[3]
-; CHECK-NEXT:    mov v23.h[3], v2.h[0]
-; CHECK-NEXT:    mov v21.h[3], v17.h[5]
-; CHECK-NEXT:    mov v19.h[3], v0.h[2]
-; CHECK-NEXT:    mov v22.h[3], v18.h[3]
-; CHECK-NEXT:    mov v20.h[3], v6.h[7]
-; CHECK-NEXT:    mov v24.h[3], v27.h[5]
-; CHECK-NEXT:    mov v26.h[3], v1.h[7]
-; CHECK-NEXT:    mov v25.h[4], v3.h[0]
-; CHECK-NEXT:    mov v16.h[4], v17.h[2]
-; CHECK-NEXT:    mov v7.h[4], v6.h[4]
-; CHECK-NEXT:    mov v23.h[4], v18.h[0]
-; CHECK-NEXT:    mov v21.h[4], v4.h[5]
-; CHECK-NEXT:    mov v19.h[4], v27.h[2]
-; CHECK-NEXT:    mov v22.h[4], v1.h[4]
-; CHECK-NEXT:    mov v20.h[4], v5.h[7]
-; CHECK-NEXT:    mov v24.h[4], v2.h[5]
-; CHECK-NEXT:    mov v26.h[4], v0.h[7]
-; CHECK-NEXT:    mov v25.h[5], v6.h[1]
-; CHECK-NEXT:    mov v16.h[5], v4.h[2]
-; CHECK-NEXT:    mov v7.h[5], v5.h[4]
-; CHECK-NEXT:    mov v23.h[5], v1.h[1]
-; CHECK-NEXT:    mov v21.h[5], v3.h[5]
-; CHECK-NEXT:    mov v19.h[5], v2.h[2]
-; CHECK-NEXT:    mov v22.h[5], v0.h[4]
-; CHECK-NEXT:    mov v20.h[5], v17.h[7]
-; CHECK-NEXT:    mov v24.h[5], v18.h[5]
-; CHECK-NEXT:    mov v26.h[5], v27.h[7]
-; CHECK-NEXT:    mov v25.h[6], v5.h[1]
-; CHECK-NEXT:    mov v16.h[6], v3.h[2]
-; CHECK-NEXT:    mov v7.h[6], v17.h[4]
-; CHECK-NEXT:    mov v23.h[6], v0.h[1]
-; CHECK-NEXT:    mov v21.h[6], v6.h[6]
-; CHECK-NEXT:    mov v19.h[6], v18.h[2]
-; CHECK-NEXT:    mov v22.h[6], v27.h[4]
-; CHECK-NEXT:    mov v20.h[6], v4.h[7]
-; CHECK-NEXT:    mov v24.h[6], v1.h[6]
-; CHECK-NEXT:    mov v26.h[6], v2.h[7]
-; CHECK-NEXT:    mov v25.h[7], v17.h[1]
-; CHECK-NEXT:    mov v16.h[7], v6.h[3]
-; CHECK-NEXT:    mov v7.h[7], v4.h[4]
-; CHECK-NEXT:    mov v23.h[7], v27.h[1]
-; CHECK-NEXT:    mov v21.h[7], v5.h[6]
-; CHECK-NEXT:    mov v19.h[7], v1.h[3]
-; CHECK-NEXT:    mov v22.h[7], v2.h[4]
-; CHECK-NEXT:    mov v20.h[7], v3.h[7]
-; CHECK-NEXT:    mov v24.h[7], v0.h[6]
-; CHECK-NEXT:    mov v26.h[7], v18.h[7]
-; CHECK-NEXT:    stp q25, q16, [x1]
-; CHECK-NEXT:    stp q7, q21, [x1, #32]
-; CHECK-NEXT:    stp q20, q23, [x1, #64]
-; CHECK-NEXT:    stp q19, q22, [x1, #96]
-; CHECK-NEXT:    stp q24, q26, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI20_0
+; CHECK-NEXT:    ldp q4, q0, [x0]
+; CHECK-NEXT:    ldp q5, q1, [x0, #32]
+; CHECK-NEXT:    adrp x9, .LCPI20_8
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI20_0]
+; CHECK-NEXT:    adrp x8, .LCPI20_2
+; CHECK-NEXT:    ldr q19, [x9, :lo12:.LCPI20_8]
+; CHECK-NEXT:    ldp q6, q2, [x0, #64]
+; CHECK-NEXT:    adrp x9, .LCPI20_6
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI20_2]
+; CHECK-NEXT:    adrp x8, .LCPI20_4
+; CHECK-NEXT:    ldr q21, [x9, :lo12:.LCPI20_6]
+; CHECK-NEXT:    ldp q7, q3, [x0, #96]
+; CHECK-NEXT:    ldr q22, [x8, :lo12:.LCPI20_4]
+; CHECK-NEXT:    adrp x8, .LCPI20_3
+; CHECK-NEXT:    ldp q17, q16, [x0, #128]
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI20_3]
+; CHECK-NEXT:    adrp x8, .LCPI20_9
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI20_9]
+; CHECK-NEXT:    adrp x8, .LCPI20_7
+; CHECK-NEXT:    tbl v23.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v19.16b
+; CHECK-NEXT:    tbl v25.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v21.16b
+; CHECK-NEXT:    tbl v27.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v22.16b
+; CHECK-NEXT:    ldr q28, [x8, :lo12:.LCPI20_7]
+; CHECK-NEXT:    adrp x8, .LCPI20_5
+; CHECK-NEXT:    tbl v29.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v20.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v18.16b
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v19.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    tbl v19.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v22.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v18.16b
+; CHECK-NEXT:    ldr q30, [x8, :lo12:.LCPI20_5]
+; CHECK-NEXT:    adrp x8, .LCPI20_1
+; CHECK-NEXT:    tbx v23.16b, { v17.16b }, v26.16b
+; CHECK-NEXT:    tbx v25.16b, { v17.16b }, v28.16b
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI20_1]
+; CHECK-NEXT:    tbx v27.16b, { v17.16b }, v30.16b
+; CHECK-NEXT:    tbx v29.16b, { v17.16b }, v24.16b
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v26.16b
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v28.16b
+; CHECK-NEXT:    tbx v19.16b, { v16.16b }, v30.16b
+; CHECK-NEXT:    tbx v4.16b, { v17.16b }, v6.16b
+; CHECK-NEXT:    tbx v20.16b, { v16.16b }, v24.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v6.16b
+; CHECK-NEXT:    stp q23, q25, [x1]
+; CHECK-NEXT:    stp q27, q29, [x1, #32]
+; CHECK-NEXT:    stp q7, q19, [x1, #96]
+; CHECK-NEXT:    stp q4, q5, [x1, #64]
+; CHECK-NEXT:    stp q20, q0, [x1, #128]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 32
   %p2 = getelementptr i8, ptr %src, i64 64
@@ -1713,97 +1095,57 @@ define void @interleave5_v16f16(ptr %src, ptr %dst) {
 define void @deinterleave5_v16f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q18, [x0]
-; CHECK-NEXT:    ldr q20, [x0, #112]
-; CHECK-NEXT:    ldp q1, q19, [x0, #80]
-; CHECK-NEXT:    ldr q21, [x0, #32]
-; CHECK-NEXT:    dup v2.8h, v0.h[2]
-; CHECK-NEXT:    dup v16.8h, v0.h[1]
-; CHECK-NEXT:    dup v4.8h, v0.h[4]
-; CHECK-NEXT:    dup v3.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v1.h[2]
-; CHECK-NEXT:    dup v17.8h, v1.h[1]
-; CHECK-NEXT:    dup v5.8h, v1.h[3]
-; CHECK-NEXT:    dup v7.8h, v0.h[3]
-; CHECK-NEXT:    mov v2.h[1], v0.h[7]
-; CHECK-NEXT:    mov v16.h[1], v0.h[6]
-; CHECK-NEXT:    mov v0.h[1], v0.h[5]
-; CHECK-NEXT:    mov v6.h[1], v1.h[7]
-; CHECK-NEXT:    mov v17.h[1], v1.h[6]
-; CHECK-NEXT:    mov v1.h[1], v1.h[5]
-; CHECK-NEXT:    mov v7.h[1], v18.h[0]
-; CHECK-NEXT:    mov v5.h[1], v19.h[0]
-; CHECK-NEXT:    mov v4.h[1], v18.h[1]
-; CHECK-NEXT:    mov v3.h[1], v19.h[1]
-; CHECK-NEXT:    mov v0.h[2], v18.h[2]
-; CHECK-NEXT:    mov v16.h[2], v18.h[3]
-; CHECK-NEXT:    mov v2.h[2], v18.h[4]
-; CHECK-NEXT:    mov v1.h[2], v19.h[2]
-; CHECK-NEXT:    mov v17.h[2], v19.h[3]
-; CHECK-NEXT:    mov v6.h[2], v19.h[4]
-; CHECK-NEXT:    mov v7.h[2], v18.h[5]
-; CHECK-NEXT:    mov v5.h[2], v19.h[5]
-; CHECK-NEXT:    mov v4.h[2], v18.h[6]
-; CHECK-NEXT:    mov v3.h[2], v19.h[6]
-; CHECK-NEXT:    mov v0.h[3], v18.h[7]
-; CHECK-NEXT:    mov v16.h[3], v21.h[0]
-; CHECK-NEXT:    ldr q18, [x0, #48]
-; CHECK-NEXT:    mov v1.h[3], v19.h[7]
-; CHECK-NEXT:    mov v17.h[3], v20.h[0]
-; CHECK-NEXT:    ldr q19, [x0, #128]
-; CHECK-NEXT:    mov v2.h[3], v21.h[1]
-; CHECK-NEXT:    mov v6.h[3], v20.h[1]
-; CHECK-NEXT:    mov v7.h[3], v21.h[2]
-; CHECK-NEXT:    mov v5.h[3], v20.h[2]
-; CHECK-NEXT:    mov v4.h[3], v21.h[3]
-; CHECK-NEXT:    mov v3.h[3], v20.h[3]
-; CHECK-NEXT:    mov v0.h[4], v21.h[4]
-; CHECK-NEXT:    mov v16.h[4], v21.h[5]
-; CHECK-NEXT:    mov v1.h[4], v20.h[4]
-; CHECK-NEXT:    mov v17.h[4], v20.h[5]
-; CHECK-NEXT:    mov v2.h[4], v21.h[6]
-; CHECK-NEXT:    mov v6.h[4], v20.h[6]
-; CHECK-NEXT:    mov v7.h[4], v21.h[7]
-; CHECK-NEXT:    ldr q21, [x0, #144]
-; CHECK-NEXT:    mov v5.h[4], v20.h[7]
-; CHECK-NEXT:    ldr q20, [x0, #64]
-; CHECK-NEXT:    mov v4.h[4], v18.h[0]
-; CHECK-NEXT:    mov v3.h[4], v19.h[0]
-; CHECK-NEXT:    mov v0.h[5], v18.h[1]
-; CHECK-NEXT:    mov v1.h[5], v19.h[1]
-; CHECK-NEXT:    mov v16.h[5], v18.h[2]
-; CHECK-NEXT:    mov v17.h[5], v19.h[2]
-; CHECK-NEXT:    mov v2.h[5], v18.h[3]
-; CHECK-NEXT:    mov v6.h[5], v19.h[3]
-; CHECK-NEXT:    mov v7.h[5], v18.h[4]
-; CHECK-NEXT:    mov v5.h[5], v19.h[4]
-; CHECK-NEXT:    mov v4.h[5], v18.h[5]
-; CHECK-NEXT:    mov v3.h[5], v19.h[5]
-; CHECK-NEXT:    mov v0.h[6], v18.h[6]
-; CHECK-NEXT:    mov v1.h[6], v19.h[6]
-; CHECK-NEXT:    mov v16.h[6], v18.h[7]
-; CHECK-NEXT:    mov v17.h[6], v19.h[7]
-; CHECK-NEXT:    mov v2.h[6], v20.h[0]
-; CHECK-NEXT:    mov v6.h[6], v21.h[0]
-; CHECK-NEXT:    mov v7.h[6], v20.h[1]
-; CHECK-NEXT:    mov v5.h[6], v21.h[1]
-; CHECK-NEXT:    mov v4.h[6], v20.h[2]
-; CHECK-NEXT:    mov v3.h[6], v21.h[2]
-; CHECK-NEXT:    mov v0.h[7], v20.h[3]
-; CHECK-NEXT:    mov v1.h[7], v21.h[3]
-; CHECK-NEXT:    mov v16.h[7], v20.h[4]
-; CHECK-NEXT:    mov v17.h[7], v21.h[4]
-; CHECK-NEXT:    mov v2.h[7], v20.h[5]
-; CHECK-NEXT:    mov v6.h[7], v21.h[5]
-; CHECK-NEXT:    mov v7.h[7], v20.h[6]
-; CHECK-NEXT:    mov v5.h[7], v21.h[6]
-; CHECK-NEXT:    mov v4.h[7], v20.h[7]
-; CHECK-NEXT:    mov v3.h[7], v21.h[7]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q16, q17, [x1, #32]
-; CHECK-NEXT:    stp q2, q6, [x1, #64]
-; CHECK-NEXT:    stp q7, q5, [x1, #96]
-; CHECK-NEXT:    stp q4, q3, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI21_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldp q19, q5, [x0, #128]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI21_0]
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    adrp x8, .LCPI21_8
+; CHECK-NEXT:    ldp q17, q18, [x0, #96]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI21_8]
+; CHECK-NEXT:    adrp x8, .LCPI21_2
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q16, [x0, #80]
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI21_2]
+; CHECK-NEXT:    adrp x8, .LCPI21_6
+; CHECK-NEXT:    ldr q21, [x8, :lo12:.LCPI21_6]
+; CHECK-NEXT:    adrp x8, .LCPI21_4
+; CHECK-NEXT:    tbl v22.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v7.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v7.16b
+; CHECK-NEXT:    ldr q23, [x8, :lo12:.LCPI21_4]
+; CHECK-NEXT:    adrp x8, .LCPI21_9
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI21_9]
+; CHECK-NEXT:    adrp x8, .LCPI21_5
+; CHECK-NEXT:    tbl v25.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI21_5]
+; CHECK-NEXT:    adrp x8, .LCPI21_7
+; CHECK-NEXT:    tbl v21.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v21.16b
+; CHECK-NEXT:    ldr q27, [x8, :lo12:.LCPI21_7]
+; CHECK-NEXT:    tbl v28.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v23.16b
+; CHECK-NEXT:    tbx v22.16b, { v4.16b }, v24.16b
+; CHECK-NEXT:    adrp x8, .LCPI21_3
+; CHECK-NEXT:    tbl v23.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v23.16b
+; CHECK-NEXT:    tbx v7.16b, { v5.16b }, v24.16b
+; CHECK-NEXT:    tbl v24.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v20.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v16.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI21_3]
+; CHECK-NEXT:    adrp x8, .LCPI21_1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI21_1]
+; CHECK-NEXT:    tbx v25.16b, { v4.16b }, v27.16b
+; CHECK-NEXT:    tbx v21.16b, { v5.16b }, v27.16b
+; CHECK-NEXT:    tbx v28.16b, { v4.16b }, v26.16b
+; CHECK-NEXT:    tbx v23.16b, { v5.16b }, v26.16b
+; CHECK-NEXT:    stp q22, q7, [x1]
+; CHECK-NEXT:    tbx v20.16b, { v4.16b }, v17.16b
+; CHECK-NEXT:    tbx v24.16b, { v5.16b }, v17.16b
+; CHECK-NEXT:    tbx v16.16b, { v5.16b }, v1.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q25, q21, [x1, #32]
+; CHECK-NEXT:    stp q28, q23, [x1, #64]
+; CHECK-NEXT:    stp q20, q24, [x1, #96]
+; CHECK-NEXT:    stp q0, q16, [x1, #128]
 ; CHECK-NEXT:    ret
   %wide = load <80 x half>, ptr %src, align 32
   %parts = call { <16 x half>, <16 x half>, <16 x half>, <16 x half>, <16 x half> } @llvm.vector.deinterleave5.v80f16(<80 x half> %wide)
@@ -1827,96 +1169,56 @@ define void @deinterleave5_v16f16(ptr %src, ptr %dst) {
 define void @interleave5_v16bf16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: interleave5_v16bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q4, q2, [x0, #96]
-; CHECK-NEXT:    ldp q6, q1, [x0]
-; CHECK-NEXT:    ldp q5, q0, [x0, #32]
-; CHECK-NEXT:    ldp q3, q18, [x0, #128]
-; CHECK-NEXT:    dup v16.8h, v4.h[1]
-; CHECK-NEXT:    ldp q17, q27, [x0, #64]
-; CHECK-NEXT:    mov v25.16b, v6.16b
-; CHECK-NEXT:    dup v7.8h, v5.h[3]
-; CHECK-NEXT:    dup v19.8h, v2.h[1]
-; CHECK-NEXT:    mov v23.16b, v1.16b
-; CHECK-NEXT:    dup v21.8h, v3.h[4]
-; CHECK-NEXT:    dup v22.8h, v0.h[3]
-; CHECK-NEXT:    dup v24.8h, v18.h[4]
-; CHECK-NEXT:    dup v20.8h, v17.h[6]
-; CHECK-NEXT:    dup v26.8h, v27.h[6]
-; CHECK-NEXT:    mov v25.h[1], v5.h[0]
-; CHECK-NEXT:    mov v16.h[1], v3.h[1]
-; CHECK-NEXT:    mov v7.h[1], v17.h[3]
-; CHECK-NEXT:    mov v23.h[1], v0.h[0]
-; CHECK-NEXT:    mov v21.h[1], v6.h[5]
-; CHECK-NEXT:    mov v19.h[1], v18.h[1]
-; CHECK-NEXT:    mov v22.h[1], v27.h[3]
-; CHECK-NEXT:    mov v20.h[1], v4.h[6]
-; CHECK-NEXT:    mov v24.h[1], v1.h[5]
-; CHECK-NEXT:    mov v26.h[1], v2.h[6]
-; CHECK-NEXT:    mov v25.h[2], v17.h[0]
-; CHECK-NEXT:    mov v16.h[2], v6.h[2]
-; CHECK-NEXT:    mov v7.h[2], v4.h[3]
-; CHECK-NEXT:    mov v23.h[2], v27.h[0]
-; CHECK-NEXT:    mov v21.h[2], v5.h[5]
-; CHECK-NEXT:    mov v19.h[2], v1.h[2]
-; CHECK-NEXT:    mov v22.h[2], v2.h[3]
-; CHECK-NEXT:    mov v20.h[2], v3.h[6]
-; CHECK-NEXT:    mov v24.h[2], v0.h[5]
-; CHECK-NEXT:    mov v26.h[2], v18.h[6]
-; CHECK-NEXT:    mov v25.h[3], v4.h[0]
-; CHECK-NEXT:    mov v16.h[3], v5.h[2]
-; CHECK-NEXT:    mov v7.h[3], v3.h[3]
-; CHECK-NEXT:    mov v23.h[3], v2.h[0]
-; CHECK-NEXT:    mov v21.h[3], v17.h[5]
-; CHECK-NEXT:    mov v19.h[3], v0.h[2]
-; CHECK-NEXT:    mov v22.h[3], v18.h[3]
-; CHECK-NEXT:    mov v20.h[3], v6.h[7]
-; CHECK-NEXT:    mov v24.h[3], v27.h[5]
-; CHECK-NEXT:    mov v26.h[3], v1.h[7]
-; CHECK-NEXT:    mov v25.h[4], v3.h[0]
-; CHECK-NEXT:    mov v16.h[4], v17.h[2]
-; CHECK-NEXT:    mov v7.h[4], v6.h[4]
-; CHECK-NEXT:    mov v23.h[4], v18.h[0]
-; CHECK-NEXT:    mov v21.h[4], v4.h[5]
-; CHECK-NEXT:    mov v19.h[4], v27.h[2]
-; CHECK-NEXT:    mov v22.h[4], v1.h[4]
-; CHECK-NEXT:    mov v20.h[4], v5.h[7]
-; CHECK-NEXT:    mov v24.h[4], v2.h[5]
-; CHECK-NEXT:    mov v26.h[4], v0.h[7]
-; CHECK-NEXT:    mov v25.h[5], v6.h[1]
-; CHECK-NEXT:    mov v16.h[5], v4.h[2]
-; CHECK-NEXT:    mov v7.h[5], v5.h[4]
-; CHECK-NEXT:    mov v23.h[5], v1.h[1]
-; CHECK-NEXT:    mov v21.h[5], v3.h[5]
-; CHECK-NEXT:    mov v19.h[5], v2.h[2]
-; CHECK-NEXT:    mov v22.h[5], v0.h[4]
-; CHECK-NEXT:    mov v20.h[5], v17.h[7]
-; CHECK-NEXT:    mov v24.h[5], v18.h[5]
-; CHECK-NEXT:    mov v26.h[5], v27.h[7]
-; CHECK-NEXT:    mov v25.h[6], v5.h[1]
-; CHECK-NEXT:    mov v16.h[6], v3.h[2]
-; CHECK-NEXT:    mov v7.h[6], v17.h[4]
-; CHECK-NEXT:    mov v23.h[6], v0.h[1]
-; CHECK-NEXT:    mov v21.h[6], v6.h[6]
-; CHECK-NEXT:    mov v19.h[6], v18.h[2]
-; CHECK-NEXT:    mov v22.h[6], v27.h[4]
-; CHECK-NEXT:    mov v20.h[6], v4.h[7]
-; CHECK-NEXT:    mov v24.h[6], v1.h[6]
-; CHECK-NEXT:    mov v26.h[6], v2.h[7]
-; CHECK-NEXT:    mov v25.h[7], v17.h[1]
-; CHECK-NEXT:    mov v16.h[7], v6.h[3]
-; CHECK-NEXT:    mov v7.h[7], v4.h[4]
-; CHECK-NEXT:    mov v23.h[7], v27.h[1]
-; CHECK-NEXT:    mov v21.h[7], v5.h[6]
-; CHECK-NEXT:    mov v19.h[7], v1.h[3]
-; CHECK-NEXT:    mov v22.h[7], v2.h[4]
-; CHECK-NEXT:    mov v20.h[7], v3.h[7]
-; CHECK-NEXT:    mov v24.h[7], v0.h[6]
-; CHECK-NEXT:    mov v26.h[7], v18.h[7]
-; CHECK-NEXT:    stp q25, q16, [x1]
-; CHECK-NEXT:    stp q7, q21, [x1, #32]
-; CHECK-NEXT:    stp q20, q23, [x1, #64]
-; CHECK-NEXT:    stp q19, q22, [x1, #96]
-; CHECK-NEXT:    stp q24, q26, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI22_0
+; CHECK-NEXT:    ldp q4, q0, [x0]
+; CHECK-NEXT:    ldp q5, q1, [x0, #32]
+; CHECK-NEXT:    adrp x9, .LCPI22_8
+; CHECK-NEXT:    ldr q18, [x8, :lo12:.LCPI22_0]
+; CHECK-NEXT:    adrp x8, .LCPI22_2
+; CHECK-NEXT:    ldr q19, [x9, :lo12:.LCPI22_8]
+; CHECK-NEXT:    ldp q6, q2, [x0, #64]
+; CHECK-NEXT:    adrp x9, .LCPI22_6
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI22_2]
+; CHECK-NEXT:    adrp x8, .LCPI22_4
+; CHECK-NEXT:    ldr q21, [x9, :lo12:.LCPI22_6]
+; CHECK-NEXT:    ldp q7, q3, [x0, #96]
+; CHECK-NEXT:    ldr q22, [x8, :lo12:.LCPI22_4]
+; CHECK-NEXT:    adrp x8, .LCPI22_3
+; CHECK-NEXT:    ldp q17, q16, [x0, #128]
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI22_3]
+; CHECK-NEXT:    adrp x8, .LCPI22_9
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI22_9]
+; CHECK-NEXT:    adrp x8, .LCPI22_7
+; CHECK-NEXT:    tbl v23.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v19.16b
+; CHECK-NEXT:    tbl v25.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v21.16b
+; CHECK-NEXT:    tbl v27.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v22.16b
+; CHECK-NEXT:    ldr q28, [x8, :lo12:.LCPI22_7]
+; CHECK-NEXT:    adrp x8, .LCPI22_5
+; CHECK-NEXT:    tbl v29.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v20.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v18.16b
+; CHECK-NEXT:    tbl v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v19.16b
+; CHECK-NEXT:    tbl v7.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    tbl v19.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v22.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v18.16b
+; CHECK-NEXT:    ldr q30, [x8, :lo12:.LCPI22_5]
+; CHECK-NEXT:    adrp x8, .LCPI22_1
+; CHECK-NEXT:    tbx v23.16b, { v17.16b }, v26.16b
+; CHECK-NEXT:    tbx v25.16b, { v17.16b }, v28.16b
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI22_1]
+; CHECK-NEXT:    tbx v27.16b, { v17.16b }, v30.16b
+; CHECK-NEXT:    tbx v29.16b, { v17.16b }, v24.16b
+; CHECK-NEXT:    tbx v5.16b, { v16.16b }, v26.16b
+; CHECK-NEXT:    tbx v7.16b, { v16.16b }, v28.16b
+; CHECK-NEXT:    tbx v19.16b, { v16.16b }, v30.16b
+; CHECK-NEXT:    tbx v4.16b, { v17.16b }, v6.16b
+; CHECK-NEXT:    tbx v20.16b, { v16.16b }, v24.16b
+; CHECK-NEXT:    tbx v0.16b, { v16.16b }, v6.16b
+; CHECK-NEXT:    stp q23, q25, [x1]
+; CHECK-NEXT:    stp q27, q29, [x1, #32]
+; CHECK-NEXT:    stp q7, q19, [x1, #96]
+; CHECK-NEXT:    stp q4, q5, [x1, #64]
+; CHECK-NEXT:    stp q20, q0, [x1, #128]
 ; CHECK-NEXT:    ret
   %p1 = getelementptr i8, ptr %src, i64 32
   %p2 = getelementptr i8, ptr %src, i64 64
@@ -1935,97 +1237,57 @@ define void @interleave5_v16bf16(ptr %src, ptr %dst) {
 define void @deinterleave5_v16bf16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: deinterleave5_v16bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q18, [x0]
-; CHECK-NEXT:    ldr q20, [x0, #112]
-; CHECK-NEXT:    ldp q1, q19, [x0, #80]
-; CHECK-NEXT:    ldr q21, [x0, #32]
-; CHECK-NEXT:    dup v2.8h, v0.h[2]
-; CHECK-NEXT:    dup v16.8h, v0.h[1]
-; CHECK-NEXT:    dup v4.8h, v0.h[4]
-; CHECK-NEXT:    dup v3.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v1.h[2]
-; CHECK-NEXT:    dup v17.8h, v1.h[1]
-; CHECK-NEXT:    dup v5.8h, v1.h[3]
-; CHECK-NEXT:    dup v7.8h, v0.h[3]
-; CHECK-NEXT:    mov v2.h[1], v0.h[7]
-; CHECK-NEXT:    mov v16.h[1], v0.h[6]
-; CHECK-NEXT:    mov v0.h[1], v0.h[5]
-; CHECK-NEXT:    mov v6.h[1], v1.h[7]
-; CHECK-NEXT:    mov v17.h[1], v1.h[6]
-; CHECK-NEXT:    mov v1.h[1], v1.h[5]
-; CHECK-NEXT:    mov v7.h[1], v18.h[0]
-; CHECK-NEXT:    mov v5.h[1], v19.h[0]
-; CHECK-NEXT:    mov v4.h[1], v18.h[1]
-; CHECK-NEXT:    mov v3.h[1], v19.h[1]
-; CHECK-NEXT:    mov v0.h[2], v18.h[2]
-; CHECK-NEXT:    mov v16.h[2], v18.h[3]
-; CHECK-NEXT:    mov v2.h[2], v18.h[4]
-; CHECK-NEXT:    mov v1.h[2], v19.h[2]
-; CHECK-NEXT:    mov v17.h[2], v19.h[3]
-; CHECK-NEXT:    mov v6.h[2], v19.h[4]
-; CHECK-NEXT:    mov v7.h[2], v18.h[5]
-; CHECK-NEXT:    mov v5.h[2], v19.h[5]
-; CHECK-NEXT:    mov v4.h[2], v18.h[6]
-; CHECK-NEXT:    mov v3.h[2], v19.h[6]
-; CHECK-NEXT:    mov v0.h[3], v18.h[7]
-; CHECK-NEXT:    mov v16.h[3], v21.h[0]
-; CHECK-NEXT:    ldr q18, [x0, #48]
-; CHECK-NEXT:    mov v1.h[3], v19.h[7]
-; CHECK-NEXT:    mov v17.h[3], v20.h[0]
-; CHECK-NEXT:    ldr q19, [x0, #128]
-; CHECK-NEXT:    mov v2.h[3], v21.h[1]
-; CHECK-NEXT:    mov v6.h[3], v20.h[1]
-; CHECK-NEXT:    mov v7.h[3], v21.h[2]
-; CHECK-NEXT:    mov v5.h[3], v20.h[2]
-; CHECK-NEXT:    mov v4.h[3], v21.h[3]
-; CHECK-NEXT:    mov v3.h[3], v20.h[3]
-; CHECK-NEXT:    mov v0.h[4], v21.h[4]
-; CHECK-NEXT:    mov v16.h[4], v21.h[5]
-; CHECK-NEXT:    mov v1.h[4], v20.h[4]
-; CHECK-NEXT:    mov v17.h[4], v20.h[5]
-; CHECK-NEXT:    mov v2.h[4], v21.h[6]
-; CHECK-NEXT:    mov v6.h[4], v20.h[6]
-; CHECK-NEXT:    mov v7.h[4], v21.h[7]
-; CHECK-NEXT:    ldr q21, [x0, #144]
-; CHECK-NEXT:    mov v5.h[4], v20.h[7]
-; CHECK-NEXT:    ldr q20, [x0, #64]
-; CHECK-NEXT:    mov v4.h[4], v18.h[0]
-; CHECK-NEXT:    mov v3.h[4], v19.h[0]
-; CHECK-NEXT:    mov v0.h[5], v18.h[1]
-; CHECK-NEXT:    mov v1.h[5], v19.h[1]
-; CHECK-NEXT:    mov v16.h[5], v18.h[2]
-; CHECK-NEXT:    mov v17.h[5], v19.h[2]
-; CHECK-NEXT:    mov v2.h[5], v18.h[3]
-; CHECK-NEXT:    mov v6.h[5], v19.h[3]
-; CHECK-NEXT:    mov v7.h[5], v18.h[4]
-; CHECK-NEXT:    mov v5.h[5], v19.h[4]
-; CHECK-NEXT:    mov v4.h[5], v18.h[5]
-; CHECK-NEXT:    mov v3.h[5], v19.h[5]
-; CHECK-NEXT:    mov v0.h[6], v18.h[6]
-; CHECK-NEXT:    mov v1.h[6], v19.h[6]
-; CHECK-NEXT:    mov v16.h[6], v18.h[7]
-; CHECK-NEXT:    mov v17.h[6], v19.h[7]
-; CHECK-NEXT:    mov v2.h[6], v20.h[0]
-; CHECK-NEXT:    mov v6.h[6], v21.h[0]
-; CHECK-NEXT:    mov v7.h[6], v20.h[1]
-; CHECK-NEXT:    mov v5.h[6], v21.h[1]
-; CHECK-NEXT:    mov v4.h[6], v20.h[2]
-; CHECK-NEXT:    mov v3.h[6], v21.h[2]
-; CHECK-NEXT:    mov v0.h[7], v20.h[3]
-; CHECK-NEXT:    mov v1.h[7], v21.h[3]
-; CHECK-NEXT:    mov v16.h[7], v20.h[4]
-; CHECK-NEXT:    mov v17.h[7], v21.h[4]
-; CHECK-NEXT:    mov v2.h[7], v20.h[5]
-; CHECK-NEXT:    mov v6.h[7], v21.h[5]
-; CHECK-NEXT:    mov v7.h[7], v20.h[6]
-; CHECK-NEXT:    mov v5.h[7], v21.h[6]
-; CHECK-NEXT:    mov v4.h[7], v20.h[7]
-; CHECK-NEXT:    mov v3.h[7], v21.h[7]
-; CHECK-NEXT:    stp q0, q1, [x1]
-; CHECK-NEXT:    stp q16, q17, [x1, #32]
-; CHECK-NEXT:    stp q2, q6, [x1, #64]
-; CHECK-NEXT:    stp q7, q5, [x1, #96]
-; CHECK-NEXT:    stp q4, q3, [x1, #128]
+; CHECK-NEXT:    adrp x8, .LCPI23_0
+; CHECK-NEXT:    ldp q3, q4, [x0, #48]
+; CHECK-NEXT:    ldp q19, q5, [x0, #128]
+; CHECK-NEXT:    ldr q6, [x8, :lo12:.LCPI23_0]
+; CHECK-NEXT:    ldp q1, q2, [x0, #16]
+; CHECK-NEXT:    adrp x8, .LCPI23_8
+; CHECK-NEXT:    ldp q17, q18, [x0, #96]
+; CHECK-NEXT:    ldr q7, [x8, :lo12:.LCPI23_8]
+; CHECK-NEXT:    adrp x8, .LCPI23_2
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q16, [x0, #80]
+; CHECK-NEXT:    ldr q20, [x8, :lo12:.LCPI23_2]
+; CHECK-NEXT:    adrp x8, .LCPI23_6
+; CHECK-NEXT:    ldr q21, [x8, :lo12:.LCPI23_6]
+; CHECK-NEXT:    adrp x8, .LCPI23_4
+; CHECK-NEXT:    tbl v22.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v7.16b
+; CHECK-NEXT:    tbl v7.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v7.16b
+; CHECK-NEXT:    ldr q23, [x8, :lo12:.LCPI23_4]
+; CHECK-NEXT:    adrp x8, .LCPI23_9
+; CHECK-NEXT:    ldr q24, [x8, :lo12:.LCPI23_9]
+; CHECK-NEXT:    adrp x8, .LCPI23_5
+; CHECK-NEXT:    tbl v25.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v21.16b
+; CHECK-NEXT:    ldr q26, [x8, :lo12:.LCPI23_5]
+; CHECK-NEXT:    adrp x8, .LCPI23_7
+; CHECK-NEXT:    tbl v21.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v21.16b
+; CHECK-NEXT:    ldr q27, [x8, :lo12:.LCPI23_7]
+; CHECK-NEXT:    tbl v28.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v23.16b
+; CHECK-NEXT:    tbx v22.16b, { v4.16b }, v24.16b
+; CHECK-NEXT:    adrp x8, .LCPI23_3
+; CHECK-NEXT:    tbl v23.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v23.16b
+; CHECK-NEXT:    tbx v7.16b, { v5.16b }, v24.16b
+; CHECK-NEXT:    tbl v24.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v20.16b
+; CHECK-NEXT:    tbl v20.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v20.16b
+; CHECK-NEXT:    tbl v16.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v6.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v6.16b
+; CHECK-NEXT:    ldr q17, [x8, :lo12:.LCPI23_3]
+; CHECK-NEXT:    adrp x8, .LCPI23_1
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI23_1]
+; CHECK-NEXT:    tbx v25.16b, { v4.16b }, v27.16b
+; CHECK-NEXT:    tbx v21.16b, { v5.16b }, v27.16b
+; CHECK-NEXT:    tbx v28.16b, { v4.16b }, v26.16b
+; CHECK-NEXT:    tbx v23.16b, { v5.16b }, v26.16b
+; CHECK-NEXT:    stp q22, q7, [x1]
+; CHECK-NEXT:    tbx v20.16b, { v4.16b }, v17.16b
+; CHECK-NEXT:    tbx v24.16b, { v5.16b }, v17.16b
+; CHECK-NEXT:    tbx v16.16b, { v5.16b }, v1.16b
+; CHECK-NEXT:    tbx v0.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    stp q25, q21, [x1, #32]
+; CHECK-NEXT:    stp q28, q23, [x1, #64]
+; CHECK-NEXT:    stp q20, q24, [x1, #96]
+; CHECK-NEXT:    stp q0, q16, [x1, #128]
 ; CHECK-NEXT:    ret
   %wide = load <80 x bfloat>, ptr %src, align 32
   %parts = call { <16 x bfloat>, <16 x bfloat>, <16 x bfloat>, <16 x bfloat>, <16 x bfloat> } @llvm.vector.deinterleave5.v80bf16(<80 x bfloat> %wide)
