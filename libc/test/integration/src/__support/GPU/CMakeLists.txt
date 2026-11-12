@@ -1,9 +1,8 @@
-add_custom_target(libc-support-gpu-tests)
-add_dependencies(libc-integration-tests libc-support-gpu-tests)
+add_libc_testsuite(libc-support-gpu-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   scan_reduce_test
-  SUITE libc-support-gpu-tests
+  SUITE libc-support-gpu-integration-tests
   SRCS
     scan_reduce.cpp
   LOADER_ARGS
@@ -12,7 +11,7 @@ add_integration_test(
 
 add_integration_test(
   shuffle_test
-  SUITE libc-support-gpu-tests
+  SUITE libc-support-gpu-integration-tests
   SRCS
     shuffle.cpp
   LOADER_ARGS
@@ -21,7 +20,7 @@ add_integration_test(
 
 add_integration_test(
   match_test
-  SUITE libc-support-gpu-tests
+  SUITE libc-support-gpu-integration-tests
   SRCS
     match.cpp
   LOADER_ARGS
@@ -31,7 +30,7 @@ add_integration_test(
 add_integration_test(
   fixedbuffer_test
   SUITE
-    libc-support-gpu-tests
+    libc-support-gpu-integration-tests
   SRCS
     fixedbuffer_test.cpp
   DEPENDS

@@ -26,7 +26,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGenUtils/ClassUtils.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -882,7 +882,7 @@ public:
   }
 
   void addMemcpyableField(FieldDecl *F) {
-    if (isEmptyFieldForLayout(CGF.getContext(), F))
+    if (CodeGenUtils::isEmptyFieldForLayout(CGF.getContext(), F))
       return;
     if (!FirstField)
       addInitialField(F);
@@ -907,6 +907,12 @@ public:
     // Give the subclass a chance to bail out if it feels the memcpy isn't
     // worth it (e.g. Hasn't aggregated enough data).
     if (!FirstField) {
+      return;
+    }
+
+    // Unreachable, e.g. after a noreturn member copy; drop it like EmitStmt.
+    if (!CGF.HaveInsertPoint()) {
+      reset();
       return;
     }
 
@@ -1863,7 +1869,7 @@ public:
                              const CXXDestructorDecl *DD)
       : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
   void PushCleanupForField(const FieldDecl *Field) {
-    if (isEmptyFieldForLayout(Context, Field))
+    if (CodeGenUtils::isEmptyFieldForLayout(Context, Field))
       return;
     unsigned FieldIndex = Field->getFieldIndex();
     if (CodeGenUtils::fieldHasTrivialDestructorBody(Context, Field)) {

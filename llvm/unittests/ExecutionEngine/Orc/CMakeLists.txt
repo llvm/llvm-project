@@ -1,5 +1,6 @@
 
 set(LLVM_LINK_COMPONENTS
+  Analysis
   Core
   ExecutionEngine
   IRReader
@@ -28,6 +29,7 @@ add_llvm_unittest(OrcJITTests
   EPCGenericDylibManagerTest.cpp
   IndirectionUtilsTest.cpp
   InProcessEPCTest.cpp
+  InstanceSymbolGeneratorTest.cpp
   JITTargetMachineBuilderTest.cpp
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp
@@ -50,6 +52,7 @@ add_llvm_unittest(OrcJITTests
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
   SimpleRemoteEPCUtilsTest.cpp
+  SPSHandlerSpecTest.cpp
   SPSProxySpecTest.cpp
   SymbolLookupSetTest.cpp
   SymbolStringPoolTest.cpp

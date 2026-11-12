@@ -94,7 +94,7 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  PassBuilder PB;
+  PassBuilder PB(M.getContext());
 
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -122,7 +122,7 @@ static std::string OptLLVM(const std::string &IR, CodeGenOptLevel OLvl) {
 
   Triple ModuleTriple(M->getTargetTriple());
   const TargetOptions Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+      codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   std::string E;
   const Target *TheTarget =
       TargetRegistry::lookupTarget(codegen::getMArch(), ModuleTriple, E);
@@ -179,7 +179,7 @@ static void CreateAndRunJITFunc(const std::string &IR, CodeGenOptLevel OLvl) {
   builder.setMCJITMemoryManager(std::make_unique<SectionMemoryManager>());
   builder.setOptLevel(OLvl);
   builder.setTargetOptions(
-      codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple));
+      codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple));
 
   std::unique_ptr<ExecutionEngine> EE(builder.create());
   if (!EE)

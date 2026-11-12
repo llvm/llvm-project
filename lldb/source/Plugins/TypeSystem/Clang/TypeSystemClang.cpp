@@ -41,11 +41,17 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -61,10 +67,15 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -115,9 +126,9 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsCPlusPlus(language) ||
          lldb_private::Language::LanguageIsObjC(language) ||
          lldb_private::Language::LanguageIsPascal(language) ||
-         // Use Clang for Rust until there is a proper language plugin for it
+         // Use Clang for Rust until there is a Rust type system
          language == eLanguageTypeRust ||
-         // Use Clang for D until there is a proper language plugin for it
+         // Use Clang for D until there is a D type system
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan;
@@ -584,14 +595,85 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
+namespace {
+class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules dump pcm-info",
+            "Dump information about the given clang module (pcm).") {
+    // Take a single file argument.
+    AddSimpleArgumentList(eArgTypeFilename);
+  }
+
+  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
+                                   m_cmd_name.c_str());
+      return;
+    }
+
+    const char *pcm_path = command.GetArgumentAtIndex(0);
+    const FileSpec pcm_file{pcm_path};
+
+    if (pcm_file.GetFileNameExtension() != ".pcm") {
+      result.AppendError("file must have a .pcm extension");
+      return;
+    }
+
+    if (!FileSystem::Instance().Exists(pcm_file)) {
+      result.AppendError("pcm file does not exist");
+      return;
+    }
+
+    const char *clang_args[] = {"clang", pcm_path};
+    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
+
+    // Pass empty deleter to not attempt to free memory that was allocated
+    // outside of the current scope, possibly statically.
+    std::shared_ptr<llvm::raw_ostream> Out(
+        &result.GetOutputStream().AsRawOstream(), [](llvm::raw_ostream *) {});
+    clang::DumpModuleInfoAction dump_module_info(Out);
+    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
+    compiler.getPCHContainerOperations()->registerReader(
+        std::make_unique<clang::ObjectFilePCHContainerReader>());
+
+    if (compiler.ExecuteAction(dump_module_info))
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+} // namespace
+
 void TypeSystemClang::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
-      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
+      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions(),
+      DebuggerInitialize);
+
+  llvm::SmallString<128> path;
+  if (clang::driver::Driver::getDefaultModuleCachePath(path))
+    ModuleList::GetGlobalModuleListProperties().SetClangModulesCachePath(
+        FileSpec(path));
 }
 
 void TypeSystemClang::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+void TypeSystemClang::DebuggerInitialize(Debugger &debugger) {
+  CommandInterpreter &interpreter = debugger.GetCommandInterpreter();
+  llvm::StringRef parent = "target modules dump";
+  if (CommandObject *dump = interpreter.GetCommandObjectForCommand(parent))
+    dump->LoadSubCommand(
+        "pcm-info",
+        std::make_shared<CommandObjectTargetModulesDumpClangPCMInfo>(
+            interpreter));
 }
 
 void TypeSystemClang::Finalize() {
@@ -3668,6 +3750,16 @@ bool TypeSystemClang::HasPointerAuthQualifier(
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
+std::optional<uint32_t> TypeSystemClang::GetTargetAddressSpace(
+    lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return std::nullopt;
+  clang::LangAS as = GetCanonicalQualType(type).getAddressSpace();
+  if (!clang::isTargetAddressSpace(as))
+    return std::nullopt;
+  return clang::toTargetAddressSpace(as);
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
@@ -4605,6 +4697,18 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType
+TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                         uint32_t address_space) {
+  assert(type);
+  assert(address_space <= clang::Qualifiers::MaxAddressSpace);
+  clang::QualType qual_type = GetQualType(type);
+  auto lang_as = static_cast<clang::LangAS>(address_space);
+  if (lang_as == clang::LangAS::Default || qual_type.hasAddressSpace())
+    return GetType(qual_type);
+  return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
+}
+
+CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
@@ -4923,6 +5027,12 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::NullPtr:
+      return lldb::eEncodingUint;
+
+    case clang::BuiltinType::MetaInfo:
+      // HLSL -- Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::Kind::ARCUnbridgedCast:
@@ -8528,6 +8638,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
   auto consumer =
       clang::CreateASTDumper(output, filter,
+                             /*FilterPath=*/"",
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
@@ -8799,12 +8910,6 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
-
-  CompilerType ct(weak_from_this(), type);
-  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  if (std::optional<ClangASTMetadata> metadata = GetMetadata(clang_type)) {
-    metadata->Dump(&s);
-  }
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
@@ -8893,7 +8998,25 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-}
+
+    if (level == eDescriptionLevelVerbose) {
+      std::optional<ClangASTMetadata> metadata =
+          GetMetadata(qual_type.getTypePtr());
+      if (metadata) {
+        s << "type-metadata = ";
+        metadata->Dump(&s);
+      }
+
+      metadata.reset();
+      if (const clang::TagDecl *tag = qual_type->getAsTagDecl())
+        metadata = GetMetadata(tag);
+
+      if (metadata) {
+        s << "decl-metadata = ";
+        metadata->Dump(&s);
+      }
+    }
+  }
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {

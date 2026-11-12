@@ -1,5 +1,5 @@
 ;; Verify that byte types are encoded as integer types in DXIL bitcode.
-; RUN: llc --filetype=obj %s --stop-after=dxil-write-bitcode -o %t
+; RUN: llc --filetype=obj %s --stop-after=dxil-writer -o %t
 ; RUN: llvm-bcanalyzer --dump %t | FileCheck %s
 
 target triple = "dxil--shadermodel6.5-library"

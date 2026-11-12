@@ -22,6 +22,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
@@ -207,6 +208,7 @@ struct ObjectEntryBlockArgs {
   ObjectEntryBlockArgsEntry hasDeviceAddr;
   llvm::ArrayRef<mlir::Value> hostEvalVars;
   ObjectEntryBlockArgsEntry inReduction;
+  ObjectEntryBlockArgsEntry linear;
   ObjectEntryBlockArgsEntry map;
   ObjectEntryBlockArgsEntry priv;
   ObjectEntryBlockArgsEntry reduction;
@@ -216,8 +218,9 @@ struct ObjectEntryBlockArgs {
   std::size_t sourceUseDeviceAddrCount{0};
 
   bool isValid() const {
-    return hasDeviceAddr.isValid() && inReduction.isValid() && map.isValid() &&
-           priv.isValid() && reduction.isValid() && taskReduction.isValid() &&
+    return hasDeviceAddr.isValid() && inReduction.isValid() &&
+           linear.isValid() && map.isValid() && priv.isValid() &&
+           reduction.isValid() && taskReduction.isValid() &&
            useDeviceAddr.isValid() && useDevicePtr.isValid() &&
            sourceUseDeviceAddrCount <= useDeviceAddr.objects.size();
   }
@@ -231,6 +234,7 @@ struct ObjectEntryBlockArgs {
     };
     appendSyms(hasDeviceAddr);
     appendSyms(inReduction);
+    appendSyms(linear);
     appendSyms(map);
     appendSyms(priv);
     appendSyms(reduction);
@@ -242,9 +246,9 @@ struct ObjectEntryBlockArgs {
 
   auto getVars() const {
     return llvm::concat<const mlir::Value>(
-        hasDeviceAddr.vars, hostEvalVars, inReduction.vars, map.vars, priv.vars,
-        reduction.vars, taskReduction.vars, useDeviceAddr.vars,
-        useDevicePtr.vars);
+        hasDeviceAddr.vars, hostEvalVars, inReduction.vars, linear.vars,
+        map.vars, priv.vars, reduction.vars, taskReduction.vars,
+        useDeviceAddr.vars, useDevicePtr.vars);
   }
 
   Fortran::common::openmp::EntryBlockArgs asEntryBlockArgs() const {
@@ -252,6 +256,7 @@ struct ObjectEntryBlockArgs {
     args.hasDeviceAddrVars = hasDeviceAddr.vars;
     args.hostEvalVars = hostEvalVars;
     args.inReductionVars = inReduction.vars;
+    args.linearVars = linear.vars;
     args.mapVars = map.vars;
     args.privVars = priv.vars;
     args.reductionVars = reduction.vars;
@@ -424,9 +429,9 @@ protected:
   virtual llvm::omp::Directives visitDirective(lower::pft::Evaluation &eval,
                                                llvm::omp::Directive dir) = 0;
 
-  /// Obtain the list of clauses of the given OpenMP block or loop construct
-  /// evaluation. If it's not an OpenMP construct, no modifications are made to
-  /// the \c clauses output argument.
+  /// Obtain the list of clauses of the given OpenMP block, loop or sections
+  /// construct evaluation. If it's not an OpenMP construct, no modifications
+  /// are made to the \c clauses output argument.
   void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses) {
     const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
     if (!ompEval)
@@ -438,7 +443,8 @@ protected:
         [&](const auto &construct) {
           using Type = llvm::remove_cvref_t<decltype(construct)>;
           if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPLoopConstruct>) {
+                        std::is_same_v<Type, parser::OpenMPLoopConstruct> ||
+                        std::is_same_v<Type, parser::OpenMPSectionsConstruct>) {
             beginClauseList = &construct.BeginDir().Clauses();
             if (auto &endSpec{construct.EndDir()})
               endClauseList = &endSpec->Clauses();
@@ -845,6 +851,24 @@ getSectionsConstructStackTop(lower::AbstractConverter &converter) {
   return frame ? &frame->sectionsConstruct : nullptr;
 }
 
+class DispatchTargetStackFrame
+    : public mlir::StateStackFrameBase<DispatchTargetStackFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DispatchTargetStackFrame)
+
+  explicit DispatchTargetStackFrame(const evaluate::ProcedureRef *target)
+      : target{target} {}
+
+  const evaluate::ProcedureRef *target;
+};
+
+bool Fortran::lower::omp::isDispatchTargetCall(
+    const evaluate::ProcedureRef &proc, lower::AbstractConverter &converter) {
+  auto *frame =
+      converter.getStateStack().getStackTop<DispatchTargetStackFrame>();
+  return frame && frame->target == &proc;
+}
+
 /// Bind objects to their corresponding entry block arguments.
 ///
 /// The binding will be performed inside of the current block, which does not
@@ -965,6 +989,8 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
   bindMapLike(args.hasDeviceAddr.objects, op.getHasDeviceAddrBlockArgs());
   bindPrivateLike(args.inReduction.objects, args.inReduction.vars,
                   op.getInReductionBlockArgs());
+  bindPrivateLike(args.linear.objects, args.linear.vars,
+                  op.getLinearBlockArgs());
   bindMapLike(args.map.objects, op.getMapBlockArgs());
   bindPrivateLike(args.priv.objects, args.priv.vars, op.getPrivateBlockArgs());
   bindPrivateLike(args.reduction.objects, args.reduction.vars,
@@ -1030,19 +1056,13 @@ static void genNestedEvaluations(lower::AbstractConverter &converter,
     converter.genEval(e);
 }
 
-static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
-                                   mlir::Location loc, mlir::Value indexVal,
-                                   const semantics::Symbol *sym);
-
 /// Emit the body of a collapsed loop nest, including any intervening code
 /// from imperfect nesting at intermediate levels (CLN relaxation, applied
 /// retroactively for all OMP versions).
 ///
-/// Because omp.loop_nest places its entire body at the innermost nesting
-/// level, intervening code must be guarded so that it only executes on the
-/// iterations where the corresponding inner induction variables are at their
-/// initial (for intervening code before nested loop) or final (for intervening
-/// code after nested loop) values.
+/// Intervening code is emitted unguarded into the innermost body, so it runs
+/// once per collapsed logical iteration. OpenMP 6.0 leaves that count
+/// unspecified between that and once per enclosing iteration.
 ///
 /// \param [in] converter - PFT to MLIR conversion interface.
 /// \param [in] outerEval - the evaluation containing the outermost loop
@@ -1052,42 +1072,17 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
                                      lower::pft::Evaluation &outerEval,
                                      int collapseValue) {
   assert(collapseValue >= 1);
-  if (collapseValue == 1) {
-    genNestedEvaluations(converter, outerEval, /*collapseValue=*/1);
-    return;
-  }
-
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  const mlir::Location loc = converter.getCurrentLocation();
-
-  // Get the enclosing omp.loop_nest to access induction variables and bounds.
-  auto loopNestOp = mlir::dyn_cast<mlir::omp::LoopNestOp>(
-      firOpBuilder.getInsertionBlock()->getParentOp());
-  assert(loopNestOp && "expected to be inside omp.loop_nest");
 
   // Collect before/after evaluations at each intermediate level.
   struct LevelInfo {
     llvm::SmallVector<lower::pft::Evaluation *> before;
     llvm::SmallVector<lower::pft::Evaluation *> after;
-
-    // Whether this level carries intervening code (i.e. imperfect nesting).
-    bool hasInterveningCode() const {
-      return !before.empty() || !after.empty();
-    }
   };
   llvm::SmallVector<LevelInfo> levels;
-
-  // DO-variable symbol of each collapsed level (index 0 = outermost). Used to
-  // restore an inner loop's variable to its Fortran terminal value before
-  // emitting "after" intervening code (see below).
-  llvm::SmallVector<const semantics::Symbol *> ivSyms;
 
   lower::pft::Evaluation *curEval = &outerEval;
   for (int i = 0; i < collapseValue - 1; ++i) {
     lower::pft::Evaluation *doEval = getNestedDoConstruct(*curEval);
-    const semantics::Symbol *ivSym = getIterationVariableSymbol(*doEval);
-    assert(ivSym && "expected iteration variable on collapsed DO loop");
-    ivSyms.push_back(ivSym);
     LevelInfo level;
     bool pastDo = false;
     for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
@@ -1112,117 +1107,19 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
     levels.push_back(std::move(level));
     curEval = doEval;
   }
-  // DO-variable symbol of the innermost collapsed loop must be restored
-  // inside enclosing "after" regions.
-  const semantics::Symbol *innermostIvSym =
-      getIterationVariableSymbol(*getNestedDoConstruct(*curEval));
-  assert(innermostIvSym && "expected iteration variable on collapsed DO loop");
-  ivSyms.push_back(innermostIvSym);
 
-  // Build a guard condition: all induction variables from
-  // startLevel..endLevel-1 equal their respective bound values.
-  // For "before" guards (useLowerBound=true), compare iv == lb (first iter).
-  // For "after" guards (useLowerBound=false), compare iv == last_iv.
-  const auto lbs = loopNestOp.getLoopLowerBounds();
-  const auto ubs = loopNestOp.getLoopUpperBounds();
-  const auto steps = loopNestOp.getLoopSteps();
-
-  // The intervening-code guards and terminal-value restoration do arithmetic
-  // on the collapsed loop bounds. If those bounds are host_eval block arguments
-  // of an enclosing omp.target region, such uses are illegal, so diagnose
-  // instead of emitting IR the omp.target verifier rejects.
-  const bool hasInterveningCode = llvm::any_of(
-      levels, [](const LevelInfo &l) { return l.hasInterveningCode(); });
-  if (hasInterveningCode) {
-    auto isHostEvalValue = [](mlir::Value v) {
-      auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(v);
-      if (!blockArg)
-        return false;
-      auto iface = mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
-          blockArg.getOwner()->getParentOp());
-      return iface &&
-             llvm::is_contained(iface.getHostEvalBlockArgs(), blockArg);
-    };
-    if (llvm::any_of(lbs, isHostEvalValue) ||
-        llvm::any_of(ubs, isHostEvalValue) ||
-        llvm::any_of(steps, isHostEvalValue))
-      TODO(loc, "collapsed loop nest with intervening code whose loop bounds "
-                "are evaluated on the host for an enclosing 'target' region");
-  }
-
-  // Last value the induction variable at \p lvl actually takes:
-  // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
-  auto computeLastIV = [&](const int lvl) -> mlir::Value {
-    const std::optional<llvm::APInt> constStep =
-        fir::getIntIfConstant(steps[lvl]);
-    if (constStep && (constStep->isOne() || constStep->isAllOnes()))
-      return ubs[lvl];
-    const mlir::Value lb = lbs[lvl];
-    const mlir::Value ub = ubs[lvl];
-    const mlir::Value step = steps[lvl];
-    const mlir::Value range =
-        mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb);
-    const mlir::Value tripMinus1 =
-        mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step);
-    const mlir::Value lastOffset =
-        mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step);
-    return mlir::arith::AddIOp::create(firOpBuilder, loc, lb, lastOffset);
-  };
-
-  auto buildGuard = [&](const int startLevel, const int endLevel,
-                        const bool useLowerBound) -> mlir::Value {
-    mlir::Value cond;
-    for (int lvl = startLevel; lvl < endLevel; ++lvl) {
-      const mlir::Value iv = loopNestOp.getRegion().getArgument(lvl);
-      const mlir::Value target = useLowerBound ? lbs[lvl] : computeLastIV(lvl);
-      const mlir::Value cmp = mlir::arith::CmpIOp::create(
-          firOpBuilder, loc, mlir::arith::CmpIPredicate::eq, iv, target);
-      if (!cond)
-        cond = cmp;
-      else
-        cond = mlir::arith::AndIOp::create(firOpBuilder, loc, cond, cmp);
-    }
-    return cond;
-  };
-
-  // Emit "before" code at each level, guarded by inner IVs == lower bounds.
-  for (int i = 0; i < static_cast<int>(levels.size()); ++i) {
-    if (levels[i].before.empty())
-      continue;
-    const mlir::Value guard =
-        buildGuard(i + 1, collapseValue, /*useLowerBound=*/true);
-    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
-    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    for (auto *e : levels[i].before)
+  // Emit before code, outermost-to-innermost.
+  for (const LevelInfo &level : levels)
+    for (lower::pft::Evaluation *e : level.before)
       converter.genEval(*e);
-    firOpBuilder.setInsertionPointAfter(ifOp);
-  }
 
-  // Emit innermost loop body.
+  // Emit the innermost loop body.
   genNestedEvaluations(converter, *curEval, /*collapseValue=*/1);
 
-  // Emit "after" code at each level (innermost first), guarded by
-  // inner IVs == last iteration values (accounts for non-unit steps).
-  for (int i = static_cast<int>(levels.size()) - 1; i >= 0; --i) {
-    if (levels[i].after.empty())
-      continue;
-    const mlir::Value guard =
-        buildGuard(i + 1, collapseValue, /*useLowerBound=*/false);
-    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
-    firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    // A normally-terminated Fortran DO loop leaves its variable one step past
-    // the last executed value, but the flattened nest leaves each at its last
-    // executed value. Restore the terminal value before running "after" code
-    // that may read it.
-    for (int lvl = i + 1; lvl < collapseValue; ++lvl) {
-      const mlir::Value terminal = mlir::arith::AddIOp::create(
-          firOpBuilder, loc, computeLastIV(lvl), steps[lvl]);
-      setLoopVar(converter, loc, terminal, ivSyms[lvl]);
-    }
-    for (auto *e : levels[i].after)
+  // Emit after code, innermost-to-outermost.
+  for (const LevelInfo &level : llvm::reverse(levels))
+    for (lower::pft::Evaluation *e : level.after)
       converter.genEval(*e);
-    firOpBuilder.setInsertionPointAfter(ifOp);
-  }
 }
 
 static fir::GlobalOp globalInitialization(lower::AbstractConverter &converter,
@@ -1641,7 +1538,7 @@ genLoopVars(mlir::Operation *op, lower::AbstractConverter &converter,
 
   std::size_t loopVarTypeSize = 0;
   for (const semantics::Symbol *arg : args)
-    loopVarTypeSize = std::max(loopVarTypeSize, arg->GetUltimate().size());
+    loopVarTypeSize = std::max(loopVarTypeSize, getLoopVarSize(*arg));
   mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
   llvm::SmallVector<mlir::Type> tiv(args.size(), loopVarType);
   llvm::SmallVector<mlir::Location> locs(args.size(), loc);
@@ -1980,6 +1877,35 @@ struct OpWithBodyGenInfo {
   int collapseValue = 0;
 };
 
+static bool canAssumeBoundedRecipeEffects(const mlir::Value &variable) {
+  mlir::Type type = variable.getType();
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
+    if (mlir::isa<fir::BoxCharType, fir::BaseBoxType>(refType.getEleTy()))
+      return false;
+  return !fir::isAllocatableType(type) &&
+         !fir::isa_derived(fir::getFortranElementType(type)) &&
+         !fir::isPointerType(type);
+}
+
+static bool canAssumeBoundedRecipeEffects(lower::AbstractConverter &converter,
+                                          const semantics::Symbol &sym) {
+  mlir::Value variable = converter.getSymbolAddress(sym);
+  return variable && canAssumeBoundedRecipeEffects(variable);
+}
+
+static bool
+canAssumeBoundedRecipeEffectsForItem(lower::AbstractConverter &converter,
+                                     const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [&converter](const auto &member) {
+      return canAssumeBoundedRecipeEffects(converter, *member);
+    });
+  }
+  return canAssumeBoundedRecipeEffects(converter, sym);
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]   op  - the operation the body belongs to.
@@ -2048,6 +1974,17 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                     Fortran::lower::omp::isLastItemInQueue(item, queue),
                     /*useDelayedPrivatization=*/false, info.symTable);
     tempDsp->processStep1();
+
+    // TODO: omp.single still uses eager privatisation.
+    // Use clauseOps.privateVars inside genSingleOp once
+    // delayedPrivatization is turned on.
+    if (auto singleOp = llvm::dyn_cast<mlir::omp::SingleOp>(op)) {
+      const auto &privateSyms = tempDsp->getAllSymbolsToPrivatize();
+      if (llvm::all_of(privateSyms, [&info](const semantics::Symbol *sym) {
+            return canAssumeBoundedRecipeEffectsForItem(info.converter, *sym);
+          }))
+        singleOp.setPrivateAssumeBoundedRecipeEffects(true);
+    }
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_parallel) {
@@ -2422,9 +2359,10 @@ static void genDispatchClauses(lower::AbstractConverter &converter,
                                const List<Clause> &clauses, mlir::Location loc,
                                mlir::omp::DispatchOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNocontext(stmtCtx, clauseOps);
+  cp.processNovariants(stmtCtx, clauseOps);
   cp.processNowait(clauseOps);
-  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
-                 clause::Novariants, clause::Nocontext>(
+  cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr>(
       loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
@@ -2531,6 +2469,7 @@ static void genSimdClauses(
     const List<Clause> &clauses, mlir::Location loc,
     mlir::omp::SimdOperands &clauseOps,
     llvm::SmallVectorImpl<Object> &reductionObjects,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &linearSyms,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache =
         nullptr) {
   ClauseProcessor cp(converter, semaCtx, clauses);
@@ -2541,17 +2480,17 @@ static void genSimdClauses(
   cp.processReduction(loc, clauseOps, reductionObjects, reductionVarCache);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
-  cp.processLinear(clauseOps);
+  cp.processLinear(clauseOps, /*isDeclareSimd=*/false, &linearSyms);
 }
 
 // SIMD construct may have implicit
 // linear semantics on IV. Process the same here.
-static void
-genSimdImplicitLinear(lower::AbstractConverter &converter,
-                      semantics::SemanticsContext &semaCtx,
-                      mlir::omp::SimdOperands &clauseOps,
-                      mlir::omp::LoopNestOperands loopNestClauseOps,
-                      llvm::SmallVector<const semantics::Symbol *> iv) {
+static void genSimdImplicitLinear(
+    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
+    mlir::omp::SimdOperands &clauseOps,
+    mlir::omp::LoopNestOperands loopNestClauseOps,
+    llvm::SmallVector<const semantics::Symbol *> iv,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &linearSyms) {
 
   // If the (standalone/composite) SIMD is enclosed within TARGET,
   // implicit linearization will cause invalid FIR due to
@@ -2586,14 +2525,9 @@ genSimdImplicitLinear(lower::AbstractConverter &converter,
                   variable) != clauseOps.linearVars.end())
       continue;
 
-    // TODO: Implicit linearization is skipped if iv is a pointer
-    // or an allocatable, due to potential mismatch between the linear
-    // variable type (example !fir.ref<!fir.box<!fir.heap<i32>>>)
-    // and the linear step size (example: i64). Handle this type mismatch
-    // gracefully.
+    // TODO: Implicit linearization is skipped if iv is a pointer.
     if (loopVar->test(Fortran::semantics::Symbol::Flag::OmpLinear) &&
-        !(Fortran::semantics::IsAllocatableOrPointer(*loopVar) ||
-          Fortran::semantics::IsAllocatableOrPointer(loopVar->GetUltimate()))) {
+        !Fortran::semantics::IsPointer(loopVar->GetUltimate())) {
       mlir::Type ty = converter.genType(*loopVar);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
       if (semaCtx.langOptions().getOpenMPVersion() >= 52)
@@ -2604,6 +2538,7 @@ genSimdImplicitLinear(lower::AbstractConverter &converter,
             mlir::UnitAttr::get(&converter.getMLIRContext()));
       clauseOps.linearVars.push_back(variable);
       clauseOps.linearStepVars.push_back(loopStep);
+      linearSyms.push_back(loopVar);
     }
   }
   if (!typeAttrs.empty()) {
@@ -2612,6 +2547,29 @@ genSimdImplicitLinear(lower::AbstractConverter &converter,
     clauseOps.linearModifiers =
         mlir::ArrayAttr::get(&converter.getMLIRContext(), linearModAttrs);
   }
+}
+
+/// Create the `linear` privatizers of the LINEAR items `linearSyms`. Their
+/// private copies are entry block arguments of the op with the linear clause.
+static void
+genLinearPrivatizers(DataSharingProcessor &dsp, mlir::Location loc,
+                     llvm::ArrayRef<const semantics::Symbol *> linearSyms,
+                     mlir::omp::LinearClauseOps &clauseOps,
+                     ObjectEntryBlockArgsEntry &linearArgs) {
+  if (linearSyms.empty())
+    return;
+  if (!dsp.usesDelayedPrivatization())
+    TODO(loc, "LINEAR clause without delayed privatization");
+
+  for (auto [sym, var] : llvm::zip_equal(linearSyms, clauseOps.linearVars)) {
+    mlir::omp::PrivateClauseOps privateOps;
+    dsp.privatizeSymbol(sym, &privateOps, /*dir=*/std::nullopt,
+                        /*isLinear=*/true);
+    var = privateOps.privateVars.front();
+    clauseOps.linearSyms.push_back(privateOps.privateSyms.front());
+  }
+  linearArgs.objects = makeObjects(linearSyms);
+  linearArgs.vars = clauseOps.linearVars;
 }
 
 static void genScopeClauses(lower::AbstractConverter &converter,
@@ -2682,7 +2640,7 @@ genTargetClauses(lower::AbstractConverter &converter,
                   "storage-associated variable");
     }
   cp.processIsDevicePtr(stmtCtx, clauseOps, isDevicePtrObjects);
-  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_unknown,
+  cp.processMap(loc, stmtCtx, clauseOps, llvm::omp::Directive::OMPD_target,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
@@ -2705,7 +2663,8 @@ static void genTargetDataClauses(
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processDevice(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_target_data, clauseOps);
-  cp.processMap(loc, stmtCtx, clauseOps);
+  cp.processMap(loc, stmtCtx, clauseOps,
+                llvm::omp::Directive::OMPD_target_data);
   cp.processUseDeviceAddr(stmtCtx, clauseOps, useDeviceAddrObjects);
   // Record the source UDA prefix before non-C_PTR UDP operands are promoted.
   sourceUseDeviceAddrCount = useDeviceAddrObjects.size();
@@ -2846,6 +2805,7 @@ static void genWsloopClauses(
     lower::StatementContext &stmtCtx, const List<Clause> &clauses,
     mlir::Location loc, mlir::omp::WsloopOperands &clauseOps,
     llvm::SmallVectorImpl<Object> &reductionObjects,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &linearSyms,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache =
         nullptr) {
   ClauseProcessor cp(converter, semaCtx, clauses);
@@ -2855,7 +2815,7 @@ static void genWsloopClauses(
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects, reductionVarCache);
   cp.processSchedule(stmtCtx, clauseOps);
-  cp.processLinear(clauseOps);
+  cp.processLinear(clauseOps, /*isDeclareSimd=*/false, &linearSyms);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3001,6 +2961,21 @@ genCriticalOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, nameAttr);
 }
 
+class DispatchTargetFinder
+    : public evaluate::AnyTraverse<DispatchTargetFinder,
+                                   const evaluate::ProcedureRef *> {
+public:
+  using Base = evaluate::AnyTraverse<DispatchTargetFinder,
+                                     const evaluate::ProcedureRef *>;
+  DispatchTargetFinder() : Base{*this} {}
+  using Base::operator();
+
+  const evaluate::ProcedureRef *
+  operator()(const evaluate::ProcedureRef &proc) const {
+    return &proc;
+  }
+};
+
 static mlir::omp::DispatchOp genDispatchOp(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
@@ -3009,6 +2984,17 @@ static mlir::omp::DispatchOp genDispatchOp(
   mlir::omp::DispatchOperands clauseOps;
   genDispatchClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                      clauseOps);
+
+  const evaluate::ProcedureRef *target = nullptr;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations())
+    nested.visit(common::visitors{
+        [&](const parser::CallStmt &stmt) { target = &*stmt.typedCall; },
+        [&](const parser::AssignmentStmt &stmt) {
+          target = DispatchTargetFinder{}(stmt.typedAssignment->v->rhs);
+        },
+        [](const auto &) {}});
+  mlir::SaveStateStack<DispatchTargetStackFrame> saveStateStack{
+      converter.getStateStack(), target};
 
   return genOpWithBody<mlir::omp::DispatchOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -3172,7 +3158,7 @@ static void genCanonicalLoopNest(
         converter.genExprValue(*semantics::GetExpr(bounds->Upper()), stmtCtx));
 
     // Get the integer kind for the loop variable and cast the loop bounds.
-    size_t loopVarTypeSize = bounds->Name().thing.symbol->GetUltimate().size();
+    size_t loopVarTypeSize = getLoopVarSize(*bounds->Name().thing.symbol);
     mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
     loopVarTypes.push_back(loopVarType);
     mlir::Value loopStepVar = [&]() {
@@ -3220,9 +3206,12 @@ static void genCanonicalLoopNest(
         loc, isDownwards, loopLBVar, loopUBVar);
 
     // Compute the trip count assuming lb <= ub. This guarantees that the result
-    // is non-negative and we can use unsigned arithmetic.
-    mlir::Value span = firOpBuilder.createOrFold<mlir::arith::SubIOp>(
-        loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
+    // is non-negative and we can use unsigned arithmetic. The subtraction
+    // cannot be nuw: lb <= ub is a signed comparison, and lb may be negative
+    // while ub is not. It cannot be nsw either, since the span may not fit in
+    // the signed loop variable type.
+    mlir::Value span =
+        firOpBuilder.createOrFold<mlir::arith::SubIOp>(loc, ub, lb);
     mlir::Value tcMinusOne =
         firOpBuilder.createOrFold<mlir::arith::DivUIOp>(loc, span, incr);
     mlir::Value tcIfLooping = firOpBuilder.createOrFold<mlir::arith::AddIOp>(
@@ -3731,6 +3720,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     clauseOps.reductionByref.push_back(true);
     clauseOps.reductionSyms.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    if (!clauseOps.reductionMods.empty())
+      clauseOps.reductionMods.push_back(mlir::omp::ReductionModifierAttr::get(
+          builder.getContext(), mlir::omp::ReductionModifier::defaultmod));
     reductionObjects.push_back(Object{{nullptr, std::nullopt}});
   }
 
@@ -3755,6 +3747,23 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // SECTIONS construct.
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
+  // TODO: sections still uses eager privatisation. Use clauseOps.privateVars
+  // once delayedPrivatization is turned on.
+  const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
+  if (!privateSyms.empty() &&
+      llvm::all_of(privateSyms, [&converter](const semantics::Symbol *sym) {
+        return canAssumeBoundedRecipeEffectsForItem(converter, *sym);
+      }))
+    sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
+
+  if (!clauseOps.reductionVars.empty() &&
+      llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
+        // The generated conditional-lastprivate recipe only accesses the
+        // intrinsic value and index fields of its accumulator, despite its
+        // record type.
+        return variable == lpAlloca || canAssumeBoundedRecipeEffects(variable);
+      }))
+    sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
   // Create entry block with reduction variables as arguments.
   ObjectEntryBlockArgs args;
@@ -4002,11 +4011,18 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   mlir::omp::SingleOperands clauseOps;
   genSingleClauses(converter, semaCtx, item->clauses, loc, clauseOps);
 
-  return genOpWithBody<mlir::omp::SingleOp>(
+  auto singleOp = genOpWithBody<mlir::omp::SingleOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
           .setClauses(&item->clauses),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.copyprivateVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    singleOp.setCopyprivateAssumeBoundedRecipeEffects(true);
+
+  return singleOp;
 }
 
 static bool isDuplicateMappedSymbol(
@@ -4347,7 +4363,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             // where the record type contains an allocatable.
             if (!isPointer &&
                 (hasDefaultMapper ||
-                 (requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
+                 (requiresImplicitDefaultDeclareMapper(
+                     converter, firOpBuilder, *typeSpec,
+                     enableImplicitDefaultMapperAllocatableMembers)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -4357,7 +4375,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                       [&](std::string &mapperIdName,
                           llvm::StringRef memberName) {
                         defaultMangler(converter, mapperIdName, memberName);
-                      });
+                      },
+                      enableImplicitDefaultMapperAllocatableMembers);
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
@@ -4716,12 +4735,19 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
   taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
-  return genOpWithBody<mlir::omp::TaskgroupOp>(
+  auto taskgroupOp = genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
           .setClauses(&item->clauses)
           .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
+
+  if (llvm::all_of(clauseOps.taskReductionVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    taskgroupOp.setTaskReductionAssumeBoundedRecipeEffects(true);
+
+  return taskgroupOp;
 }
 
 static mlir::omp::TaskwaitOp
@@ -5037,8 +5063,9 @@ static mlir::omp::WsloopOp genStandaloneDo(
     llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> wsloopLinearSyms;
   genWsloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
-                   wsloopClauseOps, wsloopReductionObjects);
+                   wsloopClauseOps, wsloopReductionObjects, wsloopLinearSyms);
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -5106,6 +5133,10 @@ static mlir::omp::WsloopOp genStandaloneDo(
     wsloopClauseOps.reductionByref.push_back(true);
     wsloopClauseOps.reductionSyms.push_back(
         mlir::SymbolRefAttr::get(builder.getContext(), declRedOp.getSymName()));
+    if (!wsloopClauseOps.reductionMods.empty())
+      wsloopClauseOps.reductionMods.push_back(
+          mlir::omp::ReductionModifierAttr::get(
+              builder.getContext(), mlir::omp::ReductionModifier::defaultmod));
 
     // Use a null-symbol Object as a sentinel — bindPrivateLike will skip it.
     wsloopReductionObjects.push_back(Object{{nullptr, std::nullopt}});
@@ -5117,6 +5148,8 @@ static mlir::omp::WsloopOp genStandaloneDo(
                      loopNestClauseOps, iv);
 
   ObjectEntryBlockArgs wsloopArgs;
+  genLinearPrivatizers(dsp, loc, wsloopLinearSyms, wsloopClauseOps,
+                       wsloopArgs.linear);
   wsloopArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.objects = wsloopReductionObjects;
@@ -5261,8 +5294,9 @@ static mlir::omp::SimdOp genStandaloneSimd(
     llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> simdLinearSyms;
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps,
-                 simdReductionObjects);
+                 simdReductionObjects, simdLinearSyms);
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -5278,9 +5312,11 @@ static mlir::omp::SimdOp genStandaloneSimd(
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
                      loopNestClauseOps, iv);
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
-                        iv);
+                        iv, simdLinearSyms);
 
   ObjectEntryBlockArgs simdArgs;
+  genLinearPrivatizers(dsp, loc, simdLinearSyms, simdClauseOps,
+                       simdArgs.linear);
   simdArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -5368,11 +5404,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   ConstructQueue::const_iterator parallelItem = std::next(distributeItem);
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
 
+  // Operands evaluated outside omp.parallel are destroyed once, after it.
+  lower::StatementContext parallelStmtCtx;
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
-  genParallelClauses(converter, semaCtx, stmtCtx, parallelItem->clauses, loc,
-                     parallelClauseOps, parallelReductionObjects);
+  genParallelClauses(converter, semaCtx, parallelStmtCtx, parallelItem->clauses,
+                     loc, parallelClauseOps, parallelReductionObjects);
 
   DataSharingProcessor dsp(converter, semaCtx, doItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
@@ -5385,8 +5424,10 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
   parallelArgs.reduction.objects = parallelReductionObjects;
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
-  genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
-                parallelClauseOps, parallelArgs, &dsp, /*isComposite=*/true);
+  mlir::omp::ParallelOp parallelOp =
+      genParallelOp(converter, symTable, semaCtx, eval, loc, queue,
+                    parallelItem, parallelClauseOps, parallelArgs, &dsp,
+                    /*isComposite=*/true);
 
   // Clause processing.
   mlir::omp::DistributeOperands distributeClauseOps;
@@ -5395,8 +5436,9 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
 
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> wsloopLinearSyms;
   genWsloopClauses(converter, semaCtx, stmtCtx, doItem->clauses, loc,
-                   wsloopClauseOps, wsloopReductionObjects);
+                   wsloopClauseOps, wsloopReductionObjects, wsloopLinearSyms);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
@@ -5412,6 +5454,8 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
 
   ObjectEntryBlockArgs wsloopArgs;
   // TODO: Add private syms and vars.
+  genLinearPrivatizers(dsp, loc, wsloopLinearSyms, wsloopClauseOps,
+                       wsloopArgs.linear);
   wsloopArgs.reduction.objects = wsloopReductionObjects;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
@@ -5422,6 +5466,11 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
                 loopNestClauseOps, iv,
                 {{distributeOp, distributeArgs}, {wsloopOp, wsloopArgs}},
                 llvm::omp::Directive::OMPD_distribute_parallel_do, dsp);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(parallelOp);
+  parallelStmtCtx.finalizeAndPop();
   return distributeOp;
 }
 
@@ -5436,11 +5485,14 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   ConstructQueue::const_iterator doItem = std::next(parallelItem);
   ConstructQueue::const_iterator simdItem = std::next(doItem);
 
+  // Operands evaluated outside omp.parallel are destroyed once, after it.
+  lower::StatementContext parallelStmtCtx;
+
   // Create parent omp.parallel first.
   mlir::omp::ParallelOperands parallelClauseOps;
   llvm::SmallVector<Object> parallelReductionObjects;
-  genParallelClauses(converter, semaCtx, stmtCtx, parallelItem->clauses, loc,
-                     parallelClauseOps, parallelReductionObjects);
+  genParallelClauses(converter, semaCtx, parallelStmtCtx, parallelItem->clauses,
+                     loc, parallelClauseOps, parallelReductionObjects);
 
   DataSharingProcessor parallelItemDSP(
       converter, semaCtx, parallelItem->clauses, eval,
@@ -5454,9 +5506,9 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   parallelArgs.priv.vars = parallelClauseOps.privateVars;
   parallelArgs.reduction.objects = parallelReductionObjects;
   parallelArgs.reduction.vars = parallelClauseOps.reductionVars;
-  genParallelOp(converter, symTable, semaCtx, eval, loc, queue, parallelItem,
-                parallelClauseOps, parallelArgs, &parallelItemDSP,
-                /*isComposite=*/true);
+  mlir::omp::ParallelOp parallelOp = genParallelOp(
+      converter, symTable, semaCtx, eval, loc, queue, parallelItem,
+      parallelClauseOps, parallelArgs, &parallelItemDSP, /*isComposite=*/true);
 
   // Clause processing.
   // Use a shared cache so that both wsloop and simd produce the same SSA
@@ -5469,13 +5521,16 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
 
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> wsloopLinearSyms;
   genWsloopClauses(converter, semaCtx, stmtCtx, doItem->clauses, loc,
-                   wsloopClauseOps, wsloopReductionObjects, &reductionVarCache);
+                   wsloopClauseOps, wsloopReductionObjects, wsloopLinearSyms,
+                   &reductionVarCache);
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> simdLinearSyms;
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects, &reductionVarCache);
+                 simdReductionObjects, simdLinearSyms, &reductionVarCache);
 
   // Same as genCompositeDoSimd.
   if (!simdClauseOps.linearVars.empty()) {
@@ -5487,6 +5542,8 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
     simdClauseOps.linearStepVars.clear();
     simdClauseOps.linearVarTypes = nullptr;
     simdClauseOps.linearModifiers = nullptr;
+    wsloopLinearSyms = std::move(simdLinearSyms);
+    simdLinearSyms.clear();
   }
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
@@ -5498,7 +5555,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
-                        iv);
+                        iv, simdLinearSyms);
 
   // Operation creation.
   ObjectEntryBlockArgs distributeArgs;
@@ -5509,6 +5566,8 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
 
   ObjectEntryBlockArgs wsloopArgs;
   // TODO: Add private syms and vars.
+  genLinearPrivatizers(simdItemDSP, loc, wsloopLinearSyms, wsloopClauseOps,
+                       wsloopArgs.linear);
   wsloopArgs.reduction.objects = wsloopReductionObjects;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
@@ -5516,6 +5575,8 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   ObjectEntryBlockArgs simdArgs;
+  genLinearPrivatizers(simdItemDSP, loc, simdLinearSyms, simdClauseOps,
+                       simdArgs.linear);
   simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -5531,6 +5592,11 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
                  {simdOp, simdArgs}},
                 llvm::omp::Directive::OMPD_distribute_parallel_do_simd,
                 simdItemDSP);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  fir::FirOpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(parallelOp);
+  parallelStmtCtx.finalizeAndPop();
   return distributeOp;
 }
 
@@ -5550,8 +5616,9 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> simdLinearSyms;
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects);
+                 simdReductionObjects, simdLinearSyms);
 
   DataSharingProcessor distributeItemDSP(
       converter, semaCtx, distributeItem->clauses, eval,
@@ -5571,7 +5638,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
-                        iv);
+                        iv, simdLinearSyms);
 
   // Operation creation.
   ObjectEntryBlockArgs distributeArgs;
@@ -5583,6 +5650,8 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   distributeOp.setComposite(/*val=*/true);
 
   ObjectEntryBlockArgs simdArgs;
+  genLinearPrivatizers(simdItemDSP, loc, simdLinearSyms, simdClauseOps,
+                       simdArgs.linear);
   simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -5617,13 +5686,16 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
 
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<Object> wsloopReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> wsloopLinearSyms;
   genWsloopClauses(converter, semaCtx, stmtCtx, doItem->clauses, loc,
-                   wsloopClauseOps, wsloopReductionObjects, &reductionVarCache);
+                   wsloopClauseOps, wsloopReductionObjects, wsloopLinearSyms,
+                   &reductionVarCache);
 
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<Object> simdReductionObjects;
+  llvm::SmallVector<const semantics::Symbol *> simdLinearSyms;
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
-                 simdReductionObjects, &reductionVarCache);
+                 simdReductionObjects, simdLinearSyms, &reductionVarCache);
 
   // omp.simd writes back linear vars unconditionally, causing a race when
   // inside a parallel region. Move them to wsloop which has proper last-iter
@@ -5637,6 +5709,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
     simdClauseOps.linearStepVars.clear();
     simdClauseOps.linearVarTypes = nullptr;
     simdClauseOps.linearModifiers = nullptr;
+    wsloopLinearSyms = std::move(simdLinearSyms);
+    simdLinearSyms.clear();
   }
   DataSharingProcessor wsloopItemDSP(
       converter, semaCtx, doItem->clauses, eval,
@@ -5660,10 +5734,12 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genLoopNestClauses(converter, semaCtx, eval, simdItem->clauses, loc,
                      loopNestClauseOps, iv);
   genSimdImplicitLinear(converter, semaCtx, simdClauseOps, loopNestClauseOps,
-                        iv);
+                        iv, simdLinearSyms);
 
   // Operation creation.
   ObjectEntryBlockArgs wsloopArgs;
+  genLinearPrivatizers(simdItemDSP, loc, wsloopLinearSyms, wsloopClauseOps,
+                       wsloopArgs.linear);
   wsloopArgs.priv.objects = makeObjects(wsloopItemDSP.getDelayedPrivSymbols());
   wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.objects = wsloopReductionObjects;
@@ -5673,6 +5749,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   ObjectEntryBlockArgs simdArgs;
+  genLinearPrivatizers(simdItemDSP, loc, simdLinearSyms, simdClauseOps,
+                       simdArgs.linear);
   simdArgs.priv.objects = makeObjects(simdItemDSP.getDelayedPrivSymbols());
   simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.objects = simdReductionObjects;
@@ -5997,11 +6075,15 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpAssumesDirective &assumesConstruct) {
-  // Assumption clauses are hints with no representation in the OpenMP dialect,
-  // so this declarative directive is a no-op.
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(),
-         "assumption clauses on the assumes directive");
+  if (semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  for (const parser::OmpClause &clause : assumesConstruct.v.Clauses().v) {
+    if (!std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u) &&
+        !std::holds_alternative<parser::OmpClause::Absent>(clause.u))
+      TODO(converter.genLocation(clause.source),
+           "assumption clauses on the assumes directive");
+  }
 }
 
 static void
@@ -6673,6 +6755,111 @@ appendCombiner(const parser::OmpDeclareReductionDirective &construct,
   llvm_unreachable("Expecting reduction combiner");
 }
 
+// Name the op for a defined-operator reduction identifier: either an intrinsic
+// operator (`declare reduction(+:t)`) or a user-defined one (`.myop.`).
+static std::string getDefinedOperatorOpName(
+    lower::AbstractConverter &converter, const clause::DefinedOperator &defOp,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  return common::visit(
+      common::visitors{
+          [&](const clause::IntrinsicOperator &intrOp) -> std::string {
+            // Directive side of the intrinsic-operator USER reduction naming
+            // contract (clause side:
+            // ReductionProcessor::processReductionArguments site 2). A user
+            // `declare reduction(+:t)` is scoped by its owning scope exactly
+            // like the defined-operator and named paths, so two declarations
+            // for the same (operator, type) in different scopes get distinct
+            // ops instead of colliding on the one global builtin name. Only
+            // user reductions reach here (builtins are created directly by
+            // createDeclareReduction), so this always scopes. The
+            // intrinsic-operator parse node carries no reduction symbol: symOpt
+            // supplies it for separate compilation; same-file it is resolved
+            // from the current (declaration) scope under the operator's mangled
+            // name (MakeNameFromOperator), which resolves to the same ultimate
+            // the clause side finds, so both name the op identically.
+            const semantics::Symbol *redSymPtr = symOpt;
+            if (!redSymPtr) {
+              parser::CharBlock mangledOpName = semantics::MakeNameFromOperator(
+                  ReductionProcessor::toParserIntrinsicOperator(intrOp));
+              redSymPtr = semantics::omp::FindUserReductionSymbol(
+                  converter.getCurrentScope(), mangledOpName);
+            }
+            if (!redSymPtr)
+              TODO(converter.getCurrentLocation(),
+                   "OpenMP user-defined intrinsic-operator declare "
+                   "reduction symbol was not found for lowering");
+            const semantics::Symbol &redSym = redSymPtr->GetUltimate();
+            return ReductionProcessor::getScopedUserReductionName(
+                converter, redSym, reductionType, isByRef);
+          },
+          [&](const clause::DefinedOperator::DefinedOpName &opName)
+              -> std::string {
+            // Directive side of the user-defined operator reduction naming
+            // contract (the clause side is in
+            // ReductionProcessor::processReductionArguments). Name the op via
+            // getScopedUserReductionName from the symbol's ultimate (name,
+            // owner) plus the per-type suffix, byte-identical to the clause
+            // reference. symOpt supplies the source symbol for separate
+            // compilation, else opName.v.sym(). Runs once per listed type (the
+            // enclosing loop walks typeNameList in lockstep with the per-type
+            // combiner/initializer instances), emitting one op per (operator,
+            // type); single-type is N=1.
+            const semantics::Symbol &redSym =
+                symOpt ? symOpt->GetUltimate() : opName.v.sym()->GetUltimate();
+            const auto *userDetails =
+                redSym.detailsIf<semantics::UserReductionDetails>();
+            if (!userDetails)
+              TODO(converter.getCurrentLocation(),
+                   "OpenMP user-defined operator declare reduction "
+                   "without user reduction details");
+            return ReductionProcessor::getScopedUserReductionName(
+                converter, redSym, reductionType, isByRef);
+          },
+      },
+      defOp.u);
+}
+
+// Name the op for a procedure-designator reduction identifier, i.e. a named
+// reduction (`declare reduction(myred:t)`).
+static std::string getProcedureDesignatorOpName(
+    lower::AbstractConverter &converter, const clause::ProcedureDesignator &pd,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  // Directive side of the named-reduction naming contract (clause side in
+  // ReductionProcessor::processReductionArguments). Name the op via
+  // getScopedUserReductionName from the source symbol's ultimate (name, owner)
+  // plus the per-type suffix, byte-identical to the clause reference. symOpt
+  // supplies the source symbol for separate compilation, else pd.v.sym();
+  // GetUltimate keeps the name stable across a plain `use`. reductionType is
+  // the declared element type (already canonical), so unlike the clause side it
+  // needs no namingType normalization.
+  const semantics::Symbol &redSym =
+      (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
+  return ReductionProcessor::getScopedUserReductionName(converter, redSym,
+                                                        reductionType, isByRef);
+}
+
+// Compute the canonical omp.declare_reduction op name for one listed type of a
+// `declare reduction` directive, the same way processReductionArguments does on
+// the clause side, so the two name the same op. \p symOpt is the source
+// reduction symbol when materializing an imported declaration, and null for
+// same-file lowering.
+static std::string getDeclareReductionOpName(
+    lower::AbstractConverter &converter, const clause::ReductionOperator &redOp,
+    const semantics::Symbol *symOpt, mlir::Type reductionType, bool isByRef) {
+  return common::visit(
+      common::visitors{
+          [&](const clause::DefinedOperator &defOp) -> std::string {
+            return getDefinedOperatorOpName(converter, defOp, symOpt,
+                                            reductionType, isByRef);
+          },
+          [&](const clause::ProcedureDesignator &pd) -> std::string {
+            return getProcedureDesignatorOpName(converter, pd, symOpt,
+                                                reductionType, isByRef);
+          },
+      },
+      redOp.u);
+}
+
 // Lower a single declare-reduction directive. Serves both same-file lowering
 // (symOpt null, no filter) and separate-compilation materialization of an
 // imported reduction (symOpt is the source symbol, with a fresh SymMap).
@@ -6757,95 +6944,8 @@ static void genOpenMPDeclareReductionImpl(
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     // Compute the canonical reduction name the same way
     // processReductionArguments does.
-    std::string reductionNameStr = common::visit(
-        common::visitors{
-            [&](const clause::DefinedOperator &defOp) -> std::string {
-              return common::visit(
-                  common::visitors{
-                      [&](const clause::DefinedOperator::IntrinsicOperator
-                              &intrOp) -> std::string {
-                        // Directive side of the intrinsic-operator USER
-                        // reduction naming contract (clause side:
-                        // ReductionProcessor::processReductionArguments site
-                        // 2). A user `declare reduction(+:t)` is scoped by its
-                        // owning scope exactly like the defined-operator and
-                        // named paths, so two declarations for the same
-                        // (operator, type) in different scopes get distinct ops
-                        // instead of colliding on the one global builtin name.
-                        // Only user reductions reach here (builtins are created
-                        // directly by createDeclareReduction), so this always
-                        // scopes. The intrinsic-operator parse node carries no
-                        // reduction symbol: symOpt supplies it for separate
-                        // compilation; same-file it is resolved from the
-                        // current (declaration) scope under the operator's
-                        // mangled name (MakeNameFromOperator), which resolves
-                        // to the same ultimate the clause side finds, so both
-                        // name the op identically.
-                        const semantics::Symbol *redSymPtr = symOpt;
-                        if (!redSymPtr) {
-                          parser::CharBlock mangledOpName = semantics::omp::
-                              MangledIntrinsicOperatorReductionName(
-                                  ReductionProcessor::toParserIntrinsicOperator(
-                                      intrOp),
-                                  semaCtx);
-                          redSymPtr = semantics::omp::FindUserReductionSymbol(
-                              converter.getCurrentScope(), mangledOpName);
-                        }
-                        if (!redSymPtr)
-                          TODO(converter.getCurrentLocation(),
-                               "OpenMP user-defined intrinsic-operator declare "
-                               "reduction symbol was not found for lowering");
-                        const semantics::Symbol &redSym =
-                            redSymPtr->GetUltimate();
-                        return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym, reductionType, isByRef);
-                      },
-                      [&](const clause::DefinedOperator::DefinedOpName &opName)
-                          -> std::string {
-                        // Directive side of the user-defined operator reduction
-                        // naming contract (the clause side is in
-                        // ReductionProcessor::processReductionArguments). Name
-                        // the op via getScopedUserReductionName from the
-                        // symbol's ultimate (name, owner) plus the per-type
-                        // suffix, byte-identical to the clause reference.
-                        // symOpt supplies the source symbol for separate
-                        // compilation, else opName.v.sym(). Runs once per
-                        // listed type (the enclosing loop walks typeNameList in
-                        // lockstep with the per-type combiner/initializer
-                        // instances), emitting one op per (operator, type);
-                        // single-type is N=1.
-                        const semantics::Symbol &redSym =
-                            symOpt ? symOpt->GetUltimate()
-                                   : opName.v.sym()->GetUltimate();
-                        const auto *userDetails =
-                            redSym.detailsIf<semantics::UserReductionDetails>();
-                        if (!userDetails)
-                          TODO(converter.getCurrentLocation(),
-                               "OpenMP user-defined operator declare reduction "
-                               "without user reduction details");
-                        return ReductionProcessor::getScopedUserReductionName(
-                            converter, redSym, reductionType, isByRef);
-                      },
-                  },
-                  defOp.u);
-            },
-            [&](const clause::ProcedureDesignator &pd) -> std::string {
-              // Directive side of the named-reduction naming contract (clause
-              // side in ReductionProcessor::processReductionArguments). Name
-              // the op via getScopedUserReductionName from the source symbol's
-              // ultimate (name, owner) plus the per-type suffix, byte-identical
-              // to the clause reference. symOpt supplies the source symbol for
-              // separate compilation, else pd.v.sym(); GetUltimate keeps the
-              // name stable across a plain `use`. reductionType is the declared
-              // element type (already canonical), so unlike the clause side it
-              // needs no namingType normalization.
-              const semantics::Symbol &redSym =
-                  (symOpt ? *symOpt : *pd.v.sym()).GetUltimate();
-              return ReductionProcessor::getScopedUserReductionName(
-                  converter, redSym, reductionType, isByRef);
-            },
-        },
-        redOp.u);
+    std::string reductionNameStr = getDeclareReductionOpName(
+        converter, redOp, symOpt, reductionType, isByRef);
 
     // Lazy path: emit only the op the clause requested, skipping this
     // declaration's other listed types (keeping the per-type iterators in
@@ -7698,6 +7798,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
       return;
     }
     mlir::Location variantLoc = converter.genLocation(spec->source);
+    if (spec->DirId() == llvm::omp::Directive::OMPD_nothing)
+      TODO(variantLoc, "NOTHING with clauses in METADIRECTIVE");
     List<Clause> variantClauses = makeClauses(spec->Clauses(), semaCtx);
     ConstructQueue queue{
         buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
@@ -8094,11 +8196,11 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
             prefValues.push_back(*constVal);
           } else if (auto str =
                          evaluate::GetScalarConstantValue<evaluate::Ascii>(
-                             pref)) {
+                             evaluate::AsciiKind, pref)) {
             // Map standard OpenMP foreign-runtime identifier strings to
             // their well-known integer values (OpenMP 5.1, Table 22.2).
             auto frId = llvm::StringSwitch<std::optional<int64_t>>(
-                            llvm::StringRef(*str).lower())
+                            str->AsStringRef()->lower())
                             .Case("cuda", 1)
                             .Case("cuda_driver", 2)
                             .Case("opencl", 3)
@@ -8388,8 +8490,9 @@ static void genErrorDirective(lower::AbstractConverter &converter,
   MaybeExpr messageExpr;
   if (args.message) {
     if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
-      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
-        message = *val;
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(
+              evaluate::AsciiKind, *expr))
+        message = val->AsStdString();
       else
         messageExpr = expr;
     }

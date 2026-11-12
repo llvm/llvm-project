@@ -11,6 +11,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
@@ -362,11 +363,57 @@ Iterator makeIterator(const parser::OmpIterator &inp,
   return iterator;
 }
 
-DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
-                                    semantics::SemanticsContext &semaCtx) {
+// Walk source syntax rather than the analyzed designator: folding can remove
+// an iterator reference that still determines whether a locator is evaluated.
+struct IteratorReferenceCollector {
+  template <typename T>
+  bool Pre(const T &) {
+    return true;
+  }
+  template <typename T>
+  void Post(const T &) {}
+
+  bool Pre(const parser::Name &name) {
+    if (name.symbol) {
+      const semantics::Symbol *symbol = &name.symbol->GetUltimate();
+      if (llvm::is_contained(iterators, symbol) &&
+          !llvm::is_contained(references, symbol))
+        references.push_back(symbol);
+    }
+    return true;
+  }
+
+  const List<const semantics::Symbol *> &iterators;
+  List<const semantics::Symbol *> &references;
+};
+
+static ObjectList makeIteratorObjects(const parser::OmpObjectList &objects,
+                                      const std::optional<Iterator> &iterator,
+                                      semantics::SemanticsContext &semaCtx) {
+  if (!iterator)
+    return makeObjects(objects, semaCtx);
+
+  List<const semantics::Symbol *> symbols;
+  for (const auto &specifier : *iterator)
+    symbols.push_back(&std::get<Object>(specifier.t).sym()->GetUltimate());
+
+  return makeList(objects.v, [&](const parser::OmpObject &source) {
+    Object object = makeObject(source, semaCtx);
+    auto &references = object.sourceIteratorReferences.emplace();
+    IteratorReferenceCollector collector{symbols, references};
+    parser::Walk(source, collector);
+    return object;
+  });
+}
+
+// If the DefinedOperator refers to an intrinsic operator, create the
+// corresponding IntrinsicOperator, otherwise return nullopt.
+std::optional<IntrinsicOperator>
+makeIntrinsicOperator(const parser::DefinedOperator &inp,
+                      semantics::SemanticsContext &semaCtx) {
   CLAUSET_ENUM_CONVERT( //
       convert, parser::DefinedOperator::IntrinsicOperator,
-      DefinedOperator::IntrinsicOperator,
+      IntrinsicOperator::Operator,
       // clang-format off
       MS(Add,      Add)
       MS(AND,      AND)
@@ -388,17 +435,22 @@ DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
       // clang-format on
   );
 
-  return Fortran::common::visit(
-      common::visitors{
-          [&](const parser::DefinedOpName &s) {
-            return DefinedOperator{
-                DefinedOperator::DefinedOpName{makeObject(s.v, semaCtx)}};
-          },
-          [&](const parser::DefinedOperator::IntrinsicOperator &s) {
-            return DefinedOperator{convert(s)};
-          },
-      },
-      inp.u);
+  if (auto *intOp =
+          std::get_if<parser::DefinedOperator::IntrinsicOperator>(&inp.u)) {
+    return IntrinsicOperator{convert(*intOp)};
+  }
+  return std::nullopt;
+}
+
+DefinedOperator makeDefinedOperator(const parser::DefinedOperator &inp,
+                                    semantics::SemanticsContext &semaCtx) {
+  // All intrinsic operators from parser::DefinedOperator are covered here.
+  if (auto &&intOp = makeIntrinsicOperator(inp, semaCtx)) {
+    return DefinedOperator{std::move(*intOp)};
+  }
+
+  return DefinedOperator{DefinedOperator::DefinedOpName{
+      makeObject(std::get<parser::DefinedOpName>(inp.u).v, semaCtx)}};
 }
 
 ProcedureDesignator
@@ -488,8 +540,9 @@ Affinity make(const parser::OmpClause::Affinity &inp,
   auto &&maybeIter =
       m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
 
+  auto objects = makeIteratorObjects(t1, maybeIter, semaCtx);
   return Affinity{{/*Iterator=*/std::move(maybeIter),
-                   /*LocatorList=*/makeObjects(t1, semaCtx)}};
+                   /*LocatorList=*/std::move(objects)}};
 }
 
 Align make(const parser::OmpClause::Align &inp,
@@ -741,8 +794,9 @@ Doacross makeDoacross(const parser::OmpDoacross &doa,
     auto convert3 = [&](const IterOffset &u) {
       auto &s0 = std::get<parser::DefinedOperator>(u.t);
       auto &s1 = std::get<parser::ScalarIntConstantExpr>(u.t);
-      return Iteration::Distance{
-          {makeDefinedOperator(s0, semaCtx), makeExpr(s1, semaCtx)}};
+      auto &&intOp = makeIntrinsicOperator(s0, semaCtx);
+      assert(intOp && "Expecting intrinsic operator");
+      return Iteration::Distance{{std::move(*intOp), makeExpr(s1, semaCtx)}};
     };
     return Iteration{{makeObject(t0, semaCtx), maybeApply(convert3, t1)}};
   };
@@ -764,10 +818,11 @@ Depend makeDepend(const parser::OmpDependClause::TaskDep &inp,
 
   auto &&maybeIter =
       m0 ? makeIterator(*m0, semaCtx) : std::optional<Iterator>{};
+  auto objects = makeIteratorObjects(t1, maybeIter, semaCtx);
   return Depend{{/*DependenceType=*/makeDepType(*m1),
                  /*Iterator=*/std::move(maybeIter),
                  /*Vector=*/std::nullopt,
-                 /*LocatorList=*/makeObjects(t1, semaCtx)}};
+                 /*LocatorList=*/std::move(objects)}};
 }
 
 // depend(source) / depend(sink: vec) on ordered (4.5..5.1 spelling, deprecated
@@ -1022,10 +1077,11 @@ From make(const parser::OmpClause::From &inp,
     return std::nullopt;
   }();
 
+  auto objects = makeIteratorObjects(t5, iterator, semaCtx);
   return From{{/*Expectation=*/maybeExp,
                /*Mappers=*/std::move(mappers),
                /*Iterator=*/std::move(iterator),
-               /*LocatorList=*/makeObjects(t5, semaCtx)}};
+               /*LocatorList=*/std::move(objects)}};
 }
 
 // Full: empty
@@ -1340,12 +1396,13 @@ Map make(const parser::OmpClause::Map &inp,
     return std::nullopt;
   }();
 
+  auto objects = makeIteratorObjects(t2, iterator, semaCtx);
   return Map{{/*MapType=*/std::move(type),
               /*MapTypeModifiers=*/std::move(maybeTypeMods),
               /*AttachModifier=*/std::move(attachMod),
               /*RefModifier=*/std::move(refMod), /*Mapper=*/std::move(mappers),
               /*Iterator=*/std::move(iterator),
-              /*LocatorList=*/makeObjects(t2, semaCtx)}};
+              /*LocatorList=*/std::move(objects)}};
 }
 
 Match make(const parser::OmpClause::Match &inp,
@@ -1762,10 +1819,11 @@ To make(const parser::OmpClause::To &inp,
     return std::nullopt;
   }();
 
+  auto objects = makeIteratorObjects(t5, iterator, semaCtx);
   return To{{/*Expectation=*/maybeExp,
              /*Mappers=*/{std::move(mappers)},
              /*Iterator=*/std::move(iterator),
-             /*LocatorList=*/makeObjects(t5, semaCtx)}};
+             /*LocatorList=*/std::move(objects)}};
 }
 
 UnifiedAddress make(const parser::OmpClause::UnifiedAddress &inp,

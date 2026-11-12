@@ -130,6 +130,7 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
   addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
   addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.
@@ -475,7 +476,7 @@ bool HexagonPacketizerList::useCallersSP(MachineInstr &MI) {
   unsigned FrameSize = MF.getFrameInfo().getStackSize();
   MachineOperand &Off = MI.getOperand(1);
   int64_t NewOff = Off.getImm() - (FrameSize + HEXAGON_LRFP_SIZE);
-  if (HII->isValidOffset(Opc, NewOff, HRI)) {
+  if (HII->isValidOffset(Opc, NewOff)) {
     Off.setImm(NewOff);
     return true;
   }
@@ -526,7 +527,7 @@ bool HexagonPacketizerList::updateOffset(SUnit *SUI, SUnit *SUJ) {
     return false;
 
   int64_t Offset = MI.getOperand(OPI).getImm();
-  if (!HII->isValidOffset(MI.getOpcode(), Offset+Incr, HRI))
+  if (!HII->isValidOffset(MI.getOpcode(), Offset + Incr))
     return false;
 
   MI.getOperand(OPI).setImm(Offset + Incr);
@@ -1115,6 +1116,28 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   // New-value stores cannot coexist with any other stores.
   if (HII.isNewValueStore(MI) && MJ.mayStore())
     return true;
+
+  // An HLX instruction with a 64-bit scalar source cannot be paired with
+  // another HLX instruction using a scalar or immediate source. Loads and
+  // stores are exempt because they do not use the shared scalar resource.
+  if (HII.isHLXVec(MI) && HII.isHLXVec(MJ) && !MJ.mayLoad() && !MJ.mayStore()) {
+    auto getScalarUses = [](const MachineInstr &MI) {
+      unsigned Uses = 0;
+      for (const MachineOperand &MO : MI.explicit_uses()) {
+        if (MO.isImm())
+          Uses |= 1;
+        else if (MO.isReg() && Hexagon::IntRegsRegClass.contains(MO.getReg()))
+          Uses |= 2;
+        else if (MO.isReg() &&
+                 Hexagon::DoubleRegsRegClass.contains(MO.getReg()))
+          Uses |= 4;
+      }
+      return Uses;
+    };
+
+    if ((getScalarUses(MI) & 4) && getScalarUses(MJ))
+      return true;
+  }
 
   switch (MI.getOpcode()) {
   case Hexagon::S2_storew_locked:

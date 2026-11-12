@@ -143,6 +143,10 @@ class Symbolizer final {
   // current executing process, such as an offloading device.
   SymbolizedStack* SymbolizeModuleOffset(const char* module_name,
                                          uptr module_offset);
+  // Like SymbolizeData, but the module is not mapped in this process
+  // (offload device images).
+  bool SymbolizeModuleData(const char* module_name, uptr module_offset,
+                           DataInfo* info);
   bool SymbolizeData(uptr address, DataInfo *info);
   bool SymbolizeFrame(uptr address, FrameInfo *info);
 

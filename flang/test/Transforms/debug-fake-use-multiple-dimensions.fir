@@ -98,7 +98,7 @@ module {
   // 2D dynamically-sized array with a single return.
   func.func @test_2d_dynamic_array(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_2d_dynamic_array"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0(%arg1, %arg3) origin %arg2, %arg4 dummy_scope %0 arg 1 {uniq_name = "_QFtest_2d_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1, %arg3) origin %arg2, %arg4 dummy_scope %0 arg 1 uniq_name("_QFtest_2d_dynamic_arrayEarr") : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     return loc(#loc5)
   } loc(#loc1)
@@ -106,7 +106,7 @@ module {
   // 3D dynamically-sized array with a single return.
   func.func @test_3d_dynamic_array(%arg0: !fir.ref<!fir.array<?x?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg5: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg6: index loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_3d_dynamic_array"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0(%arg1, %arg3, %arg5) origin %arg2, %arg4, %arg6 dummy_scope %0 arg 1 {uniq_name = "_QFtest_3d_dynamic_arrayEarr"} : (!fir.ref<!fir.array<?x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1, %arg3, %arg5) origin %arg2, %arg4, %arg6 dummy_scope %0 arg 1 uniq_name("_QFtest_3d_dynamic_arrayEarr") : (!fir.ref<!fir.array<?x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     return loc(#loc5)
   } loc(#loc1)
@@ -114,7 +114,7 @@ module {
   // 2D dynamically-sized array with multiple returns.
   func.func @test_2d_dynamic_array_multi_ret(%arg0: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "arr"} loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg1: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg2: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg3: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg4: index loc("debug-fake-use-multiple-dimensions.f90":1:1), %arg5: i1 loc("debug-fake-use-multiple-dimensions.f90":1:1)) attributes {fir.internal_name = "_QPtest_2d_dynamic_array_multi_ret"} {
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0(%arg1, %arg3) origin %arg2, %arg4 dummy_scope %0 arg 1 {uniq_name = "_QFtest_2d_dynamic_array_multi_retEarr"} : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%arg1, %arg3) origin %arg2, %arg4 dummy_scope %0 arg 1 uniq_name("_QFtest_2d_dynamic_array_multi_retEarr") : (!fir.ref<!fir.array<?x?xi32>>, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     cf.cond_br %arg5, ^bb1, ^bb2
   ^bb1:
@@ -128,7 +128,7 @@ module {
     %c10 = arith.constant 10 : index
     %c1 = arith.constant 1 : index
     %0 = fir.undefined !fir.dscope loc(#loc1)
-    %1 = fircg.ext_declare %arg0(%c10, %arg1, %arg3) origin %c1, %arg2, %arg4 dummy_scope %0 arg 1 {uniq_name = "_QFtest_3d_mixed_arrayEarr"} : (!fir.ref<!fir.array<10x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<10x?x?xi32>> loc(#loc3)
+    %1 = fircg.ext_declare %arg0(%c10, %arg1, %arg3) origin %c1, %arg2, %arg4 dummy_scope %0 arg 1 uniq_name("_QFtest_3d_mixed_arrayEarr") : (!fir.ref<!fir.array<10x?x?xi32>>, index, index, index, index, index, index, !fir.dscope) -> !fir.ref<!fir.array<10x?x?xi32>> loc(#loc3)
     fir.call @foo() : () -> ()
     return loc(#loc5)
   } loc(#loc1)

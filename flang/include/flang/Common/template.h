@@ -25,7 +25,8 @@ namespace Fortran::common {
 // SearchTypeList<PREDICATE, TYPES...> scans a list of types.  The zero-based
 // index of the first type T in the list for which PREDICATE<T>::value() is
 // true is returned, or -1 if the predicate is false for every type in the list.
-// This is a compile-time operation; see SearchTypes below for a run-time form.
+// This is a compile-time operation; see evaluate::SearchTypes for a run-time
+// form.
 template <int N, template <typename> class PREDICATE, typename TUPLE>
 struct SearchTypeListHelper {
   static constexpr int value() {
@@ -289,37 +290,32 @@ std::optional<R> MapOptional(R (*f)(A &&...), std::optional<A> &&...x) {
   return MapOptional(std::function<R(A && ...)>{f}, std::move(x)...);
 }
 
-// Given a VISITOR class of the general form
-//   struct VISITOR {
-//     using Result = ...;
-//     using Types = std::tuple<...>;
-//     template<typename T> Result Test() { ... }
-//   };
-// SearchTypes will traverse the element types in the tuple in order
-// and invoke VISITOR::Test<T>() on each until it returns a value that
-// casts to true.  If no invocation of Test succeeds, SearchTypes will
-// return a default value.
-template <std::size_t J, typename VISITOR>
-common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypesHelper(
-    VISITOR &&visitor, typename VISITOR::Result &&defaultResult) {
-  using Tuple = typename VISITOR::Types;
-  if constexpr (J < std::tuple_size_v<Tuple>) {
-    if (auto result{visitor.template Test<std::tuple_element_t<J, Tuple>>()}) {
-      return result;
-    }
-    return SearchTypesHelper<J + 1, VISITOR>(
-        std::move(visitor), std::move(defaultResult));
-  } else {
-    return std::move(defaultResult);
-  }
-}
+template <typename Target, typename List> struct type_index;
 
-template <typename VISITOR>
-common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypes(
-    VISITOR &&visitor,
-    typename VISITOR::Result defaultResult = typename VISITOR::Result{}) {
-  return SearchTypesHelper<0, VISITOR>(
-      std::move(visitor), std::move(defaultResult));
-}
+template <typename Target, template <typename...> class List, typename... Ts>
+struct type_index<Target, List<Ts...>> {
+private:
+  template <typename Current, typename... Rest>
+  static constexpr std::size_t find_index(std::size_t current_idx) {
+    if constexpr (std::is_same_v<Target, Current>) {
+      return current_idx;
+    } else if constexpr (sizeof...(Rest) > 0) {
+      return find_index<Rest...>(current_idx + 1);
+    } else {
+      static_assert(std::is_same_v<Target, Current>,
+          "Target type not found in type list!");
+      return 0;
+    }
+  }
+
+public:
+  static constexpr std::size_t value = find_index<Ts...>(0);
+};
+
+/// Get the index in an (typically variadic) template list. Eg.
+/// type_index_v<MyClass, std::tuple<char, int, MyClass, long>> == 2
+template <typename Target, typename List>
+inline constexpr std::size_t type_index_v = type_index<Target, List>::value;
+
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_TEMPLATE_H_

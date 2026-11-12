@@ -26,10 +26,13 @@
 using namespace orc_rt;
 using namespace orc_rt::test;
 
+ORC_RT_C_DEFINE_CONTROLLER_HANDLER_TAG(
+    orc_rt_tag_test_inProcessControllerAccessTest);
+
 namespace {
 
-static orc_rt_ControllerHandlerTag testHandlerTag() {
-  return reinterpret_cast<orc_rt_ControllerHandlerTag>(uintptr_t{0xdeadbeef});
+static orc_rt_ControllerHandlerTag *testHandlerTag() {
+  return &orc_rt_tag_test_inProcessControllerAccessTest;
 }
 
 // A minimal stand-in for llvm::orc::InProcessEPC. Registers itself on the
@@ -40,7 +43,7 @@ public:
   using Connection = InProcessControllerAccess::Connection;
 
   using OnCallJITDispatchFn =
-      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag T,
+      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag *T,
                               WrapperFunctionBuffer ArgBytes)>;
   using OnReturnWrapperResultFn = move_only_function<void(
       uint64_t CallId, WrapperFunctionBuffer ResultBytes)>;
@@ -91,7 +94,7 @@ public:
 
 private:
   static void callJITDispatchEntry(void *IPEPC, uint64_t CallId,
-                                   orc_rt_ControllerHandlerTag T,
+                                   orc_rt_ControllerHandlerTag *T,
                                    orc_rt_WrapperFunctionBuffer ArgBytes) {
     auto *Self = static_cast<MockIPEPC *>(IPEPC);
     WrapperFunctionBuffer Buf(ArgBytes);
@@ -332,7 +335,9 @@ TEST(InProcessControllerAccessTest, BootstrapValuesExposeSubtargetFeatures) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   std::optional<std::string> Features;
   std::unique_ptr<MockIPEPC> Mock;
-  attachWithMock(S, Mock, cantFail(BootstrapInfo::CreateDefault(S)),
+  auto BI = BootstrapInfo::CreateDefault(S);
+  ASSERT_THAT_EXPECTED(BI, Succeeded());
+  attachWithMock(S, Mock, std::move(*BI),
                  [&](InProcessControllerAccess::BootstrapInfoAccess *BIA) {
                    const char *Name = nullptr;
                    const char *Bytes = nullptr;

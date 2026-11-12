@@ -15,7 +15,7 @@ define <4 x i16> @test_pwcvth_v4i8(<4 x i8> %a) {
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x0
-  ; RV32-NEXT:   [[WZIP8P:%[0-9]+]]:gprpair = WZIP8P [[COPY1]], [[COPY]]
+  ; RV32-NEXT:   [[WZIP8P:%[0-9]+]]:gprpairnox0 = WZIP8P [[COPY1]], [[COPY]]
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[WZIP8P]].sub_gpr_even
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[WZIP8P]].sub_gpr_odd
   ; RV32-NEXT:   $x10 = COPY [[COPY2]]
@@ -43,7 +43,7 @@ define <2 x i32> @test_pwcvth_v2i16(<2 x i16> %a) {
   ; RV32-NEXT: {{  $}}
   ; RV32-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; RV32-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x0
-  ; RV32-NEXT:   [[WZIP16P:%[0-9]+]]:gprpair = WZIP16P [[COPY1]], [[COPY]]
+  ; RV32-NEXT:   [[WZIP16P:%[0-9]+]]:gprpairnox0 = WZIP16P [[COPY1]], [[COPY]]
   ; RV32-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[WZIP16P]].sub_gpr_even
   ; RV32-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[WZIP16P]].sub_gpr_odd
   ; RV32-NEXT:   $x10 = COPY [[COPY2]]

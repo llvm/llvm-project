@@ -15,16 +15,17 @@
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/StateStack.h"
+#include "mlir/Support/TypeID.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
@@ -33,11 +34,9 @@
 namespace llvm {
 class BasicBlock;
 class CallBase;
-class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
 class Metadata;
-class OpenMPIRBuilder;
 class Value;
 } // namespace llvm
 
@@ -118,41 +117,6 @@ public:
   /// Finds an LLVM IR basic block that corresponds to the given MLIR block.
   llvm::BasicBlock *lookupBlock(Block *block) const {
     return blockMapping.lookup(block);
-  }
-
-  /// Find the LLVM-IR loop that represents an MLIR loop.
-  llvm::CanonicalLoopInfo *lookupOMPLoop(omp::NewCliOp mlir) const {
-    llvm::CanonicalLoopInfo *result = loopMapping.lookup(mlir);
-    assert(result && "attempt to get non-existing loop");
-    return result;
-  }
-
-  /// Find the LLVM-IR loop that represents an MLIR loop.
-  llvm::CanonicalLoopInfo *lookupOMPLoop(Value mlir) const {
-    return lookupOMPLoop(mlir.getDefiningOp<omp::NewCliOp>());
-  }
-
-  /// Mark an OpenMP loop as having been consumed.
-  void invalidateOmpLoop(omp::NewCliOp mlir) { loopMapping.erase(mlir); }
-
-  /// Mark an OpenMP loop as having been consumed.
-  void invalidateOmpLoop(Value mlir) {
-    invalidateOmpLoop(mlir.getDefiningOp<omp::NewCliOp>());
-  }
-
-  /// Map an MLIR OpenMP dialect CanonicalLoopInfo to its lowered LLVM-IR
-  /// OpenMPIRBuilder CanonicalLoopInfo
-  void mapOmpLoop(omp::NewCliOp mlir, llvm::CanonicalLoopInfo *llvm) {
-    assert(llvm && "argument must be non-null");
-    llvm::CanonicalLoopInfo *&cur = loopMapping[mlir];
-    assert(cur == nullptr && "attempting to map a loop that is already mapped");
-    cur = llvm;
-  }
-
-  /// Map an MLIR OpenMP dialect CanonicalLoopInfo to its lowered LLVM-IR
-  /// OpenMPIRBuilder CanonicalLoopInfo
-  void mapOmpLoop(Value mlir, llvm::CanonicalLoopInfo *llvm) {
-    mapOmpLoop(mlir.getDefiningOp<omp::NewCliOp>(), llvm);
   }
 
   /// Stores the mapping between an MLIR operation with successors and a
@@ -284,10 +248,6 @@ public:
     return ifuncMapping.lookup(op);
   }
 
-  /// Returns the OpenMP IR builder associated with the LLVM IR module being
-  /// constructed.
-  llvm::OpenMPIRBuilder *getOpenMPBuilder();
-
   /// Returns the virtual filesystem to use for file operations. Falls back to
   /// the real filesystem if none was provided.
   llvm::vfs::FileSystem &getFileSystem();
@@ -380,6 +340,37 @@ public:
   /// RAII object calling stackPush/stackPop on construction/destruction.
   template <typename T>
   using SaveStack = SaveStateStack<T, ModuleTranslation>;
+
+  /// Base class for state that lives as long as the module translation.
+  /// Dialect translations use extensions to keep state shared across the
+  /// translation of several operations (e.g. IR builders or handle mappings)
+  /// without the core translation depending on those dialects. Derived classes
+  /// must provide an explicit TypeID.
+  class Extension {
+  public:
+    virtual ~Extension();
+
+    /// Called once after all operations have been translated and before the
+    /// LLVM module is verified. Extensions are finalized in creation order.
+    virtual LogicalResult finalize() { return success(); }
+  };
+
+  /// Returns the extension of type `T`, constructing it from `args` on first
+  /// use. `T` must derive from `Extension`.
+  template <typename T, typename... Args>
+  T &getOrCreateExtension(Args &&...args) {
+    static_assert(std::is_base_of<Extension, T>::value,
+                  "expected T derived from ModuleTranslation::Extension");
+    TypeID id = TypeID::get<T>();
+    auto it = extensions.find(id);
+    if (it != extensions.end())
+      return static_cast<T &>(*it->second);
+    // Construct before inserting: the constructor may create other extensions.
+    auto extension = std::make_unique<T>(std::forward<Args>(args)...);
+    T &result = *extension;
+    extensions.insert({id, std::move(extension)});
+    return result;
+  }
 
   SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
@@ -489,8 +480,8 @@ private:
   /// A converter for translating loop annotations.
   std::unique_ptr<detail::LoopAnnotationTranslation> loopAnnotationTranslation;
 
-  /// Builder for LLVM IR generation of OpenMP constructs.
-  std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
+  /// Translation-scoped state owned by dialect translations.
+  llvm::MapVector<TypeID, std::unique_ptr<Extension>> extensions;
 
   /// Optional virtual filesystem for file operations. When null, the real
   /// filesystem is used (via getFileSystem()). Not owned.
@@ -524,12 +515,6 @@ private:
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;
-
-  /// List of not yet consumed MLIR loop handles (represented by an omp.new_cli
-  /// operation which creates a value of type CanonicalLoopInfoType) and their
-  /// LLVM-IR representation as CanonicalLoopInfo which is managed by the
-  /// OpenMPIRBuilder.
-  DenseMap<omp::NewCliOp, llvm::CanonicalLoopInfo *> loopMapping;
 
   /// A mapping between MLIR LLVM dialect terminators and LLVM IR terminators
   /// they are converted to. This allows for connecting PHI nodes to the source

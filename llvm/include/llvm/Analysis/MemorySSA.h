@@ -98,6 +98,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -108,6 +109,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -316,10 +318,6 @@ public:
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
       : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB, AllocMarker) {}
 
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
-
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -380,10 +378,6 @@ public:
             unsigned Ver)
       : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB, AllocMarker),
         ID(Ver) {}
-
-  // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -616,13 +610,6 @@ public:
   void unorderedDeleteIncomingBlock(const BasicBlock *BB) {
     unorderedDeleteIncomingIf(
         [&](const MemoryAccess *, const BasicBlock *B) { return BB == B; });
-  }
-
-  // After deleting incoming memory access MA, the incoming accesses order may
-  // be changed.
-  void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
-    unorderedDeleteIncomingIf(
-        [&](const MemoryAccess *M, const BasicBlock *) { return MA == M; });
   }
 
   static bool classof(const Value *V) {
@@ -866,10 +853,14 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;
   Loop *L = nullptr;
+
+  // Memory for MemoryUses and MemoryDefs.
+  BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
@@ -1320,11 +1311,6 @@ inline upward_defs_iterator upward_defs_begin(const UpwardDefsElem &Pair,
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-
-inline iterator_range<upward_defs_iterator>
-upward_defs(const UpwardDefsElem &Pair, DominatorTree &DT) {
-  return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
-}
 
 /// Walks the defining accesses of MemoryDefs. Stops after we hit something that
 /// has no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when

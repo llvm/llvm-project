@@ -2,28 +2,35 @@ add_llvm_component_group(X86 HAS_JIT)
 
 set(LLVM_TARGET_DEFINITIONS X86.td)
 
-tablegen(LLVM X86GenAsmMatcher.inc -gen-asm-matcher)
-tablegen(LLVM X86GenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM X86GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
-tablegen(LLVM X86GenCallingConv.inc -gen-callingconv)
-tablegen(LLVM X86GenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM X86GenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM X86GenInstrMapping.inc -gen-x86-instr-mapping)
-tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
-tablegen(LLVM X86GenFastISel.inc -gen-fast-isel)
-tablegen(LLVM X86GenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM X86GenInstrInfo.inc -gen-instr-info
+llvm_tablegen(X86GenAsmMatcher.inc -gen-asm-matcher)
+llvm_tablegen(X86GenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(X86GenAsmWriter1.inc -gen-asm-writer -asmwriternum=1)
+llvm_tablegen(X86GenCallingConv.inc -gen-callingconv)
+llvm_tablegen(X86GenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(X86GenDisassemblerTables.inc -gen-disassembler)
+llvm_tablegen(X86GenInstrMapping.inc -gen-x86-instr-mapping)
+llvm_tablegen(X86GenExegesis.inc -gen-exegesis)
+llvm_tablegen(X86GenFastISel.inc -gen-fast-isel)
+llvm_tablegen(X86GenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(X86GenInstrInfo.inc -gen-instr-info
                                   -instr-info-expand-mi-operand-info=0)
-tablegen(LLVM X86GenMnemonicTables.inc -gen-x86-mnemonic-tables -asmwriternum=1)
-tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
-tablegen(LLVM X86GenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM X86GenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables -asmwriternum=1)
-tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(X86GenMnemonicTables.inc -gen-x86-mnemonic-tables -asmwriternum=1)
+llvm_tablegen(X86GenRegisterBank.inc -gen-register-bank)
+llvm_tablegen(X86GenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(X86GenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(X86GenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(X86GenFoldTables.inc -gen-x86-fold-tables -asmwriternum=1)
+llvm_tablegen(X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PreLegalizerCombiner")
-tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+llvm_tablegen(X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PostLegalizerCombiner")
+
+set(LLVM_TARGET_DEFINITIONS X86Options.td)
+llvm_tablegen(X86Options.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/X86MCOptions.td)
+llvm_tablegen(X86MCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
@@ -46,6 +53,7 @@ set(sources
   X86PreTileConfig.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
+  X86FenceNonTemporalStores.cpp
   X86FixupBWInsts.cpp
   X86FixupLEAs.cpp
   X86FixupInstTuning.cpp
@@ -112,6 +120,7 @@ add_llvm_target(X86CodeGen ${sources}
   Instrumentation
   MC
   ObjCARC
+  Option
   Passes
   ProfileData
   SelectionDAG

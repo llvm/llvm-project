@@ -1,0 +1,15 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+# cleanup.cpp builds an inferior with %clang_host, which the bazel setup
+# doesn't support yet.
+lit_test(
+    name = "assert.test.test",
+    srcs = ["assert.test"],
+    data = ["//lldb/test/Shell:lit_data"],
+)

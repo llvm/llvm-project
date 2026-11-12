@@ -52,6 +52,7 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
+      .Case("acquire-release-atomics", HasAcquireReleaseAtomics)
       .Case("atomics", HasAtomics)
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
@@ -66,7 +67,6 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mutable-globals", HasMutableGlobals)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("reference-types", HasReferenceTypes)
-      .Case("relaxed-atomics", HasRelaxedAtomics)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
@@ -87,6 +87,8 @@ void WebAssemblyTargetInfo::fillValidCPUList(
 void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
                                              MacroBuilder &Builder) const {
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
+  if (HasAcquireReleaseAtomics)
+    Builder.defineMacro("__wasm_acquire_release_atomics__");
   if (HasAtomics)
     Builder.defineMacro("__wasm_atomics__");
   if (HasBulkMemory)
@@ -111,8 +113,6 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
-  if (HasRelaxedAtomics)
-    Builder.defineMacro("__wasm_relaxed_atomics__");
   if (SIMDLevel >= RelaxedSIMD)
     Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasSignExt)
@@ -198,6 +198,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
+    Features["acquire-release-atomics"] = true;
     Features["atomics"] = true;
     Features["compact-imports"] = true;
     Features["exception-handling"] = true;
@@ -205,7 +206,6 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["fp16"] = true;
     Features["gc"] = true;
     Features["multimemory"] = true;
-    Features["relaxed-atomics"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
@@ -225,6 +225,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
   HasMustTail = false;
   for (const auto &Feature : Features) {
+    if (Feature == "+acquire-release-atomics") {
+      HasAcquireReleaseAtomics = true;
+      continue;
+    }
+    if (Feature == "-acquire-release-atomics") {
+      HasAcquireReleaseAtomics = false;
+      continue;
+    }
     if (Feature == "+atomics") {
       HasAtomics = true;
       continue;
@@ -336,14 +344,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-reference-types") {
       HasReferenceTypes = false;
-      continue;
-    }
-    if (Feature == "+relaxed-atomics") {
-      HasRelaxedAtomics = true;
-      continue;
-    }
-    if (Feature == "-relaxed-atomics") {
-      HasRelaxedAtomics = false;
       continue;
     }
     if (Feature == "+relaxed-simd") {

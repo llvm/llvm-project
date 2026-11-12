@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
@@ -24,6 +25,8 @@
 #include "mlir/IR/Value.h"
 
 #include <atomic>
+#include <mutex>
+#include <optional>
 
 namespace mlir::remark {
 
@@ -172,6 +175,8 @@ public:
     /// Optional attribute storage for Attribute-based args. Allows streamers
     /// to access the original attribute for custom handling.
     std::optional<Attribute> attr;
+    /// Generated RelatedTo argument, distinct from a user-supplied argument.
+    bool isLink = false;
 
     Arg(llvm::StringRef m) : key("Remark"), val(m) {}
     Arg(llvm::StringRef k, llvm::StringRef v) : key(k), val(v) {}
@@ -238,6 +243,7 @@ public:
 
   std::string getMsg() const;
 
+  /// Return arguments, owned until mutation or destruction.
   ArrayRef<Arg> getArgs() const { return args; }
 
   llvm::remarks::Type getRemarkType() const;
@@ -259,13 +265,17 @@ public:
   /// Get the list of related remark IDs.
   ArrayRef<RemarkId> getRelatedRemarkIds() const { return relatedRemarks; }
 
-  /// Add a reference to a related remark. Also adds it as an Arg for
-  /// serialization.
+  /// Replace the list of related remark IDs.
+  void setRelatedRemarkIds(ArrayRef<RemarkId> ids);
+
+  /// Add a related ID and its generated argument.
   void addRelatedRemark(RemarkId relatedId) {
-    if (relatedId) {
-      relatedRemarks.push_back(relatedId);
-      args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
-    }
+    if (!relatedId)
+      return;
+    relatedRemarks.push_back(relatedId);
+    Arg &arg =
+        args.emplace_back("RelatedTo", llvm::utostr(relatedId.getValue()));
+    arg.isLink = true;
   }
 
   /// Check if this remark has any related remarks.
@@ -668,23 +678,24 @@ public:
 /// Policy that emits only the last remark reported for each identity, see
 /// DenseMapInfo<Remark>. Remarks are stored until finalize().
 class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
-private:
-  /// Remarks reported since the last finalize().
-  llvm::DenseSet<detail::Remark> postponedRemarks;
-
 public:
   RemarkEmittingPolicyFinal();
 
-  void reportRemark(const detail::Remark &remark) override {
-    postponedRemarks.erase(remark);
-    postponedRemarks.insert(remark);
-  }
+  void reportRemark(const detail::Remark &remark) override;
 
-  /// Emits and drains all stored remarks. Related remarks are printed right
-  /// after the remark that references them; a link only resolves when both
-  /// remarks are in the same call. A later call emits only remarks reported
-  /// since this one.
+  /// Emit each survivor once, grouping related remarks after their parents.
+  /// Visit roots with IDs in ID order, then ID-less roots in unspecified order.
+  /// Finally, start traversals from any unvisited remarks in ID order.
+  /// Links to IDs replaced in this batch are removed; IDs outside this batch
+  /// are preserved without validation. Call after reporting stops; callbacks
+  /// must not reenter the policy. A later call emits only new remarks.
   void finalize() override;
+
+private:
+  std::mutex mutex;
+  llvm::DenseSet<detail::Remark> pendingRemarks;
+  /// IDs replaced in the current batch.
+  llvm::DenseSet<uint64_t> discardedIds;
 };
 
 /// Create a Reason with llvm::formatv formatting.

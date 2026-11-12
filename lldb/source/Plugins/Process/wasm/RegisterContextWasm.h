@@ -14,6 +14,7 @@
 #include "ThreadWasm.h"
 #include "Utility/WasmVirtualRegisters.h"
 #include "lldb/lldb-private-types.h"
+#include <algorithm>
 #include <unordered_map>
 
 namespace lldb_private {
@@ -28,7 +29,11 @@ struct WasmVirtualRegisterInfo : public RegisterInfo {
   uint32_t index;
 
   WasmVirtualRegisterInfo(WasmVirtualRegisterKinds kind, uint32_t index)
-      : RegisterInfo(), kind(kind), index(index) {}
+      : RegisterInfo(), kind(kind), index(index) {
+    // RegisterInfo() zeroes the numbers, and 0 is the generic PC.
+    std::fill(std::begin(kinds), std::end(kinds), LLDB_INVALID_REGNUM);
+    kinds[lldb::eRegisterKindLLDB] = GetWasmRegister(kind, index);
+  }
 };
 
 class RegisterContextWasm

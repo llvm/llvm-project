@@ -328,17 +328,16 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
     Register Reg = MI->getOperand(0).getReg();
     SpvType = GR->getSPIRVTypeForVReg(Reg);
     if (!SpvType) {
+      MIB.setInsertPt(*MI->getParent(), MI);
       switch (MI->getOpcode()) {
       case TargetOpcode::G_FCONSTANT:
       case TargetOpcode::G_CONSTANT: {
-        MIB.setInsertPt(*MI->getParent(), MI);
         Type *Ty = MI->getOperand(1).getCImm()->getType();
         SpvType = GR->getOrCreateSPIRVType(
             Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
       }
       case TargetOpcode::G_GLOBAL_VALUE: {
-        MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
         Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
         unsigned AddrSpace = Global->getType()->getAddressSpace();
@@ -937,6 +936,12 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             const MDNode *TypeMD = cast<MDNode>(MD->getOperand(0));
             Type *ValueTy = getMDOperandAsType(TypeMD, 0);
             GR->addValueAttrs(Def, std::make_pair(ValueTy, ValueName.str()));
+            // Type results that nothing extracts.
+            auto *STy = dyn_cast<StructType>(ValueTy);
+            if (STy && STy->getNumElements() == Def->getNumDefs())
+              for (auto [Op, ElemTy] : zip(Def->defs(), STy->elements()))
+                if (!GR->getSPIRVTypeForVReg(Op.getReg()))
+                  updateRegType(Op.getReg(), ElemTy, nullptr, GR, MIB, MRI);
           }
           ToErase.push_back(MdMI);
         }

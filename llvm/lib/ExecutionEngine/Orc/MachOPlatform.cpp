@@ -14,8 +14,10 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/BindCallControllerHandler.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/SPSHandlerSpec.h"
 #include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/Debug.h"
@@ -98,6 +100,22 @@ struct CreatePThreadKey {
 };
 } // namespace llvm::orc::macho_sps_ci
 
+// Descriptors for the call-controller handlers that the MachO platform
+// runtime calls.
+namespace llvm::orc::macho_sps_handlers {
+struct PushInitializers {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag");
+  using SPSSig = SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
+};
+struct PushSymbols {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag");
+  using SPSSig = SPSError(SPSExecutorAddr,
+                          SPSSequence<SPSTuple<SPSString, bool>>);
+};
+} // namespace llvm::orc::macho_sps_handlers
+
 namespace {
 
 using SPSRegisterSymbolsArgs =
@@ -110,7 +128,8 @@ std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
   auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
       std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
-      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
+      ES.getTargetTriple().getArchPointerBitWidth() / 8, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -444,8 +463,7 @@ ArrayRef<std::pair<const char *, const char *>>
 MachOPlatform::standardLazyCompilationAliases() {
   static const std::pair<const char *, const char *>
       StandardLazyCompilationAliases[] = {
-          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"},
-          {"__orc_rt_resolve_tag", "___orc_rt_resolve_tag"}};
+          {"__orc_rt_reenter", "__orc_rt_sysv_reenter"}};
 
   return ArrayRef<std::pair<const char *, const char *>>(
       StandardLazyCompilationAliases);
@@ -624,21 +642,14 @@ MachOPlatform::MachOPlatform(
 }
 
 Error MachOPlatform::associateRuntimeSupportFunctions() {
-  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
-
-  using PushInitializersSPSSig =
-      SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
-  WFs[ES.intern("___orc_rt_macho_push_initializers_tag")] =
-      ES.wrapAsyncWithSPS<PushInitializersSPSSig>(
-          this, &MachOPlatform::rt_pushInitializers);
-
-  using PushSymbolsSPSSig =
-      SPSError(SPSExecutorAddr, SPSSequence<SPSTuple<SPSString, bool>>);
-  WFs[ES.intern("___orc_rt_macho_push_symbols_tag")] =
-      ES.wrapAsyncWithSPS<PushSymbolsSPSSig>(this,
-                                             &MachOPlatform::rt_pushSymbols);
-
-  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+  return ES.registerCallControllerHandlers(
+      PlatformJD,
+      bindCallControllerHandler<
+          sps::HandlerSpec<macho_sps_handlers::PushInitializers>>(
+          this, &MachOPlatform::rt_pushInitializers),
+      bindCallControllerHandler<
+          sps::HandlerSpec<macho_sps_handlers::PushSymbols>>(
+          this, &MachOPlatform::rt_pushSymbols));
 }
 
 void MachOPlatform::pushInitializersLoop(
@@ -1592,7 +1603,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
       }
 
       SecBlock.addEdge(PointerEdge,
-                       RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),
+                       RecordOffset + offsetof(MachO::section_64, addr),
                        *ObjCImageInfoSym, -SecBlock.getAddress().getValue());
     };
   }

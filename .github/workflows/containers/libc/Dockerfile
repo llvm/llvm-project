@@ -35,7 +35,8 @@ RUN apt-get update && \
     gnupg \
     cmake \
     m4 \
-    linux-libc-dev && \
+    linux-libc-dev \
+    qemu-system-arm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -104,7 +105,7 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 # the tools into /usr/bin under versioned names (lit-23, FileCheck-23, ...),
 # so also symlink them under their canonical names.
 # llvm-link is required to build bitcode library for GPU targets
-RUN apt-get install -y llvm-23-tools && \
+RUN apt-get install -y llvm-23-tools llvm-23 && \
     ln -s -t /usr/bin $(dpkg -L llvm-23-tools | grep '^/usr/lib/llvm-23/bin/') && \
     ln -s /usr/lib/llvm-23/bin/llvm-link /usr/bin/llvm-link
 

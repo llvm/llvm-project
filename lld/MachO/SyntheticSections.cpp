@@ -103,6 +103,16 @@ static uint32_t cpuSubtype() {
       config->platformInfo.target.MinDeployment >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
+  if (config->arch() == AK_arm64e) {
+    // ld64 marks macOS and Mac Catalyst executables with ptrauth ABI version 1.
+    bool isMacExecutable = config->outputType == MH_EXECUTE &&
+                           (config->platform() == PLATFORM_MACOS ||
+                            config->platform() == PLATFORM_MACCATALYST);
+    subtype = CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        /*PtrAuthABIVersion=*/isMacExecutable ? 1 : 0,
+        /*PtrAuthKernelABIVersion=*/false);
+  }
+
   return subtype;
 }
 
@@ -308,10 +318,10 @@ GotSection::GotSection()
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
+                                     int64_t addend, bool forceOutlineAuth) {
   if (config->emitChainedFixups) {
     if (needsBinding(sym))
-      in.chainedFixups->addBinding(sym, isec, offset, addend);
+      in.chainedFixups->addBinding(sym, isec, offset, addend, forceOutlineAuth);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
     else
@@ -346,42 +356,156 @@ void GotSection::addEntry(Symbol *sym) {
   }
 }
 
-void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
-  assert(config->emitChainedFixups);
-  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
-  auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
-  rebase->target = targetVA & 0xf'ffff'ffff;
-  rebase->high8 = (targetVA >> 56);
-  rebase->reserved = 0;
+// Reports, with ld64's message, a rebase target the pointer format can't hold.
+static void reportUnencodableRebase(const uint8_t *buf, bool isAddress,
+                                    uint64_t value) {
+  uint64_t fileOff = buf - in.bufferStart;
+  std::string loc = "<unknown>";
+  for (const OutputSegment *seg : outputSegments)
+    if (fileOff >= seg->fileOff && fileOff - seg->fileOff < seg->fileSize)
+      loc = (seg->name + "+0x" + utohexstr(fileOff - seg->fileOff)).str();
+  error(Twine(isAddress ? "vmAddress" : "vmOffset") + " (0x" +
+        utohexstr(value) + ") cannot fit in fixup at " + loc);
+}
+
+static void writeArm64eChainedRebase(uint8_t *buf, uint64_t targetVA,
+                                     const AuthInfo *auth) {
+  uint64_t imageBase = in.header->addr;
+  if (auth) {
+    auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_auth_rebase *>(buf);
+    uint64_t runtimeOffset = targetVA - imageBase;
+    if (!isUInt<32>(runtimeOffset))
+      reportUnencodableRebase(buf, /*isAddress=*/false, runtimeOffset);
+    rebase->target = runtimeOffset;
+    rebase->diversity = auth->diversity;
+    rebase->addrDiv = auth->addrDiv;
+    rebase->key = auth->key;
+    rebase->next = 0;
+    rebase->bind = 0;
+    rebase->auth = 1;
+    return;
+  }
+
+  // USERLAND24 rebases hold an offset from the image base, ARM64E rebases an
+  // address.
+  uint64_t targetValue =
+      config->chainedFixupsPointerFormat == DYLD_CHAINED_PTR_ARM64E_USERLAND24
+          ? targetVA - imageBase
+          : targetVA;
+  auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_rebase *>(buf);
+  rebase->target = targetValue & 0x7ff'ffff'ffff;
+  rebase->high8 = targetValue >> 56;
   rebase->next = 0;
   rebase->bind = 0;
+  rebase->auth = 0;
+  // Reject targets that lose bits in the encoding and, like ld64, targets below
+  // the image base.
+  uint64_t encodedValue = rebase->target | (uint64_t(rebase->high8) << 56);
+  uint64_t untaggedTarget = targetVA & ((uint64_t(1) << 56) - 1);
+  if (encodedValue != targetValue || untaggedTarget < imageBase)
+    reportUnencodableRebase(buf,
+                            config->chainedFixupsPointerFormat !=
+                                DYLD_CHAINED_PTR_ARM64E_USERLAND24,
+                            targetValue);
+}
+
+void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                               const AuthInfo *auth) {
+  assert(config->emitChainedFixups);
+  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    writeArm64eChainedRebase(buf, targetVA, auth);
+    return;
+  }
+  // DYLD_CHAINED_PTR_64 fixups only need to be 4-byte aligned, so build the
+  // pointer here and copy it out.
+  dyld_chained_ptr_64_rebase rebase;
+  rebase.target = targetVA & 0xf'ffff'ffff;
+  rebase.high8 = (targetVA >> 56);
+  rebase.reserved = 0;
+  rebase.next = 0;
+  rebase.bind = 0;
+  memcpy(buf, &rebase, sizeof(rebase));
 
   // The fixup format places a 64 GiB limit on the output's size.
   // Should we handle this gracefully?
-  uint64_t encodedVA = rebase->target | ((uint64_t)rebase->high8 << 56);
+  uint64_t encodedVA = rebase.target | ((uint64_t)rebase.high8 << 56);
   if (encodedVA != targetVA)
     error("rebase target address 0x" + Twine::utohexstr(targetVA) +
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
 }
 
-static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
-  assert(config->emitChainedFixups);
-  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
-  auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
+// Bind is dyld_chained_ptr_arm64e_bind or dyld_chained_ptr_arm64e_bind24.
+template <class Bind>
+static void writeArm64eChainedBind(uint8_t *buf, const Symbol *sym,
+                                   int64_t addend) {
+  auto *bind = reinterpret_cast<Bind *>(buf);
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
   bind->ordinal = ordinal;
+  bind->zero = 0;
   bind->addend = inlineAddend;
-  bind->reserved = 0;
   bind->next = 0;
   bind->bind = 1;
+  bind->auth = 0;
 }
 
-void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
-  if (needsBinding(sym))
-    writeChainedBind(buf, sym, addend);
-  else
-    writeChainedRebase(buf, sym->getVA() + addend);
+// AuthBind is dyld_chained_ptr_arm64e_auth_bind or
+// dyld_chained_ptr_arm64e_auth_bind24, neither of which has room for an
+// addend.
+template <class AuthBind>
+static void writeArm64eChainedAuthBind(uint8_t *buf, const Symbol *sym,
+                                       int64_t addend, const AuthInfo &auth) {
+  auto *bind = reinterpret_cast<AuthBind *>(buf);
+  bind->ordinal =
+      in.chainedFixups->getBinding(sym, addend, /*forceOutline=*/true).first;
+  bind->zero = 0;
+  bind->diversity = auth.diversity;
+  bind->addrDiv = auth.addrDiv;
+  bind->key = auth.key;
+  bind->next = 0;
+  bind->bind = 1;
+  bind->auth = 1;
 }
+
+static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
+                             const AuthInfo *auth) {
+  assert(config->emitChainedFixups);
+  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    bool isUserland24 = config->chainedFixupsPointerFormat ==
+                        DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+    if (auth && isUserland24)
+      writeArm64eChainedAuthBind<dyld_chained_ptr_arm64e_auth_bind24>(
+          buf, sym, addend, *auth);
+    else if (auth)
+      writeArm64eChainedAuthBind<dyld_chained_ptr_arm64e_auth_bind>(
+          buf, sym, addend, *auth);
+    else if (isUserland24)
+      writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind24>(buf, sym, addend);
+    else
+      writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind>(buf, sym, addend);
+    return;
+  }
+  // See writeChainedRebase() for why this is copied out.
+  dyld_chained_ptr_64_bind bind;
+  auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
+  bind.ordinal = ordinal;
+  bind.addend = inlineAddend;
+  bind.reserved = 0;
+  bind.next = 0;
+  bind.bind = 1;
+  memcpy(buf, &bind, sizeof(bind));
+}
+
+void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                              const AuthInfo *auth) {
+  if (needsBinding(sym))
+    writeChainedBind(buf, sym, addend, auth);
+  else
+    writeChainedRebase(buf, sym->getVA() + addend, auth);
+}
+
+bool macho::canDisableChainedFixups() { return config->arch() != AK_arm64e; }
 
 void GotSection::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
@@ -392,6 +516,28 @@ void GotSection::writeTo(uint8_t *buf) const {
       if (auto *defined = dyn_cast<Defined>(entry))
         write64le(&buf[i * target->wordSize], defined->getVA());
   }
+}
+
+AuthGotSection::AuthGotSection()
+    : SyntheticSection(segment_names::data, section_names::authGot) {
+  align = target->wordSize;
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+void AuthGotSection::addEntry(Symbol *sym) {
+  auto [it, inserted] = indices.try_emplace(sym, entries.size());
+  if (!inserted)
+    return;
+  entries.push_back(sym);
+  addNonLazyBindingEntries(sym, isec, it->second * target->wordSize, 0,
+                           /*forceOutlineAuth=*/true);
+}
+
+void AuthGotSection::writeTo(uint8_t *buf) const {
+  static constexpr AuthInfo auth = {/*diversity=*/0, PtrAuthKeyIA,
+                                    /*addrDiv=*/true};
+  for (const auto &[i, entry] : llvm::enumerate(entries))
+    writeChainedFixup(&buf[i * target->wordSize], entry, 0, &auth);
 }
 
 BindingSection::BindingSection()
@@ -694,7 +840,9 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
 }
 
 StubsSection::StubsSection()
-    : SyntheticSection(segment_names::text, section_names::stubs) {
+    : SyntheticSection(segment_names::text, config->arch() == AK_arm64e
+                                                ? section_names::authStubs
+                                                : section_names::stubs) {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
   // The stubs section comprises machine instructions, which are aligned to
   // 4 bytes on the archs we care about.
@@ -709,8 +857,13 @@ uint64_t StubsSection::getSize() const {
 void StubsSection::writeTo(uint8_t *buf) const {
   size_t off = 0;
   for (const Symbol *sym : entries) {
-    uint64_t pointerVA =
-        config->emitChainedFixups ? sym->getGotVA() : sym->getLazyPtrVA();
+    uint64_t pointerVA;
+    if (!config->emitChainedFixups)
+      pointerVA = sym->getLazyPtrVA();
+    else if (config->arch() == AK_arm64e)
+      pointerVA = in.authGot->getVA(sym);
+    else
+      pointerVA = sym->getGotVA();
     target->writeStub(buf + off, *sym, pointerVA);
     off += target->stubSize;
   }
@@ -750,10 +903,12 @@ void StubsSection::addEntry(Symbol *sym) {
   if (inserted) {
     sym->stubsIndex = entries.size() - 1;
 
-    if (config->emitChainedFixups)
-      in.got->addEntry(sym);
-    else
+    if (!config->emitChainedFixups)
       addBindingsForStub(sym);
+    else if (config->arch() == AK_arm64e)
+      in.authGot->addEntry(sym);
+    else
+      in.got->addEntry(sym);
   }
 }
 
@@ -827,7 +982,7 @@ void ObjCSelRefsHelper::initialize() {
     // might be aggregated.
     assert(isec->relocs.size() == 1);
     auto Reloc = isec->relocs[0];
-    if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
+    if (const auto *sym = dyn_cast_if_present<Symbol *>(Reloc.referent)) {
       if (const auto *d = dyn_cast<Defined>(sym)) {
         auto *cisec = cast<CStringInputSection>(d->isec());
         auto methname = cisec->getStringRefAtOffset(d->value);
@@ -878,50 +1033,151 @@ ObjCStubsSection::ObjCStubsSection()
               : target->objcStubsSmallAlignment;
 }
 
+bool ObjCStubsSection::isObjCMsgSendStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(objcMsgSendStubPrefix);
+}
+
+bool ObjCStubsSection::isObjCClassStubSymbol(Symbol *sym) {
+  return sym->getName().starts_with(objcMsgSendClassStubPrefix);
+}
+
 bool ObjCStubsSection::isObjCStubSymbol(Symbol *sym) {
-  return sym->getName().starts_with(symbolPrefix);
+  return isObjCMsgSendStubSymbol(sym) || isObjCClassStubSymbol(sym);
 }
 
 StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   assert(isObjCStubSymbol(sym) && "not an objc stub");
-  auto name = sym->getName();
-  StringRef methname = name.drop_front(symbolPrefix.size());
-  return methname;
+  if (isObjCMsgSendStubSymbol(sym))
+    return sym->getName().drop_front(objcMsgSendStubPrefix.size());
+
+  assert(isObjCClassStubSymbol(sym) && "not an objc class stub");
+  std::optional<ObjCClassStubNames> parsed = parseObjCClassStubSymbol(sym);
+  assert(parsed && "malformed objc class stub");
+  return parsed->selectorName;
 }
 
-size_t ObjCStubsSection::getStubSize() const {
-  return config->objcStubsMode == ObjCStubsMode::fast
-             ? target->objcStubsFastSize
-             : target->objcStubsSmallSize;
+std::optional<ObjCStubsSection::ObjCClassStubNames>
+ObjCStubsSection::parseObjCClassStubSymbol(Symbol *sym) {
+  assert(isObjCClassStubSymbol(sym) && "not an objc class stub");
+  StringRef name = sym->getName().drop_front(objcMsgSendClassStubPrefix.size());
+  // For _objc_msgSendClass$alloc$_OBJC_CLASS_$_Foo, return
+  // selectorName "alloc" and classSymbolName "_OBJC_CLASS_$_Foo".
+  auto [selectorName, classSymbolName] = name.split('$');
+  if (selectorName.empty() || classSymbolName.empty() ||
+      !classSymbolName.starts_with(objcClassSymbolPrefix))
+    return std::nullopt;
+  return ObjCClassStubNames{selectorName, classSymbolName};
+}
+
+void ObjCStubsSection::recordClassSymbol(Symbol *stubSym, Symbol *classSym) {
+  // SymbolTable updates symbols in place with replaceSymbol(), so this pointer
+  // remains valid if an Undefined later becomes a DylibSymbol or Defined.
+  classSymbols[stubSym] = classSym;
+}
+
+Symbol *ObjCStubsSection::lookupClassSymbol(Symbol *stubSym) const {
+  return classSymbols.lookup(stubSym);
+}
+
+size_t ObjCStubsSection::getStubSize(Symbol *sym) const {
+  if (config->objcStubsMode == ObjCStubsMode::fast)
+    return isObjCClassStubSymbol(sym) ? target->objcClassStubsFastSize
+                                      : target->objcStubsFastSize;
+  return isObjCClassStubSymbol(sym) ? target->objcClassStubsSmallSize
+                                    : target->objcStubsSmallSize;
 }
 
 void ObjCStubsSection::addEntry(Symbol *sym) {
-  StringRef methname = getMethname(sym);
-  // We create a selref entry for each unique methname.
-  if (!ObjCSelRefsHelper::getSelRef(methname))
-    ObjCSelRefsHelper::makeSelRef(methname);
+  // Replace invalid stubs to avoid follow-on undefined-symbol diagnostics.
+  auto replaceWithEmptyStub = [&] {
+    replaceSymbol<Defined>(
+        sym, sym->getName(), nullptr, isec, /*value=*/stubsSectionSize,
+        /*size=*/0,
+        /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
+        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
+        /*noDeadStrip=*/false);
+  };
 
-  size_t stubSize = getStubSize();
+  StringRef selectorName;
+  Symbol *classSym = nullptr;
+  if (isObjCClassStubSymbol(sym)) {
+    if (!target->supportsObjCClassStubs()) {
+      error("objc class stubs are not supported for " +
+            getArchitectureName(config->arch()));
+      replaceWithEmptyStub();
+      return;
+    }
+    std::optional<ObjCClassStubNames> parsed = parseObjCClassStubSymbol(sym);
+    if (!parsed) {
+      error("malformed objc class stub symbol " + sym->getName() +
+            "; expected " + objcMsgSendClassStubPrefix + "<selector>" + "$" +
+            objcClassSymbolPrefix + "<class>");
+      replaceWithEmptyStub();
+      return;
+    }
+    selectorName = parsed->selectorName;
+    classSym = lookupClassSymbol(sym);
+    if (!classSym) {
+      error("objc class stub symbol " + sym->getName() +
+            " references missing class symbol " + parsed->classSymbolName);
+      replaceWithEmptyStub();
+      return;
+    }
+    if (auto *undefined = dyn_cast<Undefined>(classSym)) {
+      treatUndefinedSymbol(*undefined, "objc class stub");
+      if (isa<Undefined>(classSym)) {
+        replaceWithEmptyStub();
+        return;
+      }
+    }
+    if (auto *dysym = dyn_cast<DylibSymbol>(classSym)) {
+      // Preserve effective import weakness from a classref or a weak library.
+      // Otherwise, an unreferenced class still defaults to a strong import.
+      dysym->reference(dysym->isWeakRef() ? RefState::Weak : RefState::Strong);
+      in.got->addEntry(dysym);
+    } else if (needsBinding(classSym)) {
+      // Interposable or weak definitions in this image.
+      in.got->addEntry(classSym);
+    }
+    classSym->used = true;
+  } else {
+    selectorName = getMethname(sym);
+  }
+
+  size_t stubSize = getStubSize(sym);
+  // We create a selref entry for each unique selector.
+  if (!ObjCSelRefsHelper::getSelRef(selectorName))
+    ObjCSelRefsHelper::makeSelRef(selectorName);
+
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
-      /*value=*/symbols.size() * stubSize,
+      /*value=*/stubsSectionSize,
       /*size=*/stubSize,
       /*isWeakDef=*/false, /*isExternal=*/true, /*isPrivateExtern=*/true,
       /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
       /*noDeadStrip=*/false);
   symbols.push_back(newSym);
+  stubsSectionSize += stubSize;
 }
 
 void ObjCStubsSection::setUp() {
   objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
                                      /*isWeakRef=*/false);
-  if (auto *undefined = dyn_cast<Undefined>(objcMsgSend))
+  if (auto *undefined = dyn_cast<Undefined>(objcMsgSend)) {
     treatUndefinedSymbol(*undefined,
                          "lazy binding (normally in libobjc.dylib)");
+    // treatUndefinedSymbol() can replace its arg with a DylibSymbol; re-check.
+    if (isa<Undefined>(objcMsgSend))
+      return;
+  }
   objcMsgSend->used = true;
   if (config->objcStubsMode == ObjCStubsMode::fast) {
-    in.got->addEntry(objcMsgSend);
-    assert(objcMsgSend->isInGot());
+    if (config->arch() == AK_arm64e) {
+      in.authGot->addEntry(objcMsgSend);
+    } else {
+      in.got->addEntry(objcMsgSend);
+      assert(objcMsgSend->isInGot());
+    }
   } else {
     assert(config->objcStubsMode == ObjCStubsMode::small);
     // In line with ld64's behavior, when objc_msgSend is a direct symbol,
@@ -933,9 +1189,7 @@ void ObjCStubsSection::setUp() {
   }
 }
 
-uint64_t ObjCStubsSection::getSize() const {
-  return getStubSize() * symbols.size();
-}
+uint64_t ObjCStubsSection::getSize() const { return stubsSectionSize; }
 
 void ObjCStubsSection::sortSymbols(
     const llvm::DenseMap<const Symbol *, int> &priorities) {
@@ -947,9 +1201,12 @@ void ObjCStubsSection::sortSymbols(
     };
     return priority(a) < priority(b);
   });
-  size_t stubSize = getStubSize();
-  for (auto [idx, sym] : llvm::enumerate(symbols))
-    sym->value = idx * stubSize;
+  size_t stubOffset = 0;
+  for (Defined *sym : symbols) {
+    sym->value = stubOffset;
+    stubOffset += sym->size;
+  }
+  assert(stubOffset == stubsSectionSize);
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
@@ -959,8 +1216,16 @@ void ObjCStubsSection::writeTo(uint8_t *buf) const {
     InputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef != nullptr && "no selref for methname");
     auto selrefAddr = selRef->getVA(0);
-    target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
-                                 stubOffset, selrefAddr, objcMsgSend);
+    if (isObjCClassStubSymbol(sym)) {
+      Symbol *classSym = classSymbols.lookup(sym);
+      assert(classSym != nullptr && "no class symbol for objc class stub");
+      target->writeObjCMsgSendClassStub(buf + stubOffset, sym,
+                                        in.objcStubs->addr, stubOffset,
+                                        selrefAddr, classSym, objcMsgSend);
+    } else {
+      target->writeObjCMsgSendStub(buf + stubOffset, sym, in.objcStubs->addr,
+                                   stubOffset, selrefAddr, objcMsgSend);
+    }
   }
 }
 
@@ -1495,19 +1760,26 @@ IndirectSymtabSection::IndirectSymtabSection()
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
   uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
+  if (in.authGot)
+    size += in.authGot->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.stubs->isNeeded();
+  return in.got->isNeeded() || in.stubs->isNeeded() ||
+         (in.authGot && in.authGot->isNeeded());
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
+  if (in.authGot) {
+    in.authGot->reserved1 = off;
+    off += in.authGot->getEntries().size();
+  }
   in.stubs->reserved1 = off;
   if (in.lazyPointers) {
     off += in.stubs->getEntries().size();
@@ -1526,6 +1798,12 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   for (const Symbol *sym : in.got->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
+  }
+  if (in.authGot) {
+    for (const Symbol *sym : in.authGot->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
   for (const Symbol *sym : in.stubs->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
@@ -1731,7 +2009,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // `16 % A`.
 static Align getStringPieceAlignment(const CStringInputSection &isec,
                                      const StringPiece &piece) {
-  return llvm::Align(1ULL << llvm::countr_zero(isec.align | piece.inSecOff));
+  return llvm::Align::fromLog2(llvm::countr_zero(isec.align | piece.inSecOff));
 }
 
 void CStringSection::finalizeContents() {
@@ -1768,7 +2046,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2048,14 +2326,14 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
-      Symbol *sym = rel.referent.dyn_cast<Symbol *>();
+      Symbol *sym = dyn_cast<Symbol *>(rel.referent);
       if (auto *undefined = dyn_cast<Undefined>(sym))
         treatUndefinedSymbol(*undefined, isec, rel.offset);
       if (needsBinding(sym))
@@ -2075,6 +2353,9 @@ ObjCMethListSection::ObjCMethListSection()
 // create them early on here to ensure they are processed correctly by the lld
 // pipeline.
 void ObjCMethListSection::setUp() {
+  llvm::erase_if(inputs, [](const ConcatInputSection *isec) {
+    return isec->shouldOmitFromOutput();
+  });
   for (const ConcatInputSection *isec : inputs) {
     uint32_t structSizeAndFlags = 0, structCount = 0;
     readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
@@ -2140,6 +2421,8 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
+    assert(!isec->shouldOmitFromOutput() &&
+           "dead method list should have been dropped in setUp()");
     assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
@@ -2203,7 +2486,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2363,11 +2646,29 @@ bool ChainedFixupsSection::isNeeded() const {
   return true;
 }
 
+// Whether a bind keeps its addend in its own addend field rather than in the
+// imports table. The 19-bit addend field is two's complement, but Xcode's ld
+// inlines only addends below 256 KiB in magnitude, and with
+// DYLD_CHAINED_PTR_ARM64E no negative ones, which it rejects ("addend cannot
+// fit in fixup"); we move those to the imports table instead.
+static bool fitsInlineAddend(int64_t addend) {
+  switch (config->chainedFixupsPointerFormat) {
+  case DYLD_CHAINED_PTR_64:
+    return isUInt<8>(addend);
+  case DYLD_CHAINED_PTR_ARM64E:
+    return addend >= 0 && addend < (1 << 18);
+  case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+    return addend > -(1 << 18) && addend < (1 << 18);
+  }
+  llvm_unreachable("unexpected chained fixup pointer format");
+}
+
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
-                                      int64_t addend) {
+                                      int64_t addend, bool forceOutline) {
   locations.emplace_back(isec, offset);
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  int64_t outlineAddend =
+      (forceOutline || !fitsInlineAddend(addend)) ? addend : 0;
   auto [it, inserted] = bindings.insert(
       {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
 
@@ -2381,9 +2682,11 @@ void ChainedFixupsSection::addBinding(const Symbol *sym,
   }
 }
 
-std::pair<uint32_t, uint8_t>
-ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+std::pair<uint32_t, int32_t>
+ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend,
+                                 bool forceOutline) const {
+  int64_t outlineAddend =
+      (forceOutline || !fitsInlineAddend(addend)) ? addend : 0;
   auto it = bindings.find({sym, outlineAddend});
   assert(it != bindings.end() && "binding not found in the imports table");
   if (outlineAddend == 0)
@@ -2432,8 +2735,7 @@ size_t ChainedFixupsSection::SegmentInfo::writeTo(uint8_t *buf) const {
   auto *segInfo = reinterpret_cast<dyld_chained_starts_in_segment *>(buf);
   segInfo->size = getSize();
   segInfo->page_size = target->getPageSize();
-  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
-  segInfo->pointer_format = DYLD_CHAINED_PTR_64;
+  segInfo->pointer_format = config->chainedFixupsPointerFormat;
   segInfo->segment_offset = oseg->addr - in.header->addr;
   segInfo->max_valid_pointer = 0; // not used on 64-bit
   segInfo->page_count = pageStarts.back().first + 1;
@@ -2525,6 +2827,11 @@ void ChainedFixupsSection::writeTo(uint8_t *buf) const {
   assert(curOffset() == getRawSize());
 }
 
+uint32_t ChainedFixupsSection::chainStride() {
+  // All ARM64E userland formats use 8-byte stride; DYLD_CHAINED_PTR_64 uses 4.
+  return config->arch() == AK_arm64e ? 8 : 4;
+}
+
 // This is step 2 of the algorithm described in the class comment of
 // ChainedFixupsSection.
 void ChainedFixupsSection::finalizeContents() {
@@ -2534,6 +2841,12 @@ void ChainedFixupsSection::finalizeContents() {
   if (!isUInt<32>(symtabSize))
     error("cannot encode chained fixups: imported symbols table size " +
           Twine(symtabSize) + " exceeds 4 GiB");
+
+  // DYLD_CHAINED_PTR_ARM64E binds have 16-bit import ordinals.
+  if (config->chainedFixupsPointerFormat == DYLD_CHAINED_PTR_ARM64E &&
+      bindings.size() > UINT16_MAX)
+    error("chained fixups, imports_count (" + Twine(bindings.size()) +
+          ") exceeds max of 65535");
 
   bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
     // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
@@ -2547,9 +2860,27 @@ void ChainedFixupsSection::finalizeContents() {
   else
     importFormat = DYLD_CHAINED_IMPORT;
 
-  for (Location &loc : locations)
-    loc.offset =
+  const uint64_t pageSize = target->getPageSize();
+  for (Location &loc : locations) {
+    uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+    auto report = [&](const Twine &problem) {
+      std::string msg =
+          (loc.isec->getLocation(loc.offset) + ": " + problem +
+           "; stop packing structs containing pointers" +
+           (canDisableChainedFixups() ? " or link with -no_fixup_chains" : ""))
+              .str();
+      std::string src = loc.isec->getSourceLocation(loc.offset);
+      if (!src.empty())
+        msg += "\n>>> defined at " + src;
+      error(msg);
+    };
+    if (offset % pageSize + target->wordSize > pageSize)
+      report("fixup straddles page boundary");
+    if (offset % chainStride() != 0)
+      report("fixup is not " + Twine(chainStride()) + "-byte aligned");
+    loc.offset = offset;
+  }
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
     const OutputSegment *segA = a.isec->parent->parent;
@@ -2563,12 +2894,16 @@ void ChainedFixupsSection::finalizeContents() {
     return a.isec->parent->parent == b.isec->parent->parent;
   };
 
-  const uint64_t pageSize = target->getPageSize();
   for (size_t i = 0, count = locations.size(); i < count;) {
     const Location &firstLoc = locations[i];
     fixupSegments.emplace_back(firstLoc.isec->parent->parent);
     while (i < count && sameSegment(locations[i], firstLoc)) {
-      uint32_t pageIdx = locations[i].offset / pageSize;
+      uint64_t pageIdx = locations[i].offset / pageSize;
+      if (pageIdx >= UINT16_MAX) {
+        fatal("page index in " + locations[i].isec->getSegName() + "," +
+              locations[i].isec->getName() + " too large for chained fixups" +
+              (canDisableChainedFixups() ? "; use -no_fixup_chains" : ""));
+      }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;

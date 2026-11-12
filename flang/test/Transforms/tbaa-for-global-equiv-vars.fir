@@ -20,8 +20,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@_QMdata1Eglob1) : !fir.ref<!fir.array<4xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ptr<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QMdata1Eglob1"} : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
-    %5 = fir.declare %3 storage(%1[0]) {uniq_name = "_QMdata1Eglob2"} : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QMdata1Eglob1") : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
+    %5 = fir.declare %3 storage(%1[0]) uniq_name("_QMdata1Eglob2") : (!fir.ptr<f32>, !fir.ref<!fir.array<4xi8>>) -> !fir.ptr<f32>
     %6 = fir.load %5 : !fir.ptr<f32>
     fir.store %6 to %4 : !fir.ptr<f32>
     return
@@ -58,11 +58,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %1 = fir.address_of(@glob1_) : !fir.ref<!fir.array<8xi8>>
     %2 = fir.coordinate_of %1, %c0 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %3 = fir.convert %2 : (!fir.ref<i8>) -> !fir.ptr<f32>
-    %4 = fir.declare %3 storage(%1[0]) {uniq_name = "_QMdata2Eglob1"} : (!fir.ptr<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ptr<f32>
-    %5 = fir.declare %3 storage(%1[0]) {uniq_name = "_QMdata2Eglob2"} : (!fir.ptr<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ptr<f32>
+    %4 = fir.declare %3 storage(%1[0]) uniq_name("_QMdata2Eglob1") : (!fir.ptr<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ptr<f32>
+    %5 = fir.declare %3 storage(%1[0]) uniq_name("_QMdata2Eglob2") : (!fir.ptr<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ptr<f32>
     %6 = fir.coordinate_of %1, %c4 : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
     %7 = fir.convert %6 : (!fir.ref<i8>) -> !fir.ref<f32>
-    %8 = fir.declare %7 storage(%1[4]) {uniq_name = "_QMdata2Eglob3"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
+    %8 = fir.declare %7 storage(%1[4]) uniq_name("_QMdata2Eglob3") : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> !fir.ref<f32>
     %9 = fir.load %5 : !fir.ptr<f32>
     %10 = fir.load %8 : !fir.ref<f32>
     %11 = arith.addf %9, %10 fastmath<contract> : f32

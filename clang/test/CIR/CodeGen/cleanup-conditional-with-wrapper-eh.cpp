@@ -101,14 +101,10 @@ Wrapper makeWrapper() {
 // LLVM: [[CONSTRUCT_DONE]]:
 // LLVM:   %[[CLEANUP_FLAG:.*]] = load i8, ptr %[[CLEANUP_COND]]
 // LLVM:   %[[SHOULD_CLEANUP:.*]] = trunc i8 %[[CLEANUP_FLAG]] to i1
-// LLVM:   br i1 %[[SHOULD_CLEANUP]], label %[[NORMAL_CLEANUP:.*]], label %[[CLEANUP_DONE:.*]]
+// LLVM:   br i1 %[[SHOULD_CLEANUP]], label %[[NORMAL_CLEANUP:.*]], label %[[DONE:.*]]
 // LLVM: [[NORMAL_CLEANUP]]:
 // LLVM:   call void @_ZNSt10unique_ptrI4BaseED1Ev(ptr {{.*}} %[[AGG_TMP0]])
-// LLVM:   br label %[[CLEANUP_DONE]]
-// LLVM: [[CLEANUP_DONE]]:
-// LLVM:   br label %[[EXIT_CLEANUP_SCOPE:.*]]
-// LLVM: [[EXIT_CLEANUP_SCOPE]]:
-// LLVM:   br label %[[DONE:.*]]
+// LLVM:   br label %[[DONE]]
 // LLVM: [[INVOKE_CLEANUP]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
@@ -226,12 +222,12 @@ void APFixedPoint::add(int x) const {
 // CIR:   cir.return
 
 // LLVM: define {{.*}} void @_ZNK12APFixedPoint3addEi(ptr {{.*}} %{{.*}}, i32 {{.*}} %{{.*}}){{.*}} personality ptr @__gxx_personality_v0
-// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.APInt
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   %[[X_ADDR:.*]] = alloca i32
 // LLVM:   %[[THISVAL:.*]] = alloca %struct.APInt
 // LLVM:   %[[CLEANUP_COND_TRUE:.*]] = alloca i8
 // LLVM:   %[[CLEANUP_COND_FALSE:.*]] = alloca i8
+// LLVM:   %[[AGG_TMP:.*]] = alloca %struct.APInt
 // LLVM:   br i1 %{{.*}}, label %[[OUTER_TRUE:.*]], label %[[OUTER_END:.*]]
 // LLVM: [[OUTER_TRUE]]:
 // LLVM:   br i1 %{{.*}}, label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
@@ -253,7 +249,6 @@ void APFixedPoint::add(int x) const {
 // LLVM:   br i1 %[[TF_B]], label %[[CLEANUP_T:.*]], label %[[AFTER_T:.*]]
 // LLVM: [[CLEANUP_T]]:
 // LLVM:   call void @_ZN5APIntD1Ev(ptr {{.*}} %[[AGG_TMP]])
-// LLVM: [[AFTER_T]]:
 // LLVM: [[LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM:     cleanup
@@ -268,6 +263,7 @@ void APFixedPoint::add(int x) const {
 // LLVM:   br i1 %[[TF_EH_B]], label %[[EH_CLEANUP_T:.*]], label %[[EH_AFTER_T:.*]]
 // LLVM: [[EH_CLEANUP_T]]:
 // LLVM:   call void @_ZN5APIntD1Ev(ptr {{.*}} %[[AGG_TMP]])
+// LLVM: [[AFTER_T]]:
 // LLVM: [[EH_AFTER_T]]:
 // LLVM:   call void @_ZN5APIntD1Ev(ptr {{.*}} %[[THISVAL]])
 // LLVM:   resume
@@ -378,11 +374,11 @@ void makeEntry() {
 // CIR:   cir.return
 
 // LLVM: define {{.*}} void @_Z9makeEntryv(){{.*}} personality ptr @__gxx_personality_v0
+// LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
+// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[AGG_TMP0:.*]] = alloca %struct.Path
 // LLVM:   %[[ENSURED_T:.*]] = alloca %struct.Entry
 // LLVM:   %[[ENSURED_F:.*]] = alloca %struct.Entry
-// LLVM:   %[[REF_TMP:.*]] = alloca %struct.Iter
-// LLVM:   %[[CLEANUP_COND:.*]] = alloca i8
 // LLVM:   %[[CALL:.*]] = invoke {{.*}} i1 @_ZN4ItercvbEv(ptr {{.*}} %[[REF_TMP]])
 // LLVM:                     to label %[[CALL_CONT:.*]] unwind label %[[LPAD_ITER:.*]]
 // LLVM: [[CALL_CONT]]:

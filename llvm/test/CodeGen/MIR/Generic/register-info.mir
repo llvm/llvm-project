@@ -14,12 +14,17 @@
     ret i32 0
   }
 
+  define i32 @baz() {
+  start:
+    ret i32 0
+  }
 ...
 ---
 # CHECK: name: foo
 # CHECK: tracksRegLiveness: false
 # CHECK: ...
 name:            foo
+tracksRegLiveness: false
 ...
 ---
 # CHECK: name: bar
@@ -27,4 +32,10 @@ name:            foo
 # CHECK: ...
 name: bar
 tracksRegLiveness: true
+...
+---
+# CHECK: name: baz
+# CHECK: tracksRegLiveness: true
+# CHECK: ...
+name: baz
 ...

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=loongarch64 -relocation-model=static -O2 \
-; RUN:   -stop-after=loongarch-merge-base-offset -verify-machineinstrs %s -o - \
+; RUN:   -stop-after=loongarch-merge-base-offset %s -o - \
 ; RUN:   | FileCheck %s
 
 ; CHECK-LABEL: name: test
@@ -7,7 +7,7 @@
 ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, !{{[0-9]+}},
 ; CHECK-SAME: !DIExpression(DW_OP_plus_uconst, 8, DW_OP_stack_value),
 ; CHECK-SAME: debug-location !{{[0-9]+}}
-; CHECK-NEXT: %{{[0-9]+}}:gpr = LD_D killed %[[BASE]], target-flags(loongarch-pcrel-lo) @values + 8
+; CHECK-NEXT: %{{[0-9]+}}:gpr = LD_D %[[BASE]], target-flags(loongarch-pcrel-lo) @values + 8
 
 @values = external hidden local_unnamed_addr global [2 x i64], align 8
 

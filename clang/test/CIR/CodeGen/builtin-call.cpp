@@ -14,7 +14,7 @@ const double parsed = strtod(str, nullptr);
 // LLVM:  @_ZL6parsed = internal global double 0.000000e+00, align 8 
 // LLVM:  @v = global ptr null, align 8
 
-// CIR-BEFORE-LPP:  cir.global "private" internal dso_local @_ZL6parsed = ctor : !cir.double {
+// CIR-BEFORE-LPP:  cir.global "private" internal dso_local @_ZL6parsed = #cir.fp<0.000000e+00> : !cir.double ctor {
 // CIR-BEFORE-LPP:    %[[GET_GLOB:.*]] = cir.get_global @_ZL6parsed : !cir.ptr<!cir.double>
 // CIR-BEFORE-LPP:    %[[GET_BUILTIN:.*]] = cir.get_global @strtod : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>) -> !cir.double>>
 // CIR-BEFORE-LPP:    %[[GET_STR:.*]] = cir.get_global @str : !cir.ptr<!cir.ptr<!s8i>>
@@ -26,7 +26,7 @@ const double parsed = strtod(str, nullptr);
 // CIR-BEFORE-LPP:  }
 
 // CIR: cir.global "private" internal dso_local @_ZL6parsed = #cir.fp<0.000000e+00> : !cir.double
-// CIR: cir.func internal private @__cxx_global_var_init{{.*}}() {
+// CIR: cir.func internal private @__cxx_global_var_init{{.*}}(){{.*}} {
 // CIR:    %[[GET_GLOB:.*]] = cir.get_global @_ZL6parsed : !cir.ptr<!cir.double>
 // CIR:    %[[GET_BUILTIN:.*]] = cir.get_global @strtod : !cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>) -> !cir.double>>
 // CIR:    %[[GET_STR:.*]] = cir.get_global @str : !cir.ptr<!cir.ptr<!s8i>>
@@ -50,7 +50,7 @@ void *memcpy(void *a, const void *b, size_t c) {
 }
 
 const void* v = memcpy(nullptr, nullptr, 1);
-// CIR-BEFORE-LPP:  cir.global external @v = ctor : !cir.ptr<!void> {
+// CIR-BEFORE-LPP:  cir.global external @v = #cir.ptr<null> : !cir.ptr<!void> ctor {
 // CIR-BEFORE-LPP:    %[[GET_V:.*]] = cir.get_global @v : !cir.ptr<!cir.ptr<!void>>
 // CIR-BEFORE-LPP:    %[[NULL1:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR-BEFORE-LPP:    %[[NULL2:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
@@ -60,7 +60,7 @@ const void* v = memcpy(nullptr, nullptr, 1);
 // CIR-BEFORE-LPP:  }
 
 // CIR:  cir.global external @v = #cir.ptr<null> : !cir.ptr<!void> align(8) ast(#cir.var.decl.ast)
-// CIR:  cir.func internal private @__cxx_global_var_init.1() {
+// CIR:  cir.func internal private @__cxx_global_var_init.1(){{.*}} {
 // CIR:    %[[GET_V:.*]] = cir.get_global @v : !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[NULL1:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR:    %[[NULL2:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>

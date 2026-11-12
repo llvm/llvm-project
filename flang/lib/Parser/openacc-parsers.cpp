@@ -237,10 +237,23 @@ private:
 
     // The terminating statement may be an END DO statement; the DO construct
     // built below has its own synthetic one, so turn it into a CONTINUE
-    // statement to keep its label.
-    if (Unwrap<EndDoStmt>(body.back())) {
-      std::get<ExecutableConstruct>(body.back().u).u =
-          Statement<ActionStmt>{GetStatementLabel(body.back()), ContinueStmt{}};
+    // statement to keep its label and source.  Only an unnamed labeled DO
+    // statement is parsed here (a named one is parsed as a DO construct), so
+    // a construct name on the END DO statement is not allowed (C1135);
+    // diagnose it before it is lost.
+    if (auto *last{std::get_if<ExecutableConstruct>(&body.back().u)}) {
+      if (auto *endDoStmt{
+              std::get_if<Statement<common::Indirection<EndDoStmt>>>(
+                  &last->u)}) {
+        if (const auto &name{endDoStmt->statement.value().v}) {
+          state.Say(name->source, "Unexpected DO construct name '%s'"_err_en_US,
+              name->source);
+        }
+        Statement<ActionStmt> continueStmt{
+            std::optional<Label>{endDoStmt->label}, ContinueStmt{}};
+        continueStmt.source = endDoStmt->source;
+        last->u = std::move(continueStmt);
+      }
     }
 
     Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt.label),
@@ -326,6 +339,27 @@ TYPE_PARSER(
 // 2.13 Declare constructs
 TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
     first("DECLARE" >> pure(llvm::acc::Directive::ACCD_declare)))))
+
+// Recovery alternative where a declarative directive cannot appear.
+// The lookahead keeps unrelated OpenACC directives on their existing paths.
+std::optional<Success> MisplacedOpenACCDeclare::Parse(ParseState &state) const {
+  static constexpr auto parser{skipStuffBeforeStatement >>
+      lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
+      recovery(
+          fail<Success>(
+              "OpenACC DECLARE directive must appear in the specification part of the scope to which it applies"_err_en_US),
+          startAccLine >>
+              Parser<OpenACCStandaloneDeclarativeConstruct>{} / endAccLine >>
+              ok)};
+  return parser.Parse(state);
+}
+
+std::optional<ErrorRecovery> MisplacedOpenACCDeclareRecovery::Parse(
+    ParseState &state) const {
+  static constexpr auto parser{
+      misplacedOpenACCDeclare >> construct<ErrorRecovery>()};
+  return parser.Parse(state);
+}
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<AccClauseList>(

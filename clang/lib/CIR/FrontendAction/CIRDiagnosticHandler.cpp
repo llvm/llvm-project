@@ -19,9 +19,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <cassert>
+#include <optional>
+#include <string>
 
 namespace cir {
 
@@ -65,6 +68,28 @@ clang::SourceLocation CIRDiagnosticHandler::translateLoc(mlir::Location loc) {
   return clang::SourceLocation();
 }
 
+// Returns the first file/line/column location with a known line nested in
+// \p loc, walking the same wrappers as translateLoc.
+static std::optional<mlir::FileLineColLoc>
+findFileLineColLoc(mlir::Location loc) {
+  if (auto file = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+    if (file.getLine() == 0 || file.getColumn() == 0)
+      return std::nullopt;
+    return file;
+  }
+  if (auto fused = mlir::dyn_cast<mlir::FusedLoc>(loc)) {
+    for (mlir::Location child : fused.getLocations())
+      if (std::optional<mlir::FileLineColLoc> file = findFileLineColLoc(child))
+        return file;
+    return std::nullopt;
+  }
+  if (auto callsite = mlir::dyn_cast<mlir::CallSiteLoc>(loc))
+    return findFileLineColLoc(callsite.getCallee());
+  if (auto named = mlir::dyn_cast<mlir::NameLoc>(loc))
+    return findFileLineColLoc(named.getChildLoc());
+  return std::nullopt;
+}
+
 void CIRDiagnosticHandler::emit(mlir::Diagnostic &diag, bool isNote) {
   unsigned diagID;
   if (isNote) {
@@ -87,7 +112,19 @@ void CIRDiagnosticHandler::emit(mlir::Diagnostic &diag, bool isNote) {
                        "severity; notes arrive via getNotes()");
     }
   }
-  Diags.Report(translateLoc(diag.getLocation()), diagID) << diag.str();
+  clang::SourceLocation loc = translateLoc(diag.getLocation());
+  std::string message = diag.str();
+  // A location in a file that is not loaded in the SourceManager, such as the
+  // original source of parsed ClangIR input, cannot be attached to the
+  // diagnostic. Keep it as text so the user can still find the code.
+  if (loc.isInvalid())
+    if (std::optional<mlir::FileLineColLoc> file =
+            findFileLineColLoc(diag.getLocation()))
+      message = (llvm::Twine(file->getFilename().getValue()) + ":" +
+                 llvm::Twine(file->getLine()) + ":" +
+                 llvm::Twine(file->getColumn()) + ": " + message)
+                    .str();
+  Diags.Report(loc, diagID) << message;
 }
 
 mlir::LogicalResult CIRDiagnosticHandler::handle(mlir::Diagnostic &diag) {

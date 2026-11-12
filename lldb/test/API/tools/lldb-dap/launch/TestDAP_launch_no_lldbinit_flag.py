@@ -31,7 +31,7 @@ class TestDAP_launch_no_lldbinit_flag(DAPTestCaseBase):
             # temp dir and the --no-lldbinit flag.
             self.build()
             program = self.getBuildArtifact("a.out")
-            adapter = self.create_stdio_debug_adapter(
+            adapter = self.create_debug_adapter(
                 DebugAdapterOptions(
                     env={"HOME": temp_home},
                     args=["--no-lldbinit"],

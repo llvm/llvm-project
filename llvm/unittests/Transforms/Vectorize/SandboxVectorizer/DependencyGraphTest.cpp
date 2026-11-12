@@ -1631,7 +1631,7 @@ define void @foo(i8 %v0) {
 TEST_F(DependencyGraphTest, MaintainUnscheduledPredsWhenOperandScheduled) {
   parseIR(C, R"IR(
 define void @foo(i8 %v0) {
-  %sched = add i8 %add0, 1
+  %sched = add i8 %v0, 1
   %add0 = add i8 %v0, 0
   ret void
 }

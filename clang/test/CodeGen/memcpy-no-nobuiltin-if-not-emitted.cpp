@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i686-linux-gnu -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i686-linux-gnu -std=c++11 -emit-llvm -o - %s | FileCheck %s %}
 //
 // Regression test for the issue reported at
 // https://reviews.llvm.org/D78162#1986104

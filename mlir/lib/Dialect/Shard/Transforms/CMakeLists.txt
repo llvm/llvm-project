@@ -22,9 +22,9 @@ add_mlir_dialect_library(MLIRShardTransforms
   MLIRFunctionInterfaces
   MLIRIR
   MLIRShardDialect
+  MLIRShardingInterface
   MLIRPass
   MLIRSupport
   MLIRTensorDialect
-  MLIRTosaShardingInterfaceImpl
   MLIRTransformUtils
 )

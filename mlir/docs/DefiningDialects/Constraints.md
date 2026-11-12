@@ -24,6 +24,20 @@ code is generated for type/attribute constraints. Type constraints can not only
 be used when defining operation arguments, but also when defining type
 parameters.
 
+The C++ headers declaring the C++ classes a type/attribute constraint refers to
+(e.g. the C++ type of a type, or the attribute class and return type of an
+attribute) can be specified in the `cppIncludes` list. ODS then include these
+headers for every constraint used. Type and attribute constraints default to
+`mlir/IR/Types.h` and `mlir/IR/Attributes.h` respectively.
+
+```tablegen
+class MyDialect_Type<string name, string typeMnemonic>
+    : TypeDef<MyDialect, name> {
+  let mnemonic = typeMnemonic;
+  let cppIncludes = ["MyDialect/MyDialectTypes.h"];
+}
+```
+
 Optionally, C++ functions can be generated, so that type/attribute constraints
 can be checked from C++. The name of the C++ function must be specified in the
 `cppFunctionName` field. If no function name is specified, no C++ function is

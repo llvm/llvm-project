@@ -31,6 +31,43 @@ func.func @avg_pool2d_with_unsupported_quant_type(%arg0: tensor<1x7x7x9x!quant.u
 
 // -----
 
+// Check that canonicalization rewrites max_pool2d_adaptive before named
+// TOSA-to-Linalg conversion.
+// CHECK-LABEL: func.func @max_pool2d_adaptive(
+// CHECK-NOT: tosa.max_pool2d_adaptive
+// CHECK: linalg.generic
+// CHECK: arith.maximumf
+func.func @max_pool2d_adaptive(
+    %arg0: tensor<1x4x4x1xf32>) -> tensor<1x2x2x1xf32> {
+  %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[0, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad nan_mode<IGNORE> :
+    (tensor<1x4x4x1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
+// Check that canonicalization rewrites avg_pool2d_adaptive before named
+// TOSA-to-Linalg conversion.
+// CHECK-LABEL: func.func @avg_pool2d_adaptive(
+// CHECK-NOT: tosa.avg_pool2d_adaptive
+// CHECK: linalg.pooling_nhwc_sum
+func.func @avg_pool2d_adaptive(
+    %arg0: tensor<1x4x4x1xf32>) -> tensor<1x2x2x1xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[0, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad acc_type(f32) :
+    (tensor<1x4x4x1xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xf32>
+  return %0 : tensor<1x2x2x1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: rescale_doubleround
 func.func @rescale_doubleround(%arg0: tensor<8x9x7x14xi32>) -> tensor<8x9x7x14xi8> {
   %0 = "tosa.const"() <{values = dense<0> : tensor<14xi32>}> : () -> tensor<14xi32>
@@ -52,4 +89,26 @@ func.func @rescale_inexactround(%arg0: tensor<8x9x7x14xi32>) -> tensor<8x9x7x14x
   // expected-error@+1 {{'tosa.rescale' op failed attribute check: rounding_mode = INEXACT_ROUND requires extension [inexactround]}}
   %4 = tosa.rescale %arg0, %0, %1, %2, %3 scale32(true) rounding_mode<INEXACT_ROUND> per_channel(true) input_unsigned(false) output_unsigned(false) : (tensor<8x9x7x14xi32>, tensor<14xi32>, tensor<14xi8>, tensor<1xi32>, tensor<1xi8>) -> tensor<8x9x7x14xi8>
   return %4 : tensor<8x9x7x14xi8>
+}
+
+// -----
+
+// Check that the named pass defers nonzero MATMUL_T zero points to the generic
+// pass in the full pipeline.
+// CHECK-LABEL: func.func @matmul_t_nonzero_zero_points(
+func.func @matmul_t_nonzero_zero_points(%arg0: tensor<5x3xi8>, %arg1: tensor<6x3xi8>) -> tensor<5x6xi32> {
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
+  // CHECK: %[[EXT_A:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: %[[EXT_B:.+]] = arith.extsi %{{.+}} : i8 to i32
+  // CHECK: %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK: %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK: %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK: %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK: arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK: return %[[RESULT]] : tensor<5x6xi32>
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<5x3xi8>, tensor<6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<5x6xi32>
+  return %0 : tensor<5x6xi32>
 }

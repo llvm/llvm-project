@@ -16,13 +16,17 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include <optional>
+#include <utility>
 
 namespace llvm {
 class RISCVTargetMachine : public CodeGenTargetMachineImpl {
+  const RISCVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<RISCVSubtarget>> SubtargetMap;
+  mutable std::pair<const RISCVSubtarget *, AttributeSet> LastSubtarget;
 
 public:
   RISCVTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -31,6 +35,7 @@ public:
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
 
+  const RISCVOptions &getCLOpts() const { return CLOpts; }
   const RISCVSubtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
   // subtargets are per-function entities based on the target-specific

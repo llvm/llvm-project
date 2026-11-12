@@ -36,6 +36,8 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -82,10 +84,17 @@ private:
 
   const clang::LangOptions &langOpts;
 
+  /// Seeded from langOpts and then pushed and popped by clang::atomic.
+  clang::AtomicOptions atomicOpts;
+
   const clang::CodeGenOptions &codeGenOpts;
 
   /// A "module" matches a c/cpp source file: containing a list of functions.
-  mlir::ModuleOp theModule;
+  mlir::OwningOpRef<mlir::ModuleOp> theModule;
+
+  /// Cached data layout for the module. Built lazily: the layout spec is
+  /// attached after construction, in CIRGenerator::Initialize.
+  mutable std::optional<cir::CIRDataLayout> dataLayout;
 
   clang::DiagnosticsEngine &diags;
 
@@ -113,7 +122,29 @@ private:
   /// Accumulated record layout entries, materialized in release().
   llvm::SmallVector<mlir::NamedAttribute> recordLayoutEntries;
 
+  /// Whether C++20 named modules get their own module initializer function,
+  /// which requires the Itanium mangling of the initializer name.
+  bool cxx20ModuleInits = false;
+
+  /// The complete set of modules that have been imported.
+  llvm::SetVector<clang::Module *> importedModules;
+
+  /// The location of the first import declaration of each imported module.
+  llvm::DenseMap<clang::Module *, clang::SourceLocation> moduleImportLocs;
+
+  /// The set of modules for which the module initializers have been emitted.
+  llvm::SmallPtrSet<clang::Module *, 16> emittedModuleInitializers;
+
+  /// The Itanium-mangled name of the initializer function of a C++20 named
+  /// module.
+  std::string getModuleInitializerName(clang::Module *mod);
+
   llvm::DenseSet<clang::GlobalDecl> diagnosedConflictingDefinitions;
+
+  /// Symbols created as the target of a weakref. They are extern_weak until
+  /// something names them in a way that is not itself weak, such as an
+  /// ordinary declaration or definition of the target.
+  llvm::SmallPtrSet<mlir::Operation *, 4> weakRefReferences;
 
   /// -------
   /// Annotations
@@ -148,7 +179,7 @@ private:
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
   void constructFunctionArgumentAttributes(
-      const CIRGenFunctionInfo &info, const clang::Decl *targetDecl,
+      const CIRGenFunctionInfo &info, clang::GlobalDecl calleeDecl,
       bool isThunk, bool attrOnCallSite,
       llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
@@ -162,7 +193,7 @@ private:
       materializedGlobalTemporaryMap;
 
 public:
-  mlir::ModuleOp getModule() const { return theModule; }
+  mlir::ModuleOp getModule() const { return *theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
 
   /// Queue a record layout entry for materialization in release().
@@ -176,13 +207,19 @@ public:
   CIRGenTypes &getTypes() { return genTypes; }
   const clang::LangOptions &getLangOpts() const { return langOpts; }
 
+  /// The atomic options in effect at the point currently being emitted.
+  /// clang::atomic adjusts these for the extent of the statement it is attached
+  /// to, so they are module state rather than a fixed language option.
+  clang::AtomicOptions getAtomicOpts() const { return atomicOpts; }
+  void setAtomicOpts(clang::AtomicOptions opts) { atomicOpts = opts; }
+
   CIRGenCXXABI &getCXXABI() const { return *abi; }
   mlir::MLIRContext &getMLIRContext() { return *builder.getContext(); }
 
-  const cir::CIRDataLayout getDataLayout() const {
-    // FIXME(cir): instead of creating a CIRDataLayout every time, set it as an
-    // attribute for the CIRModule class.
-    return cir::CIRDataLayout(theModule);
+  const cir::CIRDataLayout &getDataLayout() const {
+    if (!dataLayout)
+      dataLayout.emplace(getModule());
+    return *dataLayout;
   }
 
   /// -------
@@ -257,11 +294,17 @@ public:
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
   cir::GlobalOp getOrCreateCIRGlobal(llvm::StringRef mangledName, mlir::Type ty,
-                                     LangAS langAS, const VarDecl *d,
+                                     LangAS langAS, mlir::Location loc,
+                                     const VarDecl *d,
                                      ForDefinition_t isForDefinition);
 
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
+
+  /// Return the symbol that a weakref declaration refers to: the cir.func or
+  /// cir.global named by its alias target, declared extern_weak if it did not
+  /// already exist.
+  mlir::Operation *getWeakRefReference(const clang::ValueDecl *vd);
 
   cir::GlobalOp
   createGlobalOp(mlir::Location loc, llvm::StringRef name, mlir::Type t,
@@ -339,6 +382,10 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Cast \p addr, the address of the global \p vd, to the address space of
+  /// the declared type of \p vd if they differ.
+  mlir::Value castGlobalToDeclAddrSpace(mlir::Value addr, const VarDecl &vd);
+
   /// Get or create a thunk function with the given name and type.
   cir::FuncOp getAddrOfThunk(StringRef name, mlir::Type fnTy, GlobalDecl gd);
 
@@ -380,6 +427,12 @@ public:
   void addDefaultFunctionAttributes(StringRef name, bool hasOptNoneAttr,
                                     bool attrOnCallSite,
                                     mlir::NamedAttrList &attrs);
+
+  /// Returns the frame pointer kind to record on functions and on the module,
+  /// or std::nullopt when \p kind is CodeGenOptions::FramePointerKind::None,
+  /// the default, which is left implicit.
+  static std::optional<cir::FramePointerKind>
+  getFramePointerKind(CodeGenOptions::FramePointerKind kind);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -460,11 +513,30 @@ public:
   getAddrOfConstantStringFromLiteral(const StringLiteral *s,
                                      llvm::StringRef name = ".str");
 
+  /// Create a private constant global holding the null-terminated string
+  /// \p str, mirroring llvm::IRBuilder::CreateGlobalString.
+  cir::GlobalOp createGlobalString(mlir::Location loc, llvm::StringRef str,
+                                   llvm::StringRef name);
+
   /// Returns the address space for temporary allocations in the language. This
   /// ensures that the allocated variable's address space matches the
   /// expectations of the AST, rather than using the target's allocation address
   /// space, which may lead to type mismatches in other parts of the IR.
   LangAS getLangTempAllocaAddressSpace() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
+
+  /// Return the CIR address space attribute for a global in \p as, honoring
+  /// the target address space map where the LangAS fold would lose it.
+  mlir::ptr::MemorySpaceAttrInterface getGlobalCIRAddressSpace(LangAS as);
 
   /// Set attributes which are common to any form of a global definition (alias,
   /// Objective-C method, function, global variable).
@@ -593,11 +665,20 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  cir::FuncOp getRawFunctionPointer(GlobalDecl GD);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  cir::FuncOp getFunctionPointer(GlobalDecl GD);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
-    return (forEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             getTriple().isNVPTX());
+    return (forEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Emit type info if type of an expression is a variably modified
@@ -613,9 +694,12 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
-  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
-                          GlobalDecl aliasGD, cir::FuncOp aliasee,
-                          cir::GlobalLinkageKind linkage);
+  /// Emit `aliasGD` as an alias of `aliasee`, replacing any existing
+  /// declaration `op`, and return the alias.
+  cir::FuncOp emitAliasForGlobal(llvm::StringRef mangledName,
+                                 mlir::Operation *op, GlobalDecl aliasGD,
+                                 cir::FuncOp aliasee,
+                                 cir::GlobalLinkageKind linkage);
 
   /// Emit a definition for an `__attribute__((alias))` declaration.
   void emitAliasDefinition(GlobalDecl gd);
@@ -651,7 +735,7 @@ public:
                                 cir::FuncOp func, bool isThunk);
 
   /// Set extra attributes (inline, etc.) for a function.
-  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+  void setCIRFunctionAttributesForDefinition(const clang::Decl *decl,
                                              cir::FuncOp f);
 
   /// Generate OpenCL kernel argument metadata for a kernel function.
@@ -720,6 +804,10 @@ public:
 
   mlir::TypedAttr emitNullConstantAttr(QualType t);
 
+  /// Get target specific null pointer.
+  mlir::Value getNullPointer(cir::PointerType ptrTy, QualType qt,
+                             mlir::Location loc);
+
   /// Return a null constant appropriate for zero-initializing a base class with
   /// the given type. This is usually, but not always, an LLVM null constant.
   mlir::TypedAttr emitNullConstantForBase(const CXXRecordDecl *record);
@@ -771,10 +859,6 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
-
-  // Whether a global variable should be emitted by CUDA/HIP host/device
-  // related attributes.
-  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
   /// Print the postfix for externalized static variable or kernels for single
   /// source offloading languages CUDA and HIP. The unique postfix is created
@@ -975,16 +1059,6 @@ private:
 
   /// Create cir::AnnotationAttr for a single AnnotateAttr on a global.
   cir::AnnotationAttr emitAnnotateAttr(const clang::AnnotateAttr *aa);
-
-  /// Return the AST address space of the underlying global variable for D, as
-  /// determined by its declaration. Normally this is the same as the address
-  /// space of D's type, but in CUDA, address spaces are associated with
-  /// declarations, not types. If D is nullptr, return the default address
-  /// space for global variable.
-  ///
-  /// For languages without explicit address spaces, if D has default address
-  /// space, target-specific global or constant address space may be returned.
-  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 

@@ -286,6 +286,22 @@ enum class OMPInteropType { Unknown, Target, TargetSync };
 /// Atomic compare operations. Currently OpenMP only supports ==, >, and <.
 enum class OMPAtomicCompareOp : unsigned { EQ, MIN, MAX };
 
+/// Values of omp_sync_hint_t, including the kmp_ and ompx_ extensions.
+/// \note This needs to be kept in sync with omp_sync_hint_t in omp.h.
+enum class OMPSyncHint : uint64_t {
+  None = 0,
+  Uncontended = 1 << 0,
+  Contended = 1 << 1,
+  Nonspeculative = 1 << 2,
+  Speculative = 1 << 3,
+  KmpHLE = 1 << 16,
+  KmpRTM = 1 << 17,
+  KmpAdaptive = 1 << 18,
+  OMPXFastFPAtomics = 1 << 19,
+  OMPXSafeFPAtomics = 1 << 20,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ OMPXSafeFPAtomics)
+};
+
 /// Fields ids in kmp_depend_info record.
 enum class RTLDependInfoFields { BaseAddr, Len, Flags };
 

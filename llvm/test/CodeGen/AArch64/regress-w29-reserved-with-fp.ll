@@ -10,6 +10,8 @@
 ; RUN:    FileCheck %s --check-prefixes=CHECK,RESERVED
 ; RUN: llc -mtriple=aarch64-darwin -frame-pointer=none < %s | \
 ; RUN:    FileCheck %s --check-prefixes=CHECK,RESERVED
+; RUN: llc -mtriple=aarch64-unknown-uefi -frame-pointer=none < %s | \
+; RUN:    FileCheck %s --check-prefixes=CHECK,RESERVED
 @var = global i32 0
 
 declare void @bar()

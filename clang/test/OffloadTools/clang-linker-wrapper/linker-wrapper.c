@@ -51,6 +51,12 @@ __attribute__((visibility("protected"), used)) int x;
 
 // AMDGPU-LTO-TEMPS: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-save-temps
 
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --save-temps \
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=AMDGPU-SAVE-TEMPS-ASM
+
+// AMDGPU-SAVE-TEMPS-ASM-DAG: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-Wl,--save-temps{{$}}
+// AMDGPU-SAVE-TEMPS-ASM-DAG: clang{{.*}} --target=amdgpu10.30-amd-amdhsa -mcpu=gfx1030 {{.*}}-Xlinker --lto-emit-asm{{$}}
+
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=foo
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out

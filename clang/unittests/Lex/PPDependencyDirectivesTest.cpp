@@ -305,4 +305,65 @@ TEST_F(PPDependencyDirectivesTest, Embed) {
   EXPECT_EQ(EmbeddedFiles, ExpectedEmbeds);
 }
 
+TEST_F(PPDependencyDirectivesTest, LexIntoUninitializedToken) {
+  // The dependency directives lexer must not depend on the token it is given,
+  // which may be uninitialized. The following checks a token that happens to
+  // get annotation kind must not assert in setLength().
+  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  VFS->addFile("header.h", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  VFS->addFile(
+      "main.c", 0,
+      llvm::MemoryBuffer::getMemBuffer("#if __has_include(\"header.h\")"));
+  FileMgr.setVirtualFileSystem(VFS);
+
+  OptionalFileEntryRef FE;
+  ASSERT_THAT_ERROR(FileMgr.getFileRef("main.c").moveInto(FE),
+                    llvm::Succeeded());
+  SourceMgr.setMainFileID(
+      SourceMgr.createFileID(*FE, SourceLocation(), SrcMgr::C_User));
+
+  TestDependencyDirectivesGetter GetDependencyDirectives(FileMgr);
+
+  PreprocessorOptions PPOpts;
+  HeaderSearchOptions HSOpts;
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr,
+                  /*OwnsHeaderSearch =*/false);
+  PP.Initialize(*Target);
+  PP.setDependencyDirectivesGetter(GetDependencyDirectives);
+
+  // Once __has_include has been evaluated we are still inside the directive
+  // and at the end of the buffer; lex the 'eod' into a token we control.
+  class HasIncludeCatcher : public PPCallbacks {
+    Preprocessor &PP;
+
+  public:
+    bool Lexed = false;
+    HasIncludeCatcher(Preprocessor &PP) : PP(PP) {}
+
+    void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                    OptionalFileEntryRef File,
+                    SrcMgr::CharacteristicKind FileType) override {
+      Token Tok;
+      Tok.startToken();
+      Tok.setKind(tok::annot_module_include);
+      PP.LexUnexpandedToken(Tok);
+      EXPECT_EQ(Tok.getKind(), tok::eod);
+      // Lexing the 'eod' ended the directive; restore the state so the
+      // directive being evaluated can lex its own 'eod'.
+      PP.getCurrentLexer()->setParsingPreprocessorDirective(true);
+      Lexed = true;
+    }
+  };
+  auto Owned = std::make_unique<HasIncludeCatcher>(PP);
+  HasIncludeCatcher *Callbacks = Owned.get();
+  PP.addPPCallbacks(std::move(Owned));
+
+  PP.EnterMainSourceFile();
+  PP.LexTokensUntilEOF();
+  EXPECT_TRUE(Callbacks->Lexed);
+}
+
 } // anonymous namespace

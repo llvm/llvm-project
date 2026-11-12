@@ -1137,9 +1137,7 @@ public:
   QualType RebuildDecltypeType(Expr *Underlying, SourceLocation Loc);
 
   QualType RebuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
-                                   SourceLocation Loc,
-                                   SourceLocation EllipsisLoc,
-                                   bool FullySubstituted,
+                                   SourceLocation Loc, bool FullySubstituted,
                                    ArrayRef<QualType> Expansions = {});
 
   /// Build a new C++11 auto type.
@@ -1704,6 +1702,18 @@ public:
 
     return getSema().OpenMP().ActOnOpenMPExecutableDirective(
         Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP metadirective.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildOMPMetaDirective(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     ArrayRef<OMPTraitInfo *> TraitInfos,
+                                     ArrayRef<Stmt *> Variants) {
+    return getSema().OpenMP().ActOnOpenMPMetaDirective(StartLoc, EndLoc,
+                                                       TraitInfos, Variants);
   }
 
   /// Build a new OpenMP informational directive.
@@ -3882,8 +3892,8 @@ public:
   concepts::NestedRequirement *
   RebuildNestedRequirement(StringRef InvalidConstraintEntity,
                            const ASTConstraintSatisfaction &Satisfaction) {
-    return SemaRef.BuildNestedRequirement(InvalidConstraintEntity,
-                                          Satisfaction);
+    return new (getSema().Context)
+        concepts::NestedRequirement(InvalidConstraintEntity, &Satisfaction);
   }
 
   concepts::NestedRequirement *RebuildNestedRequirement(Expr *Constraint) {
@@ -5330,7 +5340,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
         PackLocIterator;
 
       TemplateArgumentListInfo *PackOutput = &Outputs;
-      TemplateArgumentListInfo New;
 
       if (TransformTemplateArguments(
               PackLocIterator(*this, In.getArgument().pack_begin()),
@@ -7287,8 +7296,7 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
       if (NotYetExpanded) {
         FullySubstituted = false;
         QualType Out = getDerived().RebuildPackIndexingType(
-            Pack, IndexExpr.get(), SourceLocation(), TL.getEllipsisLoc(),
-            FullySubstituted);
+            Pack, IndexExpr.get(), TL.getBeginLoc(), FullySubstituted);
         if (Out.isNull())
           return QualType();
 
@@ -7326,8 +7334,8 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
   QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
 
   QualType Out = getDerived().RebuildPackIndexingType(
-      Result, IndexExpr.get(), SourceLocation(), TL.getEllipsisLoc(),
-      FullySubstituted, SubtitutedTypes);
+      Result, IndexExpr.get(), TL.getBeginLoc(), FullySubstituted,
+      SubtitutedTypes);
   if (Out.isNull())
     return Out;
 
@@ -8792,7 +8800,7 @@ TreeTransform<Derived>::TransformIndirectGotoStmt(IndirectGotoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -8807,7 +8815,7 @@ TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -10075,12 +10083,45 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
 template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
-  // TODO: Fix This
-  llvm::omp::Version OMPVersion =
-      getDerived().getSema().getLangOpts().getOpenMPVersion();
-  SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
-  return StmtError();
+  // Every variant is a complete directive (or the plain associated statement),
+  // so it is transformed on its own.
+  SmallVector<Stmt *, 4> Variants;
+  for (Stmt *V : D->variants()) {
+    StmtResult NewV = getDerived().TransformStmt(V);
+    if (NewV.isInvalid())
+      return StmtError();
+    Variants.push_back(NewV.get());
+  }
+
+  // Copy the trait infos and transform their score and condition expressions.
+  // The implicit 'otherwise' trait info is added back by Sema.
+  ArrayRef<OMPTraitInfo *> OldTraitInfos = D->traitInfos();
+  if (D->hasImplicitOtherwise())
+    OldTraitInfos = OldTraitInfos.drop_back();
+  SmallVector<OMPTraitInfo *, 4> TraitInfos;
+  for (const OMPTraitInfo *OldTI : OldTraitInfos) {
+    OMPTraitInfo &TI = getSema().getASTContext().getNewOMPTraitInfo();
+    TI = *OldTI;
+    auto TransformScoreOrCondition = [&](Expr *&E, bool IsScore) {
+      if (!E)
+        return false;
+      EnterExpressionEvaluationContext Ctx(
+          getSema(),
+          IsScore ? Sema::ExpressionEvaluationContext::ConstantEvaluated
+                  : Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      ExprResult ER = getDerived().TransformExpr(E);
+      if (!ER.isUsable())
+        return true;
+      E = ER.get();
+      return false;
+    };
+    if (TI.anyScoreOrCondition(TransformScoreOrCondition))
+      return StmtError();
+    TraitInfos.push_back(&TI);
+  }
+
+  return getDerived().RebuildOMPMetaDirective(D->getBeginLoc(), D->getEndLoc(),
+                                              TraitInfos, Variants);
 }
 
 template <typename Derived>
@@ -10956,6 +10997,17 @@ TreeTransform<Derived>::TransformOMPTargetParallelGenericLoopDirective(
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
       OMPD_target_parallel_loop, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_target_loop, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -13640,7 +13692,20 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
-  assert(false && "not implemented yet");
+
+  switch (E->getKind()) {
+  case ReflectionKind::Type: {
+    TypeSourceInfo *NewT = getDerived().TransformType(
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
+    if (!NewT)
+      return ExprError();
+    return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
+  }
+  case ReflectionKind::Null:
+    llvm_unreachable("A null reflection should not reach here");
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
   return ExprError();
 }
 
@@ -15294,7 +15359,7 @@ TreeTransform<Derived>::TransformCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
 
   if (!getDerived().AlwaysRebuild() && Field == E->getField() &&
       E->getUsedContext() == SemaRef.CurContext &&
-      InitRes.get() == E->getRewrittenExpr())
+      InitRes.get() == E->getExpr())
     return E;
 
   return getDerived().RebuildCXXDefaultInitExpr(E->getExprLoc(), Field,
@@ -18326,9 +18391,8 @@ QualType TreeTransform<Derived>::RebuildDecltypeType(Expr *E, SourceLocation) {
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildPackIndexingType(
     QualType Pattern, Expr *IndexExpr, SourceLocation Loc,
-    SourceLocation EllipsisLoc, bool FullySubstituted,
-    ArrayRef<QualType> Expansions) {
-  return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc,
+    bool FullySubstituted, ArrayRef<QualType> Expansions) {
+  return SemaRef.BuildPackIndexingType(Pattern, IndexExpr, Loc,
                                        FullySubstituted, Expansions);
 }
 

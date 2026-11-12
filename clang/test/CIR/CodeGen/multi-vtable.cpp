@@ -39,7 +39,7 @@ void Child::MotherKey() {}
 
 // Child vtable
 
-// CIR:      cir.global "private" constant external @_ZTV5Child = #cir.vtable<{
+// CIR:      cir.global constant external @_ZTV5Child = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -83,7 +83,7 @@ void Child::MotherKey() {}
 
 // Mother vtable
 
-// CIR:      cir.global "private" constant external @_ZTV6Mother = #cir.vtable<{
+// CIR:      cir.global constant external @_ZTV6Mother = #cir.vtable<{
 // CIR-SAME:      #cir.const_array<[
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -112,7 +112,7 @@ void Child::MotherKey() {}
 
 // Father vtable
 
-// CIR:      cir.global "private" constant external @_ZTV6Father = #cir.vtable<{
+// CIR:      cir.global constant external @_ZTV6Father = #cir.vtable<{
 // CIR-SAME:     #cir.const_array<[
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
@@ -143,15 +143,15 @@ Child::Child() {}
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [0] -> !cir.ptr<!rec_Mother>
+// CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Child> -> !cir.ptr<!rec_Mother>
 // CIR:   cir.call @_ZN6MotherC2Ev(%[[MOTHER_BASE]]) nothrow : (!cir.ptr<!rec_Mother> {{.*}}) -> ()
-// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_Child> -> !cir.ptr<!rec_Father>
 // CIR:   cir.call @_ZN6FatherC2Ev(%[[FATHER_BASE]]) nothrow : (!cir.ptr<!rec_Father> {{.*}}) -> ()
 // CIR:   %[[CHILD_VPTR:.*]] = cir.vtable.address_point(@_ZTV5Child, address_point = <index = 0, offset = 2>) : !cir.vptr
 // CIR:   %[[CHILD_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Child> -> !cir.ptr<!cir.vptr>
 // CIR:   cir.store{{.*}} %[[CHILD_VPTR]], %[[CHILD_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   %[[FATHER_IN_CHILD_VPTR:.*]] = cir.vtable.address_point(@_ZTV5Child, address_point = <index = 1, offset = 2>) : !cir.vptr
-// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [8] -> !cir.ptr<!rec_Father>
+// CIR:   %[[FATHER_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [8] : !cir.ptr<!rec_Child> -> !cir.ptr<!rec_Father>
 // CIR:   %[[FATHER_IN_CHILD_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[FATHER_BASE]] : !cir.ptr<!rec_Father> -> !cir.ptr<!cir.vptr>
 // CIR:   cir.store{{.*}} %[[FATHER_IN_CHILD_VPTR]], %[[FATHER_IN_CHILD_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 // CIR:   cir.return

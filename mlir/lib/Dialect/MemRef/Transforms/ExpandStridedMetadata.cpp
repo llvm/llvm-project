@@ -230,7 +230,7 @@ public:
 /// the replacements for the original `extract_strided_metadata`.
 struct ExtractStridedMetadataOpSubviewFolder
     : OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
                                 PatternRewriter &rewriter) const override {
@@ -645,7 +645,7 @@ public:
 /// the replacements for the original `extract_strided_metadata`.
 struct ExtractStridedMetadataOpCollapseShapeFolder
     : OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
                                 PatternRewriter &rewriter) const override {
@@ -682,7 +682,7 @@ struct ExtractStridedMetadataOpCollapseShapeFolder
 /// and dividing up dimensions into static and dynamic parts as needed.
 struct ExtractStridedMetadataOpExpandShapeFolder
     : OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
                                 PatternRewriter &rewriter) const override {
@@ -907,7 +907,7 @@ public:
 /// source of the ViewLikeOp.
 class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
     : public OpRewritePattern<memref::ExtractAlignedPointerAsIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ExtractAlignedPointerAsIndexOp extractOp,
@@ -942,7 +942,7 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
 /// on the offset, sizes, and strides.
 class ExtractStridedMetadataOpReinterpretCastFolder
     : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
@@ -1004,7 +1004,7 @@ class ExtractStridedMetadataOpReinterpretCastFolder
 /// In other words, propagate metadata extraction accross memory space casts.
 class ExtractStridedMetadataOpMemorySpaceCastFolder
     : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
@@ -1048,7 +1048,7 @@ class ExtractStridedMetadataOpMemorySpaceCastFolder
 /// ```
 class ExtractStridedMetadataOpExtractStridedMetadataFolder
     : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,

@@ -51,8 +51,8 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   using FXRep = fixed_point::FXRep<accum>;
   using StorageType = typename FXRep::StorageType;
   // Output overflow
-  // > floor(log(2^16) * 2^15) * 2^-15
-  if (LIBC_UNLIKELY(x >= 0x1.62e4p3k))
+  //   ceil(log(2^16) * 2^15) * 2^-15
+  if (LIBC_UNLIKELY(x >= 0x1.62e44p3k))
     return FXRep::MAX();
   // Lower bound where exp(x) -> 0:
   //   floor(log(2^-16) * 2^15) * 2^-15
@@ -60,7 +60,7 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
     return FXRep::ZERO();
 
   // Current range of x:
-  //   -0x1.62e4p3 <= x <= 0x1.62e3cp3
+  //   -0x1.62e4p3 <= x <= 0x1.62e4p3
   // Range reduction:
   //   x = hi + mid + lo,
   // where:
@@ -72,9 +72,9 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   // with relative errors < |lo|^3/2 <= 2^-16.
   //   exp(hi) and exp(mid) are extracted from small lookup tables.
 
-  // Round-to-nearest 1/16, tie-to-(+Int):
+  // Round-to-nearest 1/16, tie-to-(+Inf):
   constexpr accum ONE_THIRTY_SECOND = 0x1.0p-5k;
-  // x_rounded = floor(x + 1/16).
+  // x_rounded = floor((x + 1/32) * 2^4) * 2^-4.
   accum x_rounded = ((x + ONE_THIRTY_SECOND) >> (FXRep::FRACTION_LEN - 4))
                     << (FXRep::FRACTION_LEN - 4);
   accum lo = x - x_rounded;
@@ -82,24 +82,26 @@ LLVM_LIBC_FUNCTION(accum, expk, (accum x)) {
   // Range of x_rounded:
   //   x_rounded >= floor((-0x1.62e4p3 + 0x1.0p-5) * 2^4) * 2^-4
   //              = -0x1.62p3 = -11.0625
+  //   x_rounded <= floor((0x1.62e4p3 + 0x1.0p-5) * 2^4) * 2^-4
+  //              = 0x1.62p3 = 11.0625
   // To get the indices, we shift the values so that it start with 0.
-  // Range of indices: 0 <= indices <= 355.
+  // Range of indices: 0 <= indices <= 354.
   StorageType indices = cpp::bit_cast<StorageType>((x_rounded + 0x1.62p3k) >>
                                                    (FXRep::FRACTION_LEN - 4));
   // So we have the following relation:
   //   indices = (hi + mid + 177/16) * 16
   // That implies:
   //   hi + mid = indices/16 - 11.0625
-  // So for lookup tables, we can use the upper 4 bits to get:
+  // So for lookup tables, we can use the upper 5 bits to get:
   //   exp( floor(indices / 16) - 11 )
   // and lower 4 bits for:
-  //   exp( (indices - floor(indices)) - 0.0625 )
+  //   exp( indices/16 - floor(indices / 16) - 0.0625 )
   accum exp_hi = EXP_HI[indices >> 4];
   accum exp_mid = EXP_MID[indices & 0xf];
-  // exp(x) ~ exp(hi) * exp(mid) * (1 + lo);
+  // exp(x) ~ exp(hi) * exp(mid) * (1 + lo + lo^2 / 2);
   accum l1 = 0x1.0p0k + (lo >> 1); // = 1 + lo / 2
   accum l2 = 0x1.0p0k + lo * l1;   // = 1 + lo * (1 + lo / 2) = 1 + lo + lo^2/2
-  return (exp_hi * (exp_mid * l2));
+  return exp_hi * (exp_mid * l2);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

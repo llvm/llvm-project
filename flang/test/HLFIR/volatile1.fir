@@ -4,10 +4,10 @@ func.func @_QQmain() attributes {fir.bindc_name = "p"} {
   %c10 = arith.constant 10 : index
   %1 = fir.shape %c10 : (index) -> !fir.shape<1>
   %2 = fir.volatile_cast %0 : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-  %3:2 = hlfir.declare %2(%1) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEarr"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
+  %3:2 = hlfir.declare %2(%1) uniq_name("_QFEarr") fortran_attrs<volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>, volatile>, !fir.ref<!fir.array<10xi32>, volatile>)
   %4 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
   %5 = fir.volatile_cast %4 : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
-  %6:2 = hlfir.declare %5 {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEi"} : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
+  %6:2 = hlfir.declare %5 uniq_name("_QFEi") fortran_attrs<volatile> : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
   %7 = fir.volatile_cast %6#0 : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
   fir.call @_QFPnot_declared_volatile_in_this_scope(%7) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<i32>) -> ()
   %c1 = arith.constant 1 : index
@@ -39,14 +39,14 @@ func.func @_QQmain() attributes {fir.bindc_name = "p"} {
 }
 func.func private @_QFPnot_declared_volatile_in_this_scope(%arg0: !fir.ref<i32> {fir.bindc_name = "v"}) attributes {fir.host_symbol = @_QQmain, fir.proc_attrs = #fir.proc_attrs<elemental, pure>, llvm.linkage = #llvm.linkage<internal>} {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFFnot_declared_volatile_in_this_scopeEv"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFFnot_declared_volatile_in_this_scopeEv") fortran_attrs<intent_inout> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %c1_i32 = arith.constant 1 : i32
   hlfir.assign %c1_i32 to %1#0 : i32, !fir.ref<i32>
   return
 }
 func.func private @_QFPdeclared_volatile_in_this_scope(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "v"}, %arg1: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFFdeclared_volatile_in_this_scopeEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QFFdeclared_volatile_in_this_scopeEn") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.load %1#0 : !fir.ref<i32>
   %3 = fir.convert %2 : (i32) -> i64
   %4 = fir.convert %3 : (i64) -> index
@@ -55,7 +55,7 @@ func.func private @_QFPdeclared_volatile_in_this_scope(%arg0: !fir.ref<!fir.arra
   %6 = arith.select %5, %4, %c0 : index
   %7 = fir.shape %6 : (index) -> !fir.shape<1>
   %8 = fir.volatile_cast %arg0 : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>, volatile>
-  %9:2 = hlfir.declare %8(%7) dummy_scope %0 {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFdeclared_volatile_in_this_scopeEv"} : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.ref<!fir.array<?xi32>, volatile>)
+  %9:2 = hlfir.declare %8(%7) dummy_scope %0 uniq_name("_QFFdeclared_volatile_in_this_scopeEv") fortran_attrs<intent_inout, volatile> : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.ref<!fir.array<?xi32>, volatile>)
   %c1_i32 = arith.constant 1 : i32
   hlfir.assign %c1_i32 to %9#0 : i32, !fir.box<!fir.array<?xi32>, volatile>
   return
@@ -71,10 +71,10 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_4:.*]] = fir.volatile_cast %[[VAL_1]] : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>, volatile>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]](%[[VAL_3]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEarr"} : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>, volatile>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]](%[[VAL_3]]) uniq_name("_QFEarr") fortran_attrs<volatile> : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.ref<!fir.array<10xi32>, volatile>
 // CHECK:           %[[VAL_6:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
 // CHECK:           %[[VAL_7:.*]] = fir.volatile_cast %[[VAL_6]] : (!fir.ref<i32>) -> !fir.ref<i32, volatile>
-// CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFEi"} : (!fir.ref<i32, volatile>) -> !fir.ref<i32, volatile>
+// CHECK:           %[[VAL_8:.*]] = fir.declare %[[VAL_7]] uniq_name("_QFEi") fortran_attrs<volatile> : (!fir.ref<i32, volatile>) -> !fir.ref<i32, volatile>
 // CHECK:           %[[VAL_9:.*]] = fir.volatile_cast %[[VAL_8]] : (!fir.ref<i32, volatile>) -> !fir.ref<i32>
 // CHECK:           fir.call @_QFPnot_declared_volatile_in_this_scope(%[[VAL_9]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<i32>) -> ()
 // CHECK:           %[[VAL_10:.*]] = arith.constant 1 : index
@@ -108,7 +108,7 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK-LABEL:   func.func private @_QFPnot_declared_volatile_in_this_scope(
 // CHECK-SAME:                                                               %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "v"}) attributes {fir.host_symbol = @_QQmain, fir.proc_attrs = #fir.proc_attrs<elemental, pure>, llvm.linkage = #llvm.linkage<internal>} {
 // CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFFnot_declared_volatile_in_this_scopeEv"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] uniq_name("_QFFnot_declared_volatile_in_this_scopeEv") fortran_attrs<intent_inout> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[VAL_3:.*]] = arith.constant 1 : i32
 // CHECK:           fir.store %[[VAL_3]] to %[[VAL_2]] : !fir.ref<i32>
 // CHECK:           return
@@ -119,7 +119,7 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK-SAME:                                                           %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>} {
 // CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.array<?xi32>, volatile>
 // CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFFdeclared_volatile_in_this_scopeEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_1]] dummy_scope %[[VAL_3]] uniq_name("_QFFdeclared_volatile_in_this_scopeEn") fortran_attrs<intent_in> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 // CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> i64
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i64) -> index
@@ -128,7 +128,7 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_7]], %[[VAL_8]] : index
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_12:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>, volatile>
-// CHECK:           %[[VAL_13:.*]] = fir.declare %[[VAL_12]](%[[VAL_11]]) dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<intent_inout, volatile>, uniq_name = "_QFFdeclared_volatile_in_this_scopeEv"} : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>, volatile>
+// CHECK:           %[[VAL_13:.*]] = fir.declare %[[VAL_12]](%[[VAL_11]]) dummy_scope %[[VAL_3]] uniq_name("_QFFdeclared_volatile_in_this_scopeEv") fortran_attrs<intent_inout, volatile> : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xi32>, volatile>
 // CHECK:           %[[VAL_14:.*]] = fir.embox %[[VAL_13]](%[[VAL_11]]) : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>, volatile>
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_16:.*]] = fir.alloca i32

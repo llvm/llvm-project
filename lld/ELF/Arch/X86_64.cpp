@@ -773,9 +773,9 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
 void X86_64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<X86_64, ELF64LE>(*this, sec, shard);
+    elf::scanSection1<ELF64LE>(*this, sec, shard);
   else // ilp32
-    elf::scanSection1<X86_64, ELF32LE>(*this, sec, shard);
+    elf::scanSection1<ELF32LE>(*this, sec, shard);
 }
 
 static bool isPltOff64Tls(const uint8_t *loc) {

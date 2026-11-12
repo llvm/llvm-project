@@ -17,8 +17,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG-VS2: Main Loop VF:vscale x 8, Main Loop UF:1, Epilogue Loop VF:8, Epilogue Loop UF:1
 
 ; DEBUG-LABEL: LV: Checking a loop in 'trip_count_too_small'
-; DEBUG: LV: Found a loop with a very small trip count. This loop is worth vectorizing only if no scalar iteration overheads are incurred.
-; DEBUG: LV: Not vectorizing: Runtime SCEV check is required with -Os/-Oz.
+; DEBUG: LV: Found a loop with a very small trip count. This loop is worth vectorizing only if no scalar epilogue is required.
+; DEBUG: LV: Not vectorizing: The trip count is below the minial threshold value..
 
 ; DEBUG-LABEL: LV: Checking a loop in 'too_many_runtime_checks'
 ; DEBUG: LV: Found trip count: 0
@@ -35,7 +35,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; DEBUG: LV: can fold tail by masking.
 ; DEBUG: Executing best plan with VF=vscale x 16, UF=1
 
-define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) {
+define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-VS1-LABEL: define void @low_vf_ic_is_better(
 ; CHECK-VS1-SAME: ptr noundef captures(none) [[P:%.*]], i32 [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-VS1-NEXT:  [[ENTRY:.*:]]
@@ -243,7 +243,7 @@ while.end:
   ret void
 }
 
-define void @trip_count_too_small(ptr nocapture noundef %p, i32 noundef %tc, i16 noundef %val) {
+define void @trip_count_too_small(ptr nocapture noundef %p, i32 noundef %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @trip_count_too_small(
 ; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -294,7 +294,7 @@ while.end:
   ret void
 }
 
-define void @too_many_runtime_checks(ptr nocapture noundef %p, ptr nocapture noundef %p1, ptr nocapture noundef readonly %p2, ptr nocapture noundef readonly %p3, i32 noundef %tc, i16 noundef %val) {
+define void @too_many_runtime_checks(ptr nocapture noundef %p, ptr nocapture noundef %p1, ptr nocapture noundef readonly %p2, ptr nocapture noundef readonly %p3, i32 noundef %tc, i16 noundef %val) vscale_range(1,16) {
 ; CHECK-LABEL: define void @too_many_runtime_checks(
 ; CHECK-SAME: ptr noundef captures(none) [[P:%.*]], ptr noundef captures(none) [[P1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], ptr noundef readonly captures(none) [[P3:%.*]], i32 noundef [[TC:%.*]], i16 noundef [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -402,7 +402,7 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP13]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP15]], ptr align 1 [[TMP13]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = xor i1 [[TMP30]], true

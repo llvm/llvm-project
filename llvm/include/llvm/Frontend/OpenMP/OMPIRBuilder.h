@@ -102,6 +102,18 @@ LLVM_ABI BasicBlock *splitBBWithSuffix(IRBuilderBase &Builder,
 /// are ones that are not dependent on the configuration.
 class OpenMPIRBuilderConfig {
 public:
+  /// Representation of a collapsed iteration space.
+  enum class CollapseIVMapping {
+    /// Decode source indices from the logical index using division and
+    /// remainder in each iteration.
+    DivMod,
+    /// Retain the physical nest and decode each assigned range once.
+    Virtual,
+  };
+
+  /// Mapping used for collapsed loops.
+  CollapseIVMapping CollapseMapping = CollapseIVMapping::DivMod;
+
   /// Flag to define whether to generate code for the role of the OpenMP host
   /// (if set to false) or device (if set to true) in an offloading context. It
   /// is set when the -fopenmp-is-target-device compiler frontend option is
@@ -513,8 +525,10 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
-      : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(M.getTargetTriple()), IsFinalized(false) {}
+      : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
+        IsFinalized(false) {
+    Builder.disableGEPCanonicalization();
+  }
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -952,7 +966,13 @@ public:
       InsertPointTy ComputeIP = {}, const Twine &Name = "loop",
       bool InScan = false, ScanInfo *ScanRedInfo = nullptr);
 
-  /// Collapse a loop nest into a single loop.
+  /// Strategy used to derive the original induction variables after collapse.
+  using CollapseIVMapping = OpenMPIRBuilderConfig::CollapseIVMapping;
+
+  /// Collapse a loop nest using Config.CollapseMapping.
+  /// Two mappings are supported: DivMod and Virtual.
+  ///
+  /// The DivMod mapping works as follows.
   ///
   /// Merges loops of a loop nest into a single CanonicalLoopNest representation
   /// that has the same number of innermost loop iterations as the origin loop
@@ -1000,6 +1020,28 @@ public:
   ///    is hoisted into the loop body, and such code will be executed more
   ///    often than before collapsing (or not at all if any inner loop iteration
   ///    has a trip count of 0). This is permitted by the OpenMP specification.
+  ///
+  /// The Virtual mapping retains the nest. Threads receive ranges of one
+  /// unsigned logical index spanning inner-loop invocations. For [b,b+n),
+  /// decode the start once and use a remaining-iteration budget:
+  ///
+  ///     if (n != 0) {
+  ///       unsigned remaining = n + b % 9;
+  ///       for (unsigned i = b / 9, start = b % 9; i < 7; ++i, start = 0) {
+  ///         for (unsigned j = start; j < min(remaining, 9u); ++j)
+  ///           body(i, j);
+  ///         if (remaining <= 9) break;
+  ///         remaining -= 9;
+  ///       }
+  ///     }
+  ///
+  /// Virtual shares DivMod's type and trip-count limits. Intervening code stays
+  /// at its level, once per range touching that row; empty ranges skip it.
+  /// Two constant-count loops and direct body-to-preheader/after-to-latch edges
+  /// are required. Controls must retain form and be unobserved after the nest.
+  /// Only host static worksharing without chunk or ordered is supported.
+  /// SIMD, transforms of the result and logical body/IV access are unsupported.
+  /// MLIR falls back to DivMod; API callers must choose a supported mapping.
   ///
   /// \param DL        Debug location for instructions added for collapsing,
   ///                  such as instructions to compute/derive the input loop's
@@ -1160,6 +1202,35 @@ public:
                          omp::OpenMPOffloadMappingFlags MemberOfFlag);
 
 private:
+  /// Attach unroll metadata only to supported logical iteration loops.
+  void addUnrollMetadata(CanonicalLoopInfo *Loop,
+                         ArrayRef<Metadata *> Properties);
+  /// Input loop blocks, induction variables, and inner comparison used to
+  /// build the Virtual row executor. Collected before modifying the CFG.
+  struct VirtualRowPlan;
+  /// Collect the input loop blocks, induction variables, and inner comparison.
+  /// Require direct nesting; reject an indirectbr terminator in the innermost
+  /// after block. Report a fatal error before changing IR.
+  VirtualRowPlan planVirtualRowLoop(ArrayRef<CanonicalLoopInfo *> Loops);
+  /// Generate IR for Count logical iterations starting at Begin, keeping the
+  /// original loops. Decode Begin once in Entry, limit the final inner-loop
+  /// execution, and exit the nest when the assigned range is complete.
+  void createVirtualRowExecutor(CanonicalLoopInfo *Result,
+                                const VirtualRowPlan &Plan,
+                                ArrayRef<Value *> TripCounts, Value *Begin,
+                                Value *Count, BasicBlock *Entry);
+  /// Create a Virtual CanonicalLoopInfo using the outer loop's control blocks.
+  /// Initialize Begin/Count for the full nest and skip empty ranges. Build the
+  /// executor, then invalidate the input CanonicalLoopInfo objects.
+  CanonicalLoopInfo *
+  createVirtualCollapsedLoop(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
+                             const VirtualRowPlan &Plan,
+                             ArrayRef<Value *> TripCounts,
+                             Value *CollapsedTripCount);
+  /// Update the Begin and Count copies with the scheduler's range.
+  /// Use the scheduler's values unchanged, without validation or clipping.
+  void bindCollapsedRange(CanonicalLoopInfo *Loop, Value *Begin, Value *Count);
+
   /// Modifies the canonical loop to be a statically-scheduled workshare loop
   /// which is executed on the device
   ///
@@ -1176,13 +1247,17 @@ private:
   ///                 preheader of the loop.
   /// \param LoopType Information about type of loop worksharing.
   ///                 It corresponds to type of loop workshare OpenMP pragma.
+  /// \param NeedsBarrier Indicates whether a barrier must be inserted after
+  ///                     the loop.
   /// \param NoLoop   If true, no-loop code is generated.
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
-  InsertPointTy applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
-                                         InsertPointTy AllocaIP,
-                                         omp::WorksharingLoopType LoopType,
-                                         bool NoLoop);
+  InsertPointOrErrorTy
+  applyWorkshareLoopTarget(DebugLoc DL, CanonicalLoopInfo *CLI,
+                           InsertPointTy AllocaIP,
+                           omp::WorksharingLoopType LoopType, bool NeedsBarrier,
+                           bool NoLoop, bool NeedsLastIter);
 
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
@@ -1340,8 +1415,8 @@ public:
   /// \param NoLoop If true, no-loop code is generated.
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
-  ///
   /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
+  /// \param NeedsLastIter  If true, the last iteration variable is emitted.
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1354,7 +1429,7 @@ public:
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
       bool NoLoop = false, bool HasDistSchedule = false,
-      Value *DistScheduleChunkSize = nullptr);
+      Value *DistScheduleChunkSize = nullptr, bool NeedsLastIter = false);
 
   /// Tile a loop nest.
   ///
@@ -2531,7 +2606,7 @@ public:
   bool updateToLocation(const LocationDescription &Loc) {
     Builder.restoreIP(Loc.IP);
     Builder.SetCurrentDebugLocation(Loc.DL);
-    return Loc.IP.getBlock() != nullptr;
+    return Loc.IP.isValid();
   }
 
   /// Return the function declaration for the runtime function with \p FnID.
@@ -2561,7 +2636,7 @@ public:
   /// Return the (LLVM-IR) string describing the DebugLoc \p DL. Use \p F as
   /// fallback if \p DL does not specify the function name.
   LLVM_ABI Constant *getOrCreateSrcLocStr(DebugLoc DL, uint32_t &SrcLocStrSize,
-                                          Function *F = nullptr);
+                                          const Function *F = nullptr);
 
   /// Return the (LLVM-IR) string describing the source location \p Loc.
   LLVM_ABI Constant *getOrCreateSrcLocStr(const LocationDescription &Loc,
@@ -4022,7 +4097,8 @@ private:
   ///                   instructions.
   /// \param RMWOp		  The binary operation used for update. If
   ///                   operation is not supported by atomicRMW,
-  ///                   or belong to {FADD, FSUB, BAD_BINOP}.
+  ///                   or belong to {FMaximumNum, FMinimumNum, UDecWrap,
+  ///                   UIncWrap, USubCond, USubSat, BAD_BINOP}.
   ///                   Then a `cmpExch` based	atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
@@ -4099,8 +4175,9 @@ public:
   /// \param AO       Atomic ordering of the generated atomic instructions.
   /// \param RMWOp    The binary operation used for update. If operation
   ///                 is	not supported by atomicRMW, or belong to
-  ///	                {FADD, FSUB, BAD_BINOP}. Then a `cmpExch` based
-  ///                 atomic will be generated.
+  ///                 {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
+  ///                 USubCond, USubSat, BAD_BINOP}. Then a
+  ///                 `cmpExch` based atomic will be generated.
   /// \param UpdateOp 	Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
   /// \param IsXBinopExpr true if \a X is Left H.S. in Right H.S. part of the
@@ -4131,8 +4208,9 @@ public:
   /// \param AO         Atomic ordering of the generated atomic instructions
   /// \param RMWOp      The binary operation used for update. If
   ///                   operation is not supported by atomicRMW, or belong to
-  ///	                  {FADD, FSUB, BAD_BINOP}. Then a cmpExch based
-  ///                   atomic will be generated.
+  ///                   {FMaximumNum, FMinimumNum, UDecWrap, UIncWrap,
+  ///                   USubCond, USubSat, BAD_BINOP}. Then a
+  ///                   `cmpExch` based atomic will be generated.
   /// \param UpdateOp   Code generator for complex expressions that cannot be
   ///                   expressed through atomicrmw instruction.
   /// \param UpdateExpr true if X is an in place update of the form
@@ -4291,10 +4369,13 @@ public:
   ///
   ///  - The skeleton’s unconditional branch from the loop body is removed
   ///    before invoking \p BodyGen.
-  ///  - \p BodyGen may freely emit instructions and temporarily introduce
-  ///    control flow.
-  ///  - If the loop body does not end with a terminator after \p BodyGen
-  ///    returns, a branch to the latch is inserted to restore canonical form.
+  ///  - \p BodyGen may freely emit instructions and introduce control flow
+  ///    within the loop body.
+  ///  - If the body leaves exactly one block without a terminator after
+  ///    \p BodyGen returns, a branch to the latch is inserted there. Otherwise,
+  ///    some block of the body must already branch to the latch.
+  ///  - The body must not branch to blocks that existed before \p BodyGen ran,
+  ///    other than the body block and the latch.
   ///
   /// \param Loc The location where the iterator modifier was encountered.
   /// \param TripCount Number of loop iterations.
@@ -4458,7 +4539,7 @@ public:
 /// modified loop. What is done is an implementation detail of
 /// transformation-implementing method and callers should always assume that the
 /// CanonicalLoopInfo passed to it is invalidated and a new object is returned.
-/// Returned CanonicalLoopInfo have the same structure and guarantees as the one
+/// Without Virtual collapse, results have the same guarantees as the one
 /// created by createCanonicalLoop, such that transforming methods do not have
 /// to special case where the CanonicalLoopInfo originated from.
 ///
@@ -4478,6 +4559,24 @@ class CanonicalLoopInfo {
   friend class OpenMPIRBuilder;
 
 private:
+  /// State retained after Virtual collapse of a loop nest.
+  struct VirtualCollapseInfo {
+    /// Copy of the first normalized iteration; scheduling replaces operand
+    /// zero.
+    BinaryOperator *Begin = nullptr;
+    /// Copy of the full count; scheduling replaces operand zero with its count.
+    /// May wrap for idle scheduler assignments.
+    BinaryOperator *Count = nullptr;
+  };
+  std::optional<VirtualCollapseInfo> VirtualCollapse;
+
+  /// Report a fatal error for an unsupported operation on Virtual collapse.
+  /// Must only be called for a loop with Virtual collapse state.
+  [[noreturn]] LLVM_ABI void reportUnsupportedVirtualCollapse() const;
+  /// Return the Virtual range initialization block containing the Begin and
+  /// Count copies, or nullptr for ordinary canonical loops.
+  BasicBlock *getVirtualCollapseInit() const;
+
   BasicBlock *Header = nullptr;
   BasicBlock *Cond = nullptr;
   BasicBlock *Latch = nullptr;
@@ -4558,8 +4657,11 @@ public:
   /// The body block is the single entry for a loop iteration and not controlled
   /// by CanonicalLoopInfo. It can contain arbitrary control flow but must
   /// eventually branch to the \p Latch block.
+  /// Virtual does not expose a logical loop body.
   BasicBlock *getBody() const {
     assert(isValid() && "Requires a valid canonical loop");
+    if (VirtualCollapse)
+      reportUnsupportedVirtualCollapse();
     return cast<CondBrInst>(Cond->getTerminator())->getSuccessor(0);
   }
 
@@ -4592,6 +4694,8 @@ public:
   /// any bit-width.
   Value *getTripCount() const {
     assert(isValid() && "Requires a valid canonical loop");
+    if (VirtualCollapse)
+      return VirtualCollapse->Count->getOperand(0);
     Instruction *CmpI = &Cond->front();
     assert(isa<CmpInst>(CmpI) && "First inst must compare IV with TripCount");
     return CmpI->getOperand(1);
@@ -4599,8 +4703,11 @@ public:
 
   /// Returns the instruction representing the current logical induction
   /// variable. Always unsigned, always starting at 0 with an increment of one.
+  /// Virtual does not expose a logical induction variable.
   Instruction *getIndVar() const {
     assert(isValid() && "Requires a valid canonical loop");
+    if (VirtualCollapse)
+      reportUnsupportedVirtualCollapse();
     Instruction *IndVarPHI = &Header->front();
     assert(isa<PHINode>(IndVarPHI) && "First inst must be the IV PHI");
     return IndVarPHI;
@@ -4609,28 +4716,28 @@ public:
   /// Return the type of the induction variable (and the trip count).
   Type *getIndVarType() const {
     assert(isValid() && "Requires a valid canonical loop");
-    return getIndVar()->getType();
+    return getTripCount()->getType();
   }
 
   /// Return the insertion point for user code before the loop.
   OpenMPIRBuilder::InsertPointTy getPreheaderIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Preheader = getPreheader();
-    return {Preheader, std::prev(Preheader->end())};
+    return std::prev(Preheader->end());
   };
 
   /// Return the insertion point for user code in the body.
   OpenMPIRBuilder::InsertPointTy getBodyIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *Body = getBody();
-    return {Body, Body->begin()};
+    return Body->begin();
   };
 
   /// Return the insertion point for user code after the loop.
   OpenMPIRBuilder::InsertPointTy getAfterIP() const {
     assert(isValid() && "Requires a valid canonical loop");
     BasicBlock *After = getAfter();
-    return {After, After->begin()};
+    return After->begin();
   };
 
   Function *getFunction() const {

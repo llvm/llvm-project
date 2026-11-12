@@ -90,6 +90,11 @@ int __attribute__((vector_size(0x10000001))) v7; // expected-error {{vector size
 // no support for vector enum type
 enum { e_2 } x3 __attribute__((vector_size(64))); // expected-error {{invalid vector element type}}
 
+// GH225037: reject enum elements before constructing an extended vector type.
+typedef enum { enum_value } EnumElement;
+typedef EnumElement EnumVector __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'EnumElement'}}
+typedef enum e TaggedEnumVector __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'enum e'}}
+
 int x4 __attribute__((ext_vector_type(64)));
 
 typedef __attribute__ ((ext_vector_type(32),__aligned__(32))) unsigned char uchar32;

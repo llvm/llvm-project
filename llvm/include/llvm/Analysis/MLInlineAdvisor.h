@@ -20,6 +20,7 @@
 #include <optional>
 
 namespace llvm {
+struct AnalysisOptions;
 class DiagnosticInfoOptimizationBase;
 class Module;
 class MLInlineAdvice;
@@ -67,6 +68,7 @@ protected:
   // TODO: should we keep this updated?
   unsigned getInitialFunctionLevel(const Function &F) const;
 
+  const AnalysisOptions &Opts;
   std::unique_ptr<MLModelRunner> ModelRunner;
   std::function<bool(CallBase &)> GetDefaultAdvice;
   std::vector<TensorSpec> FeatureMap;

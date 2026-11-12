@@ -67,25 +67,25 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_27
 ; CHECK-NEXT:  # %bb.23:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:  .LBB0_24: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    callq *%r14
+; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    movq %rbx, %r9
+; CHECK-NEXT:    movq %r14, %r9
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
-; CHECK-NEXT:    callq *%r14
+; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
@@ -97,7 +97,7 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
-; CHECK-NEXT:    callq *%r14
+; CHECK-NEXT:    callq *%rbx
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    je .LBB0_24

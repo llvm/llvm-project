@@ -1,0 +1,51 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+// switch.flat successor operands must be type-converted: the destination
+// block arguments are converted, so raw CIR operands would mismatch them.
+
+!s32i = !cir.int<s, 32>
+!ptr = !cir.ptr<!s32i>
+
+module {
+  // CHECK-LABEL: llvm.func @switch_flat_ptr_operand
+  // CHECK:         llvm.switch {{.*}}, ^bb{{.*}}(%{{.*}} : !llvm.ptr) [
+  // CHECK-NEXT:    0: ^bb{{.*}}(%{{.*}} : !llvm.ptr)
+  cir.func @switch_flat_ptr_operand(%cond: !s32i, %p: !ptr) -> !s32i {
+    cir.switch.flat %cond : !s32i, ^default(%p : !ptr) [
+      0: ^case0(%p : !ptr)
+    ]
+  ^case0(%a: !ptr):
+    %v = cir.load %a : !ptr, !s32i
+    cir.return %v : !s32i
+  ^default(%d: !ptr):
+    %w = cir.load %d : !ptr, !s32i
+    cir.return %w : !s32i
+  }
+
+  // Mixed segments: one case with a ptr, one with nothing, one with two
+  // operands, and no default operands.
+  // CHECK-LABEL: llvm.func @switch_flat_mixed_segments
+  // CHECK:         llvm.switch {{.*}}, ^bb{{.*}} [
+  // CHECK-NEXT:    0: ^bb{{.*}}(%{{.*}} : !llvm.ptr),
+  // CHECK-NEXT:    1: ^bb{{.*}},
+  // CHECK-NEXT:    2: ^bb{{.*}}(%{{.*}}, %{{.*}} : i32, !llvm.ptr)
+  // CHECK:         ^bb{{.*}}(%{{.*}}: !llvm.ptr):
+  // CHECK:         ^bb{{.*}}(%{{.*}}: i32, %{{.*}}: !llvm.ptr):
+  cir.func @switch_flat_mixed_segments(%cond: !s32i, %p: !ptr, %x: !s32i) -> !s32i {
+    cir.switch.flat %cond : !s32i, ^default [
+      0: ^case0(%p : !ptr),
+      1: ^case1,
+      2: ^case2(%x, %p : !s32i, !ptr)
+    ]
+  ^case0(%a: !ptr):
+    %v = cir.load %a : !ptr, !s32i
+    cir.return %v : !s32i
+  ^case1:
+    cir.return %x : !s32i
+  ^case2(%b: !s32i, %c: !ptr):
+    %w = cir.load %c : !ptr, !s32i
+    cir.return %w : !s32i
+  ^default:
+    cir.return %x : !s32i
+  }
+}

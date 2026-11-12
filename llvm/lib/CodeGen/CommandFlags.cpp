@@ -98,13 +98,11 @@ CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
-CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EnableCallGraphSection)
 CGOPT(bool, EmitCallSiteInfo)
-CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableStaticDataPartitioning)
 CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
@@ -371,16 +369,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(SeparateNamedSections);
 
-  static cl::opt<DebuggerKind> DebuggerTuningOpt(
-      "debugger-tune", cl::desc("Tune debug info for a particular debugger"),
-      cl::init(DebuggerKind::Default),
-      cl::values(
-          clEnumValN(DebuggerKind::GDB, "gdb", "gdb"),
-          clEnumValN(DebuggerKind::LLDB, "lldb", "lldb"),
-          clEnumValN(DebuggerKind::DBX, "dbx", "dbx"),
-          clEnumValN(DebuggerKind::SCE, "sce", "SCE targets (e.g. PS4)")));
-  CGBINDOPT(DebuggerTuningOpt);
-
   static cl::opt<VectorLibrary> VectorLibrary(
       "vector-library", cl::Hidden, cl::desc("Vector functions library"),
       cl::init(VectorLibrary::NoLibrary),
@@ -432,13 +420,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-  static cl::opt<bool> EnableMachineFunctionSplitter(
-      "split-machine-functions",
-      cl::desc("Split out cold basic blocks from machine functions based on "
-               "profile information"),
-      cl::init(false));
-  CGBINDOPT(EnableMachineFunctionSplitter);
-
   static cl::opt<bool> EnableStaticDataPartitioning(
       "partition-static-data-sections",
       cl::desc("Partition data sections using profile information."),
@@ -476,7 +457,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  mc::RegisterMCTargetOptionsFlags();
+  mc::RegisterMCToolOptions();
 }
 
 codegen::RegisterMTuneFlag::RegisterMTuneFlag() {
@@ -524,9 +505,10 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 }
 
 // Common utility function tightly tied to the options listed here. Initializes
-// a TargetOptions object with CodeGen flags and returns it.
+// a TargetOptions object with CodeGen options and returns it.
 TargetOptions
-codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
+codegen::getTargetOptions(const cl::LibraryOptionsContext &LibraryOptions,
+                          const Triple &TheTriple) {
   TargetOptions Options;
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
@@ -547,10 +529,8 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
   Options.EnableTLSDESC =
       getExplicitEnableTLSDESC().value_or(TheTriple.hasDefaultTLSDESC());
-  Options.ExceptionModel = getExceptionModel();
   Options.VecLib = getVectorLibrary();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
-  Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
   Options.EnableStaticDataPartitioning = getEnableStaticDataPartitioning();
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallGraphSection = getEnableCallGraphSection();
@@ -563,9 +543,8 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.JMCInstrument = getJMCInstrument();
   Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
 
-  Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
+  Options.MCOptions = mc::getMCTargetOptions(LibraryOptions);
 
-  Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
 }
@@ -751,7 +730,7 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
   //
   // FIXME: verifyOptionsConsistency validates consistency for target-abi. We
   // should consistently handle all ABI module flags either here or there.
-  StringRef ABIName = mc::getABIName();
+  StringRef ABIName = mc::getABIName(M.getContext().getLibraryOptions());
   if (!ABIName.empty() && !M.getModuleFlag("target-abi")) {
     M.addModuleFlag(Module::Error, "target-abi",
                     MDString::get(M.getContext(), ABIName));
@@ -761,9 +740,9 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
     setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
-Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(const Triple &TargetTriple,
-                                      CodeGenOptLevel OptLevel) {
+Expected<std::unique_ptr<TargetMachine>> codegen::createTargetMachineForTriple(
+    const cl::LibraryOptionsContext &LibraryOptions, const Triple &TargetTriple,
+    CodeGenOptLevel OptLevel) {
   // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
@@ -771,9 +750,10 @@ codegen::createTargetMachineForTriple(const Triple &TargetTriple,
       TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
+  TargetOptions Options = codegen::getTargetOptions(LibraryOptions, TheTriple);
+  Options.MCOptions.LibraryOptions = &LibraryOptions;
   auto *Target = TheTarget->createTargetMachine(
-      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(),
-      codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
+      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(), Options,
       codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
       OptLevel);
   if (!Target)

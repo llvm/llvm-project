@@ -35,6 +35,7 @@ namespace llvm {
 LLVM_ABI extern llvm::cl::opt<bool> NoKernelInfoEndLTO;
 
 class AAManager;
+class CSEConfigBase;
 using ModulePassManager = PassManager<Module>;
 
 class Function;
@@ -118,8 +119,18 @@ protected: // Can only create subclasses.
   /// MC subtarget keyed by target features and target CPU.
   StringMap<std::unique_ptr<const MCSubtargetInfo>> MCSubtargetMap;
 
+  /// Bit N is set if the target can lower exceptions using model N.
+  unsigned SupportedExceptionModels = 0;
+
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
+  unsigned EnableTiedFastRegAlloc : 1;
+
+  /// Set if the target supports default outlining behaviour.
+  unsigned SupportsDefaultOutlining : 1;
+
+  /// Set if the target supports the debug entry values by default.
+  unsigned SupportsDebugEntryValues : 1;
 
   // PGO related tunables.
   std::optional<PGOOptions> PGOOption;
@@ -185,6 +196,9 @@ public:
   createPostMachineScheduler(MachineSchedContext *C) const {
     return nullptr;
   }
+
+  /// GlobalISel CSEConfig for the new PM. Return NULL for the standard one.
+  virtual CSEConfigBase *createCSEConfig() const { return nullptr; }
 
   /// Allocate and return a default initialized instance of the YAML
   /// representation for the MachineFunctionInfo.
@@ -258,16 +272,38 @@ public:
   /// assembly.
   const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
-  /// Return the ExceptionHandling to use. A Default model resolves to the
-  /// triple's default; None means exceptions are disabled.
-  ExceptionHandling getExceptionModel() const {
-    return Options.ExceptionModel == ExceptionHandling::Default
-               ? TargetTriple.getDefaultExceptionHandling()
-               : Options.ExceptionModel;
-  }
-
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
+
+  /// Return true if this target can lower exceptions using \p Model. Used to
+  /// guard scheduling of the exception-handling preparation passes.
+  bool supportsExceptionModel(ExceptionHandling Model) const {
+    assert(Model != ExceptionHandling::None && "none is trivially supported");
+    return SupportedExceptionModels & (1u << static_cast<unsigned>(Model));
+  }
+
+  /// Override whether this target can lower exceptions using \p Model. The
+  /// default is derived from the object format and architecture.
+  void setSupportsExceptionModel(ExceptionHandling Model, bool Value = true) {
+    unsigned Bit = 1u << static_cast<unsigned>(Model);
+    SupportedExceptionModels = Value ? SupportedExceptionModels | Bit
+                                     : SupportedExceptionModels & ~Bit;
+  }
+
+  bool supportsDefaultOutlining() const { return SupportsDefaultOutlining; }
+  void setSupportsDefaultOutlining(bool Enable) {
+    SupportsDefaultOutlining = Enable;
+  }
+
+  /// NOTE: There are targets that still do not support the debug entry values
+  /// production.
+  bool shouldEmitDebugEntryValues(DebuggerKind Tuning) const;
+
+  /// Whether the fast register allocator lowers tied operands itself instead
+  /// of running TwoAddressInstructionPass. AMDGPU anchors passes on
+  /// TwoAddressInstructionPassID and cannot enable it.
+  bool enableTiedFastRegAlloc() const { return EnableTiedFastRegAlloc; }
+  void setEnableTiedFastRegAlloc(bool Value) { EnableTiedFastRegAlloc = Value; }
 
   /// Returns the code generation relocation model. The choices are static, PIC,
   /// and dynamic-no-pic, and target default.
@@ -316,11 +352,8 @@ public:
   void setMachineOutliner(bool Enable) {
     Options.EnableMachineOutliner = Enable;
   }
-  void setSupportsDefaultOutlining(bool Enable) {
-    Options.SupportsDefaultOutlining = Enable;
-  }
   void setSupportsDebugEntryValues(bool Enable) {
-    Options.SupportsDebugEntryValues = Enable;
+    SupportsDebugEntryValues = Enable;
   }
   void setEnableDefaultMachineVerifier(bool Enable) {
     Options.EnableDefaultMachineVerifier = Enable;
@@ -466,10 +499,6 @@ public:
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
   MCSymbol *getSymbol(const GlobalValue *GV) const;
-
-  /// The integer bit size to use for SjLj based exception handling.
-  static constexpr unsigned DefaultSjLjDataSize = 32;
-  virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
 
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.

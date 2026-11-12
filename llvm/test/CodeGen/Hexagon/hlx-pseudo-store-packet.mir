@@ -1,0 +1,36 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -run-pass=hexagon-packetizer %s -o - | FileCheck %s
+
+# Keep each HLX store pseudo out of the packet containing the instruction that
+# defines its stored value. Otherwise pseudo expansion creates two definitions
+# of the same HLX register in one packet.
+
+# CHECK: LX_S16b_pseudo $r{{[0-9]+}}, $[[REG0:l([0-9]+)]]
+# CHECK-NOT: [[REG0]] = LX_assign
+# CHECK: }
+# CHECK: LX_S16b_pseudo killed $r{{[0-9]+}}, $[[REG1:l([0-9]+)]]
+# CHECK-NOT: [[REG1]] = LX_add_h
+# CHECK: }
+
+--- |
+  define <1024 x i16> @hlx_store_packet(<1024 x i16> %x) {
+    ret <1024 x i16> %x
+  }
+...
+---
+name:            hlx_store_packet
+tracksRegLiveness: true
+liveins:
+  - { reg: '$l0' }
+body:             |
+  bb.0:
+    liveins: $l0
+
+    $r0 = A2_tfrsi 0
+    renamable $l1 = LX_assign renamable $l0
+    LX_S16b_pseudo $r0, $l1
+    renamable $l2 = LX_add_h renamable $l0, renamable $l1
+    $r0 = A2_addi killed $r0, 2048
+    LX_S16b_pseudo killed $r0, $l2
+    PS_jmpret $r31, implicit-def dead $pc
+...

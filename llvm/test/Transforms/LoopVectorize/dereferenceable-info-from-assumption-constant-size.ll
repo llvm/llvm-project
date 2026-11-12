@@ -13,7 +13,7 @@ define void @deref_assumption_in_header_constant_trip_count(ptr noalias noundef 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4), "dereferenceable"(ptr [[TMP0]], i64 4) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 1
@@ -75,10 +75,9 @@ define void @align_deref_assumption_in_header_constant_trip_count_loop_invariant
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP6]], align 4
@@ -127,7 +126,7 @@ define void @deref_assumption_too_small_in_header_constant_trip_count(ptr noalia
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0]], i64 4), "dereferenceable"(ptr [[TMP0]], i64 2) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 1
@@ -186,7 +185,7 @@ define void @deref_assumption_in_header_constant_trip_count_align_1(ptr noalias 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 4) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 1
@@ -245,7 +244,7 @@ define void @deref_assumption_in_header_constant_trip_count_align_via_arg_attrib
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 4) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 1
@@ -304,7 +303,7 @@ define void @deref_assumption_in_header_constant_trip_count_align_not_known(ptr 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0]], i64 4) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 1
@@ -416,7 +415,7 @@ define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
@@ -478,7 +477,7 @@ define void @deref_assumption_in_header_variable_trip_count(ptr noalias noundef 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, ptr [[A]], <2 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <2 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP1]], i64 4), "dereferenceable"(ptr [[TMP1]], i64 4) ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[WIDE_GEP]], i64 1
@@ -1182,9 +1181,9 @@ define void @deref_assumption_in_header_constant_trip_count_multiple_loop_predec
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP0]], <2 x i1> [[TMP2]], <2 x i32> poison)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[WIDE_MASKED_LOAD]], <2 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

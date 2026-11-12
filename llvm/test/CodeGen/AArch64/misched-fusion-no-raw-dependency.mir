@@ -19,7 +19,6 @@
 # CHECK: ExitSU: CBZW
 ---
 name: live_out_exit_su_no_raw
-tracksRegLiveness: true
 isSSA: false
 noVRegs: true
 body: |

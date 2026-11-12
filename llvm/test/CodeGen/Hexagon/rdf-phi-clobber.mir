@@ -1,5 +1,5 @@
 # RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt \
-# RUN: -hexagon-rdf-dump -verify-machineinstrs -o /dev/null %s 2>&1 \
+# RUN: -hexagon-rdf-dump -o /dev/null %s 2>&1 \
 # RUN: | FileCheck %s
 
 # Check that phi nodes that only have clobbering reaching defs are not created
@@ -27,7 +27,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false

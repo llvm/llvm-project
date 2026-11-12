@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -40,9 +41,10 @@ using namespace clang::interp;
 // On MSVC, musttail does not guarantee tail calls in debug mode.
 // We disable it on MSVC generally since it doesn't seem to be able
 // to handle the way we use tailcalls.
-// PPC can't tail-call external calls, which is a problem for InterpNext.
+// MIPS and PPC can't tail-call external calls, which is a problem for
+// InterpNext.
 #if defined(_MSC_VER) || defined(__powerpc__) || !defined(MUSTTAIL) ||         \
-    defined(__i386__) || defined(__sparc__)
+    defined(__i386__) || defined(__sparc__) || defined(__mips__)
 #undef MUSTTAIL
 #define MUSTTAIL
 #define USE_TAILCALLS 0
@@ -93,34 +95,6 @@ static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.FFDiag(E, diag::note_constexpr_var_init_unknown, 1) << VD;
   S.Note(VD->getLocation(), diag::note_declared_at) << VD->getSourceRange();
-}
-
-static void noteValueLocation(InterpState &S, const Block *B) {
-  const Descriptor *Desc = B->getDescriptor();
-
-  if (B->isDynamic())
-    S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
-  else if (B->isTemporary())
-    S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
-  else
-    S.Note(Desc->getLocation(), diag::note_declared_at);
-}
-
-static void noteValueLocation(InterpState &S, const Pointer &Ptr) {
-  if (Ptr.isBlockPointer()) {
-    const Block *B = Ptr.block();
-    const Descriptor *Desc = B->getDescriptor();
-    if (B->isDynamic())
-      S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
-    else if (B->isTemporary())
-      S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
-    else
-      S.Note(Desc->getLocation(), diag::note_declared_at);
-    return;
-  }
-
-  if (Ptr.isOpaquePointer())
-    S.Note(Ptr.asOpaquePointer().Base.getLocation(), diag::note_declared_at);
 }
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
@@ -225,10 +199,52 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
+static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (auto ID = Ptr.getDeclID()) {
+    if (!Ptr.isStatic())
+      return true;
+
+    if (S.P.getCurrentDecl() == ID)
+      return true;
+
+    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
+    return false;
+  }
+  return true;
+}
+
+namespace clang {
+namespace interp {
+
+static void noteValueLocation(InterpState &S, const Block *B) {
+  const Descriptor *Desc = B->getDescriptor();
+
+  if (B->isDynamic())
+    S.Note(Desc->getLocation(), diag::note_constexpr_dynamic_alloc_here);
+  else if (B->isTemporary())
+    S.Note(Desc->getLocation(), diag::note_constexpr_temporary_here);
+  else
+    S.Note(Desc->getLocation(), diag::note_declared_at);
+}
+
+void noteValueLocation(InterpState &S, const Pointer &Ptr) {
+  if (Ptr.isBlockPointer()) {
+    noteValueLocation(S, Ptr.block());
+    return;
+  }
+
+  if (Ptr.isOpaquePointer())
+    S.Note(Ptr.asOpaquePointer().Base.getLocation(), diag::note_declared_at);
+
+  if (Ptr.isStringPointer())
+    S.Note(Ptr.asStringPointer().getLiteral(),
+           diag::note_constexpr_temporary_here);
+}
+
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
                            AccessKinds AK) {
   if (B->getDeclID()) {
-    if (!(B->isStatic() && B->isTemporary()))
+    if (!(B->isGlobal() && B->isTemporary()))
       return true;
 
     const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(
@@ -251,7 +267,6 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
 
   return true;
 }
-
 static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   if (!Ptr.isBlockPointer())
@@ -259,22 +274,6 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return CheckTemporary(S, OpPC, Ptr.block(), AK);
 }
 
-static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (auto ID = Ptr.getDeclID()) {
-    if (!Ptr.isStatic())
-      return true;
-
-    if (S.P.getCurrentDecl() == ID)
-      return true;
-
-    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_modify_global);
-    return false;
-  }
-  return true;
-}
-
-namespace clang {
-namespace interp {
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
                               PrimType PT);
 
@@ -338,16 +337,6 @@ void cleanupAfterFunctionCall(InterpState &S, const Function *Func) {
     S.Stk.discard<Pointer>();
   if (Func->hasRVO())
     S.Stk.discard<Pointer>();
-}
-
-bool isConstexprUnknown(const Block *B) {
-  return B->getDescriptor()->IsConstexprUnknown;
-}
-
-bool isConstexprUnknown(const Pointer &P) {
-  if (!P.isBlockPointer() || P.isZero())
-    return false;
-  return isConstexprUnknown(P.block());
 }
 
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
@@ -597,7 +586,7 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
   if (S.checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl()))
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
-  if (!Ptr.block()->isStatic())
+  if (!Ptr.block()->isGlobal())
     return true;
   if (!Ptr.block()->getDeclID())
     return true;
@@ -633,33 +622,6 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
       << CSK << S.Current->getRange(OpPC);
-  return false;
-}
-
-bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   uint32_t Offset) {
-  uint32_t MinOffset = Ptr.block()->getMetadataSize();
-  uint32_t PtrOffset = Ptr.getByteOffset();
-
-  // We subtract Offset from PtrOffset. The result must be at least
-  // MinOffset.
-  if (Offset < PtrOffset && (PtrOffset - Offset) >= MinOffset)
-    return true;
-
-  const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-  QualType ExprTy = E->getType();
-  if (ExprTy->isPointerOrReferenceType())
-    ExprTy = ExprTy->getPointeeType();
-
-  QualType TargetQT = ExprTy;
-  QualType MostDerivedQT = Ptr.getDeclPtr().getType();
-
-  if (MostDerivedQT->isPointerOrReferenceType())
-    MostDerivedQT = MostDerivedQT->getPointeeType();
-
-  S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << MostDerivedQT << TargetQT;
-
   return false;
 }
 
@@ -902,7 +864,9 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   if (!B->isAccessible()) {
     if (!CheckExtern(S, OpPC, B))
       return false;
-    return CheckWeak(S, OpPC, B);
+    if (!CheckWeak(S, OpPC, B))
+      return false;
+    return false;
   }
 
   if (!CheckConstant(S, OpPC, B->getDescriptor()))
@@ -928,11 +892,12 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
 // Similarly, for local loads.
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
-  const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
+  const auto &Desc = B->getBlockDesc<LocalInlineDescriptor>();
   const Descriptor *BlockDesc = B->getDescriptor();
   if (!Desc.IsInitialized)
-    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
-  if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
+    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B,
+                                 Desc.getLifetime());
+  if (!CheckLifetime(S, OpPC, Desc.getLifetime(), B, AK_Read))
     return false;
   if (BlockDesc->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
@@ -984,7 +949,9 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
     }
     if (!CheckExtern(S, OpPC, Ptr.block()))
       return false;
-    return CheckWeak(S, OpPC, Ptr.block());
+    if (!CheckWeak(S, OpPC, Ptr.block()))
+      return false;
+    return false;
   }
 
   if (!CheckConstant(S, OpPC, Ptr, AK))
@@ -1004,8 +971,6 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   if (!CheckMutable(S, OpPC, Ptr, AK))
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK))
-    return false;
-  if (isConstexprUnknown(Ptr.block()))
     return false;
 
   if (!Ptr.isArrayRoot()) {
@@ -1053,7 +1018,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   // Block and string pointers are the only ones we can actually read from.
-  if (!Ptr.isReadablePointerType())
+  if (!Ptr.isStringPointer())
     return diagnoseDummy(S, OpPC, Ptr, AK);
 
   assert(Ptr.isStringPointer());
@@ -1079,8 +1044,13 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
-    return CheckWeak(S, OpPC, Ptr.block());
+    if (!CheckWeak(S, OpPC, Ptr.block()))
+      return false;
+    return false;
   }
+
+  if (Ptr.isPastEnd())
+    return false;
 
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
@@ -1098,8 +1068,6 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     if (!CheckMutable(S, OpPC, Ptr.view()))
       return false;
   }
-  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-    return false;
   return true;
 }
 
@@ -1117,7 +1085,9 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
-    return CheckExtern(S, OpPC, Ptr);
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
+    return false;
   }
   if (!WillBeActivated && !CheckLifetime(S, OpPC, Ptr, AK))
     return false;
@@ -1133,14 +1103,12 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckMutable(S, OpPC, Ptr.view(), AK))
     return false;
-  if (isConstexprUnknown(Ptr))
-    return false;
   return true;
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                         bool IsCtor, bool IsDtor) {
-  if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
+  if (!Ptr.isDummy() && !Ptr.isConstexprUnknown()) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
@@ -1268,7 +1236,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 }
 
 static bool CheckCallDepth(InterpState &S, CodePtr OpPC) {
-  if ((S.Current->getDepth() + 1) > S.getLangOpts().ConstexprCallDepth) {
+  if ((S.FrameDepth + 1) > S.getLangOpts().ConstexprCallDepth) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_depth_limit_exceeded)
         << S.getLangOpts().ConstexprCallDepth;
@@ -1381,20 +1349,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr) {
-  if (!Ptr.isBlockPointer() && !Ptr.isOpaquePointer())
-    return false;
-  // Regular new type(...) call.
-  if (isa_and_nonnull<CXXNewExpr>(Source))
-    return true;
-  // operator new.
-  if (const auto *CE = dyn_cast_if_present<CallExpr>(Source);
-      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_operator_new)
-    return true;
-  // std::allocator.allocate() call
-  if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(Source);
-      MCE && MCE->getMethodDecl()->getIdentifier()->isStr("allocate"))
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
     return true;
 
   // Whatever this is, we didn't heap allocate it.
@@ -1560,7 +1516,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return true;
 
     if (!Ptr.isBlockPointer())
-      return CheckDeleteSource(S, OpPC, nullptr, Ptr);
+      return CheckDeleteSource(S, OpPC, Ptr);
 
     // Remove base casts.
     QualType InitialType = Ptr.getType();
@@ -1599,7 +1555,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       return false;
     }
 
-    if (!CheckDeleteSource(S, OpPC, Source, Ptr))
+    if (!CheckDeleteSource(S, OpPC, Ptr))
       return false;
 
     // For a class type with a virtual destructor, the selected operator delete
@@ -1860,8 +1816,9 @@ bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK) {
   return getBase(S, OpPC, Ptr.narrow(), Off, NullOK);
 }
 
-bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
-                      const Type *TargetType) {
+// Do ONE step of a BaseToDerived cast.
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, bool NullOK,
+                      const Type *TargetType, const Type *FinalType) {
   const Pointer &Ptr = S.Stk.pop<Pointer>().narrow();
   if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
     return false;
@@ -1881,21 +1838,31 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
 
   if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
     return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
-    return false;
 
-  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
-  assert(TargetRecord);
-
-  if (TargetRecord->getDecl()->getCanonicalDecl() !=
-      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
+  auto diagFailedCast = [&]() -> bool {
     QualType MostDerivedType = Ptr.getDeclDesc()->getType();
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
-        << MostDerivedType << QualType(TargetType, 0);
+        << MostDerivedType << QualType(FinalType, 0);
     return false;
-  }
+  };
 
-  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
+  // We're casting down one level, which isn't possible if the pointer is
+  // already the root.
+  if (Ptr.isRoot())
+    return diagFailedCast();
+
+  auto unwrapPointerType = [](QualType T) -> const Type * {
+    if (T->isPointerOrReferenceType())
+      return T->getPointeeType().getTypePtr();
+    return T.getTypePtr();
+  };
+
+  PtrView BasePtr = Ptr.view().getBase();
+  const Type *BaseTy = unwrapPointerType(BasePtr.getType());
+  if (!ASTContext::hasSameType(BaseTy, TargetType))
+    return diagFailedCast();
+
+  S.Stk.push<Pointer>(BasePtr);
   return true;
 }
 
@@ -1957,8 +1924,16 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (S.checkingConstantDestruction(Ptr))
     return true;
 
+  // String pointers are immutable, so can't call a destructor on them.
+  if (Ptr.isStringPointer()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_access_unreadable_object)
+        << AK_Destroy << Ptr.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   // Can't call a dtor on a global variable.
-  if (Ptr.isOpaquePointer() || Ptr.block()->isStatic()) {
+  if (Ptr.isOpaquePointer() || Ptr.block()->isGlobal()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_modify_global);
     return false;
@@ -1968,7 +1943,7 @@ bool checkDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 /// Opcode. Check if the function decl can be called at compile time.
 bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
-  if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
+  if (S.checkingPotentialConstantExpression() && !S.Current->isBottomFrame())
     return false;
 
   const FunctionDecl *Definition = nullptr;
@@ -2074,9 +2049,25 @@ bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
   return true;
 }
 
-static void compileFunction(InterpState &S, const Function *Func) {
+static void compileFunction(InterpState &S, const Function *Func,
+                            CodePtr OpPC) {
+  const FunctionDecl *Fn = Func->getDecl();
+
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+  if (FunctionDefinitionCanBeLazilyInstantiated(Fn) && S.inConstantContext()) {
+    SemaProxy *SProxy = S.getSemaProxy();
+    if (!SProxy)
+      return;
+    SProxy->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
+                                          const_cast<FunctionDecl *>(Fn));
+  }
+
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->hasBody(Definition))
+  if (!Fn->hasBody(Definition))
     return;
   if (!Definition)
     return;
@@ -2109,7 +2100,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -2118,11 +2109,11 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
 
   InterpFrame *NewFrame = S.allocFrame(Func, S.PC, VarArgSize);
-  S.Current = NewFrame;
+  S.enterFrame(NewFrame);
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
-  S.resetCurrentFrame();
+  S.exitFrame();
   return Success;
 }
 
@@ -2188,7 +2179,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -2203,7 +2194,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     return cleanup();
 
   InterpFrame *NewFrame = S.allocFrame(Func, S.PC, VarArgSize);
-  S.Current = NewFrame;
+  S.enterFrame(NewFrame);
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
@@ -2211,7 +2202,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (InstancePtrTracked)
     S.InitializingPtrs.pop_back();
 
-  S.resetCurrentFrame();
+  S.exitFrame();
   return Success;
 }
 
@@ -2260,7 +2251,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   QualType DynamicType = TypePtr.getType();
-  if (TypePtr.Pointee->isStatic() || TypePtr.isConst()) {
+  if (TypePtr.Pointee->isGlobal() || TypePtr.isConst()) {
     if (const VarDecl *VD = Pointer(TypePtr).getRootVarDecl();
         VD && !VD->isConstexpr())
       return diagUnknownDynamicType(Pointer(TypePtr));
@@ -2418,7 +2409,7 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   {
     CXXBasePaths Paths;
     getRecord(LimitedPtr)
-        ->isDerivedFrom(TargetType->getAsCXXRecordDecl(), Paths);
+        ->isDerivedFrom(TargetType->castAsCXXRecordDecl(), Paths);
     if (std::distance(Paths.begin(), Paths.end()) == 0 &&
         !typesMatch(LimitedPtr.getType(), TargetType)) {
       return diag(DiagNoBase, TargetType);
@@ -2550,7 +2541,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     Func = S.getContext().getOrCreateFunction(Overrider);
 
     const CXXRecordDecl *ThisFieldDecl =
-        ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
+        ThisPtr.getFieldDesc()->getType()->castAsCXXRecordDecl();
     if (Func->getParentDecl()->isDerivedFrom(ThisFieldDecl)) {
       // If the function we call is further DOWN the hierarchy than the
       // FieldDesc of our pointer, just go up the hierarchy of this field
@@ -2644,7 +2635,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // because the Call/CallVirt below might access the instance pointer
   // but the Function's information about them is wrong.
   if (!F->isFullyCompiled())
-    compileFunction(S, F);
+    compileFunction(S, F, OpPC);
 
   if (!CheckCallable(S, OpPC, F))
     return false;
@@ -2883,8 +2874,6 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
     return false;
   if (!CheckConst(S, OpPC, Ptr))
     return false;
-  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
-    return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
   const ASTContext &ASTCtx = S.getASTContext();
@@ -3000,7 +2989,7 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  if (Ptr.isBlockPointer() && !Ptr.isZero())
+  if ((Ptr.isBlockPointer() && !Ptr.isZero()) || Ptr.isOpaquePointer())
     S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;
@@ -3068,12 +3057,12 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
 }
 
 bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
-  if (isConstexprUnknown(B)) {
+  if (B->isConstexprUnknown()) {
     S.Stk.push<Pointer>(B);
     return true;
   }
 
-  const auto &ID = B->getBlockDesc<const InlineDescriptor>();
+  const auto &ID = B->getBlockDesc<LocalInlineDescriptor>();
   if (!ID.IsInitialized) {
     if (!S.checkingPotentialConstantExpression())
       S.FFDiag(S.Current->getSource(OpPC),
@@ -3313,20 +3302,16 @@ bool FinishInitGlobal(InterpState &S) {
     return true;
 
   finishGlobalRecurse(S, Ptr.view());
-  if (Ptr.canBeInitialized()) {
-    Ptr.initialize();
-    Ptr.activate();
-  }
+  Ptr.initialize();
+  Ptr.activate();
 
   return true;
 }
 
 bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-
   switch (Kind) {
   case CastKind::Reinterpret:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3336,16 +3321,17 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     assert(!Fatal);
     return true;
   case CastKind::ReinterpretLike:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
     return !Fatal;
   case CastKind::Volatile:
     if (!S.checkingPotentialConstantExpression()) {
-      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-      if (S.getLangOpts().CPlusPlus)
+      const auto *E = S.Current->getExpr(OpPC);
+      const auto *CE = dyn_cast<CastExpr>(E);
+      if (CE && S.getLangOpts().CPlusPlus)
         S.FFDiag(E, diag::note_constexpr_access_volatile_type)
-            << AK_Read << E->getSubExpr()->getType();
+            << AK_Read << CE->getSubExpr()->getType();
       else
         S.FFDiag(E);
     }
@@ -3353,7 +3339,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     return false;
   case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }
@@ -3371,7 +3357,7 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
     if (!LocalBlock->isInitialized())
       continue;
 
-    if (LocalBlock->getBlockDesc<InlineDescriptor>().LifeState ==
+    if (LocalBlock->getBlockDesc<LocalInlineDescriptor>().getLifetime() ==
         Lifetime::Ended) {
       const Pointer Ptr = S.Current->getLocalPointer(Local.Offset);
       return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
@@ -3735,12 +3721,8 @@ bool Memcpy(InterpState &S, CodePtr OpPC) {
   if (!Dest.isBlockPointer())
     return false;
 
-  if ((Src.getRecord() && Src.getRecord()->isUnion() &&
-       !Src.getRecord()->isAnonymousUnion()) ||
-      Src.inUnion()) {
-    if (!CheckLoad(S, OpPC, Src))
-      return false;
-  }
+  if (!CheckLoad(S, OpPC, Src))
+    return false;
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }
@@ -3792,7 +3774,7 @@ bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
          Op == OP_RetSint64 || Op == OP_RetUint64 || Op == OP_RetIntAP ||
          Op == OP_RetIntAPS || Op == OP_RetBool || Op == OP_RetFixedPoint ||
          Op == OP_RetPtr || Op == OP_RetMemberPtr || Op == OP_RetFloat ||
-         Op == OP_EndSpeculation;
+         Op == OP_RetReflect || Op == OP_EndSpeculation;
 }
 
 #if USE_TAILCALLS

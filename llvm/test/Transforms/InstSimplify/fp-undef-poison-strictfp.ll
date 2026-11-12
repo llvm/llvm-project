@@ -911,6 +911,251 @@ define float @fma_poison_op2_defaultfp(float %x, float %y) #0 {
   ret float %r
 }
 
+;
+; constrained intrinsics propagating poison
+;
+
+define float @acos_poison_op0() #0 {
+; CHECK-LABEL: @acos_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.acos.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @acos_poison_op0_strict() #0 {
+; CHECK-LABEL: @acos_poison_op0_strict(
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.acos.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.acos.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %r
+}
+
+define float @asin_poison_op0() #0 {
+; CHECK-LABEL: @asin_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.asin.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @atan_poison_op0() #0 {
+; CHECK-LABEL: @atan_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.atan.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @atan2_poison_op0(float %x) #0 {
+; CHECK-LABEL: @atan2_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.atan2.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @ceil_poison_op0() #0 {
+; CHECK-LABEL: @ceil_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.ceil.f32(float poison, metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @cos_poison_op0() #0 {
+; CHECK-LABEL: @cos_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.cos.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @cosh_poison_op0() #0 {
+; CHECK-LABEL: @cosh_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.cosh.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @exp_poison_op0() #0 {
+; CHECK-LABEL: @exp_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.exp.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @exp2_poison_op0() #0 {
+; CHECK-LABEL: @exp2_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.exp2.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @floor_poison_op0() #0 {
+; CHECK-LABEL: @floor_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.floor.f32(float poison, metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @fma_poison_op0(float %x, float %y) #0 {
+; CHECK-LABEL: @fma_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.fma.f32(float poison, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @fmuladd_poison_op0(float %x, float %y) #0 {
+; CHECK-LABEL: @fmuladd_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.fmuladd.f32(float poison, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @log_poison_op0() #0 {
+; CHECK-LABEL: @log_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.log.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @log10_poison_op0() #0 {
+; CHECK-LABEL: @log10_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.log10.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @log2_poison_op0() #0 {
+; CHECK-LABEL: @log2_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.log2.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @nearbyint_poison_op0() #0 {
+; CHECK-LABEL: @nearbyint_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.nearbyint.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @pow_poison_op0(float %x) #0 {
+; CHECK-LABEL: @pow_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.pow.f32(float poison, float %x, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @powi_poison_op0(i32 %y) #0 {
+; CHECK-LABEL: @powi_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.powi.f32(float poison, i32 %y, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @rint_poison_op0() #0 {
+; CHECK-LABEL: @rint_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.rint.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @round_poison_op0() #0 {
+; CHECK-LABEL: @round_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.round.f32(float poison, metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @roundeven_poison_op0() #0 {
+; CHECK-LABEL: @roundeven_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.roundeven.f32(float poison, metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @sin_poison_op0() #0 {
+; CHECK-LABEL: @sin_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.sin.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @sinh_poison_op0() #0 {
+; CHECK-LABEL: @sinh_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.sinh.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @sqrt_poison_op0() #0 {
+; CHECK-LABEL: @sqrt_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.sqrt.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @tan_poison_op0() #0 {
+; CHECK-LABEL: @tan_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.tan.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @tanh_poison_op0() #0 {
+; CHECK-LABEL: @tanh_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.tanh.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define float @trunc_poison_op0() #0 {
+; CHECK-LABEL: @trunc_poison_op0(
+; CHECK-NEXT:    ret float poison
+;
+  %r = call float @llvm.experimental.constrained.trunc.f32(float poison, metadata !"fpexcept.ignore")
+  ret float %r
+}
+
+define i32 @lrint_poison_op0() #0 {
+; CHECK-LABEL: @lrint_poison_op0(
+; CHECK-NEXT:    ret i32 poison
+;
+  %r = call i32 @llvm.experimental.constrained.lrint.i32.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret i32 %r
+}
+
+define i64 @llrint_poison_op0() #0 {
+; CHECK-LABEL: @llrint_poison_op0(
+; CHECK-NEXT:    ret i64 poison
+;
+  %r = call i64 @llvm.experimental.constrained.llrint.i64.f32(float poison, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret i64 %r
+}
+
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)

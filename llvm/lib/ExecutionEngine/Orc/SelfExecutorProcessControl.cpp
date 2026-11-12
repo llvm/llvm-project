@@ -135,7 +135,7 @@ SelfExecutorProcessControl::jitDispatchViaWrapperFunctionManager(
   auto ResultF = ResultP.get_future();
   static_cast<SelfExecutorProcessControl *>(Ctx)
       ->getExecutionSession()
-      .runJITDispatchHandler(
+      .runCallControllerHandler(
           [ResultP = std::move(ResultP)](
               shared::WrapperFunctionBuffer Result) mutable {
             ResultP.set_value(std::move(Result));
@@ -166,12 +166,20 @@ void SelfExecutorProcessControl::InProcessDylibManager::lookupSymbolsAsync(
   tpctypes::LookupResult R;
 
   sys::DynamicLibrary Dylib(H.toPtr<void *>());
-  for (auto &KV : Symbols) {
-    auto &Sym = KV.first;
-    std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
-                    (*Sym).size() - !!GlobalManglingPrefix);
-    void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
-    if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
+  for (auto &[Name, Flags] : Symbols) {
+    StringRef LookupName = *Name;
+
+    // Check for and strip the global mangling prefix.
+    if (GlobalManglingPrefix) {
+      if (LookupName.empty() || LookupName.front() != GlobalManglingPrefix) {
+        R.emplace_back();
+        continue;
+      }
+      LookupName = LookupName.drop_front();
+    }
+
+    void *Addr = Dylib.getAddressOfSymbol(LookupName.str().c_str());
+    if (!Addr && Flags == SymbolLookupFlags::RequiredSymbol)
       R.emplace_back();
     else
       R.emplace_back(ExecutorAddr::fromPtr(Addr));

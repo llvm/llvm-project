@@ -16,7 +16,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/RegionPass.h"
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -74,9 +73,20 @@ static codegen::RegisterCodeGenFlags CFG;
 static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
-// The OptimizationList is automatically populated with registered Passes by the
-// PassNameParser.
-static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+static bool shouldPinPassToLegacyPM(StringRef Pass);
+
+namespace {
+// Register only the passes that the legacy pipeline accepts, so other pass
+// names do not occupy option spellings.
+struct PinnedPassNameParser : PassNameParser {
+  using PassNameParser::PassNameParser;
+  bool ignorablePassImpl(const PassInfo *P) const override {
+    return !shouldPinPassToLegacyPM(P->getPassArgument());
+  }
+};
+} // namespace
+
+static cl::list<const PassInfo *, bool, PinnedPassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
 // This flag specifies a textual description of the optimization pass pipeline
@@ -394,14 +404,12 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   return llvm::is_contained(PassNameExact, Pass);
 }
 
-// For use in NPM transition.
-static bool shouldForceLegacyPM() {
-  for (const PassInfo *P : PassList) {
-    StringRef Arg = P->getPassArgument();
-    if (shouldPinPassToLegacyPM(Arg))
-      return true;
-  }
-  return false;
+static void printPassNameSyntaxError() {
+  errs() << "The `opt -passname` syntax for the new pass manager is "
+            "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
+            "alias for a more concise version).\n";
+  errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
+            "for more details on the pass pipeline syntax.\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -431,7 +439,6 @@ optMain(int argc, char **argv,
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandIRInstsLegacyPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeInlineAsmPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
@@ -445,7 +452,6 @@ optMain(int argc, char **argv,
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
-  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeWasmEHPreparePass(Registry);
@@ -453,37 +459,43 @@ optMain(int argc, char **argv,
   initializeReplaceWithVeclibLegacyPass(Registry);
   initializeJMCInstrumenterPass(Registry);
 
-  SmallVector<PassPluginLibraryInfo, 0> Extensions;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    Extensions.push_back(Plugin->getInfo());
-  });
-
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
 
-  cl::ParseCommandLineOptions(
-      argc, argv, "llvm .bc -> .bc modular optimizer and analysis printer\n");
+  LLVMContext Context;
+  if (!cl::parseCommandLineOptions(
+          Context.getLibraryOptions(), ArrayRef(argv, argc),
+          "llvm .bc -> .bc modular optimizer and analysis printer\n",
+          &errs())) {
+    // Unpinned pass names are not options; point `opt -passname` users to
+    // -passes.
+    if (any_of(ArrayRef(argv + 1, argc - 1), [&](StringRef Arg) {
+          if (!Arg.consume_front("-"))
+            return false;
+          Arg.consume_front("-");
+          Arg = Arg.split('=').first;
+          return Registry.getPassInfo(Arg) && !shouldPinPassToLegacyPM(Arg);
+        }))
+      printPassNameSyntaxError();
+    return 1;
+  }
 
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
+  for (const std::string &Path : PassPlugins) {
+    auto Plugin = PassPlugin::load(Path);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    Extensions.push_back(Plugin->getInfo());
+  }
 #define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
 #include "llvm/Support/Extension.def"
   if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
 
-  LLVMContext Context;
-
-  // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM =
-      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
-    errs() << "The `opt -passname` syntax for the new pass manager is "
-              "not supported, please use `opt -passes=<pipeline>` (or the `-p` "
-              "alias for a more concise version).\n";
-    errs() << "See https://llvm.org/docs/NewPassManager.html#invoking-opt "
-              "for more details on the pass pipeline syntax.\n\n";
+    printPassNameSyntaxError();
     return 1;
   }
 
@@ -497,7 +509,7 @@ optMain(int argc, char **argv,
   // construct the PassBuilder before parsing IR so we can reuse the same
   // PassBuilder for print passes.
   if (PrintPasses) {
-    printPasses(outs());
+    printPasses(Context, outs());
     return 0;
   }
 
@@ -525,7 +537,7 @@ optMain(int argc, char **argv,
     // Pass "help" as CPU for -mtune=help
     std::string SkipModuleCPU = (TuneCPUStr == "help" ? "help" : CPUStr);
     TargetOptions Options =
-        codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), TheTriple);
     // Create the target machine just to print the help info. Use unique_ptr
     // to avoid a memory leak.
     std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
@@ -563,7 +575,8 @@ optMain(int argc, char **argv,
 
   codegen::MaybeEnableStatistics();
 
-  StringRef ABIName = mc::getABIName(); // FIXME: Handle module flag.
+  StringRef ABIName =
+      mc::getABIName(Context.getLibraryOptions()); // FIXME: Handle module flag.
 
   // Load the input module...
   auto SetDataLayout = [&](StringRef IRTriple,
@@ -699,8 +712,8 @@ optMain(int argc, char **argv,
     TuneCPUStr = codegen::getTuneCPUStr();
     FeaturesStr = codegen::getFeaturesStr();
     Expected<std::unique_ptr<TargetMachine>> ExpectedTM =
-        codegen::createTargetMachineForTriple(ModuleTriple,
-                                              GetCodeGenOptLevel());
+        codegen::createTargetMachineForTriple(
+            Context.getLibraryOptions(), ModuleTriple, GetCodeGenOptLevel());
     if (auto E = ExpectedTM.takeError()) {
       errs() << argv[0] << ": WARNING: failed to create target machine for '"
              << ModuleTriple.str() << "': " << toString(std::move(E)) << "\n";
@@ -718,7 +731,7 @@ optMain(int argc, char **argv,
   const TargetOptions *Options = TM ? &TM->Options : &CodeGenFlagsOptions;
   if (!TM) {
     CodeGenFlagsOptions =
-        codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
+        codegen::getTargetOptions(Context.getLibraryOptions(), ModuleTriple);
   }
 
   // Override function attributes based on CPUStr, TuneCPUStr, FeaturesStr, and

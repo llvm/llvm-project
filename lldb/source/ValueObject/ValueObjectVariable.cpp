@@ -21,6 +21,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -170,8 +171,18 @@ bool ValueObjectVariable::UpdateValue() {
       m_value.SetContext(Value::ContextType::Variable, variable);
 
       CompilerType compiler_type = GetCompilerType();
-      if (compiler_type.IsValid())
+      if (compiler_type.IsValid()) {
         m_value.SetCompilerType(compiler_type);
+
+        if (lldb::ProcessSP process_sp = GetProcessSP())
+          if (LanguageRuntime *runtime = process_sp->GetLanguageRuntime(
+                  compiler_type.GetMinimumLanguage()))
+            if (llvm::Error err =
+                    runtime->FixupVariableLocation(*variable, m_value)) {
+              m_error = Status::FromError(std::move(err));
+              return false;
+            }
+      }
 
       Value::ValueType value_type = m_value.GetValueType();
 

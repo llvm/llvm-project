@@ -961,6 +961,16 @@ func.func @contraction(%arg0: vector<7x8x16x15xf32>, %arg1: vector<8x16x7x5xf32>
 
 // -----
 
+func.func @contraction_scalar_acc_0d_result(%arg0: vector<10xf32>, %arg1: vector<10xf32>, %acc: f32) {
+  // expected-error@+1 {{expected same accumulator and result type}}
+  %0 = "vector.contract"(%arg0, %arg1, %acc) <{
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
+    iterator_types = [#vector.iterator_type<reduction>],
+    kind = #vector.kind<add>}> : (vector<10xf32>, vector<10xf32>, f32) -> vector<f32>
+}
+
+// -----
+
 #contraction_accesses = [
   affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
   affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
@@ -1021,17 +1031,17 @@ func.func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: ve
 
 // -----
 
-func.func @contract_with_dim_unused_by_lhs_and_rhs(%arg0 : vector<1x2xi32>, %arg1 : vector<2xi32>, %arg2 : vector<1xi32>) -> vector<1xi32> {
+func.func @contract_with_dim_unused_by_lhs_and_rhs(%arg0 : vector<1x2xi32>, %arg1 : vector<1x2xi32>, %arg2 : vector<1x3xi32>) -> vector<1x3xi32> {
 // expected-error@+1 {{'vector.contract' op expected all dimensions to be either a LHS or a RHS dimension}}
   %result = vector.contract {
     indexing_maps = [
-      affine_map<(d0, d1, d2) -> (d0, d2)>,
-      affine_map<(d0, d1, d2) -> (d2)>,
-      affine_map<(d0, d1, d2) -> (d1)>
+      affine_map<(d0, d1, d2) -> (d0, d1)>,
+      affine_map<(d0, d1, d2) -> (d0, d1)>,
+      affine_map<(d0, d1, d2) -> (d0, d2)>
     ],
-    iterator_types = ["reduction", "parallel", "reduction"],
-    kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2xi32> into vector<1xi32>
-  return  %result : vector<1xi32>
+    iterator_types = ["parallel", "reduction", "parallel"],
+    kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<1x2xi32> into vector<1x3xi32>
+  return  %result : vector<1x3xi32>
 }
 
 // -----
@@ -1060,6 +1070,27 @@ func.func @contraction_invalid_kind(%arg0: vector<4x3xf32>,
   // expected-error@+1 {{expected 'kind' attribute of type CombiningKind (e.g. 'vector.kind<add>')}}
   %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
     : vector<4x3xf32>, vector<3x7xf32> into vector<4x7xf32>
+  return
+}
+
+// -----
+
+#contraction_accesses = [
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (j)>,
+        affine_map<(i, j, k) -> (i, j)>
+      ]
+#contraction_trait = {
+        kind = "add",
+        indexing_maps = #contraction_accesses,
+        iterator_types = ["parallel", "parallel", "reduction"]
+      }
+func.func @contraction_one_sided_reduction(%arg0: vector<4x3xf32>,
+                                           %arg1: vector<7xf32>,
+                                           %arg2: vector<4x7xf32>) {
+  // expected-error @+1 {{reduction dim at index 2 must appear in both LHS and RHS}}
+  %0 = vector.contract #contraction_trait %arg0, %arg1, %arg2
+    : vector<4x3xf32>, vector<7xf32> into vector<4x7xf32>
   return
 }
 
@@ -2164,7 +2195,7 @@ func.func @deinterleave_n_dim_rank_fail(%vec : vector<2x3x4xf32>) {
 // -----
 
 func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
-  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {resultEven, resultOdd} have same type}}
   %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<2x[1]xf32>)
   return
 }
@@ -2172,7 +2203,7 @@ func.func @deinterleave_scalable_dim_size_fail(%vec : vector<2x[4]xf32>) {
 // -----
 
 func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
-  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {res1, res2} have same type}}
+  // expected-error @+1 {{'vector.deinterleave' op failed to verify that all of {resultEven, resultOdd} have same type}}
   %0, %1 = "vector.deinterleave" (%vec) : (vector<2x[4]xf32>) -> (vector<2x[2]xf32>, vector<[2]xf32>)
   return
 }
@@ -2213,7 +2244,7 @@ func.func @from_elements_wrong_operand_type(%a: f32, %b: i32) {
 // -----
 
 func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
-  // expected-error @+1 {{'dest' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
+  // expected-error @+1 {{'result' must be fixed-length vector of any non-token type values, but got 'vector<[2]xf32>'}}
   vector.from_elements %a, %b : vector<[2]xf32>
   return
 }

@@ -306,7 +306,7 @@ define <4 x i16> @fix_double_to_i16(<4 x double> %in) {
 ; CHECK-NEXT:    vmov.32 d16[1], r0
 ; CHECK-NEXT:    vmov r0, s6
 ; CHECK-NEXT:    vmov.32 d17[1], r0
-; CHECK-NEXT:    vuzp.16 d16, d17
+; CHECK-NEXT:    vmovn.i32 d16, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 

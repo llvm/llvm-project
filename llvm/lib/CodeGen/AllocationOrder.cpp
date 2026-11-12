@@ -53,14 +53,14 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   auto Order = RegClassInfo.getOrder(MF.getRegInfo().getRegClass(VirtReg));
+  // Get Hints.
+  SmallSetVector<MCPhysReg, 16> Hints;
+  bool HardHints =
+      TRI->getRegAllocationHints(VirtReg, Order, Hints, MF, &VRM, Matrix);
 
   // HintsAndCustomOrder holds Hints first followed by the custom order if the
   // anti-hints reorders it.
-  SmallVector<MCPhysReg, 16> HintsAndCustomOrder;
-
-  // Get Hints.
-  bool HardHints = TRI->getRegAllocationHints(
-      VirtReg, Order, HintsAndCustomOrder, MF, &VRM, Matrix);
+  SmallVector<MCPhysReg, 16> HintsAndCustomOrder = Hints.takeVector();
   const int NumHints = static_cast<int>(HintsAndCustomOrder.size());
 
   // HintsAndCustomOrder only holds Hints (custom order is not added yet).

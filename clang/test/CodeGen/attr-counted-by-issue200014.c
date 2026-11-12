@@ -84,7 +84,7 @@ extern size_t sink;
 // FRONTEND-NEXT:    store i64 [[TMP1]], ptr @sink, align 8
 // FRONTEND-NEXT:    [[FAM1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYDECAY2:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM1]], i64 0, i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[AF]], i64 0
 // FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], -1
@@ -98,7 +98,7 @@ extern size_t sink;
 // O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]]) #[[ATTR6:[0-9]+]]
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AF]], i64 9
 // O2-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// O2-NEXT:    store i64 [[TMP1]], ptr @sink, align 8, !tbaa [[LONG_TBAA5:![0-9]+]]
+// O2-NEXT:    store i64 [[TMP1]], ptr @sink, align 8, !tbaa [[LONG_TBAA6:![0-9]+]]
 // O2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
 // O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]]) #[[ATTR6]]
 // O2-NEXT:    ret i64 [[TMP2]]
@@ -129,7 +129,7 @@ size_t local_fam(size_t n) {
 // FRONTEND-NEXT:    store i64 [[TMP1]], ptr @sink, align 8
 // FRONTEND-NEXT:    [[FAM1:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM1]], i64 0, i64 2
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED_FLEX]], ptr [[AF]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[AF]], i64 0
 // FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[RESULT:%.*]] = sub nuw i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], 2
@@ -145,7 +145,7 @@ size_t local_fam(size_t n) {
 // O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]]) #[[ATTR6]]
 // O2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[AF]], i64 11
 // O2-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
-// O2-NEXT:    store i64 [[TMP0]], ptr @sink, align 8, !tbaa [[LONG_TBAA5]]
+// O2-NEXT:    store i64 [[TMP0]], ptr @sink, align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    [[RESULT:%.*]] = add i64 [[N]], -2
 // O2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smax.i64(i64 [[RESULT]], i64 0)
 // O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]]) #[[ATTR6]]
@@ -185,7 +185,7 @@ size_t local_subscript(size_t n) {
 // O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]]) #[[ATTR6]]
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AF]], i64 9
 // O2-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// O2-NEXT:    store i64 [[TMP1]], ptr @sink, align 8, !tbaa [[LONG_TBAA5]]
+// O2-NEXT:    store i64 [[TMP1]], ptr @sink, align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]]) #[[ATTR6]]
 // O2-NEXT:    ret i64 7
 //
@@ -274,7 +274,7 @@ size_t global_addrof(void) {
 // FRONTEND-NEXT:  [[ENTRY:.*:]]
 // FRONTEND-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX:%.*]], ptr [[P]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM]], i64 0, i64 0
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED_FLEX]], ptr [[P]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
 // FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], -1
@@ -300,7 +300,7 @@ size_t ptr_fam(struct annotated_flex *p) {
 // FRONTEND-NEXT:  [[ENTRY:.*:]]
 // FRONTEND-NEXT:    [[FAM:%.*]] = getelementptr inbounds nuw [[STRUCT_ANNOTATED_FLEX:%.*]], ptr [[P]], i32 0, i32 2
 // FRONTEND-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[FAM]], i64 0, i64 3
-// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED_FLEX]], ptr [[P]], i32 0, i32 0
+// FRONTEND-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 0
 // FRONTEND-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[COUNTED_BY_GEP]], align 4
 // FRONTEND-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = mul nuw i64 [[COUNTED_BY_LOAD]], 1
 // FRONTEND-NEXT:    [[RESULT:%.*]] = sub nuw i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], 3
@@ -340,8 +340,8 @@ size_t ptr_addrof(struct annotated_flex *p) {
     return __builtin_dynamic_object_size(&p->fam, 1);
 }
 //.
-// O2: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// O2: [[META4]] = !{!"Simple C/C++ TBAA"}
-// O2: [[LONG_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-// O2: [[META6]] = !{!"long", [[META3]], i64 0}
+// O2: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// O2: [[META5]] = !{!"Simple C/C++ TBAA"}
+// O2: [[LONG_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// O2: [[META7]] = !{!"long", [[META4]], i64 0}
 //.

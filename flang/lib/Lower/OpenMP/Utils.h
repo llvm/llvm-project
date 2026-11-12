@@ -146,13 +146,17 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     mlir::omp::ClauseMapFlags mapTypeBits);
 
 bool requiresImplicitDefaultDeclareMapper(
-    const semantics::DerivedTypeSpec &typeSpec);
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
+    const semantics::DerivedTypeSpec &typeSpec,
+    bool enableImplicitDefaultMapperAllocatableMembers);
 
 omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
                                 semantics::SemanticsContext &semaCtx);
 
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
+
+std::size_t getLoopVarSize(const semantics::Symbol &sym);
 
 semantics::Symbol *
 getIterationVariableSymbol(const lower::pft::Evaluation &eval);
@@ -216,9 +220,12 @@ struct IteratorRange {
   Fortran::semantics::Symbol *ivSym = nullptr;
 };
 
-bool hasIteratorIVReference(
-    const omp::Object &object,
-    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+/// Select ranges referenced in the locator source, even if folding removes
+/// their occurrences from the analyzed expression. Preserve declaration order.
+/// An empty result means the locator is not iterator-dependent.
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges);
 
 /// Default name mangler for implicit default mappers.
 ///
@@ -227,11 +234,6 @@ bool hasIteratorIVReference(
 /// \param memberName The name of the member to mangle.
 void defaultMangler(Fortran::lower::AbstractConverter &converter,
                     std::string &mapperIdName, llvm::StringRef memberName);
-
-mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  hlfir::Entity entity,
-                                  llvm::ArrayRef<mlir::Value> ivs,
-                                  mlir::Location loc);
 
 /// Resolve the declare mapper symbol to attach to a mapped object.
 ///
@@ -254,17 +256,42 @@ mlir::FlatSymbolRefAttr resolveMapperId(
     const omp::Object &object, llvm::StringRef mapperIdName,
     mlir::omp::ClauseMapFlags mapTypeBits, llvm::omp::Directive directive);
 
-std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
-    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
-    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+struct IteratorMapInfo {
+  hlfir::Entity entity;
+  llvm::SmallVector<mlir::Value> bounds;
+};
+
+/// Properties needed to validate an iterator map locator without lowering it.
+/// Unsupported DataRef forms are classified without evaluating their bases.
+struct IteratorMapObjectAnalysis {
+  bool isDerivedTypeMember = false;
+  bool hasArrayValuedParent = false;
+  // Own the validated reference so lowering can reuse it after analysis.
+  std::optional<evaluate::ArrayRef> arrayRef;
+};
+
+/// Classify a locator and retain its array reference if supported.
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
+
+/// Lower a locator to its array base and iterator-dependent map bounds.
+/// \p arrayRef must be the supported reference returned by locator analysis.
+IteratorMapInfo genIteratorMapInfo(Fortran::lower::AbstractConverter &converter,
+                                   fir::FirOpBuilder &builder,
+                                   Fortran::lower::StatementContext &stmtCtx,
+                                   const omp::Object &object,
+                                   const evaluate::ArrayRef &arrayRef,
+                                   mlir::Location loc);
 
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
 /// order. Used by metadirective lowering and declare-variant call resolution
-/// to build the `ConstructTraits` of an `OMPContext`.
+/// to build the `ConstructTraits` of an `OMPContext`. When
+/// \p excludeNearestDispatch is set, the innermost enclosing `dispatch`
+/// construct is omitted (used to implement the `nocontext` clause).
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
-    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits,
+    bool excludeNearestDispatch = false);
 
 /// Return true when \p module is being compiled for an AMDGPU device or all of
 /// its offload targets are AMDGPU devices.

@@ -29,8 +29,8 @@ subroutine target_teams_loop
 end subroutine target_teams_loop
 
 !CHECK-LABEL: func.func @_QPtarget_teams_loop
-!CHECK:           %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}i"}
-!CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}x"}
+!CHECK:           %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}i")
+!CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("{{.*}}x")
 
 !CHECK:           omp.teams {
 

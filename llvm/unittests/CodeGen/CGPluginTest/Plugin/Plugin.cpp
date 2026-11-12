@@ -20,11 +20,14 @@ namespace {
     [](auto &TM, auto &PM, auto *TPC) {
       TPC->insertPass(&GCLoweringID, &CodeGenTest::ID);
     }};
-} // namespace
 
-__attribute__((constructor)) static void initCodeGenPlugin() {
-  initializeCodeGenTestPass(*PassRegistry::getPassRegistry());
-}
+struct InitCodeGenPlugin {
+  InitCodeGenPlugin() {
+    initializeCodeGenTestPass(*PassRegistry::getPassRegistry());
+  }
+};
+[[maybe_unused]] InitCodeGenPlugin InitCodeGenPluginInstance;
+} // namespace
 
 // We use -load-pass-plugin to specify and load the plugin shared-lib, but not
 // the actual pass-plugin interface. This isn't available in the codegen

@@ -29,6 +29,15 @@ protected:
   llvm::abi::IRTypeMapper Mapper{Context, DL};
 };
 
+TEST_F(IRTypeMapperTest, OpaqueFloat8MapsToOneElementI8Vector) {
+  const llvm::abi::Type *MFP8 = TB.getOpaqueFloat8Type(llvm::Align(1));
+
+  auto *Vec = llvm::dyn_cast<llvm::FixedVectorType>(Mapper.convertType(MFP8));
+  ASSERT_NE(Vec, nullptr);
+  EXPECT_EQ(Vec->getNumElements(), 1u);
+  EXPECT_TRUE(Vec->getElementType()->isIntegerTy(8));
+}
+
 TEST_F(IRTypeMapperTest, GenericVectorMapsToFixedVector) {
   const llvm::abi::Type *I32 =
       TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true);
@@ -71,7 +80,9 @@ TEST_F(IRTypeMapperTest, SVEPredicateVectorMapsToScalableI1Vector) {
 }
 
 TEST_F(IRTypeMapperTest, SVECountMapsToAArch64SVCount) {
-  const llvm::abi::VectorType *SVCount = TB.getSVECountType(llvm::Align(2));
+  const llvm::abi::VectorType *SVCount =
+      TB.getScalablePredicateOrCountVectorType(llvm::Align(2),
+                                               llvm::abi::VectorKind::SVECount);
 
   auto *TET = llvm::dyn_cast<llvm::TargetExtType>(Mapper.convertType(SVCount));
   ASSERT_NE(TET, nullptr);
@@ -95,6 +106,26 @@ TEST_F(IRTypeMapperTest, SVEDataTupleMapsToStructOfVectors) {
   llvm::Type *ExpectedVec = Mapper.convertType(SVInt32);
   for (unsigned I = 0; I < 3; ++I)
     EXPECT_EQ(Struct->getElementType(I), ExpectedVec);
+}
+
+TEST_F(IRTypeMapperTest, PackedRecordMapsToPackedStruct) {
+  const llvm::abi::Type *I32 =
+      TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true);
+  const llvm::abi::VectorType *SVInt32 =
+      TB.getVectorType(I32, llvm::ElementCount::getScalable(4), llvm::Align(16),
+                       llvm::abi::VectorKind::SVEData);
+  const llvm::abi::RecordType *Packed = TB.getRecordType(
+      {llvm::abi::FieldInfo(SVInt32, 0), llvm::abi::FieldInfo(SVInt32, 0)},
+      llvm::TypeSize::getFixed(0), llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1), llvm::abi::StructPacking::Packed);
+
+  auto *Struct = llvm::dyn_cast<llvm::StructType>(Mapper.convertType(Packed));
+  ASSERT_NE(Struct, nullptr);
+  EXPECT_TRUE(Struct->isPacked());
+  ASSERT_EQ(Struct->getNumElements(), 2u);
+  llvm::Type *Vec = Mapper.convertType(SVInt32);
+  EXPECT_EQ(Struct->getElementType(0), Vec);
+  EXPECT_EQ(Struct->getElementType(1), Vec);
 }
 
 TEST_F(IRTypeMapperTest, SameSizeAtomicMapsToValueType) {

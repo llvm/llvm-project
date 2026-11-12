@@ -20,6 +20,7 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Pass.h"
+#include <memory>
 
 namespace llvm {
 
@@ -61,6 +62,20 @@ public:
     return LibcallImpls[Call];
   }
 
+  /// Return the implementation for \p Call, or for its masked variant if \p
+  /// Call has no implementation.
+  ///
+  /// FIXME: Callers should explicitly try the masked variant and track whether
+  /// a mask argument is needed, instead of re-deriving it from the result with
+  /// hasVectorMaskArgument.
+  RTLIB::LibcallImpl getVectorLibcallImplOrMasked(RTLIB::Libcall Call) const {
+    RTLIB::LibcallImpl Impl = getLibcallImpl(Call);
+    if (Impl != RTLIB::Unsupported)
+      return Impl;
+    return getLibcallImpl(
+        RTLIB::RuntimeLibcallsInfo::getMaskedVectorLibcall(Call));
+  }
+
   /// Remap the default libcall routine name for the specified libcall.
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     LibcallImpls[Call] = Impl;
@@ -97,7 +112,8 @@ public:
 /// TargetSubtargetInfo*)
 class ModuleLibcallLoweringInfo {
 private:
-  using LibcallLoweringMap = DenseMap<const void *, LibcallLoweringInfo>;
+  using LibcallLoweringMap =
+      DenseMap<const void *, std::unique_ptr<LibcallLoweringInfo>>;
   mutable LibcallLoweringMap LoweringMap;
   const RTLIB::RuntimeLibcallsInfo *RTLCI = nullptr;
 
@@ -133,11 +149,10 @@ private:
   const LibcallLoweringInfo &getLibcallLoweringForKey(
       const void *Key,
       LibcallLoweringInfo::ApplyContextRulesFn ApplyContextRules) const {
-    auto It = LoweringMap.find(Key);
-    if (It != LoweringMap.end())
-      return It->second;
-    return LoweringMap.try_emplace(Key, *RTLCI, ApplyContextRules)
-        .first->second;
+    std::unique_ptr<LibcallLoweringInfo> &Entry = LoweringMap[Key];
+    if (!Entry)
+      Entry = std::make_unique<LibcallLoweringInfo>(*RTLCI, ApplyContextRules);
+    return *Entry;
   }
 };
 
@@ -146,8 +161,6 @@ class LibcallLoweringModuleAnalysis
 private:
   friend AnalysisInfoMixin<LibcallLoweringModuleAnalysis>;
   LLVM_ABI static AnalysisKey Key;
-
-  ModuleLibcallLoweringInfo LibcallLoweringMap;
 
 public:
   using Result = ModuleLibcallLoweringInfo;

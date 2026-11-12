@@ -162,6 +162,28 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
 }
 
 std::optional<TypeAndShape> TypeAndShape::Characterize(
+    const Designator<Type<TypeCategory::Character>> &x, FoldingContext &context,
+    bool invariantOnly) {
+  const auto *symbol{UnwrapWholeSymbolOrComponentDataRef(x)};
+  if (symbol && !symbol->owner().IsDerivedType()) { // Whole variable
+    if (auto result{Characterize(*symbol, context, invariantOnly)}) {
+      return result;
+    }
+  }
+  if (auto type{x.GetType()}) {
+    TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
+    if (auto length{x.LEN()}) {
+      result.set_LEN(std::move(*length));
+    }
+    if (symbol) { // component
+      result.AcquireAttrs(*symbol);
+    }
+    return std::move(result.Rewrite(context));
+  }
+  return std::nullopt;
+}
+
+std::optional<TypeAndShape> TypeAndShape::Characterize(
     const ActualArgument &arg, FoldingContext &context, bool invariantOnly) {
   if (const auto *expr{arg.GetArgExpr()}) {
     return Characterize(*expr, context, invariantOnly);
@@ -194,10 +216,9 @@ std::optional<Expr<SubscriptInteger>> TypeAndShape::MeasureElementSizeInBytes(
   if (LEN_) {
     CHECK(type_.category() == TypeCategory::Character);
     return Fold(foldingContext,
-        Expr<SubscriptInteger>{
-            foldingContext.targetCharacteristics().GetByteSize(
-                type_.category(), type_.kind())} *
-            Expr<SubscriptInteger>{*LEN_});
+        MakeSubscriptIntExpr(foldingContext.targetCharacteristics().GetByteSize(
+            type_.category(), type_.kind())) *
+            common::Clone(*LEN_));
   }
   if (auto elementBytes{type_.MeasureSizeInBytes(foldingContext, align)}) {
     return Fold(foldingContext, std::move(*elementBytes));

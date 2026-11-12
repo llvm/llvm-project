@@ -8,8 +8,18 @@
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/ScalableValueBoundsConstraintSet.h"
+#include "mlir/Dialect/Vector/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+
+namespace mlir {
+namespace vector {
+
+#define GEN_PASS_DEF_ELIMINATEVECTORMASKS
+#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
+
+} // namespace vector
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -135,5 +145,36 @@ void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
   for (auto mask : worklist)
     (void)resolveAllTrueCreateMaskOp(rewriter, mask, vscaleRange);
 }
+
+namespace {
+struct EliminateVectorMasksPass
+    : public impl::EliminateVectorMasksBase<EliminateVectorMasksPass> {
+  using Base::Base;
+
+  // Checked here rather than in runOnOperation so that a bad range is reported
+  // once, not once per function.
+  LogicalResult initialize(MLIRContext *context) override {
+    bool unset = !vscaleMin && !vscaleMax;
+    bool valid = vscaleMin && vscaleMax && vscaleMin <= vscaleMax;
+    if (unset || valid)
+      return success();
+    return emitError(UnknownLoc::get(context))
+           << "invalid vscale range 'vscale-min="
+           << static_cast<unsigned>(vscaleMin)
+           << " vscale-max=" << static_cast<unsigned>(vscaleMax)
+           << "': expected both to be 0 (unknown), or both non-zero with "
+              "'vscale-min' <= 'vscale-max'";
+  }
+
+  void runOnOperation() override {
+    std::optional<VscaleRange> vscaleRange;
+    if (vscaleMin && vscaleMax)
+      vscaleRange = VscaleRange{vscaleMin, vscaleMax};
+
+    IRRewriter rewriter(&getContext());
+    eliminateVectorMasks(rewriter, getOperation(), vscaleRange);
+  }
+};
+} // namespace
 
 } // namespace mlir::vector

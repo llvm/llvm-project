@@ -3,6 +3,7 @@
 
 ---
 name:            test_scalar_sub_big
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_big
@@ -28,6 +29,7 @@ body:             |
 ...
 ---
 name:            test_scalar_sub_big_nonpow2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_big_nonpow2
@@ -56,6 +58,7 @@ body:             |
 ...
 ---
 name:            test_scalar_sub_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_sub_small
@@ -77,6 +80,7 @@ body:             |
 ...
 ---
 name:            test_vector_sub_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_sub_v16s16
@@ -97,6 +101,7 @@ body:             |
 ...
 ---
 name:            test_vector_sub_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_sub_v32s8
@@ -117,7 +122,6 @@ body:             |
 ...
 ---
 name:            sub_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -147,7 +151,6 @@ body:             |
 ...
 ---
 name:            sub_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -181,7 +184,6 @@ body:             |
 ...
 ---
 name:            sub_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -211,7 +213,6 @@ body:             |
 ...
 ---
 name:            sub_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -241,7 +242,6 @@ body:             |
 ...
 ---
 name:            sub_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3
