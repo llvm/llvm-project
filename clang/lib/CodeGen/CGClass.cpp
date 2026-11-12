@@ -3004,8 +3004,6 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   auto CheckHandler = SanitizerHandler::CFICheckFail;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
-  EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
-
   CanQualType T = CGM.getContext().getCanonicalTagType(RD);
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
@@ -3023,6 +3021,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   if (SanOpts.has(SanitizerKind::CFIVCall) &&
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
+    EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
     EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler, {}, {});
   }
 
