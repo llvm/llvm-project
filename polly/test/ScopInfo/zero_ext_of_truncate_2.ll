@@ -13,7 +13,7 @@
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N, tmp] -> {  :  }
 ; CHECK:         Invalid Context:
-; CHECK-NEXT:    [N, tmp] -> {  : tmp <= -2147483649 or tmp >= 2147483648 or (N > 0 and tmp < 0) }
+; CHECK-NEXT:    [N, tmp] -> {  : tmp <= -2147483649 or tmp >= 2147483648 or N < 0 or (N > 0 and tmp < 0) }
 ; CHECK:         Defined Behavior Context:
 ; CHECK-NEXT:    [N, tmp] -> {  : -2147483648 <= tmp <= 2147483647 and ((0 < N <= 2147483647 and tmp >= 0) or N = 0) }
 ;
