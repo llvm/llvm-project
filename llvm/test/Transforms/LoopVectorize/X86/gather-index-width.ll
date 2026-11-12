@@ -28,7 +28,7 @@
 ; index list alone would find no varying index and price this as a dword form
 ; covering all eight in one.
 ; COST-LABEL: 'chase'
-; COST: Cost of 12 for VF 8: WIDEN ir<%y> = load ir<%field>
+; COST: Cost of 10 for VF 8: WIDEN ir<%y> = load ir<%field>
 ; ASM-LABEL: chase:
 ; ASM-COUNT-2: vpgatherqd
 ; ASM-NOT: vpgather
@@ -56,7 +56,7 @@ exit:
 ; base is a global and it is the index that varies, sign-extended from a byte
 ; and so narrow enough to stay a dword. One instruction covers all eight lanes.
 ; COST-LABEL: 'narrow_index'
-; COST: Cost of 12 for VF 8: WIDEN ir<%valB> = load ir<%inB>
+; COST: Cost of 10 for VF 8: WIDEN ir<%valB> = load ir<%inB>
 ; ASM-LABEL: narrow_index:
 ; ASM-COUNT-1: vpgatherdd
 ; ASM-NOT: vpgather
@@ -115,7 +115,7 @@ exit:
 ; one instruction covers all eight lanes. Reading the base off the scalar GEP
 ; cannot tell this from the chase below, which is why the recipe reports it.
 ; COST-LABEL: 'invariant_loaded_base'
-; COST: Cost of 12 for VF 8: WIDEN ir<%val> = load ir<%in>
+; COST: Cost of 10 for VF 8: WIDEN ir<%val> = load ir<%in>
 ; ASM-LABEL: invariant_loaded_base:
 ; ASM-COUNT-1: vpgatherdd
 ; ASM-NOT: vpgather
@@ -146,7 +146,7 @@ exit:
 ; a <8 x ptr> base and still needs two instructions. Finding one varying index
 ; and stopping there would price it as the single dword form.
 ; COST-LABEL: 'chase_index'
-; COST: Cost of 12 for VF 8: WIDEN ir<%v> = load ir<%p>
+; COST: Cost of 10 for VF 8: WIDEN ir<%v> = load ir<%p>
 ; ASM-LABEL: chase_index:
 ; ASM-COUNT-2: vpgatherqd
 ; ASM-NOT: vpgather

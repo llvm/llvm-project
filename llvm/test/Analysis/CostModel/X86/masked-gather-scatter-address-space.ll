@@ -18,11 +18,11 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:
 ; dword-indexed gather, not a split qword-indexed pair.
 define <16 x i32> @gather_v16i32_p270(<16 x ptr addrspace(270)> %ptrs, <16 x i1> %mask) {
 ; SKX-LABEL: 'gather_v16i32_p270'
-; SKX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:68 SizeLat:20 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; SKX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:66 SizeLat:18 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %v
 ;
 ; SKL-LABEL: 'gather_v16i32_p270'
-; SKL-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:8 Lat:76 SizeLat:28 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:6 Lat:72 SizeLat:24 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %v
 ;
   %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
@@ -52,7 +52,7 @@ define <16 x i32> @gather_v16i32_p270_gep(ptr addrspace(270) %base, <16 x i32> %
 ;
 ; SKL-LABEL: 'gather_v16i32_p270_gep'
 ; SKL-NEXT:  Cost Model: Found costs of 0 for: %ptrs = getelementptr inbounds i32, ptr addrspace(270) %base, <16 x i32> %idx
-; SKL-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:8 Lat:76 SizeLat:28 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:6 Lat:72 SizeLat:24 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p270(<16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %v
 ;
   %ptrs = getelementptr inbounds i32, ptr addrspace(270) %base, <16 x i32> %idx
@@ -62,7 +62,7 @@ define <16 x i32> @gather_v16i32_p270_gep(ptr addrspace(270) %base, <16 x i32> %
 
 define void @scatter_v16i32_p270(<16 x i32> %val, <16 x ptr addrspace(270)> %ptrs, <16 x i1> %mask) {
 ; SKX-LABEL: 'scatter_v16i32_p270'
-; SKX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:20 SizeLat:20 for: call void @llvm.masked.scatter.v16i32.v16p270(<16 x i32> %val, <16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask)
+; SKX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:18 SizeLat:18 for: call void @llvm.masked.scatter.v16i32.v16p270(<16 x i32> %val, <16 x ptr addrspace(270)> align 4 %ptrs, <16 x i1> %mask)
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SKL-LABEL: 'scatter_v16i32_p270'
@@ -89,11 +89,11 @@ define void @scatter_v16i32_p0(<16 x i32> %val, <16 x ptr> %ptrs, <16 x i1> %mas
 ; Address space 271 holds 32-bit pointers too, and must be treated like 270.
 define <16 x i32> @gather_v16i32_p271(<16 x ptr addrspace(271)> %ptrs, <16 x i1> %mask) {
 ; SKX-LABEL: 'gather_v16i32_p271'
-; SKX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:68 SizeLat:20 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p271(<16 x ptr addrspace(271)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; SKX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:66 SizeLat:18 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p271(<16 x ptr addrspace(271)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %v
 ;
 ; SKL-LABEL: 'gather_v16i32_p271'
-; SKL-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:8 Lat:76 SizeLat:28 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p271(<16 x ptr addrspace(271)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
+; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:6 Lat:72 SizeLat:24 for: %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p271(<16 x ptr addrspace(271)> align 4 %ptrs, <16 x i1> %mask, <16 x i32> poison)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i32> %v
 ;
   %v = call <16 x i32> @llvm.masked.gather.v16i32.v16p271(<16 x ptr addrspace(271)> %ptrs, i32 4, <16 x i1> %mask, <16 x i32> poison)
@@ -102,7 +102,7 @@ define <16 x i32> @gather_v16i32_p271(<16 x ptr addrspace(271)> %ptrs, <16 x i1>
 
 define void @scatter_v16i32_p271(<16 x i32> %val, <16 x ptr addrspace(271)> %ptrs, <16 x i1> %mask) {
 ; SKX-LABEL: 'scatter_v16i32_p271'
-; SKX-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:20 SizeLat:20 for: call void @llvm.masked.scatter.v16i32.v16p271(<16 x i32> %val, <16 x ptr addrspace(271)> align 4 %ptrs, <16 x i1> %mask)
+; SKX-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:18 SizeLat:18 for: call void @llvm.masked.scatter.v16i32.v16p271(<16 x i32> %val, <16 x ptr addrspace(271)> align 4 %ptrs, <16 x i1> %mask)
 ; SKX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SKL-LABEL: 'scatter_v16i32_p271'

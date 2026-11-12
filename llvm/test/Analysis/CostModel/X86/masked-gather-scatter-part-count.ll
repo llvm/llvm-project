@@ -39,14 +39,14 @@ define <8 x i32> @gather_v8i32_dword_index(ptr %base, <8 x i32> %idx, <8 x i1> %
 ; A vector length that is not a multiple of its part count: the remainder lane
 ; still needs a part of its own once the index no longer fits alongside the rest.
 ; SKX-COST-LABEL: 'gather_v9i32_dword_index'
-; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v9i32_dword_index'
-; SKX-TPUT: cost of 12 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 11 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v9i32_dword_index:
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v9i32_dword_index'
-; AVX2-COST: cost of 8 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 6 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v9i32_dword_index:
 ; AVX2-ASM-COUNT-2: vpgatherdd
 ; AVX2-ASM-NOT: vpgather
@@ -62,7 +62,7 @@ define <9 x i32> @gather_v9i32_dword_index(ptr %base, <9 x i32> %idx, <9 x i1> %
 ; SKX-ASM-COUNT-2: vpgatherqd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v9i32_qword_index'
-; AVX2-COST: cost of 8 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 7 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v9i32_qword_index:
 ; AVX2-ASM-COUNT-3: vpgatherqd
 ; AVX2-ASM-NOT: vpgather
@@ -77,12 +77,12 @@ define <9 x i32> @gather_v9i32_qword_index(ptr %base, <9 x i64> %idx, <9 x i1> %
 ; what the qword form above costs. Asking whether the index type is exactly 64
 ; bits wide would miss it and price it as a dword.
 ; SKX-COST-LABEL: 'gather_v9i32_oversized_index'
-; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v9i32_oversized_index:
 ; SKX-ASM-COUNT-2: vpgatherqd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v9i32_oversized_index'
-; AVX2-COST: cost of 8 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 6 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v9i32_oversized_index:
 ; AVX2-ASM-COUNT-3: vpgatherqd
 ; AVX2-ASM-NOT: vpgatherqd
@@ -100,7 +100,7 @@ define <9 x i32> @gather_v9i32_oversized_index(ptr %base, <9 x i128> %idx, <9 x 
 ; SKX-ASM-COUNT-2: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v17i32_dword_index'
-; AVX2-COST: cost of 16 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 11 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v17i32_dword_index:
 ; AVX2-ASM-COUNT-3: vpgatherdd
 ; AVX2-ASM-NOT: vpgather
@@ -111,12 +111,12 @@ define <17 x i32> @gather_v17i32_dword_index(ptr %base, <17 x i32> %idx, <17 x i
 }
 
 ; SKX-COST-LABEL: 'gather_v17i32_qword_index'
-; SKX-COST: cost of 8 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 7 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v17i32_qword_index:
 ; SKX-ASM-COUNT-3: vpgatherqd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v17i32_qword_index'
-; AVX2-COST: cost of 16 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 13 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v17i32_qword_index:
 ; AVX2-ASM-COUNT-5: vpgatherqd
 ; AVX2-ASM-NOT: vpgather
@@ -129,12 +129,12 @@ define <17 x i32> @gather_v17i32_qword_index(ptr %base, <17 x i64> %idx, <17 x i
 ; A length whose qword indices occupy four legal registers but fill only three
 ; of them with live lanes.
 ; SKX-COST-LABEL: 'gather_v24i32_dword_index'
-; SKX-COST: cost of 8 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 6 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_dword_index:
 ; SKX-ASM-COUNT-2: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v24i32_dword_index'
-; AVX2-COST: cost of 16 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 11 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v24i32_dword_index:
 ; AVX2-ASM-COUNT-3: vpgatherdd
 ; AVX2-ASM-NOT: vpgather
@@ -145,14 +145,14 @@ define <24 x i32> @gather_v24i32_dword_index(ptr %base, <24 x i32> %idx, <24 x i
 }
 
 ; SKX-COST-LABEL: 'gather_v24i32_qword_index'
-; SKX-COST: cost of 8 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 7 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v24i32_qword_index'
-; SKX-TPUT: cost of 36 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 34 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_qword_index:
 ; SKX-ASM-COUNT-3: vpgatherqd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v24i32_qword_index'
-; AVX2-COST: cost of 16 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 14 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v24i32_qword_index:
 ; AVX2-ASM-COUNT-6: vpgatherqd
 ; AVX2-ASM-NOT: vpgather
@@ -165,7 +165,7 @@ define <24 x i32> @gather_v24i32_qword_index(ptr %base, <24 x i64> %idx, <24 x i
 ; Scatters with a variable mask. AVX2 has no hardware scatter, so its cost comes
 ; from scalarizing instead of from a part count, and it emits no scatter at all.
 ; SKX-COST-LABEL: 'scatter_v9i32_dword_index_var_mask'
-; SKX-COST: cost of 2 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v9i32_dword_index_var_mask:
 ; SKX-ASM-COUNT-1: vpscatterdd
 ; SKX-ASM-NOT: vpscatter
@@ -192,7 +192,7 @@ define void @scatter_v9i32_qword_index_var_mask(ptr %base, <9 x i64> %idx, <9 x 
 
 ; Scatters with every lane active: an all-ones mask leaves the part count alone.
 ; SKX-COST-LABEL: 'scatter_v24i32_dword_index_all_active'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v24i32_dword_index_all_active:
 ; SKX-ASM-COUNT-2: vpscatterdd
 ; SKX-ASM-NOT: vpscatter
@@ -205,7 +205,7 @@ define void @scatter_v24i32_dword_index_all_active(ptr %base, <24 x i32> %idx, <
 }
 
 ; SKX-COST-LABEL: 'scatter_v24i32_qword_index_all_active'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 3 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v24i32_qword_index_all_active:
 ; SKX-ASM-COUNT-3: vpscatterqd
 ; SKX-ASM-NOT: vpscatter
@@ -242,9 +242,9 @@ define void @scatter_v24i32_qword_index_var_mask(ptr %base, <24 x i64> %idx, <24
 ; The dead lanes are not charged either: against the 30 the same shape costs
 ; with an unknown mask above, this is the cost of the eight lanes it reaches.
 ; SKX-COST-LABEL: 'gather_v24i32_qword_index_first8_mask'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v24i32_qword_index_first8_mask'
-; SKX-TPUT: cost of 32 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 10 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_qword_index_first8_mask:
 ; SKX-ASM-COUNT-1: vpgatherqd
 ; SKX-ASM-NOT: vpgather
@@ -257,7 +257,7 @@ define <24 x i32> @gather_v24i32_qword_index_first8_mask(ptr %base, <24 x i64> %
 ; The same for a scatter, where the dead parts would otherwise be the zeroed
 ; stores counted above.
 ; SKX-COST-LABEL: 'scatter_v24i32_qword_index_first8_mask'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v24i32_qword_index_first8_mask:
 ; SKX-ASM-COUNT-1: vpscatterqd
 ; SKX-ASM-NOT: vpscatter
@@ -270,9 +270,9 @@ define void @scatter_v24i32_qword_index_first8_mask(ptr %base, <24 x i64> %idx, 
 ; A mask with no live lane leaves nothing to do, and CodeGen emits no gather at
 ; all, so the operation is free rather than costed as three parts.
 ; SKX-COST-LABEL: 'gather_v24i32_qword_index_zero_mask'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 0 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v24i32_qword_index_zero_mask'
-; SKX-TPUT: cost of 32 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 0 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_qword_index_zero_mask:
 ; SKX-ASM-NOT: vpgather
 define <24 x i32> @gather_v24i32_qword_index_zero_mask(ptr %base, <24 x i64> %idx) {
@@ -284,7 +284,7 @@ define <24 x i32> @gather_v24i32_qword_index_zero_mask(ptr %base, <24 x i64> %id
 ; The same for a scatter, which unlike a gather would otherwise still be charged
 ; for the tail it emits under a zeroed mask.
 ; SKX-COST-LABEL: 'scatter_v24i32_qword_index_zero_mask'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 0 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v24i32_qword_index_zero_mask:
 ; SKX-ASM-NOT: vpscatter
 define void @scatter_v24i32_qword_index_zero_mask(ptr %base, <24 x i64> %idx, <24 x i32> %val) {
@@ -297,9 +297,9 @@ define void @scatter_v24i32_qword_index_zero_mask(ptr %base, <24 x i64> %idx, <2
 ; with a dead one between, so it is the parts holding a live lane that are
 ; counted, not the number of live lanes rounded up to a part.
 ; SKX-COST-LABEL: 'gather_v24i32_qword_index_gapped_mask'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v24i32_qword_index_gapped_mask'
-; SKX-TPUT: cost of 32 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 6 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_qword_index_gapped_mask:
 ; SKX-ASM-COUNT-2: vpgatherqd
 ; SKX-ASM-NOT: vpgather
@@ -312,7 +312,7 @@ define <24 x i32> @gather_v24i32_qword_index_gapped_mask(ptr %base, <24 x i64> %
 ; Live lanes confined to the last part, the mirror of the first-eight case, so
 ; that a part is not counted merely because earlier parts were.
 ; SKX-COST-LABEL: 'gather_v24i32_qword_index_last8_mask'
-; SKX-COST: cost of 4 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v24i32_qword_index_last8_mask:
 ; SKX-ASM-COUNT-1: vpgatherqd
 ; SKX-ASM-NOT: vpgather
@@ -334,7 +334,7 @@ define <24 x i32> @gather_v24i32_qword_index_last8_mask(ptr %base, <24 x i64> %i
 ; SKX-ASM-COUNT-8: vpscatterqd
 ; SKX-ASM-NOT: vpscatter
 ; KNL-COST-LABEL: 'scatter_v48i32_qword_index_var_mask'
-; KNL-COST: cost of 8 for instruction: {{.*}}masked.scatter
+; KNL-COST: cost of 6 for instruction: {{.*}}masked.scatter
 ; KNL-ASM-LABEL: scatter_v48i32_qword_index_var_mask:
 ; KNL-ASM-COUNT-6: vpscatterqd
 ; KNL-ASM-NOT: vpscatter
@@ -347,12 +347,12 @@ define void @scatter_v48i32_qword_index_var_mask(ptr %base, <48 x i64> %idx, <48
 ; The same split with dword indices, where a part covers sixteen lanes instead
 ; of eight: four parts with the wide predicate, three without it.
 ; SKX-COST-LABEL: 'scatter_v48i32_dword_index_var_mask'
-; SKX-COST: cost of 16 for instruction: {{.*}}masked.scatter
+; SKX-COST: cost of 12 for instruction: {{.*}}masked.scatter
 ; SKX-ASM-LABEL: scatter_v48i32_dword_index_var_mask:
 ; SKX-ASM-COUNT-4: vpscatterdd
 ; SKX-ASM-NOT: vpscatter
 ; KNL-COST-LABEL: 'scatter_v48i32_dword_index_var_mask'
-; KNL-COST: cost of 8 for instruction: {{.*}}masked.scatter
+; KNL-COST: cost of 3 for instruction: {{.*}}masked.scatter
 ; KNL-ASM-LABEL: scatter_v48i32_dword_index_var_mask:
 ; KNL-ASM-COUNT-3: vpscatterdd
 ; KNL-ASM-NOT: vpscatter
@@ -372,7 +372,7 @@ define void @scatter_v48i32_dword_index_var_mask(ptr %base, <48 x i32> %idx, <48
 ; SKX-ASM-COUNT-12: vpscatterqd
 ; SKX-ASM-NOT: vpscatter
 ; KNL-COST-LABEL: 'scatter_v65i32_qword_index_var_mask'
-; KNL-COST: cost of 16 for instruction: {{.*}}masked.scatter
+; KNL-COST: cost of 10 for instruction: {{.*}}masked.scatter
 ; KNL-ASM-LABEL: scatter_v65i32_qword_index_var_mask:
 ; KNL-ASM-COUNT-10: vpscatterqd
 ; KNL-ASM-NOT: vpscatter
@@ -390,7 +390,7 @@ define void @scatter_v65i32_qword_index_var_mask(ptr %base, <65 x i64> %idx, <65
 ; SKX-ASM-COUNT-6: vpscatterdd
 ; SKX-ASM-NOT: vpscatter
 ; KNL-COST-LABEL: 'scatter_v65i32_dword_index_var_mask'
-; KNL-COST: cost of 8 for instruction: {{.*}}masked.scatter
+; KNL-COST: cost of 5 for instruction: {{.*}}masked.scatter
 ; KNL-ASM-LABEL: scatter_v65i32_dword_index_var_mask:
 ; KNL-ASM-COUNT-5: vpscatterdd
 ; KNL-ASM-NOT: vpscatter
@@ -503,12 +503,12 @@ define <8 x ptr> @gather_v8ptr_qword_index(ptr %base, <8 x i64> %idx, <8 x i1> %
 ; SKX-COST-LABEL: 'gather_v8ptr_qword_index_first2_mask'
 ; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; SKX-TPUT-LABEL: 'gather_v8ptr_qword_index_first2_mask'
-; SKX-TPUT: cost of 10 for instruction: {{.*}}masked.gather
+; SKX-TPUT: cost of 4 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v8ptr_qword_index_first2_mask:
 ; SKX-ASM-COUNT-1: vpgatherqq
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8ptr_qword_index_first2_mask'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8ptr_qword_index_first2_mask:
 ; AVX2-ASM-COUNT-1: vpgatherqq
 ; AVX2-ASM-NOT: vpgatherqq
@@ -526,7 +526,7 @@ define <8 x ptr> @gather_v8ptr_qword_index_first2_mask(ptr %base, <8 x i64> %idx
 ; the gather ends up indexed by qwords, taking twice the instructions of the
 ; four-byte-stride control below.
 ; SKX-COST-LABEL: 'gather_v16i32_struct_stride'
-; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v16i32_struct_stride:
 ; SKX-ASM-COUNT-2: vpgatherqd
 ; SKX-ASM-NOT: vpgather
@@ -551,7 +551,7 @@ define <16 x i32> @gather_v16i32_struct_stride(ptr %base, <16 x i32> %idx, <16 x
 ; register is available, so the same gather keeps qword indices on AVX2 and
 ; narrows to dwords on AVX-512.
 ; SKX-COST-LABEL: 'gather_v16i32_struct_stride_narrow_index'
-; SKX-COST: cost of 1 for instruction: {{.*}}masked.gather
+; SKX-COST: cost of 2 for instruction: {{.*}}masked.gather
 ; SKX-ASM-LABEL: gather_v16i32_struct_stride_narrow_index:
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
@@ -561,7 +561,7 @@ define <16 x i32> @gather_v16i32_struct_stride(ptr %base, <16 x i32> %idx, <16 x
 ; AVX2-ASM-COUNT-4: vpgatherqd
 ; AVX2-ASM-NOT: vpgatherqd
 ; KNL-COST-LABEL: 'gather_v16i32_struct_stride_narrow_index'
-; KNL-COST: cost of 1 for instruction: {{.*}}masked.gather
+; KNL-COST: cost of 2 for instruction: {{.*}}masked.gather
 ; KNL-ASM-LABEL: gather_v16i32_struct_stride_narrow_index:
 ; KNL-ASM-COUNT-1: vpgatherdd
 ; KNL-ASM-NOT: vpgather
@@ -622,7 +622,7 @@ define <16 x i32> @gather_v16i32_struct_stride_27bit_index(ptr %base, <16 x i64>
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v16i32_scaled_stride'
-; AVX2-COST: cost of 8 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 6 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v16i32_scaled_stride:
 ; AVX2-ASM-COUNT-2: vpgatherdd
 ; AVX2-ASM-NOT: vpgatherdd
@@ -710,7 +710,7 @@ define <16 x i32> @gather_v16i32_wide_zext_index(ptr %base, <16 x i32> %idx, <16
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8i32_const_index'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8i32_const_index:
 ; AVX2-ASM-COUNT-1: vpgatherdd
 ; AVX2-ASM-NOT: vpgatherdd
@@ -730,7 +730,7 @@ define <8 x i32> @gather_v8i32_const_index(ptr %base, <8 x i1> %mask) {
 ; SKX-ASM-COUNT-1: vpgatherqd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8i32_const_index_out_of_range'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8i32_const_index_out_of_range:
 ; AVX2-ASM-COUNT-2: vpgatherqd
 ; AVX2-ASM-NOT: vpgatherqd
@@ -772,7 +772,7 @@ define <16 x i32> @gather_v16i32_splat_addend(ptr %base, <16 x i16> %idx, <16 x 
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8i32_splat_const_index'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8i32_splat_const_index:
 ; AVX2-ASM-COUNT-1: vpgatherdd
 ; AVX2-ASM-NOT: vpgather
@@ -993,7 +993,7 @@ define <16 x i32> @gather_v16i32_pow2_stride_big_addend(ptr %base, <16 x i16> %i
 ; SKX-ASM-COUNT-1: vpgatherqd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8i32_gep_other_block'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8i32_gep_other_block:
 ; AVX2-ASM-COUNT-2: vpgatherqd
 ; AVX2-ASM-NOT: vpgather
@@ -1019,7 +1019,7 @@ use:
 ; SKX-ASM-COUNT-1: vpgatherdd
 ; SKX-ASM-NOT: vpgather
 ; AVX2-COST-LABEL: 'gather_v8i32_gep_same_block'
-; AVX2-COST: cost of 2 for instruction: {{.*}}masked.gather
+; AVX2-COST: cost of 1 for instruction: {{.*}}masked.gather
 ; AVX2-ASM-LABEL: gather_v8i32_gep_same_block:
 ; AVX2-ASM-COUNT-1: vpgatherdd
 ; AVX2-ASM-NOT: vpgather
