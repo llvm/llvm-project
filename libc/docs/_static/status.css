@@ -244,3 +244,28 @@ body[data-theme="dark"] {
 .hc-mini-val { font-size: 1.1rem; font-weight: 700; margin: 3px 0 6px 0; }
 .hc-mini-val span { font-size: 0.78em; font-weight: 600; }
 .hc-subcard-title { font-size: 0.88rem; font-weight: 600; margin-bottom: 10px; }
+.hc-grid-standards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin: 16px 0 12px 0; }
+.hc-grid-standards .hc-card { margin: 0; }
+.hc-std-title { font-size: 0.95rem; font-weight: 600; color: var(--color-foreground-muted, #57606a); }
+.hc-std-val { font-size: 1.85rem; font-weight: 700; margin: 4px 0 8px 0; }
+.hc-std-val span { font-size: 0.52em; font-weight: 500; color: var(--color-foreground-muted, #57606a); }
+.hc-headers-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 24px 0; }
+.header-card { border: 1px solid var(--color-background-border, #e1e4e8); border-radius: 6px; background: var(--color-background-secondary, #f6f8fa); }
+.header-card > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; gap: 12px; user-select: none; }
+.header-card > summary::-webkit-details-marker { display: none; }
+.header-card:has(.hc-drawer) > summary { cursor: pointer; }
+.header-card > summary:focus-visible, .hc-page-link:focus-visible { outline: 2px solid var(--hc-blue-text); outline-offset: 2px; }
+.hc-header-title-col { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; width: 240px; flex-shrink: 0; }
+.hc-thermometer-col { flex: 1; min-width: 140px; display: flex; align-items: center; gap: 10px; }
+.hc-thermometer-col .hc-progress-track { flex: 1; height: 10px; }
+.hc-row-pct { font-size: 0.85rem; font-weight: 700; width: 48px; text-align: right; }
+.hc-row-frac { font-size: 0.78rem; color: var(--color-foreground-muted, #57606a); width: 64px; text-align: right; }
+.hc-action-col { display: flex; align-items: center; flex-shrink: 0; }
+.hc-page-link { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border: 1px solid var(--color-background-border, #d0d7de); border-radius: 4px; font-size: 0.76rem; font-weight: 500; text-decoration: none; color: var(--color-foreground-secondary, #57606a); background: var(--color-background-primary, #fff); white-space: nowrap; }
+.hc-page-link:hover { border-color: var(--hc-blue-border); color: var(--hc-blue-text); text-decoration: none; }
+@media (max-width: 640px) {
+  .header-card > summary { flex-wrap: wrap; padding: 9px 12px; gap: 8px; }
+  .hc-header-title-col { width: auto; flex: 1 1 auto; min-width: 0; }
+  .hc-action-col { margin-left: auto; }
+  .hc-thermometer-col { width: 100%; flex: 1 1 100%; order: 3; }
+}

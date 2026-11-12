@@ -2912,9 +2912,10 @@ LogicalResult NVVM::LdMatrixOp::verify() {
       return emitOpError("expected layout to be row for 8x16 matrix");
     }
     if (getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
-        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
-      return emitOpError("expected element type to be b8x16.b4x16_p64 or "
-                         "b8x16.b6x16_p32 for 8x16 matrix");
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32 &&
+        getEltType() != LdStMatrixEltType::S8_S4) {
+      return emitOpError("expected element type to be b8x16.b4x16_p64, "
+                         "b8x16.b6x16_p32 or s8.s4 for 8x16 matrix");
     }
   } else if (m == 16 && n == 16) {
     if (num != 1 && num != 2) {
