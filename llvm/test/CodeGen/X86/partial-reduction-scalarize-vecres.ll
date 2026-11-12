@@ -60,92 +60,93 @@ define i32 @test_prdx_mla(<1 x i32> %acc, <1 x i32> %in) {
 define bfloat @test_prdx_fmla_wide_input(<1 x bfloat> %acc, <8 x bfloat> %in) {
 ; SSE-LABEL: test_prdx_fmla_wide_input:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pextrw $7, %xmm1, %eax
-; SSE-NEXT:    pextrw $6, %xmm1, %ecx
-; SSE-NEXT:    pextrw $5, %xmm1, %edx
-; SSE-NEXT:    pextrw $3, %xmm1, %esi
-; SSE-NEXT:    pextrw $2, %xmm1, %edi
-; SSE-NEXT:    pextrw $1, %xmm1, %r8d
-; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; SSE-NEXT:    movdqa %xmm1, %xmm2
+; SSE-NEXT:    psrldq {{.*#+}} xmm2 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm1, %xmm3
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm1[3,3]
+; SSE-NEXT:    movdqa %xmm1, %xmm4
+; SSE-NEXT:    psrldq {{.*#+}} xmm4 = xmm4[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm1, %xmm5
+; SSE-NEXT:    punpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm1[1]
+; SSE-NEXT:    movdqa %xmm1, %xmm6
+; SSE-NEXT:    psrlq $48, %xmm6
+; SSE-NEXT:    movaps %xmm1, %xmm7
+; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,1],xmm1[1,1]
+; SSE-NEXT:    movdqa %xmm1, %xmm8
+; SSE-NEXT:    psrld $16, %xmm8
 ; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    movd %r8d, %xmm3
+; SSE-NEXT:    pslld $16, %xmm8
+; SSE-NEXT:    addss %xmm1, %xmm8
+; SSE-NEXT:    movd %xmm8, %eax
+; SSE-NEXT:    btl $16, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
+; SSE-NEXT:    ucomiss %xmm8, %xmm8
+; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pslld $16, %xmm1
+; SSE-NEXT:    pslld $16, %xmm7
+; SSE-NEXT:    addss %xmm1, %xmm7
+; SSE-NEXT:    movd %xmm7, %eax
+; SSE-NEXT:    btl $16, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
+; SSE-NEXT:    ucomiss %xmm7, %xmm7
+; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pslld $16, %xmm1
+; SSE-NEXT:    pslld $16, %xmm6
+; SSE-NEXT:    addss %xmm1, %xmm6
+; SSE-NEXT:    movd %xmm6, %eax
+; SSE-NEXT:    btl $16, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
+; SSE-NEXT:    ucomiss %xmm6, %xmm6
+; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pslld $16, %xmm1
+; SSE-NEXT:    pslld $16, %xmm5
+; SSE-NEXT:    addss %xmm1, %xmm5
+; SSE-NEXT:    movd %xmm5, %eax
+; SSE-NEXT:    btl $16, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
+; SSE-NEXT:    ucomiss %xmm5, %xmm5
+; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pslld $16, %xmm1
+; SSE-NEXT:    pslld $16, %xmm4
+; SSE-NEXT:    addss %xmm1, %xmm4
+; SSE-NEXT:    movd %xmm4, %eax
+; SSE-NEXT:    btl $16, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
+; SSE-NEXT:    ucomiss %xmm4, %xmm4
+; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    pslld $16, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm3
 ; SSE-NEXT:    addss %xmm1, %xmm3
-; SSE-NEXT:    movd %xmm3, %r8d
-; SSE-NEXT:    btl $16, %r8d
-; SSE-NEXT:    movl %r8d, %r9d
-; SSE-NEXT:    adcl $32767, %r9d # imm = 0x7FFF
-; SSE-NEXT:    orl $4194304, %r8d # imm = 0x400000
+; SSE-NEXT:    movd %xmm3, %eax
+; SSE-NEXT:    btl $16, %eax
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
 ; SSE-NEXT:    ucomiss %xmm3, %xmm3
-; SSE-NEXT:    cmovnpl %r9d, %r8d
-; SSE-NEXT:    movd %r8d, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
+; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movd %eax, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    movd %edi, %xmm3
-; SSE-NEXT:    pslld $16, %xmm3
-; SSE-NEXT:    addss %xmm1, %xmm3
-; SSE-NEXT:    movd %xmm3, %edi
-; SSE-NEXT:    btl $16, %edi
-; SSE-NEXT:    movl %edi, %r8d
-; SSE-NEXT:    adcl $32767, %r8d # imm = 0x7FFF
-; SSE-NEXT:    orl $4194304, %edi # imm = 0x400000
-; SSE-NEXT:    ucomiss %xmm3, %xmm3
-; SSE-NEXT:    cmovnpl %r8d, %edi
-; SSE-NEXT:    movd %edi, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    movd %esi, %xmm3
-; SSE-NEXT:    pslld $16, %xmm3
-; SSE-NEXT:    addss %xmm1, %xmm3
-; SSE-NEXT:    movd %xmm3, %esi
-; SSE-NEXT:    btl $16, %esi
-; SSE-NEXT:    movl %esi, %edi
-; SSE-NEXT:    adcl $32767, %edi # imm = 0x7FFF
-; SSE-NEXT:    orl $4194304, %esi # imm = 0x400000
-; SSE-NEXT:    ucomiss %xmm3, %xmm3
-; SSE-NEXT:    cmovnpl %edi, %esi
-; SSE-NEXT:    movd %esi, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    addss %xmm1, %xmm2
-; SSE-NEXT:    movd %xmm2, %esi
-; SSE-NEXT:    btl $16, %esi
-; SSE-NEXT:    movl %esi, %edi
-; SSE-NEXT:    adcl $32767, %edi # imm = 0x7FFF
-; SSE-NEXT:    orl $4194304, %esi # imm = 0x400000
-; SSE-NEXT:    ucomiss %xmm2, %xmm2
-; SSE-NEXT:    cmovnpl %edi, %esi
-; SSE-NEXT:    movd %esi, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    movd %edx, %xmm2
-; SSE-NEXT:    pslld $16, %xmm2
-; SSE-NEXT:    addss %xmm1, %xmm2
-; SSE-NEXT:    movd %xmm2, %edx
-; SSE-NEXT:    btl $16, %edx
-; SSE-NEXT:    movl %edx, %esi
-; SSE-NEXT:    adcl $32767, %esi # imm = 0x7FFF
-; SSE-NEXT:    orl $4194304, %edx # imm = 0x400000
-; SSE-NEXT:    ucomiss %xmm2, %xmm2
-; SSE-NEXT:    cmovnpl %esi, %edx
-; SSE-NEXT:    movd %edx, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    movd %ecx, %xmm2
-; SSE-NEXT:    pslld $16, %xmm2
-; SSE-NEXT:    addss %xmm1, %xmm2
-; SSE-NEXT:    movd %xmm2, %ecx
-; SSE-NEXT:    btl $16, %ecx
-; SSE-NEXT:    movl %ecx, %edx
-; SSE-NEXT:    adcl $32767, %edx # imm = 0x7FFF
-; SSE-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; SSE-NEXT:    ucomiss %xmm2, %xmm2
-; SSE-NEXT:    cmovnpl %edx, %ecx
-; SSE-NEXT:    movd %ecx, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    pslld $16, %xmm1
-; SSE-NEXT:    movd %eax, %xmm2
 ; SSE-NEXT:    pslld $16, %xmm2
 ; SSE-NEXT:    addss %xmm1, %xmm2
 ; SSE-NEXT:    movd %xmm2, %eax
@@ -155,8 +156,8 @@ define bfloat @test_prdx_fmla_wide_input(<1 x bfloat> %acc, <8 x bfloat> %in) {
 ; SSE-NEXT:    orl $4194304, %eax # imm = 0x400000
 ; SSE-NEXT:    ucomiss %xmm2, %xmm2
 ; SSE-NEXT:    cmovnpl %ecx, %eax
+; SSE-NEXT:    shrl $16, %eax
 ; SSE-NEXT:    movd %eax, %xmm1
-; SSE-NEXT:    psrld $16, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm0
 ; SSE-NEXT:    addss %xmm1, %xmm0
@@ -173,106 +174,16 @@ define bfloat @test_prdx_fmla_wide_input(<1 x bfloat> %acc, <8 x bfloat> %in) {
 ;
 ; AVX-LABEL: test_prdx_fmla_wide_input:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; AVX-NEXT:    vpsrld $16, %xmm3, %xmm4
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm5 = [1,1,1,1]
-; AVX-NEXT:    vpand %xmm5, %xmm4, %xmm4
-; AVX-NEXT:    vpor %xmm3, %xmm4, %xmm4
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm6 = [32767,32767,32767,32767]
-; AVX-NEXT:    vpaddd %xmm6, %xmm4, %xmm4
-; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; AVX-NEXT:    vpsrld $16, %xmm1, %xmm7
-; AVX-NEXT:    vpand %xmm5, %xmm7, %xmm5
-; AVX-NEXT:    vpor %xmm1, %xmm5, %xmm5
-; AVX-NEXT:    vpaddd %xmm6, %xmm5, %xmm5
-; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm5, %ymm4
-; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX-NEXT:    vcmpunordps %ymm1, %ymm1, %ymm3
-; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX-NEXT:    vblendvps %ymm3, %ymm1, %ymm4, %ymm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
-; AVX-NEXT:    vpextrw $3, %xmm1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpslld $16, %xmm4, %xmm4
-; AVX-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    btl $16, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX-NEXT:    vucomiss %xmm3, %xmm3
-; AVX-NEXT:    cmovnpl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm3[1],xmm2[2],xmm3[3],xmm2[4],xmm3[5],xmm2[6],xmm3[7]
-; AVX-NEXT:    vpextrw $5, %xmm1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpslld $16, %xmm4, %xmm4
-; AVX-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    btl $16, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX-NEXT:    vucomiss %xmm3, %xmm3
-; AVX-NEXT:    cmovnpl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm3[1],xmm2[2],xmm3[3],xmm2[4],xmm3[5],xmm2[6],xmm3[7]
-; AVX-NEXT:    vpextrw $7, %xmm1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpslld $16, %xmm4, %xmm4
-; AVX-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    btl $16, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX-NEXT:    vucomiss %xmm3, %xmm3
-; AVX-NEXT:    cmovnpl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm3[1],xmm2[2],xmm3[3],xmm2[4],xmm3[5],xmm2[6],xmm3[7]
-; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm4 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
-; AVX-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    btl $16, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX-NEXT:    vucomiss %xmm3, %xmm3
-; AVX-NEXT:    cmovnpl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm3[1],xmm2[2],xmm3[3],xmm2[4],xmm3[5],xmm2[6],xmm3[7]
-; AVX-NEXT:    vpextrw $3, %xmm1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpslld $16, %xmm4, %xmm4
-; AVX-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    btl $16, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX-NEXT:    vucomiss %xmm3, %xmm3
-; AVX-NEXT:    cmovnpl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm3[1],xmm2[2],xmm3[3],xmm2[4],xmm3[5],xmm2[6],xmm3[7]
-; AVX-NEXT:    vpextrw $5, %xmm1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm4
-; AVX-NEXT:    vpslld $16, %xmm4, %xmm4
-; AVX-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX-NEXT:    vmovd %xmm3, %eax
-; AVX-NEXT:    btl $16, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
-; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
-; AVX-NEXT:    vucomiss %xmm3, %xmm3
-; AVX-NEXT:    cmovnpl %ecx, %eax
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpblendw {{.*#+}} xmm3 = xmm2[0],xmm3[1],xmm2[2],xmm3[3],xmm2[4],xmm3[5],xmm2[6],xmm3[7]
-; AVX-NEXT:    vpextrw $7, %xmm1, %eax
-; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; AVX-NEXT:    vpsrldq {{.*#+}} xmm4 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
+; AVX-NEXT:    vpsrlq $48, %xmm1, %xmm6
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm1[1,1,3,3]
+; AVX-NEXT:    vpxor %xmm8, %xmm8, %xmm8
+; AVX-NEXT:    vpblendw {{.*#+}} xmm8 = xmm8[0],xmm1[1],xmm8[2],xmm1[3],xmm8[4],xmm1[5],xmm8[6],xmm1[7]
 ; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
-; AVX-NEXT:    vaddss %xmm1, %xmm3, %xmm1
+; AVX-NEXT:    vaddss %xmm1, %xmm8, %xmm1
 ; AVX-NEXT:    vmovd %xmm1, %eax
 ; AVX-NEXT:    btl $16, %eax
 ; AVX-NEXT:    movl %eax, %ecx
@@ -280,8 +191,81 @@ define bfloat @test_prdx_fmla_wide_input(<1 x bfloat> %acc, <8 x bfloat> %in) {
 ; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
 ; AVX-NEXT:    vucomiss %xmm1, %xmm1
 ; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3],xmm2[4],xmm1[5],xmm2[6],xmm1[7]
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm7, %xmm7
+; AVX-NEXT:    vaddss %xmm7, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    btl $16, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
+; AVX-NEXT:    vucomiss %xmm1, %xmm1
+; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm6, %xmm6
+; AVX-NEXT:    vaddss %xmm6, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    btl $16, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
+; AVX-NEXT:    vucomiss %xmm1, %xmm1
+; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm5, %xmm5
+; AVX-NEXT:    vaddss %xmm5, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    btl $16, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
+; AVX-NEXT:    vucomiss %xmm1, %xmm1
+; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm4, %xmm4
+; AVX-NEXT:    vaddss %xmm4, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    btl $16, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
+; AVX-NEXT:    vucomiss %xmm1, %xmm1
+; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm3, %xmm3
+; AVX-NEXT:    vaddss %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    btl $16, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
+; AVX-NEXT:    vucomiss %xmm1, %xmm1
+; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm2, %xmm2
+; AVX-NEXT:    vaddss %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vmovd %xmm1, %eax
+; AVX-NEXT:    btl $16, %eax
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    adcl $32767, %ecx # imm = 0x7FFF
+; AVX-NEXT:    orl $4194304, %eax # imm = 0x400000
+; AVX-NEXT:    vucomiss %xmm1, %xmm1
+; AVX-NEXT:    cmovnpl %ecx, %eax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
 ; AVX-NEXT:    vpslld $16, %xmm0, %xmm0
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
@@ -293,7 +277,6 @@ define bfloat @test_prdx_fmla_wide_input(<1 x bfloat> %acc, <8 x bfloat> %in) {
 ; AVX-NEXT:    cmovnpl %ecx, %eax
 ; AVX-NEXT:    shrl $16, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   %prdx = call <1 x bfloat> @llvm.vector.partial.reduce.fadd(<1 x bfloat> %acc, <8 x bfloat> %in)
   %res = extractelement <1 x bfloat> %prdx, i32 0

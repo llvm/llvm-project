@@ -15,15 +15,8 @@ define void @phi_vec1bf16_to_f32_with_const_folding(ptr %dst) #0 {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    jmp LBB0_1
 ; CHECK-NEXT:  LBB0_1: ## %bb
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    btl $16, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    adcl $32767, %ecx ## imm = 0x7FFF
-; CHECK-NEXT:    orl $4194304, %eax ## imm = 0x400000
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    movw %cx, 2(%rdi)
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 2(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   br label %bb
@@ -42,20 +35,11 @@ bb:
 define void @phi_vec1bf16_to_f32(ptr %src, ptr %dst) #0 {
 ; CHECK-LABEL: phi_vec1bf16_to_f32:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    pinsrw $0, (%rdi), %xmm0
 ; CHECK-NEXT:    jmp LBB1_1
 ; CHECK-NEXT:  LBB1_1: ## %bb
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    btl $16, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    adcl $32767, %ecx ## imm = 0x7FFF
-; CHECK-NEXT:    orl $4194304, %eax ## imm = 0x400000
-; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovpl %eax, %ecx
-; CHECK-NEXT:    shrl $16, %ecx
-; CHECK-NEXT:    movw %cx, 2(%rsi)
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    movw %ax, 2(%rsi)
 ; CHECK-NEXT:    retq
 entry:
   %input = load <1 x bfloat>, ptr %src

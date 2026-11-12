@@ -237,30 +237,14 @@ define void @store_atomic_vec1_bfloat(ptr %x, <1 x bfloat> %v) nounwind {
 ;
 ; CHECK-SSE-O0-LABEL: store_atomic_vec1_bfloat:
 ; CHECK-SSE-O0:       # %bb.0:
-; CHECK-SSE-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE-O0-NEXT:    movd %xmm0, %ecx
-; CHECK-SSE-O0-NEXT:    btl $16, %ecx
-; CHECK-SSE-O0-NEXT:    movl %ecx, %eax
-; CHECK-SSE-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-SSE-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-SSE-O0-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-SSE-O0-NEXT:    cmovpl %ecx, %eax
-; CHECK-SSE-O0-NEXT:    shrl $16, %eax
+; CHECK-SSE-O0-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-SSE-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-SSE-O0-NEXT:    movw %ax, (%rdi)
 ; CHECK-SSE-O0-NEXT:    retq
 ;
 ; CHECK-AVX-O0-LABEL: store_atomic_vec1_bfloat:
 ; CHECK-AVX-O0:       # %bb.0:
-; CHECK-AVX-O0-NEXT:    vpslld $16, %xmm0, %xmm0
-; CHECK-AVX-O0-NEXT:    vmovd %xmm0, %ecx
-; CHECK-AVX-O0-NEXT:    btl $16, %ecx
-; CHECK-AVX-O0-NEXT:    movl %ecx, %eax
-; CHECK-AVX-O0-NEXT:    adcl $32767, %eax # imm = 0x7FFF
-; CHECK-AVX-O0-NEXT:    orl $4194304, %ecx # imm = 0x400000
-; CHECK-AVX-O0-NEXT:    vucomiss %xmm0, %xmm0
-; CHECK-AVX-O0-NEXT:    cmovpl %ecx, %eax
-; CHECK-AVX-O0-NEXT:    shrl $16, %eax
+; CHECK-AVX-O0-NEXT:    vpextrw $0, %xmm0, %eax
 ; CHECK-AVX-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-AVX-O0-NEXT:    movw %ax, (%rdi)
 ; CHECK-AVX-O0-NEXT:    retq
@@ -877,43 +861,14 @@ define void @store_atomic_vec2_bfloat(ptr %x, <2 x bfloat> %v) nounwind {
 ; CHECK-AVX-O3-NEXT:    vmovss %xmm0, (%rdi)
 ; CHECK-AVX-O3-NEXT:    retq
 ;
-; CHECK-SSE2-O0-LABEL: store_atomic_vec2_bfloat:
-; CHECK-SSE2-O0:       # %bb.0:
-; CHECK-SSE2-O0-NEXT:    movaps %xmm0, %xmm1
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm0, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; CHECK-SSE2-O0-NEXT:    movl %eax, (%rdi)
-; CHECK-SSE2-O0-NEXT:    retq
-;
-; CHECK-SSE4-O0-LABEL: store_atomic_vec2_bfloat:
-; CHECK-SSE4-O0:       # %bb.0:
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm1
-; CHECK-SSE4-O0-NEXT:    xorps %xmm2, %xmm2
-; CHECK-SSE4-O0-NEXT:    movaps %xmm1, %xmm0
-; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; CHECK-SSE4-O0-NEXT:    movl %eax, (%rdi)
-; CHECK-SSE4-O0-NEXT:    retq
+; CHECK-SSE-O0-LABEL: store_atomic_vec2_bfloat:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    movaps %xmm0, %xmm1
+; CHECK-SSE-O0-NEXT:    movaps %xmm1, %xmm0
+; CHECK-SSE-O0-NEXT:    psrld $16, %xmm1
+; CHECK-SSE-O0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-SSE-O0-NEXT:    movd %xmm0, (%rdi)
+; CHECK-SSE-O0-NEXT:    retq
 ;
 ; CHECK-AVX-O0-LABEL: store_atomic_vec2_bfloat:
 ; CHECK-AVX-O0:       # %bb.0:
@@ -984,70 +939,32 @@ define void @store_atomic_vec4_bfloat(ptr %x, <4 x bfloat> %v) nounwind {
 ;
 ; CHECK-SSE2-O0-LABEL: store_atomic_vec4_bfloat:
 ; CHECK-SSE2-O0:       # %bb.0:
-; CHECK-SSE2-O0-NEXT:    movaps %xmm0, %xmm2
-; CHECK-SSE2-O0-NEXT:    movaps %xmm2, %xmm3
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm3
-; CHECK-SSE2-O0-NEXT:    pextrw $3, %xmm2, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE2-O0-NEXT:    pextrw $2, %xmm2, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm1
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm2, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm2
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm2
-; CHECK-SSE2-O0-NEXT:    movd %xmm3, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm2, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-SSE2-O0-NEXT:    movq %rax, (%rdi)
+; CHECK-SSE2-O0-NEXT:    movaps %xmm0, %xmm3
+; CHECK-SSE2-O0-NEXT:    movaps %xmm3, %xmm0
+; CHECK-SSE2-O0-NEXT:    movaps %xmm3, %xmm2
+; CHECK-SSE2-O0-NEXT:    psrlq $48, %xmm2
+; CHECK-SSE2-O0-NEXT:    movaps %xmm3, %xmm1
+; CHECK-SSE2-O0-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; CHECK-SSE2-O0-NEXT:    psrld $16, %xmm3
+; CHECK-SSE2-O0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; CHECK-SSE2-O0-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; CHECK-SSE2-O0-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-SSE2-O0-NEXT:    retq
 ;
 ; CHECK-SSE4-O0-LABEL: store_atomic_vec4_bfloat:
 ; CHECK-SSE4-O0:       # %bb.0:
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm1
-; CHECK-SSE4-O0-NEXT:    xorps %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    movaps %xmm1, %xmm2
-; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm1, %xmm3
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm3
-; CHECK-SSE4-O0-NEXT:    pextrw $3, %xmm1, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm1, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm1
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE4-O0-NEXT:    movd %xmm3, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm2, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-SSE4-O0-NEXT:    movq %rax, (%rdi)
+; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm3
+; CHECK-SSE4-O0-NEXT:    movaps %xmm3, %xmm0
+; CHECK-SSE4-O0-NEXT:    movaps %xmm3, %xmm1
+; CHECK-SSE4-O0-NEXT:    psrlq $48, %xmm1
+; CHECK-SSE4-O0-NEXT:    movshdup {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; CHECK-SSE4-O0-NEXT:    psrld $16, %xmm3
+; CHECK-SSE4-O0-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
+; CHECK-SSE4-O0-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; CHECK-SSE4-O0-NEXT:    psllq $48, %xmm1
+; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3],xmm0[4,5,6,7]
+; CHECK-SSE4-O0-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-SSE4-O0-NEXT:    retq
 ;
 ; CHECK-AVX-O0-LABEL: store_atomic_vec4_bfloat:
@@ -2555,276 +2472,31 @@ define void @store_atomic_vec16_bfloat_unaligned(ptr %x, <16 x bfloat> %v) nounw
 ; CHECK-AVX-O3-NEXT:    addq $40, %rsp
 ; CHECK-AVX-O3-NEXT:    retq
 ;
-; CHECK-SSE2-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
-; CHECK-SSE2-O0:       # %bb.0:
-; CHECK-SSE2-O0-NEXT:    subq $40, %rsp
-; CHECK-SSE2-O0-NEXT:    movaps %xmm1, %xmm6
-; CHECK-SSE2-O0-NEXT:    movaps %xmm0, %xmm14
-; CHECK-SSE2-O0-NEXT:    movq %rdi, %rsi
-; CHECK-SSE2-O0-NEXT:    xorps %xmm11, %xmm11
-; CHECK-SSE2-O0-NEXT:    movaps %xmm11, %xmm3
-; CHECK-SSE2-O0-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm6[4],xmm3[5],xmm6[5],xmm3[6],xmm6[6],xmm3[7],xmm6[7]
-; CHECK-SSE2-O0-NEXT:    punpckhwd {{.*#+}} xmm11 = xmm11[4],xmm14[4],xmm11[5],xmm14[5],xmm11[6],xmm14[6],xmm11[7],xmm14[7]
-; CHECK-SSE2-O0-NEXT:    movaps %xmm6, %xmm7
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm7
-; CHECK-SSE2-O0-NEXT:    movaps %xmm14, %xmm15
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm15
-; CHECK-SSE2-O0-NEXT:    pextrw $7, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE2-O0-NEXT:    pextrw $6, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm1
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE2-O0-NEXT:    pextrw $5, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm2
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm2
-; CHECK-SSE2-O0-NEXT:    pextrw $3, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm4
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm4
-; CHECK-SSE2-O0-NEXT:    pextrw $2, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm5
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm5
-; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm6
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm6
-; CHECK-SSE2-O0-NEXT:    pextrw $7, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm8
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm8
-; CHECK-SSE2-O0-NEXT:    pextrw $6, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm9
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm9
-; CHECK-SSE2-O0-NEXT:    pextrw $5, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm10
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm10
-; CHECK-SSE2-O0-NEXT:    pextrw $3, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm12
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm12
-; CHECK-SSE2-O0-NEXT:    pextrw $2, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm13
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm13
-; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm14
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm14
-; CHECK-SSE2-O0-NEXT:    movd %xmm15, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm13, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm12, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm11, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm10, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm9, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm8, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm7, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm5, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm4, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm3, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm2, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movl $32, %edi
-; CHECK-SSE2-O0-NEXT:    movq %rsp, %rdx
-; CHECK-SSE2-O0-NEXT:    movl $3, %ecx
-; CHECK-SSE2-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-SSE2-O0-NEXT:    addq $40, %rsp
-; CHECK-SSE2-O0-NEXT:    retq
+; CHECK-SSE-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $40, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movaps %xmm0, (%rsp)
+; CHECK-SSE-O0-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-SSE-O0-NEXT:    movl $32, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $3, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_store@PLT
+; CHECK-SSE-O0-NEXT:    addq $40, %rsp
+; CHECK-SSE-O0-NEXT:    retq
 ;
-; CHECK-SSE4-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
-; CHECK-SSE4-O0:       # %bb.0:
-; CHECK-SSE4-O0-NEXT:    subq $40, %rsp
-; CHECK-SSE4-O0-NEXT:    movaps %xmm1, %xmm5
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm13
-; CHECK-SSE4-O0-NEXT:    movq %rdi, %rsi
-; CHECK-SSE4-O0-NEXT:    xorps %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm3
-; CHECK-SSE4-O0-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm5, %xmm6
-; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm6 = xmm0[0],xmm6[1],xmm0[2],xmm6[3],xmm0[4],xmm6[5],xmm0[6],xmm6[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm11
-; CHECK-SSE4-O0-NEXT:    punpckhwd {{.*#+}} xmm11 = xmm11[4],xmm13[4],xmm11[5],xmm13[5],xmm11[6],xmm13[6],xmm11[7],xmm13[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm13, %xmm14
-; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm14 = xmm0[0],xmm14[1],xmm0[2],xmm14[3],xmm0[4],xmm14[5],xmm0[6],xmm14[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm5, %xmm7
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm7
-; CHECK-SSE4-O0-NEXT:    movaps %xmm13, %xmm15
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm15
-; CHECK-SSE4-O0-NEXT:    pextrw $7, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE4-O0-NEXT:    pextrw $6, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm1
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE4-O0-NEXT:    pextrw $5, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm2
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm2
-; CHECK-SSE4-O0-NEXT:    pextrw $3, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm4
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm4
-; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm5
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm5
-; CHECK-SSE4-O0-NEXT:    pextrw $7, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm8
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm8
-; CHECK-SSE4-O0-NEXT:    pextrw $6, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm9
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm9
-; CHECK-SSE4-O0-NEXT:    pextrw $5, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm10
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm10
-; CHECK-SSE4-O0-NEXT:    pextrw $3, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm12
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm12
-; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm13
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm13
-; CHECK-SSE4-O0-NEXT:    movd %xmm15, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm14, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm12, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm11, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm10, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm9, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm8, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm7, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm6, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm4, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm3, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm2, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movl $32, %edi
-; CHECK-SSE4-O0-NEXT:    movq %rsp, %rdx
-; CHECK-SSE4-O0-NEXT:    movl $3, %ecx
-; CHECK-SSE4-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-SSE4-O0-NEXT:    addq $40, %rsp
-; CHECK-SSE4-O0-NEXT:    retq
-;
-; CHECK-AVX2-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
-; CHECK-AVX2-O0:       # %bb.0:
-; CHECK-AVX2-O0-NEXT:    subq $40, %rsp
-; CHECK-AVX2-O0-NEXT:    vmovaps %ymm0, %ymm1
-; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX2-O0-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; CHECK-AVX2-O0-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
-; CHECK-AVX2-O0-NEXT:    vmovaps %xmm1, (%rsp)
-; CHECK-AVX2-O0-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movl $32, %edi
-; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
-; CHECK-AVX2-O0-NEXT:    movl $3, %ecx
-; CHECK-AVX2-O0-NEXT:    vzeroupper
-; CHECK-AVX2-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX2-O0-NEXT:    addq $40, %rsp
-; CHECK-AVX2-O0-NEXT:    retq
-;
-; CHECK-AVX512-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
-; CHECK-AVX512-O0:       # %bb.0:
-; CHECK-AVX512-O0-NEXT:    subq $40, %rsp
-; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX512-O0-NEXT:    vmovups %ymm0, (%rsp)
-; CHECK-AVX512-O0-NEXT:    movl $32, %edi
-; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
-; CHECK-AVX512-O0-NEXT:    movl $3, %ecx
-; CHECK-AVX512-O0-NEXT:    vzeroupper
-; CHECK-AVX512-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX512-O0-NEXT:    addq $40, %rsp
-; CHECK-AVX512-O0-NEXT:    retq
+; CHECK-AVX-O0-LABEL: store_atomic_vec16_bfloat_unaligned:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    subq $40, %rsp
+; CHECK-AVX-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX-O0-NEXT:    vmovups %ymm0, (%rsp)
+; CHECK-AVX-O0-NEXT:    movl $32, %edi
+; CHECK-AVX-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX-O0-NEXT:    movl $3, %ecx
+; CHECK-AVX-O0-NEXT:    vzeroupper
+; CHECK-AVX-O0-NEXT:    callq __atomic_store@PLT
+; CHECK-AVX-O0-NEXT:    addq $40, %rsp
+; CHECK-AVX-O0-NEXT:    retq
   store atomic <16 x bfloat> %v, ptr %x release, align 4
   ret void
 }
@@ -3176,276 +2848,31 @@ define void @store_atomic_vec16_bfloat_align(ptr %x, <16 x bfloat> %v) nounwind 
 ; CHECK-AVX-O3-NEXT:    addq $40, %rsp
 ; CHECK-AVX-O3-NEXT:    retq
 ;
-; CHECK-SSE2-O0-LABEL: store_atomic_vec16_bfloat_align:
-; CHECK-SSE2-O0:       # %bb.0:
-; CHECK-SSE2-O0-NEXT:    subq $40, %rsp
-; CHECK-SSE2-O0-NEXT:    movaps %xmm1, %xmm6
-; CHECK-SSE2-O0-NEXT:    movaps %xmm0, %xmm14
-; CHECK-SSE2-O0-NEXT:    movq %rdi, %rsi
-; CHECK-SSE2-O0-NEXT:    xorps %xmm11, %xmm11
-; CHECK-SSE2-O0-NEXT:    movaps %xmm11, %xmm3
-; CHECK-SSE2-O0-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm6[4],xmm3[5],xmm6[5],xmm3[6],xmm6[6],xmm3[7],xmm6[7]
-; CHECK-SSE2-O0-NEXT:    punpckhwd {{.*#+}} xmm11 = xmm11[4],xmm14[4],xmm11[5],xmm14[5],xmm11[6],xmm14[6],xmm11[7],xmm14[7]
-; CHECK-SSE2-O0-NEXT:    movaps %xmm6, %xmm7
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm7
-; CHECK-SSE2-O0-NEXT:    movaps %xmm14, %xmm15
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm15
-; CHECK-SSE2-O0-NEXT:    pextrw $7, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE2-O0-NEXT:    pextrw $6, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm1
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE2-O0-NEXT:    pextrw $5, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm2
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm2
-; CHECK-SSE2-O0-NEXT:    pextrw $3, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm4
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm4
-; CHECK-SSE2-O0-NEXT:    pextrw $2, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm5
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm5
-; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm6
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm6
-; CHECK-SSE2-O0-NEXT:    pextrw $7, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm8
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm8
-; CHECK-SSE2-O0-NEXT:    pextrw $6, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm9
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm9
-; CHECK-SSE2-O0-NEXT:    pextrw $5, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm10
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm10
-; CHECK-SSE2-O0-NEXT:    pextrw $3, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm12
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm12
-; CHECK-SSE2-O0-NEXT:    pextrw $2, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm13
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm13
-; CHECK-SSE2-O0-NEXT:    pextrw $1, %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    movd %eax, %xmm14
-; CHECK-SSE2-O0-NEXT:    pslld $16, %xmm14
-; CHECK-SSE2-O0-NEXT:    movd %xmm15, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm14, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm13, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm12, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm11, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm10, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm9, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm8, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm7, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm6, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm5, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm4, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm3, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm2, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE2-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE2-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE2-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE2-O0-NEXT:    movl $32, %edi
-; CHECK-SSE2-O0-NEXT:    movq %rsp, %rdx
-; CHECK-SSE2-O0-NEXT:    movl $3, %ecx
-; CHECK-SSE2-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-SSE2-O0-NEXT:    addq $40, %rsp
-; CHECK-SSE2-O0-NEXT:    retq
+; CHECK-SSE-O0-LABEL: store_atomic_vec16_bfloat_align:
+; CHECK-SSE-O0:       # %bb.0:
+; CHECK-SSE-O0-NEXT:    subq $40, %rsp
+; CHECK-SSE-O0-NEXT:    movq %rdi, %rsi
+; CHECK-SSE-O0-NEXT:    movaps %xmm0, (%rsp)
+; CHECK-SSE-O0-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-SSE-O0-NEXT:    movl $32, %edi
+; CHECK-SSE-O0-NEXT:    movq %rsp, %rdx
+; CHECK-SSE-O0-NEXT:    movl $3, %ecx
+; CHECK-SSE-O0-NEXT:    callq __atomic_store@PLT
+; CHECK-SSE-O0-NEXT:    addq $40, %rsp
+; CHECK-SSE-O0-NEXT:    retq
 ;
-; CHECK-SSE4-O0-LABEL: store_atomic_vec16_bfloat_align:
-; CHECK-SSE4-O0:       # %bb.0:
-; CHECK-SSE4-O0-NEXT:    subq $40, %rsp
-; CHECK-SSE4-O0-NEXT:    movaps %xmm1, %xmm5
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm13
-; CHECK-SSE4-O0-NEXT:    movq %rdi, %rsi
-; CHECK-SSE4-O0-NEXT:    xorps %xmm0, %xmm0
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm3
-; CHECK-SSE4-O0-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm5, %xmm6
-; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm6 = xmm0[0],xmm6[1],xmm0[2],xmm6[3],xmm0[4],xmm6[5],xmm0[6],xmm6[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm0, %xmm11
-; CHECK-SSE4-O0-NEXT:    punpckhwd {{.*#+}} xmm11 = xmm11[4],xmm13[4],xmm11[5],xmm13[5],xmm11[6],xmm13[6],xmm11[7],xmm13[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm13, %xmm14
-; CHECK-SSE4-O0-NEXT:    pblendw {{.*#+}} xmm14 = xmm0[0],xmm14[1],xmm0[2],xmm14[3],xmm0[4],xmm14[5],xmm0[6],xmm14[7]
-; CHECK-SSE4-O0-NEXT:    movaps %xmm5, %xmm7
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm7
-; CHECK-SSE4-O0-NEXT:    movaps %xmm13, %xmm15
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm15
-; CHECK-SSE4-O0-NEXT:    pextrw $7, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm0
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm0
-; CHECK-SSE4-O0-NEXT:    pextrw $6, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm1
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm1
-; CHECK-SSE4-O0-NEXT:    pextrw $5, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm2
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm2
-; CHECK-SSE4-O0-NEXT:    pextrw $3, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm4
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm4
-; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm5
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm5
-; CHECK-SSE4-O0-NEXT:    pextrw $7, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm8
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm8
-; CHECK-SSE4-O0-NEXT:    pextrw $6, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm9
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm9
-; CHECK-SSE4-O0-NEXT:    pextrw $5, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm10
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm10
-; CHECK-SSE4-O0-NEXT:    pextrw $3, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm12
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm12
-; CHECK-SSE4-O0-NEXT:    pextrw $2, %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    movd %eax, %xmm13
-; CHECK-SSE4-O0-NEXT:    pslld $16, %xmm13
-; CHECK-SSE4-O0-NEXT:    movd %xmm15, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, (%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm14, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm13, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm12, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm11, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm10, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm9, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm8, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm7, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm6, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm5, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm4, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm3, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm2, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm1, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movd %xmm0, %eax
-; CHECK-SSE4-O0-NEXT:    shrl $16, %eax
-; CHECK-SSE4-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-SSE4-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-SSE4-O0-NEXT:    movl $32, %edi
-; CHECK-SSE4-O0-NEXT:    movq %rsp, %rdx
-; CHECK-SSE4-O0-NEXT:    movl $3, %ecx
-; CHECK-SSE4-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-SSE4-O0-NEXT:    addq $40, %rsp
-; CHECK-SSE4-O0-NEXT:    retq
-;
-; CHECK-AVX2-O0-LABEL: store_atomic_vec16_bfloat_align:
-; CHECK-AVX2-O0:       # %bb.0:
-; CHECK-AVX2-O0-NEXT:    subq $40, %rsp
-; CHECK-AVX2-O0-NEXT:    vmovaps %ymm0, %ymm1
-; CHECK-AVX2-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX2-O0-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; CHECK-AVX2-O0-NEXT:    # kill: def $xmm1 killed $xmm1 killed $ymm1
-; CHECK-AVX2-O0-NEXT:    vmovaps %xmm1, (%rsp)
-; CHECK-AVX2-O0-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-AVX2-O0-NEXT:    movl $32, %edi
-; CHECK-AVX2-O0-NEXT:    movq %rsp, %rdx
-; CHECK-AVX2-O0-NEXT:    movl $3, %ecx
-; CHECK-AVX2-O0-NEXT:    vzeroupper
-; CHECK-AVX2-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX2-O0-NEXT:    addq $40, %rsp
-; CHECK-AVX2-O0-NEXT:    retq
-;
-; CHECK-AVX512-O0-LABEL: store_atomic_vec16_bfloat_align:
-; CHECK-AVX512-O0:       # %bb.0:
-; CHECK-AVX512-O0-NEXT:    subq $40, %rsp
-; CHECK-AVX512-O0-NEXT:    movq %rdi, %rsi
-; CHECK-AVX512-O0-NEXT:    vmovups %ymm0, (%rsp)
-; CHECK-AVX512-O0-NEXT:    movl $32, %edi
-; CHECK-AVX512-O0-NEXT:    movq %rsp, %rdx
-; CHECK-AVX512-O0-NEXT:    movl $3, %ecx
-; CHECK-AVX512-O0-NEXT:    vzeroupper
-; CHECK-AVX512-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-AVX512-O0-NEXT:    addq $40, %rsp
-; CHECK-AVX512-O0-NEXT:    retq
+; CHECK-AVX-O0-LABEL: store_atomic_vec16_bfloat_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    subq $40, %rsp
+; CHECK-AVX-O0-NEXT:    movq %rdi, %rsi
+; CHECK-AVX-O0-NEXT:    vmovups %ymm0, (%rsp)
+; CHECK-AVX-O0-NEXT:    movl $32, %edi
+; CHECK-AVX-O0-NEXT:    movq %rsp, %rdx
+; CHECK-AVX-O0-NEXT:    movl $3, %ecx
+; CHECK-AVX-O0-NEXT:    vzeroupper
+; CHECK-AVX-O0-NEXT:    callq __atomic_store@PLT
+; CHECK-AVX-O0-NEXT:    addq $40, %rsp
+; CHECK-AVX-O0-NEXT:    retq
   store atomic <16 x bfloat> %v, ptr %x release, align 32
   ret void
 }
