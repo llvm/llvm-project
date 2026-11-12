@@ -4564,10 +4564,10 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
 
   if (!WaveAddr) {
     WaveAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), WaveAddr)
-      .addReg(SrcReg)
-      .addImm(Subtarget->getWavefrontSizeLog2())
-      .setOperandDead(3); // Dead scc
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHL_B32), WaveAddr)
+        .addReg(SrcReg)
+        .addImm(Subtarget->getWavefrontSizeLog2())
+        .setOperandDead(3); // Dead scc
   }
 
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), SP)

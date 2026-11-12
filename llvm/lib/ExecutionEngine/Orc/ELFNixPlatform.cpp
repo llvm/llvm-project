@@ -770,8 +770,7 @@ Expected<uint64_t> ELFNixPlatform::createPThreadKey() {
 
   using CreatePThreadKeyProxy = Proxy<Expected<uint64_t>()>;
   CreatePThreadKeyProxy CreateKey(
-      sps::ProxySpec<CreatePThreadKeyProxy,
-                     elfnix_sps_ci::CreatePThreadKey>::dispatch,
+      sps::ProxySpec<elfnix_sps_ci::CreatePThreadKey>::dispatch,
       CreatePThreadKey.Addr);
   return CreateKey(ES);
 }

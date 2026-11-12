@@ -3757,7 +3757,14 @@ def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
 // VTableGetVPtr
 //===----------------------------------------------------------------------===//
 
-def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
+def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [
+  Pure,
+  TypesMatchWith<
+      "result is a vptr pointer in the address space of 'src'",
+      "src", "result",
+      "cir::PointerType::get(cir::VPtrType::get($_self.getContext()), "
+      "mlir::cast<cir::PointerType>($_self).getAddrSpace())">
+]> {
   let summary = "Get a the address of the vtable pointer for an object";
   let description = [{
     The `vtable.get_vptr` operation retrieves the address of the vptr for a
@@ -3766,7 +3773,7 @@ def CIR_VTableGetVPtrOp : CIR_Op<"vtable.get_vptr", [Pure]> {
     The vptr will always be at offset zero in the object, but this operation
     is more explicit about what is being retrieved than a direct bitcast.
 
-    The return type is always `!cir.ptr<!cir.vptr>`.
+    The return type is `!cir.ptr<!cir.vptr>` in the address space of `src`.
 
     Example:
     ```
@@ -6027,6 +6034,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
 
+    The `convergent` attribute marks asm that may contain convergent
+    operations, so it must not be moved across divergent control flow.
+
     Example:
     ```C++
     __asm__("foo" : : : );
@@ -6069,13 +6079,13 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
       "llvm::ArrayRef<mlir::ValueRange>":$asmOperands,
       "llvm::StringRef":$asmString, "llvm::StringRef":$constraints,
-      "bool":$sideEffects, "AsmFlavor":$asmFlavor,
+      "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
   let hasCustomAssemblyFormat = 1;

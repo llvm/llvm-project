@@ -3393,7 +3393,7 @@ define <5 x i8> @to_bf8_v5f16(<5 x half> %x) {
 ; GFX1200-NEXT:    v_lshrrev_b16 v4.l, v4.l, v6.h
 ; GFX1200-NEXT:    v_and_b16 v9.h, v5.h, 1
 ; GFX1200-NEXT:    v_cmp_ne_u16_e64 s0, 0, v7.h
-; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1200-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1200-NEXT:    v_or_b16 v8.l, v8.l, v8.h
 ; GFX1200-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX1200-NEXT:    v_cndmask_b16 v7.h, 0, 1, s0
