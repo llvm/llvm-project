@@ -499,7 +499,12 @@ FindCallSeqStart(SDNode *N, unsigned &NestLevel, unsigned &MaxNest,
             BestMaxNest = MyMaxNest;
           }
       }
-      assert(Best);
+      // A token factor can also merge chains from before the call sequence,
+      // such as that of a load that instruction selection folded into the
+      // store of a call argument. Where none of its operands leads to the
+      // CALLSEQ_BEGIN, the caller finds it on another path.
+      if (!Best)
+        return nullptr;
       MaxNest = BestMaxNest;
       return Best;
     }
