@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file declares a helper that attaches the DLTI data-layout spec,
-// including the CIR-native pointer entry, to a CIR module.
+// including the CIR-native pointer and _BitInt entries, to a CIR module.
 //
 //===----------------------------------------------------------------------===//
 #ifndef CLANG_CIR_CIRDATALAYOUTSPEC_H
@@ -24,10 +24,16 @@ class ModuleOp;
 namespace cir {
 
 /// Translate \p dl into a DLTI data-layout spec and attach it to \p mod.
-/// On top of the plain mlir::translateDataLayout entries this adds a
-/// #cir.ptr_spec entry keyed on !cir.ptr, which CIR pointer types read for
-/// their size and alignment; without it pointer widths default to 64 bits.
-void setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl);
+/// On top of the plain mlir::translateDataLayout entries this adds:
+///
+/// - a #cir.ptr_spec entry keyed on !cir.ptr, which CIR pointer types read
+///   for their size and alignment. Without it pointer widths default to 64
+///   bits.
+/// - a #cir.bitint_spec entry keyed on !cir.int<u, 1, bitint>.
+///   \p bitIntMaxAlign is TargetInfo::getBitIntMaxAlign(), in bits. _BitInt
+///   ABI alignment clamps to that cap.
+void setMLIRDataLayout(mlir::ModuleOp mod, const llvm::DataLayout &dl,
+                       unsigned bitIntMaxAlign);
 
 } // namespace cir
 

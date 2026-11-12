@@ -105,7 +105,7 @@ static uint64_t getMemoryFallbackAlignment(mlir::Type cirType,
                                            const mlir::DataLayout &dataLayout) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
       intTy && intTy.isBitInt())
-    return intTy.getABIAlignment(dataLayout, {});
+    return dataLayout.getTypeABIAlignment(intTy);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -5136,15 +5136,18 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     return;
   }
 
-  // Drop the cir.ptr-keyed data-layout entries: they drove pointer-width
-  // queries up to this point, but the LLVM IR exporter rejects CIR types.
+  // Drop CIR-native data-layout entries. They drove pointer-width and
+  // _BitInt alignment queries up to this point, but the LLVM IR exporter
+  // rejects CIR types.
   if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
           module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
     llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
     for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
-      if (entry.isTypeEntry() &&
-          mlir::isa<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey())))
-        continue;
+      if (entry.isTypeEntry()) {
+        mlir::Type key = mlir::cast<mlir::Type>(entry.getKey());
+        if (mlir::isa<cir::PointerType, cir::IntType>(key))
+          continue;
+      }
       kept.push_back(entry);
     }
     module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
