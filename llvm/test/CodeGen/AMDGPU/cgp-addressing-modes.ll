@@ -739,6 +739,65 @@ done:
   ret void
 }
 
+; An offset of 2^32 + 4 does not fit in the MUBUF immediate offset, even
+; though its low 32 bits do, so the GEP is not sunk into the block.
+; OPT-LABEL: @test_no_sink_global_4gb_plus_4_mubuf_offset(
+; OPT: %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 4294967300
+; OPT: br i1
+; OPT-NOT: getelementptr
+; OPT: load i8, ptr addrspace(1) %in.gep
+define amdgpu_kernel void @test_no_sink_global_4gb_plus_4_mubuf_offset(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+entry:
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 1024
+  %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 4294967300
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1 = load i8, ptr addrspace(1) %in.gep
+  %tmp2 = sext i8 %tmp1 to i32
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp2, %if ], [ 0, %entry ]
+  store i32 %x, ptr addrspace(1) %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
+; An offset of 2^32 + 1 is not a multiple of 4, so the constant address space
+; access is checked against the MUBUF immediate offset on all subtargets. The
+; offset does not fit, even though its low 32 bits do, so the GEP is not sunk.
+; OPT-LABEL: @test_no_sink_constant_4gb_plus_1_mubuf_offset(
+; OPT: %in.gep = getelementptr i8, ptr addrspace(4) %in, i64 4294967297
+; OPT: br i1
+; OPT-NOT: getelementptr
+; OPT: load i8, ptr addrspace(4) %in.gep
+define amdgpu_kernel void @test_no_sink_constant_4gb_plus_1_mubuf_offset(ptr addrspace(1) %out, ptr addrspace(4) %in) {
+entry:
+  %out.gep = getelementptr i32, ptr addrspace(1) %out, i32 1024
+  %in.gep = getelementptr i8, ptr addrspace(4) %in, i64 4294967297
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %tmp0 = icmp eq i32 %tid, 0
+  br i1 %tmp0, label %endif, label %if
+
+if:
+  %tmp1 = load i8, ptr addrspace(4) %in.gep
+  %tmp2 = sext i8 %tmp1 to i32
+  br label %endif
+
+endif:
+  %x = phi i32 [ %tmp2, %if ], [ 0, %entry ]
+  store i32 %x, ptr addrspace(1) %out.gep
+  br label %done
+
+done:
+  ret void
+}
+
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #3
 declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture, i1 immarg) #3
