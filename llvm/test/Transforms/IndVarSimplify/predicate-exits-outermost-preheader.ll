@@ -6,18 +6,20 @@ define void @outermost_two_level(ptr %p, i64 %n, i64 %m, i64 %k) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i64 [[K:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ENTER:%.*]] = icmp sgt i64 [[N]], 0
-; CHECK-NEXT:    br i1 [[ENTER]], label %[[OUTER_PREHEADER:.*]], label %[[EXIT:.*]]
-; CHECK:       [[OUTER_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[ENTER]], label %[[TARGET_OUTER_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[TARGET_OUTER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[K]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[K]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[TARGET_OUTER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[TRAP:.*]], label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = add i64 [[I]], [[J]]
@@ -42,14 +44,20 @@ define void @outermost_two_level(ptr %p, i64 %n, i64 %m, i64 %k) {
 ;
 entry:
   %enter = icmp sgt i64 %n, 0
-  br i1 %enter, label %outer, label %exit
+  br i1 %enter, label %target.outer.preheader, label %exit
+
+target.outer.preheader:
+  br label %outer
 
 outer:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i = phi i64 [ 0, %target.outer.preheader ], [ %i.next, %outer.latch ]
+  br label %inner.preheader
+
+inner.preheader:
   br label %inner
 
 inner:
-  %j = phi i64 [ 0, %outer ], [ %j.next, %inner.latch ]
+  %j = phi i64 [ 0, %inner.preheader ], [ %j.next, %inner.latch ]
   %oob = icmp uge i64 %j, %k
   br i1 %oob, label %trap, label %inner.body
 
@@ -80,21 +88,27 @@ trap:
 define void @middle_of_three_levels(ptr %p, ptr %q, i64 %n, i64 %m) {
 ; CHECK-LABEL: define void @middle_of_three_levels(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[OUTER_PREHEADER:.*]]
+; CHECK:       [[OUTER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    br label %[[L1:.*]]
 ; CHECK:       [[L1]]:
-; CHECK-NEXT:    [[A:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[A_NEXT:%.*]], %[[L1_LATCH:.*]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i64 [ 0, %[[OUTER_PREHEADER]] ], [ [[A_NEXT:%.*]], %[[L1_LATCH:.*]] ]
 ; CHECK-NEXT:    [[K:%.*]] = load i64, ptr [[Q]], align 4
+; CHECK-NEXT:    br label %[[TARGET_MIDDLE_PREHEADER:.*]]
+; CHECK:       [[TARGET_MIDDLE_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 [[K]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[K]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[L2:.*]]
 ; CHECK:       [[L2]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[L1]] ], [ [[I_NEXT:%.*]], %[[L2_LATCH:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[TARGET_MIDDLE_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[L2_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[L2]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[TRAP:.*]], label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = add i64 [[I]], [[J]]
@@ -120,19 +134,28 @@ define void @middle_of_three_levels(ptr %p, ptr %q, i64 %n, i64 %m) {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
+  br label %outer.preheader
+
+outer.preheader:
   br label %l1
 
 l1:
-  %a = phi i64 [ 0, %entry ], [ %a.next, %l1.latch ]
+  %a = phi i64 [ 0, %outer.preheader ], [ %a.next, %l1.latch ]
   %k = load i64, ptr %q
+  br label %target.middle.preheader
+
+target.middle.preheader:
   br label %l2
 
 l2:
-  %i = phi i64 [ 0, %l1 ], [ %i.next, %l2.latch ]
+  %i = phi i64 [ 0, %target.middle.preheader ], [ %i.next, %l2.latch ]
+  br label %inner.preheader
+
+inner.preheader:
   br label %inner
 
 inner:
-  %j = phi i64 [ 0, %l2 ], [ %j.next, %inner.latch ]
+  %j = phi i64 [ 0, %inner.preheader ], [ %j.next, %inner.latch ]
   %oob = icmp uge i64 %j, %k
   br i1 %oob, label %trap, label %inner.body
 
@@ -175,13 +198,15 @@ define void @inner_only_bound_varies_in_outer(ptr %p, i64 %n, i64 %m) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 3, %[[OUTER_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 3, %[[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[OUTER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[INDVARS_IV]], i64 [[TMP0]])
+; CHECK-NEXT:    br label %[[TARGET_INNER_PREHEADER:.*]]
+; CHECK:       [[TARGET_INNER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDVARS_IV]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[TARGET_INNER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_BODY]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = add nuw i64 [[I]], [[J]]
@@ -207,15 +232,21 @@ define void @inner_only_bound_varies_in_outer(ptr %p, i64 %n, i64 %m) {
 ;
 entry:
   %enter = icmp sgt i64 %n, 0
-  br i1 %enter, label %outer, label %exit
+  br i1 %enter, label %outer.preheader, label %exit
+
+outer.preheader:
+  br label %outer
 
 outer:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i = phi i64 [ 0, %outer.preheader ], [ %i.next, %outer.latch ]
   %k = add i64 %i, 3
+  br label %target.inner.preheader
+
+target.inner.preheader:
   br label %inner
 
 inner:
-  %j = phi i64 [ 0, %outer ], [ %j.next, %inner.latch ]
+  %j = phi i64 [ 0, %target.inner.preheader ], [ %j.next, %inner.latch ]
   %oob = icmp uge i64 %j, %k
   br i1 %oob, label %trap, label %inner.body
 
@@ -252,14 +283,16 @@ define void @inner_only_division_by_outer_value(ptr %p, i64 %n, i64 %m, i64 %d) 
 ; CHECK:       [[OUTER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[OUTER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[NZ:%.*]] = icmp eq i64 [[D]], 0
 ; CHECK-NEXT:    br i1 [[NZ]], label %[[OUTER_LATCH]], label %[[OUTER_BODY:.*]]
 ; CHECK:       [[OUTER_BODY]]:
 ; CHECK-NEXT:    [[K:%.*]] = udiv i64 [[M]], [[D]]
+; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER_BODY]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[OOB:%.*]] = icmp uge i64 [[J]], [[K]]
 ; CHECK-NEXT:    br i1 [[OOB]], label %[[TRAP:.*]], label %[[INNER_BODY:.*]]
 ; CHECK:       [[INNER_BODY]]:
@@ -287,19 +320,25 @@ define void @inner_only_division_by_outer_value(ptr %p, i64 %n, i64 %m, i64 %d) 
 ;
 entry:
   %enter = icmp sgt i64 %n, 0
-  br i1 %enter, label %outer, label %exit
+  br i1 %enter, label %outer.preheader, label %exit
+
+outer.preheader:
+  br label %outer
 
 outer:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i = phi i64 [ 0, %outer.preheader ], [ %i.next, %outer.latch ]
   %nz = icmp eq i64 %d, 0
   br i1 %nz, label %outer.latch, label %outer.body
 
 outer.body:
   %k = udiv i64 %m, %d
+  br label %inner.preheader
+
+inner.preheader:
   br label %inner
 
 inner:
-  %j = phi i64 [ 0, %outer.body ], [ %j.next, %inner.latch ]
+  %j = phi i64 [ 0, %inner.preheader ], [ %j.next, %inner.latch ]
   %oob = icmp uge i64 %j, %k
   br i1 %oob, label %trap, label %inner.body
 
@@ -332,8 +371,8 @@ define void @two_predicated_exits(ptr %p, i64 %n, i64 %m, i64 %k1, i64 %k2) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i64 [[K1:%.*]], i64 [[K2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ENTER:%.*]] = icmp sgt i64 [[N]], 0
-; CHECK-NEXT:    br i1 [[ENTER]], label %[[OUTER_PREHEADER:.*]], label %[[EXIT:.*]]
-; CHECK:       [[OUTER_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[ENTER]], label %[[TARGET_OUTER_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[TARGET_OUTER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[K2]]
@@ -343,10 +382,12 @@ define void @two_predicated_exits(ptr %p, i64 %n, i64 %m, i64 %k1, i64 %k2) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[K2]], [[UMIN1]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[TARGET_OUTER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[TRAP:.*]], label %[[CHECK2:.*]]
 ; CHECK:       [[CHECK2]]:
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[TRAP]], label %[[INNER_BODY:.*]]
@@ -373,14 +414,20 @@ define void @two_predicated_exits(ptr %p, i64 %n, i64 %m, i64 %k1, i64 %k2) {
 ;
 entry:
   %enter = icmp sgt i64 %n, 0
-  br i1 %enter, label %outer, label %exit
+  br i1 %enter, label %target.outer.preheader, label %exit
+
+target.outer.preheader:
+  br label %outer
 
 outer:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %i = phi i64 [ 0, %target.outer.preheader ], [ %i.next, %outer.latch ]
+  br label %inner.preheader
+
+inner.preheader:
   br label %inner
 
 inner:
-  %j = phi i64 [ 0, %outer ], [ %j.next, %inner.latch ]
+  %j = phi i64 [ 0, %inner.preheader ], [ %j.next, %inner.latch ]
   %oob1 = icmp uge i64 %j, %k1
   br i1 %oob1, label %trap, label %check2
 
