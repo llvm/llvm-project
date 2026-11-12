@@ -46,31 +46,6 @@
 ---
 name:            test_api
 alignment:       16
-registers:
-  - { id: 0, class: tile }
-  - { id: 1, class: tile }
-  - { id: 2, class: tile }
-  - { id: 3, class: tile }
-  - { id: 4, class: tile }
-  - { id: 5, class: tile }
-  - { id: 6, class: tile }
-  - { id: 7, class: tile }
-  - { id: 8, class: tile }
-  - { id: 9, class: gr32 }
-  - { id: 10, class: gr32 }
-  - { id: 11, class: gr32 }
-  - { id: 12, class: gr16 }
-  - { id: 13, class: gr16 }
-  - { id: 14, class: gr64 }
-  - { id: 15, class: gr64_nosp }
-  - { id: 16, class: gr16 }
-  - { id: 17, class: gr64 }
-  - { id: 18, class: gr64_nosp }
-  - { id: 19, class: gr16 }
-  - { id: 20, class: gr16 }
-  - { id: 21, class: tile }
-  - { id: 22, class: gr64 }
-  - { id: 23, class: gr64_nosp }
 liveins:
   - { reg: '$edi', virtual-reg: '%9' }
   - { reg: '$esi', virtual-reg: '%10' }

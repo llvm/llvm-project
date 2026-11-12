@@ -28,10 +28,6 @@ name:            test_and_i8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -48,9 +44,9 @@ body:             |
     ; ALL-NEXT: [[AND8rr:%[0-9]+]]:gr8 = AND8rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $al = COPY [[AND8rr]]
     ; ALL-NEXT: RET 0, implicit $al
-    %0(s8) = COPY $dil
-    %1(s8) = COPY $sil
-    %2(s8) = G_AND %0, %1
+    %0:gpr(s8) = COPY $dil
+    %1:gpr(s8) = COPY $sil
+    %2:gpr(s8) = G_AND %0, %1
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -60,10 +56,6 @@ name:            test_and_i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -80,9 +72,9 @@ body:             |
     ; ALL-NEXT: [[AND16rr:%[0-9]+]]:gr16 = AND16rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $ax = COPY [[AND16rr]]
     ; ALL-NEXT: RET 0, implicit $ax
-    %0(s16) = COPY $di
-    %1(s16) = COPY $si
-    %2(s16) = G_AND %0, %1
+    %0:gpr(s16) = COPY $di
+    %1:gpr(s16) = COPY $si
+    %2:gpr(s16) = G_AND %0, %1
     $ax = COPY %2(s16)
     RET 0, implicit $ax
 
@@ -92,10 +84,6 @@ name:            test_and_i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -112,9 +100,9 @@ body:             |
     ; ALL-NEXT: [[AND32rr:%[0-9]+]]:gr32 = AND32rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $eax = COPY [[AND32rr]]
     ; ALL-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s32) = G_AND %0, %1
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = COPY $esi
+    %2:gpr(s32) = G_AND %0, %1
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -124,10 +112,6 @@ name:            test_and_i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -144,9 +128,9 @@ body:             |
     ; ALL-NEXT: [[AND64rr:%[0-9]+]]:gr64 = AND64rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $rax = COPY [[AND64rr]]
     ; ALL-NEXT: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s64) = COPY $rsi
-    %2(s64) = G_AND %0, %1
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s64) = COPY $rsi
+    %2:gpr(s64) = G_AND %0, %1
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 

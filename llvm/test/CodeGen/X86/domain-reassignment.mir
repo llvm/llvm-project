@@ -61,30 +61,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr8, preferred-register: '' }
-  - { id: 1, class: gr8, preferred-register: '' }
-  - { id: 2, class: gr8, preferred-register: '' }
-  - { id: 3, class: gr32, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: vr128x, preferred-register: '' }
-  - { id: 6, class: fr32x, preferred-register: '' }
-  - { id: 7, class: fr32x, preferred-register: '' }
-  - { id: 8, class: fr32x, preferred-register: '' }
-  - { id: 9, class: fr32x, preferred-register: '' }
-  - { id: 10, class: fr32x, preferred-register: '' }
-  - { id: 11, class: gr8, preferred-register: '' }
-  - { id: 12, class: vk1, preferred-register: '' }
-  - { id: 13, class: gr32, preferred-register: '' }
-  - { id: 14, class: vk1, preferred-register: '' }
-  - { id: 15, class: gr32, preferred-register: '' }
-  - { id: 16, class: gr32, preferred-register: '' }
-  - { id: 17, class: gr32, preferred-register: '' }
-  - { id: 18, class: vk1wm, preferred-register: '' }
-  - { id: 19, class: vr128x, preferred-register: '' }
-  - { id: 20, class: vr128, preferred-register: '' }
-  - { id: 21, class: vr128, preferred-register: '' }
-  - { id: 22, class: fr32x, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%3' }
   - { reg: '$rsi', virtual-reg: '%4' }
@@ -157,15 +133,15 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $edi, $rsi, $xmm0, $xmm1, $xmm2, $xmm3, $xmm4, $xmm5
 
-    %10 = COPY $xmm5
-    %9 = COPY $xmm4
-    %8 = COPY $xmm3
-    %7 = COPY $xmm2
-    %6 = COPY $xmm1
-    %5 = COPY $xmm0
-    %4 = COPY $rsi
-    %3 = COPY $edi
-    %11 = COPY %3.sub_8bit
+    %10:fr32x = COPY $xmm5
+    %9:fr32x = COPY $xmm4
+    %8:fr32x = COPY $xmm3
+    %7:fr32x = COPY $xmm2
+    %6:fr32x = COPY $xmm1
+    %5:vr128x = COPY $xmm0
+    %4:gr64 = COPY $rsi
+    %3:gr32 = COPY $edi
+    %11:gr8 = COPY %3.sub_8bit
     TEST8ri %11, 1, implicit-def $eflags
     JCC_1 %bb.2, 4, implicit $eflags
     JMP_1 %bb.1
@@ -173,35 +149,35 @@ body:             |
   bb.1.if:
     successors: %bb.3(0x80000000)
 
-    %14 = VCMPSSZrri %7, %8, 0, implicit $mxcsr
+    %14:vk1 = VCMPSSZrri %7, %8, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
-    %15 = COPY %14
-    %0 = COPY %15.sub_8bit
+    %15:gr32 = COPY %14
+    %0:gr8 = COPY %15.sub_8bit
     JMP_1 %bb.3
 
   bb.2.else:
     successors: %bb.3(0x80000000)
-    %12 = VCMPSSZrri %9, %10, 0, implicit $mxcsr
+    %12:vk1 = VCMPSSZrri %9, %10, 0, implicit $mxcsr
 
     ; check that cross domain copies are replaced with same domain copies.
 
-    %13 = COPY %12
-    %1 = COPY %13.sub_8bit
+    %13:gr32 = COPY %12
+    %1:gr8 = COPY %13.sub_8bit
 
   bb.3.exit:
 
     ; check PHI, IMPLICIT_DEF, and INSERT_SUBREG replacers.
 
-    %2 = PHI %1, %bb.2, %0, %bb.1
-    %17 = IMPLICIT_DEF
-    %16 = INSERT_SUBREG %17, %2, %subreg.sub_8bit_hi
-    %18 = COPY %16
-    %19 = COPY %6
-    %21 = IMPLICIT_DEF
-    %20 = VMOVSSZrrk %19, %18, %21, %5
-    %22 = COPY %20
+    %2:gr8 = PHI %1, %bb.2, %0, %bb.1
+    %17:gr32 = IMPLICIT_DEF
+    %16:gr32 = INSERT_SUBREG %17, %2, %subreg.sub_8bit_hi
+    %18:vk1wm = COPY %16
+    %19:vr128x = COPY %6
+    %21:vr128 = IMPLICIT_DEF
+    %20:vr128 = VMOVSSZrrk %19, %18, %21, %5
+    %22:fr32x = COPY %20
     VMOVSSZmr %4, 1, $noreg, 0, $noreg, %22 :: (store (s32) into %ir.fptr)
     RET 0
 
@@ -213,26 +189,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vr512, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: vk8, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr8, preferred-register: '' }
-  - { id: 8, class: gr32, preferred-register: '' }
-  - { id: 9, class: gr32, preferred-register: '' }
-  - { id: 10, class: vk8wm, preferred-register: '' }
-  - { id: 11, class: vr512, preferred-register: '' }
-  - { id: 12, class: gr8, preferred-register: '' }
-  - { id: 13, class: gr8, preferred-register: '' }
-  - { id: 14, class: gr8, preferred-register: '' }
-  - { id: 15, class: gr8, preferred-register: '' }
-  - { id: 16, class: gr8, preferred-register: '' }
-  - { id: 17, class: gr8, preferred-register: '' }
-  - { id: 18, class: gr8, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -291,28 +247,28 @@ body:             |
   bb.0:
     liveins: $rdi, $zmm0, $zmm1, $zmm2, $zmm3
 
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
-    %3 = COPY $zmm2
-    %4 = COPY $zmm3
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
+    %3:vr512 = COPY $zmm2
+    %4:vr512 = COPY $zmm3
 
-    %5 = VCMPPDZrri %3, %4, 0, implicit $mxcsr
-    %6 = COPY %5
-    %7 = COPY %6.sub_8bit
+    %5:vk8 = VCMPPDZrri %3, %4, 0, implicit $mxcsr
+    %6:gr32 = COPY %5
+    %7:gr8 = COPY %6.sub_8bit
 
-    %12 = SHR8ri %7, 2, implicit-def dead $eflags
-    %13 = SHL8ri %12, 1, implicit-def dead $eflags
-    %14 = NOT8r %13
-    %15 = OR8rr %14, %12, implicit-def dead $eflags
-    %16 = AND8rr %15, %13, implicit-def dead $eflags
-    %17 = XOR8rr %16, %12, implicit-def dead $eflags
-    %18 = ADD8rr %17, %14, implicit-def dead $eflags
+    %12:gr8 = SHR8ri %7, 2, implicit-def dead $eflags
+    %13:gr8 = SHL8ri %12, 1, implicit-def dead $eflags
+    %14:gr8 = NOT8r %13
+    %15:gr8 = OR8rr %14, %12, implicit-def dead $eflags
+    %16:gr8 = AND8rr %15, %13, implicit-def dead $eflags
+    %17:gr8 = XOR8rr %16, %12, implicit-def dead $eflags
+    %18:gr8 = ADD8rr %17, %14, implicit-def dead $eflags
 
-    %8 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %8, %18, %subreg.sub_8bit_hi
-    %10 = COPY %9
-    %11 = VMOVAPDZrrk %2, %10, %1
+    %8:gr32 = IMPLICIT_DEF
+    %9:gr32 = INSERT_SUBREG %8, %18, %subreg.sub_8bit_hi
+    %10:vk8wm = COPY %9
+    %11:vr512 = VMOVAPDZrrk %2, %10, %1
     VMOVAPDZmr %0, 1, $noreg, 0, $noreg, %11
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
@@ -333,25 +289,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vr512, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: vk16, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr16, preferred-register: '' }
-  - { id: 8, class: gr32, preferred-register: '' }
-  - { id: 9, class: gr32, preferred-register: '' }
-  - { id: 10, class: vk16wm, preferred-register: '' }
-  - { id: 11, class: vr512, preferred-register: '' }
-  - { id: 12, class: gr16, preferred-register: '' }
-  - { id: 13, class: gr16, preferred-register: '' }
-  - { id: 14, class: gr16, preferred-register: '' }
-  - { id: 15, class: gr16, preferred-register: '' }
-  - { id: 16, class: gr16, preferred-register: '' }
-  - { id: 17, class: gr16, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -409,27 +346,27 @@ body:             |
   bb.0:
     liveins: $rdi, $zmm0, $zmm1, $zmm2, $zmm3
 
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
-    %3 = COPY $zmm2
-    %4 = COPY $zmm3
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
+    %3:vr512 = COPY $zmm2
+    %4:vr512 = COPY $zmm3
 
-    %5 = VCMPPSZrri %3, %4, 0, implicit $mxcsr
-    %6 = COPY %5
-    %7 = COPY %6.sub_16bit
+    %5:vk16 = VCMPPSZrri %3, %4, 0, implicit $mxcsr
+    %6:gr32 = COPY %5
+    %7:gr16 = COPY %6.sub_16bit
 
-    %12 = SHR16ri %7, 2, implicit-def dead $eflags
-    %13 = SHL16ri %12, 1, implicit-def dead $eflags
-    %14 = NOT16r %13
-    %15 = OR16rr %14, %12, implicit-def dead $eflags
-    %16 = AND16rr %15, %13, implicit-def dead $eflags
-    %17 = XOR16rr %16, %12, implicit-def dead $eflags
+    %12:gr16 = SHR16ri %7, 2, implicit-def dead $eflags
+    %13:gr16 = SHL16ri %12, 1, implicit-def dead $eflags
+    %14:gr16 = NOT16r %13
+    %15:gr16 = OR16rr %14, %12, implicit-def dead $eflags
+    %16:gr16 = AND16rr %15, %13, implicit-def dead $eflags
+    %17:gr16 = XOR16rr %16, %12, implicit-def dead $eflags
 
-    %8 = IMPLICIT_DEF
-    %9 = INSERT_SUBREG %8, %17, %subreg.sub_16bit
-    %10 = COPY %9
-    %11 = VMOVAPSZrrk %2, %10, %1
+    %8:gr32 = IMPLICIT_DEF
+    %9:gr32 = INSERT_SUBREG %8, %17, %subreg.sub_16bit
+    %10:vk16wm = COPY %9
+    %11:vr512 = VMOVAPSZrrk %2, %10, %1
     VMOVAPSZmr %0, 1, $noreg, 0, $noreg, %11
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
@@ -450,21 +387,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vk32wm, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr32, preferred-register: '' }
-  - { id: 8, class: gr32, preferred-register: '' }
-  - { id: 9, class: gr32, preferred-register: '' }
-  - { id: 10, class: gr32, preferred-register: '' }
-  - { id: 11, class: gr32, preferred-register: '' }
-  - { id: 12, class: gr32, preferred-register: '' }
-  - { id: 13, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -516,22 +438,22 @@ body:             |
   bb.0:
     liveins: $rdi, $zmm0, $zmm1
 
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
 
-    %5 = MOV32rm %0, 1, $noreg, 0, $noreg
-    %6 = SHR32ri %5, 2, implicit-def dead $eflags
-    %7 = SHL32ri %6, 1, implicit-def dead $eflags
-    %8 = NOT32r %7
-    %9 = OR32rr %8, %6, implicit-def dead $eflags
-    %10 = AND32rr %9, %7, implicit-def dead $eflags
-    %11 = XOR32rr %10, %6, implicit-def dead $eflags
-    %12 = ANDN32rr %11, %9, implicit-def dead $eflags
-    %13 = ADD32rr %12, %11, implicit-def dead $eflags
+    %5:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
+    %6:gr32 = SHR32ri %5, 2, implicit-def dead $eflags
+    %7:gr32 = SHL32ri %6, 1, implicit-def dead $eflags
+    %8:gr32 = NOT32r %7
+    %9:gr32 = OR32rr %8, %6, implicit-def dead $eflags
+    %10:gr32 = AND32rr %9, %7, implicit-def dead $eflags
+    %11:gr32 = XOR32rr %10, %6, implicit-def dead $eflags
+    %12:gr32 = ANDN32rr %11, %9, implicit-def dead $eflags
+    %13:gr32 = ADD32rr %12, %11, implicit-def dead $eflags
 
-    %3 = COPY %13
-    %4 = VMOVDQU16Zrrk %2, %3, %1
+    %3:vk32wm = COPY %13
+    %4:vr512 = VMOVDQU16Zrrk %2, %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
@@ -552,21 +474,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vk64wm, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: gr64, preferred-register: '' }
-  - { id: 6, class: gr64, preferred-register: '' }
-  - { id: 7, class: gr64, preferred-register: '' }
-  - { id: 8, class: gr64, preferred-register: '' }
-  - { id: 9, class: gr64, preferred-register: '' }
-  - { id: 10, class: gr64, preferred-register: '' }
-  - { id: 11, class: gr64, preferred-register: '' }
-  - { id: 12, class: gr64, preferred-register: '' }
-  - { id: 13, class: gr64, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -618,22 +525,22 @@ body:             |
   bb.0:
     liveins: $rdi, $zmm0, $zmm1
 
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
 
-    %5 = MOV64rm %0, 1, $noreg, 0, $noreg
-    %6 = SHR64ri %5, 2, implicit-def dead $eflags
-    %7 = SHL64ri %6, 1, implicit-def dead $eflags
-    %8 = NOT64r %7
-    %9 = OR64rr %8, %6, implicit-def dead $eflags
-    %10 = AND64rr %9, %7, implicit-def dead $eflags
-    %11 = XOR64rr %10, %6, implicit-def dead $eflags
-    %12 = ANDN64rr %11, %9, implicit-def dead $eflags
-    %13 = ADD64rr %12, %11, implicit-def dead $eflags
+    %5:gr64 = MOV64rm %0, 1, $noreg, 0, $noreg
+    %6:gr64 = SHR64ri %5, 2, implicit-def dead $eflags
+    %7:gr64 = SHL64ri %6, 1, implicit-def dead $eflags
+    %8:gr64 = NOT64r %7
+    %9:gr64 = OR64rr %8, %6, implicit-def dead $eflags
+    %10:gr64 = AND64rr %9, %7, implicit-def dead $eflags
+    %11:gr64 = XOR64rr %10, %6, implicit-def dead $eflags
+    %12:gr64 = ANDN64rr %11, %9, implicit-def dead $eflags
+    %13:gr64 = ADD64rr %12, %11, implicit-def dead $eflags
 
-    %3 = COPY %13
-    %4 = VMOVDQU8Zrrk %2, %3, %1
+    %3:vk64wm = COPY %13
+    %4:vr512 = VMOVDQU8Zrrk %2, %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
 
     ; FIXME We can't replace TEST with KTEST due to flag differences
@@ -654,14 +561,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vk16wm, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: gr16, preferred-register: '' }
-  - { id: 6, class: gr16, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -702,15 +601,15 @@ body:             |
     ; CHECK: [[VMOVAPSZrrk:%[0-9]+]]:vr512 = VMOVAPSZrrk [[COPY2]], [[COPY4]], [[COPY1]]
     ; CHECK: VMOVAPSZmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVAPSZrrk]]
     ; CHECK: RET 0
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
 
-    %5 = MOVZX16rm8 %0, 1, $noreg, 0, $noreg
-    %6 = NOT16r %5
+    %5:gr16 = MOVZX16rm8 %0, 1, $noreg, 0, $noreg
+    %6:gr16 = NOT16r %5
 
-    %3 = COPY %6
-    %4 = VMOVAPSZrrk %2, %3, %1
+    %3:vk16wm = COPY %6
+    %4:vr512 = VMOVAPSZrrk %2, %3, %1
     VMOVAPSZmr %0, 1, $noreg, 0, $noreg, %4
     RET 0
 
@@ -722,15 +621,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vk64wm, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -773,16 +663,16 @@ body:             |
     ; CHECK: [[VMOVDQU16Zrrk:%[0-9]+]]:vr512 = VMOVDQU16Zrrk [[COPY2]], [[COPY5]], [[COPY1]]
     ; CHECK: VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVDQU16Zrrk]]
     ; CHECK: RET 0
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
 
-    %5 = MOVZX32rm8 %0, 1, $noreg, 0, $noreg
-    %6 = MOVZX32rm16 %0, 1, $noreg, 0, $noreg
-    %7 = ADD32rr %5, %6, implicit-def dead $eflags
+    %5:gr32 = MOVZX32rm8 %0, 1, $noreg, 0, $noreg
+    %6:gr32 = MOVZX32rm16 %0, 1, $noreg, 0, $noreg
+    %7:gr32 = ADD32rr %5, %6, implicit-def dead $eflags
 
-    %3 = COPY %7
-    %4 = VMOVDQU16Zrrk %2, %3, %1
+    %3:vk64wm = COPY %7
+    %4:vr512 = VMOVDQU16Zrrk %2, %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
     RET 0
 
@@ -794,15 +684,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: vr512, preferred-register: '' }
-  - { id: 2, class: vr512, preferred-register: '' }
-  - { id: 3, class: vk64wm, preferred-register: '' }
-  - { id: 4, class: vr512, preferred-register: '' }
-  - { id: 5, class: gr64, preferred-register: '' }
-  - { id: 6, class: gr64, preferred-register: '' }
-  - { id: 7, class: gr64, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$zmm0', virtual-reg: '%1' }
@@ -845,16 +726,16 @@ body:             |
     ; CHECK: [[VMOVDQU8Zrrk:%[0-9]+]]:vr512 = VMOVDQU8Zrrk [[COPY2]], [[COPY5]], [[COPY1]]
     ; CHECK: VMOVDQA32Zmr [[COPY]], 1, $noreg, 0, $noreg, [[VMOVDQU8Zrrk]]
     ; CHECK: RET 0
-    %0 = COPY $rdi
-    %1 = COPY $zmm0
-    %2 = COPY $zmm1
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
 
-    %5 = MOVZX64rm8 %0, 1, $noreg, 0, $noreg
-    %6 = MOVZX64rm16 %0, 1, $noreg, 0, $noreg
-    %7 = ADD64rr %5, %6, implicit-def dead $eflags
+    %5:gr64 = MOVZX64rm8 %0, 1, $noreg, 0, $noreg
+    %6:gr64 = MOVZX64rm16 %0, 1, $noreg, 0, $noreg
+    %7:gr64 = ADD64rr %5, %6, implicit-def dead $eflags
 
-    %3 = COPY %7
-    %4 = VMOVDQU8Zrrk %2, %3, %1
+    %3:vk64wm = COPY %7
+    %4:vr512 = VMOVDQU8Zrrk %2, %3, %1
     VMOVDQA32Zmr %0, 1, $noreg, 0, $noreg, %4
     RET 0
 
@@ -877,11 +758,7 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
 # Note that this test is supposed to have registers without classes
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:

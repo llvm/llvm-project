@@ -94,10 +94,6 @@ name:            test_mul_v8i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -108,9 +104,9 @@ body:             |
     ; CHECK: [[PMULLWrr:%[0-9]+]]:vr128 = PMULLWrr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[PMULLWrr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<8 x s16>) = COPY $xmm0
-    %1(<8 x s16>) = COPY $xmm1
-    %2(<8 x s16>) = G_MUL %0, %1
+    %0:vecr(<8 x s16>) = COPY $xmm0
+    %1:vecr(<8 x s16>) = COPY $xmm1
+    %2:vecr(<8 x s16>) = G_MUL %0, %1
     $xmm0 = COPY %2(<8 x s16>)
     RET 0, implicit $xmm0
 
@@ -120,10 +116,6 @@ name:            test_mul_v8i16_avx
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -134,9 +126,9 @@ body:             |
     ; CHECK: [[VPMULLWrr:%[0-9]+]]:vr128 = VPMULLWrr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[VPMULLWrr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<8 x s16>) = COPY $xmm0
-    %1(<8 x s16>) = COPY $xmm1
-    %2(<8 x s16>) = G_MUL %0, %1
+    %0:vecr(<8 x s16>) = COPY $xmm0
+    %1:vecr(<8 x s16>) = COPY $xmm1
+    %2:vecr(<8 x s16>) = G_MUL %0, %1
     $xmm0 = COPY %2(<8 x s16>)
     RET 0, implicit $xmm0
 
@@ -146,10 +138,6 @@ name:            test_mul_v8i16_avx512bwvl
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -160,9 +148,9 @@ body:             |
     ; CHECK: [[VPMULLWZ128rr:%[0-9]+]]:vr128x = VPMULLWZ128rr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[VPMULLWZ128rr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<8 x s16>) = COPY $xmm0
-    %1(<8 x s16>) = COPY $xmm1
-    %2(<8 x s16>) = G_MUL %0, %1
+    %0:vecr(<8 x s16>) = COPY $xmm0
+    %1:vecr(<8 x s16>) = COPY $xmm1
+    %2:vecr(<8 x s16>) = G_MUL %0, %1
     $xmm0 = COPY %2(<8 x s16>)
     RET 0, implicit $xmm0
 
@@ -172,10 +160,6 @@ name:            test_mul_v4i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -186,9 +170,9 @@ body:             |
     ; CHECK: [[PMULLDrr:%[0-9]+]]:vr128 = PMULLDrr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[PMULLDrr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_MUL %0, %1
+    %0:vecr(<4 x s32>) = COPY $xmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<4 x s32>) = G_MUL %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -198,10 +182,6 @@ name:            test_mul_v4i32_avx
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -212,9 +192,9 @@ body:             |
     ; CHECK: [[VPMULLDrr:%[0-9]+]]:vr128 = VPMULLDrr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[VPMULLDrr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_MUL %0, %1
+    %0:vecr(<4 x s32>) = COPY $xmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<4 x s32>) = G_MUL %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -224,10 +204,6 @@ name:            test_mul_v4i32_avx512vl
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -238,9 +214,9 @@ body:             |
     ; CHECK: [[VPMULLDZ128rr:%[0-9]+]]:vr128x = VPMULLDZ128rr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[VPMULLDZ128rr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_MUL %0, %1
+    %0:vecr(<4 x s32>) = COPY $xmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<4 x s32>) = G_MUL %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -250,10 +226,6 @@ name:            test_mul_v2i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -264,9 +236,9 @@ body:             |
     ; CHECK: [[VPMULLQZ128rr:%[0-9]+]]:vr128x = VPMULLQZ128rr [[COPY]], [[COPY1]]
     ; CHECK: $xmm0 = COPY [[VPMULLQZ128rr]]
     ; CHECK: RET 0, implicit $xmm0
-    %0(<2 x s64>) = COPY $xmm0
-    %1(<2 x s64>) = COPY $xmm1
-    %2(<2 x s64>) = G_MUL %0, %1
+    %0:vecr(<2 x s64>) = COPY $xmm0
+    %1:vecr(<2 x s64>) = COPY $xmm1
+    %2:vecr(<2 x s64>) = G_MUL %0, %1
     $xmm0 = COPY %2(<2 x s64>)
     RET 0, implicit $xmm0
 
@@ -276,10 +248,6 @@ name:            test_mul_v16i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -290,9 +258,9 @@ body:             |
     ; CHECK: [[VPMULLWYrr:%[0-9]+]]:vr256 = VPMULLWYrr [[COPY]], [[COPY1]]
     ; CHECK: $ymm0 = COPY [[VPMULLWYrr]]
     ; CHECK: RET 0, implicit $ymm0
-    %0(<16 x s16>) = COPY $ymm0
-    %1(<16 x s16>) = COPY $ymm1
-    %2(<16 x s16>) = G_MUL %0, %1
+    %0:vecr(<16 x s16>) = COPY $ymm0
+    %1:vecr(<16 x s16>) = COPY $ymm1
+    %2:vecr(<16 x s16>) = G_MUL %0, %1
     $ymm0 = COPY %2(<16 x s16>)
     RET 0, implicit $ymm0
 
@@ -302,10 +270,6 @@ name:            test_mul_v16i16_avx512bwvl
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -316,9 +280,9 @@ body:             |
     ; CHECK: [[VPMULLWZ256rr:%[0-9]+]]:vr256x = VPMULLWZ256rr [[COPY]], [[COPY1]]
     ; CHECK: $ymm0 = COPY [[VPMULLWZ256rr]]
     ; CHECK: RET 0, implicit $ymm0
-    %0(<16 x s16>) = COPY $ymm0
-    %1(<16 x s16>) = COPY $ymm1
-    %2(<16 x s16>) = G_MUL %0, %1
+    %0:vecr(<16 x s16>) = COPY $ymm0
+    %1:vecr(<16 x s16>) = COPY $ymm1
+    %2:vecr(<16 x s16>) = G_MUL %0, %1
     $ymm0 = COPY %2(<16 x s16>)
     RET 0, implicit $ymm0
 
@@ -328,10 +292,6 @@ name:            test_mul_v8i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -342,9 +302,9 @@ body:             |
     ; CHECK: [[VPMULLDYrr:%[0-9]+]]:vr256 = VPMULLDYrr [[COPY]], [[COPY1]]
     ; CHECK: $ymm0 = COPY [[VPMULLDYrr]]
     ; CHECK: RET 0, implicit $ymm0
-    %0(<8 x s32>) = COPY $ymm0
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<8 x s32>) = G_MUL %0, %1
+    %0:vecr(<8 x s32>) = COPY $ymm0
+    %1:vecr(<8 x s32>) = COPY $ymm1
+    %2:vecr(<8 x s32>) = G_MUL %0, %1
     $ymm0 = COPY %2(<8 x s32>)
     RET 0, implicit $ymm0
 
@@ -354,10 +314,6 @@ name:            test_mul_v8i32_avx512vl
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -368,9 +324,9 @@ body:             |
     ; CHECK: [[VPMULLDZ256rr:%[0-9]+]]:vr256x = VPMULLDZ256rr [[COPY]], [[COPY1]]
     ; CHECK: $ymm0 = COPY [[VPMULLDZ256rr]]
     ; CHECK: RET 0, implicit $ymm0
-    %0(<8 x s32>) = COPY $ymm0
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<8 x s32>) = G_MUL %0, %1
+    %0:vecr(<8 x s32>) = COPY $ymm0
+    %1:vecr(<8 x s32>) = COPY $ymm1
+    %2:vecr(<8 x s32>) = G_MUL %0, %1
     $ymm0 = COPY %2(<8 x s32>)
     RET 0, implicit $ymm0
 
@@ -380,10 +336,6 @@ name:            test_mul_v4i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -394,9 +346,9 @@ body:             |
     ; CHECK: [[VPMULLQZ256rr:%[0-9]+]]:vr256x = VPMULLQZ256rr [[COPY]], [[COPY1]]
     ; CHECK: $ymm0 = COPY [[VPMULLQZ256rr]]
     ; CHECK: RET 0, implicit $ymm0
-    %0(<4 x s64>) = COPY $ymm0
-    %1(<4 x s64>) = COPY $ymm1
-    %2(<4 x s64>) = G_MUL %0, %1
+    %0:vecr(<4 x s64>) = COPY $ymm0
+    %1:vecr(<4 x s64>) = COPY $ymm1
+    %2:vecr(<4 x s64>) = G_MUL %0, %1
     $ymm0 = COPY %2(<4 x s64>)
     RET 0, implicit $ymm0
 
@@ -406,10 +358,6 @@ name:            test_mul_v32i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -420,9 +368,9 @@ body:             |
     ; CHECK: [[VPMULLWZrr:%[0-9]+]]:vr512 = VPMULLWZrr [[COPY]], [[COPY1]]
     ; CHECK: $zmm0 = COPY [[VPMULLWZrr]]
     ; CHECK: RET 0, implicit $zmm0
-    %0(<32 x s16>) = COPY $zmm0
-    %1(<32 x s16>) = COPY $zmm1
-    %2(<32 x s16>) = G_MUL %0, %1
+    %0:vecr(<32 x s16>) = COPY $zmm0
+    %1:vecr(<32 x s16>) = COPY $zmm1
+    %2:vecr(<32 x s16>) = G_MUL %0, %1
     $zmm0 = COPY %2(<32 x s16>)
     RET 0, implicit $zmm0
 
@@ -432,10 +380,6 @@ name:            test_mul_v16i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -446,9 +390,9 @@ body:             |
     ; CHECK: [[VPMULLDZrr:%[0-9]+]]:vr512 = VPMULLDZrr [[COPY]], [[COPY1]]
     ; CHECK: $zmm0 = COPY [[VPMULLDZrr]]
     ; CHECK: RET 0, implicit $zmm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<16 x s32>) = COPY $zmm1
-    %2(<16 x s32>) = G_MUL %0, %1
+    %0:vecr(<16 x s32>) = COPY $zmm0
+    %1:vecr(<16 x s32>) = COPY $zmm1
+    %2:vecr(<16 x s32>) = G_MUL %0, %1
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $zmm0
 
@@ -458,10 +402,6 @@ name:            test_mul_v8i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -472,9 +412,9 @@ body:             |
     ; CHECK: [[VPMULLQZrr:%[0-9]+]]:vr512 = VPMULLQZrr [[COPY]], [[COPY1]]
     ; CHECK: $zmm0 = COPY [[VPMULLQZrr]]
     ; CHECK: RET 0, implicit $zmm0
-    %0(<8 x s64>) = COPY $zmm0
-    %1(<8 x s64>) = COPY $zmm1
-    %2(<8 x s64>) = G_MUL %0, %1
+    %0:vecr(<8 x s64>) = COPY $zmm0
+    %1:vecr(<8 x s64>) = COPY $zmm1
+    %2:vecr(<8 x s64>) = G_MUL %0, %1
     $zmm0 = COPY %2(<8 x s64>)
     RET 0, implicit $zmm0
 

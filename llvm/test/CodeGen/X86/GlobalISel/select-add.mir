@@ -40,10 +40,6 @@ name:            test_add_i64
 # ALL-LABEL: name:            test_add_i64
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 # ALL:      %0:gr64 = COPY $rdi
 # ALL-NEXT: %1:gr64 = COPY $rsi
 # ALL-NEXT: %2:gr64 = ADD64rr %0, %1
@@ -51,9 +47,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
 
-    %0(s64) = COPY $rdi
-    %1(s64) = COPY $rsi
-    %2(s64) = G_ADD %0, %1
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s64) = COPY $rsi
+    %2:gpr(s64) = G_ADD %0, %1
     $rax = COPY %2(s64)
 
 ...
@@ -63,10 +59,6 @@ name:            test_add_i32
 # ALL-LABEL: name:            test_add_i32
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 # ALL:      %0:gr32 = COPY $edi
 # ALL-NEXT: %1:gr32 = COPY $esi
 # ALL-NEXT: %2:gr32 = ADD32rr %0, %1
@@ -74,9 +66,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
 
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s32) = G_ADD %0, %1
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = COPY $esi
+    %2:gpr(s32) = G_ADD %0, %1
     $eax = COPY %2(s32)
 
 ...
@@ -87,10 +79,6 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 # ALL: %0:gr16 = COPY $di
 # ALL: %1:gr16 = COPY $si
 # ALL: %2:gr16 = ADD16rr %0, %1, implicit-def dead $eflags
@@ -98,9 +86,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
 
-    %0(s16) = COPY $di
-    %1(s16) = COPY $si
-    %2(s16) = G_ADD %0, %1
+    %0:gpr(s16) = COPY $di
+    %1:gpr(s16) = COPY $si
+    %2:gpr(s16) = G_ADD %0, %1
     $ax = COPY %2(s16)
     RET 0, implicit $ax
 
@@ -112,10 +100,6 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 # ALL: %0:gr8 = COPY $dil
 # ALL: %1:gr8 = COPY $sil
 # ALL: %2:gr8 = ADD8rr %0, %1, implicit-def dead $eflags
@@ -123,9 +107,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
 
-    %0(s8) = COPY $dil
-    %1(s8) = COPY $sil
-    %2(s8) = G_ADD %0, %1
+    %0:gpr(s8) = COPY $dil
+    %1:gpr(s8) = COPY $sil
+    %2:gpr(s8) = G_ADD %0, %1
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -137,10 +121,6 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 # NO_AVX512VL:   %0:vr128 = COPY $xmm0
 # NO_AVX512VL:   %1:vr128 = COPY $xmm1
 # SSE-NEXT:      %2:vr128 = PADDDrr %0, %1
@@ -153,9 +133,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
 
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_ADD %0, %1
+    %0:vecr(<4 x s32>) = COPY $xmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<4 x s32>) = G_ADD %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -167,10 +147,6 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 # SSE:           %0:vr128 = COPY $xmm0
 # SSE-NEXT:      %1:vr128 = COPY $xmm1
 # SSE-NEXT:      %2:vr128 = nofpexcept ADDPSrr %0, %1
@@ -187,9 +163,9 @@ body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
 
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_FADD %0, %1
+    %0:vecr(<4 x s32>) = COPY $xmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<4 x s32>) = G_FADD %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 

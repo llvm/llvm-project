@@ -91,15 +91,6 @@
 name:            test_erased
 alignment:       16
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr64, preferred-register: '' }
-  - { id: 7, class: gr64, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
@@ -138,16 +129,6 @@ body:             |
 name:            test_not_erased_when_sf_used
 alignment:       16
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr64, preferred-register: '' }
-  - { id: 8, class: gr64, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
@@ -187,18 +168,6 @@ body:             |
 name:            test_not_erased_when_eflags_change
 alignment:       16
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr64, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr32, preferred-register: '' }
-  - { id: 8, class: gr64, preferred-register: '' }
-  - { id: 9, class: gr64, preferred-register: '' }
-  - { id: 10, class: gr64, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
   - { reg: '$rsi', virtual-reg: '%1' }
@@ -260,15 +229,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr16, preferred-register: '' }
-  - { id: 4, class: gr16, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr16, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }
   - { reg: '$esi', virtual-reg: '%1' }
@@ -384,15 +344,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr32, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr16, preferred-register: '' }
-  - { id: 5, class: gr16, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr16, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%1' }
   - { reg: '$esi', virtual-reg: '%2' }
@@ -509,15 +460,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr16, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr32, preferred-register: '' }
-  - { id: 3, class: gr64, preferred-register: '' }
-  - { id: 4, class: gr16, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr16, preferred-register: '' }
 liveins:
   - { reg: '$edi', virtual-reg: '%1' }
   - { reg: '$esi', virtual-reg: '%2' }

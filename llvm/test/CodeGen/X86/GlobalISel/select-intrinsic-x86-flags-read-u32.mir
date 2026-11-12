@@ -18,11 +18,9 @@ name:            read_flags
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
-    %0(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.flags.read.u32)
+    %0:gpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.x86.flags.read.u32)
     $eax = COPY %0(s32)
 ...

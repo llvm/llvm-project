@@ -15,10 +15,6 @@ name:            inttoptr_p0_s32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 frameInfo:
   maxAlignment:    4
 fixedStack:

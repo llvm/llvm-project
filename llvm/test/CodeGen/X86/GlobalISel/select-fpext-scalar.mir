@@ -14,11 +14,6 @@ name:            test
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr, preferred-register: '' }
-  - { id: 1, class: vecr, preferred-register: '' }
-  - { id: 2, class: vecr, preferred-register: '' }
-  - { id: 3, class: vecr, preferred-register: '' }
 liveins:
 fixedStack:
 stack:

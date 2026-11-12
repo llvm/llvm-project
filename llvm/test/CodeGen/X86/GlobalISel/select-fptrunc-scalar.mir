@@ -13,11 +13,6 @@ name:            test_fptrunc
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0

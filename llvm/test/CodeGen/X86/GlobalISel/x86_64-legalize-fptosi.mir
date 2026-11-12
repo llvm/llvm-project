@@ -55,10 +55,6 @@
 ---
 name:            float_to_int8
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -81,10 +77,6 @@ body:             |
 ---
 name:            float_to_int16
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -107,10 +99,6 @@ body:             |
 ---
 name:            float_to_int32
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -132,10 +120,6 @@ body:             |
 ---
 name:            float_to_int64
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -157,10 +141,6 @@ body:             |
 ---
 name:            double_to_int8
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -183,10 +163,6 @@ body:             |
 ---
 name:            double_to_int16
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -209,10 +185,6 @@ body:             |
 ---
 name:            double_to_int32
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -234,10 +206,6 @@ body:             |
 ---
 name:            double_to_int64
 alignment:       16
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0

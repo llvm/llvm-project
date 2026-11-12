@@ -5,8 +5,6 @@
 # CHECK: name: foo
 # This test forces a spill of %0.
 name: foo
-registers:
-  - { id: 0, class: gr64 }
 body: |
   bb.0:
   ; CHECK: NOOP implicit-def [[VAL:%[0-9]+]]
@@ -16,7 +14,7 @@ body: |
   ; We need to reload before the (implicit) use.
   ; CHECK-NEXT: [[RELOADED_VAL:%[0-9]+]]:gr64 = MOV64rm [[SLOT]], 1, $noreg, 0, $noreg
   ; CHECK-NEXT: NOOP implicit [[RELOADED_VAL]]
-  NOOP implicit-def %0
+  NOOP implicit-def %0:gr64
   NOOP csr_noregs
   NOOP implicit %0
 ...

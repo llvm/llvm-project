@@ -56,12 +56,6 @@ isOutlined:      false
 debugInstrRef:   true
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: fr32, preferred-register: '' }
-  - { id: 1, class: fr32, preferred-register: '' }
-  - { id: 2, class: fr32, preferred-register: '' }
-  - { id: 3, class: fr32, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
 liveins:
   - { reg: '$xmm0', virtual-reg: '%2' }
   - { reg: '$xmm1', virtual-reg: '%3' }

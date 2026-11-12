@@ -33,11 +33,6 @@ name:            ptrtoint_s1_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
 frameInfo:
   maxAlignment:    4
 fixedStack:
@@ -62,10 +57,6 @@ name:            ptrtoint_s8_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 frameInfo:
   maxAlignment:    4
 fixedStack:
@@ -89,10 +80,6 @@ name:            ptrtoint_s16_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 frameInfo:
   maxAlignment:    4
 fixedStack:
@@ -116,10 +103,6 @@ name:            ptrtoint_s32_p0
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 frameInfo:
   maxAlignment:    4
 fixedStack:

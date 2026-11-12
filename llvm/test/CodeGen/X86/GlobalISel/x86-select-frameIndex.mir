@@ -13,8 +13,6 @@ name:            allocai32
 legalized:       true
 regBankSelected: true
 selected:        false
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
 fixedStack:
 stack:
   - { id: 0, name: ptr1, type: default, offset: 0, size: 4, alignment: 4,

@@ -23,11 +23,6 @@
 ---
 name:            atomic
 alignment:       16
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr8 }
-  - { id: 3, class: gr32 }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
 machineFunctionInfo: {}
@@ -55,11 +50,6 @@ body:             |
 ---
 name:            nonatomic_unoptimized
 alignment:       16
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr8 }
-  - { id: 3, class: gr32 }
 liveins:
   - { reg: '$rdi', virtual-reg: '%0' }
 machineFunctionInfo: {}

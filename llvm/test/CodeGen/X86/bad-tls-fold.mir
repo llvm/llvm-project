@@ -19,12 +19,6 @@
 # CHECK-LABEL: or:
 name: or
 alignment: 16
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr64 }
-  - { id: 4, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -48,12 +42,6 @@ body: |
 # CHECK-LABEL: and:
 name: and
 alignment: 16
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr64 }
-  - { id: 4, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))

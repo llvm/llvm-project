@@ -23,7 +23,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
 frameInfo:
   isFrameAddressTaken: false

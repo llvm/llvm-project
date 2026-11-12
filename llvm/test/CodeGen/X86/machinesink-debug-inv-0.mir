@@ -43,20 +43,6 @@
 ---
 name:            l
 alignment:       16
-registers:
-  - { id: 0, class: gr8 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr8 }
-  - { id: 3, class: gr64 }
-  - { id: 4, class: gr64 }
-  - { id: 5, class: gr64 }
-  - { id: 6, class: gr32 }
-  - { id: 7, class: gr64 }
-  - { id: 8, class: gr8 }
-  - { id: 9, class: gr32 }
-  - { id: 10, class: gr64 }
-  - { id: 11, class: gr32 }
-  - { id: 12, class: gr32 }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -74,7 +60,7 @@ body:             |
   ; CHECK-NEXT: bb.1.for.body:
   ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.2(0x50000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr8 = PHI [[MOV8ri]], %bb.0, %8, %bb.3
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gr8 = PHI [[MOV8ri]], %bb.0, %6, %bb.3
   ; CHECK-NEXT:   CMP32mi [[MOV64rm]], 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s32) from @d, align 1)
   ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit $eflags
   ; CHECK-NEXT:   JMP_1 %bb.2

@@ -216,7 +216,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       []
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -260,18 +259,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr32, preferred-register: '' }
-  - { id: 3, class: gr32, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
-  - { id: 6, class: gr32, preferred-register: '' }
-  - { id: 7, class: gr32, preferred-register: '' }
-  - { id: 8, class: gr32, preferred-register: '' }
-  - { id: 9, class: gr32, preferred-register: '' }
-  - { id: 10, class: gr32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -380,8 +367,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
