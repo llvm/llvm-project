@@ -3481,6 +3481,10 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
       }
     }
     if (ambiguous) {
+      // 16.9.144(6): a bare NULL() is not allowed as an actual argument to a
+      // generic procedure if the specific procedure cannot be unambiguously
+      // distinguished. Underspecified external procedure actual arguments can
+      // also leave several specifics equally eligible.
       return {nullptr, true /* due to ambiguity */, std::move(tried)};
     }
     if (best) {
