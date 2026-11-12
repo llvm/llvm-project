@@ -785,6 +785,7 @@ bool SafeStack::run() {
     ++NumUnsafeStackRestorePointsFunctions;
 
   IRBuilder<> IRB(F.begin()->getFirstInsertionPt());
+  IRB.disableGEPCanonicalization();
   // Calls must always have a debug location, or else inlining breaks. So
   // we explicitly set a artificial debug location here.
   if (DISubprogram *SP = F.getSubprogram())

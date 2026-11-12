@@ -1947,6 +1947,10 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
   case MSVCIntrin::_InterlockedIncrement:
     return EmitAtomicIncrementValue(*this, E);
 
+  case MSVCIntrin::_ReadWriteBarrier:
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::SyncScope::SingleThread);
+
   case MSVCIntrin::__fastfail: {
     // Request immediate process termination from the kernel. The instruction
     // sequences to do this are documented on MSDN:

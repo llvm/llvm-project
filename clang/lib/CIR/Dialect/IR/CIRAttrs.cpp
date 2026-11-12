@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/Support/MathExtras.h"
 
 //===-----------------------------------------------------------------===//
 // RecordMembers
@@ -170,6 +171,20 @@ LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (abi > preferred)
     return emitError() << "preferred alignment is expected to be at least "
                           "as large as ABI alignment";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitIntSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getBitIntMaxAlign() is a power of two, at least the char
+  // width. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
   return success();
 }
 
@@ -1096,10 +1111,11 @@ Attribute RecordLayoutAttr::parse(AsmParser &parser, Type odsType) {
   if (failed(recordAlign))
     return {};
 
-  // An omitted unadjusted_align stores the record alignment. Either optional
-  // field may follow record_align, in either order.
+  // An omitted unadjusted_align stores the record alignment. The optional
+  // fields may follow record_align in any order.
   uint64_t unadjustedAlign = *recordAlign;
   bool transparentUnion = false;
+  bool flexibleArrayMember = false;
   while (succeeded(parser.parseOptionalComma())) {
     if (succeeded(parser.parseOptionalKeyword("unadjusted_align"))) {
       if (parser.parseEqual())
@@ -1119,16 +1135,26 @@ Attribute RecordLayoutAttr::parse(AsmParser &parser, Type odsType) {
       transparentUnion = *parsed;
       continue;
     }
+    if (succeeded(parser.parseOptionalKeyword("flexible_array_member"))) {
+      if (parser.parseEqual())
+        return {};
+      FailureOr<bool> parsed = FieldParser<bool>::parse(parser);
+      if (failed(parsed))
+        return {};
+      flexibleArrayMember = *parsed;
+      continue;
+    }
     parser.emitError(parser.getCurrentLocation(),
-                     "expected unadjusted_align or transparent_union");
+                     "expected unadjusted_align, transparent_union or "
+                     "flexible_array_member");
     return {};
   }
 
   if (parser.parseGreater())
     return {};
-  return parser.getChecked<RecordLayoutAttr>(loc, parser.getContext(), *kind,
-                                             *hasTrivialDtor, *recordAlign,
-                                             unadjustedAlign, transparentUnion);
+  return parser.getChecked<RecordLayoutAttr>(
+      loc, parser.getContext(), *kind, *hasTrivialDtor, *recordAlign,
+      unadjustedAlign, transparentUnion, flexibleArrayMember);
 }
 
 void RecordLayoutAttr::print(AsmPrinter &printer) const {
@@ -1146,6 +1172,10 @@ void RecordLayoutAttr::print(AsmPrinter &printer) const {
   if (getTransparentUnion()) {
     printer << ", transparent_union = ";
     printer.printStrippedAttrOrType(getTransparentUnion());
+  }
+  if (getFlexibleArrayMember()) {
+    printer << ", flexible_array_member = ";
+    printer.printStrippedAttrOrType(getFlexibleArrayMember());
   }
   printer << '>';
 }

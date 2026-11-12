@@ -968,11 +968,11 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
         astLayout.getUnadjustedAlignment().getQuantity();
     bool isTransparentUnion = rd->hasAttr<TransparentUnionAttr>();
 
-    cgm.addRecordLayout(
-        ty->getName(),
-        cir::RecordLayoutAttr::get(mlirCtx, apk, hasTrivialDestructor,
-                                   recordAlignInBytes, unadjustedAlignInBytes,
-                                   isTransparentUnion));
+    cgm.addRecordLayout(ty->getName(),
+                        cir::RecordLayoutAttr::get(
+                            mlirCtx, apk, hasTrivialDestructor,
+                            recordAlignInBytes, unadjustedAlignInBytes,
+                            isTransparentUnion, rd->hasFlexibleArrayMember()));
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

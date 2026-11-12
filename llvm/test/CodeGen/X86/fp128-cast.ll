@@ -1692,7 +1692,7 @@ entry:
 
 if.then:                                          ; preds = %entry
   %conv = fptrunc fp128 %x to double
-  %call = tail call double @copysign(double +inf, double %conv) #2
+  %call = tail call double @llvm.copysign.f64(double +inf, double %conv)
   %conv1 = fpext double %call to fp128
   br label %cleanup
 
@@ -1800,6 +1800,5 @@ define i1 @PR34866_commute(i128 %x) nounwind {
 }
 
 
-declare double @copysign(double, double) #1
 
 attributes #2 = { nounwind readnone }
