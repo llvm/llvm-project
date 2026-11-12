@@ -252,6 +252,14 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
 
   std::pair<unsigned, std::optional<unsigned>> Args = Attr.getAllocSizeArgs();
 
+  // The size argument must refer to an argument that is actually present at
+  // this call site. A call may be made with fewer arguments than the callee
+  // declares (e.g. through a mismatched function-pointer type), in which case
+  // an otherwise-valid allocsize attribute is out of bounds here.
+  if (Args.first >= CB->arg_size() ||
+      (Args.second && *Args.second >= CB->arg_size()))
+    return std::nullopt;
+
   AllocFnsTy Result;
   // Because allocsize only tells us how many bytes are allocated, we're not
   // really allowed to assume anything, so we use MallocLike.
