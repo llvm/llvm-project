@@ -23,8 +23,8 @@ define i32 @minimal(i64 %idx, i32 %a, i32 %b) {
 }
 
 ; Similar to the test above, but valid `%idx` values are -1 and 0.
-define i32 @minimal_with_offset(i64 %idx, i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @minimal_with_offset(
+define i32 @with_offset(i64 %idx, i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @with_offset(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 0
 ; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 [[B]], i32 [[A]]
@@ -47,8 +47,8 @@ define i32 @minimal_with_offset(i64 %idx, i32 %a, i32 %b) {
 ;
 ; TODO: This currently splits the alloca but doe snot promote the parts, which
 ; could be fixed.
-define i64 @minimal_with_offset_partial(i64 %idx, i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @minimal_with_offset_partial(
+define i64 @with_offset_partial(i64 %idx, i32 %a, i32 %b) {
+; CHECK-LABEL: define i64 @with_offset_partial(
 ; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[ALLOCA_SROA_1:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[ALLOCA_SROA_4:%.*]] = alloca i64, align 8
@@ -81,28 +81,51 @@ define i64 @minimal_with_offset_partial(i64 %idx, i32 %a, i32 %b) {
   ret i64 %v
 }
 
-; The two slots overlap: [0, 4) and [1, 5).
-; TODO: There's no point in unfolding the GEP here as it won't allow promotion.
-define i32 @minimal_with_overlapping_slots(i64 %idx, i32 %a, i8 %b) {
-; CHECK-LABEL: define i32 @minimal_with_overlapping_slots(
-; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i8 [[B:%.*]]) {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [5 x i8], align 1
-; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA]], align 1
-; CHECK-NEXT:    [[ALLOCA_4_ALLOCA_1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i32 4
-; CHECK-NEXT:    store i8 [[B]], ptr [[ALLOCA_4_ALLOCA_1_SROA_IDX]], align 1
+; The two slots overlap: [0, 4) and [3, 8).
+define i32 @overlapping_slots_promotable(i64 %idx, i64 %a) {
+; CHECK-LABEL: define i32 @overlapping_slots_promotable(
+; CHECK-SAME: i64 [[IDX:%.*]], i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A]] to i56
+; CHECK-NEXT:    [[ALLOCA_SROA_3_0_EXTRACT_SHIFT:%.*]] = lshr i64 [[A]], 56
+; CHECK-NEXT:    [[ALLOCA_SROA_3_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[ALLOCA_SROA_3_0_EXTRACT_SHIFT]] to i8
 ; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
-; CHECK-NEXT:    [[ALLOCA_1_SLOT1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA]], i32 1
-; CHECK-NEXT:    [[GEP_SROA_SEL:%.*]] = select i1 [[GEP_SROA_IDX]], ptr [[ALLOCA_1_SLOT1_SROA_IDX]], ptr [[ALLOCA]]
+; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_SHIFT:%.*]] = lshr i56 [[ALLOCA_SROA_0_0_EXTRACT_TRUNC]], 24
+; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_TRUNC:%.*]] = trunc i56 [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_SHIFT]] to i32
+; CHECK-NEXT:    [[ALLOCA_SROA_0_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i56 [[ALLOCA_SROA_0_0_EXTRACT_TRUNC]] to i32
+; CHECK-NEXT:    [[V_SROA_SPECULATED:%.*]] = select i1 [[GEP_SROA_IDX]], i32 [[ALLOCA_SROA_0_SROA_0_3_EXTRACT_TRUNC]], i32 [[ALLOCA_SROA_0_SROA_0_0_EXTRACT_TRUNC]]
+; CHECK-NEXT:    ret i32 [[V_SROA_SPECULATED]]
+;
+  %alloca = alloca [8 x i8]
+  store i64 %a, ptr %alloca
+
+  %gep = getelementptr nusw [3 x i8], ptr %alloca, i64 %idx
+  %v = load i32, ptr %gep
+
+  ret i32 %v
+}
+
+; Same as above, but multiple stores to the alloca prevent splitting and
+; promotion.
+define i32 @overlapping_slots_not_promotable(i64 %idx, i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @overlapping_slots_not_promotable(
+; CHECK-SAME: i64 [[IDX:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA_SROA_0:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i32 [[A]], ptr [[ALLOCA_SROA_0]], align 8
+; CHECK-NEXT:    [[ALLOCA_SROA_0_4_ALLOCA_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA_SROA_0]], i32 4
+; CHECK-NEXT:    store i32 [[B]], ptr [[ALLOCA_SROA_0_4_ALLOCA_1_SROA_IDX2]], align 4
+; CHECK-NEXT:    [[GEP_SROA_IDX:%.*]] = icmp eq i64 [[IDX]], 1
+; CHECK-NEXT:    [[ALLOCA_SROA_0_3_SLOT1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[ALLOCA_SROA_0]], i32 3
+; CHECK-NEXT:    [[GEP_SROA_SEL:%.*]] = select i1 [[GEP_SROA_IDX]], ptr [[ALLOCA_SROA_0_3_SLOT1_SROA_IDX1]], ptr [[ALLOCA_SROA_0]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP_SROA_SEL]], align 1
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %alloca = alloca [5 x i8]
+  %alloca = alloca [8 x i8]
 
   store i32 %a, ptr %alloca
-  %alloca.1 = getelementptr i8, ptr %alloca, i64 4
-  store i8 %b, ptr %alloca.1
+  %alloca.1 = getelementptr nusw i8, ptr %alloca, i64 4
+  store i32 %b, ptr %alloca.1
 
-  %gep = getelementptr nusw i8, ptr %alloca, i64 %idx
+  %gep = getelementptr nusw [3 x i8], ptr %alloca, i64 %idx
   %v = load i32, ptr %gep
 
   ret i32 %v
