@@ -201,7 +201,7 @@ constexpr bool test_all() {
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     dangling_1st(std::ranges::shuffle, in, rand_gen());
 #if TEST_STD_VER >= 26
-  if (!std::is_constant_evaluated()) { // The standard engines and distributions aren't `constexpr`.
+  if (!std::is_constant_evaluated()) {
     dangling_1st(std::ranges::generate_random, in, rand_gen());
     dangling_1st(std::ranges::generate_random, in, rand_gen(), std::uniform_int_distribution<int>());
   }

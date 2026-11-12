@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <random>
 
 // Check the constraints of ranges::generate_random ([alg.rand.generate]), including the is_arithmetic_v constraint
 // on the distribution overloads added by LWG4085.
 
-#include <random>
-
 #include <array>
+#include <random>
 #include <utility>
 
 #include "almost_satisfies_types.h"
@@ -89,8 +88,7 @@ struct NotInvocableEngine {
 };
 static_assert(!std::uniform_random_bit_generator<NotInvocableEngine>);
 
-// Engine overloads
-// ================
+// Engine overloads.
 
 // (range) overload.
 static_assert(HasGenerateRandomRange<std::array<unsigned, 3>&, Engine&>);
@@ -152,8 +150,7 @@ static_assert(!HasGenerateRandomIter<unsigned*, unsigned*, MinEqualsMaxEngine&>)
 static_assert(!HasGenerateRandomIter<unsigned*, unsigned*, NoMinMaxEngine&>);
 static_assert(!HasGenerateRandomIter<unsigned*, unsigned*, NotInvocableEngine&>);
 
-// Distribution overloads
-// ======================
+// Distribution overloads.
 
 struct Dist {
   template <class G>

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <random>
 
@@ -18,14 +18,13 @@
 //   requires uniform_random_bit_generator<remove_cvref_t<G>>
 //   constexpr O ranges::generate_random(O first, S last, G&& g);
 
-#include <random>
-
 #include <array>
 #include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <deque>
 #include <list>
+#include <random>
 #include <ranges>
 #include <span>
 #include <type_traits>

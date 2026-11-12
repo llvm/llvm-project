@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <random>
 
@@ -21,8 +21,6 @@
 //            is_arithmetic_v<invoke_result_t<D&, G&>>
 //   constexpr O ranges::generate_random(O first, S last, G&& g, D&& d);
 
-#include <random>
-
 #include <array>
 #include <cassert>
 #include <concepts>
@@ -30,6 +28,7 @@
 #include <deque>
 #include <initializer_list>
 #include <list>
+#include <random>
 #include <ranges>
 #include <span>
 #include <utility>
