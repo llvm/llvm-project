@@ -1652,6 +1652,8 @@ LogicalResult ResolveLayoutConflicts::run() {
 LogicalResult ResolveLayoutConflicts::assignResultLayout(OpResult &result) {
   Operation *producerOp = result.getDefiningOp();
   auto producerLayout = xegpu::getDistributeLayoutAttr(result);
+  if (!producerLayout)
+    return failure();
   // Insert a convert_layout op to assign the layout.
   builder.setInsertionPointAfterValue(result);
   auto convertOp = xegpu::ConvertLayoutOp::create(
