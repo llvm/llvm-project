@@ -1154,6 +1154,19 @@ static Value *createBoundedMemSetSplat(IRBuilderBase &B, Value *SetValue,
   return B.CreateVectorSplat(Size, SetValue, "setvalue.splat");
 }
 
+static Value *createBoundedMemSetPatternSplat(IRBuilderBase &B, Value *Pattern,
+                                              uint64_t Size) {
+  if (Size == 1)
+    return Pattern;
+  // A vector pattern can't be a vector element, so splat it as an integer.
+  Type *PatternTy = Pattern->getType();
+  if (!VectorType::isValidElementType(PatternTy))
+    Pattern = B.CreateBitCast(Pattern,
+                              B.getIntNTy(PatternTy->getPrimitiveSizeInBits()),
+                              "pattern.int");
+  return B.CreateVectorSplat(Size, Pattern, "pattern.splat");
+}
+
 static void
 createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
                           ConstantInt *Len, Value *SetValue, Align DstAlign,
@@ -1700,6 +1713,208 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   }
 
   MemSet->getParent()->setName("memset_done");
+}
+
+void llvm::expandBoundedMemSetPattern(MemSetPatternInst *MemSet,
+                                      uint64_t MinCount, uint64_t MaxCount,
+                                      const KnownBits &CountKnown) {
+  assert(MinCount <= MaxCount && "Invalid count bounds");
+  assert(!MemSet->isVolatile() && "Cannot split a volatile memset.pattern");
+
+  // Known bits make the count a multiple of MinStoreCount, so no smaller store
+  // is needed, and a count below it can only be zero.
+  uint64_t MinStoreCount = uint64_t(1)
+                           << std::min(CountKnown.countMinTrailingZeros(), 63u);
+  if (MaxCount < MinStoreCount)
+    return;
+
+  Value *Dst = MemSet->getRawDest();
+  Value *Count = MemSet->getLength();
+  Value *Pattern = MemSet->getValue();
+  Type *CountTy = Count->getType();
+  Type *PatternTy = Pattern->getType();
+  const DataLayout &DL = MemSet->getDataLayout();
+  uint64_t PatternSize = DL.getTypeStoreSize(PatternTy).getFixedValue();
+  Align DstAlign = MemSet->getDestAlign().valueOrOne();
+  Align TailAlign = commonAlignment(DstAlign, MinStoreCount * PatternSize);
+
+  // The same branches as for a memset (see above), but counting copies of the
+  // pattern instead of bytes. A store of Size copies stores the pattern
+  // splatted into a vector. E.g. for an i32 pattern and a count in [0, 4]:
+  //
+  //     %count.ge4 = icmp uge i64 %count, 4
+  //     br i1 %count.ge4, label %memset_pattern_store4,
+  //                       label %memset_pattern_lt4
+  //   memset_pattern_store4:         ; count 4, so no tail store
+  //     store <4 x i32> splat (i32 7), ptr %dst
+  //     br label %memset_pattern_done
+  //   memset_pattern_lt4:
+  //     %count.ge2 = icmp uge i64 %count, 2
+  //     br i1 %count.ge2, label %memset_pattern_store2,
+  //                       label %memset_pattern_lt2
+  //   memset_pattern_store2:         ; count 2 or 3
+  //     store <2 x i32> splat (i32 7), ptr %dst
+  //     %tail.off = sub i64 %count, 2
+  //     %tail = getelementptr inbounds i32, ptr %dst, i64 %tail.off
+  //     store <2 x i32> splat (i32 7), ptr %tail  ; <<< may overlap!
+  //     br label %memset_pattern_done
+  //   memset_pattern_lt2:
+  //     %count.ge1 = icmp uge i64 %count, 1
+  //     br i1 %count.ge1, label %memset_pattern_store1,
+  //                       label %memset_pattern_done
+  //   memset_pattern_store1:         ; count 1
+  //     store i32 7, ptr %dst
+  //     br label %memset_pattern_done
+  uint64_t TopSize = llvm::bit_floor(MaxCount);
+  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
+      *MemSet->getFunction(), DEBUG_TYPE);
+  Instruction *InsertBefore = MemSet;
+  for (uint64_t Size = TopSize; Size >= MinStoreCount; Size /= 2) {
+    Instruction *StoreBefore = InsertBefore;
+    if (MinCount < Size) {
+      IRBuilder<> B(InsertBefore);
+      Value *Cond = B.CreateICmpUGE(Count, ConstantInt::get(CountTy, Size),
+                                    "count.ge" + Twine(Size));
+      if (Size == MinStoreCount) {
+        StoreBefore =
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
+      } else {
+        Instruction *ElseTerm;
+        SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
+                                      &ElseTerm, Weights);
+        ElseTerm->getParent()->setName("memset_pattern_lt" + Twine(Size));
+        InsertBefore = ElseTerm;
+      }
+      StoreBefore->getParent()->setName("memset_pattern_store" + Twine(Size));
+    }
+
+    // Do the store of Size copies
+    IRBuilder<> B(StoreBefore);
+    Value *Val = createBoundedMemSetPatternSplat(B, Pattern, Size);
+    B.CreateAlignedStore(Val, Dst, DstAlign);
+
+    // The possibly-overlapping "remainder" store
+    uint64_t MaxCountForSize =
+        Size == TopSize ? MaxCount : 2 * Size - MinStoreCount;
+    if (MaxCountForSize > Size) {
+      Value *TailOff =
+          B.CreateSub(Count, ConstantInt::get(CountTy, Size), "tail.off");
+      Value *TailPtr = B.CreateInBoundsGEP(PatternTy, Dst, TailOff, "tail");
+      B.CreateAlignedStore(Val, TailPtr, TailAlign);
+    }
+
+    if (MinCount >= Size)
+      break;
+  }
+
+  MemSet->getParent()->setName("memset_pattern_done");
+}
+
+void llvm::expandBoundedMemTransfer(MemTransferInst *MemTransfer,
+                                    uint64_t MinLen, uint64_t MaxLen,
+                                    const KnownBits &LenKnown) {
+  assert(MinLen <= MaxLen && "Invalid length bounds");
+  assert(!MemTransfer->isVolatile() && "Cannot split a volatile memcpy");
+
+  // Known bits make the length a multiple of MinAccessSize, so no smaller
+  // access is needed, and a length below it can only be zero.
+  uint64_t MinAccessSize = uint64_t(1)
+                           << std::min(LenKnown.countMinTrailingZeros(), 63u);
+  if (MaxLen < MinAccessSize)
+    return;
+
+  Value *Dst = MemTransfer->getRawDest();
+  Value *Src = MemTransfer->getRawSource();
+  Value *Len = MemTransfer->getLength();
+  Type *LenTy = Len->getType();
+  Align DstAlign = MemTransfer->getDestAlign().valueOrOne();
+  Align SrcAlign = MemTransfer->getSourceAlign().valueOrOne();
+  Align DstTailAlign = commonAlignment(DstAlign, MinAccessSize);
+  Align SrcTailAlign = commonAlignment(SrcAlign, MinAccessSize);
+  StringRef Name = isa<MemMoveInst>(MemTransfer) ? "memmove" : "memcpy";
+
+  // The same branches as for a memset, but each size class loads the head and
+  // the tail of the source before storing either, so this is also correct for
+  // a memmove whose source and destination overlap. E.g. for a length in
+  // [0, 4]:
+  //
+  //     %len.ge4 = icmp uge i64 %len, 4
+  //     br i1 %len.ge4, label %memcpy_store4, label %memcpy_lt4
+  //   memcpy_store4:                 ; length 4, so no tail copy
+  //     %head = load i32, ptr %src
+  //     store i32 %head, ptr %dst
+  //     br label %memcpy_done
+  //   memcpy_lt4:
+  //     %len.ge2 = icmp uge i64 %len, 2
+  //     br i1 %len.ge2, label %memcpy_store2, label %memcpy_lt2
+  //   memcpy_store2:                 ; length 2 or 3
+  //     %head = load i16, ptr %src
+  //     %tail.off = sub i64 %len, 2
+  //     %src.tail = getelementptr inbounds i8, ptr %src, i64 %tail.off
+  //     %tail = load i16, ptr %src.tail
+  //     store i16 %head, ptr %dst
+  //     %dst.tail = getelementptr inbounds i8, ptr %dst, i64 %tail.off
+  //     store i16 %tail, ptr %dst.tail  ; <<< may overlap!
+  //     br label %memcpy_done
+  //   memcpy_lt2:
+  //     %len.ge1 = icmp uge i64 %len, 1
+  //     br i1 %len.ge1, label %memcpy_store1, label %memcpy_done
+  //   memcpy_store1:                 ; length 1
+  //     %head = load i8, ptr %src
+  //     store i8 %head, ptr %dst
+  //     br label %memcpy_done
+  uint64_t TopSize = llvm::bit_floor(MaxLen);
+  Instruction *InsertBefore = MemTransfer;
+  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
+      *MemTransfer->getFunction(), DEBUG_TYPE);
+  for (uint64_t Size = TopSize; Size >= MinAccessSize; Size /= 2) {
+    Instruction *StoreBefore = InsertBefore;
+    if (MinLen < Size) {
+      IRBuilder<> B(InsertBefore);
+      Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
+                                    "len.ge" + Twine(Size));
+      if (Size == MinAccessSize) {
+        StoreBefore =
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
+      } else {
+        Instruction *ElseTerm;
+        SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
+                                      &ElseTerm, Weights);
+        ElseTerm->getParent()->setName(Name + "_lt" + Twine(Size));
+        InsertBefore = ElseTerm;
+      }
+      StoreBefore->getParent()->setName(Name + "_store" + Twine(Size));
+    }
+
+    // Load the Size-sized head, and the possibly-overlapping "remainder" tail,
+    // before storing either.
+    IRBuilder<> B(StoreBefore);
+    Type *Ty = Size <= 8 ? cast<Type>(B.getIntNTy(Size * 8))
+                         : FixedVectorType::get(B.getInt8Ty(), Size);
+    Value *Head = B.CreateAlignedLoad(Ty, Src, SrcAlign, "head");
+    uint64_t MaxLenForSize =
+        Size == TopSize ? MaxLen : 2 * Size - MinAccessSize;
+    Value *TailOff = nullptr;
+    Value *Tail = nullptr;
+    if (MaxLenForSize > Size) {
+      TailOff = B.CreateSub(Len, ConstantInt::get(LenTy, Size), "tail.off");
+      Value *SrcTail =
+          B.CreateInBoundsGEP(B.getInt8Ty(), Src, TailOff, "src.tail");
+      Tail = B.CreateAlignedLoad(Ty, SrcTail, SrcTailAlign, "tail");
+    }
+
+    B.CreateAlignedStore(Head, Dst, DstAlign);
+    if (Tail) {
+      Value *DstTail =
+          B.CreateInBoundsGEP(B.getInt8Ty(), Dst, TailOff, "dst.tail");
+      B.CreateAlignedStore(Tail, DstTail, DstTailAlign);
+    }
+
+    if (MinLen >= Size)
+      break;
+  }
+
+  MemTransfer->getParent()->setName(Name + "_done");
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,

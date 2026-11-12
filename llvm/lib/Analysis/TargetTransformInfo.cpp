@@ -1408,6 +1408,10 @@ uint64_t TargetTransformInfo::getMaxBoundedMemSetInlineSize() const {
   return TTIImpl->getMaxBoundedMemSetInlineSize();
 }
 
+uint64_t TargetTransformInfo::getMaxBoundedMemTransferInlineSize() const {
+  return TTIImpl->getMaxBoundedMemTransferInlineSize();
+}
+
 InstructionCost TargetTransformInfo::getArithmeticReductionCost(
     unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
     TTI::TargetCostKind CostKind) const {
