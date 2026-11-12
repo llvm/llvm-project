@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <memory>
+#include <cstdint>
 #include <boost/math/interpolators/detail/quintic_hermite_detail.hpp>
 
 namespace boost {
@@ -50,7 +51,7 @@ public:
         impl_->push_back(x, y, dydx, d2ydx2);
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return impl_->bytes() + sizeof(impl_);
     }
@@ -85,7 +86,7 @@ public:
         return impl_->double_prime(x);
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return impl_->bytes() + sizeof(impl_);
     }
@@ -123,7 +124,7 @@ public:
         return impl_->double_prime(x);
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return impl_->bytes() + sizeof(impl_);
     }

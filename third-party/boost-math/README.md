@@ -138,8 +138,12 @@ The Boost Math Library is located in `libs/math/`.
 
 ### Running tests
 
-First, make sure you are in `libs/math/test`.
-You can either run all the tests listed in `Jamfile.v2` or run a single test:
+The Boost build program `b2` is used to run the tests. To build `b2`, from the
+top-level Boost directory, run either `./bootstrap.sh` (Linux/MacOS) or
+`bootstrap.bat` (Windows).
+
+Then move to `libs/math/test`.  You can either run all the tests listed in
+`Jamfile.v2` or run a single test:
 
     test$ ../../../b2                        <- run all tests
     test$ ../../../b2 static_assert_test     <- single test

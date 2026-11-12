@@ -3,7 +3,7 @@
 set -e # stop at the first error
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-VERSION="1.89.0"
+VERSION="1.92.0"
 
 echo "This script deletes ${SCRIPT_DIR}/boost-math and re-downloads it from the standalone Boost.Math release version ${VERSION}."
 echo "It then subsets it so it only contains the parts that are used in libc++."

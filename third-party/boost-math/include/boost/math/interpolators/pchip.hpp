@@ -121,6 +121,11 @@ public:
         }
     }
 
+    std::pair<Real, Real> domain() const
+    {
+        return impl_->domain();
+    }
+
 private:
     std::shared_ptr<detail::cubic_hermite_detail<RandomAccessContainer>> impl_;
 };
