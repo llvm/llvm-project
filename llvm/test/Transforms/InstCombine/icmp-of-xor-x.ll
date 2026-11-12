@@ -701,8 +701,8 @@ define i1 @xor_ugt_2(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-LABEL: @xor_ugt_2(
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[YZ:%.*]] = and i8 [[Y:%.*]], 63
-; CHECK-NEXT:    [[Y1:%.*]] = or disjoint i8 [[YZ]], 64
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[YZ]], [[X]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[TMP1]], 64
 ; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[XOR]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -728,8 +728,8 @@ define i1 @xor_ult(i8 %x) {
 define <2 x i1> @xor_sgt(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @xor_sgt(
 ; CHECK-NEXT:    [[YZ:%.*]] = and <2 x i8> [[Y:%.*]], splat (i8 31)
-; CHECK-NEXT:    [[Y1:%.*]] = or disjoint <2 x i8> [[YZ]], splat (i8 64)
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], [[Y1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[YZ]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[TMP1]], splat (i8 64)
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[XOR]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
@@ -743,8 +743,8 @@ define <2 x i1> @xor_sgt(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i1> @xor_sgt_fail_no_known_msb(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @xor_sgt_fail_no_known_msb(
 ; CHECK-NEXT:    [[YZ:%.*]] = and <2 x i8> [[Y:%.*]], splat (i8 55)
-; CHECK-NEXT:    [[Y1:%.*]] = or disjoint <2 x i8> [[YZ]], splat (i8 8)
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], [[Y1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[YZ]], [[X:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[TMP1]], splat (i8 8)
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt <2 x i8> [[XOR]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
