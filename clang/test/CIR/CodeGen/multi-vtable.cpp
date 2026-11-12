@@ -51,7 +51,7 @@ void Child::MotherKey() {}
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.global_view<@_ZN6Father9FatherKeyEv> : !cir.ptr<!u8i>
 // CIR-SAME:     ]> : !cir.array<!cir.ptr<!u8i> x 3>
-// CIR-SAME: }> : [[CHILD_VTABLE_TYPE]]
+// CIR-SAME: }, address_points = [#cir.address_point<index = 0, offset = 2>, #cir.address_point<index = 1, offset = 2>]> : [[CHILD_VTABLE_TYPE]]
 
 // LLVM:      @_ZTV5Child = constant { [4 x ptr], [3 x ptr] } {
 // LLVM-SAME:     [4 x ptr] [
@@ -90,7 +90,7 @@ void Child::MotherKey() {}
 // CIR-SAME:          #cir.global_view<@_ZN6Mother9MotherKeyEv> : !cir.ptr<!u8i>,
 // CIR-SAME:          #cir.global_view<@_ZN6Mother12MotherNonKeyEv> : !cir.ptr<!u8i>
 // CIR-SAME:      ]> : !cir.array<!cir.ptr<!u8i> x 4>
-// CIR-SAME: }> : [[MOTHER_VTABLE_TYPE]]
+// CIR-SAME: }, address_points = [#cir.address_point<index = 0, offset = 2>]> : [[MOTHER_VTABLE_TYPE]]
 
 // LLVM:      @_ZTV6Mother = constant { [4 x ptr] } {
 // LLVM-SAME:     [4 x ptr] [
@@ -118,7 +118,7 @@ void Child::MotherKey() {}
 // CIR-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CIR-SAME:         #cir.global_view<@_ZN6Father9FatherKeyEv> : !cir.ptr<!u8i>
 // CIR-SAME:     ]> : !cir.array<!cir.ptr<!u8i> x 3>
-// CIR-SAME: }> : [[FATHER_VTABLE_TYPE]]
+// CIR-SAME: }, address_points = [#cir.address_point<index = 0, offset = 2>]> : [[FATHER_VTABLE_TYPE]]
 
 // LLVM:      @_ZTV6Father = constant { [3 x ptr] } {
 // LLVM-SAME:     [3 x ptr] [

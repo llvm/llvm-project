@@ -131,7 +131,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // Lower the view before its target, including through enclosing attributes.
   // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.array<!cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)> x 1>' for symbol @target}}
   // expected-error @below {{failed to legalize operation 'cir.global'}}
-  cir.global external @view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !ptrarray}> : !vtable
+  cir.global external @view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !ptrarray}, address_points = [#cir.address_point<index = 0, offset = 0>]> : !vtable
 
   cir.global external @target = #cir.zero : !array
 }

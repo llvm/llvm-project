@@ -18,7 +18,7 @@ module {
   cir.global external @vt = #cir.vtable<{
     #cir.const_array<[#cir.global_view<@tgt> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>,
     #cir.const_array<[#cir.global_view<@vt, [0 : i32, 2 : i32]> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>
-  }> : !cir.struct<"VT" {data !cir.array<!cir.ptr<!u8i> x 1>, data !cir.array<!cir.ptr<!u8i> x 1>}>
+  }, address_points = [#cir.address_point<index = 0, offset = 0>, #cir.address_point<index = 1, offset = 0>]> : !cir.struct<"VT" {data !cir.array<!cir.ptr<!u8i> x 1>, data !cir.array<!cir.ptr<!u8i> x 1>}>
 
   cir.global external @bad = #cir.block_addr_diff<@fn, "lbl", "lbl2"> : !s32i
 
