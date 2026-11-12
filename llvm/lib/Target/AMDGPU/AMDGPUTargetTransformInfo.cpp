@@ -2007,7 +2007,8 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 }
 
 unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
-                                         const AllocaInst *AI) const {
+                                         const AllocaInst *AI,
+                                         const Function &Callee) const {
 
   // Below the cutoff, assume that the private memory objects would be
   // optimized
@@ -2033,7 +2034,7 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
   unsigned Threshold =
       CLOpts.inline_arg_alloca_cost * getInliningThresholdMultiplier();
 
-  bool SingleBB = none_of(*CB->getCalledFunction(), [](const BasicBlock &BB) {
+  bool SingleBB = none_of(Callee, [](const BasicBlock &BB) {
     return BB.getTerminator()->getNumSuccessors() > 1;
   });
   if (SingleBB) {

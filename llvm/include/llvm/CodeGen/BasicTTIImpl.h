@@ -715,8 +715,8 @@ public:
   unsigned adjustInliningThreshold(const CallBase *CB) const override {
     return 0;
   }
-  unsigned getCallerAllocaCost(const CallBase *CB,
-                               const AllocaInst *AI) const override {
+  unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI,
+                               const Function &Callee) const override {
     return 0;
   }
 

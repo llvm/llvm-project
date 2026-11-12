@@ -91,4 +91,50 @@ entry:
   ret void
 }
 
+define void @use_externally_single_bb(ptr addrspace(5) %p, i1 %cond) {
+  call void @external(ptr addrspace(5) %p)
+  ret void
+}
+
+define void @use_externally_multi_bb(ptr addrspace(5) %p, i1 %cond) {
+entry:
+  br i1 %cond, label %use, label %exit
+
+use:
+  call void @external(ptr addrspace(5) %p)
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Compute the alloca penalty using the known indirect target's control flow.
+define void @use_indirectly(ptr %fn, i1 %cond) {
+  %pvt_arr = alloca [512 x i8], addrspace(5)
+  call void %fn(ptr addrspace(5) %pvt_arr, i1 %cond)
+  ret void
+}
+
+; The single-BB multiplier applies to this target
+; CHECK: Analyzing call of use_externally_single_bb... (caller:test_inliner_indirect_single_bb)
+; CHECK: NumAllocaArgs: 1
+; CHECK: SROACostSavings: 0
+; CHECK: SROACostSavingsLost: 66000
+; CHECK: Threshold: 66000
+define void @test_inliner_indirect_single_bb(i1 %cond) {
+  call void @use_indirectly(ptr @use_externally_single_bb, i1 %cond)
+  ret void
+}
+
+; No single-BB multiplier applies to this target.
+; CHECK: Analyzing call of use_externally_multi_bb... (caller:test_inliner_indirect_multi_bb)
+; CHECK: NumAllocaArgs: 1
+; CHECK: SROACostSavings: 0
+; CHECK: SROACostSavingsLost: 44000
+; CHECK: Threshold: 44000
+define void @test_inliner_indirect_multi_bb(i1 %cond) {
+  call void @use_indirectly(ptr @use_externally_multi_bb, i1 %cond)
+  ret void
+}
+
 declare void @external(ptr addrspace(5) %p)
