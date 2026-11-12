@@ -1155,7 +1155,8 @@ static ld_plugin_status allSymbolsReadHook() {
 
   cl::LibraryOptionsContext LibraryOptions;
   if (!options::extra.empty())
-    cl::parseCommandLineOptions(LibraryOptions, options::extra);
+    cl::parseCommandLineOptions(LibraryOptions, codegen::getToolOptions(),
+                                options::extra);
 
   // Initialize time trace profiler
   if (!options::time_trace_file.empty())

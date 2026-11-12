@@ -456,8 +456,10 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                "values are put into the RO data section."),
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
+}
 
-  mc::RegisterMCToolOptions();
+ArrayRef<const cl::LibraryOptions *> codegen::getToolOptions() {
+  return mc::getToolOptions();
 }
 
 codegen::RegisterMTuneFlag::RegisterMTuneFlag() {

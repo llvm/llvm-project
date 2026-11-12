@@ -129,11 +129,15 @@ static cl::opt<bool>
   DisableHVX("mno-hvx", cl::Hidden,
              cl::desc("Disable Hexagon Vector eXtensions"));
 
+static cl::opt<bool> EnableHMX("mhmx",
+                               cl::desc("Enable Hexagon Matrix eXtensions"));
+
 static cl::opt<bool>
     EnableHvxIeeeFp("mhvx-ieee-fp", cl::Hidden,
                     cl::desc("Enable HVX IEEE floating point extensions"));
 static cl::opt<bool> EnableHexagonCabac
   ("mcabac", cl::desc("tbd"), cl::init(false));
+static cl::opt<bool> EnableHLX("mhlx", cl::desc("Enable Hexagon HLX"));
 
 static constexpr StringRef DefaultArch = "hexagonv68";
 
@@ -452,6 +456,9 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   if (!FS.empty())
     Result.push_back(FS);
 
+  if (EnableHMX)
+    Result.push_back("+hmx");
+
   switch (EnableHVX) {
   case Hexagon::ArchEnum::V5:
   case Hexagon::ArchEnum::V55:
@@ -527,6 +534,8 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
     Result.push_back("+hvx-ieee-fp");
   if (EnableHexagonCabac)
     Result.push_back("+cabac");
+  if (EnableHLX)
+    Result.push_back("+hlx");
 
   return join(Result.begin(), Result.end(), ",");
 }

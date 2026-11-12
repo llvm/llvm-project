@@ -406,7 +406,7 @@ private:
     }
 
   private:
-    const char* const calling_func_;
+    [[maybe_unused]] const char* const calling_func_;
   };
 };
 

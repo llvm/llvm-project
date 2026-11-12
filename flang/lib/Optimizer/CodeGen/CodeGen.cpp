@@ -378,7 +378,7 @@ public:
         // where that value is live. Spill the address to a slot and deref it.
         if (addr.getDefiningOp<mlir::LLVM::CallOp>()) {
           mlir::Value slot = this->genAllocaAndAddrCastWithType(
-              fusedLoc, addr.getType(), defaultAlign, rewriter);
+              addr.getType(), defaultAlign, rewriter);
           mlir::LLVM::StoreOp::create(rewriter, fusedLoc, addr, slot);
           addr = slot;
           expr = mlir::LLVM::DIExpressionAttr::get(
@@ -2436,8 +2436,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
             loc, rewriter, mod, storage, firBox,
             this->options.cudaDescriptorFreeFunction, this->symbolTables);
     } else {
-      storage = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign,
-                                                   rewriter);
+      storage =
+          this->genAllocaAndAddrCastWithType(llvmBoxTy, defaultAlign, rewriter);
     }
     auto storeOp =
         mlir::LLVM::StoreOp::create(rewriter, loc, boxValue, storage);
@@ -3481,8 +3481,14 @@ struct CoordinateOpConversion
     // Complex type - basically, extract the real or imaginary part
     // FIXME: double check why this is done before the fir.box case below.
     if (fir::isa_complex(objectTy)) {
+      // A complex is two elements of the same type laid out contiguously, so a
+      // part index that is not constant can index the element type directly.
+      // Only an index into the struct itself has to be constant.
       mlir::Value gep =
-          genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1]);
+          fir::getIntIfConstant(operands[1])
+              ? genGEP(loc, llvmObjectTy, rewriter, base, 0, operands[1])
+              : genGEP(loc, convertType(getComplexEleTy(objectTy)), rewriter,
+                       base, operands[1]);
       rewriter.replaceOp(coor, gep);
       return mlir::success();
     }
@@ -4171,8 +4177,8 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
             this->options.cudaDescriptorFreeFunction, this->symbolTables);
       }
       if (!newBoxStorage)
-        newBoxStorage = genAllocaAndAddrCastWithType(loc, llvmLoadTy,
-                                                     defaultAlign, rewriter);
+        newBoxStorage =
+            genAllocaAndAddrCastWithType(llvmLoadTy, defaultAlign, rewriter);
 
       TypePair boxTypePair{boxTy, llvmLoadTy};
       mlir::Value boxSize =
@@ -4455,7 +4461,7 @@ struct UndefOpConversion : public fir::FIROpConversion<fir::UndefOp> {
       mlir::Location loc = undef.getLoc();
       mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
       mlir::Value storage =
-          genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign, rewriter);
+          genAllocaAndAddrCastWithType(llvmBoxTy, defaultAlign, rewriter);
       if (boxTy.isAssumedRank()) {
         // Copies of an assumed-rank descriptor are sized from its rank, which
         // must therefore stay within the storage.
