@@ -398,4 +398,214 @@ define i1 @neg_or_trunc_implied(i8 %x, i8 %y) {
   ret i1 %and
 }
 
+define i1 @or_slt_ult_nonneg_lhs(i8 range(i8 0, 127) %x, i8 %y) {
+; CHECK-LABEL: @or_slt_ult_nonneg_lhs(
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[ULT]]
+;
+  %slt = icmp slt i8 %x, %y
+  %ult = icmp ult i8 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define i1 @or_ult_slt_nonneg_lhs(i8 range(i8 0, 127) %x, i8 %y) {
+; CHECK-LABEL: @or_ult_slt_nonneg_lhs(
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[ULT]]
+;
+  %ult = icmp ult i8 %x, %y
+  %slt = icmp slt i8 %x, %y
+  %or = or i1 %ult, %slt
+  ret i1 %or
+}
+
+define i1 @or_slt_ult_zext_lhs(i4 %a, i8 %y) {
+; CHECK-LABEL: @or_slt_ult_zext_lhs(
+; CHECK-NEXT:    [[X:%.*]] = zext i4 [[A:%.*]] to i8
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[ULT]]
+;
+  %x = zext i4 %a to i8
+  %slt = icmp slt i8 %x, %y
+  %ult = icmp ult i8 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define i1 @or_sle_ule_nonneg_lhs(i8 range(i8 0, 127) %x, i8 %y) {
+; CHECK-LABEL: @or_sle_ule_nonneg_lhs(
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[ULE]]
+;
+  %sle = icmp sle i8 %x, %y
+  %ule = icmp ule i8 %x, %y
+  %or = or i1 %sle, %ule
+  ret i1 %or
+}
+
+define i1 @and_slt_ult_nonneg_lhs(i8 range(i8 0, 127) %x, i8 %y) {
+; CHECK-LABEL: @and_slt_ult_nonneg_lhs(
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[SLT]]
+;
+  %slt = icmp slt i8 %x, %y
+  %ult = icmp ult i8 %x, %y
+  %and = and i1 %slt, %ult
+  ret i1 %and
+}
+
+define i1 @or_ult_slt_nonneg_rhs(i8 %x, i8 range(i8 0, 127) %y) {
+; CHECK-LABEL: @or_ult_slt_nonneg_rhs(
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[SLT]]
+;
+  %ult = icmp ult i8 %x, %y
+  %slt = icmp slt i8 %x, %y
+  %or = or i1 %ult, %slt
+  ret i1 %or
+}
+
+define i1 @or_sgt_ugt_nonneg_rhs(i8 %x, i8 range(i8 0, 127) %y) {
+; CHECK-LABEL: @or_sgt_ugt_nonneg_rhs(
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[UGT]]
+;
+  %sgt = icmp sgt i8 %x, %y
+  %ugt = icmp ugt i8 %x, %y
+  %or = or i1 %sgt, %ugt
+  ret i1 %or
+}
+
+define i1 @neg_or_slt_ult(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_or_slt_ult(
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SLT]], [[ULT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %slt = icmp slt i8 %x, %y
+  %ult = icmp ult i8 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define i1 @neg_or_slt_ult_may_be_negative_lhs(i8 range(i8 -1, 127) %x, i8 %y) {
+; CHECK-LABEL: @neg_or_slt_ult_may_be_negative_lhs(
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SLT]], [[ULT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %slt = icmp slt i8 %x, %y
+  %ult = icmp ult i8 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define i1 @neg_or_slt_ugt_nonneg_lhs(i8 range(i8 0, 127) %x, i8 %y) {
+; CHECK-LABEL: @neg_or_slt_ugt_nonneg_lhs(
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[UGT:%.*]] = icmp ugt i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SLT]], [[UGT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %slt = icmp slt i8 %x, %y
+  %ugt = icmp ugt i8 %x, %y
+  %or = or i1 %slt, %ugt
+  ret i1 %or
+}
+
+define i1 @or_slt_ult_zext_lhs_sext_rhs(i8 %a, i16 %b) {
+; CHECK-LABEL: @or_slt_ult_zext_lhs_sext_rhs(
+; CHECK-NEXT:    [[X:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = sext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[ULT]]
+;
+  %x = zext i8 %a to i32
+  %y = sext i16 %b to i32
+  %slt = icmp slt i32 %x, %y
+  %ult = icmp ult i32 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define i1 @or_ult_slt_sext_lhs_zext_rhs(i16 %a, i8 %b) {
+; CHECK-LABEL: @or_ult_slt_sext_lhs_zext_rhs(
+; CHECK-NEXT:    [[X:%.*]] = sext i16 [[A:%.*]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[SLT]]
+;
+  %x = sext i16 %a to i32
+  %y = zext i8 %b to i32
+  %ult = icmp ult i32 %x, %y
+  %slt = icmp slt i32 %x, %y
+  %or = or i1 %ult, %slt
+  ret i1 %or
+}
+
+define i1 @and_sgt_ugt_sext_lhs_zext_rhs(i8 %a, i16 %b) {
+; CHECK-LABEL: @and_sgt_ugt_sext_lhs_zext_rhs(
+; CHECK-NEXT:    [[X:%.*]] = sext i8 [[A:%.*]] to i64
+; CHECK-NEXT:    [[Y:%.*]] = zext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[SGT:%.*]] = icmp sgt i64 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[SGT]]
+;
+  %x = sext i8 %a to i64
+  %y = zext i16 %b to i64
+  %sgt = icmp sgt i64 %x, %y
+  %ugt = icmp ugt i64 %x, %y
+  %and = and i1 %sgt, %ugt
+  ret i1 %and
+}
+
+define i1 @or_sle_ule_zext_nneg_lhs(i8 %a, i32 %y) {
+; CHECK-LABEL: @or_sle_ule_zext_nneg_lhs(
+; CHECK-NEXT:    [[X:%.*]] = zext nneg i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ULE:%.*]] = icmp ule i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[ULE]]
+;
+  %x = zext nneg i8 %a to i32
+  %sle = icmp sle i32 %x, %y
+  %ule = icmp ule i32 %x, %y
+  %or = or i1 %sle, %ule
+  ret i1 %or
+}
+
+define i1 @or_slt_ult_sext_of_nonneg_lhs(i8 %a, i32 %y) {
+; CHECK-LABEL: @or_slt_ult_sext_of_nonneg_lhs(
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[A:%.*]], 127
+; CHECK-NEXT:    [[X:%.*]] = sext i8 [[M]] to i32
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SLT]], [[ULT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %m = and i8 %a, 127
+  %x = sext i8 %m to i32
+  %slt = icmp slt i32 %x, %y
+  %ult = icmp ult i32 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
+define i1 @neg_or_slt_ult_sext_both(i8 %a, i16 %b) {
+; CHECK-LABEL: @neg_or_slt_ult_sext_both(
+; CHECK-NEXT:    [[X:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[Y:%.*]] = sext i16 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SLT:%.*]] = icmp slt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SLT]], [[ULT]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %x = sext i8 %a to i32
+  %y = sext i16 %b to i32
+  %slt = icmp slt i32 %x, %y
+  %ult = icmp ult i32 %x, %y
+  %or = or i1 %slt, %ult
+  ret i1 %or
+}
+
 declare i1 @llvm.is.constant.i1(i1)
