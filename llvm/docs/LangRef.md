@@ -2755,7 +2755,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `"oracle-function"`
 :   This attribute indicates that the function is an oracle function of
     '`llvm.speculative.load`'. A function with this attribute must have local
-    linkage, and it may only be used as the oracle argument of
+    linkage, be non-variadic, return `i64`, be `nounwind`, `nosync`, and
+    `willreturn`, have no side effects, and only read memory through its
+    arguments. It may only be used as the oracle argument of
     '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
