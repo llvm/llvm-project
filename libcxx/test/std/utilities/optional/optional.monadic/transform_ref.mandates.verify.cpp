@@ -10,7 +10,7 @@
 
 // <optional>
 
-// Test the mandates
+// Test the Mandates added by LWG4299.
 // template<class F> constexpr optional<remove_cv_t<invoke_result_t<F, T&>>> optional<T&>::transform(F&& f) const;
 // Mandates:
 //  Let U be remove_cv_t<invoke_result_t<F, T&>>.
