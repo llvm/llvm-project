@@ -2,8 +2,8 @@
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=aarch64-unknown-linux-gnu -pass-remarks-output=%t < %s | FileCheck %s
 ; RUN: FileCheck --input-file=%t --check-prefix=COST %s
 
-; The gathers of the load columns mix free inserts at lane 0 with non-free
-; inserts at lane 1, and every lane is vectorized in another entry.
+; The gathers of the load columns mix zero cost inserts at lane 0 with nonzero
+; cost inserts at lane 1, and every lane is vectorized in another entry.
 
 ; COST:      --- !Passed
 ; COST-NEXT: Pass:            slp-vectorizer
@@ -86,5 +86,48 @@ define void @mixed_insert_costs(ptr noalias %p, ptr noalias %out, double %x0, do
   %s3_2 = fadd double %s3_1, %m3_2
   %o3 = getelementptr double, ptr %out, i64 3
   store double %s3_2, ptr %o3, align 8
+  ret void
+}
+
+; Only lane 0 of the four lane gather is vectorized in another entry. Its
+; insert price is zero, although it is moved out of the load vector with a
+; shuffle.
+
+; COST:      --- !Passed
+; COST-NEXT: Pass:            slp-vectorizer
+; COST-NEXT: Name:            StoresVectorized
+; COST-NEXT: Function:        four_lane_gather
+; COST:        - Cost:            '-3'
+
+define void @four_lane_gather(ptr noalias %a, float %x, float %y, float %z, ptr noalias %out) {
+; CHECK-LABEL: define void @four_lane_gather(
+; CHECK-SAME: ptr noalias [[A:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], ptr noalias [[OUT:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[X]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[Y]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[Z]], i64 3
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP1]], <4 x i32> <i32 5, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub <4 x float> [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr float, ptr %a, i64 1
+  %p2 = getelementptr float, ptr %a, i64 2
+  %p3 = getelementptr float, ptr %a, i64 3
+  %a0 = load float, ptr %a, align 4
+  %a1 = load float, ptr %p1, align 4
+  %a2 = load float, ptr %p2, align 4
+  %a3 = load float, ptr %p3, align 4
+  %s0 = fsub float %a0, %a1
+  %s1 = fsub float %a1, %x
+  %s2 = fsub float %a2, %y
+  %s3 = fsub float %a3, %z
+  %o1 = getelementptr float, ptr %out, i64 1
+  %o2 = getelementptr float, ptr %out, i64 2
+  %o3 = getelementptr float, ptr %out, i64 3
+  store float %s0, ptr %out, align 4
+  store float %s1, ptr %o1, align 4
+  store float %s2, ptr %o2, align 4
+  store float %s3, ptr %o3, align 4
   ret void
 }
