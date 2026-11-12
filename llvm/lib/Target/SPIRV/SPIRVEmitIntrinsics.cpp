@@ -1203,7 +1203,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       return NewTy;
     }
   } else if (auto *ArrTy = dyn_cast<ArrayType>(OrigTy)) {
-    if (Value *Op = U->getNumOperands() > 0 ? U->getOperand(0) : nullptr) {
+    for (Value *Op : U->operands()) {
       Type *OpTy = ArrTy->getElementType();
       Type *Ty = OpTy;
       if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
@@ -1221,7 +1221,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       }
     }
   } else if (auto *VecTy = dyn_cast<VectorType>(OrigTy)) {
-    if (Value *Op = U->getNumOperands() > 0 ? U->getOperand(0) : nullptr) {
+    for (Value *Op : U->operands()) {
       Type *OpTy = VecTy->getElementType();
       Type *Ty = OpTy;
       if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
