@@ -3507,8 +3507,8 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG)
   if (MemVT == MVT::f128)
     return LowerF128Store(Op, DAG);
 
-  if (MemVT == MVT::i64) {
-    // Custom handling for i64 stores: turn it into a bitcast and a
+  if (MemVT == MVT::i64 && St->getAlign() >= Align(8)) {
+    // Custom handling for aligned i64 stores: turn it into a bitcast and a
     // v2i32 store.
     SDValue Val = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, St->getValue());
     SDValue Chain = DAG.getStore(
@@ -4224,9 +4224,10 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::LOAD: {
     LoadSDNode *Ld = cast<LoadSDNode>(N);
-    // Custom handling only for i64: turn i64 load into a v2i32 load,
-    // and a bitcast.
-    if (Ld->getValueType(0) != MVT::i64 || Ld->getMemoryVT() != MVT::i64)
+    // Custom handling only for aligned i64 loads: turn i64 load into a v2i32
+    // load, and a bitcast.
+    if (Ld->getValueType(0) != MVT::i64 || Ld->getMemoryVT() != MVT::i64 ||
+        Ld->getAlign() < Align(8))
       return;
 
     SDLoc dl(N);
