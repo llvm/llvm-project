@@ -1740,6 +1740,27 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
     }
   }
 
+  // For a coroutine, model the construction of the promise object --
+  // including the evaluation of any of its default member initializers --
+  // as part of this CFG, if requested. `Statement` here is only the
+  // coroutine's as-written body (see `AnalysisDeclContext::getBody()`), so
+  // without this the promise object's fields would incorrectly appear
+  // never-initialized to any client that symbolically evaluates the CFG,
+  // even though the promise is always fully constructed by the time the
+  // coroutine body -- and thus the first `co_await` -- runs.
+  if (BuildOpts.AddImplicitCoroutinePromiseConstruction) {
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+      if (const auto *CoroBody =
+              dyn_cast_or_null<CoroutineBodyStmt>(FD->getBody())) {
+        if (B)
+          Succ = B;
+        B = addStmt(CoroBody->getPromiseDeclStmt());
+        if (badCFG)
+          return nullptr;
+      }
+    }
+  }
+
   if (B)
     Succ = B;
 
