@@ -970,6 +970,11 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     reverse order. This is useful for uncovering non-determinism caused by
     iteration of unordered containers.
 
+**LLVM_RUNTIMES_EXTRA_CMAKE**, **LLVM_RUNTIMES_EXTRA_CMAKE_AFTER**:STRING
+
+:   Semicolon-separated list(s) of additional CMake files included at the beginning (`LLVM_RUNTIMES_EXTRA_CMAKE`) or end (`LLVM_RUNTIMES_EXTRA_CMAKE_AFTER`) of `llvm/runtimes/CMakeLists.txt` in the outer LLVM build.
+    This allows outer-build configurations (such as CMake cache scripts) to define custom commands and targets in the outer build and attach them to builtins or runtimes sub-builds via `BUILTINS_DEPENDS`, `BUILTINS_<target>_DEPENDS`, `RUNTIMES_DEPENDS`, or `RUNTIMES_<target>_DEPENDS`.
+
 **LLVM_SPHINX_THREADS**:STRING
 
 :   Controls `sphinx-build -j`, which is the internal Sphinx worker count.
