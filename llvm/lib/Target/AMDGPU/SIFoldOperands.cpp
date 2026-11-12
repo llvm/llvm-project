@@ -2096,21 +2096,24 @@ bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
   return true;
 }
 
-/// Fold S_AND (S_CSELECT EXEC|-1, 0), %mask -> S_CSELECT %mask, 0.
-/// The EXEC form requires %mask to be masked by EXEC. Also handles
-/// S_CSELECT 0, EXEC|-1.
+/// Fold S_AND (S_CSELECT EXEC|-1, 0), %mask -> S_CSELECT %mask, 0, rewriting
+/// the S_CSELECT in place. The EXEC form requires %mask to be masked by EXEC.
+/// Also handles S_CSELECT 0, EXEC|-1.
 bool SIFoldOperandsImpl::tryFoldAndCSelectExec(MachineInstr &MI) const {
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(*ST);
-  // The AND's SCC def must be dead.
+  // The AND is erased, so its SCC def must be dead.
   if (MI.getOpcode() != LMC.AndOpc || !MI.allImplicitDefsAreDead())
     return false;
 
   for (unsigned SelIdx : {1u, 2u}) {
     const MachineOperand &SelMO = MI.getOperand(SelIdx);
     const MachineOperand &MaskMO = MI.getOperand(3 - SelIdx);
-    // Single use, so the S_CSELECT can be rewritten in place.
+    // The S_CSELECT is rewritten in place, so the AND must be its only user.
+    // %mask is then read at the S_CSELECT; EXEC is the only physical register
+    // known not to change in between.
     if (!SelMO.isReg() || !SelMO.getReg().isVirtual() || SelMO.getSubReg() ||
         !MaskMO.isReg() || MaskMO.getSubReg() ||
+        !(MaskMO.getReg().isVirtual() || MaskMO.getReg() == LMC.ExecReg) ||
         !MRI->hasOneNonDBGUse(SelMO.getReg()))
       continue;
 
@@ -2120,45 +2123,58 @@ bool SIFoldOperandsImpl::tryFoldAndCSelectExec(MachineInstr &MI) const {
       continue;
 
     unsigned ArmIdx;
-    if (TII->getImmOrMaterializedImm(*MRI, Sel->getOperand(2)) == 0)
+    if (Sel->getOperand(2).isImm() && Sel->getOperand(2).getImm() == 0)
       ArmIdx = 1;
-    else if (TII->getImmOrMaterializedImm(*MRI, Sel->getOperand(1)) == 0)
+    else if (Sel->getOperand(1).isImm() && Sel->getOperand(1).getImm() == 0)
       ArmIdx = 2;
     else
       continue;
 
+    Register MaskReg = MaskMO.getReg();
     MachineOperand &Arm = Sel->getOperand(ArmIdx);
+    const bool IsAllOnesArm = Arm.isImm() && Arm.getImm() == -1;
     const bool IsExecArm = Arm.isReg() && Arm.getReg() == LMC.ExecReg;
-    if (IsExecArm ? !TII->isMaskedByExec(MaskMO.getReg(), MI, *MRI)
-                  : TII->getImmOrMaterializedImm(*MRI, Arm) != -1)
+    if (!IsAllOnesArm && !(IsExecArm && TII->isMaskedByExec(MaskReg, MI, *MRI)))
       continue;
 
-    // The S_CSELECT is sunk to the AND: SCC, and EXEC for the EXEC form, must
-    // not change in between.
-    constexpr unsigned MaxInstScan = 20;
-    unsigned NumInst = 0;
-    if (any_of(instructionsWithoutDebug(std::next(Sel->getIterator()),
-                                        MI.getIterator()),
-               [&](const MachineInstr &I) {
-                 return ++NumInst > MaxInstScan ||
-                        I.modifiesRegister(AMDGPU::SCC, TRI) ||
-                        (IsExecArm && I.modifiesRegister(AMDGPU::EXEC, TRI));
-               }))
+    // A def of %mask in another block dominates the S_CSELECT; in the same
+    // block it must not lie between the S_CSELECT and the AND.
+    if (MaskReg.isVirtual()) {
+      const MachineInstr *MaskDef = MRI->getVRegDef(MaskReg);
+      if (!MaskDef)
+        continue;
+      if (MaskDef->getParent() == Sel->getParent()) {
+        constexpr unsigned MaxInstScan = 20;
+        unsigned NumInst = 0;
+        if (any_of(instructionsWithoutDebug(std::next(Sel->getIterator()),
+                                            MI.getIterator()),
+                   [&](const MachineInstr &I) {
+                     return ++NumInst > MaxInstScan || &I == MaskDef;
+                   }))
+          continue;
+      }
+    }
+
+    Register SelReg = SelMO.getReg();
+    Register DstReg = MI.getOperand(0).getReg();
+    if (DstReg.isVirtual() &&
+        !MRI->constrainRegClass(SelReg, MRI->getRegClass(DstReg)))
       continue;
 
     LLVM_DEBUG(dbgs() << "Folding AND of S_CSELECT into S_CSELECT: " << MI);
 
-    // SCC is now read at the AND, so it stays live until there.
-    for (MachineInstr &I : make_range(Sel->getIterator(), MI.getIterator()))
-      I.clearRegisterKills(AMDGPU::SCC, TRI);
-    // The original S_CSELECT result no longer exists after optimization.
-    MRI->markUsesInDebugValueAsUndef(SelMO.getReg());
+    // Debug uses of the S_CSELECT refer to its old value.
+    MRI->markUsesInDebugValueAsUndef(SelReg);
+    Arm.ChangeToRegister(MaskReg, /*isDef=*/false);
 
-    Arm.ChangeToRegister(MaskMO.getReg(), /*isDef=*/false, /*isImp=*/false,
-                         MaskMO.isKill());
-    Sel->getOperand(0).setReg(MI.getOperand(0).getReg());
-    Sel->setDebugLoc(MI.getDebugLoc());
-    Sel->moveBefore(&MI);
+    if (DstReg.isVirtual()) {
+      MRI->replaceRegWith(DstReg, SelReg);
+    } else {
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
+              DstReg)
+          .addReg(SelReg);
+    }
+
     MI.eraseFromParent();
     return true;
   }
@@ -3367,11 +3383,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
         continue;
       }
 
-      if (tryFoldAndCSelectExec(MI)) {
-        Changed = true;
-        continue;
-      }
-
       if (MI.isRegSequence() && tryFoldRegSequence(MI)) {
         Changed = true;
         continue;
@@ -3383,6 +3394,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (MI.mayLoad() && tryFoldLoad(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFoldAndCSelectExec(MI)) {
         Changed = true;
         continue;
       }

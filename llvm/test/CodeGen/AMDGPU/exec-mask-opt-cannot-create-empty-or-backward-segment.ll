@@ -4,29 +4,25 @@
 define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 %arg1, i1 %arg2, i1 %arg3, i1 %arg4, i1 %arg5) {
 ; CHECK-LABEL: cannot_create_empty_or_backwards_segment:
 ; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; CHECK-NEXT:    s_mov_b64 s[20:21], s[0:1]
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:    s_add_u32 s20, s20, s17
 ; CHECK-NEXT:    s_addc_u32 s21, s21, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 0
 ; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 8
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 16
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 8
+; CHECK-NEXT:    s_cselect_b64 s[2:3], exec, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 16
 ; CHECK-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s0, 24
-; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s1, 0
-; CHECK-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; CHECK-NEXT:    s_bitcmp1_b32 s1, 8
-; CHECK-NEXT:    s_cselect_b64 s[12:13], -1, 0
-; CHECK-NEXT:    s_and_b64 s[0:1], exec, s[2:3]
-; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[12:13]
-; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
-; CHECK-NEXT:    s_and_b64 s[6:7], exec, s[6:7]
+; CHECK-NEXT:    s_bitcmp1_b32 s6, 24
+; CHECK-NEXT:    s_cselect_b64 s[0:1], exec, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s7, 0
+; CHECK-NEXT:    s_cselect_b64 s[4:5], exec, 0
+; CHECK-NEXT:    s_bitcmp1_b32 s7, 8
+; CHECK-NEXT:    s_cselect_b64 s[6:7], exec, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:  .LBB0_1: ; %bb6
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_2 Depth 2
@@ -42,20 +38,20 @@ define amdgpu_kernel void @cannot_create_empty_or_backwards_segment(i1 %arg, i1 
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.4: ; %bb10
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=2
-; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
+; CHECK-NEXT:    s_mov_b64 vcc, s[6:7]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_6
 ; CHECK-NEXT:    s_branch .LBB0_10
 ; CHECK-NEXT:  .LBB0_5: ; %bb9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=2
-; CHECK-NEXT:    s_mov_b64 vcc, s[4:5]
+; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_10
 ; CHECK-NEXT:  .LBB0_6: ; %bb13
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=2
-; CHECK-NEXT:    s_mov_b64 vcc, s[4:5]
+; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_11
 ; CHECK-NEXT:  ; %bb.7: ; %bb16
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=2
-; CHECK-NEXT:    s_mov_b64 vcc, s[6:7]
+; CHECK-NEXT:    s_mov_b64 vcc, s[4:5]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_2
 ; CHECK-NEXT:  ; %bb.8: ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[14:15], 0

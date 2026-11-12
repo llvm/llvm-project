@@ -223,8 +223,8 @@ define amdgpu_kernel void @undef_v3f64(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
-; GCN-NEXT:    v_mov_b32_e32 v6, s0
 ; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
+; GCN-NEXT:    v_mov_b32_e32 v6, s0
 ; GCN-NEXT:  .LBB8_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ds_read_b128 v[7:10], v6
@@ -263,8 +263,8 @@ define amdgpu_kernel void @undef_v3i64(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s3, 0
-; GCN-NEXT:    v_mov_b32_e32 v6, s2
 ; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
+; GCN-NEXT:    v_mov_b32_e32 v6, s2
 ; GCN-NEXT:  .LBB9_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ds_read_b128 v[7:10], v6
@@ -305,8 +305,8 @@ define amdgpu_kernel void @undef_v4f16(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:  .LBB10_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ds_read_b64 v[3:4], v2
@@ -340,8 +340,8 @@ define amdgpu_kernel void @undef_v4i16(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:  .LBB11_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ds_read_b64 v[3:4], v2
@@ -376,8 +376,8 @@ define amdgpu_kernel void @undef_v2f16(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:  .LBB12_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ds_read_b32 v2, v1
@@ -410,8 +410,8 @@ define amdgpu_kernel void @undef_v2i16(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    s_cselect_b64 vcc, exec, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:  .LBB13_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ds_read_b32 v2, v1
