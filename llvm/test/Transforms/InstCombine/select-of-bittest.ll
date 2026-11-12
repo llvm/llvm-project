@@ -627,11 +627,11 @@ define i32 @n1(i32 %arg, i32 %arg1) {
 
 define i32 @n2(i32 %arg) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 1
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[ARG:%.*]] = freeze i32 [[ARG1:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG]], 1
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[ARG]], 2
 ; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 1
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], i32 [[T3]], i32 0
+; CHECK-NEXT:    [[T4:%.*]] = lshr i32 [[T3]], [[T]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t = and i32 %arg, 1
@@ -644,10 +644,10 @@ define i32 @n2(i32 %arg) {
 
 define i32 @n3(i32 %arg) {
 ; CHECK-LABEL: @n3(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 2
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[T]], 0
+; CHECK-NEXT:    [[ARG:%.*]] = freeze i32 [[ARG1:%.*]]
+; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG]], 2
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[ARG]], 1
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T1]], i32 [[T2]], i32 0
+; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[T2]], [[T]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t = and i32 %arg, 2
