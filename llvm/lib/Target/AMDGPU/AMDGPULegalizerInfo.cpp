@@ -8380,6 +8380,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       MI.eraseFromParent();
     }
     return true;
+  case Intrinsic::amdgcn_endpgm:
+    // s_endpgm is a terminator, but the call need not end its block (see
+    // SITargetLowering::LowerINTRINSIC_VOID).
+    return legalizeTrapEndpgm(Helper, MI);
   case Intrinsic::amdgcn_if:
   case Intrinsic::amdgcn_else: {
     MachineInstr *Br = nullptr;

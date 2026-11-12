@@ -12733,6 +12733,11 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(1);
 
   switch (IntrinsicID) {
+  case Intrinsic::amdgcn_endpgm:
+    // s_endpgm is a terminator, but the call need not end its block: in a
+    // divergent region, the unreachable after it becomes a branch to the
+    // region's exit. Lower it like a trap, which splits the block if needed.
+    return lowerTrapEndpgm(Op, DAG);
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:

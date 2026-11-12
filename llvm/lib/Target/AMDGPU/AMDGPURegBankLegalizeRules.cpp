@@ -1820,7 +1820,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   // Intrinsics with no register operands.
   addRulesForIOpcs({amdgcn_asyncmark,
-                    amdgcn_endpgm,
                     amdgcn_iglp_opt,
                     amdgcn_init_exec,
                     amdgcn_s_barrier,
