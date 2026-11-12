@@ -1728,7 +1728,11 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     Register NewDst = MRI.createVirtualRegister(SgprRB_I32);
     B.setInsertPt(*MI.getParent(), MI.getParent()->getFirstNonPHI());
     MI.getOperand(0).setReg(NewDst);
-    B.buildTrunc(Dst, NewDst);
+    LLT Ty = MRI.getType(Dst);
+    if (Ty.isFloatOrFloatVector())
+      B.buildBitcast(Dst, B.buildTrunc(Ty.changeToInteger(), NewDst));
+    else
+      B.buildTrunc(Dst, NewDst);
 
     for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
       Register UseReg = MI.getOperand(i).getReg();
