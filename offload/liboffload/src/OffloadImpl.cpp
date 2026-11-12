@@ -1252,6 +1252,80 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   return Error::success();
 }
 
+Error olMemcpy3D_impl(ol_queue_handle_t Queue, void *DstPtr,
+                      ol_device_handle_t DstDevice,
+                      const ol_memcpy3d_layout_t *DstLayout, const void *SrcPtr,
+                      ol_device_handle_t SrcDevice,
+                      const ol_memcpy3d_layout_t *SrcLayout,
+                      ol_dimensions_t Size) {
+  const ol_dimensions_t DstOffset = DstLayout->Offset;
+  const ol_dimensions_t SrcOffset = SrcLayout->Offset;
+  const size_t DstPitch = DstLayout->Pitch;
+  const size_t DstSlicePitch = DstLayout->SlicePitch;
+  const size_t SrcPitch = SrcLayout->Pitch;
+  const size_t SrcSlicePitch = SrcLayout->SlicePitch;
+
+  bool IsDstHost =
+      !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsSrcHost =
+      !SrcDevice || SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+
+  if (Size.x == 0 || Size.y == 0 || Size.z == 0)
+    return Error::success();
+
+  auto Fits = [&](size_t Pitch, size_t SlicePitch, ol_dimensions_t Off) {
+    if (Pitch < (size_t)Off.x + Size.x)
+      return false;
+    if (Size.z == 1 && Off.z == 0)
+      return true;
+    size_t MinSlice;
+    return !__builtin_mul_overflow(Pitch, (size_t)Off.y + Size.y, &MinSlice) &&
+           SlicePitch >= MinSlice && SlicePitch % Pitch == 0;
+  };
+  if (!Fits(DstPitch, DstSlicePitch, DstOffset) ||
+      !Fits(SrcPitch, SrcSlicePitch, SrcOffset))
+    return createOffloadError(ErrorCode::INVALID_SIZE,
+                              "pitch is smaller than the copied region");
+
+  GenericDeviceTy::Copy3DTy Copy{DstPtr,
+                                 SrcPtr,
+                                 {DstOffset.x, DstOffset.y, DstOffset.z},
+                                 {SrcOffset.x, SrcOffset.y, SrcOffset.z},
+                                 DstPitch,
+                                 DstSlicePitch,
+                                 SrcPitch,
+                                 SrcSlicePitch,
+                                 {Size.x, Size.y, Size.z},
+                                 IsDstHost,
+                                 IsSrcHost};
+  if (IsDstHost && IsSrcHost && !Queue) {
+    Copy.copyHost();
+    return Error::success();
+  }
+
+  // As in olMemcpy, the source device performs the copy unless it is the host.
+  ol_device_handle_t Device = !IsSrcHost   ? SrcDevice
+                              : !IsDstHost ? DstDevice
+                              : Queue ? Queue->Device
+                                      : (DstDevice ? DstDevice : SrcDevice);
+  if (!Device)
+    return createOffloadError(ErrorCode::INVALID_NULL_HANDLE,
+                              "no device available to perform the copy");
+  if (!IsDstHost && !IsSrcHost && DstDevice != SrcDevice &&
+      (DstDevice->Platform.Plugin != SrcDevice->Platform.Plugin ||
+       !SrcDevice->Platform.Plugin->isDataExchangable(
+           SrcDevice->Device->getDeviceId(), DstDevice->Device->getDeviceId())))
+    return createOffloadError(ErrorCode::UNSUPPORTED,
+                              "3D copy between devices without direct access");
+
+  if (Queue && Queue->Device != Device)
+    return createOffloadError(
+        ErrorCode::INVALID_QUEUE,
+        "the queue does not belong to the device performing the copy");
+
+  return Device->Device->dataMemcpy3D(Copy, Queue ? Queue->AsyncInfo : nullptr);
+}
+
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
                      const void *PatternPtr, size_t FillSize) {
   return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,

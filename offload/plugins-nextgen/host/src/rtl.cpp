@@ -282,6 +282,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    Copy.copyHost();
+    return Plugin::success();
+  }
+
   /// Exchange data between two devices within the plugin. This function is not
   /// supported in this plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,

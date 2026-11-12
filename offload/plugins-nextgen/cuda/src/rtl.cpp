@@ -878,6 +878,50 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemcpyAsync: %s");
   }
 
+  Error dataMemcpy3DImpl(const Copy3DTy &Copy,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (auto Err = setContext())
+      return Err;
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    auto LayoutHeight = [&](size_t Pitch, size_t SlicePitch, size_t Off) {
+      return (Copy.Extent[2] > 1 || Off > 0) ? SlicePitch / Pitch : 0;
+    };
+    bool UsesSlices =
+        Copy.Extent[2] > 1 || Copy.DstOffset[2] > 0 || Copy.SrcOffset[2] > 0;
+    if (UsesSlices && (Copy.DstSlicePitch % Copy.DstPitch ||
+                       Copy.SrcSlicePitch % Copy.SrcPitch))
+      return Plugin::error(ErrorCode::INVALID_SIZE,
+                           "slice pitch must be a multiple of the row pitch");
+
+    CUDA_MEMCPY3D Params = {};
+    Params.srcMemoryType = CU_MEMORYTYPE_UNIFIED;
+    Params.srcDevice = (CUdeviceptr)Copy.SrcPtr;
+    Params.srcXInBytes = Copy.SrcOffset[0];
+    Params.srcY = Copy.SrcOffset[1];
+    Params.srcZ = Copy.SrcOffset[2];
+    Params.srcPitch = Copy.SrcPitch;
+    Params.srcHeight =
+        LayoutHeight(Copy.SrcPitch, Copy.SrcSlicePitch, Copy.SrcOffset[2]);
+    Params.dstMemoryType = CU_MEMORYTYPE_UNIFIED;
+    Params.dstDevice = (CUdeviceptr)Copy.DstPtr;
+    Params.dstXInBytes = Copy.DstOffset[0];
+    Params.dstY = Copy.DstOffset[1];
+    Params.dstZ = Copy.DstOffset[2];
+    Params.dstPitch = Copy.DstPitch;
+    Params.dstHeight =
+        LayoutHeight(Copy.DstPitch, Copy.DstSlicePitch, Copy.DstOffset[2]);
+    Params.WidthInBytes = Copy.Extent[0];
+    Params.Height = Copy.Extent[1];
+    Params.Depth = Copy.Extent[2];
+
+    CUresult Res = cuMemcpy3DAsync(&Params, Stream);
+    return Plugin::check(Res, "error in cuMemcpy3DAsync: %s");
+  }
+
   /// Exchange data between two devices directly. We may use peer access if
   /// the CUDA devices and driver allow them.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,

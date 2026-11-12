@@ -22,6 +22,8 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 
+#include <limits>
+
 namespace llvm::omp::target::plugin {
 
 // clang-format off
@@ -399,6 +401,48 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
 Error L0DeviceTy::dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) {
   return enqueueMemCopy(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+}
+
+Error L0DeviceTy::dataMemcpy3DImpl(const Copy3DTy &Copy,
+                                   AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  if (!Copy.fitsIn32Bits())
+    return Plugin::error(ErrorCode::INVALID_SIZE,
+                         "3D copy offset, extent or pitch exceeds 32 bits");
+  constexpr size_t Max = std::numeric_limits<uint32_t>::max();
+  uint32_t DstSlicePitch =
+      static_cast<uint32_t>(std::min<size_t>(Copy.DstSlicePitch, Max));
+  uint32_t SrcSlicePitch =
+      static_cast<uint32_t>(std::min<size_t>(Copy.SrcSlicePitch, Max));
+
+  ze_copy_region_t DstRegion{static_cast<uint32_t>(Copy.DstOffset[0]),
+                             static_cast<uint32_t>(Copy.DstOffset[1]),
+                             static_cast<uint32_t>(Copy.DstOffset[2]),
+                             static_cast<uint32_t>(Copy.Extent[0]),
+                             static_cast<uint32_t>(Copy.Extent[1]),
+                             static_cast<uint32_t>(Copy.Extent[2])};
+  ze_copy_region_t SrcRegion{static_cast<uint32_t>(Copy.SrcOffset[0]),
+                             static_cast<uint32_t>(Copy.SrcOffset[1]),
+                             static_cast<uint32_t>(Copy.SrcOffset[2]),
+                             static_cast<uint32_t>(Copy.Extent[0]),
+                             static_cast<uint32_t>(Copy.Extent[1]),
+                             static_cast<uint32_t>(Copy.Extent[2])};
+
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  if (auto Err = (*QueueOrErr)
+                     ->memoryCopy3D(Copy.DstPtr, DstRegion,
+                                    static_cast<uint32_t>(Copy.DstPitch),
+                                    DstSlicePitch, Copy.SrcPtr, SrcRegion,
+                                    static_cast<uint32_t>(Copy.SrcPitch),
+                                    SrcSlicePitch))
+    return Err;
+  ODBG(OLDT_DataTransfer) << "Device " << getDeviceId() << ": 3D copy of "
+                          << Copy.Extent[0] << "x" << Copy.Extent[1] << "x"
+                          << Copy.Extent[2] << " bytes (src:" << Copy.SrcPtr
+                          << ") -> (dst:" << Copy.DstPtr << ").";
+  return Plugin::success();
 }
 
 Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,

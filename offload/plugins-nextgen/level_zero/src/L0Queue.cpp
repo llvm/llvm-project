@@ -201,6 +201,15 @@ Error L0InorderQueueTy::memoryCopyImpl(void *Dst, const void *Src,
   return CmdList->appendMemoryCopy(Dst, Src, Size);
 }
 
+Error L0InorderQueueTy::memoryCopy3DImpl(
+    void *Dst, const ze_copy_region_t &DstRegion, uint32_t DstPitch,
+    uint32_t DstSlicePitch, const void *Src, const ze_copy_region_t &SrcRegion,
+    uint32_t SrcPitch, uint32_t SrcSlicePitch) {
+  return CmdList->appendMemoryCopyRegion(Dst, &DstRegion, DstPitch,
+                                         DstSlicePitch, Src, &SrcRegion,
+                                         SrcPitch, SrcSlicePitch);
+}
+
 Error L0InorderQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                          L0LaunchEnvTy &KEnv) {
   return dispatchLaunchKernel(Kernel, KEnv);
@@ -213,6 +222,17 @@ Error L0InorderQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
 // L0SyncQueueTy implementation.
 Error L0SyncQueueTy::memoryCopyImpl(void *Dst, const void *Src, size_t Size) {
   if (auto Err = L0InorderQueueTy::memoryCopyImpl(Dst, Src, Size))
+    return Err;
+  return CmdList->hostSynchronize();
+}
+
+Error L0SyncQueueTy::memoryCopy3DImpl(
+    void *Dst, const ze_copy_region_t &DstRegion, uint32_t DstPitch,
+    uint32_t DstSlicePitch, const void *Src, const ze_copy_region_t &SrcRegion,
+    uint32_t SrcPitch, uint32_t SrcSlicePitch) {
+  if (auto Err = L0InorderQueueTy::memoryCopy3DImpl(
+          Dst, DstRegion, DstPitch, DstSlicePitch, Src, SrcRegion, SrcPitch,
+          SrcSlicePitch))
     return Err;
   return CmdList->hostSynchronize();
 }
