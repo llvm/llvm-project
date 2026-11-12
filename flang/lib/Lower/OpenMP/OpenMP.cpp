@@ -1157,12 +1157,17 @@ static bool isThreadPrivate(lower::SymbolRef sym) {
 }
 #endif
 
+/// Create omp.threadprivate operations for all threadprivate symbols referenced
+/// in \p eval and rebind the symbols to them. The operations are created at
+/// the start of \p insertBlock or, if not given, of the current alloca block.
 static void threadPrivatizeVars(lower::AbstractConverter &converter,
-                                lower::pft::Evaluation &eval) {
+                                lower::pft::Evaluation &eval,
+                                mlir::Block *insertBlock = nullptr) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-  firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+  firOpBuilder.setInsertionPointToStart(
+      insertBlock ? insertBlock : firOpBuilder.getAllocaBlock());
 
   // If the symbol corresponds to the original ThreadprivateOp, use the symbol
   // value from that operation to create one ThreadprivateOp copy operation
@@ -1988,7 +1993,10 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
   }
 
   if (info.dir == llvm::omp::Directive::OMPD_parallel) {
-    threadPrivatizeVars(info.converter, info.eval);
+    // A composite omp.parallel may only contain its nested omp.distribute.
+    // The threadprivate operations are created inside the loop nest instead.
+    if (!info.genSkeletonOnly)
+      threadPrivatizeVars(info.converter, info.eval);
     if (info.clauses) {
       firOpBuilder.setInsertionPoint(marker);
       ClauseProcessor(info.converter, info.semaCtx, *info.clauses)
@@ -5463,10 +5471,15 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
       converter, loc, wsloopClauseOps, wsloopArgs);
   wsloopOp.setComposite(/*val=*/true);
 
-  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, doItem,
-                loopNestClauseOps, iv,
-                {{distributeOp, distributeArgs}, {wsloopOp, wsloopArgs}},
-                llvm::omp::Directive::OMPD_distribute_parallel_do, dsp);
+  genLoopNestOp(
+      converter, symTable, semaCtx, eval, loc, queue, doItem, loopNestClauseOps,
+      iv, {{distributeOp, distributeArgs}, {wsloopOp, wsloopArgs}},
+      llvm::omp::Directive::OMPD_distribute_parallel_do, dsp,
+      [&](mlir::Operation *loopNestOp) {
+        // Threadprivate variables cannot be bound in the composite
+        // omp.parallel, so do it at the start of the loop body.
+        threadPrivatizeVars(converter, eval, &loopNestOp->getRegion(0).front());
+      });
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::FirOpBuilder::InsertionGuard guard(builder);
@@ -5592,7 +5605,10 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
                  {wsloopOp, wsloopArgs},
                  {simdOp, simdArgs}},
                 llvm::omp::Directive::OMPD_distribute_parallel_do_simd,
-                simdItemDSP);
+                simdItemDSP, [&](mlir::Operation *loopNestOp) {
+                  threadPrivatizeVars(converter, eval,
+                                      &loopNestOp->getRegion(0).front());
+                });
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   fir::FirOpBuilder::InsertionGuard guard(builder);

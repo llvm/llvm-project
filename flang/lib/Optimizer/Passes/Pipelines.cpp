@@ -504,6 +504,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     // Propagate implicit declare target information early in order to diagnose
     // target device not-yet-implemented cases based on FIR.
     pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+    pm.addPass(flangomp::createDeviceThreadprivateCheckPass());
     pm.addPass(flangomp::createUnimplementedDeviceCheckPass());
   }
 
