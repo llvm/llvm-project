@@ -11980,13 +11980,28 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 
     // v2i32 on RV32 lives in a GPR pair; constant index extracts are selected
     // with EXTRACT_SUBREG.
-    if (!Subtarget.is64Bit() && VecVT == MVT::v2i32)
-      return isa<ConstantSDNode>(Idx) ? Op : SDValue();
-
-    if (!Subtarget.is64Bit() && (VecVT == MVT::v4i16 || VecVT == MVT::v8i8)) {
+    if (!Subtarget.is64Bit() && VecVT.getSizeInBits() == 64) {
       auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
-      if (!IdxC)
-        return SDValue();
+      if (!IdxC) {
+        // Shift the pair right by the bit offset of the element. NSRL reads 6
+        // bits of shift amount so it handles offsets >= 32.
+        SDValue Lo, Hi;
+        if (VecVT == MVT::v2i32) {
+          Lo = DAG.getExtractVectorElt(DL, MVT::i32, Vec, 0);
+          Hi = DAG.getExtractVectorElt(DL, MVT::i32, Vec, 1);
+        } else {
+          std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
+          Lo = DAG.getBitcast(XLenVT, Lo);
+          Hi = DAG.getBitcast(XLenVT, Hi);
+        }
+        unsigned ElemWidth = VecVT.getVectorElementType().getSizeInBits();
+        SDValue Shamt = DAG.getNode(ISD::MUL, DL, XLenVT, Idx,
+                                    DAG.getConstant(ElemWidth, DL, XLenVT));
+        return DAG.getNode(RISCVISD::NSRL, DL, XLenVT, Lo, Hi, Shamt);
+      }
+      // v2i32 constant index extracts are selected with EXTRACT_SUBREG.
+      if (VecVT == MVT::v2i32)
+        return Op;
       unsigned IdxVal = IdxC->getZExtValue();
       unsigned HalfNumElts = VecVT.getVectorNumElements() / 2;
       auto [Lo, Hi] = DAG.SplitVector(Vec, DL);
