@@ -14,6 +14,7 @@
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -241,11 +242,16 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fsyntax-only");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp,
-                               options::OPT_mno_hexagon_hvx_ieee_fp)) {
-    if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
-      CmdArgs.push_back("-mhvx-ieee-fp");
-  }
+  // Forward the target features (e.g. HVX, HVX length, HVX qfloat/ieee-fp) to
+  // the external assembler so that its behavior matches the integrated
+  // assembler. getHexagonTargetFeatures() computes the same feature list that
+  // the compiler and integrated assembler use, and llvm-mc consumes it via
+  // -mattr=.
+  std::vector<StringRef> Features;
+  hexagon::getHexagonTargetFeatures(D, HTC.getTriple(), Args, Features);
+  if (!Features.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-mattr=" + llvm::join(Features, ",")));
 
   if (Args.hasFlag(options::OPT_mhexagon_hmx, options::OPT_mno_hexagon_hmx,
                    false)) {
