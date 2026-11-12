@@ -251,13 +251,14 @@ auto l0 = [](int i) consteval {
   return f(i);
 };
 
-auto l1 = [](int i) constexpr { // expected-error{{cannot take address of immediate call operator}} \
+auto l1 = [](int i) constexpr { // expected-note {{operator int (*)(int)' is an immediate function because its body evaluates the address of an immediate function '__invoke'}} \
                                 // expected-note {{declared here}}
   int t = f(i);
   return f(0);
 };
 
-int(*test)(int)  = l1;
+int(*test)(int)  = l1; // expected-error {{call to immediate function 'context::(lambda)::operator int (*)(int)' is not a constant expression}} \
++                      // expected-note {{pointer to a consteval declaration is not a constant expression}}
 
 }
 
@@ -1046,24 +1047,30 @@ int f() {
 
 namespace GH57682 {
 void test() {
-  constexpr auto l1 = []() consteval { // expected-error {{cannot take address of consteval call operator of '(lambda at}} \
+  constexpr auto l1 = []() consteval { // expected-note {{'operator int (*)()' is an immediate function because its body evaluates the address of a consteval function '__invoke'}} \
                                        // expected-note  2{{declared here}}
         return 3;
   };
-  constexpr int (*f1)(void) = l1; // expected-error {{constexpr variable 'f1' must be initialized by a constant expression}} \
+  constexpr int (*f1)(void) = l1; // expected-error {{call to immediate function 'GH57682::test()::(lambda)::operator int (*)()' is not a constant expression}} \
+                                  // expected-error {{constexpr variable 'f1' must be initialized by a constant expression}} \
+                                  // expected-note  {{pointer to a consteval declaration is not a constant expression}} \
                                   // expected-note  {{pointer to a consteval declaration is not a constant expression}}
 
 
-  constexpr auto lstatic = []() static consteval { // expected-error {{cannot take address of consteval call operator of '(lambda at}} \
+  constexpr auto lstatic = []() static consteval { // expected-note {{'operator int (*)()' is an immediate function because its body evaluates the address of a consteval function 'operator()'}} \
                                        // expected-note  2{{declared here}} \
                                        // expected-warning {{extension}}
         return 3;
   };
-  constexpr int (*f2)(void) = lstatic; // expected-error {{constexpr variable 'f2' must be initialized by a constant expression}} \
+  constexpr int (*f2)(void) = lstatic; // expected-error {{call to immediate function 'GH57682::test()::(lambda)::operator int (*)()' is not a constant expression}} \
+                                       // expected-error {{constexpr variable 'f2' must be initialized by a constant expression}} \
+                                       // expected-note  {{pointer to a consteval declaration is not a constant expression}} \
                                        // expected-note  {{pointer to a consteval declaration is not a constant expression}}
 
-  int (*f3)(void) = []() consteval { return 3; };  // expected-error {{cannot take address of consteval call operator of '(lambda at}} \
-                                                   // expected-note {{declared here}}
+  int (*f3)(void) = []() consteval { return 3; }; // expected-error {{call to immediate function 'GH57682::test()::(lambda)::operator int (*)()' is not a constant expression}} \
+                                                  // expected-note {{'operator int (*)()' is an immediate function because its body evaluates the address of a consteval function '__invoke'}} \
+                                                  // expected-note  {{pointer to a consteval declaration is not a constant expression}} \
+                                                  // expected-note {{declared here}}
 }
 
 consteval void consteval_test() {
