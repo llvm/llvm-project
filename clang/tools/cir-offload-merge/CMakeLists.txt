@@ -10,8 +10,6 @@ target_link_libraries(cir-offload-merge
   CIRRegisterAllDialects
   MLIRCIR
   MLIRIR
-  MLIRLLVMDialect
-  MLIRMemRefDialect
   MLIRParser
   MLIRSupport
 )

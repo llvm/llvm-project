@@ -13,8 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -164,7 +162,6 @@ int main(int argc, char **argv) {
 
   mlir::DialectRegistry registry;
   cir::registerAllDialects(registry);
-  registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
   mlir::MLIRContext context(registry);
   context.loadDialect<cir::CIRDialect>();
 
