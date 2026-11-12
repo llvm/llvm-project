@@ -762,15 +762,9 @@ function(llvm_add_library name)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
   # Set the ABI definitions for the library and its object library.
-  set(abi_args "")
-  foreach(option COMPONENT_LIB DISABLE_LLVM_LINK_LLVM_DYLIB)
-    if(ARG_${option})
-      list(APPEND abi_args ${option})
-    endif()
-  endforeach()
-  llvm_update_abi_definitions(${name} ${abi_args})
+  llvm_update_abi_definitions(${name} ${ARGN})
   if(TARGET obj.${name})
-    llvm_update_abi_definitions(obj.${name} ${abi_args})
+    llvm_update_abi_definitions(obj.${name} ${ARGN})
   endif()
 
   ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
@@ -1312,13 +1306,9 @@ macro(add_llvm_executable name)
   endif()
 
   # Set the ABI definitions for the executable and its object library.
-  set(abi_args "")
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-    set(abi_args DISABLE_LLVM_LINK_LLVM_DYLIB)
-  endif()
-  llvm_update_abi_definitions(${name} ${abi_args})
+  llvm_update_abi_definitions(${name} ${ARGN})
   if(TARGET obj.${name})
-    llvm_update_abi_definitions(obj.${name} ${abi_args})
+    llvm_update_abi_definitions(obj.${name} ${ARGN})
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)
