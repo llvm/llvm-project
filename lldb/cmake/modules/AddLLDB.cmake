@@ -34,10 +34,14 @@ function(lldb_tablegen)
 
   if(LTG_TARGET)
     add_public_tablegen_target(${LTG_TARGET})
-    set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
+
   if("-dump-json" IN_LIST ARGN)
     set_property(GLOBAL APPEND PROPERTY LLDB_DOCS_JSON_OUTPUTS "${TABLEGEN_OUTPUT}")
+  elseif(LTG_TARGET)
+    # Only add non-JSON targets to the list of all targets. They're collected 
+    # from all includes and we don't need JSON files to build lldb.
+    set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
   endif()
 endfunction(lldb_tablegen)
 
