@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SPS ProxySpecs for the dlfcn proxies: each binds a Proxy to its
+// SPS ProxySpecs for the dlfcn proxies: each is built from a
 // controller-interface descriptor in Shared/SPSCI/DlfcnSPSCI.h, which supplies
 // the wrapper name and wire signature.
 //
@@ -22,14 +22,13 @@
 namespace llvm::orc::sps {
 
 /// SPS proxy for DlfcnOpenProxy (dlopen).
-using DlfcnOpenProxySpec = ProxySpec<DlfcnOpenProxy, rt::sps_ci::DlfcnOpen>;
+using DlfcnOpenProxySpec = ProxySpec<rt::sps_ci::DlfcnOpen>;
 
 /// SPS proxy for DlfcnUpdateProxy (dlupdate).
-using DlfcnUpdateProxySpec =
-    ProxySpec<DlfcnUpdateProxy, rt::sps_ci::DlfcnUpdate>;
+using DlfcnUpdateProxySpec = ProxySpec<rt::sps_ci::DlfcnUpdate>;
 
 /// SPS proxy for DlfcnCloseProxy (dlclose).
-using DlfcnCloseProxySpec = ProxySpec<DlfcnCloseProxy, rt::sps_ci::DlfcnClose>;
+using DlfcnCloseProxySpec = ProxySpec<rt::sps_ci::DlfcnClose>;
 
 } // namespace llvm::orc::sps
 

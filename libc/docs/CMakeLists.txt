@@ -50,12 +50,14 @@ if(LLVM_ENABLE_SPHINX)
         pwd
         regex
         sched
+        search
         semaphore
         setjmp
         signal
         spawn
         stdbit
         stdckdint
+        stdfix
         stdint
         stdio
         stdlib

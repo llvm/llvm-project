@@ -838,7 +838,6 @@ public:
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(M);
-      Builder.disableGEPCanonicalization();
       Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
@@ -1121,8 +1120,6 @@ public:
                                       KernelsThatIndirectlyAllocateDynamicLDS);
 
     if (!KernelsThatAllocateTableLDS.empty()) {
-      IRBuilder<> Builder(M);
-
       // The order must be consistent between lookup table and accesses to
       // lookup table
       auto TableLookupVariablesOrdered =

@@ -6816,7 +6816,6 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   }
 
   assert(ResType->getOpcode() == SPIRV::OpTypePointer);
-  MachineIRBuilder MIRBuilder(I);
 
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);

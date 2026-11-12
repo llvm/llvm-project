@@ -13989,7 +13989,7 @@ assumptions to be made about the values of input arguments; namely
 ##### Syntax:
 
 ```
-<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...
+<result> = phi [fast-math-flags] <ty> [ <val0>, <label0>], ...[, !nonnull !<empty_node>][, !noundef !<empty_node>][, !range !<range-info>][, !nofpclass !<fpclass-info>][, !align !<align_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]
 ```
 
 ##### Overview:
@@ -14202,7 +14202,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -14211,7 +14211,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -14220,7 +14220,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -14236,14 +14236,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
@@ -22552,11 +22552,11 @@ behavior. For all other VP intrinsics the result is poison.
 
 The explicit vector length (%evl) creates a mask, %EVLmask, with all
 elements `0 <= i < %evl` set to True, and all other lanes `%evl <= i <
-W` to False.  A new mask %M is calculated with an element-wise AND
-from %mask and %EVLmask:
+W` to False.  A new mask %M is calculated with an element-wise logical and
+of %EVLmask and %mask:
 
 ```
-M = %mask AND %EVLmask
+M = select <W x i1> %EVLmask, <W x i1> %mask, <W x i1> splat (i1 false)
 ```
 
 A vector operation `<opcode>` on vectors `A` and `B` calculates:
@@ -22621,8 +22621,8 @@ is taken from the third argument.
 ;; Lanes at and above %pivot are taken from %on_false
 %atfirst = insertelement <4 x i32> poison, i32 %pivot, i64 0
 %splat = shufflevector <4 x i32> %atfirst, <4 x i32> poison, <4 x i32> zeroinitializer
-%pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> %splat
-%mergemask = and <4 x i1> %cond, <4 x i1> %pivotmask
+%pivotmask = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %splat
+%mergemask = select <4 x i1> %pivotmask, <4 x i1> %cond, <4 x i1> splat (i1 false)
 %also.r = select <4 x i1> %mergemask, <4 x i32> %on_true, <4 x i32> %on_false
 ```
 

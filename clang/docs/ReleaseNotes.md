@@ -163,6 +163,10 @@ features cannot lower the translation-unit ABI level;
   accesses to these fields. `__attribute__((packed))` on the field or the
   enclosing record still reduces the alignment. (#GH208256)
 
+- On 32-bit Arm Windows, the C++ throw information (`ThrowInfo`,
+  `CatchableTypeArray` and `CatchableType`) is now image-relative, as the MSVC
+  runtime expects.
+
 - On Windows targets using Microsoft C++ ABI, fixed returning a class with
   a deleted template constructor which should be returned in a register.
   This affects the ABI of `std::strong_ordering` in some versions of the
@@ -1371,6 +1375,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
   already did on AArch64.
 
+- `_ReadBarrier`, `_WriteBarrier` and `_ReadWriteBarrier` are now available on
+  32-bit Arm, as on x86 and AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
@@ -1379,6 +1386,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
+
+- `__attribute__((pcs("aapcs-vfp")))` is now accepted without a warning on
+  32-bit Arm Windows, where it is the default calling convention.
 
 - The `__interface` tag specifier now implicitly applies `__declspec(novtable)`
   to the declaration, which matches the documented behavior of the keyword. #GH232046
