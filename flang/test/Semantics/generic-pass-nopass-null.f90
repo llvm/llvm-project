@@ -28,9 +28,9 @@ contains
     real, pointer :: rp
     ! F2023 16.9.155p6 requires MOLD= when type information is needed to
     ! resolve a generic reference. Check both binding orders and a keyword.
-    !ERROR: The actual arguments to the generic procedure 'choose' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'choose' matched specific procedures with and without a passed-object dummy argument, which cannot be ranked against each other
     call obj%choose(null())
-    !ERROR: The actual arguments to the generic procedure 'choose_reversed' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'choose_reversed' matched specific procedures with and without a passed-object dummy argument, which cannot be ranked against each other
     call obj%choose_reversed(x=null())
     ! MOLD= makes each call resolvable, selecting either PASS or NOPASS.
     call obj%choose(null(mold=ip))

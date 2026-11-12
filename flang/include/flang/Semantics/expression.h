@@ -379,6 +379,9 @@ private:
     // Resolution was not attempted because the reference is already in error;
     // callers must not report a resolution failure too.
     bool errorReported{false};
+    // The matching specifics include both PASS and NOPASS bindings, which have
+    // no common matching distance to rank them by.
+    bool failedDueToPassNopassMix{false};
   };
   // Resolves a generic identifier against an argument list.  Does not report
   // resolution failure; callers do that with EmitGenericResolutionError.  It
@@ -396,7 +399,7 @@ private:
       SymbolVector &&tried, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
       bool isSubroutine, const ActualArguments &, const SymbolVector &,
-      const AdjustActuals &);
+      const AdjustActuals &, bool dueToPassNopassMix = false);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,

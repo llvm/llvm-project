@@ -32,9 +32,9 @@ contains
     integer :: x
     ! Both of these calls must be diagnosed, rather than comparing vectors
     ! with different lengths and aborting. PASS(this) need not be first.
-    !ERROR: The actual arguments to the generic procedure 'ambiguous' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'ambiguous' matched specific procedures with and without a passed-object dummy argument, which cannot be ranked against each other
     call obj%ambiguous(x)
-    !ERROR: The actual arguments to the generic procedure 'reversed' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    !ERROR: The actual arguments to the generic procedure 'reversed' matched specific procedures with and without a passed-object dummy argument, which cannot be ranked against each other
     call obj%reversed(x=x)
     ! A standard-conforming mixed generic remains resolvable by its explicit
     ! argument, both positionally and by keyword.

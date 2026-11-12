@@ -2792,7 +2792,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           if (!sym) {
             if (!result.errorReported) {
               EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                  isSubroutine, arguments, result.tried, adjustment);
+                  isSubroutine, arguments, result.tried, adjustment,
+                  result.failedDueToPassNopassMix);
             }
             return std::nullopt;
           }
@@ -3466,7 +3467,10 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     // F2023 C1514(3) distinguishes passed objects when both specifics have
     // one. Do not invent an object score to rank a remaining NOPASS match.
     if (hasPass && hasNopass) {
-      return {nullptr, true /* due to ambiguity */, std::move(tried)};
+      GenericResolution result{
+          nullptr, true /* due to ambiguity */, std::move(tried)};
+      result.failedDueToPassNopassMix = true;
+      return result;
     }
     const Match *best{nullptr};
     bool ambiguous{false};
@@ -3606,8 +3610,11 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
     bool dueToAmbiguity, bool isSubroutine, const ActualArguments &arguments,
-    const SymbolVector &tried, const AdjustActuals &adjustment) {
-  if (auto *msg{Say(dueToAmbiguity
+    const SymbolVector &tried, const AdjustActuals &adjustment,
+    bool dueToPassNopassMix) {
+  if (auto *msg{Say(dueToPassNopassMix
+              ? "The actual arguments to the generic procedure '%s' matched specific procedures with and without a passed-object dummy argument, which cannot be ranked against each other"_err_en_US
+              : dueToAmbiguity
               ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
               : semantics::IsGenericDefinedOp(symbol)
               ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
@@ -6185,7 +6192,8 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
         *isAmbiguous = result.failedDueToAmbiguity;
       }
       context_.EmitGenericResolutionError(*generic, result.failedDueToAmbiguity,
-          isSubroutine, actuals_, result.tried, adjustment);
+          isSubroutine, actuals_, result.tried, adjustment,
+          result.failedDueToPassNopassMix);
     }
   }
   return nullptr;
