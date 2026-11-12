@@ -334,6 +334,9 @@ PresburgerRelation PresburgerRelation::computeReprWithOnlyDivLocals() const {
 /// division inequalities to each part. Since the division inequalities are
 /// added to each part, we can skip the parts where the complement of any
 /// division inequality is added, as these parts will become empty anyway.
+/// The division inequalities added are always the standard bounds of the
+/// division; constraints of s_i that are tighter than these bounds, or an
+/// equality defining the division, are ordinary constraints of s_i.
 ///
 /// As a heuristic, we try adding all the constraints and check if simplex
 /// says that the intersection is empty. If it is, then subtracting this
@@ -427,10 +430,23 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       std::vector<MaybeLocalRepr> repr(sI.getNumLocalVars());
       DivisionRepr divs = sI.getLocalReprs(&repr);
 
-      // Mark which inequalities of sI are division inequalities and add all
-      // such inequalities to b.
-      llvm::SmallBitVector canIgnoreIneq(sI.getNumInequalities() +
-                                         2 * sI.getNumEqualities());
+      // Add the division inequalities of the locals of sI to b. These are
+      // always the standard bounds 0 <= dividend - denominator * q <=
+      // denominator - 1, even when the local's representation was found from
+      // constraints of sI that are strictly tighter than these bounds (see
+      // getDivRepr) or from an equality: tighter constraints, like an
+      // equality, also restrict the variables of sI, so they must stay
+      // ordinary constraints of sI that are complemented below, rather than
+      // be copied into b.
+      //
+      // For example, in (x) : (exists q : 3q <= x <= 3q), the local q is
+      // x floordiv 3 and its constraints say that x is a multiple of 3. Adding
+      // 0 <= x - 3q <= 2 to b leaves 3q <= x <= 3q in sI, whose complement
+      // (x > 3q or x < 3q) contains the points that are not multiples of 3;
+      // adding 3q <= x <= 3q itself to b would drop those points.
+      //
+      // The division inequalities need not be considered further: constraints
+      // of sI that are implied by them are found redundant below.
       for (unsigned i = initBCounts.getSpace().getNumLocalVars(),
                     e = sI.getNumLocalVars();
            i < e; ++i) {
@@ -438,44 +454,12 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
             repr[i] &&
             "Subtraction is not supported when a representation of the local "
             "variables of the subtrahend cannot be found!");
-
-        if (repr[i].kind == ReprKind::Inequality) {
-          unsigned lb = repr[i].repr.inequalityPair.lowerBoundIdx;
-          unsigned ub = repr[i].repr.inequalityPair.upperBoundIdx;
-
-          b.addInequality(sI.getInequality(lb));
-          b.addInequality(sI.getInequality(ub));
-
-          assert(lb != ub &&
-                 "Upper and lower bounds must be different inequalities!");
-          canIgnoreIneq[lb] = true;
-          canIgnoreIneq[ub] = true;
-        } else {
-          assert(repr[i].kind == ReprKind::Equality &&
-                 "ReprKind isn't inequality so should be equality");
-
-          // Consider the case (x) : (x = 3e + 1), where e is a local.
-          // Its complement is (x) : (x = 3e) or (x = 3e + 2).
-          //
-          // This can be computed by considering the set to be
-          // (x) : (x = 3*(x floordiv 3) + 1).
-          //
-          // Now there are no equalities defining divisions; the division is
-          // defined by the standard division equalities for e = x floordiv 3,
-          // i.e., 0 <= x - 3*e <= 2.
-          // So now as before, we add these division inequalities to b. The
-          // equality is now just an ordinary constraint that must be considered
-          // in the remainder of the algorithm. The division inequalities must
-          // need not be considered, same as above, and they automatically will
-          // not be because they were never a part of sI; we just infer them
-          // from the equality and add them only to b.
-          b.addInequality(
-              getDivLowerBound(divs.getDividend(i), divs.getDenom(i),
-                               sI.getVarKindOffset(VarKind::Local) + i));
-          b.addInequality(
-              getDivUpperBound(divs.getDividend(i), divs.getDenom(i),
-                               sI.getVarKindOffset(VarKind::Local) + i));
-        }
+        b.addInequality(
+            getDivLowerBound(divs.getDividend(i), divs.getDenom(i),
+                             sI.getVarKindOffset(VarKind::Local) + i));
+        b.addInequality(
+            getDivUpperBound(divs.getDividend(i), divs.getDenom(i),
+                             sI.getVarKindOffset(VarKind::Local) + i));
       }
 
       unsigned offset = simplex.getNumConstraints();
@@ -519,6 +503,7 @@ static PresburgerRelation getSetDifference(IntegerRelation b,
       // `detectRedundant` to only mark constraints from `sI` as being
       // redundant.
       simplex.detectRedundant(offset, totalNewSimplexInequalities);
+      llvm::SmallBitVector canIgnoreIneq(totalNewSimplexInequalities);
       for (unsigned j = 0; j < totalNewSimplexInequalities; j++)
         canIgnoreIneq[j] = simplex.isMarkedRedundant(offset + j);
       simplex.rollback(snapshotBeforeIntersect);
