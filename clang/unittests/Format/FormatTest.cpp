@@ -8439,6 +8439,16 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "         d);\n"
                "}",
                Style);
+
+  Style.PackArguments.BreakAfter = 0;
+  verifyFormat("int x[] = {{\n"
+               "#if 1\n"
+               "    0\n"
+               "#else\n"
+               "    ;\n"
+               "#endif\n"
+               "}};",
+               Style);
 }
 
 TEST_F(FormatTest, BreakBeforeInlineASMColon) {

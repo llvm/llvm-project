@@ -4364,8 +4364,11 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           ParamTok->MustBreakBefore = true;
           ParamTok->CanBreakBefore = true;
         }
-        if (ParamTok->opensScope())
+        if (ParamTok->opensScope()) {
           ParamTok = ParamTok->MatchingParen;
+          if (!ParamTok)
+            break;
+        }
       }
     }
 
