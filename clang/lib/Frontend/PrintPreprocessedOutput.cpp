@@ -811,13 +811,17 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
       if (ColNo == 1 && Tok.hasLeadingSpace())
         ColNo = 2;
 
-      // This hack prevents stuff like:
-      // #define HASH #
-      // HASH define foo bar
-      // From having the # character end up at column 1, which makes it so it
-      // is not handled as a #define next time through the preprocessor if in
-      // -fpreprocessed mode.
-      if (ColNo <= 1 && Tok.is(tok::hash))
+      // Keep macro-produced hashes from becoming directives in -fpreprocessed
+      // mode, but preserve hashes originally at the start of a source line.
+      // For example:
+      //   #define HASH #
+      //   HASH define foo bar
+      // must not produce a #define directive in column one.
+      // StartOfLine can be propagated by macro expansion, so use the physical
+      // line flag and exclude macro locations.
+      // See https://github.com/llvm/llvm-project/issues/78778.
+      if (ColNo <= 1 && Tok.is(tok::hash) &&
+          (!Tok.isAtPhysicalStartOfLine() || Tok.getLocation().isMacroID()))
         *OS << ' ';
 
       // Otherwise, indent the appropriate number of spaces.
