@@ -279,7 +279,9 @@ public:
     // They do not use jumpInstrMod.
     RelaxAux *relaxAux;
 
-    // The compressed content size when `compressed` is true.
+    // The compressed content size when `compressed` is true. SHF_ALLOC
+    // sections cannot stay compressed because they require the two members
+    // above. See InputSectionBase::parseCompressedHeader.
     size_t compressedSize;
   };
 
