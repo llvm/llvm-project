@@ -293,27 +293,24 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GFX12-GISEL-NEXT:    s_mov_b32 s2, s1
 ; GFX12-GISEL-NEXT:    s_sext_i32_i16 s5, s5
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_mov_b32 s20, exec_lo
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, s5
 ; GFX12-GISEL-NEXT:    s_mov_b32 s3, s5
 ; GFX12-GISEL-NEXT:    s_load_b256 s[4:11], s[0:1], 0x40
 ; GFX12-GISEL-NEXT:    s_load_b128 s[12:15], s[2:3], 0x30
-; GFX12-GISEL-NEXT:    s_load_b128 s[16:19], s[0:1], 0x10
-; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x10
+; GFX12-GISEL-NEXT:    s_mov_b32 s21, s20
 ; GFX12-GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s20, v12
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s21, v13
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s22, v14
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s23, v15
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s16, v12
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s17, v13
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s18, v14
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s19, v15
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[20:21], v[12:13]
-; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[22:23], v[14:15]
-; GFX12-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[12:15], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[20:23]
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u64_e32 s[16:17], v[12:13]
+; GFX12-GISEL-NEXT:    v_cmpx_eq_u64_e32 s[18:19], v[14:15]
+; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[12:15], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[16:19]
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr12
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr2
@@ -321,12 +318,12 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr14_vgpr15
-; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_and_not1_wrexec_b32 s21, s21
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
-; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s20
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    buffer_load_b32 v0, off, s[16:19], null
+; GFX12-GISEL-NEXT:    buffer_load_b32 v0, off, s[0:3], null
 ; GFX12-GISEL-NEXT:    buffer_load_b32 v1, off, s[4:7], null
 ; GFX12-GISEL-NEXT:    buffer_load_b32 v2, off, s[12:15], null
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
