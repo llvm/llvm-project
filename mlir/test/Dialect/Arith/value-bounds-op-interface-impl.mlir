@@ -5,6 +5,89 @@
 // RUN:     -verify-diagnostics -split-input-file | \
 // RUN: FileCheck %s --check-prefix=CHECK-ARITH
 
+// The eager select model used to process pending sibling %b before adding %a's
+// bounds. Registering conditional bounds must handle both operand orders.
+func.func @queued_a_first(%p: i1, %q: i1, %r: i1) {
+  %c0 = arith.constant 0 : index
+  %c119 = arith.constant 119 : index
+  %c238 = arith.constant 238 : index
+  %base = arith.select %p, %c0, %c119 : index
+  %a = arith.select %q, %c0, %base : index
+  %b = arith.select %r, %c0, %a : index
+  %sum = arith.addi %a, %b : index
+  // expected-remark @below {{true}}
+  "test.compare"(%sum, %c238) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+func.func @queued_b_first(%p: i1, %q: i1, %r: i1) {
+  %c0 = arith.constant 0 : index
+  %c119 = arith.constant 119 : index
+  %c238 = arith.constant 238 : index
+  %base = arith.select %p, %c0, %c119 : index
+  %a = arith.select %q, %c0, %base : index
+  %b = arith.select %r, %c0, %a : index
+  %sum = arith.addi %b, %a : index
+  // expected-remark @below {{true}}
+  "test.compare"(%sum, %c238) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// Proving %c's guard requires conditional bounds from %b, whose guard in turn
+// requires conditional bounds from %a. A single scan is insufficient.
+func.func @transitive_select_dependency(%p: i1, %q: i1, %r: i1, %s: i1) {
+  %c0 = arith.constant 0 : index
+  %c119 = arith.constant 119 : index
+  %c357 = arith.constant 357 : index
+  %base = arith.select %p, %c0, %c119 : index
+  %a = arith.select %q, %c0, %base : index
+  %b = arith.select %r, %c0, %a : index
+  %c = arith.select %s, %c0, %b : index
+  %bc = arith.addi %b, %c : index
+  %sum = arith.addi %a, %bc : index
+  // expected-remark @below {{true}}
+  "test.compare"(%sum, %c357) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// %b only adds a symbolic equality. Proving %c's guard requires facts about
+// %a through that equality; checking only direct SSA dependencies would miss it.
+func.func @transitive_symbolic_dependency(%p: i1, %q: i1, %r: i1) {
+  %c0 = arith.constant 0 : index
+  %c119 = arith.constant 119 : index
+  %c357 = arith.constant 357 : index
+  %base = arith.select %p, %c0, %c119 : index
+  %a = arith.select %q, %c0, %base : index
+  %b = arith.addi %a, %c0 : index
+  %c = arith.select %r, %c0, %b : index
+  %bc = arith.addi %b, %c : index
+  %sum = arith.addi %a, %bc : index
+  // expected-remark @below {{true}}
+  "test.compare"(%sum, %c357) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// An unknown guard must not be assumed in order to prove its consequence.
+func.func @unknown_select_guard(%p: i1, %a: index, %b: index) {
+  %r = arith.select %p, %a, %b : index
+  // expected-error @below {{unknown}}
+  "test.compare"(%r, %a) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// Knowing only the divisor sign must not satisfy a conjunction that also
+// requires a non-negative dividend.
+func.func @unknown_divui_dividend(%a: index) {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %r = arith.divui %a, %c2 : index
+  // expected-error @below {{unknown}}
+  "test.compare"(%r, %c0) {cmp = "GE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
 // CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 + 5)>
 // CHECK-LABEL: func @arith_addi(
 //  CHECK-SAME:     %[[a:.*]]: index

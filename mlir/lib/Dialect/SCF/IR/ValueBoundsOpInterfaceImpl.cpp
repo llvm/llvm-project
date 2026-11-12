@@ -16,6 +16,7 @@ using namespace mlir;
 namespace mlir {
 namespace scf {
 namespace {
+using Cmp = ValueBoundsConstraintSet::ComparisonOperator;
 
 static AffineExpr getTripCountExpr(OpFoldResult lb, OpFoldResult ub,
                                    OpFoldResult step,
@@ -85,18 +86,15 @@ struct ForOpInterface
     Value iterArg = forOp.getRegionIterArg(iterArgIdx);
     Value initArg = forOp.getInitArgs()[iterArgIdx];
 
-    // An EQ constraint can be added if the yielded value (dimension size)
-    // equals the corresponding block argument (dimension size).
-    if (cstr.populateAndCompare(
-            /*lhs=*/{yieldedValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::EQ,
-            /*rhs=*/{iterArg, dim})) {
-      if (dim.has_value()) {
-        cstr.bound(value)[*dim] == cstr.getExpr(initArg, dim);
-      } else {
-        cstr.bound(value) == cstr.getExpr(initArg);
-      }
-    }
+    // The result/iter_arg equals its initial value when one iteration
+    // preserves the value (or dimension). Do not assume this equality while
+    // trying to prove the loop-invariance condition.
+    auto invariantBounds = cstr.bound(value);
+    if (dim)
+      invariantBounds[*dim];
+    auto conditional =
+        invariantBounds.when({{{yieldedValue, dim}, Cmp::EQ, {iterArg, dim}}});
+    conditional == cstr.getExpr(initArg, dim);
 
     if (dim.has_value() || isa<BlockArgument>(value))
       return;
@@ -104,11 +102,7 @@ struct ForOpInterface
     // The closed form below holds only if the loop runs at least once (the
     // trip count is not clamped at 0) and the bounds are compared as signed
     // integers.
-    if (forOp.getUnsignedCmp() ||
-        !cstr.populateAndCompare(
-            forOp.getUpperBound(),
-            ValueBoundsConstraintSet::ComparisonOperator::GT,
-            forOp.getLowerBound()))
+    if (forOp.getUnsignedCmp())
       return;
 
     // `value` is result of `forOp`, we can prove that:
@@ -118,7 +112,8 @@ struct ForOpInterface
         forOp.getLowerBound(), forOp.getUpperBound(), forOp.getStep(), cstr);
     AffineExpr oneIterAdvanceExpr =
         cstr.getExpr(yieldedValue) - cstr.getExpr(iterArg);
-    cstr.bound(value) ==
+    cstr.bound(value).when(
+        {{forOp.getUpperBound(), Cmp::GT, forOp.getLowerBound()}}) ==
         cstr.getExpr(initArg) + AffineExpr(tripCountExpr * oneIterAdvanceExpr);
   }
 
@@ -195,41 +190,16 @@ struct IfOpInterface
     Value thenValue = ifOp.thenYield().getResults()[resultNum];
     Value elseValue = ifOp.elseYield().getResults()[resultNum];
 
-    auto boundsBuilder = cstr.bound(value);
-    if (dim)
-      boundsBuilder[*dim];
-
-    // Compare yielded values.
-    // If thenValue <= elseValue:
-    // * result <= elseValue
-    // * result >= thenValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{thenValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{elseValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(thenValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(elseValue, dim);
-      } else {
-        cstr.bound(value) >= thenValue;
-        cstr.bound(value) <= elseValue;
-      }
-    }
-    // If elseValue <= thenValue:
-    // * result <= thenValue
-    // * result >= elseValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{elseValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{thenValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(elseValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(thenValue, dim);
-      } else {
-        cstr.bound(value) >= elseValue;
-        cstr.bound(value) <= thenValue;
-      }
-    }
+    auto addBounds = [&](Value lower, Value upper) {
+      auto bounds = cstr.bound(value);
+      if (dim)
+        bounds[*dim];
+      auto conditional = bounds.when({{{lower, dim}, Cmp::LE, {upper, dim}}});
+      conditional >= cstr.getExpr(lower, dim);
+      conditional <= cstr.getExpr(upper, dim);
+    };
+    addBounds(thenValue, elseValue);
+    addBounds(elseValue, thenValue);
   }
 
   void populateBoundsForIndexValue(Operation *op, Value value,

@@ -13,6 +13,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -409,6 +410,14 @@ bool ValueBoundsConstraintSet::isMapped(Value value,
 }
 
 void ValueBoundsConstraintSet::processWorklist() {
+  bool nested = std::exchange(processingWorklist, true);
+  auto restore = llvm::scope_exit([&] { processingWorklist = nested; });
+  do {
+    processWorklistImpl();
+  } while (!nested && processConditionalBounds());
+}
+
+void ValueBoundsConstraintSet::processWorklistImpl() {
   LDBG() << "Processing value bounds worklist...";
   while (!worklist.empty()) {
     ValueDim valueDim = worklist.front();
@@ -460,6 +469,90 @@ void ValueBoundsConstraintSet::processWorklist() {
     Value tiedOperand = dstOp.getTiedOpOperand(cast<OpResult>(value))->get();
     bound(value)[dim] == getExpr(tiedOperand, dim);
   }
+}
+
+unsigned
+ValueBoundsConstraintSet::addConditionalBounds(ArrayRef<Condition> conditions,
+                                               std::optional<unsigned> parent) {
+  ConditionalBounds bounds;
+  if (parent)
+    bounds.conditions = conditionalBounds[*parent].conditions;
+
+  // As in populateConstraints, materialize both operands as dimension columns.
+  // Appending dimensions and symbols preserves these dimension positions.
+  // Conservative semi-affine assumptions must not justify guarded bounds.
+  bool conservative = std::exchange(addConservativeSemiAffineBounds, false);
+  for (const Condition &condition : conditions) {
+    int64_t lhs = insert(condition.lhs, /*isSymbol=*/false);
+    int64_t rhs = insert(condition.rhs, /*isSymbol=*/false);
+    bounds.conditions.push_back({lhs, condition.cmp, rhs});
+  }
+  addConservativeSemiAffineBounds = conservative;
+
+  unsigned rule = conditionalBounds.size();
+  conditionalBounds.push_back(std::move(bounds));
+  pendingConditionalBounds.push_back(rule);
+  return rule;
+}
+
+void ValueBoundsConstraintSet::addConditionalBound(unsigned rule, Value value,
+                                                   std::optional<int64_t> dim,
+                                                   BoundType type,
+                                                   AffineExpr expr) {
+  if (auto satisfied = conditionalBounds[rule].satisfied) {
+    if (*satisfied)
+      addBound(type, getPos(value, dim), expr);
+    return;
+  }
+
+  // Dimensions and symbols are appended within their respective kinds until
+  // projection, which runs after conditional-bound processing.
+  conditionalBounds[rule].bounds.push_back(
+      {{value, dim.value_or(kIndexValue)}, type, expr});
+}
+
+bool ValueBoundsConstraintSet::processConditionalBounds() {
+  assert(worklist.empty() && "expected drained worklist");
+  bool changed = false;
+  // Backward IR traversal commonly registers users before their dependencies.
+  // Sweep in reverse registration order and expose proven consequences to the
+  // remaining guards immediately. Further passes still handle other orders.
+  for (unsigned rule : llvm::reverse(pendingConditionalBounds)) {
+    std::optional<bool> satisfied = true;
+    for (const MaterializedCondition &condition :
+         conditionalBounds[rule].conditions) {
+      FailureOr<bool> result =
+          strongComparePos(condition.lhs, condition.cmp, condition.rhs);
+      if (failed(result)) {
+        satisfied.reset();
+      } else if (!*result) {
+        satisfied = false;
+        break;
+      }
+    }
+    if (!satisfied)
+      continue;
+    conditionalBounds[rule].satisfied = *satisfied;
+    if (!*satisfied) {
+      LDBG() << "Discarding conditional bounds rule " << rule;
+      conditionalBounds[rule].bounds.clear();
+      continue;
+    }
+    changed = true;
+    LDBG() << "Applying conditional bounds rule " << rule;
+    for (const ConditionalBound &bound : conditionalBounds[rule].bounds) {
+      auto [value, dim] = bound.valueDim;
+      addBound(bound.type,
+               getPos(value, dim == kIndexValue ? std::nullopt
+                                                : std::make_optional(dim)),
+               bound.expr);
+    }
+    conditionalBounds[rule].bounds.clear();
+  }
+  llvm::erase_if(pendingConditionalBounds, [&](unsigned rule) {
+    return conditionalBounds[rule].satisfied.has_value();
+  });
+  return changed;
 }
 
 void ValueBoundsConstraintSet::projectOut(int64_t pos) {
@@ -809,16 +902,14 @@ FailureOr<bool> ValueBoundsConstraintSet::strongComparePos(
   case ComparisonOperator::EQ: {
     std::optional<bool> le =
         strongComparePos(lhsPos, ComparisonOperator::LE, rhsPos);
-    if (!le)
-      return failure();
-    if (!*le)
+    if (le && !*le)
       return false;
     std::optional<bool> ge =
         strongComparePos(lhsPos, ComparisonOperator::GE, rhsPos);
-    if (!ge)
-      return failure();
-    if (!*ge)
+    if (ge && !*ge)
       return false;
+    if (!le || !ge)
+      return failure();
     return true;
   }
   }
@@ -1025,11 +1116,27 @@ ValueBoundsConstraintSet::BoundBuilder::operator[](int64_t dim) {
   return *this;
 }
 
+ValueBoundsConstraintSet::BoundBuilder
+ValueBoundsConstraintSet::BoundBuilder::when(
+    ArrayRef<Condition> conditions) const {
+  return BoundBuilder(cstr, value, dim,
+                      cstr.addConditionalBounds(conditions, conditionalBounds));
+}
+
+void ValueBoundsConstraintSet::BoundBuilder::addBound(BoundType type,
+                                                      AffineExpr expr) {
+  if (conditionalBounds) {
+    cstr.addConditionalBound(*conditionalBounds, value, dim, type, expr);
+    return;
+  }
+  cstr.addBound(type, cstr.getPos(value, dim), expr);
+}
+
 void ValueBoundsConstraintSet::BoundBuilder::operator<(AffineExpr expr) {
 #ifndef NDEBUG
   assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
-  cstr.addBound(BoundType::UB, cstr.getPos(value, this->dim), expr);
+  addBound(BoundType::UB, expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator<=(AffineExpr expr) {
@@ -1044,14 +1151,14 @@ void ValueBoundsConstraintSet::BoundBuilder::operator>=(AffineExpr expr) {
 #ifndef NDEBUG
   assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
-  cstr.addBound(BoundType::LB, cstr.getPos(value, this->dim), expr);
+  addBound(BoundType::LB, expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator==(AffineExpr expr) {
 #ifndef NDEBUG
   assertValidValueDim(value, this->dim, cstr.options);
 #endif // NDEBUG
-  cstr.addBound(BoundType::EQ, cstr.getPos(value, this->dim), expr);
+  addBound(BoundType::EQ, expr);
 }
 
 void ValueBoundsConstraintSet::BoundBuilder::operator<(OpFoldResult ofr) {

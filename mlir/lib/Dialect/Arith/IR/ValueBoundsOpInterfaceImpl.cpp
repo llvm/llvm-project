@@ -16,6 +16,7 @@ using namespace mlir;
 namespace mlir {
 namespace arith {
 namespace {
+using Cmp = ValueBoundsConstraintSet::ComparisonOperator;
 
 struct ConstantOpInterface
     : public ValueBoundsOpInterface::ExternalModel<ConstantOpInterface,
@@ -70,17 +71,13 @@ struct DivUIOpInterface
     auto divOp = cast<arith::DivUIOp>(op);
     assert(value == divOp.getResult() && "invalid value");
 
-    bool lhsNonNegative =
-        ValueBoundsConstraintSet::isProvablyNonNegative(divOp.getLhs(), cstr);
-    bool rhsPositive =
-        ValueBoundsConstraintSet::isProvablyPositive(divOp.getRhs(), cstr);
-    if (!lhsNonNegative || !rhsPositive)
-      return;
-
     AffineExpr lhs = cstr.getExpr(divOp.getLhs());
     AffineExpr rhs = cstr.getExpr(divOp.getRhs());
-    cstr.bound(value) >= 0;
-    cstr.bound(value) == lhs.floorDiv(rhs);
+    OpFoldResult zero = Builder(op->getContext()).getIndexAttr(0);
+    auto bounds = cstr.bound(value).when(
+        {{divOp.getLhs(), Cmp::GE, zero}, {divOp.getRhs(), Cmp::GT, zero}});
+    bounds >= 0;
+    bounds == lhs.floorDiv(rhs);
   }
 };
 
@@ -94,36 +91,32 @@ struct DivSIOpInterface
 
     Value lhsValue = divOp.getLhs();
     Value rhsValue = divOp.getRhs();
-
-    bool lhsNonNegative =
-        ValueBoundsConstraintSet::isProvablyNonNegative(lhsValue, cstr);
-    bool lhsNonPositive =
-        ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr);
-    bool rhsPositive =
-        ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
-    bool rhsNegative =
-        ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
-
     AffineExpr lhs = cstr.getExpr(lhsValue);
     AffineExpr rhs = cstr.getExpr(rhsValue);
+    OpFoldResult zero = Builder(op->getContext()).getIndexAttr(0);
 
     // divsi rounds toward zero, unlike floorDiv/ceilDiv which round toward
-    // negative/positive infinity respectively. When the result is non-negative,
-    // divsi equals floorDiv(lhs, rhs); when negative, it equals ceilDiv(lhs,
-    // rhs). Without knowing the sign, bound the result between those two
-    // expressions, which is always correct.
+    // negative/positive infinity respectively. Without knowing the sign, the
+    // result is bounded between these expressions.
     cstr.bound(value) >= lhs.floorDiv(rhs);
     cstr.bound(value) <= lhs.ceilDiv(rhs);
 
-    // If the sign of the result is known, we can use the exact expression.
-    if ((lhsNonNegative && rhsPositive) || (lhsNonPositive && rhsNegative)) {
-      cstr.bound(value) == lhs.floorDiv(rhs);
-      cstr.bound(value) >= 0;
-    } else if ((lhsNonPositive && rhsPositive) ||
-               (lhsNonNegative && rhsNegative)) {
-      cstr.bound(value) == lhs.ceilDiv(rhs);
-      cstr.bound(value) <= 0;
-    }
+    // Register each sign combination separately. At lhs == 0 both signs can
+    // be proven, and the resulting equalities consistently describe zero.
+    auto addBounds = [&](Cmp lhsSign, Cmp rhsSign, AffineExpr quotient,
+                         bool nonNegative) {
+      auto bounds = cstr.bound(value).when(
+          {{lhsValue, lhsSign, zero}, {rhsValue, rhsSign, zero}});
+      bounds == quotient;
+      if (nonNegative)
+        bounds >= 0;
+      else
+        bounds <= 0;
+    };
+    addBounds(Cmp::GE, Cmp::GT, lhs.floorDiv(rhs), true);
+    addBounds(Cmp::LE, Cmp::LT, lhs.floorDiv(rhs), true);
+    addBounds(Cmp::LE, Cmp::GT, lhs.ceilDiv(rhs), false);
+    addBounds(Cmp::GE, Cmp::LT, lhs.ceilDiv(rhs), false);
   }
 };
 
@@ -191,38 +184,20 @@ struct RemSIOpInterface
     Value lhsValue = remSIOp.getLhs();
     Value rhsValue = remSIOp.getRhs();
     AffineExpr rhs = cstr.getExpr(rhsValue);
-    bool rhsPositive =
-        ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
-    bool rhsNegative =
-        ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
+    OpFoldResult zero = Builder(op->getContext()).getIndexAttr(0);
 
-    // The result of remsi has the same sign as the dividend (lhs) and also
-    // fulfills |result| < |rhs|. The sign of lhs does not need to be a
-    // compile-time constant: it is sufficient if the constraint set can prove
-    // it. For lhs == 0 both branches may fire, which is consistent since the
-    // result is then 0. f.e:
-    //   lhs   rhs   result   bounds
-    //   ----  ----  ------   --------------------------------------------------
-    //    7     3      1      0 <= val && val <= rhs-1 = 2      -> [0, 2]
-    //    7    -3      1      0 <= val && val <= -rhs-1 = 2     -> [0, 2]
-    //   -7     3     -1      val <= 0 && val >= 1-rhs = -2     -> [-2, 0]
-    //   -7    -3     -1      val <= 0 && val >= rhs+1 = -2     -> [-2, 0]
-    //    0     3      0      both lhs branches fire (0<=val and val<=0) -> val
-    //    == 0
-    if (ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr)) {
-      cstr.bound(value) <= 0;
-      if (rhsPositive)
-        cstr.bound(value) >= 1 - rhs;
-      if (rhsNegative)
-        cstr.bound(value) >= rhs + 1;
-    }
-    if (ValueBoundsConstraintSet::isProvablyNonNegative(lhsValue, cstr)) {
-      cstr.bound(value) >= 0;
-      if (rhsPositive)
-        cstr.bound(value) <= rhs - 1;
-      if (rhsNegative)
-        cstr.bound(value) <= -rhs - 1;
-    }
+    // remsi has the sign of lhs and |result| < |rhs|. At lhs == 0 both
+    // dividend conditions hold, consistently bounding the result to zero.
+    cstr.bound(value).when({{lhsValue, Cmp::LE, zero}}) <= 0;
+    cstr.bound(value).when({{lhsValue, Cmp::GE, zero}}) >= 0;
+    cstr.bound(value).when(
+        {{lhsValue, Cmp::LE, zero}, {rhsValue, Cmp::GT, zero}}) >= 1 - rhs;
+    cstr.bound(value).when(
+        {{lhsValue, Cmp::LE, zero}, {rhsValue, Cmp::LT, zero}}) >= rhs + 1;
+    cstr.bound(value).when(
+        {{lhsValue, Cmp::GE, zero}, {rhsValue, Cmp::GT, zero}}) <= rhs - 1;
+    cstr.bound(value).when(
+        {{lhsValue, Cmp::GE, zero}, {rhsValue, Cmp::LT, zero}}) <= -rhs - 1;
   }
 };
 
@@ -235,13 +210,11 @@ struct RemUIOpInterface
 
     Value rhsValue = remUIOp.getRhs();
     AffineExpr rhs = cstr.getExpr(rhsValue);
-
-    // remui computes an unsigned remainder, so for a provably positive divisor
-    // the result is always in [0, rhs - 1].
-    if (ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr)) {
-      cstr.bound(value) >= 0;
-      cstr.bound(value) <= rhs - 1;
-    }
+    OpFoldResult zero = Builder(op->getContext()).getIndexAttr(0);
+    // For a provably positive divisor, remui is always in [0, rhs - 1].
+    auto bounds = cstr.bound(value).when({{rhsValue, Cmp::GT, zero}});
+    bounds >= 0;
+    bounds <= rhs - 1;
   }
 };
 
@@ -265,45 +238,18 @@ struct SelectOpInterface
       return;
     }
 
-    // Populate constraints for the true/false values (and all values on the
-    // backward slice, as long as the current stop condition is not satisfied).
-    cstr.populateConstraints(trueValue, dim);
-    cstr.populateConstraints(falseValue, dim);
-    auto boundsBuilder = cstr.bound(value);
-    if (dim)
-      boundsBuilder[*dim];
-
-    // Compare yielded values.
-    // If trueValue <= falseValue:
-    // * result <= falseValue
-    // * result >= trueValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{trueValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{falseValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(trueValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(falseValue, dim);
-      } else {
-        cstr.bound(value) >= trueValue;
-        cstr.bound(value) <= falseValue;
-      }
-    }
-    // If falseValue <= trueValue:
-    // * result <= trueValue
-    // * result >= falseValue
-    if (cstr.populateAndCompare(
-            /*lhs=*/{falseValue, dim},
-            ValueBoundsConstraintSet::ComparisonOperator::LE,
-            /*rhs=*/{trueValue, dim})) {
-      if (dim) {
-        cstr.bound(value)[*dim] >= cstr.getExpr(falseValue, dim);
-        cstr.bound(value)[*dim] <= cstr.getExpr(trueValue, dim);
-      } else {
-        cstr.bound(value) >= falseValue;
-        cstr.bound(value) <= trueValue;
-      }
-    }
+    // Each ordering is a sufficient condition for an interval containing both
+    // possible results. Registration does not query or recursively analyze IR.
+    auto addBounds = [&](Value lower, Value upper) {
+      auto bounds = cstr.bound(value);
+      if (dim)
+        bounds[*dim];
+      auto conditional = bounds.when({{{lower, dim}, Cmp::LE, {upper, dim}}});
+      conditional >= cstr.getExpr(lower, dim);
+      conditional <= cstr.getExpr(upper, dim);
+    };
+    addBounds(trueValue, falseValue);
+    addBounds(falseValue, trueValue);
   }
 
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -357,30 +303,12 @@ struct MinUIOpInterface
     // 0xff is treated as -1, not 255). For an unsigned minimum it is enough
     // that a single operand is provably non-negative: minui(x, y) is in
     // [0, y] whenever y >= 0 (and symmetrically for x).
-    bool lhsNonNegative =
-        ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
-    bool rhsNonNegative =
-        ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
-    if (!lhsNonNegative && !rhsNonNegative)
-      return;
-
-    // A negative signed integer bit pattern reinterpreted as an
-    // unsigned integer is greater than SIGNED_INT_MAX. If
-    // one of the operands is signed non-negative, it is smaller than
-    // or equal to SIGNED_INT_MAX in unsigned interpretation,
-    // and `minui` will choose that operand over a negative signed
-    // integer operand.
-    cstr.bound(value) >= 0;
-    // If an operand is provably non-negative, its signed and unsigned value
-    // interpretations agree, so `minsi` and `minui` impose the same upper
-    // bound: `result <= operand`.
-    if (lhsNonNegative) {
-      AffineExpr lhs = cstr.getExpr(minOp.getLhs());
-      cstr.bound(value) <= lhs;
-    }
-    if (rhsNonNegative) {
-      AffineExpr rhs = cstr.getExpr(minOp.getRhs());
-      cstr.bound(value) <= rhs;
+    OpFoldResult zero = Builder(op->getContext()).getIndexAttr(0);
+    // Either non-negative operand bounds the unsigned minimum from above.
+    for (Value operand : {minOp.getLhs(), minOp.getRhs()}) {
+      auto bounds = cstr.bound(value).when({{operand, Cmp::GE, zero}});
+      bounds >= 0;
+      bounds <= cstr.getExpr(operand);
     }
   }
 };
@@ -393,20 +321,11 @@ struct MaxUIOpInterface
     auto maxOp = cast<arith::MaxUIOp>(op);
     assert(value == maxOp.getResult() && "invalid value");
 
-    // See MinUIOpInterface comment
-    bool lhsNonNegative =
-        ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr);
-    bool rhsNonNegative =
-        ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr);
-
-    if (lhsNonNegative) {
-      AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
-      cstr.bound(value) >= lhs;
-    }
-    if (rhsNonNegative) {
-      AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
-      cstr.bound(value) >= rhs;
-    }
+    // See MinUIOpInterface comment.
+    OpFoldResult zero = Builder(op->getContext()).getIndexAttr(0);
+    for (Value operand : {maxOp.getLhs(), maxOp.getRhs()})
+      cstr.bound(value).when({{operand, Cmp::GE, zero}}) >=
+          cstr.getExpr(operand);
   }
 };
 } // namespace
