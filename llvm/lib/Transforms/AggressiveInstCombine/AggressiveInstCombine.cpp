@@ -2699,9 +2699,14 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
         break;
       case Instruction::Call:
         MadeChange |= tryToFPToSat(I, TTI);
-        MadeChange |=
-            foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange) ||
-            foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange);
+        // These folds can erase the instruction `I`, so they need to be called
+        // at the end of this sequence.
+        if (foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange)) {
+          MadeChange = true;
+          break;
+        }
+        if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
+          MadeChange = true;
         break;
       default:;
       }
