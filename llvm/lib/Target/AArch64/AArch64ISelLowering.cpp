@@ -11054,8 +11054,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     OpFlags = Subtarget->classifyGlobalFunctionReference(CalledGlobal,
                                                          getTargetMachine());
     if (OpFlags & AArch64II::MO_GOT) {
-      Callee = DAG.getTargetGlobalAddress(CalledGlobal, DL, PtrVT, 0, OpFlags);
-      Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
+      Callee = getGOT(G, DAG, OpFlags);
     } else if (!CLI.PAI || !IsTailCall) {
       const GlobalValue *GV = G->getGlobal();
       Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
