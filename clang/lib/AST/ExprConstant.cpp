@@ -23793,10 +23793,9 @@ EvaluateBuiltinStrLen(const Expr *E, EvalInfo &Info,
     StringRef Str = S->getBytes();
     int64_t Off = String.Offset.getQuantity();
     unsigned Width = S->getCharByteWidth();
-    QualType LitCharTy =
-        S->getType()->castAsArrayTypeUnsafe()->getElementType();
     if (Off >= 0 && (uint64_t)Off <= (uint64_t)Str.size() && Off % Width == 0 &&
-        Info.Ctx.hasSameUnqualifiedType(CharTy, LitCharTy) &&
+        !CharTy->isIncompleteType() &&
+        Info.Ctx.getTypeSize(CharTy) == Width * 8 &&
         // When the text is wanted, wide strings go to the slow path, which
         // builds it one char per character. Raw bytes here would not match.
         (Width == 1 || !StringResult)) {
