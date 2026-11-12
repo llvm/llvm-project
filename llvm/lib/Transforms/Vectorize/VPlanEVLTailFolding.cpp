@@ -299,8 +299,8 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
   }
 
   // Pull out left splices from any elementwise op.
-  // binop(splice.left(poison, x, evl), live-in)
-  // -> splice.left(poison, binop(x,live-in), evl)
+  // binop(splice.left(poison, x, evl), splat)
+  // -> splice.left(poison, binop(x,splat), evl)
   vputils::pullOutPermutations(
       Plan,
       [&EVL](VPValue *&X) {

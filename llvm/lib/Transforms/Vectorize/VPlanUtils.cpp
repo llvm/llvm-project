@@ -1573,9 +1573,9 @@ void vputils::detail::pullOutPermutationsImpl(
       if (none_of(Def.operands(), MatchPerm))
         continue;
 
-      // All operands must be a single-use permutation or a live in (splat).
+      // All operands must be a single-use permutation or a single scalar.
       if (!all_of(Def.operands(), [&MatchPerm](VPValue *Op) {
-            return (Op->hasOneUse() && MatchPerm(Op)) || match(Op, m_LiveIn());
+            return (Op->hasOneUse() && MatchPerm(Op)) || isSingleScalar(Op);
           }))
         continue;
 

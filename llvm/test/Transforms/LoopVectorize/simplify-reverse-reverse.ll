@@ -192,3 +192,75 @@ loop:
 exit:
   ret void
 }
+
+; The invariant load is a single scalar inside the loop, so the reverses can be
+; pulled through the add and cancelled.
+define void @reverse_binop_invariant_load(ptr noalias %src, ptr noalias %dst, ptr noalias %p, i32 %n) {
+; CHECK-LABEL: define void @reverse_binop_invariant_load(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[P:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[N]], [[TMP1]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP5]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP9]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[REVERSE1:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP11]], i64 -3
+; CHECK-NEXT:    store <4 x i32> [[REVERSE1]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[IV_NEXT]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[INV:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], [[INV]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i32 [[IV_NEXT]]
+; CHECK-NEXT:    store i32 [[Y]], ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[EC:%.*]] = icmp sgt i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%n, %entry], [%iv.next, %loop]
+  %iv.next = add nsw i32 %iv, -1
+  %gep.src = getelementptr i32, ptr %src, i32 %iv.next
+  %x = load i32, ptr %gep.src
+  %inv = load i32, ptr %p
+  %y = add i32 %x, %inv
+  %gep.dst = getelementptr i32, ptr %dst, i32 %iv.next
+  store i32 %y, ptr %gep.dst
+  %ec = icmp sgt i32 %iv.next, 0
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
