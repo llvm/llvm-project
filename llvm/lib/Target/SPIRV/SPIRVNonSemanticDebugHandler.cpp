@@ -992,6 +992,11 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypeForDerivedType(
   switch (DT->getTag()) {
   case dwarf::DW_TAG_pointer_type:
     return emitDebugTypePointer(DT, MAI);
+  case dwarf::DW_TAG_const_type:
+  case dwarf::DW_TAG_volatile_type:
+  case dwarf::DW_TAG_restrict_type:
+  case dwarf::DW_TAG_atomic_type:
+    return emitDebugTypeQualifier(DT, MAI);
   case dwarf::DW_TAG_typedef:
     return emitDebugTypedef(DT, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
   case dwarf::DW_TAG_member:
@@ -1037,6 +1042,49 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
   return EmitResult<PreparedScope>::emitted(
       PreparedScope{SPIRV::NonSemanticExtInst::DebugTypePointer,
                     {BaseReg, StorageClassReg, DebugTypePointerFlagsReg}});
+}
+
+auto SPIRVNonSemanticDebugHandler::emitDebugTypeQualifier(
+    const DIDerivedType *QT, SPIRV::ModuleAnalysisInfo &MAI)
+    -> EmitResult<PreparedScope> {
+  // Type Qualifier values from the NonSemantic.Shader.DebugInfo.100 spec.
+  enum : uint32_t {
+    ConstType = 0,
+    VolatileType = 1,
+    RestrictType = 2,
+    AtomicType = 3
+  };
+  uint32_t Qualifier;
+  switch (QT->getTag()) {
+  case dwarf::DW_TAG_const_type:
+    Qualifier = ConstType;
+    break;
+  case dwarf::DW_TAG_volatile_type:
+    Qualifier = VolatileType;
+    break;
+  case dwarf::DW_TAG_restrict_type:
+    Qualifier = RestrictType;
+    break;
+  case dwarf::DW_TAG_atomic_type:
+    Qualifier = AtomicType;
+    break;
+  default:
+    llvm_unreachable("not a qualified type");
+  }
+
+  // No base type (e.g. const void): use DebugInfoNone, as for pointers.
+  MCRegister BaseReg = CachedDebugInfoNoneReg;
+  if (const DIType *BaseTy = QT->getBaseType()) {
+    EmitResult<MCRegister> Base = getOrCreateDebugScope(BaseTy);
+    if (!Base)
+      return EmitResult<PreparedScope>::failure(Base);
+    BaseReg = *Base.Value;
+  }
+
+  MCRegister QualifierReg =
+      emitOpConstantI32(Qualifier, getOrEmitOpTypeInt32Reg(MAI), MAI);
+  return EmitResult<PreparedScope>::emitted(PreparedScope{
+      SPIRV::NonSemanticExtInst::DebugTypeQualifier, {BaseReg, QualifierReg}});
 }
 
 auto SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
