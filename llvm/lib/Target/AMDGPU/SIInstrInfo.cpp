@@ -2877,48 +2877,6 @@ bool SIInstrInfo::swapSourceModifiers(MachineInstr &MI, MachineOperand &Src0,
   return true;
 }
 
-static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
-                                             MachineOperand &RegOp,
-                                             MachineOperand &NonRegOp) {
-  Register Reg = RegOp.getReg();
-  unsigned SubReg = RegOp.getSubReg();
-  bool IsKill = RegOp.isKill();
-  bool IsDead = RegOp.isDead();
-  bool IsUndef = RegOp.isUndef();
-  bool IsDebug = RegOp.isDebug();
-
-  if (NonRegOp.isImm())
-    RegOp.ChangeToImmediate(NonRegOp.getImm());
-  else if (NonRegOp.isFI())
-    RegOp.ChangeToFrameIndex(NonRegOp.getIndex());
-  else if (NonRegOp.isGlobal()) {
-    RegOp.ChangeToGA(NonRegOp.getGlobal(), NonRegOp.getOffset(),
-                     NonRegOp.getTargetFlags());
-  } else
-    return nullptr;
-
-  // Make sure we don't reinterpret a subreg index in the target flags.
-  RegOp.setTargetFlags(NonRegOp.getTargetFlags());
-
-  NonRegOp.ChangeToRegister(Reg, false, false, IsKill, IsDead, IsUndef, IsDebug);
-  NonRegOp.setSubReg(SubReg);
-
-  return &MI;
-}
-
-static MachineInstr *swapImmOperands(MachineInstr &MI,
-                                     MachineOperand &NonRegOp1,
-                                     MachineOperand &NonRegOp2) {
-  unsigned TargetFlags = NonRegOp1.getTargetFlags();
-  int64_t NonRegVal = NonRegOp1.getImm();
-
-  NonRegOp1.setImm(NonRegOp2.getImm());
-  NonRegOp2.setImm(NonRegVal);
-  NonRegOp1.setTargetFlags(NonRegOp2.getTargetFlags());
-  NonRegOp2.setTargetFlags(TargetFlags);
-  return &MI;
-}
-
 // GFX950 v_pk_{add,mul}_f32 must not have opsel[1:0] == 2'b10, i.e. OP_SEL_0 on
 // src1 but not on src0, and v_pk_fma_f32 must not have OP_SEL_0 on src1 or
 // src2.
@@ -3030,25 +2988,12 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   if (!isLegalToSwap(MI, Src0Idx, Src1Idx))
     return nullptr;
 
-  MachineInstr *CommutedMI = nullptr;
-  MachineOperand &Src0 = MI.getOperand(Src0Idx);
-  MachineOperand &Src1 = MI.getOperand(Src1Idx);
-  if (Src0.isReg() && Src1.isReg()) {
-    // Be sure to copy the source modifiers to the right place.
-    CommutedMI =
-        TargetInstrInfo::commuteInstructionImpl(MI, NewMI, Src0Idx, Src1Idx);
-  } else if (Src0.isReg() && !Src1.isReg()) {
-    CommutedMI = swapRegAndNonRegOperand(MI, Src0, Src1);
-  } else if (!Src0.isReg() && Src1.isReg()) {
-    CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
-  } else if (Src0.isImm() && Src1.isImm()) {
-    CommutedMI = swapImmOperands(MI, Src0, Src1);
-  } else {
-    // FIXME: Found two non registers to commute. This does happen.
-    return nullptr;
-  }
-
+  MachineInstr *CommutedMI =
+      TargetInstrInfo::commuteInstructionImpl(MI, NewMI, Src0Idx, Src1Idx);
   if (CommutedMI) {
+    MachineOperand &Src0 = MI.getOperand(Src0Idx);
+    MachineOperand &Src1 = MI.getOperand(Src1Idx);
+    // Copy the source modifiers to the right place.
     swapSourceModifiers(MI, Src0, AMDGPU::OpName::src0_modifiers,
                         Src1, AMDGPU::OpName::src1_modifiers);
 
