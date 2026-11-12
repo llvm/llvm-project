@@ -1045,13 +1045,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return IsStore ? AnyValue() : Data;
   }
 
-  /// Implements llvm.vp.load and llvm.vp.store as the corresponding masked
+  /// Implements llvm.vp.{load,store,gather,scatter} as the corresponding masked
   /// intrinsic. Lanes at or past \p EVL are disabled even if their \p Mask lane
-  /// is poison, and without an align attribute the base pointer must have the
-  /// ABI alignment of the vector type.
+  /// is poison. Without an align attribute, \p Ptr must have the ABI
+  /// alignment of the vector type or element type for gathers and scatters.
   AnyValue callVPLoadStoreIntrinsic(CallBase &CB, AnyValue Ptr,
                                     const AnyValue &Mask, const AnyValue &EVL,
-                                    AnyValue Data, bool IsStore) {
+                                    AnyValue Data, MaskedAddrMode Mode,
+                                    bool IsStore) {
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     if (EVL.isPoison()) {
       reportImmediateUB() << IntrinsicName
@@ -1070,12 +1071,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       EnabledMask[I] = AnyValue::boolean(false);
 
     if (!CB.getParamAlign(IsStore ? 1 : 0)) {
-      Type *VecTy = IsStore ? CB.getArgOperand(0)->getType() : CB.getType();
-      applyAlignAttr(Ptr, DL.getABITypeAlign(VecTy));
+      Type *Ty = IsStore ? CB.getArgOperand(0)->getType() : CB.getType();
+      if (Mode == MaskedAddrMode::PerLane)
+        Ty = Ty->getScalarType();
+      applyAlignAttr(Ptr, DL.getABITypeAlign(Ty));
     }
     return callMaskedLoadStoreIntrinsic(CB, Ptr, std::move(EnabledMask),
-                                        std::move(Data),
-                                        MaskedAddrMode::Consecutive, IsStore);
+                                        std::move(Data), Mode, IsStore);
   }
 
   /// Implements llvm.matrix.column.major.store. Column C of \p Data is stored
@@ -2160,9 +2162,20 @@ public:
     case Intrinsic::vp_load:
       return callVPLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
                                       AnyValue::getPoisonValue(Ctx, RetTy),
+                                      MaskedAddrMode::Consecutive,
                                       /*IsStore=*/false);
     case Intrinsic::vp_store:
       return callVPLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3], Args[0],
+                                      MaskedAddrMode::Consecutive,
+                                      /*IsStore=*/true);
+    case Intrinsic::vp_gather:
+      return callVPLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                      AnyValue::getPoisonValue(Ctx, RetTy),
+                                      MaskedAddrMode::PerLane,
+                                      /*IsStore=*/false);
+    case Intrinsic::vp_scatter:
+      return callVPLoadStoreIntrinsic(CB, Args[1], Args[2], Args[3], Args[0],
+                                      MaskedAddrMode::PerLane,
                                       /*IsStore=*/true);
     case Intrinsic::vp_merge: {
       std::vector<AnyValue> Cond(Args[0].asAggregate());
