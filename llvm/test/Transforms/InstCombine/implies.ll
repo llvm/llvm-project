@@ -285,16 +285,15 @@ F:
   ret i1 %other
 }
 
-define i1 @src_or_implies_false_ugt_todo(i8 %x, i8 %y, i8 %z, i1 %other) {
-; CHECK-LABEL: @src_or_implies_false_ugt_todo(
+define i1 @src_or_implies_false_ugt(i8 %x, i8 %y, i8 %z, i1 %other) {
+; CHECK-LABEL: @src_or_implies_false_ugt(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ; CHECK:       F:
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[Z]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %or = or i8 %x, %y
   %cond = icmp ugt i8 %or, %z
