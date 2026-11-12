@@ -398,7 +398,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   Conf.RemarksFilename =
       Args.getLastArgValue(OPT_opt_remarks_filename, RemarksFilename);
   Conf.RemarksPasses =
-      Args.getLastArgValue(OPT_opt_remarks_filter, RemarksPasses);
+      Args.getLastArgValue(OPT_opt_remarks_passes, RemarksPasses);
   Conf.RemarksFormat =
       Args.getLastArgValue(OPT_opt_remarks_format, RemarksFormat);
 

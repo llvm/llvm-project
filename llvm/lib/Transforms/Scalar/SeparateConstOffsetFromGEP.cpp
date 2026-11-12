@@ -969,6 +969,7 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
     GetElementPtrInst *Variadic, const APInt &AccumulativeByteOffset) {
   IRBuilder<> Builder(Variadic);
+  Builder.disableGEPCanonicalization();
   Type *PtrIndexTy = DL->getIndexType(Variadic->getType());
 
   Value *ResultPtr = Variadic->getOperand(0);
@@ -1060,6 +1061,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   }
 
   IRBuilder<> Builder(GEP);
+  Builder.disableGEPCanonicalization();
   // For trivial GEP chains, we can swap the indices.
   Value *NewSrc = Builder.CreateGEP(
       GEP->getSourceElementType(), PtrGEP->getPointerOperand(),

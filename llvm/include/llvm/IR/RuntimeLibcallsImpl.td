@@ -158,7 +158,9 @@ class MemoryEffects<ModRefInfo mr = ModRef> {
 }
 
 def UnknownMemory : MemoryEffects;
+def NoMemory : MemoryEffects<NoModRef>;
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
+def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
 
 class ValueAttr<list<AttrProperty> props, string expr>
     : Attr<"", IntersectPreserve, props> {
@@ -175,6 +177,10 @@ class AllocSizeAttr<int elemSizeArg, string numElemsArg = "std::nullopt">
 class AllocFamilyAttr<string family>
     : ValueAttr<[FnAttr],
                 "Attribute::get(C, \"alloc-family\", \"" # family # "\")">;
+
+class NoFPClassAttr<string mask>
+    : ValueAttr<[ParamAttr, RetAttr],
+                "Attribute::getWithNoFPClass(C, " # mask # ")">;
 
 def CapturesNone
     : ValueAttr<[ParamAttr],
@@ -218,7 +224,7 @@ class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
 }
 
 // TODO: NoCallback probably unsafe in general
-defvar VectorMathFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
+defvar MathFnAttrs = [NoCallback, NoFree, NoSync, NoUnwind, WillReturn];
 
 multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
                              list<FuncArgType> ArgTypes = [],
@@ -227,7 +233,7 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
                              list<FuncArgType> paramPointeeTypes = []> {
   defvar VT = !cast<VectorFuncArgType>(suffix);
   def _#suffix : RuntimeLibcall<RetType, ArgTypes> {
-    let FnAttrs = VectorMathFnAttrs;
+    let FnAttrs = MathFnAttrs;
     let Memory = memory;
     let ParamAttrs = paramAttrs;
     let ParamPointeeTypes = paramPointeeTypes;

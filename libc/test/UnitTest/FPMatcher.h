@@ -30,6 +30,8 @@ using LIBC_NAMESPACE::Sign;
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
+#if LIBC_TEST_HAS_MATCHERS()
+
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
@@ -37,11 +39,13 @@ template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
                 "Unsupported FPMatcher test condition.");
 
   T expected;
+  T actual;
 
 public:
   FPMatcher(T expectedValue) : expected(expectedValue) {}
 
-  bool match(T actual) const {
+  bool match(T actualValue) {
+    actual = actualValue;
     fputil::FPBits<T> actualBits(actual), expectedBits(expected);
     if (Condition == TestCond::EQ)
       return (actualBits.is_nan() && expectedBits.is_nan()) ||
@@ -54,16 +58,11 @@ public:
            (actualBits.uintval() != expectedBits.uintval());
   }
 
-  bool MatchAndExplain(T actual, MatchResultListener *listener) const {
-    if (match(actual))
-      return true;
-    if (listener->IsInterested()) {
-      *listener << "Expected floating point value: "
-                << str(fputil::FPBits<T>(expected)) << '\n'
-                << "Actual floating point value: "
-                << str(fputil::FPBits<T>(actual)) << '\n';
-    }
-    return false;
+  void explainError() override {
+    tlog << "Expected floating point value: "
+         << str(fputil::FPBits<T>(expected)) << '\n';
+    tlog << "Actual floating point value: " << str(fputil::FPBits<T>(actual))
+         << '\n';
   }
 };
 
@@ -75,13 +74,14 @@ template <typename T, TestCond Condition> class CFPMatcher : public Matcher<T> {
                 "Unsupported CFPMatcher test condition.");
 
   T expected;
+  T actual;
 
 public:
   CFPMatcher(T expectedValue) : expected(expectedValue) {}
 
-  template <typename CFT> bool matchComplex(T actual) const {
-    const CFT *actualCmplxPtr = reinterpret_cast<const CFT *>(&actual);
-    const CFT *expectedCmplxPtr = reinterpret_cast<const CFT *>(&expected);
+  template <typename CFT> bool matchComplex() {
+    CFT *actualCmplxPtr = reinterpret_cast<CFT *>(&actual);
+    CFT *expectedCmplxPtr = reinterpret_cast<CFT *>(&expected);
     CFT actualReal = actualCmplxPtr[0];
     CFT actualImag = actualCmplxPtr[1];
     CFT expectedReal = expectedCmplxPtr[0];
@@ -109,68 +109,62 @@ public:
             actualImagBits.uintval() != expectedImagBits.uintval());
   }
 
-  template <typename CFT>
-  void explainErrorComplex(T actual, MatchResultListener *listener) const {
-    const CFT *actualCmplxPtr = reinterpret_cast<const CFT *>(&actual);
-    const CFT *expectedCmplxPtr = reinterpret_cast<const CFT *>(&expected);
+  template <typename CFT> void explainErrorComplex() {
+    CFT *actualCmplxPtr = reinterpret_cast<CFT *>(&actual);
+    CFT *expectedCmplxPtr = reinterpret_cast<CFT *>(&expected);
     CFT actualReal = actualCmplxPtr[0];
     CFT actualImag = actualCmplxPtr[1];
     CFT expectedReal = expectedCmplxPtr[0];
     CFT expectedImag = expectedCmplxPtr[1];
-    *listener << "Expected complex floating point value: "
-              << str(fputil::FPBits<CFT>(expectedReal)) + " + " +
-                     str(fputil::FPBits<CFT>(expectedImag)) + "i"
-              << '\n'
-              << "Actual complex floating point value: "
-              << str(fputil::FPBits<CFT>(actualReal)) + " + " +
-                     str(fputil::FPBits<CFT>(actualImag)) + "i"
-              << '\n';
+    tlog << "Expected complex floating point value: "
+         << str(fputil::FPBits<CFT>(expectedReal)) + " + " +
+                str(fputil::FPBits<CFT>(expectedImag)) + "i"
+         << '\n';
+    tlog << "Actual complex floating point value: "
+         << str(fputil::FPBits<CFT>(actualReal)) + " + " +
+                str(fputil::FPBits<CFT>(actualImag)) + "i"
+         << '\n';
   }
 
-  bool match(T actual) const {
+  bool match(T actualValue) {
+    actual = actualValue;
 #ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
-      return matchComplex<float>(actual);
+      return matchComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
-      return matchComplex<double>(actual);
+      return matchComplex<double>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
-      return matchComplex<long double>(actual);
+      return matchComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
-      return matchComplex<float16>(actual);
+      return matchComplex<float16>();
 #endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
-      return matchComplex<float128>(actual);
+      return matchComplex<float128>();
 #endif // LIBC_TYPES_HAS_CFLOAT128
 #else  // LIBC_COMPILER_IS_MSVC
-    (void)actual;
     return true;
 #endif // LIBC_COMPILER_IS_MSVC
   }
 
-  bool MatchAndExplain(T actual, MatchResultListener *listener) const {
-    if (match(actual))
-      return true;
-    if (!listener->IsInterested())
-      return false;
+  void explainError() override {
 #ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
-      explainErrorComplex<float>(actual, listener);
+      return explainErrorComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
-      explainErrorComplex<double>(actual, listener);
+      return explainErrorComplex<double>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
-      explainErrorComplex<long double>(actual, listener);
+      return explainErrorComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
-      explainErrorComplex<float16>(actual, listener);
+      return explainErrorComplex<float16>();
 #endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
-      explainErrorComplex<float128>(actual, listener);
+      return explainErrorComplex<float128>();
 #endif // LIBC_TYPES_HAS_CFLOAT128
 #endif // LIBC_COMPILER_IS_MSVC
-    return false;
   }
 };
 
@@ -182,6 +176,8 @@ template <TestCond C, typename T>
 CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
+
+#endif // LIBC_TEST_HAS_MATCHERS()
 
 // Optimization barrier to prevent constant folding.
 template <typename T> LIBC_INLINE T opaque(T value) {
@@ -291,6 +287,10 @@ private:
           FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
   };
 
+#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
+
+#if LIBC_TEST_HAS_MATCHERS()
+
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
                           LIBC_NAMESPACE::testing::TestCond::EQ>(expected))
@@ -303,8 +303,6 @@ private:
   LIBC_NAMESPACE::testing::getMatcher<LIBC_NAMESPACE::testing::TestCond::EQ>(  \
       expected)                                                                \
       .match(actual)
-
-#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -680,6 +678,8 @@ private:
     EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
                                                      (expected_except));       \
   } while (0)
+
+#endif // LIBC_TEST_HAS_MATCHERS()
 
 #define ASSERT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
   do {                                                                         \

@@ -14,7 +14,6 @@
 name:            load_i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -36,7 +35,6 @@ body:             |
 name:            load_i64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -64,7 +62,6 @@ body:             |
 name:            load_ambiguous_i64_in_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -88,7 +85,6 @@ body:             |
 name:            load_float
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -110,7 +106,6 @@ body:             |
 name:            load_ambiguous_float_in_gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -134,7 +129,6 @@ body:             |
 name:            load_double
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
