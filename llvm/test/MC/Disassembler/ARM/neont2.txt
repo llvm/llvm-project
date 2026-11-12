@@ -2059,3 +2059,15 @@
 0xe7 0xf9 0x3f 0x1d
 # CHECK: vld2.8	{d17[], d19[]}, [r7:16]
 
+# Valid boundary lists without writeback and with fixed/register-offset writeback.
+[0x60 0xf9 0x0f 0xd6]
+# CHECK: vld1.8 {d29, d30, d31}, [r0]
+
+[0x40 0xf9 0x0d 0xc3]
+# CHECK: vst2.8 {d28, d29, d30, d31}, [r0]!
+
+[0x60 0xf9 0x01 0xb5]
+# CHECK: vld3.8 {d27, d29, d31}, [r0], r1
+
+[0xe0 0xf9 0x21 0x9f]
+# CHECK: vld4.8 {d25[], d27[], d29[], d31[]}, [r0], r1
