@@ -10,7 +10,7 @@ define i32 @cls_add(i32 %x) !dbg !5 {
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !7, !DIExpression(), debug-location !8
+  ; CHECK-NEXT:   DBG_VALUE [[COPY]](i32), $noreg, !7, !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_constu, 31, DW_OP_shra, DW_OP_stack_value), debug-location !8
   ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !9, !DIExpression(), debug-location !8
   ; CHECK-NEXT:   [[CTLS:%[0-9]+]]:_(i32) = G_CTLS [[COPY]](i32)
   ; CHECK-NEXT:   $w0 = COPY [[CTLS]](i32)
@@ -30,7 +30,7 @@ define i32 @cls_or(i32 %x) !dbg !12 {
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-  ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !11, !DIExpression(), debug-location !12
+  ; CHECK-NEXT:   DBG_VALUE [[COPY]](i32), $noreg, !11, !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_constu, 31, DW_OP_shra, DW_OP_stack_value), debug-location !12
   ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !13, !DIExpression(), debug-location !12
   ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !14, !DIExpression(), debug-location !12
   ; CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !15, !DIExpression(), debug-location !12
