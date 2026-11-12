@@ -110,6 +110,7 @@ add_clang_library(clangAST
   ODRHash.cpp
   OpenACCClause.cpp
   OpenMPClause.cpp
+  OpenMPLockSequence.cpp
   OSLog.cpp
   ParentMap.cpp
   PrintfFormatString.cpp

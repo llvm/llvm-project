@@ -24,6 +24,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/OpenMPLockSequence.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
@@ -47,6 +48,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPVersion.h"
@@ -651,6 +653,15 @@ public:
   bool hasExplicitDirective(
       const llvm::function_ref<bool(OpenMPDirectiveKind)> DPred,
       unsigned Level) const;
+
+  /// Calls \p F with the kind and location of each directive enclosing the
+  /// current point, the current directive first, until it returns true.
+  void forEachDirective(
+      llvm::function_ref<bool(OpenMPDirectiveKind, SourceLocation)> F) const {
+    for (const_iterator I = begin(), E = end(); I != E; ++I)
+      if (F(I->Directive, I->ConstructLoc))
+        return;
+  }
 
   /// Finds a directive which matches specified \a DPred predicate.
   bool hasDirective(
@@ -2174,6 +2185,160 @@ SemaOpenMP::diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID,
   }
 
   return SemaDiagnosticBuilder(Kind, Loc, DiagID, FD, SemaRef);
+}
+
+namespace {
+/// How the threads of a warp may run the code that a construct encloses.
+enum class LockstepContextKind {
+  /// The construct does not decide; look further out.
+  Undecided,
+  /// One thread at a time.
+  OneThread,
+  /// Several threads of a warp together.
+  Lockstep,
+  /// The sequential part of a target or teams region.
+  Sequential,
+};
+
+/// The innermost construct that decides how the threads of a warp may run some
+/// code.
+struct LockstepContext {
+  LockstepContextKind Kind = LockstepContextKind::Undecided;
+  OpenMPDirectiveKind Directive = OMPD_unknown;
+  SourceLocation Loc;
+  bool InTarget = false;
+
+  /// Takes into account a construct of kind \p DKind at \p DLoc that encloses
+  /// the code in the context. Returns true if it decides.
+  bool enclose(OpenMPDirectiveKind DKind, SourceLocation DLoc);
+};
+} // namespace
+
+bool LockstepContext::enclose(OpenMPDirectiveKind DKind, SourceLocation DLoc) {
+  // The leaf constructs of a combined construct are nested in order, so the
+  // last that decides is the innermost.
+  LockstepContextKind New = LockstepContextKind::Undecided;
+  for (OpenMPDirectiveKind Leaf :
+       llvm::reverse(llvm::omp::getLeafConstructsOrSelf(DKind))) {
+    switch (Leaf) {
+    case OMPD_single:
+    case OMPD_masked:
+    case OMPD_master:
+    case OMPD_critical:
+    case OMPD_ordered_blockassoc:
+    // A sections region runs each section, explicit or implicit, on one thread.
+    case OMPD_sections:
+    case OMPD_section:
+      New = LockstepContextKind::OneThread;
+      break;
+    default:
+      if (isOpenMPParallelDirective(Leaf) ||
+          isOpenMPWorksharingDirective(Leaf) ||
+          isOpenMPGenericLoopDirective(Leaf))
+        New = LockstepContextKind::Lockstep;
+      else if (isOpenMPTargetExecutionDirective(Leaf) ||
+               isOpenMPTeamsDirective(Leaf))
+        New = LockstepContextKind::Sequential;
+      break;
+    }
+    if (New != LockstepContextKind::Undecided)
+      break;
+  }
+  InTarget |= isOpenMPTargetExecutionDirective(DKind);
+  if (New == LockstepContextKind::Undecided)
+    return false;
+  Kind = New;
+  Directive = DKind;
+  Loc = DLoc;
+  return true;
+}
+
+void SemaOpenMP::diagnoseLockstepLocks(const CompoundStmt *CS) {
+  assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+         "Expected OpenMP device compilation.");
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  if (!TI.getTriple().isGPU() || !TI.getGridValue().GV_Lockstep_Lanes)
+    return;
+  // The lock expressions in a template are only known once it is instantiated.
+  if (SemaRef.CurContext->isDependentContext())
+    return;
+  // The callers of a lambda or block are not known.
+  if (isa_and_nonnull<sema::LambdaScopeInfo, sema::BlockScopeInfo>(
+          SemaRef.getCurFunction()))
+    return;
+
+  LockstepContext Context;
+  DSAStack->forEachDirective([&](OpenMPDirectiveKind K, SourceLocation L) {
+    return Context.enclose(K, L);
+  });
+  Context.InTarget |= isInOpenMPTargetExecutionDirective();
+  const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
+
+  auto Diagnose = [&](const CallExpr *CE, OMPLockSequenceRejection Why,
+                      const LockstepContext &C) {
+    if (C.Kind != LockstepContextKind::Lockstep ||
+        !DiagnosedLockstepLockCalls.insert(CE->getExprLoc()).second)
+      return;
+    // Code in a target region is emitted for the device; elsewhere, only if
+    // the function is.
+    auto Report = [&](SourceLocation Loc, unsigned DiagID) {
+      return C.InTarget
+                 ? SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate,
+                                         Loc, DiagID, FD, SemaRef)
+                 : diagIfOpenMPDeviceCode(Loc, DiagID, FD);
+    };
+    Report(CE->getExprLoc(), diag::warn_omp_lock_not_lane_serialized)
+        << static_cast<unsigned>(Why);
+    Report(C.Loc, diag::note_omp_lock_lockstep_context)
+        << getOpenMPDirectiveName(C.Directive,
+                                  getLangOpts().getOpenMPVersion());
+  };
+
+  // Calls to omp_set_lock nested within a statement of the block, other than
+  // in nested blocks, which were checked when they were built.
+  std::function<void(const Stmt *, LockstepContext, const CallExpr *)> Walk =
+      [&](const Stmt *S, LockstepContext C, const CallExpr *Skip) {
+        if (!S || isa<CompoundStmt, LambdaExpr, BlockExpr>(S))
+          return;
+        if (const auto *D = dyn_cast<OMPExecutableDirective>(S)) {
+          // A construct that does not decide leaves the context as it was.
+          LockstepContext Inner;
+          Inner.InTarget = C.InTarget;
+          if (!Inner.enclose(D->getDirectiveKind(), D->getBeginLoc())) {
+            Inner.Kind = C.Kind;
+            Inner.Directive = C.Directive;
+            Inner.Loc = C.Loc;
+          }
+          if (D->hasAssociatedStmt())
+            Walk(D->getAssociatedStmt(), Inner, Skip);
+          return;
+        }
+        if (const auto *Captured = dyn_cast<CapturedStmt>(S)) {
+          Walk(Captured->getCapturedStmt(), C, Skip);
+          return;
+        }
+        if (const auto *CE = dyn_cast<CallExpr>(S);
+            CE && CE != Skip && isOMPSetLockCall(CE))
+          Diagnose(CE, OMPLockSequenceRejection::NotInBlock, C);
+        for (const Stmt *Child : S->children())
+          Walk(Child, C, Skip);
+      };
+
+  // Check the block as code generation will emit it: a sequence that the
+  // threads of a warp can run one at a time is emitted as a whole.
+  ArrayRef<Stmt *> Body = CS->body();
+  for (unsigned I = 0, E = Body.size(); I != E;) {
+    OMPLockSequence Seq =
+        matchOMPLockSequence(Body.drop_front(I), getASTContext());
+    if (Seq.Length) {
+      I += Seq.Length;
+      continue;
+    }
+    if (Seq.SetCall)
+      Diagnose(Seq.SetCall, Seq.Rejection, Context);
+    Walk(Body[I], Context, Seq.SetCall);
+    ++I;
+  }
 }
 
 SemaBase::SemaDiagnosticBuilder
