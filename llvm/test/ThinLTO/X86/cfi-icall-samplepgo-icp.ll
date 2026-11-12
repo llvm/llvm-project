@@ -24,10 +24,10 @@
 ; the jump table entry (@add1 / @add2), while the direct calls target the .cfi
 ; bodies (@add1.cfi is inlined; noinline @add2.cfi remains a direct call).
 ; CHECK-LABEL: define hidden {{.*}}i32 @call_it(ptr {{.*}}%f, i32 {{.*}}%x)
-; CHECK: icmp eq ptr {{.*}}, @add1,
+; CHECK: icmp eq ptr {{.*}}, @add1{{$|,}}
 ; CHECK: add i32 %x, 1
 ; CHECK-NOT: call {{.*}}@add1
-; CHECK: icmp eq ptr {{.*}}, @add2,
+; CHECK: icmp eq ptr {{.*}}, @add2{{$|,}}
 ; CHECK: call i32 @add2.cfi(i32 %x)
 ; CHECK: call i32 %f(i32 %x)
 
