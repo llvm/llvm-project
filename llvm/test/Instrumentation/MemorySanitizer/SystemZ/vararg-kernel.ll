@@ -55,7 +55,7 @@ define i64 @foo(i64 %guard, ...) #1 {
 ; CHECK: call void @__msan_metadata_ptr_for_store_1(ptr [[TMP]], ptr [[Overflow]])
 ; CHECK: [[OverflowMeta:%.*]] = load { ptr, ptr }, ptr [[TMP]]
 ; CHECK: [[OverflowShadow:%.*]] = extractvalue { ptr, ptr } [[OverflowMeta]], 0
-; CHECK: [[OverflowShadowBackup:%.*]] = getelementptr i8, ptr [[ShadowBackup]], i32 160
+; CHECK: [[OverflowShadowBackup:%.*]] = getelementptr i8, ptr [[ShadowBackup]], i64 160
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowShadow]], ptr align 8 [[OverflowShadowBackup]], i64 [[OverflowSize]], i1 false)
 
 declare i32 @random_i32()

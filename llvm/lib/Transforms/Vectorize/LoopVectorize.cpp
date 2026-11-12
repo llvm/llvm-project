@@ -5576,9 +5576,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   RUN_VPLAN_PASS(VPlanTransforms::replaceWideCanonicalIVWithWideIV, BestVPlan,
                  *PSE.getSE(), TTI, Config.CostKind, BestVF, BestUF);
-  if (!BestVPlan.hasTailFolded() &&
-      TTI.hasMultiVectorLoadStore(BestUF,
-                                  TargetTransformInfo::MaskSource::None))
+  if (TTI.hasMultiVectorLoadStore(
+          BestUF, BestVPlan.hasTailFolded()
+                      ? TargetTransformInfo::MaskSource::ActiveLaneMask
+                      : TargetTransformInfo::MaskSource::None))
     RUN_VPLAN_PASS(VPlanTransforms::widenMemoryAccessesByUF, BestVPlan, BestVF,
                    BestUF, TTI);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
@@ -7981,8 +7982,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
   for (const auto &L : *LI)
-    Changed |= CFGChanged |=
-        simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
+    Changed |= CFGChanged |= simplifyLoop(L, DT, LI, SE, AC, nullptr,
+                                          false /* PreserveLCSSA */, TTI);
 
   // Build up a worklist of inner-loops to vectorize. This is necessary as
   // the act of vectorizing or partially unrolling a loop creates new loops

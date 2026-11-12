@@ -144,6 +144,9 @@ module;
 #  if __has_include(<linalg>)
 #    error "please update the header information for <linalg> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<linalg>)
+#  if __has_include(<meta>)
+#    error "please update the header information for <meta> in headers_not_available in utils/libcxx/header_information.py"
+#  endif // __has_include(<meta>)
 #  if __has_include(<rcu>)
 #    error "please update the header information for <rcu> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<rcu>)

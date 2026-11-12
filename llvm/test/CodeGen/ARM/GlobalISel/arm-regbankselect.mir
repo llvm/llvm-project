@@ -860,7 +860,6 @@ legalized:       true
 regBankSelected: false
 # CHECK: regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -901,7 +900,6 @@ legalized:       true
 regBankSelected: false
 # CHECK: regBankSelected: true
 selected:        false
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

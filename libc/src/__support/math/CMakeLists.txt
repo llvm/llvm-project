@@ -3137,7 +3137,7 @@ add_header_library(
   HDRS
     daddf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
@@ -5819,10 +5819,15 @@ add_header_library(
   DEPENDS
     .common_constants
     .exp_constants
+    .exp10
     .exp2
+    .exp2_accurate_128
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.big_int
+    libc.src.__support.common
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.except_value_utils
@@ -5835,8 +5840,12 @@ add_header_library(
     libc.src.__support.frac64
     libc.src.__support.frac128
     libc.src.__support.frac256
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    libc.src.__support.math_extras
+    libc.src.__support.sign
 )
 
 add_header_library(

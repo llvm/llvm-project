@@ -40,7 +40,6 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      false
-tracksRegLiveness: true
 registers:
 liveins:
 frameInfo:

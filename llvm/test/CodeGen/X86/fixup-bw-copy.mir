@@ -39,7 +39,6 @@
 
 ---
 name:            test_movb_killed
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |
@@ -54,7 +53,6 @@ body:             |
 
 ---
 name:            test_movb_impuse
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |
@@ -69,7 +67,6 @@ body:             |
 
 ---
 name:            test_movb_impdef_gr64
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |
@@ -84,7 +81,6 @@ body:             |
 
 ---
 name:            test_movb_impdef_gr32
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |
@@ -99,7 +95,6 @@ body:             |
 
 ---
 name:            test_movb_impdef_gr16
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |
@@ -114,7 +109,6 @@ body:             |
 
 ---
 name:            test_movw_impdef_gr32
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |
@@ -129,7 +123,6 @@ body:             |
 
 ---
 name:            test_movw_impdef_gr64
-tracksRegLiveness: true
 liveins:
   - { reg: '$edi' }
 body:             |

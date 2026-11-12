@@ -14,7 +14,6 @@
 ...
 ---
 name:            ubfx_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -45,7 +44,6 @@ body:             |
 ...
 ---
 name:            ubfx_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -73,7 +71,6 @@ body:             |
 ...
 ---
 name:            dont_combine_no_and_cst
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -101,7 +98,6 @@ body:             |
 ...
 ---
 name:            dont_combine_and_cst_not_mask
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -127,7 +123,6 @@ body:             |
 ...
 ---
 name:            dont_combine_shift_more_than_one_use
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -157,7 +152,6 @@ body:             |
 ...
 ---
 name:            dont_combine_negative_lsb
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -187,7 +181,6 @@ body:             |
 ...
 ---
 name:            dont_combine_lsb_too_large
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -215,7 +208,6 @@ body:             |
 ...
 ---
 name:            dont_combine_vector
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -248,7 +240,6 @@ body:             |
 ...
 ---
 name:            max_signed_int_mask
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -276,7 +267,6 @@ body:             |
 ...
 ---
 name:            max_unsigned_int_mask
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:

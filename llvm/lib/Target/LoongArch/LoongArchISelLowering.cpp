@@ -514,6 +514,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
+  setTargetDAGCombine(ISD::XOR);
   setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::SETCC);
 
@@ -4443,6 +4444,49 @@ SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
                       MachinePointerInfo(SV));
 }
 
+// Lower an unsigned vXi64 -> vXf32 conversion to the same round-to-odd
+// sequence that the generic legalizer uses for the scalar case:
+//
+//   Odd    = (x >> 1) | (x & 1)
+//   Doubled = (float)(int64_t)Odd + (float)(int64_t)Odd  // exact, no rounding
+//   Signed  = (float)(int64_t)x                          // valid for x < 2^63
+//   Result  = x < 0 ? Doubled : Signed
+//
+// The generic half-word expansion is not usable here: it converts the high and
+// low 32-bit halves separately and adds them, rounding three times, which is
+// not enough to emulate the single rounding required by uitofp.
+SDValue LoongArchTargetLowering::lowerUINT_TO_FPToF32(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
+
+  SDValue Shift = DAG.getShiftAmountConstant(1, SrcVT, DL);
+  SDValue Half = DAG.getNode(ISD::SRL, DL, SrcVT, Src, Shift);
+  SDValue Sticky =
+      DAG.getNode(ISD::AND, DL, SrcVT, Src, DAG.getConstant(1, DL, SrcVT));
+  SDValue Odd = DAG.getNode(ISD::OR, DL, SrcVT, Half, Sticky);
+
+  // Doubling a value with at most 24 significant bits is exact.
+  SDValue RoundToOdd = DAG.getNode(ISD::SINT_TO_FP, DL, DstVT, Odd);
+  SDValue Doubled = DAG.getNode(ISD::FADD, DL, DstVT, RoundToOdd, RoundToOdd);
+
+  // Values below 2^63 convert directly; above that the signed conversion is
+  // negative, so the round-to-odd path is used instead.
+  SDValue Signed = DAG.getNode(ISD::SINT_TO_FP, DL, DstVT, Src);
+
+  // The signed conversion is negative exactly when the source did not fit, so
+  // its sign bit is the mask: broadcasting it with an arithmetic shift avoids
+  // a comparison followed by a truncate of the 64-bit result to the width of
+  // the result vector.
+  EVT MaskVT = DstVT.changeVectorElementTypeToInteger();
+  SDValue Mask =
+      DAG.getNode(ISD::SRA, DL, MaskVT, DAG.getBitcast(MaskVT, Signed),
+                  DAG.getShiftAmountConstant(31, MaskVT, DL));
+  return DAG.getSelect(DL, DstVT, Mask, Doubled, Signed);
+}
+
 SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -4451,9 +4495,20 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
   EVT Op0VT = Op0.getValueType();
 
   if (VT.isVector()) {
-    if (VT.getScalarSizeInBits() != Op0VT.getScalarSizeInBits())
-      return SDValue();
-    return Op;
+    if (VT.getScalarSizeInBits() == Op0VT.getScalarSizeInBits())
+      return Op;
+
+    // There is no unsigned 64-bit to 32-bit conversion instruction, so
+    // synthesize one with a single rounding.  A value known to be
+    // non-negative converts exactly as signed, and that form is native.
+    if (Subtarget.hasExtLASX() && Op0VT.getScalarType() == MVT::i64 &&
+        VT.getScalarType() == MVT::f32) {
+      if (DAG.SignBitIsZero(Op0) || Op->getFlags().hasNonNeg())
+        return DAG.getNode(ISD::SINT_TO_FP, DL, VT, Op0);
+      return lowerUINT_TO_FPToF32(Op, DAG);
+    }
+
+    return SDValue();
   }
 
   if ((DAG.SignBitIsZero(Op0) || Op->getFlags().hasNonNeg()) &&
@@ -8619,6 +8674,25 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Not = isNOT(N0, DAG))
     return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
 
+  // VANDN(bitcast(shl(splat(1), y)), x)
+  //   -> bitcast(VANDN(shl(splat(1), y), bitcast(x)))
+  // Perform the VANDN in the element type of the shift so that it can be
+  // selected as [x]vbitclr.{b/h/w/d}.
+  if (N0.getOpcode() == ISD::BITCAST && N0.hasOneUse()) {
+    SDValue Shl = N0.getOperand(0);
+    EVT ShlVT = Shl.getValueType();
+    APInt SplatVal;
+    if (Shl.getOpcode() == ISD::SHL && ShlVT.isVector() && ShlVT.isInteger() &&
+        ShlVT != VT && ShlVT.getSizeInBits() == VT.getSizeInBits() &&
+        DAG.getTargetLoweringInfo().isTypeLegal(ShlVT) &&
+        ISD::isConstantSplatVector(Shl.getOperand(0).getNode(), SplatVal) &&
+        SplatVal.isOne()) {
+      SDValue V = DAG.getNode(LoongArchISD::VANDN, DL, ShlVT, Shl,
+                              DAG.getBitcast(ShlVT, N1));
+      return DAG.getBitcast(VT, V);
+    }
+  }
+
   // Folds for better commutativity:
   if (N1->hasOneUse()) {
     // VANDN(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
@@ -9143,17 +9217,12 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  // Note: v2i128 is an unsupported MVT vector type (see
-  // MachineValueType.h::getVectorVT()), use NumElements and SizeInBits to
-  // identify it.
   bool HasLSXOnly = Subtarget.hasExtLSX() && !Subtarget.hasExtLASX();
-  bool Isv2i128 = ResTy.isVector() && ResTy.getVectorNumElements() == 2 &&
-                  ResTy.getScalarSizeInBits() == 128;
   if (ResTy != MVT::v8i16 && ResTy != MVT::v4i32 && ResTy != MVT::v2i64 &&
       ResTy != MVT::i128 && ResTy != MVT::v16i16 && ResTy != MVT::v8i32 &&
-      ResTy != MVT::v4i64 && !Isv2i128)
+      ResTy != MVT::v4i64 && ResTy != MVT::v2i128)
     return SDValue();
-  if (HasLSXOnly && (ResTy.is256BitVector() || Isv2i128))
+  if (HasLSXOnly && (ResTy.is256BitVector() || ResTy == MVT::v2i128))
     return SDValue();
 
   // Combine:
@@ -9279,6 +9348,36 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
+  case ISD::XOR: {
+    EVT VT = N->getValueType(0);
+    // LA64 promotes i32 integer operations to GPR-width operations during
+    // legalization. Match the idiom before that promotion as well as after
+    // it, otherwise common unsigned 32-bit bit tests miss this combine.
+    if (VT != Subtarget.getGRLenVT() &&
+        !(Subtarget.is64Bit() && VT == MVT::i32))
+      return SDValue();
+
+    SDValue XorOps[] = {N->getOperand(0), N->getOperand(1)};
+    for (unsigned AndIdx = 0; AndIdx != 2; ++AndIdx) {
+      SDValue And = XorOps[AndIdx];
+      SDValue Mask = XorOps[1 - AndIdx];
+      if (And.getOpcode() != ISD::AND || !And.hasOneUse())
+        continue;
+
+      for (unsigned MaskIdx = 0; MaskIdx != 2; ++MaskIdx) {
+        // Match by SDValue identity so that (X & M1) ^ M2 is never folded
+        // unless M1 and M2 are the same value. Canonicalize before
+        // instruction selection, where the AND operand may already have been
+        // selected to a target machine node.
+        if (And.getOperand(MaskIdx) != Mask)
+          continue;
+        SDLoc DL(N);
+        SDValue X = And.getOperand(1 - MaskIdx);
+        return DAG.getNode(ISD::AND, DL, VT, Mask, DAG.getNOT(DL, X, VT));
+      }
+    }
+    return SDValue();
+  }
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SELECT:
@@ -12062,7 +12161,7 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
   if (Y.getValueType().isVector())
     return false;
 
-  return !isa<ConstantSDNode>(Y);
+  return true;
 }
 
 ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {

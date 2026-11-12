@@ -159,7 +159,7 @@ body:             |
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:areg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_e64 [[DS_READ_B128_gfx9_5]].sub2_sub3, [[DS_READ_B128_gfx9_11]].sub2_sub3, [[DEF1]], 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   DS_WRITE_B128_gfx9 [[DEF41]], [[DEF5]], 16, 0, implicit $exec :: (store (s128) into %ir.in5, !alias.scope !0, addrspace 3)
   ; GCN-NEXT:   [[DEF5:%[0-9]+]]:av_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN [[V_ADD_U32_e32_17]], [[DEF48]], 0, 0, 0, 0, implicit $exec :: (load (s128) from %ir.in29, !alias.scope !0, addrspace 7)
-  ; GCN-NEXT:   IGLP_OPT 1
+  ; GCN-NEXT:   IGLP_OPT 1, 6, 2, 0
   ; GCN-NEXT:   [[DEF49:%[0-9]+]]:sreg_32 = nsw S_ADD_I32 [[DEF49]], -1, implicit-def dead $scc
   ; GCN-NEXT:   S_CMP_LG_U32 [[DEF49]], 0, implicit-def $scc
   ; GCN-NEXT:   [[DEF15:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF43]], [[DEF15]], implicit $exec

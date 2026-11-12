@@ -105,7 +105,6 @@ body: |
 ---
 name:            store_4xi16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -127,7 +126,6 @@ body:             |
 ---
 name:            store_4xi32
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -149,7 +147,6 @@ body:             |
 ---
 name:            store_8xi16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -171,7 +168,6 @@ body:             |
 ---
 name:            store_16xi8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -193,7 +189,6 @@ body:             |
 ---
 name:            load_4xi16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -215,7 +210,6 @@ body:             |
 ---
 name:            load_4xi32
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -237,7 +231,6 @@ body:             |
 ---
 name:            load_8xi16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -259,7 +252,6 @@ body:             |
 ---
 name:            load_16xi8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -281,7 +273,6 @@ body:             |
 ---
 name:            load_8xi8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -302,7 +293,6 @@ body:             |
 ---
 name:            store_8xi8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -322,7 +312,6 @@ body:             |
 ---
 name:            store_32xs8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -345,7 +334,6 @@ body:             |
 ---
 name:            store_16xs16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -368,7 +356,6 @@ body:             |
 ---
 name:            store_8xs32
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -391,7 +378,6 @@ body:             |
 ---
 name:            store_4xs64
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -414,7 +400,6 @@ body:             |
 ---
 name:            load_32xs8
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -439,7 +424,6 @@ body:             |
 ---
 name:            load_16xs16
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -464,7 +448,6 @@ body:             |
 ---
 name:            load_8xs32
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -489,7 +472,6 @@ body:             |
 ---
 name:            load_4xs64
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -541,7 +523,6 @@ body: |
 ...
 ---
 name:            store_6xs64
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -568,7 +549,6 @@ body:             |
 ...
 ---
 name:            store_2xi16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $x0
@@ -592,7 +572,6 @@ body:             |
 ...
 ---
 name:            load_2xi16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $s0, $x0
@@ -621,7 +600,6 @@ body:             |
 ...
 ---
 name:            load_store_s88_s88_mem_size
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -660,7 +638,6 @@ body:             |
 ...
 ---
 name:            load_store_s88_s64_mem_size
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -679,7 +656,6 @@ body:             |
 ---
 name:            load_s1
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:
@@ -704,7 +680,6 @@ body:             |
 ---
 name:            load_store_6xp0
 alignment:       4
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.1:

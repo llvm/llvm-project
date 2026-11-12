@@ -8,7 +8,6 @@
 #   SHLD B, C, I <-> SHRD C, B, (BitWidth - I)
 ---
 name: shld16_legacy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $di, $si
@@ -31,7 +30,6 @@ body: |
 ...
 ---
 name: shld32_legacy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -54,7 +52,6 @@ body: |
 ...
 ---
 name: shld64_legacy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $rsi
@@ -77,7 +74,6 @@ body: |
 ...
 ---
 name: shld16_nf
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $di, $si
@@ -100,7 +96,6 @@ body: |
 ...
 ---
 name: shld32_nf
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -123,7 +118,6 @@ body: |
 ...
 ---
 name: shld64_nf
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $rsi
@@ -146,7 +140,6 @@ body: |
 ...
 ---
 name: shld16_evex
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $di, $si
@@ -169,7 +162,6 @@ body: |
 ...
 ---
 name: shld32_evex
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -192,7 +184,6 @@ body: |
 ...
 ---
 name: shld64_evex
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $rsi
@@ -215,7 +206,6 @@ body: |
 ...
 ---
 name: shrd16_legacy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $di, $si
@@ -238,7 +228,6 @@ body: |
 ...
 ---
 name: shrd32_legacy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -261,7 +250,6 @@ body: |
 ...
 ---
 name: shrd64_legacy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $rsi
@@ -284,7 +272,6 @@ body: |
 ...
 ---
 name: shrd16_nf
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $di, $si
@@ -307,7 +294,6 @@ body: |
 ...
 ---
 name: shrd32_nf
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -330,7 +316,6 @@ body: |
 ...
 ---
 name: shrd64_nf
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $rsi
@@ -353,7 +338,6 @@ body: |
 ...
 ---
 name: shrd16_evex
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $di, $si
@@ -376,7 +360,6 @@ body: |
 ...
 ---
 name: shrd32_evex
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi, $esi
@@ -399,7 +382,6 @@ body: |
 ...
 ---
 name: shrd64_evex
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi, $rsi

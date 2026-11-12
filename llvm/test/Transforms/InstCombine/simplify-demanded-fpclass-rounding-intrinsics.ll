@@ -1870,5 +1870,756 @@ define nofpclass(nan zero sub norm) ppc_fp128 @ret_inf_result__unknown_src__rint
   ret ppc_fp128 %result
 }
 
+; Test constant folds.
+
+define nofpclass(snan) float @ret__no_snan__trunc__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__psub__ieee_dynamic(float nofpclass(nan inf norm nsub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__psub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__psub__ieee_daz(float nofpclass(nan inf norm nsub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__psub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__psub__ieee_dapz(float nofpclass(nan inf norm nsub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__psub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__nsub__ieee_dynamic(float nofpclass(nan inf norm psub zero) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__nsub__ieee_daz(float nofpclass(nan inf norm psub zero) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__nsub__ieee_dapz(float nofpclass(nan inf norm psub zero) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+; Test copysign folds.
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_psub__ieee_dynamic(float nofpclass(nan inf norm nsub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_psub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_psub__ieee_daz(float nofpclass(nan inf norm nsub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_psub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_psub__ieee_dapz(float nofpclass(nan inf norm nsub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_psub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__trunc__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__trunc__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.trunc.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.trunc.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_psub__ieee_dynamic(float nofpclass(nan inf norm nsub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_psub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_psub__ieee_daz(float nofpclass(nan inf norm nsub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_psub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_psub__ieee_dapz(float nofpclass(nan inf norm nsub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_psub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__floor__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__floor__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.floor.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.floor.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_psub__ieee_dynamic(float nofpclass(nan inf norm nsub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_psub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_psub__ieee_daz(float nofpclass(nan inf norm nsub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_psub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_psub__ieee_dapz(float nofpclass(nan inf norm nsub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_psub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__ceil__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__ceil__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.ceil.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.ceil.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__round__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__round__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.round.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.round.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__roundeven__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__roundeven__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.roundeven.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.roundeven.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__nearbyint__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__nearbyint__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.nearbyint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.nearbyint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__zero_sub__ieee_dynamic(float nofpclass(nan inf norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__zero_sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__zero_sub__ieee_daz(float nofpclass(nan inf norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__zero_sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__zero_sub__ieee_dapz(float nofpclass(nan inf norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__zero_sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__zero_nsub__ieee_dynamic(float nofpclass(nan inf norm psub) %arg) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__zero_nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__zero_nsub__ieee_daz(float nofpclass(nan inf norm psub) %arg) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__zero_nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret__no_snan__rint__zero_nsub__ieee_dapz(float nofpclass(nan inf norm psub) %arg) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @ret__no_snan__rint__zero_nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.rint.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.rint.f32(float %arg)
+  ret float %result
+}
+
 attributes #0 = { denormal_fpenv(dynamic|ieee) }
 attributes #1 = { denormal_fpenv(dynamic|positivezero) }
+attributes #2 = { denormal_fpenv(ieee|dynamic) }
+attributes #3 = { denormal_fpenv(ieee|preservesign) }
+attributes #4 = { denormal_fpenv(ieee|positivezero) }
