@@ -123,6 +123,9 @@ public:
   LIBC_INLINE void static destroy([[maybe_unused]] RawMutex *lock) {
     LIBC_ASSERT(lock->futex == UNLOCKED && "Mutex destroyed while used.");
   }
+  LIBC_INLINE bool is_locked() {
+    return futex.load(cpp::MemoryOrder::RELAXED) != UNLOCKED;
+  }
   LIBC_INLINE Futex &get_raw_futex() { return futex; }
   LIBC_INLINE void reset() { futex.store(UNLOCKED); }
 };
