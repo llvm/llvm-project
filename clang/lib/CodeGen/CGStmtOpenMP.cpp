@@ -7596,19 +7596,16 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     CGM.getDiags().Report(diag::err_missing_mandatory_offloading);
   }
 
-  StringRef ParentName;
-  // In case we have Ctors/Dtors we use the complete type variant to produce
-  // the mangling of the device outlined kernel. Lambdas and blocks at
-  // namespace scope have no parent function.
-  if (!CGF.CurFuncDecl)
-    ParentName = CGF.CurFn->getName();
-  else if (const auto *D = dyn_cast<CXXConstructorDecl>(CGF.CurFuncDecl))
-    ParentName = CGM.getMangledName(GlobalDecl(D, Ctor_Complete));
-  else if (const auto *D = dyn_cast<CXXDestructorDecl>(CGF.CurFuncDecl))
-    ParentName = CGM.getMangledName(GlobalDecl(D, Dtor_Complete));
-  else
-    ParentName =
-        CGM.getMangledName(GlobalDecl(cast<FunctionDecl>(CGF.CurFuncDecl)));
+  // Lambdas and blocks at namespace scope have no parent function. Regions in
+  // constructs outlined from such a lambda are named after its call operator,
+  // as the device names them.
+  const Decl *CodeDecl = CGF.CurFuncDecl ? CGF.CurFuncDecl : CGF.CurCodeDecl;
+  while (const auto *CD = dyn_cast_or_null<CapturedDecl>(CodeDecl))
+    CodeDecl = Decl::castFromDeclContext(CD->getParent());
+  const auto *ParentFD = dyn_cast_or_null<FunctionDecl>(CodeDecl);
+  StringRef ParentName =
+      ParentFD ? CGM.getOpenMPRuntime().getTargetRegionParentName(ParentFD)
+               : CGF.CurFn->getName();
 
   // Emit target region as a standalone region.
   CGM.getOpenMPRuntime().emitTargetOutlinedFunction(S, ParentName, Fn, FnID,

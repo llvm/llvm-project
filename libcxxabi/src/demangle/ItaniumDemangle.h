@@ -2087,7 +2087,7 @@ public:
     {
       ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
       OB += "<";
-      OB.printLeft(*To);
+      To->print(OB);
       OB += ">";
     }
     OB.printOpen();

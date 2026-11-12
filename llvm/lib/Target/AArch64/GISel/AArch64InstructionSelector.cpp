@@ -7709,7 +7709,6 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
     return std::nullopt;
 
   unsigned OpFlags = STI.ClassifyGlobalReference(GV, MF.getTarget());
-  MachineIRBuilder MIRBuilder(RootDef);
   Register AdrpReg = Adrp.getOperand(0).getReg();
   return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(AdrpReg); },
            [=](MachineInstrBuilder &MIB) {
