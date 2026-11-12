@@ -625,10 +625,11 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
 //===----------------------------------------------------------------------===//
 //  Emit-helpers
 //===----------------------------------------------------------------------===//
+template <typename CmpKindTy>
 static mlir::Value
 emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                               mlir::Location loc, mlir::Value src,
-                              mlir::Type retTy, const cir::CmpOpKind kind) {
+                              mlir::Type retTy, const CmpKindTy kind) {
 
   bool scalarCmp = !isa<cir::VectorType>(src.getType());
   if (!scalarCmp) {
@@ -640,17 +641,28 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 
   mlir::Value zero = builder.getNullValue(src.getType(), loc);
 
-  if (!scalarCmp)
-    return builder.createVecCompare(loc, kind, src, zero);
+  if (!scalarCmp) {
+    if constexpr (std::is_same<CmpKindTy, cir::FCmpOpKind>::value)
+      return builder.createVecFCompare(loc, kind, src, zero);
+    else
+      return builder.createVecCompare(loc, kind, src, zero);
+  }
 
-  // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
-  // result is sign- rather zero-extended when casting to the output
-  // retType.
-  mlir::Value cmp = builder.createCast(
-      loc, cir::CastKind::bool_to_int,
-      builder.createCompare(loc, kind, src, zero), builder.getSIntNTy(1));
+  // FIXME FCmpOpKind is only supported for vector comparisons now, modify the
+  // if when scalar comparisons are supported too;
+  if constexpr (std::is_same<CmpKindTy, cir::CmpOpKind>::value) {
+    // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
+    // result is sign- rather zero-extended when casting to the output
+    // retType.
+    mlir::Value cmp = builder.createCast(
+        loc, cir::CastKind::bool_to_int,
+        builder.createCompare(loc, kind, src, zero), builder.getSIntNTy(1));
 
-  return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
+    return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
+  }
+
+  llvm_unreachable("Should not end up here");
+  return {};
 }
 
 static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
@@ -887,6 +899,7 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   const bool hasLegalHalfType = cgf.getTarget().hasFastHalfType();
   const bool usgn = neonType.isUnsigned();
   const bool isQuad = neonType.isQuad();
+  const bool floating = neonType.isFloatingPoint();
 
   // The value of allowBFloatArgsAndRet is true for AArch64, but it should
   // come from ABI info.
@@ -994,6 +1007,9 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     return mlir::Value{};
   case NEON::BI__builtin_neon_vceqz_v:
   case NEON::BI__builtin_neon_vceqzq_v:
+    if (floating)
+      return emitAArch64CompareBuiltinExpr(cgf, cgf.getBuilder(), loc, ops[0],
+                                           vTy, cir::FCmpOpKind::oeq);
     return emitAArch64CompareBuiltinExpr(cgf, cgf.getBuilder(), loc, ops[0],
                                          vTy, cir::CmpOpKind::eq);
   case NEON::BI__builtin_neon_vcgez_v:

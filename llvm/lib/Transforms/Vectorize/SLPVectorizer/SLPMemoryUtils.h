@@ -44,9 +44,8 @@ namespace llvm::slpvectorizer {
 
 /// Caches the results of the expensive analyses that are queried repeatedly
 /// for the same values while the vectorization trees are built and their costs
-/// are estimated. The results may change once the vectorized code is emitted
-/// and the scalars are erased, so the cache is cleared after each successful
-/// vectorizeTree().
+/// are estimated. The results may change once new code replaces the scalars,
+/// so the cache is cleared each time the replaced scalars are erased.
 class SLPAnalysisCache {
 public:
   /// Cached llvm::getPointersDiff(), a miss may require SCEV analysis. The

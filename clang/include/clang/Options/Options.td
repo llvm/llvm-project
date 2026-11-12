@@ -2676,7 +2676,7 @@ def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
 def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     MetaVarName<"<pathname>">,
-    HelpText<"Use memory profile for profile-guided memory optimization">,
+    HelpText<"Use memory profile for profile-guided memory optimization (MemPGO)">,
     MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
 defm copyprof : BoolFOption<"copyprof",
@@ -5170,7 +5170,7 @@ defm partition_static_data_sections: BoolFOption<"partition-static-data-sections
   CodeGenOpts<"PartitionStaticDataSections">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption], " partition static data sections using PGO profile information and MemProf (x86 and aarch64 ELF). See LLVM MemProf doc for usage.">>;
+  BothFlags<[], [ClangOption], " partition static data sections using MemPGO profiles with fall back to PGO (x86 and aarch64 ELF). See LLVM MemPGO doc for usage.">>;
 
 defm strict_return : BoolFOption<"strict-return",
   CodeGenOpts<"StrictReturn">, DefaultTrue,
@@ -7318,6 +7318,12 @@ def mno_hexagon_hvx : Flag<["-"], "mno-hvx">,
 def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
   Group<m_hexagon_Features_HVX_Group>, HelpText<"Set Hexagon Vector Length">,
   Values<"64B,128B">;
+def mhexagon_hmx : Flag<["-"], "mhmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Enable Hexagon Matrix eXtensions (HMX)">;
+def mno_hexagon_hmx : Flag<["-"], "mno-hmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Disable Hexagon Matrix eXtensions (HMX)">;
 def mhexagon_hvx_qfloat : Flag<["-"], "mhvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon HVX QFloat instructions">;
@@ -8193,6 +8199,10 @@ def reloc_section_sym : Joined<["--"], "reloc-section-sym=">,
   NormalizedValuesScope<"llvm::RelocSectionSymType">,
   NormalizedValues<["All", "Internal", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"RelocSectionSym">, "All">;
+def grelocatable_dwarf : Flag<["-"], "grelocatable-dwarf">,
+  HelpText<"Relocate offsets from one DWARF section into another in Mach-O "
+           "object files">,
+  MarshallingInfoFlag<CodeGenOpts<"MachORelocatableDwarf">>;
 // The leading 'g' is misleading. This is an unwind tables option, not
 // a debug option. But uses this name for gnu compatibility.
 def gsframe : Flag<["--"], "gsframe">,
@@ -10233,6 +10243,16 @@ def fhlsl_spv_preserve_interface
                "dead-code elimination of variables with Location or BuiltIn "
                "decorations.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvPreserveInterface">>;
+
+def fhlsl_spv_support_nonzero_base_instance
+    : Flag<["-"], "fvk-support-nonzero-base-instance">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Follow Vulkan spec to use gl_BaseInstance as the first "
+               "vertex instance, which makes SV_InstanceID = gl_InstanceIndex "
+               "- gl_BaseInstance (without this option, SV_InstanceID = "
+               "gl_InstanceIndex).">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvSupportNonzeroBaseInstance">>;
 
 def fexperimental_logical_pointer
     : Flag<["-"], "fexperimental-logical-pointer">,

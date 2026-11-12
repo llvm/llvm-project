@@ -47963,14 +47963,14 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
       ExtractVT != MVT::i64)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
-  if (!isPowerOf2_32(VT.getVectorNumElements()))
-    return SDValue();
-
   // Match shuffle + add pyramid.
   ISD::NodeType BinOp;
   SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
   if (!Root)
+    return SDValue();
+
+  EVT RootVT = Root.getValueType();
+  if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
   // The operand is expected to be zero extended from i8.
@@ -48007,7 +48007,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
 
   // If the original vector was wider than 8 elements, sum over the results
   // in the SAD vector.
-  unsigned Stages = Log2_32(VT.getVectorNumElements());
+  unsigned Stages = Log2_32(RootVT.getVectorNumElements());
   EVT SadVT = SAD.getValueType();
   if (Stages > 3) {
     unsigned SadElems = SadVT.getVectorNumElements();
@@ -51709,6 +51709,20 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
 
   unsigned Opc = ExtOpc == ISD::SIGN_EXTEND ? ISD::MULHS : ISD::MULHU;
   SDValue Mulh = DAG.getNode(Opc, DL, MulVT, LHS, RHS);
+
+  // For elements wider than 32 bits, the bits of the product above bit 31 are
+  // copies of its sign bit (sext) or zero (zext), so extend the MULH the same
+  // way as the inputs. A logical shift of a signed product then has to clear
+  // the top 16 bits.
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  if (EltSizeInBits > 32) {
+    SDValue Res = DAG.getNode(ExtOpc, DL, VT, Mulh);
+    if (N->getOpcode() == ISD::SRL && ExtOpc == ISD::SIGN_EXTEND) {
+      APInt Mask = APInt::getLowBitsSet(EltSizeInBits, EltSizeInBits - 16);
+      Res = DAG.getNode(ISD::AND, DL, VT, Res, DAG.getConstant(Mask, DL, VT));
+    }
+    return Res;
+  }
 
   ExtOpc = N->getOpcode() == ISD::SRA ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
   return DAG.getNode(ExtOpc, DL, VT, Mulh);
