@@ -67,6 +67,15 @@ static const MCPhysReg FixedCSRFIMap[] = {
 // `QC.C.MILEAVERET`.
 static constexpr uint64_t QCIInterruptPushAmount = 96;
 
+// Smip/Ssip push six registers. ACLIC specifies a 24-byte frame for RV32E,
+// a 32-byte frame for RV32I, and a 48-byte frame for RV64I/E.
+static uint64_t getACLICInterruptPushAmount(const MachineFunction &MF) {
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (STI.is64Bit())
+    return 48;
+  return STI.getTargetABI() == RISCVABI::ABI::ILP32E ? 24 : 32;
+}
+
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
     /* -1 is a gap for mepc/mnepc */
     {/*fp*/ FPReg, -2},
@@ -244,9 +253,10 @@ static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
 }
 
 static void
-createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
-                                             RISCVMachineFunctionInfo &RVFI) {
-  if (!RVFI.isSiFivePreemptibleInterrupt(MF))
+createPreemptibleInterruptFrameEntries(MachineFunction &MF,
+                                       RISCVMachineFunctionInfo &RVFI) {
+  if (!RVFI.isSiFivePreemptibleInterrupt(MF) &&
+      !RVFI.isACLICPreemptibleInterrupt(MF))
     return;
 
   const TargetRegisterClass &RC = RISCV::GPRRegClass;
@@ -254,7 +264,7 @@ createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
       *MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  // Create two frame objects for saving `mcause` and `mepc`.
+  // Each preemptible interrupt kind saves two CSRs in dedicated frame objects.
   for (int I = 0; I < 2; ++I) {
     int FI = MFI.CreateStackObject(TRI.getSpillSize(RC), TRI.getSpillAlign(RC),
                                    true);
@@ -262,13 +272,13 @@ createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
   }
 }
 
-// The scratch register retains an ordinary CSI slot, but its save and restore
-// are emitted explicitly as part of the SiFive CLIC interrupt sequence.
-static int getSiFiveCLICScratchFrameIndex(const MachineFunction &MF) {
+// X5 retains an ordinary CSI slot, but preemptible interrupt handlers save
+// and restore it explicitly around their CSR sequences.
+static int getPreemptibleInterruptScratchFrameIndex(const MachineFunction &MF) {
   const auto &CSI = MF.getFrameInfo().getCalleeSavedInfo();
   auto ScratchCS = llvm::find_if(
       CSI, [](const CalleeSavedInfo &CS) { return CS.getReg() == RISCV::X5; });
-  assert(ScratchCS != CSI.end() && "Missing SiFive CLIC scratch spill slot");
+  assert(ScratchCS != CSI.end() && "Missing interrupt scratch spill slot");
   return ScratchCS->getFrameIdx();
 }
 
@@ -288,7 +298,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
 
   // Preserve X5 before using it to save the interrupt CSRs. Other GPRs
   // are saved by the ordinary spill sequence after preemption is enabled.
-  int ScratchFI = getSiFiveCLICScratchFrameIndex(MF);
+  int ScratchFI = getPreemptibleInterruptScratchFrameIndex(MF);
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X5, /*IsKill=*/true, ScratchFI,
                            &RISCV::GPRRegClass, Register(),
                            MachineInstr::FrameSetup);
@@ -368,7 +378,95 @@ static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
   // The ordinary reloads have finished. Recover the interrupted value of X5
   // only after it has restored both CSRs.
   TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X5,
-                            getSiFiveCLICScratchFrameIndex(MF),
+                            getPreemptibleInterruptScratchFrameIndex(MF),
+                            &RISCV::GPRRegClass, Register(),
+                            RISCV::NoSubRegister, MachineInstr::FrameDestroy);
+  if (needsDwarfCFI(MF))
+    CFIBuilder.buildRestore(RISCV::X5);
+}
+
+static void emitACLICPreemptibleSaves(MachineFunction &MF,
+                                      MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator MBBI,
+                                      const DebugLoc &DL) {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (!RVFI->isACLICPreemptibleInterrupt(MF))
+    return;
+
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  const bool IsSupervisor = RVFI->isACLICSupervisorInterrupt(MF);
+  const unsigned StatusCSR =
+      IsSupervisor ? RISCVSysReg::sistatus : RISCVSysReg::mistatus;
+  const unsigned EpcCSR = IsSupervisor ? RISCVSysReg::sepc : RISCVSysReg::mepc;
+
+  // Preserve X5 before using it to save the interrupt CSRs. The ordinary
+  // GPR spills follow after preemption is enabled.
+  int ScratchFI = getPreemptibleInterruptScratchFrameIndex(MF);
+  TII->storeRegToStackSlot(MBB, MBBI, RISCV::X5, /*IsKill=*/true, ScratchFI,
+                           &RISCV::GPRRegClass, Register(),
+                           MachineInstr::FrameSetup);
+  if (needsDwarfCFI(MF))
+    CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
+        .buildOffset(RISCV::X5, MF.getFrameInfo().getObjectOffset(ScratchFI));
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS), RISCV::X5)
+      .addImm(EpcCSR)
+      .addReg(RISCV::X0)
+      .setMIFlag(MachineInstr::FrameSetup);
+  TII->storeRegToStackSlot(
+      MBB, MBBI, RISCV::X5, /*IsKill=*/true, RVFI->getInterruptCSRFrameIndex(0),
+      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+
+  // xistatus.xie is bit zero. CSRRSI returns the old status in X5 and enables
+  // interrupts after that value has been captured.
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI), RISCV::X5)
+      .addImm(StatusCSR)
+      .addImm(1)
+      .setMIFlag(MachineInstr::FrameSetup);
+  TII->storeRegToStackSlot(
+      MBB, MBBI, RISCV::X5, /*IsKill=*/true, RVFI->getInterruptCSRFrameIndex(1),
+      &RISCV::GPRRegClass, Register(), MachineInstr::FrameSetup);
+}
+
+static void emitACLICPreemptibleRestores(MachineFunction &MF,
+                                         MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         CFIInstBuilder &CFIBuilder,
+                                         const DebugLoc &DL) {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (!RVFI->isACLICPreemptibleInterrupt(MF))
+    return;
+
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+  const bool IsSupervisor = RVFI->isACLICSupervisorInterrupt(MF);
+  const unsigned StatusCSR =
+      IsSupervisor ? RISCVSysReg::sistatus : RISCVSysReg::mistatus;
+  const unsigned EpcCSR = IsSupervisor ? RISCVSysReg::sepc : RISCVSysReg::mepc;
+
+  // Loading xistatus while preemption is enabled is safe because nested
+  // handlers preserve X5. Restoring the entry value disables preemption.
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X5,
+                            RVFI->getInterruptCSRFrameIndex(1),
+                            &RISCV::GPRRegClass, Register(),
+                            RISCV::NoSubRegister, MachineInstr::FrameDestroy);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), RISCV::X0)
+      .addImm(StatusCSR)
+      .addReg(RISCV::X5, RegState::Kill)
+      .setMIFlag(MachineInstr::FrameDestroy);
+
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X5,
+                            RVFI->getInterruptCSRFrameIndex(0),
+                            &RISCV::GPRRegClass, Register(),
+                            RISCV::NoSubRegister, MachineInstr::FrameDestroy);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), RISCV::X0)
+      .addImm(EpcCSR)
+      .addReg(RISCV::X5, RegState::Kill)
+      .setMIFlag(MachineInstr::FrameDestroy);
+
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X5,
+                            getPreemptibleInterruptScratchFrameIndex(MF),
                             &RISCV::GPRRegClass, Register(),
                             RISCV::NoSubRegister, MachineInstr::FrameDestroy);
   if (needsDwarfCFI(MF))
@@ -597,14 +695,16 @@ getUnmanagedCSI(const MachineFunction &MF,
   return NonLibcallCSI;
 }
 
-// Exclude X5 from ordinary spills and restores for SiFive CLIC preemptible
-// handlers, which save and restore it explicitly.
+// Exclude X5 from ordinary spills and restores for preemptible interrupt
+// handlers, which save and restore it explicitly before the other GPRs.
 static SmallVector<CalleeSavedInfo, 8>
 getUnmanagedInterruptCSI(const MachineFunction &MF,
                          const std::vector<CalleeSavedInfo> &CSI,
                          bool ReverseOrder = false) {
   auto InterruptCSI = getUnmanagedCSI(MF, CSI, ReverseOrder);
-  if (MF.getInfo<RISCVMachineFunctionInfo>()->isSiFivePreemptibleInterrupt(MF))
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (RVFI->isSiFivePreemptibleInterrupt(MF) ||
+      RVFI->isACLICPreemptibleInterrupt(MF))
     llvm::erase_if(InterruptCSI, [](const CalleeSavedInfo &CS) {
       return CS.getReg() == RISCV::X5;
     });
@@ -1050,6 +1150,12 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
 
+  // Smip/Ssip have already adjusted SP before the first handler instruction.
+  // The locations of the six saved registers are implementation-defined, so
+  // only describe the CFA adjustment here.
+  if (NeedsDwarfCFI && RVFI->isACLICPushPopInterrupt(MF))
+    CFIBuilder.buildDefCFAOffset(RVFI->getACLICInterruptStackSize());
+
   if (unsigned LibCallFrameSize = RVFI->getLibCallStackSize()) {
     if (NeedsDwarfCFI) {
       CFIBuilder.buildDefCFAOffset(LibCallFrameSize);
@@ -1078,7 +1184,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
   // Split the SP adjustment to reduce the offsets of callee saved spill.
   if (FirstSPAdjustAmount) {
-    StackSize = FirstSPAdjustAmount;
+    StackSize = FirstSPAdjustAmount - RVFI->getACLICInterruptStackSize();
     RealStackSize = FirstSPAdjustAmount;
   }
 
@@ -1130,6 +1236,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     allocateStack(MBB, MBBI, MF, StackSize, RealStackSize, NeedsDwarfCFI,
                   NeedProbe, ProbeSize, DynAllocation,
                   MachineInstr::FrameSetup);
+
+  emitACLICPreemptibleSaves(MF, MBB, MBBI, DL);
 
   // Save SiFive CLIC CSRs into Stack
   emitSiFiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
@@ -1335,9 +1443,10 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
   uint64_t RealStackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
                                                : getStackSizeWithRVVPadding(MF);
-  uint64_t StackSize = FirstSPAdjustAmount ? FirstSPAdjustAmount
-                                           : getStackSizeWithRVVPadding(MF) -
-                                                 RVFI->getReservedSpillsSize();
+  uint64_t StackSize =
+      FirstSPAdjustAmount
+          ? FirstSPAdjustAmount - RVFI->getACLICInterruptStackSize()
+          : getStackSizeWithRVVPadding(MF) - RVFI->getReservedSpillsSize();
   uint64_t FPOffset = RealStackSize - RVFI->getVarArgsSaveSize();
   uint64_t RVVStackSize = RVFI->getRVVStackSize();
 
@@ -1402,6 +1511,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                    getUnmanagedInterruptCSI(MF, CSI, PreferAscendingLS).size());
   CFIBuilder.setInsertPoint(MBBI);
   emitSiFiveCLICPreemptibleRestores(MF, MBB, MBBI, CFIBuilder, DL);
+  emitACLICPreemptibleRestores(MF, MBB, MBBI, CFIBuilder, DL);
 
   auto emitRestoreCFI = [&](auto CSInfo) {
     for (auto &CS : CSInfo) {
@@ -1482,12 +1592,12 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  // Deallocate stack if StackSize isn't a zero yet. If this is a QCI interrupt
-  // function, there will be a leftover offset which is deallocated by
-  // `QC.C.MILEAVERET`, otherwise getQCIInterruptStackSize() will be 0.
+  // Deallocate the software-managed stack. Hardware interrupt return
+  // instructions deallocate any remaining interrupt entry frame.
   if (StackSize != 0)
     deallocateStack(MF, MBB, MBBI, DL, StackSize,
-                    RVFI->getQCIInterruptStackSize());
+                    RVFI->getQCIInterruptStackSize() +
+                        RVFI->getACLICInterruptStackSize());
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
@@ -1666,9 +1776,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     return FI == CS.getFrameIdx();
   };
 
-  bool IsInterruptCSR = RVFI->isSiFivePreemptibleInterrupt(MF) &&
-                        (FI == RVFI->getInterruptCSRFrameIndex(0) ||
-                         FI == RVFI->getInterruptCSRFrameIndex(1));
+  bool IsInterruptCSR = RVFI->isInterruptCSRFrameIndex(FI);
   bool IsInlineRestoredLibcallCSR = llvm::any_of(
       getPushOrLibCallsSavedInfo(MF, MFI.getCalleeSavedInfo()), FIIsCalleeSave);
   if ((FI >= MinCSFI && FI <= MaxCSFI) || IsInterruptCSR ||
@@ -1891,8 +1999,9 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(RISCVABI::getBPReg());
 
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  // X5 is used as a temporary for saving and restoring `mcause` and `mepc`.
-  if (RVFI->isSiFivePreemptibleInterrupt(MF))
+  // X5 is used as a temporary for saving and restoring interrupt CSRs.
+  if (RVFI->isSiFivePreemptibleInterrupt(MF) ||
+      RVFI->isACLICPreemptibleInterrupt(MF))
     SavedRegs.set(RISCV::X5);
 
   // When using cm.push/pop we must save X27 if we save X26.
@@ -1960,8 +2069,8 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
       SavedRegs.set(CSReg);
   }
 
-  // SiFive Preemptible Interrupt Handlers need additional frame entries
-  createSiFivePreemptibleInterruptFrameEntries(MF, *RVFI);
+  // Preemptible interrupt handlers need additional frame entries.
+  createPreemptibleInterruptFrameEntries(MF, *RVFI);
 }
 
 std::pair<int64_t, Align>
@@ -2275,7 +2384,12 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   // Disable SplitSPAdjust if save-restore libcall, push/pop or QCI interrupts
   // are used. The callee-saved registers will be pushed by the save-restore
   // libcalls, so we don't have to split the SP adjustment in this case.
-  if (RVFI->getReservedSpillsSize())
+  //
+  // ACLIC push-pop interrupts deliberately allow the split: Smip/Ssip
+  // only save a0-a5, so the remaining callee-saved registers are spilled in
+  // software.
+  if (RVFI->getLibCallStackSize() || RVFI->getRVPushStackSize() ||
+      RVFI->getQCIInterruptStackSize())
     return 0;
 
   // Return the FirstSPAdjustAmount if the StackSize can not fit in a signed
@@ -2340,13 +2454,19 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
+  if (RVFI->isACLICPushPopInterrupt(MF)) {
+    uint64_t PushAmount = getACLICInterruptPushAmount(MF);
+    RVFI->setACLICInterruptStackSize(PushAmount);
+    MFI.CreateFixedSpillStackObject(PushAmount,
+                                    -static_cast<int64_t>(PushAmount));
+  }
+
   // Preemptible Interrupts have two additional Callee-save Frame Indexes,
   // not tracked by `CSI`.
-  if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
-    for (int I = 0; I < 2; ++I) {
-      int FI = RVFI->getInterruptCSRFrameIndex(I);
-      MFI.setIsCalleeSavedObjectIndex(FI, true);
-    }
+  if (RVFI->isSiFivePreemptibleInterrupt(MF) ||
+      RVFI->isACLICPreemptibleInterrupt(MF)) {
+    for (int I = 0; I < 2; ++I)
+      MFI.setIsCalleeSavedObjectIndex(RVFI->getInterruptCSRFrameIndex(I), true);
   }
 
   // Early exit if no callee saved registers are modified!
@@ -2709,6 +2829,9 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
 }
 
 bool RISCVFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->isACLICPreemptibleInterrupt(MF))
+    return false;
+
   // Keep the conventional code flow when not optimizing.
   if (MF.getFunction().hasOptNone())
     return false;

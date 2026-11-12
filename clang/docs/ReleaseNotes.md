@@ -1405,6 +1405,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### RISC-V Support
 
+- Added CodeGen support for the ACLIC v0.20 `preemptible` and `push-pop`
+  interrupt attribute kinds.
+
 - Fixed a bug where the `interrupt` attribute did not accept `machine` together
   with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
 

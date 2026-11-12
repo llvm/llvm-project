@@ -87,6 +87,9 @@ private:
   /// Size of any opaque stack adjustment due to QCI Interrupt instructions.
   unsigned QCIInterruptStackSize = 0;
 
+  /// Size of the frame pushed by ACLIC Smip/Ssip interrupt entry.
+  unsigned ACLICInterruptStackSize = 0;
+
   /// Store Frame Indexes for Interrupt-Related CSR Spills.
   SmallVector<int, 2> InterruptCSRFrameIndexes;
 
@@ -127,7 +130,8 @@ public:
   }
 
   unsigned getReservedSpillsSize() const {
-    return LibCallStackSize + RVPushStackSize + QCIInterruptStackSize;
+    return LibCallStackSize + RVPushStackSize + QCIInterruptStackSize +
+           ACLICInterruptStackSize;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
@@ -190,7 +194,13 @@ public:
     QCINoNest,
     SiFiveCLICPreemptible,
     SiFiveCLICStackSwap,
-    SiFiveCLICPreemptibleStackSwap
+    SiFiveCLICPreemptibleStackSwap,
+    ACLICPreemptible,
+    ACLICSupervisorPreemptible,
+    ACLICPushPop,
+    ACLICSupervisorPushPop,
+    ACLICPreemptiblePushPop,
+    ACLICSupervisorPreemptiblePushPop
   };
 
   InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;
@@ -203,6 +213,14 @@ public:
 
   unsigned getQCIInterruptStackSize() const { return QCIInterruptStackSize; }
   void setQCIInterruptStackSize(unsigned Size) { QCIInterruptStackSize = Size; }
+
+  unsigned getACLICInterruptStackSize() const {
+    return ACLICInterruptStackSize;
+  }
+
+  void setACLICInterruptStackSize(unsigned Size) {
+    ACLICInterruptStackSize = Size;
+  }
 
   bool useSiFiveInterrupt(const MachineFunction &MF) const {
     InterruptStackKind Kind = getInterruptStackKind(MF);
@@ -223,11 +241,37 @@ public:
            Kind == InterruptStackKind::SiFiveCLICPreemptibleStackSwap;
   }
 
+  bool isACLICPreemptibleInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::ACLICPreemptible ||
+           Kind == InterruptStackKind::ACLICSupervisorPreemptible ||
+           Kind == InterruptStackKind::ACLICPreemptiblePushPop ||
+           Kind == InterruptStackKind::ACLICSupervisorPreemptiblePushPop;
+  }
+
+  bool isACLICPushPopInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::ACLICPushPop ||
+           Kind == InterruptStackKind::ACLICSupervisorPushPop ||
+           Kind == InterruptStackKind::ACLICPreemptiblePushPop ||
+           Kind == InterruptStackKind::ACLICSupervisorPreemptiblePushPop;
+  }
+
+  bool isACLICSupervisorInterrupt(const MachineFunction &MF) const {
+    InterruptStackKind Kind = getInterruptStackKind(MF);
+    return Kind == InterruptStackKind::ACLICSupervisorPreemptible ||
+           Kind == InterruptStackKind::ACLICSupervisorPushPop ||
+           Kind == InterruptStackKind::ACLICSupervisorPreemptiblePushPop;
+  }
+
   void pushInterruptCSRFrameIndex(int FI) {
     InterruptCSRFrameIndexes.push_back(FI);
   }
   int getInterruptCSRFrameIndex(size_t Idx) const {
     return InterruptCSRFrameIndexes[Idx];
+  }
+  bool isInterruptCSRFrameIndex(int FI) const {
+    return llvm::is_contained(InterruptCSRFrameIndexes, FI);
   }
 
   // Some Stack Management Variants automatically update FP in a frame-pointer

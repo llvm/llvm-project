@@ -28866,6 +28866,12 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "SiFive-CLIC-preemptible",
         "SiFive-CLIC-stack-swap",
         "SiFive-CLIC-preemptible-stack-swap",
+        "machine-preemptible",
+        "supervisor-preemptible",
+        "machine-push-pop",
+        "supervisor-push-pop",
+        "machine-preemptible-push-pop",
+        "supervisor-preemptible-push-pop",
     };
     if (!llvm::is_contained(SupportedInterruptKinds, Kind))
       reportFatalUsageError(
@@ -28878,6 +28884,20 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXSfmclic())
       reportFatalUsageError(
           "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension");
+
+    const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+    const bool IsACLICPreemptible = RVFI->isACLICPreemptibleInterrupt(MF);
+    const bool IsACLICPushPop = RVFI->isACLICPushPopInterrupt(MF);
+    const bool IsACLICSupervisor = RVFI->isACLICSupervisorInterrupt(MF);
+    if (IsACLICPreemptible && (IsACLICSupervisor ? !Subtarget.hasStdExtSsnip()
+                                                 : !Subtarget.hasStdExtSmnip()))
+      reportFatalUsageError(
+          "'preemptible' interrupt kinds require Smnip/Ssnip extension");
+
+    if (IsACLICPushPop && (IsACLICSupervisor ? !Subtarget.hasStdExtSsip()
+                                             : !Subtarget.hasStdExtSmip()))
+      reportFatalUsageError(
+          "'push-pop' interrupt kinds require Smip/Ssip extension");
 
     if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
       reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
@@ -29768,9 +29788,11 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     StringRef Kind =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
-    if (Kind == "supervisor")
-      RetOpc = RISCVISD::SRET_GLUE;
-    else if (Kind == "rnmi") {
+    const bool IsSupervisor = Kind.starts_with("supervisor");
+    const bool IsPushPop =
+        MF.getInfo<RISCVMachineFunctionInfo>()->isACLICPushPopInterrupt(MF);
+
+    if (Kind == "rnmi") {
       assert(Subtarget.hasFeature(RISCV::FeatureStdExtSmrnmi) &&
              "Need Smrnmi extension for rnmi");
       RetOpc = RISCVISD::MNRET_GLUE;
@@ -29778,6 +29800,10 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       assert(Subtarget.hasFeature(RISCV::FeatureVendorXqciint) &&
              "Need Xqciint for qci-(no)nest");
       RetOpc = RISCVISD::QC_C_MILEAVERET_GLUE;
+    } else if (IsPushPop) {
+      RetOpc = IsSupervisor ? RISCVISD::SIPOPRET_GLUE : RISCVISD::MIPOPRET_GLUE;
+    } else if (IsSupervisor) {
+      RetOpc = RISCVISD::SRET_GLUE;
     } else
       RetOpc = RISCVISD::MRET_GLUE;
   }

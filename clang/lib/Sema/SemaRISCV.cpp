@@ -1680,7 +1680,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtMostNumArgs(SemaRef, 3))
     return;
 
+  bool HasMachine = false;
+  bool HasSupervisor = false;
   bool HasSiFiveCLICType = false;
+  bool HasPreemptible = false;
+  bool HasPushPop = false;
   bool HasUnaryType = false;
   bool ReportedDuplicateType = false;
 
@@ -1702,20 +1706,28 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
     switch (Type) {
     case RISCVInterruptAttr::machine:
-      // "machine" could be combined with the SiFive CLIC types, or could be
-      // just "machine".
+      // "machine" can be used alone, with SiFive CLIC types, or with ACLIC
+      // modifiers.
+      HasMachine = true;
+      break;
+    case RISCVInterruptAttr::supervisor:
+      HasSupervisor = true;
       break;
     case RISCVInterruptAttr::SiFiveCLICPreemptible:
     case RISCVInterruptAttr::SiFiveCLICStackSwap:
       // SiFive-CLIC types can be combined with each other and "machine"
       HasSiFiveCLICType = true;
       break;
-    case RISCVInterruptAttr::supervisor:
+    case RISCVInterruptAttr::preemptible:
+      HasPreemptible = true;
+      break;
+    case RISCVInterruptAttr::pushpop:
+      HasPushPop = true;
+      break;
     case RISCVInterruptAttr::rnmi:
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest:
-      // "supervisor", "rnmi" and "qci-(no)nest" cannot be combined with any
-      // other types
+      // "rnmi" and "qci-(no)nest" cannot be combined with any other types.
       HasUnaryType = true;
       break;
     }
@@ -1732,7 +1744,13 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (HasUnaryType && HasSiFiveCLICType) {
+  if (HasMachine && HasSupervisor) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
+  }
+
+  if (HasSiFiveCLICType &&
+      (HasUnaryType || HasSupervisor || HasPreemptible || HasPushPop)) {
     Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
   }
@@ -1778,6 +1796,26 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
         Diag(AL.getLoc(),
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Smrnmi";
+        return;
+      }
+    } break;
+    case RISCVInterruptAttr::preemptible: {
+      if (!HasFeature(HasSupervisor ? "experimental-ssnip"
+                                    : "experimental-smnip")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << (HasSupervisor ? "Ssnip" : "Smnip");
+        return;
+      }
+    } break;
+    case RISCVInterruptAttr::pushpop: {
+      if (!HasFeature(HasSupervisor ? "experimental-ssip"
+                                    : "experimental-smip")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << (HasSupervisor ? "Ssip" : "Smip");
         return;
       }
     } break;
