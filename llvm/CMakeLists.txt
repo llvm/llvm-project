@@ -630,6 +630,8 @@ if (MINGW)
   set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT ON)
 endif()
 option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
+option(LLVM_TEST_WINDOWS_PREFER_FORWARD_SLASH_MATRIX "Test both forward and backward slashes on Windows during testing." OFF)
+
 
 option(LLVM_WINDOWS_RESTRICTED_APIS "Use only APIs available in restricted Windows environments, such as binaries whose imports are checked by ApiValidator. Currently this avoids shell32." OFF)
 
