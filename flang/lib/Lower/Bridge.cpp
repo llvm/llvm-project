@@ -568,9 +568,11 @@ struct LocArgumentSymbols
     if (!intrinsic || intrinsic->name != "loc" ||
         call.arguments().size() != 1 || !call.arguments()[0])
       return symbols;
-    const Fortran::lower::SomeExpr *arg = call.arguments()[0]->UnwrapExpr();
-    if (const Fortran::semantics::Symbol *symbol =
-            arg ? Fortran::evaluate::GetFirstSymbol(*arg) : nullptr)
+    const Fortran::evaluate::ActualArgument &arg = *call.arguments()[0];
+    const Fortran::semantics::Symbol *symbol = arg.GetAssumedTypeDummy();
+    if (const Fortran::lower::SomeExpr *expr = arg.UnwrapExpr())
+      symbol = Fortran::evaluate::GetFirstSymbol(*expr);
+    if (symbol)
       symbols.insert(*symbol);
     return symbols;
   }
