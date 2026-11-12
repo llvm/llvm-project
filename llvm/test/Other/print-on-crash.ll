@@ -1,6 +1,8 @@
 ; A test that the hidden option -print-on-crash properly sets a signal handler
 ; which gets called when a pass crashes.  The trigger-crash-module pass asserts.
 
+; REQUIRES: default_triple
+
 ; RUN: not --crash opt -print-on-crash -passes=trigger-crash-module < %s 2>&1 | FileCheck %s --check-prefix=CHECK_SIMPLE
 
 ; RUN: not --crash opt -print-on-crash-path=%t -passes=trigger-crash-module < %s
