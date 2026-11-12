@@ -481,7 +481,8 @@ void ModFileWriter::PutSymbols(
     PutUse(symbol);
   }
   PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
-  if (const auto *decls{GetOmpDeclarative(DEREF(scope.symbol()))}) {
+  if (const auto *decls{GetOmpDeclarative(DEREF(scope.symbol()))};
+      decls && context_.langOptions().getOpenMPVersion() < 60) {
     if (const llvm::omp::Clauses &assumes{decls->ompAssumes()};
         assumes.count()) {
       decls_ << "!$omp assumes ";

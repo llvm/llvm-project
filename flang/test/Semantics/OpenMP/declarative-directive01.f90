@@ -3,6 +3,10 @@
 ! RUN: %python %S/../test_errors.py %t/pure_assumes.f90 %flang -fopenmp -fopenmp-version=51
 ! RUN: %python %S/../test_errors.py %t/assumes.f90 %flang -fopenmp -fopenmp-version=52
 ! RUN: %python %S/../test_errors.py %t/conditional.f90 %flang -fopenmp -fopenmp-version=60
+! RUN: %python %S/../test_errors.py %t/placement.f90 %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %t/placement.f90 %flang -fopenmp -fopenmp-version=60
+! RUN: %python %S/../test_errors.py %t/execution.f90 %flang -fopenmp -fopenmp-version=52
+! RUN: %python %S/../test_errors.py %t/execution.f90 %flang -fopenmp -fopenmp-version=60
 
 !--- declarative.f90
 ! Check OpenMP declarative directives
@@ -240,4 +244,88 @@ end subroutine
 subroutine conditional_duplicate()
   !ERROR: At most one NO_PARALLELISM clause can appear on ASSUMES directive
   !$omp assumes no_parallelism(.true.) no_parallelism(.false.)
+end subroutine
+
+!--- placement.f90
+module placement_module
+  implicit none
+  !$omp assumes no_openmp no_parallelism
+  integer, parameter :: constant_value = 1
+  interface
+    module subroutine separate_work()
+    end subroutine
+  end interface
+end module
+
+submodule (placement_module) placement_submodule
+  implicit none
+  !ERROR: ASSUMES directive must appear in the specification part of a module or subprogram
+  !$omp assumes no_parallelism
+contains
+  module procedure separate_work
+  end procedure
+end submodule
+
+subroutine valid_placement()
+  use placement_module, only: constant_value
+  implicit none
+  !$omp assumes no_parallelism
+  integer :: value
+  value = constant_value
+contains
+  subroutine after_import()
+    import, only: constant_value
+    implicit none
+    !$omp assumes no_parallelism
+  end subroutine
+end subroutine
+
+program main_assumes
+  implicit none
+  !ERROR: ASSUMES directive must appear in the specification part of a module or subprogram
+  !$omp assumes no_parallelism
+end program
+
+block data block_data_assumes
+  implicit none
+  !ERROR: ASSUMES directive must appear in the specification part of a module or subprogram
+  !$omp assumes no_openmp
+end block data
+
+subroutine block_assumes()
+  block
+    !ERROR: ASSUMES directive must appear in the specification part of a module or subprogram
+    !$omp assumes absent(parallel)
+  end block
+end subroutine
+
+subroutine before_use()
+  !ERROR: ASSUMES directive must appear after all USE, IMPORT, and IMPLICIT statements
+  !$omp assumes no_parallelism
+  use placement_module, only: constant_value
+end subroutine
+
+subroutine import_host()
+contains
+  subroutine before_import()
+    !ERROR: ASSUMES directive must appear after all USE, IMPORT, and IMPLICIT statements
+    !$omp assumes no_openmp
+    import, none
+  end subroutine
+end subroutine
+
+subroutine before_implicit()
+  !ERROR: ASSUMES directive must appear after all USE, IMPORT, and IMPLICIT statements
+  !$omp assumes no_parallelism
+  !ERROR: ASSUMES directive must appear after all USE, IMPORT, and IMPLICIT statements
+  !$omp assumes absent(barrier)
+  implicit none
+end subroutine
+
+!--- execution.f90
+subroutine after_execution()
+  integer :: value
+  value = 0
+  !ERROR: misplaced declaration in the execution part
+  !$omp assumes no_parallelism
 end subroutine

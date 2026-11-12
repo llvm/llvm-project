@@ -4,6 +4,9 @@
 ! RUN: FileCheck %s --check-prefix=USE-MODFILE --input-file=%t/use_parent-use_child.mod
 ! RUN: FileCheck %s --check-prefix=PARALLELISM-MODFILE --input-file=%t/parallelism_module.mod
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SUBMODULE,SCOPE,SCOPE60,ABSENT,ABSENT60,RELOAD,RELOAD60,CONDITIONAL
+! RUN: FileCheck %s --check-prefix=MODFILE60 --input-file=%t/assumes_module.mod
+! RUN: FileCheck %s --check-prefix=MODFILE60 --input-file=%t/parallelism_module.mod
+! RUN: FileCheck %s --check-prefix=MODFILE60 --input-file=%t/scoped_assumes.mod
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %t/bare.f90 | FileCheck %s --check-prefix=SIMD
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %t/bare.f90 | FileCheck %s --check-prefix=SYMBOLS
 ! RUN: FileCheck %s --check-prefix=TRUE-MODFILE --input-file=%t/conditional_true.mod
@@ -12,6 +15,9 @@
 
 ! SIMD: module
 ! SIMD-NOT: "llvm.assume"
+
+! MODFILE60: module
+! MODFILE60-NOT: !$omp assumes
 
 ! SYMBOLS-DAG: assume_block (Subroutine): Subprogram
 ! SYMBOLS-DAG: assumes_module: Module OmpAssumptions:(no_openmp)
@@ -298,13 +304,6 @@ end subroutine assumes_parallelism_host
 subroutine without_parallelism_assumption()
 end subroutine without_parallelism_assumption
 
-! CHECK-LABEL: func.func @_QQmain()
-! CHECK-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
-program assumes_parallelism_program
-  implicit none
-  !$omp assumes no_parallelism
-end program assumes_parallelism_program
-
 ! ABSENT-LABEL: func.func {{.*}}assumes_absent
 ! ABSENT-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "absent(barrier),absent(parallel)"]]
 subroutine assumes_absent(x)
@@ -513,7 +512,7 @@ contains
 end module
 
 ! TRUE-MODFILE: module conditional_true
-! TRUE-MODFILE: !$omp assumes no_parallelism{{ *$}}
+! TRUE-MODFILE-NOT: !$omp assumes
 
 module conditional_false
   !$omp assumes no_parallelism(enabled)

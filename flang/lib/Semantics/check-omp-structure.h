@@ -145,6 +145,7 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OmpDeclareSimdDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
   void Enter(const parser::OmpAllocateDirective &);
   void Leave(const parser::OmpAllocateDirective &);
   void Enter(const parser::OmpDeclareMapperDirective &);

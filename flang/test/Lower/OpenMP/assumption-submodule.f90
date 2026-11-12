@@ -3,6 +3,9 @@
 ! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=60 -module-dir %t %t/conditional.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK5X
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK60
+! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=60 -module-dir %t %t/bare.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK60
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK60
 
 submodule (assumes_module) assumes_implementation
 contains
@@ -51,8 +54,7 @@ subroutine uses_reloaded_parallelism()
 end subroutine uses_reloaded_parallelism
 
 ! CHECK-LABEL: func.func {{.*}}uses_reloaded_true
-! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_parallelism"]]
-! CHECK60-NOT: "llvm.assume"
+! CHECK-NOT: "llvm.assume"
 ! CHECK: return
 subroutine uses_reloaded_true()
   use conditional_true, only:
