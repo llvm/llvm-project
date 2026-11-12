@@ -1706,6 +1706,8 @@ void thread_local_var() {
     static __thread int v3;
   }
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
 
 task coro() {

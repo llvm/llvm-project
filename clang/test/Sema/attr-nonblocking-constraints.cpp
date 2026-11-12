@@ -67,6 +67,8 @@ bool tl_test() [[clang::nonblocking]]
 {
 	return tl_var > 0; // expected-warning {{function with 'nonblocking' attribute must not use thread-local variables}}
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
 
 void nb7()

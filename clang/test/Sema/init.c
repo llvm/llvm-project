@@ -249,8 +249,10 @@ void GH198767(void) {
 // FIXME: remove MVS guard when TLS is supported on z/OS wyvern_dev branch
 #ifndef __MVS__
   static __thread static char buffer[128] = {{{}, 0}}; // expected-warning {{duplicate 'static' declaration specifier}} \
-                                                             expected-warning {{too many braces around scalar initializer}} \
-                                                             expected-warning {{excess elements in scalar initializer}}
+                                                              expected-warning {{too many braces around scalar initializer}} \
+                                                              expected-warning {{excess elements in scalar initializer}}
+#else
+  _Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
 }
 

@@ -28,6 +28,8 @@ void bad() {
   template for (static thread_local auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'thread_local'}}
   template for (__thread auto y : {1, 2}); // expected-error {{'__thread' variables must have global storage}}
   template for (static __thread auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
+#else
+  _Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
   template for (constinit auto y : {1, 2}); // expected-error {{local variable cannot be declared 'constinit'}}
   template for (consteval auto y : {1, 2});  // expected-error {{consteval can only be used in function declarations}}
@@ -39,6 +41,8 @@ void bad() {
   template for (int x; static thread_local auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'thread_local'}}
   template for (int x; __thread auto y : {1, 2}); // expected-error {{'__thread' variables must have global storage}}
   template for (int x; static __thread auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
+#else
+  _Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
   template for (int x; constinit auto y : {1, 2}); // expected-error {{local variable cannot be declared 'constinit'}}
   template for (int x; consteval auto y : {1, 2});  // expected-error {{consteval can only be used in function declarations}}

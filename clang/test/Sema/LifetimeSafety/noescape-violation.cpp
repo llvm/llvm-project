@@ -137,11 +137,13 @@ void escape_through_static_local(int *data [[clang::noescape]]) { // expected-wa
 thread_local int *thread_local_storage; // expected-note {{escapes to this global storage}}
 
 void escape_through_thread_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
-  // FIXME: We might want to report whenever anything derived from a 
-  // noescape parameter is assigned to a global, as this is likely 
+  // FIXME: We might want to report whenever anything derived from a
+  // noescape parameter is assigned to a global, as this is likely
   // undesired behavior in most cases.
   thread_local_storage = data;
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
 
 struct ObjConsumer {

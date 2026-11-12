@@ -14,6 +14,10 @@ void func(void) {
   static _Thread_local int tl;   /* compat-warning {{'_Thread_local' is incompatible with C standards before C11}}
                                     ext-warning {{'_Thread_local' is a C11 extension}}
                                   */
+#else
+  _Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests."); /* compat-warning {{'_Static_assert' is incompatible with C standards before C11}}
+                                                                                                  ext-warning {{'_Static_assert' is a C11 extension}}
+                                                                                                */
 #endif
   _Alignas(8) char c;            /* compat-warning {{'_Alignas' is incompatible with C standards before C11}}
                                     ext-warning {{'_Alignas' is a C11 extension}}

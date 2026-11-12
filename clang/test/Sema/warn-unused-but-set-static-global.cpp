@@ -6,6 +6,8 @@
 static thread_local int tl_set_unused;  // expected-warning {{variable 'tl_set_unused' set but not used}}
 static thread_local int tl_set_and_used;
 thread_local int tl_no_static_set_unused;
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
 
 // Warning should respect attributes.
@@ -20,6 +22,8 @@ void f0() {
   (void)x;
 
   tl_no_static_set_unused = 3;
+#else
+  _Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
 #endif
 
   with_maybe_unused = 4;
