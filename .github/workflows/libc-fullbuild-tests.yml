@@ -219,7 +219,6 @@ jobs:
         if [ "${{ matrix.include_scudo }}" = "ON" ]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS
             -DLLVM_LIBC_INCLUDE_SCUDO=ON
-            -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
             -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
             -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF"
         fi
