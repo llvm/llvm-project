@@ -7,7 +7,7 @@ def _workspace_root_impl(ctx):
     """
     return [
         platform_common.TemplateVariableInfo({
-            "WORKSPACE_ROOT": ctx.label.workspace_root,
+            "WORKSPACE_ROOT": ctx.label.workspace_root or ".",
         }),
     ]
 
