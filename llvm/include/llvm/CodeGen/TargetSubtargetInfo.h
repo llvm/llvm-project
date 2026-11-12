@@ -26,12 +26,14 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace llvm {
 
 class APInt;
 class BitVector;
+class CallBase;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -94,9 +96,12 @@ public:
 
   virtual bool isXRaySupported() const { return false; }
 
-  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
-  /// subtarget.
-  bool isIntrinsicSupported(unsigned IntrinsicID) const;
+  /// \returns true if the target intrinsic \p IntrinsicID called by \p CB is
+  /// supported by this subtarget.
+  /// Sets MissingFeatures on static failure; leaves it empty on success or
+  /// when a call-dependent custom check rejects the intrinsic.
+  bool isIntrinsicSupported(unsigned IntrinsicID, const CallBase &CB,
+                            StringRef &MissingFeatures) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -402,9 +407,16 @@ public:
   /// Target features where all mismatches prevent inlining.
   virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
 
+protected:
+  /// Performs the additional call-dependent check requested by \c $custom for
+  /// \p IntrinsicID. Only called after all static feature requirements pass.
+  virtual bool isCustomIntrinsicSupported(unsigned IntrinsicID,
+                                          const CallBase &CB) const;
+
 private:
-  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
-  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
+  /// Cache the static result and its failure reason, never call-dependent
+  /// checks.
+  mutable DenseMap<unsigned, std::pair<bool, StringRef>> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

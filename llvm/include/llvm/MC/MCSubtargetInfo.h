@@ -233,8 +233,12 @@ public:
   /// Check whether the current subtarget satisfies a target feature expression.
   /// The expression uses feature names from the target's subtarget feature
   /// table. Comma means AND, | means OR, comma has higher precedence than |,
-  /// and parentheses group expressions.
-  bool checkFeatureExpression(StringRef FeatureExpr) const;
+  /// and parentheses group expressions. Decided branches are parsed but not
+  /// evaluated. On failure, MissingFeatures references the failed requirement
+  /// in FeatureExpr (the entire disjunction if all alternatives fail);
+  /// otherwise it is cleared.
+  bool checkFeatureExpression(StringRef FeatureExpr,
+                              StringRef &MissingFeatures) const;
 
   /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;

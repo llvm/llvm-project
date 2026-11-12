@@ -40,6 +40,7 @@ class DIFile;
 class DISubprogram;
 class CallInst;
 class Function;
+class FunctionType;
 class Instruction;
 class InstructionCost;
 class Module;
@@ -1133,19 +1134,28 @@ class LLVM_ABI DiagnosticInfoUnsupportedTargetIntrinsic
     : public DiagnosticInfoWithLocationBase {
 private:
   unsigned IntrinsicID;
-  StringRef RequiredFeatures;
+  FunctionType *IntrinsicType;
+  std::optional<StringRef> RequiredFeatures;
 
 public:
-  DiagnosticInfoUnsupportedTargetIntrinsic(
-      const Function &Fn, unsigned IntrinsicID,
-      const DiagnosticLocation &Loc = DiagnosticLocation());
+  DiagnosticInfoUnsupportedTargetIntrinsic(const Function &Fn,
+                                           unsigned IntrinsicID,
+                                           FunctionType *IntrinsicType,
+                                           const DiagnosticLocation &Loc,
+                                           StringRef MissingFeatures);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_UnsupportedTargetIntrinsic;
   }
 
   unsigned getIntrinsicID() const { return IntrinsicID; }
-  StringRef getRequiredFeatures() const { return RequiredFeatures; }
+  FunctionType *getIntrinsicType() const { return IntrinsicType; }
+
+  /// Returns the required feature expression, or \c std::nullopt if support
+  /// is decided by a call-dependent target check.
+  std::optional<StringRef> getRequiredFeatures() const {
+    return RequiredFeatures;
+  }
   std::string getMessage() const;
 
   void print(DiagnosticPrinter &DP) const override;

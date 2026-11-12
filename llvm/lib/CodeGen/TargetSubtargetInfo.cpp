@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -27,17 +28,39 @@ TargetSubtargetInfo::TargetSubtargetInfo(
 
 TargetSubtargetInfo::~TargetSubtargetInfo() = default;
 
-bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
+bool TargetSubtargetInfo::isIntrinsicSupported(
+    unsigned IntrinsicID, const CallBase &CB,
+    StringRef &MissingFeatures) const {
+  MissingFeatures = {};
   StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
       static_cast<Intrinsic::ID>(IntrinsicID));
 
   if (RequiredFeatures.empty())
     return true;
 
+  bool NeedsCustomCheck =
+      RequiredFeatures.consume_back(Intrinsic::CustomTargetFeatures);
+  if (NeedsCustomCheck && !RequiredFeatures.empty() &&
+      (!RequiredFeatures.consume_back(",") || RequiredFeatures.empty()))
+    reportFatalInternalError("$custom must be standalone or follow a comma");
+
   auto [It, Inserted] = IntrinsicSupportCache.try_emplace(IntrinsicID);
-  if (Inserted)
-    It->second = checkFeatureExpression(RequiredFeatures);
-  return It->second;
+  auto &[Result, CachedMissingFeatures] = It->second;
+  if (Inserted) {
+    if (RequiredFeatures.contains(Intrinsic::CustomTargetFeatures))
+      reportFatalInternalError("$custom must be the final term");
+    Result = checkFeatureExpression(RequiredFeatures, CachedMissingFeatures);
+  }
+  if (!Result) {
+    MissingFeatures = CachedMissingFeatures;
+    return false;
+  }
+  return !NeedsCustomCheck || isCustomIntrinsicSupported(IntrinsicID, CB);
+}
+
+bool TargetSubtargetInfo::isCustomIntrinsicSupported(unsigned,
+                                                     const CallBase &) const {
+  return false;
 }
 
 bool TargetSubtargetInfo::enableAtomicExpand() const {

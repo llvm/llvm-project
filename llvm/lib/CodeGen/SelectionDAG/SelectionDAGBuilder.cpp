@@ -5774,11 +5774,13 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
   Intrinsic::ID IntrinsicID = static_cast<Intrinsic::ID>(Intrinsic);
 
+  StringRef MissingFeatures;
   if (!DAG.getMachineFunction().getSubtarget().isIntrinsicSupported(
-          Intrinsic)) {
+          Intrinsic, I, MissingFeatures)) {
     SDLoc DL = getCurSDLoc();
     DAG.getContext()->diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
-        *I.getFunction(), IntrinsicID, DL.getDebugLoc()));
+        *I.getFunction(), IntrinsicID, I.getFunctionType(), DL.getDebugLoc(),
+        MissingFeatures));
 
     // The intrinsic is not available on this subtarget. Preserve the chain for
     // side-effecting intrinsics and lower any result to poison so that

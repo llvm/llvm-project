@@ -343,7 +343,8 @@ class IRTranslatorImpl {
   /// Report an intrinsic the subtarget does not support and define its results
   /// with G_IMPLICIT_DEF. Prevents creating a malformed MIR.
   bool handleUnsupportedIntrinsic(const CallBase &CB, Intrinsic::ID ID,
-                                  MachineIRBuilder &MIRBuilder);
+                                  MachineIRBuilder &MIRBuilder,
+                                  StringRef MissingFeatures);
 
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
@@ -3654,8 +3655,9 @@ bool IRTranslatorImpl::translateCall(const User &U,
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
-  if (!MF->getSubtarget().isIntrinsicSupported(ID))
-    return handleUnsupportedIntrinsic(CI, ID, MIRBuilder);
+  StringRef MissingFeatures;
+  if (!MF->getSubtarget().isIntrinsicSupported(ID, CI, MissingFeatures))
+    return handleUnsupportedIntrinsic(CI, ID, MIRBuilder, MissingFeatures);
 
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
@@ -3666,11 +3668,13 @@ bool IRTranslatorImpl::translateCall(const User &U,
   return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
-bool IRTranslatorImpl::handleUnsupportedIntrinsic(
-    const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder) {
+bool IRTranslatorImpl::handleUnsupportedIntrinsic(const CallBase &CB,
+                                                  Intrinsic::ID ID,
+                                                  MachineIRBuilder &MIRBuilder,
+                                                  StringRef MissingFeatures) {
   const Function &F = MF->getFunction();
-  F.getContext().diagnose(
-      DiagnosticInfoUnsupportedTargetIntrinsic(F, ID, CB.getDebugLoc()));
+  F.getContext().diagnose(DiagnosticInfoUnsupportedTargetIntrinsic(
+      F, ID, CB.getFunctionType(), CB.getDebugLoc(), MissingFeatures));
 
   if (!CB.getType()->isVoidTy()) {
     for (Register Reg : getOrCreateVRegs(CB))
@@ -3684,8 +3688,9 @@ bool IRTranslatorImpl::handleUnsupportedIntrinsic(
 bool IRTranslatorImpl::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
     ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
-  if (!MF->getSubtarget().isIntrinsicSupported(ID))
-    return handleUnsupportedIntrinsic(CB, ID, MIRBuilder);
+  StringRef MissingFeatures;
+  if (!MF->getSubtarget().isIntrinsicSupported(ID, CB, MissingFeatures))
+    return handleUnsupportedIntrinsic(CB, ID, MIRBuilder, MissingFeatures);
 
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())
