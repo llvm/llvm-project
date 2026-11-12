@@ -152,7 +152,7 @@ public:
 
   Fortran::semantics::SemanticsContext &createNewSemanticsContext() {
     semaContext =
-        getInvocation().getSemanticsCtx(*allCookedSources, getTargetMachine());
+        getInvocation().getSemanticsCtx(*allCookedSources, getTargetFeatures());
     return *semaContext;
   }
 
@@ -287,15 +287,7 @@ public:
   /// @name Target Machine
   /// {
 
-  /// Get the target machine.
-  const llvm::TargetMachine &getTargetMachine() const {
-    assert(targetMachine && "target machine was not set");
-    return *targetMachine;
-  }
-  llvm::TargetMachine &getTargetMachine() {
-    assert(targetMachine && "target machine was not set");
-    return *targetMachine;
-  }
+  llvm::TargetMachine *getTargetMachineOrNull() { return targetMachine.get(); }
 
   /// Sets up LLVM's TargetMachine.
   bool setUpTargetMachine();

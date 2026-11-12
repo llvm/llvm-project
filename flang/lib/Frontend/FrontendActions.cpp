@@ -218,7 +218,7 @@ bool CodeGenAction::beginSourceFileAction() {
   fir::omp::registerOpenMPExtensions(registry);
   mlirCtx->appendDialectRegistry(registry);
 
-  const llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
 
   // If the input is an MLIR file, just parse it and return.
   if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
@@ -237,8 +237,8 @@ bool CodeGenAction::beginSourceFileAction() {
     }
 
     mlirModule = std::move(module);
-    const llvm::DataLayout dl(targetMachine.getTargetTriple().computeDataLayout(
-        ci.getInvocation().getTargetOpts().abi));
+    const llvm::DataLayout dl(
+        llvm::Triple(targetOpts.triple).computeDataLayout(targetOpts.abi));
     fir::support::setMLIRDataLayout(*mlirModule, dl);
     return true;
   }
@@ -277,7 +277,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getTargetOpts().triple, kindMap,
       ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
-      ci.getInvocation().getFrontendOpts().features, targetMachine,
+      ci.getInvocation().getFrontendOpts().features, ci.getTargetFeatures(),
       ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
@@ -970,7 +970,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   const CodeGenOptions &opts = ci.getInvocation().getCodeGenOpts();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
-  llvm::TargetMachine *targetMachine = &ci.getTargetMachine();
+  llvm::TargetMachine *targetMachine = ci.getTargetMachineOrNull();
   // Create the analysis managers.
   llvm::LoopAnalysisManager lam;
   llvm::FunctionAnalysisManager fam;
@@ -1055,8 +1055,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        targetMachine->Options.MCOptions.ABIName,
-        targetMachine->Options.VecLib);
+        targetMachine ? targetMachine->Options.MCOptions.ABIName
+                      : ci.getInvocation().getTargetOpts().abi,
+        convertDriverVectorLibraryToVectorLibrary(opts.getVecLib()));
   });
 
   // Register all the basic analyses with the managers.
@@ -1430,17 +1431,17 @@ void CodeGenAction::executeAction() {
   if (!llvmModule)
     return;
 
-  // Set the triple based on the targetmachine (this comes compiler invocation
-  // and the command-line target option if specified, or the default if not
-  // given on the command-line).
-  llvm::TargetMachine &targetMachine = ci.getTargetMachine();
+  // Use the target triple from the compiler invocation.
+  llvm::TargetMachine *targetMachine = ci.getTargetMachineOrNull();
+  if (targetMachine) {
+    targetMachine->Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
+    targetMachine->Options.MCOptions.SplitDwarfFile =
+        codeGenOpts.SplitDwarfFile;
+    targetMachine->Options.MCOptions.CompressDebugSections =
+        codeGenOpts.getCompressDebugSections();
+  }
 
-  targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
-  targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
-  targetMachine.Options.MCOptions.CompressDebugSections =
-      codeGenOpts.getCompressDebugSections();
-
-  const llvm::Triple &theTriple = targetMachine.getTargetTriple();
+  const llvm::Triple theTriple(targetOpts.triple);
 
   if (llvmModule->getTargetTriple() != theTriple) {
     diags.Report(clang::diag::warn_fe_override_module) << theTriple.str();
@@ -1504,7 +1505,7 @@ void CodeGenAction::executeAction() {
   if (action == BackendActionTy::Backend_EmitAssembly ||
       action == BackendActionTy::Backend_EmitObj) {
     generateMachineCodeOrAssemblyImpl(
-        ci, diags, targetMachine, action, *llvmModule, codeGenOpts,
+        ci, diags, *targetMachine, action, *llvmModule, codeGenOpts,
         ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     if (timingMgr.isEnabled())
       llvm::reportAndResetTimings(&ci.getTimingStreamCodeGen());
