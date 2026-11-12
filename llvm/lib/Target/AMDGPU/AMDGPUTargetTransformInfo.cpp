@@ -1305,23 +1305,18 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
     // one subregister. A loaded lane lands in place, and arguments and
     // constants are already in a register, so both are free. A computed value
-    // with one scalar user, the operation being vectorized, is defined
-    // straight into its lane. With a second scalar user the value's users
-    // split between packed and scalar code: lanes have to move between pairs,
-    // and the producer cannot contract into an FMA on either side, so charge
-    // a v_mov_b32. Insertelement users are buildvectors SLP has already
-    // emitted and do not count. SLP prices a buildvector root with the
-    // insertelements themselves as Op1, and those lanes need no packing
-    // either. Only throughput sees the move; size-based users such as the
-    // inliner and the unroller keep inserts free.
+    // whose only user is the operation being vectorized is defined straight
+    // into its lane. If it also has a scalar user, its users split between
+    // packed and scalar code: lanes have to move between pairs, and the
+    // producer cannot contract into an FMA on either side, so charge a
+    // v_mov_b32. The vectorizer reports this with HasScalarUser, where users
+    // folded into the vector code do not count. Only throughput sees the move;
+    // size-based users such as the inliner and the unroller keep inserts free.
     auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
-    const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
-    auto IsScalarUse = [](const User *U) { return !isa<InsertElementInst>(U); };
     if (Opcode == Instruction::InsertElement && EltSize == 32 &&
         CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
-        InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
-        !isa<LoadInst, InsertElementInst>(InsertedInst) &&
-        count_if(InsertedInst->users(), IsScalarUse) > 1)
+        VecTy && VecTy->getElementType()->isFloatTy() &&
+        VIC == TTI::VectorInstrContext::HasScalarUser)
       return getFullRateInstrCost();
 
     // Extracts are just reads of a subregister, so are free. Inserts are
