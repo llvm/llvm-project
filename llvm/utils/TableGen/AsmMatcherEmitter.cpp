@@ -2190,6 +2190,17 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
   // Register classes with CoerceFromRegClass that need a conversion function.
   SmallSetVector<const Record *, 8> CoercedRegClasses;
+  auto emitCoercedRegOperand = [&](const Record *RC, unsigned Indent) {
+    CoercedRegClasses.insert(RC);
+    CvtOS << indent(Indent) << "MCRegister Reg = Operands[OpIdx]->getReg();\n"
+          << indent(Indent) << "if (!get" << Target.getName()
+          << "MCRegisterClass("
+          << Target.getRegBank().getRegClass(RC)->getQualifiedIdName()
+          << ").contains(Reg))\n"
+          << indent(Indent + 2) << "Reg = convertTo" << RC->getName()
+          << "(Reg);\n"
+          << indent(Indent) << "Inst.addOperand(MCOperand::createReg(Reg));\n";
+  };
 
   for (auto &II : Info.Matchables) {
     // Check if we have a custom match function.
@@ -2242,12 +2253,23 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         const Record *RegClass = Op.getRegClass();
         bool HasRegCoercion =
             RegClass && Info.RegConversions.contains(RegClass);
+        // For RegClassByHwMode operands: the HwModes that select a register
+        // class that needs coercion.
+        SmallVector<std::pair<unsigned, const Record *>, 0> HwModeCoercions;
+        if (RegClass && RegClass->isSubClassOf("RegClassByHwMode"))
+          for (auto [ModeId, ModeRC] :
+               Target.getHwModes().getHwModeSelect(RegClass).Items)
+            if (Info.RegConversions.contains(ModeRC))
+              HwModeCoercions.emplace_back(ModeId, ModeRC);
         // Registers are always converted the same unless they need to be
         // coerced, don't duplicate the conversion function based on them.
         std::string Class;
         std::string Name = "CVT_";
         if (HasRegCoercion) {
           Class = RegClass->getName().str();
+          Name += "convertTo" + Class;
+        } else if (!HwModeCoercions.empty()) {
+          Class = Op.Class->ClassName;
           Name += "convertTo" + Class;
         } else if (Op.Class->isRegisterClass()) {
           Class = "Reg";
@@ -2299,14 +2321,27 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                 << "      }\n";
         } else if (HasRegCoercion) {
           assert(OpInfo.MINumOperands == 1 && "Expected a single register");
-          CoercedRegClasses.insert(RegClass);
-          CvtOS
-              << "      MCRegister Reg = Operands[OpIdx]->getReg();\n"
-              << "      if (!get" << Target.getName() << "MCRegisterClass("
-              << Target.getRegBank().getRegClass(RegClass)->getQualifiedIdName()
-              << ").contains(Reg))\n"
-              << "        Reg = convertTo" << Class << "(Reg);\n"
-              << "      Inst.addOperand(MCOperand::createReg(Reg));\n";
+          emitCoercedRegOperand(RegClass, 6);
+        } else if (!HwModeCoercions.empty()) {
+          // Only convert the register in the HwModes that need it.
+          assert(OpInfo.MINumOperands == 1 && "Expected a single register");
+          CvtOS << "      switch "
+                   "(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {\n";
+          for (auto [ModeId, ModeRC] : HwModeCoercions) {
+            CvtOS << "      case " << ModeId << ": { // "
+                  << Target.getHwModes().getModeName(ModeId,
+                                                     /*IncludeDefault=*/true)
+                  << "\n";
+            emitCoercedRegOperand(ModeRC, 8);
+            CvtOS << "        break;\n"
+                  << "      }\n";
+          }
+          CvtOS << "      default:\n"
+                << "        static_cast<" << TargetOperandClass
+                << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << "(Inst, 1);\n"
+                << "        break;\n"
+                << "      }\n";
         } else {
           CvtOS << "      static_cast<" << TargetOperandClass
                 << " &>(*Operands[OpIdx])." << Op.Class->RenderMethod

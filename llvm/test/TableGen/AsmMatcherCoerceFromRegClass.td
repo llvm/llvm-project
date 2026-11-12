@@ -42,6 +42,12 @@ def VRM2 : RegisterClass<"Arch", [v4i32], 128, (add V0M2, V2M2)> {
   let CoerceFromRegClass = VR;
 }
 
+/// Registers are only converted in the HwModes that select a class with
+/// CoerceFromRegClass.
+def IsCapMode : Predicate<"Subtarget->hasCapMode()">;
+def CapMode : HwMode<[IsCapMode]>;
+def PtrRC : RegClassByHwMode<[DefaultMode, CapMode], [GPR, YGPR]>;
+
 let Namespace = "Arch" in {
 def InstAnyGPR : Instruction {
   let OutOperandList = (outs AnyGPR:$rd);
@@ -59,6 +65,12 @@ def InstVRM2 : Instruction {
   let OutOperandList = (outs VRM2:$vd);
   let InOperandList = (ins VR:$vs);
   let AsmString = "vinst $vd, $vs";
+}
+
+def InstPtr : Instruction {
+  let OutOperandList = (outs GPR:$rd);
+  let InOperandList = (ins PtrRC:$ptr);
+  let AsmString = "zinst $rd, $ptr";
 }
 }
 
@@ -103,6 +115,20 @@ def BadRC : RegisterClass<"Arch", [i64], 64, (add R0_Y, R0)> {
 // CHECK-NEXT:    Inst.addOperand(MCOperand::createReg(Reg));
 // CHECK-NEXT:    break;
 // CHECK-NEXT:  }
+// CHECK-NEXT:  case CVT_95_convertToRegByHwMode_95_PtrRC:
+// CHECK-NEXT:    switch (STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
+// CHECK-NEXT:    case 1: { // CapMode
+// CHECK-NEXT:      MCRegister Reg = Operands[OpIdx]->getReg();
+// CHECK-NEXT:      if (!getArchMCRegisterClass(Arch::YGPRRegClassID).contains(Reg))
+// CHECK-NEXT:        Reg = convertToYGPR(Reg);
+// CHECK-NEXT:      Inst.addOperand(MCOperand::createReg(Reg));
+// CHECK-NEXT:      break;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    default:
+// CHECK-NEXT:      static_cast<ArchOperand &>(*Operands[OpIdx]).addRegOperands(Inst, 1);
+// CHECK-NEXT:      break;
+// CHECK-NEXT:    }
+// CHECK-NEXT:    break;
 
 /// Coerced YGPR and AnyGPR share MCK_AnyGPR because they match the same set of
 /// registers, whereas VRM2 gets its own MCK_VRM2 ({V0M2, V2M2, V0, V2}).
