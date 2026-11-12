@@ -19,6 +19,9 @@
 
 namespace llvm {
 class TargetMachine;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 } // namespace llvm
 
 namespace mlir {
@@ -27,6 +30,10 @@ class ModuleTranslation;
 /// Utility base class for transforming operations into binary objects, by
 /// default it returns the serialized LLVM bitcode for the module. The
 /// operations being transformed must be translatable into LLVM IR.
+///
+/// The target machine uses the library options that `setupLLVMContext` or
+/// `initialLlvmIRCallback` set on the LLVM context, and the global library
+/// options if they set none.
 class ModuleToObject {
 public:
   ModuleToObject(
@@ -86,7 +93,8 @@ protected:
 
 protected:
   /// Create the target machine based on the target triple and chip.
-  /// This can fail if the target is not available.
+  /// This can fail if the target is not available. A target machine created
+  /// during `run` is only valid until `run` returns.
   FailureOr<llvm::TargetMachine *> getOrCreateTargetMachine();
 
   /// Loads a bitcode file from path.
@@ -126,7 +134,8 @@ protected:
   /// Optimization level.
   int optLevel;
 
-  /// Callback invoked with the initial LLVM IR for the device module.
+  /// Callback invoked with the initial LLVM IR for the device module, before
+  /// the target machine is created.
   function_ref<void(llvm::Module &)> initialLlvmIRCallback;
 
   /// Callback invoked with LLVM IR for the device module after
@@ -145,6 +154,9 @@ private:
   /// The TargetMachine created for the given Triple, if available.
   /// Accessible through `getOrCreateTargetMachine()`.
   std::unique_ptr<llvm::TargetMachine> targetMachine;
+
+  /// The library options of the LLVM context during `run`, null otherwise.
+  const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr;
 };
 } // namespace LLVM
 } // namespace mlir
