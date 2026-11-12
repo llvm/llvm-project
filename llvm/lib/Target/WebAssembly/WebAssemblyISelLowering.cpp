@@ -3091,34 +3091,8 @@ performVectorNonNegToFPCombine(SDNode *N,
   return SDValue();
 }
 
-// Helper to extract VectorWidth bits from Vec, starting from IdxVal.
-static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
-                                const SDLoc &DL, unsigned VectorWidth) {
-  EVT VT = Vec.getValueType();
-  EVT ElVT = VT.getVectorElementType();
-  unsigned Factor = VT.getSizeInBits() / VectorWidth;
-  EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT,
-                                  VT.getVectorNumElements() / Factor);
-
-  // Extract the relevant VectorWidth bits.  Generate an EXTRACT_SUBVECTOR
-  unsigned ElemsPerChunk = VectorWidth / ElVT.getSizeInBits();
-  assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
-
-  // This is the index of the first element of the VectorWidth-bit chunk
-  // we want. Since ElemsPerChunk is a power of 2 just need to clear bits.
-  IdxVal &= ~(ElemsPerChunk - 1);
-
-  // If the input is a buildvector just emit a smaller one.
-  if (Vec.getOpcode() == ISD::BUILD_VECTOR)
-    return DAG.getBuildVector(ResultVT, DL,
-                              Vec->ops().slice(IdxVal, ElemsPerChunk));
-
-  SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, DL);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, VecIdx);
-}
-
-SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
-                          SelectionDAG &DAG) {
+static SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
+                                 SelectionDAG &DAG) {
   SDLoc DL(In);
   LLVMContext &Ctx = *DAG.getContext();
   EVT InVT = In.getValueType();
@@ -3165,8 +3139,8 @@ static SDValue ExtendLowAndHigh(SDValue Input, bool IsSext, EVT SrcVT,
   }
 }
 
-SDValue performVectorExtendCombine(SDNode *N,
-                                   TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue
+performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
          N->getOpcode() == ISD::ZERO_EXTEND);
@@ -3361,6 +3335,32 @@ performVectorTruncZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   unsigned Op = GetWasmConversionOp(ConversionOp);
   return DAG.getNode(Op, SDLoc(N), ResVT, Concat.getOperand(0));
+}
+
+// Helper to extract VectorWidth bits from Vec, starting from IdxVal.
+static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
+                                const SDLoc &DL, unsigned VectorWidth) {
+  EVT VT = Vec.getValueType();
+  EVT ElVT = VT.getVectorElementType();
+  unsigned Factor = VT.getSizeInBits() / VectorWidth;
+  EVT ResultVT = EVT::getVectorVT(*DAG.getContext(), ElVT,
+                                  VT.getVectorNumElements() / Factor);
+
+  // Extract the relevant VectorWidth bits.  Generate an EXTRACT_SUBVECTOR
+  unsigned ElemsPerChunk = VectorWidth / ElVT.getSizeInBits();
+  assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
+
+  // This is the index of the first element of the VectorWidth-bit chunk
+  // we want. Since ElemsPerChunk is a power of 2 just need to clear bits.
+  IdxVal &= ~(ElemsPerChunk - 1);
+
+  // If the input is a buildvector just emit a smaller one.
+  if (Vec.getOpcode() == ISD::BUILD_VECTOR)
+    return DAG.getBuildVector(ResultVT, DL,
+                              Vec->ops().slice(IdxVal, ElemsPerChunk));
+
+  SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, DL);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResultVT, Vec, VecIdx);
 }
 
 // Helper to recursively truncate vector elements in half with NARROW_U. DstVT
@@ -3851,7 +3851,7 @@ static SDValue performSETCCCombine(SDNode *N,
 
 static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::v4i32)
+  if (VT != MVT::v4i32 && VT != MVT::v8i32 && VT != MVT::v16i32)
     return SDValue();
 
   // Mul with extending inputs.
@@ -3868,7 +3868,8 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   EVT FromVT = LHS->getOperand(0).getValueType();
-  if (FromVT != MVT::v4i8)
+  EVT EltTy = FromVT.getVectorElementType();
+  if (EltTy != MVT::i8)
     return SDValue();
 
   // For an input DAG that looks like this
@@ -3879,26 +3880,68 @@ static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   // %mul = mul %lhs, %rhs
 
   // input_type | output_type | instructions
+  // v16i8      | v16i32      | %low = i16x8.extmul_low_i8x16_ %a, %b
+  //            |             | %high = i16x8.extmul_high_i8x16_, %a, %b
+  //            |             | %low_low = i32x4.ext_low_i16x8_ %low
+  //            |             | %low_high = i32x4.ext_high_i16x8_ %low
+  //            |             | %high_low = i32x4.ext_low_i16x8_ %high
+  //            |             | %high_high = i32x4.ext_high_i16x8_ %high
+  //            |             | %res = concat_vector(...)
+  // v8i8       | v8i32       | %low = i16x8.extmul_low_i8x16_ %a, %b
+  //            |             | %low_low = i32x4.ext_low_i16x8_ %low
+  //            |             | %low_high = i32x4.ext_high_i16x8_ %low
+  //            |             | %res = concat_vector(%low_low, %low_high)
   // v4i8       | v4i32       | %low = i16x8.extmul_low_i8x16_ %a, %b
   //                          | %res = i32x4.ext_low_i16x8_ %low
 
   SDLoc DL(N);
+  unsigned NumElts = VT.getVectorNumElements();
   SDValue ExtendInLHS = LHS->getOperand(0);
   SDValue ExtendInRHS = RHS->getOperand(0);
   bool IsSigned = LHS->getOpcode() == ISD::SIGN_EXTEND;
   unsigned ExtendLowOpc =
       IsSigned ? WebAssemblyISD::EXTEND_LOW_S : WebAssemblyISD::EXTEND_LOW_U;
+  unsigned ExtendHighOpc =
+      IsSigned ? WebAssemblyISD::EXTEND_HIGH_S : WebAssemblyISD::EXTEND_HIGH_U;
 
   auto GetExtendLow = [&DAG, &DL, &ExtendLowOpc](EVT VT, SDValue Op) {
     return DAG.getNode(ExtendLowOpc, DL, VT, Op);
   };
+  auto GetExtendHigh = [&DAG, &DL, &ExtendHighOpc](EVT VT, SDValue Op) {
+    return DAG.getNode(ExtendHighOpc, DL, VT, Op);
+  };
 
-  SDValue LowLHS =
-      GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInLHS, 16, DAG));
-  SDValue LowRHS =
-      GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInRHS, 16, DAG));
-  SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
-  return GetExtendLow(MVT::v4i32, MulLow);
+  if (NumElts == 16) {
+    SDValue LowLHS = GetExtendLow(MVT::v8i16, ExtendInLHS);
+    SDValue LowRHS = GetExtendLow(MVT::v8i16, ExtendInRHS);
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    SDValue HighLHS = GetExtendHigh(MVT::v8i16, ExtendInLHS);
+    SDValue HighRHS = GetExtendHigh(MVT::v8i16, ExtendInRHS);
+    SDValue MulHigh = DAG.getNode(ISD::MUL, DL, MVT::v8i16, HighLHS, HighRHS);
+    SDValue SubVectors[] = {
+        GetExtendLow(MVT::v4i32, MulLow),
+        GetExtendHigh(MVT::v4i32, MulLow),
+        GetExtendLow(MVT::v4i32, MulHigh),
+        GetExtendHigh(MVT::v4i32, MulHigh),
+    };
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubVectors);
+  } else if (NumElts == 8) {
+    SDValue LowLHS = DAG.getNode(LHS->getOpcode(), DL, MVT::v8i16, ExtendInLHS);
+    SDValue LowRHS = DAG.getNode(RHS->getOpcode(), DL, MVT::v8i16, ExtendInRHS);
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    SDValue Lo = GetExtendLow(MVT::v4i32, MulLow);
+    SDValue Hi = GetExtendHigh(MVT::v4i32, MulLow);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  } else {
+    assert(NumElts == 4);
+    SDValue LowLHS =
+        GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInLHS, 16, DAG));
+    SDValue LowRHS =
+        GetExtendLow(MVT::v8i16, DoubleVectorWidth(ExtendInRHS, 16, DAG));
+    SDValue MulLow = DAG.getNode(ISD::MUL, DL, MVT::v8i16, LowLHS, LowRHS);
+    return GetExtendLow(MVT::v4i32, MulLow);
+  }
+  return SDValue();
 }
 
 static SDValue performMulCombine(SDNode *N,
