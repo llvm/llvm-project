@@ -166,7 +166,7 @@ define void @clone_disjoint_domain_undeclared_scope(ptr %p, i1 %c) {
 ; CHECK-NEXT:    ret void
 ; CHECK:       fb:
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META14]])
-; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !alias.scope [[META23:![0-9]+]]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !alias.scope [[META24:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -227,6 +227,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 ; CHECK: [[META19]] = !{[[META20:![0-9]+]]}
 ; CHECK: [[META20]] = distinct !{[[META20]], [[META21:![0-9]+]], !"disjoint scope1:thread"}
 ; CHECK: [[META21]] = distinct !{[[META21]], i1 true, !"disjoint domain"}
-; CHECK: [[META22]] = !{[[META20]], [[META18]]}
-; CHECK: [[META23]] = !{[[META15]], [[META18]]}
+; CHECK: [[META22]] = !{[[META20]], [[META23:![0-9]+]]}
+; CHECK: [[META23]] = distinct !{[[META23]], [[META21]], !"disjoint scope2:thread"}
+; CHECK: [[META24]] = !{[[META15]], [[META18]]}
 ;.

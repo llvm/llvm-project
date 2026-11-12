@@ -1155,24 +1155,29 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
   return NewBB;
 }
 
+/// Create a clone of the scope \p SNANode in \p Domain, whose name is that of
+/// the original scope extended with \p Ext.
+static MDNode *createClonedScope(AliasScopeNode SNANode, MDNode *Domain,
+                                 StringRef Ext, MDBuilder &MDB) {
+  std::string Name;
+  auto ScopeName = SNANode.getName();
+  if (!ScopeName.empty())
+    Name = (Twine(ScopeName) + ":" + Ext).str();
+  else
+    Name = std::string(Ext);
+  return MDB.createAnonymousAliasScope(Domain, Name);
+}
+
 void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                               DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                              DenseMap<const MDNode *, MDNode *> &ClonedDomains,
                               StringRef Ext, LLVMContext &Context) {
   MDBuilder MDB(Context);
-
-  DenseMap<const MDNode *, MDNode *> ClonedDomains;
 
   for (MDNode *ScopeList : NoAliasDeclScopes) {
     for (const MDOperand &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
         AliasScopeNode SNANode(MD);
-
-        std::string Name;
-        auto ScopeName = SNANode.getName();
-        if (!ScopeName.empty())
-          Name = (Twine(ScopeName) + ":" + Ext).str();
-        else
-          Name = std::string(Ext);
 
         // A cloned scope has to go into a clone of its domain if that domain
         // has disjoint scopes: the copies of a duplicated access are in the
@@ -1189,22 +1194,35 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
           NewDomain = ClonedDomain;
         }
 
-        MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
-        ClonedScopes.insert(std::make_pair(MD, NewScope));
+        ClonedScopes.insert(std::make_pair(
+            MD, createClonedScope(SNANode, NewDomain, Ext, MDB)));
       }
     }
   }
 }
 
-void llvm::adaptNoAliasScopes(Instruction *I,
-                              const DenseMap<MDNode *, MDNode *> &ClonedScopes,
-                              LLVMContext &Context) {
+void llvm::adaptNoAliasScopes(
+    Instruction *I, DenseMap<MDNode *, MDNode *> &ClonedScopes,
+    const DenseMap<const MDNode *, MDNode *> &ClonedDomains, StringRef Ext,
+    LLVMContext &Context) {
+  MDBuilder MDB(Context);
+
   auto CloneScopeList = [&](const MDNode *ScopeList) -> MDNode * {
     bool NeedsReplacement = false;
     SmallVector<Metadata *, 8> NewScopeList;
     for (const MDOperand &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
-        if (auto *NewMD = ClonedScopes.lookup(MD)) {
+        MDNode *NewMD = ClonedScopes.lookup(MD);
+        // Undeclared scopes must follow their domain: a list split across the
+        // original and cloned domains can be wrongly considered noalias.
+        if (!NewMD && !ClonedDomains.empty()) {
+          AliasScopeNode SNANode(MD);
+          if (MDNode *NewDomain = ClonedDomains.lookup(SNANode.getDomain())) {
+            NewMD = createClonedScope(SNANode, NewDomain, Ext, MDB);
+            ClonedScopes[MD] = NewMD;
+          }
+        }
+        if (NewMD) {
           NewScopeList.push_back(NewMD);
           NeedsReplacement = true;
           continue;
@@ -1237,14 +1255,16 @@ void llvm::cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
     return;
 
   DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
   LLVM_DEBUG(dbgs() << "cloneAndAdaptNoAliasScopes: cloning "
                     << NoAliasDeclScopes.size() << " node(s)\n");
 
-  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, Ext, Context);
+  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, ClonedDomains, Ext,
+                     Context);
   // Identify instructions using metadata that needs adaptation
   for (BasicBlock *NewBlock : NewBlocks)
     for (Instruction &I : *NewBlock)
-      adaptNoAliasScopes(&I, ClonedScopes, Context);
+      adaptNoAliasScopes(&I, ClonedScopes, ClonedDomains, Ext, Context);
 }
 
 void llvm::cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
@@ -1254,17 +1274,19 @@ void llvm::cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
     return;
 
   DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
   LLVM_DEBUG(dbgs() << "cloneAndAdaptNoAliasScopes: cloning "
                     << NoAliasDeclScopes.size() << " node(s)\n");
 
-  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, Ext, Context);
+  cloneNoAliasScopes(NoAliasDeclScopes, ClonedScopes, ClonedDomains, Ext,
+                     Context);
   // Identify instructions using metadata that needs adaptation
   assert(IStart->getParent() == IEnd->getParent() && "different basic block ?");
   auto ItStart = IStart->getIterator();
   auto ItEnd = IEnd->getIterator();
   ++ItEnd; // IEnd is included, increment ItEnd to get the end of the range
   for (auto &I : llvm::make_range(ItStart, ItEnd))
-    adaptNoAliasScopes(&I, ClonedScopes, Context);
+    adaptNoAliasScopes(&I, ClonedScopes, ClonedDomains, Ext, Context);
 }
 
 void llvm::identifyNoAliasScopesToClone(
