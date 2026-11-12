@@ -443,6 +443,7 @@ static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
   const Function &F = *CtxI.getFunction();
   // Speculative load may create a race that did not exist in the source.
   return F.hasFnAttribute(Attribute::SanitizeThread) ||
+         F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
          // Speculative load may load data from dirty regions.
          F.hasFnAttribute(Attribute::SanitizeAddress) ||
          F.hasFnAttribute(Attribute::SanitizeHWAddress);
@@ -975,7 +976,7 @@ bool llvm::isReadOnlyLoop(
 }
 
 LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
-                                                 Value *Ptr) {
+                                                 Value *const Ptr) {
   assert(Ptr->getType()->isPointerTy() && "Must be called with pointer arg");
 
   unsigned BitWidth = DL.getIndexTypeSizeInBits(Ptr->getType());
@@ -1004,7 +1005,9 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
     // We have verified that we can fully handle this GEP, so we can update Expr
     // members past this point.
     Expr.BasePtr = GEP->getPointerOperand();
-    Expr.Flags = Expr.Flags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+    Expr.Flags = GEP == Ptr
+                     ? GEP->getNoWrapFlags()
+                     : Expr.Flags.intersectForOffsetAdd(GEP->getNoWrapFlags());
 
     // Try to look through mul and shl
     APInt IndexScale(BitWidth, 1);

@@ -230,6 +230,83 @@ define i2 @v2i16(<2 x i16> %a, <2 x i16> %b) {
   ret i2 %res
 }
 
+define i3 @bitcast_v3i16(<3 x i16> %a, <3 x i16> %b) {
+; SSE2-SSSE3-LABEL: bitcast_v3i16:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    movd %ecx, %xmm0
+; SSE2-SSSE3-NEXT:    pinsrw $1, %r8d, %xmm0
+; SSE2-SSSE3-NEXT:    pinsrw $2, %r9d, %xmm0
+; SSE2-SSSE3-NEXT:    movd %edi, %xmm1
+; SSE2-SSSE3-NEXT:    pinsrw $1, %esi, %xmm1
+; SSE2-SSSE3-NEXT:    pinsrw $2, %edx, %xmm1
+; SSE2-SSSE3-NEXT:    pcmpgtw %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    movd %xmm1, %ecx
+; SSE2-SSSE3-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-SSSE3-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
+; SSE2-SSSE3-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-SSSE3-NEXT:    andb $1, %dl
+; SSE2-SSSE3-NEXT:    addb %dl, %dl
+; SSE2-SSSE3-NEXT:    subb %cl, %dl
+; SSE2-SSSE3-NEXT:    andb $1, %al
+; SSE2-SSSE3-NEXT:    shlb $2, %al
+; SSE2-SSSE3-NEXT:    orb %dl, %al
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: bitcast_v3i16:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vmovd %ecx, %xmm0
+; AVX12-NEXT:    vpinsrw $1, %r8d, %xmm0, %xmm0
+; AVX12-NEXT:    vpinsrw $2, %r9d, %xmm0, %xmm0
+; AVX12-NEXT:    vmovd %edi, %xmm1
+; AVX12-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; AVX12-NEXT:    vpinsrw $2, %edx, %xmm1, %xmm1
+; AVX12-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; AVX12-NEXT:    vmovd %xmm0, %eax
+; AVX12-NEXT:    vpextrb $2, %xmm0, %ecx
+; AVX12-NEXT:    andb $1, %cl
+; AVX12-NEXT:    addb %cl, %cl
+; AVX12-NEXT:    subb %al, %cl
+; AVX12-NEXT:    vpextrb $4, %xmm0, %eax
+; AVX12-NEXT:    andb $1, %al
+; AVX12-NEXT:    shlb $2, %al
+; AVX12-NEXT:    orb %cl, %al
+; AVX12-NEXT:    # kill: def $al killed $al killed $eax
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: bitcast_v3i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovd %ecx, %xmm0
+; AVX512F-NEXT:    vpinsrw $1, %r8d, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrw $2, %r9d, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovd %edi, %xmm1
+; AVX512F-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; AVX512F-NEXT:    vpinsrw $2, %edx, %xmm1, %xmm1
+; AVX512F-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX512F-NEXT:    vptestmd %ymm0, %ymm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: bitcast_v3i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vmovd %ecx, %xmm0
+; AVX512BW-NEXT:    vpinsrw $1, %r8d, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpinsrw $2, %r9d, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %edi, %xmm1
+; AVX512BW-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $2, %edx, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpcmpgtw %xmm0, %xmm1, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+  %c = icmp sgt <3 x i16> %a, %b
+  %r = bitcast <3 x i1> %c to i3
+  ret i3 %r
+}
+
 define i2 @v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; SSE2-SSSE3-LABEL: v2i32:
 ; SSE2-SSSE3:       # %bb.0:
@@ -263,6 +340,39 @@ define i2 @v2i32(<2 x i32> %a, <2 x i32> %b) {
   %x = icmp sgt <2 x i32> %a, %b
   %res = bitcast <2 x i1> %x to i2
   ret i2 %res
+}
+
+define i3 @bitcast_v3i32(<3 x i32> %a, <3 x i32> %b) {
+; SSE2-SSSE3-LABEL: bitcast_v3i32:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movmskps %xmm0, %eax
+; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX12-LABEL: bitcast_v3i32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
+; AVX12-NEXT:    vmovmskps %xmm0, %eax
+; AVX12-NEXT:    # kill: def $al killed $al killed $eax
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: bitcast_v3i32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
+; AVX512F-NEXT:    kmovw %k0, %eax
+; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: bitcast_v3i32:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpcmpgtd %xmm1, %xmm0, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    retq
+  %c = icmp sgt <3 x i32> %a, %b
+  %r = bitcast <3 x i1> %c to i3
+  ret i3 %r
 }
 
 define i2 @v2i64(<2 x i64> %a, <2 x i64> %b) {

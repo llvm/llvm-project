@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=hexagon -run-pass hexagon-rdf-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-rdf-opt %s -o - | FileCheck %s
 
 # Check that the L2_loadrd_io load from stack to $d6
 # register, in bb.0, is not considered as dead code by RDF
@@ -16,7 +16,6 @@
 ...
 ---
 name: fred
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

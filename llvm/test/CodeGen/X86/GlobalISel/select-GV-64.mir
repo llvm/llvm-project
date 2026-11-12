@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu                          -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64
-# RUN: llc -mtriple=x86_64-apple-darwin -relocation-model=pic -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64_DARWIN_PIC
+# RUN: llc -mtriple=x86_64-linux-gnu -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64
+# RUN: llc -mtriple=x86_64-apple-darwin -relocation-model=pic -run-pass=instruction-select %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=X64ALL --check-prefix=X64_DARWIN_PIC
 
 --- |
 

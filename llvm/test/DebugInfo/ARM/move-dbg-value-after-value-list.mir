@@ -46,6 +46,7 @@
   !96 = !{null}
   !97 = !DISubroutineType(types: !96)
 name:            backtrace_user
+tracksRegLiveness: false
 registers:
   - {id: 0, class: rgpr, }
   - {id: 1, class: gpr, }

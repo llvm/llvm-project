@@ -46,7 +46,11 @@ if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
+  if( LLVM_WINDOWS_RESTRICTED_APIS )
+    set(system_libs ${system_libs} psapi ole32 uuid advapi32 ws2_32 ntdll)
+  else()
+    set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
+  endif()
   if( HAVE_WINDOWS_ICU )
     list(APPEND system_libs icu)
   endif()
@@ -103,7 +107,11 @@ if (MSVC)
   # than invoking `link.exe` directly.  In such a case, the flags should be
   # marked as `-Xlinker` to pass them directly to the linker.  As a temporary
   # workaround simply elide the delay loading.
-  set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp ${WL}-delayload:shell32.dll ${WL}-delayload:ole32.dll>)
+  if (LLVM_WINDOWS_RESTRICTED_APIS)
+    set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp ${WL}-delayload:ole32.dll>)
+  else()
+    set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp ${WL}-delayload:shell32.dll ${WL}-delayload:ole32.dll>)
+  endif()
 endif()
 
 # Link Z3 if the user wants to build it.
@@ -156,7 +164,6 @@ add_subdirectory(BLAKE3)
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
   AMDGPUMetadata.cpp
-  AMDGPUPrintf.cpp
   APFixedPoint.cpp
   APFloat.cpp
   APInt.cpp

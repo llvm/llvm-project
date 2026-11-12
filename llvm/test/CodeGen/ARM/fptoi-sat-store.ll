@@ -159,23 +159,23 @@ define void @test_unsigned_i32_f32(ptr %d, float %f) nounwind {
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    .pad #4
 ; SOFT-NEXT:    sub sp, #4
-; SOFT-NEXT:    mov r7, r1
+; SOFT-NEXT:    mov r6, r1
 ; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
 ; SOFT-NEXT:    movs r5, #0
 ; SOFT-NEXT:    mov r0, r1
 ; SOFT-NEXT:    mov r1, r5
 ; SOFT-NEXT:    bl __aeabi_fcmpge
-; SOFT-NEXT:    mov r6, r0
-; SOFT-NEXT:    mov r0, r7
+; SOFT-NEXT:    mov r7, r0
+; SOFT-NEXT:    mov r0, r6
 ; SOFT-NEXT:    bl __aeabi_f2uiz
 ; SOFT-NEXT:    mov r4, r0
-; SOFT-NEXT:    cmp r6, #0
+; SOFT-NEXT:    cmp r7, #0
 ; SOFT-NEXT:    bne .LBB2_2
 ; SOFT-NEXT:  @ %bb.1:
-; SOFT-NEXT:    mov r4, r6
+; SOFT-NEXT:    mov r4, r7
 ; SOFT-NEXT:  .LBB2_2:
 ; SOFT-NEXT:    ldr r1, .LCPI2_0
-; SOFT-NEXT:    mov r0, r7
+; SOFT-NEXT:    mov r0, r6
 ; SOFT-NEXT:    bl __aeabi_fcmpgt
 ; SOFT-NEXT:    cmp r0, #0
 ; SOFT-NEXT:    beq .LBB2_4
@@ -207,27 +207,27 @@ define void @test_unsigned_i32_f64(ptr %d, double %f) nounwind {
 ; SOFT:       @ %bb.0:
 ; SOFT-NEXT:    .save {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
-; SOFT-NEXT:    .pad #4
-; SOFT-NEXT:    sub sp, #4
+; SOFT-NEXT:    .pad #12
+; SOFT-NEXT:    sub sp, #12
 ; SOFT-NEXT:    mov r6, r3
 ; SOFT-NEXT:    mov r7, r2
-; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
-; SOFT-NEXT:    movs r5, #0
-; SOFT-NEXT:    mov r0, r2
+; SOFT-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; SOFT-NEXT:    movs r2, #0
+; SOFT-NEXT:    mov r0, r7
 ; SOFT-NEXT:    mov r1, r3
-; SOFT-NEXT:    mov r2, r5
-; SOFT-NEXT:    mov r3, r5
+; SOFT-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    mov r3, r2
 ; SOFT-NEXT:    bl __aeabi_dcmpge
 ; SOFT-NEXT:    mov r4, r0
 ; SOFT-NEXT:    mov r0, r7
 ; SOFT-NEXT:    mov r1, r6
 ; SOFT-NEXT:    bl __aeabi_d2uiz
+; SOFT-NEXT:    mov r5, r0
 ; SOFT-NEXT:    cmp r4, #0
 ; SOFT-NEXT:    bne .LBB3_2
 ; SOFT-NEXT:  @ %bb.1:
-; SOFT-NEXT:    mov r0, r4
+; SOFT-NEXT:    mov r5, r4
 ; SOFT-NEXT:  .LBB3_2:
-; SOFT-NEXT:    mov r4, r0
 ; SOFT-NEXT:    ldr r2, .LCPI3_0
 ; SOFT-NEXT:    ldr r3, .LCPI3_1
 ; SOFT-NEXT:    mov r0, r7
@@ -236,11 +236,12 @@ define void @test_unsigned_i32_f64(ptr %d, double %f) nounwind {
 ; SOFT-NEXT:    cmp r0, #0
 ; SOFT-NEXT:    beq .LBB3_4
 ; SOFT-NEXT:  @ %bb.3:
-; SOFT-NEXT:    mvns r4, r5
+; SOFT-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; SOFT-NEXT:    mvns r5, r0
 ; SOFT-NEXT:  .LBB3_4:
-; SOFT-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; SOFT-NEXT:    str r4, [r0]
-; SOFT-NEXT:    add sp, #4
+; SOFT-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; SOFT-NEXT:    str r5, [r0]
+; SOFT-NEXT:    add sp, #12
 ; SOFT-NEXT:    pop {r4, r5, r6, r7, pc}
 ; SOFT-NEXT:    .p2align 2
 ; SOFT-NEXT:  @ %bb.5:

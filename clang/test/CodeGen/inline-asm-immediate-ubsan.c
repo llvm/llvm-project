@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s \
 // RUN:     -fsanitize=signed-integer-overflow \
 // RUN:   | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -emit-llvm -o - %s     -fsanitize=signed-integer-overflow   | FileCheck %s %}
 
 // Verify we emit constants for "immediate" inline assembly arguments.
 // Emitting a scalar expression can make the immediate be generated as

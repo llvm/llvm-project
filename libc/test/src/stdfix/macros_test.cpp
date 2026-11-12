@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AbsTest.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
+#include "test/UnitTest/Test.h"
+
 #include "src/stdfix/abshk.h"
 #include "src/stdfix/abshr.h"
 #include "src/stdfix/absk.h"
