@@ -1187,8 +1187,8 @@ std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   if (doesHold(CmpInst::ICMP_SGE, V, Zero))
     return false;
-  if (doesHold(StrictlyNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE, V,
-               Zero))
+  auto NegativePred = StrictlyNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE;
+  if (doesHold(NegativePred, V, Zero))
     return true;
   return std::nullopt;
 }
