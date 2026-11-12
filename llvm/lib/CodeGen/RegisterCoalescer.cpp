@@ -1320,11 +1320,10 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   VNInfo *ValNo = SrcInt.Query(CopyIdx).valueIn();
   if (!ValNo)
     return false;
-  if (ValNo->isPHIDef() || ValNo->isUnused())
+  if (ValNo->isPHIDef())
     return false;
   MachineInstr *DefMI = LIS->getInstructionFromIndex(ValNo->def);
-  if (!DefMI)
-    return false;
+  assert(DefMI && "Defining instruction disappeared!");
   if (DefMI->isCopyLike()) {
     IsDefCopy = true;
     return false;
@@ -1378,25 +1377,12 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
 
   const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0);
-  if (!DefMI->isImplicitDef()) {
-    if (DstReg.isPhysical()) {
-      Register NewDstReg = DstReg;
-
-      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(), DefSubIdx);
-      if (NewDstIdx)
-        NewDstReg = TRI->getSubReg(DstReg, NewDstIdx);
-
-      // Finally, make sure that the physical subregister that will be
-      // constructed later is permitted for the instruction.
-      if (!DefRC->contains(NewDstReg))
-        return false;
-    } else {
-      // Theoretically, some stack frame reference could exist. Just make sure
-      // it hasn't actually happened.
-      assert(DstReg.isVirtual() &&
-             "Only expect to deal with virtual or physical registers");
-    }
-  }
+  // CoalescerPair has already checked that DstReg is in SrcReg's register
+  // class, and SrcReg's class is compatible with DefMI's def operand.
+  assert((!DstReg.isPhysical() || !DefRC ||
+          DefRC->contains(DefSubIdx ? TRI->getSubReg(DstReg, DefSubIdx)
+                                    : MCRegister(DstReg))) &&
+         "Physical register not allowed by remat instruction!");
 
   if (!VirtRegAuxInfo::allUsesAvailableAt(DefMI, CopyIdx, *LIS, *MRI, *TII))
     return false;
@@ -1411,6 +1397,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   LiveRangeEdit Edit(&SrcInt, NewRegs, *MF, *LIS, nullptr, this);
   Edit.rematerializeAt(*MBB, MII, DstReg, RM, *TRI, false, SrcIdx, CopyMI);
   MachineInstr &NewMI = *std::prev(MII);
+  assert(LIS->getInstructionIndex(NewMI) == CopyIdx);
   NewMI.setDebugLoc(DL);
 
   // In a situation like the following:
@@ -1441,7 +1428,6 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
         }
 
         DstIdx = 0;
-        DefMO.setIsUndef(false); // Only subregs can have def+undef.
       }
     }
   }
@@ -1487,13 +1473,12 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     if (MO.isReg() && MO.isDef()) {
       assert(MO.isImplicit());
       if (MO.getReg().isPhysical()) {
-        assert(MO.isImplicit() && MO.getReg().isPhysical() &&
-               (MO.isDead() ||
-                (DefSubIdx &&
-                 ((TRI->getSubReg(MO.getReg(), DefSubIdx) ==
-                   MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
-                  TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
-                                       MO.getReg())))));
+        assert(MO.isDead() ||
+               (DefSubIdx &&
+                ((TRI->getSubReg(MO.getReg(), DefSubIdx) ==
+                  MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
+                 TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
+                                      MO.getReg()))));
         NewMIImplDefs.push_back({i, MO.getReg()});
       } else {
         assert(MO.getReg() == NewMI.getOperand(0).getReg());
@@ -1513,29 +1498,29 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   if (DstReg.isVirtual()) {
     unsigned NewIdx = NewMI.getOperand(0).getSubReg();
 
-    if (DefRC != nullptr) {
-      if (NewIdx)
-        NewRC = TRI->getMatchingSuperRegClass(NewRC, DefRC, NewIdx);
-      else
-        NewRC = TRI->getCommonSubClass(NewRC, DefRC);
-      assert(NewRC && "subreg chosen for remat incompatible with instruction");
-    }
+    assert(
+        (!DefRC ||
+         NewRC == (NewIdx ? TRI->getMatchingSuperRegClass(NewRC, DefRC, NewIdx)
+                          : TRI->getCommonSubClass(NewRC, DefRC))) &&
+        "Subreg chosen for remat incompatible with instruction!");
 
-    // Remap subranges to new lanemask and change register class.
     LiveInterval &DstInt = LIS->getInterval(DstReg);
-    for (LiveInterval::SubRange &SR : DstInt.subranges()) {
-      SR.LaneMask = TRI->composeSubRegIndexLaneMask(DstIdx, SR.LaneMask);
-    }
     MRI->setRegClass(DstReg, NewRC);
+    if (DstIdx) {
+      // Remap subranges to new lanemask.
+      for (LiveInterval::SubRange &SR : DstInt.subranges())
+        SR.LaneMask = TRI->composeSubRegIndexLaneMask(DstIdx, SR.LaneMask);
 
-    // Update machine operands and add flags.
-    updateRegDefsUses(DstReg, DstReg, DstIdx);
-    NewMI.getOperand(0).setSubReg(NewIdx);
+      // Update machine operands and add flags.
+      updateRegDefsUses(DstReg, DstReg, DstIdx);
+      NewMI.getOperand(0).setSubReg(NewIdx);
+    }
     // updateRegDefUses can add an "undef" flag to the definition, since
     // it will replace DstReg with DstReg.DstIdx. If NewIdx is 0, make
     // sure that "undef" is not set.
     if (NewIdx == 0)
       NewMI.getOperand(0).setIsUndef(false);
+    NewMI.setRegisterDefReadUndef(DstReg);
 
     // In a situation like the following:
     //
@@ -1557,52 +1542,29 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
       DstInt.createSubRangeFrom(Alloc, UnusedLanes, DstInt);
     }
 
-    // Add dead subregister definitions if we are defining the whole register
-    // but only part of it is live.
-    // This could happen if the rematerialization instruction is rematerializing
-    // more than actually is used in the register.
-    // An example would be:
-    // %1 = LOAD CONSTANTS 5, 8 ; Loading both 5 and 8 in different subregs
-    // ; Copying only part of the register here, but the rest is undef.
-    // %2:sub_16bit<def, read-undef> = COPY %1:sub_16bit
+    // Update the subranges to match the lanes defined by NewMI. NewMI may
+    // define more of the register than the copy it replaces, in which case the
+    // extra lanes need at least a dead def. For example:
+    //   %1 = LOAD_CONSTANTS 5, 8 ; Loading both 5 and 8 in different subregs
+    //   ; Copying only part of the register here, but the rest is undef.
+    //   undef %2.sub_16bit = COPY %1.sub_16bit
     // ==>
-    // ; Materialize all the constants but only using one
-    // %2 = LOAD_CONSTANTS 5, 8
+    //   ; Materialize all the constants but only using one
+    //   %2 = LOAD_CONSTANTS 5, 8
     //
-    // at this point for the part that wasn't defined before we could have
-    // subranges missing the definition.
-    if (NewIdx == 0 && DstInt.hasSubRanges()) {
-      SlotIndex CurrIdx = LIS->getInstructionIndex(NewMI);
-      SlotIndex DefIndex =
-          CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
-      LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(DstReg);
-      VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
-      for (LiveInterval::SubRange &SR : DstInt.subranges()) {
-        if (!SR.liveAt(DefIndex))
-          SR.createDeadDef(DefIndex, Alloc);
-        MaxMask &= ~SR.LaneMask;
-      }
-      if (MaxMask.any()) {
-        LiveInterval::SubRange *SR = DstInt.createSubRange(Alloc, MaxMask);
-        SR->createDeadDef(DefIndex, Alloc);
-      }
-    }
-
-    // Make sure that the subrange for resultant undef is removed
-    // For example:
-    //   %1:sub1<def,read-undef> = LOAD CONSTANT 1
+    // Conversely, if NewMI only defines a subregister then the copied value in
+    // the other lanes is now undef and must be removed. For example:
+    //   undef %1.sub1 = LOAD_CONSTANT 1
     //   %2 = COPY %1
     // ==>
-    //   %2:sub1<def, read-undef> = LOAD CONSTANT 1
-    //     ; Correct but need to remove the subrange for %2:sub0
-    //     ; as it is now undef
-    if (NewIdx != 0 && DstInt.hasSubRanges()) {
-      // The affected subregister segments can be removed.
-      SlotIndex CurrIdx = LIS->getInstructionIndex(NewMI);
-      LaneBitmask DstMask = TRI->getSubRegIndexLaneMask(NewIdx);
-      bool UpdatedSubRanges = false;
+    //   undef %2.sub1 = LOAD_CONSTANT 1
+    //   ; Correct but need to remove the subrange for %2:sub0 as it is now
+    //   ; undef.
+    if (DstInt.hasSubRanges()) {
+      LaneBitmask DstMask = NewIdx ? TRI->getSubRegIndexLaneMask(NewIdx)
+                                   : MRI->getMaxLaneMaskForVReg(DstReg);
       SlotIndex DefIndex =
-          CurrIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
+          CopyIdx.getRegSlot(NewMI.getOperand(0).isEarlyClobber());
       VNInfo::Allocator &Alloc = LIS->getVNInfoAllocator();
 
       // Refine the subranges that are now defined by the remat.
@@ -1620,13 +1582,16 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
           },
           *LIS->getSlotIndexes(), *TRI);
 
+      // The subregister segments that are not defined by the remat can be
+      // removed.
+      bool UpdatedSubRanges = false;
       for (LiveInterval::SubRange &SR : DstInt.subranges()) {
         if ((SR.LaneMask & DstMask).none()) {
           LLVM_DEBUG(dbgs()
                      << "Removing undefined SubRange "
                      << PrintLaneMask(SR.LaneMask) << " : " << SR << "\n");
 
-          if (VNInfo *RmValNo = SR.getVNInfoAt(CurrIdx.getRegSlot())) {
+          if (VNInfo *RmValNo = SR.getVNInfoAt(CopyIdx.getRegSlot())) {
             // VNI is in ValNo - remove any segments in this SubRange that have
             // this ValNo
             SR.removeValNo(RmValNo);
@@ -1645,8 +1610,6 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   } else if (NewMI.getOperand(0).getReg() != CopyDstReg) {
     // The New instruction may be defining a sub-register of what's actually
     // been asked for. If so it must implicitly define the whole thing.
-    assert(DstReg.isPhysical() &&
-           "Only expect virtual or physical registers in remat");
 
     // CopyDstReg is added as an implicit-def below. If the remat defines a
     // sub-register of CopyDstReg, the def is part of that live value and must
@@ -1689,23 +1652,19 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     // %1 will see the interferences with CL but not with CH since
     // no live-ranges would have been created for ECX.
     // Fix that!
-    SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
     for (MCRegUnit Unit : TRI->regunits(NewMI.getOperand(0).getReg()))
       if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
-        LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
+        LR->createDeadDef(CopyIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
-
-  NewMI.setRegisterDefReadUndef(NewMI.getOperand(0).getReg());
 
   // Transfer over implicit operands to the rematerialized instruction.
   for (MachineOperand &MO : ImplicitOps)
     NewMI.addOperand(MO);
 
-  SlotIndex NewMIIdx = LIS->getInstructionIndex(NewMI);
   for (Register Reg : make_second_range(NewMIImplDefs)) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
       if (LiveRange *LR = LIS->getCachedRegUnit(Unit))
-        LR->createDeadDef(NewMIIdx.getRegSlot(), LIS->getVNInfoAllocator());
+        LR->createDeadDef(CopyIdx.getRegSlot(), LIS->getVNInfoAllocator());
   }
 
   LLVM_DEBUG(dbgs() << "Remat: " << NewMI);
@@ -1717,16 +1676,15 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
     for (MachineOperand &UseMO :
          llvm::make_early_inc_range(MRI->use_operands(SrcReg))) {
       MachineInstr *UseMI = UseMO.getParent();
-      if (UseMI->isDebugInstr()) {
-        if (DstReg.isPhysical())
-          UseMO.substPhysReg(DstReg, *TRI);
-        else
-          UseMO.setReg(DstReg);
-        // Move the debug value directly after the def of the rematerialized
-        // value in DstReg.
-        MBB->splice(std::next(NewMI.getIterator()), UseMI->getParent(), UseMI);
-        LLVM_DEBUG(dbgs() << "\t\tupdated: " << *UseMI);
-      }
+      assert(UseMI->isDebugInstr());
+      if (DstReg.isPhysical())
+        UseMO.substPhysReg(DstReg, *TRI);
+      else
+        UseMO.setReg(DstReg);
+      // Move the debug value directly after the def of the rematerialized
+      // value in DstReg.
+      MBB->splice(std::next(NewMI.getIterator()), UseMI->getParent(), UseMI);
+      LLVM_DEBUG(dbgs() << "\t\tupdated: " << *UseMI);
     }
   }
 
