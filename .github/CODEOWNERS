@@ -42,10 +42,12 @@
 /clang/include/clang/Lex/ @ChenMiaoi
 /clang/lib/Lex/ @ChenMiaoi
 
-/clang/include/clang/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR @lanza @bcardosolopes @xlauko @andykaylor
-/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @lanza @bcardosolopes @xlauko @andykaylor @banach-space
-/clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
+# ClangIR
+# Emeritus owner: @lanza
+/clang/include/clang/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR @bcardosolopes @xlauko @andykaylor
+/clang/lib/CIR/CodeGen/CIRGenBuiltinAArch64.cpp @bcardosolopes @xlauko @andykaylor @banach-space
+/clang/tools/cir-* @bcardosolopes @xlauko @andykaylor
 
 /clang/tools/clang-repl @vgvassilev
 /clang/include/clang/Interpreter @vgvassilev
