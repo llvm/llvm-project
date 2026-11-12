@@ -39,7 +39,6 @@
 ...
 ---
 name:            f0
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone: false
 body:             |
@@ -62,7 +61,6 @@ body:             |
     RET undef $lr, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5
 ---
 name:            f1
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone: false
 body:             |
@@ -85,7 +83,6 @@ body:             |
     RET undef $lr, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5
 ---
 name:            f2
-tracksRegLiveness: true
 machineFunctionInfo:
   hasRedZone: false
 body:             |

@@ -5,7 +5,6 @@
 ---
 name: hugeStack
 # CHECK-LABEL: name: hugeStack
-tracksRegLiveness: true
 frameInfo:
   localFrameSize:  256
 stack:
@@ -26,7 +25,6 @@ body: |
 ---
 name: fpDoesNotFit
 # CHECK-LABEL: name: fpDoesNotFit
-tracksRegLiveness: true
 frameInfo:
   hasStackMap: true
 # set to true to force hasFP to true.

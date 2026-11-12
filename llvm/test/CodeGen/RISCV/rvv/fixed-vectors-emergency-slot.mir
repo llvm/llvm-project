@@ -29,7 +29,6 @@
 ---
 name:            fixedlen_vector_spillslot
 alignment:       2
-tracksRegLiveness: false
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8,

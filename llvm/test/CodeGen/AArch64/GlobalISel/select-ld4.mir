@@ -5,7 +5,6 @@
 name:            LD4Fourv8b
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -35,7 +34,6 @@ body:             |
 name:            LD4Fourv16b
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -65,7 +63,6 @@ body:             |
 name:            LD4Fourv4h
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -95,7 +92,6 @@ body:             |
 name:            LD4Fourv8h
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -125,7 +121,6 @@ body:             |
 name:            LD4Fourv2s
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -155,7 +150,6 @@ body:             |
 name:            LD4Fourv4s
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -185,7 +179,6 @@ body:             |
 name:            LD4Fourv2d_v2s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -215,7 +208,6 @@ body:             |
 name:            LD4Fourv2d_v2p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -245,7 +237,6 @@ body:             |
 name:            LD1Fourv1d_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -275,7 +266,6 @@ body:             |
 name:            LD1Fourv1d_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2

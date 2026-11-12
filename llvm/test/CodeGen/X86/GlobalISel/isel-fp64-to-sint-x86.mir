@@ -7,7 +7,6 @@ name:            test_double_to_int16
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -37,7 +36,6 @@ name:            test_double_to_int32
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -67,7 +65,6 @@ name:            test_double_to_int64
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -107,7 +104,6 @@ name:            test_double_to_int8
 alignment:       16
 exposesReturnsTwice: false
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 16, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

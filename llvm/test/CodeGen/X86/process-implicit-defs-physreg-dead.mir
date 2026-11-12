@@ -6,7 +6,6 @@
 
 ---
 name:            no_succ_livein
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_succ_livein
   ; CHECK: bb.0:
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            succ_livein
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: succ_livein
   ; CHECK: bb.0:
@@ -57,7 +55,6 @@ body:             |
 ...
 ---
 name:            succ_livein_super
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: succ_livein_super
   ; CHECK: bb.0:
@@ -83,7 +80,6 @@ body:             |
 ...
 ---
 name:            succ_livein_sub
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: succ_livein_sub
   ; CHECK: bb.0:

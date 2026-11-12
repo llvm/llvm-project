@@ -4,7 +4,6 @@
 
 ---
 name:            crash
-tracksRegLiveness: true
 noPhis:          false
 isSSA:           true
 noVRegs:         false
