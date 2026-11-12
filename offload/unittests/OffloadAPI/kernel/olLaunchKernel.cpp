@@ -249,7 +249,6 @@ TEST_P(olLaunchKernelByteTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemTest, Success) {
-
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
@@ -275,7 +274,6 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
-
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
