@@ -3718,9 +3718,8 @@ private:
 
 } // end anonymous namespace
 
-std::pair<Expr *, std::string>
-Sema::findFailedBooleanCondition(Expr *Cond) {
-  Cond = lookThroughRangesV3Condition(PP, Cond);
+static Expr *findFailedBooleanConditionExpr(Sema &S, Expr *Cond) {
+  Cond = lookThroughRangesV3Condition(S.getPreprocessor(), Cond);
 
   // Separate out all of the terms in a conjunction.
   SmallVector<Expr *, 4> Terms;
@@ -3739,11 +3738,10 @@ Sema::findFailedBooleanCondition(Expr *Cond) {
     // The initialization of the parameter from the argument is
     // a constant-evaluated context.
     EnterExpressionEvaluationContext ConstantEvaluated(
-      *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
     bool Succeeded;
-    if (Term->EvaluateAsBooleanCondition(Succeeded, Context) &&
-        !Succeeded) {
+    if (Term->EvaluateAsBooleanCondition(Succeeded, S.Context) && !Succeeded) {
       FailedCond = TermAsWritten;
       break;
     }
@@ -3751,6 +3749,11 @@ Sema::findFailedBooleanCondition(Expr *Cond) {
   if (!FailedCond)
     FailedCond = Cond->IgnoreParenImpCasts();
 
+  return FailedCond;
+}
+
+std::pair<Expr *, std::string> Sema::findFailedBooleanCondition(Expr *Cond) {
+  Expr *FailedCond = findFailedBooleanConditionExpr(*this, Cond);
   std::string Description;
   {
     llvm::raw_string_ostream Out(Description);
@@ -3927,10 +3930,10 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
                   diag::err_typename_nested_not_found_enable_if &&
               TemplateArgs[0].getArgument().getKind() ==
                   TemplateArgument::Expression) {
-            Expr *FailedCond;
-            std::string FailedDescription;
-            std::tie(FailedCond, FailedDescription) =
-              findFailedBooleanCondition(TemplateArgs[0].getSourceExpression());
+            // Keep the expression until a failed candidate is diagnosed.
+            // Formatting canonical types here expands discarded candidates.
+            Expr *FailedCond = findFailedBooleanConditionExpr(
+                *this, TemplateArgs[0].getSourceExpression());
 
             // Remove the old SFINAE diagnostic.
             PartialDiagnosticAt OldDiag =
@@ -3942,7 +3945,7 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
             DeductionInfo->addSFINAEDiagnostic(
                 OldDiag.first,
                 PDiag(diag::err_typename_nested_not_found_requirement)
-                    << FailedDescription << FailedCond->getSourceRange());
+                    << FailedCond << FailedCond->getSourceRange());
           }
         }
       }
@@ -11520,15 +11523,15 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
       // If we have a condition, narrow it down to the specific failed
       // condition.
       if (Cond) {
-        Expr *FailedCond;
-        std::string FailedDescription;
-        std::tie(FailedCond, FailedDescription) =
-          findFailedBooleanCondition(Cond);
+        Expr *FailedCond = findFailedBooleanConditionExpr(*this, Cond);
 
-        Diag(FailedCond->getExprLoc(),
-             diag::err_typename_nested_not_found_requirement)
-          << FailedDescription
-          << FailedCond->getSourceRange();
+        auto DB = Diag(FailedCond->getExprLoc(),
+                       diag::err_typename_nested_not_found_requirement);
+        if (getSFINAEContext())
+          DB << FailedCond;
+        else
+          DB << findFailedBooleanCondition(FailedCond).second;
+        DB << FailedCond->getSourceRange();
         return QualType();
       }
 
