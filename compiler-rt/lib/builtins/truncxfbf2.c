@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "int_lib.h"
+
 #if defined(CRT_HAS_TF_MODE) && __LDBL_MANT_DIG__ == 64 && defined(__x86_64__)
 #define SRC_80
 #define DST_BFLOAT
