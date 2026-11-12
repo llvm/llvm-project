@@ -989,8 +989,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The 4 (8 for DWARF64) byte offset to the debug abbrevs from the start of
   // the .debug_abbrev.
   if (AbbrevSectionSymbol)
-    MCOS->emitDwarfSectionOffset(AbbrevSectionSymbol, /*Offset=*/0,
-                                 OffsetSize);
+    MCOS->emitDwarfSectionOffset(AbbrevSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     // Since the abbrevs are at the start of the section, the offset is zero.
     MCOS->emitIntValue(0, OffsetSize);

@@ -71,8 +71,8 @@ const MCExpr *MCAsmInfo::getDwarfSectionOffsetExpr(const MCSymbol *Sym,
                                                    MCContext &Ctx) const {
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
   if (Offset)
-    Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx),
-                                   Ctx);
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
   return Expr;
 }
 
