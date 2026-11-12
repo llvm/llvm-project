@@ -358,11 +358,10 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
   return Error::success();
 }
 
-/// Returns the value of the link.exe option \p Name if \p Input is that option
-/// with a '/' prefix in any case, e.g. returns "dir" for Input "/LIBPATH:dir"
-/// and Name "libpath:". link.exe options are case-insensitive, but the option
-/// table only matches lower case, so other spellings are parsed as inputs.
-/// Windows hosts only.
+/// link.exe options are case-insensitive, but the option table only knows
+/// them in lower case, so for example '/LIBPATH:dir' is parsed as an input.
+/// If \p Input is the link.exe option \p Name in any case, returns its value,
+/// e.g. "dir" for Input "/LIBPATH:dir" and Name "libpath:". Windows hosts only.
 std::optional<StringRef> getCOFFOptionValue(StringRef Input, StringRef Name,
                                             const Triple &HostTriple) {
   if (!HostTriple.isOSWindows() || !Input.consume_front("/") ||
@@ -371,18 +370,17 @@ std::optional<StringRef> getCOFFOptionValue(StringRef Input, StringRef Name,
   return Input;
 }
 
-/// Returns true if \p Input is the link.exe flag '/WHOLEARCHIVE' in any case,
-/// which extracts all archives like --whole-archive.
+/// Returns true if \p Input is '/WHOLEARCHIVE' without a file name, in any
+/// case. link.exe then takes every member of every static library.
 bool isCOFFWholeArchiveFlag(StringRef Input, const Triple &HostTriple) {
   std::optional<StringRef> Rest =
       getCOFFOptionValue(Input, "wholearchive", HostTriple);
   return Rest && Rest->empty();
 }
 
-/// Returns true if \p Input looks like a link.exe option, e.g. '/nologo' or
-/// '/LIBPATH:C:\dir'. Unlike a path, the option name before any ':' has no '/'
-/// or '\'. A root-level path such as '/a.obj' looks the same. Windows hosts
-/// only.
+/// Returns true if \p Input looks like a link.exe option, such as '/nologo' or
+/// '/LIBPATH:C:\dir', rather than a file path. A root-level path such as
+/// '/a.obj' also looks like an option. Windows hosts only.
 bool isCOFFLinkerOption(StringRef Input, const Triple &HostTriple) {
   if (!HostTriple.isOSWindows() || !Input.consume_front("/"))
     return false;
@@ -416,8 +414,8 @@ Error runLinker(ArrayRef<StringRef> Files, const ArgList &Args) {
       continue;
 
     Arg->render(Args, NewLinkerArgs);
-    // Add the wrapped device objects after the first output option only, even
-    // if the output is named more than once.
+    // Add the wrapped device objects only once, after the first output option,
+    // even if the output is named more than once.
     if (!AddedWrappedFiles && isOutputArg(Arg, HostTriple)) {
       llvm::transform(Files, std::back_inserter(NewLinkerArgs),
                       [&](StringRef A) { return Args.MakeArgString(A); });
@@ -835,13 +833,14 @@ wrapDeviceImages(const cl::LibraryOptionsContext &LibraryOptions,
                  const ArgList &Args, OffloadKind Kind) {
   llvm::TimeTraceScope TimeScope("Wrap bundled images");
 
-  // With --sycl-device-link the images are already linked. Embed them as
-  // finalized images, so that a later host link through clang-linker-wrapper
-  // does not link them again.
+  // With --sycl-device-link the device images are already linked. Mark them as
+  // finalized, so that a later host link through clang-linker-wrapper does not
+  // try to link them again.
   bool IsFinalizedImage = Kind == OFK_SYCL && Args.hasArg(OPT_sycl_device_link);
 
   // We use the discrete tools if we are in verbose mode with '--save-temps'.
-  // llvm-offload-wrapper has no option to embed finalized images.
+  // llvm-offload-wrapper cannot mark images as finalized, so it is not used for
+  // --sycl-device-link.
   if (Verbose && SaveTemps && !Args.hasArg(OPT_print_wrapped_module) &&
       !IsFinalizedImage)
     return wrapDeviceImagesVerbose(Buffers, Args, Kind);
@@ -1147,8 +1146,8 @@ Error handleOverrideImages(
   return Error::success();
 }
 
-/// Writes the result of --sycl-device-link to the output file. The wrapped SYCL
-/// device object is the final output, so the host linker is not run.
+/// Writes the output of --sycl-device-link: the wrapped SYCL device object,
+/// to be used later in a host link. The host linker is not run.
 Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
                                ArrayRef<StringRef> WrappedFiles,
                                const ArgList &Args) {
@@ -1158,8 +1157,8 @@ Error emitSYCLDeviceLinkOutput(const cl::LibraryOptionsContext &LibraryOptions,
 
   StringRef WrappedFile;
   if (WrappedFiles.empty()) {
-    // No device code was linked. Emit an empty host object with no runtime
-    // registration, so the output can still be used in the host link.
+    // No device code was linked. Write an empty host object without SYCL
+    // runtime registration, so the output file still exists for the host link.
     Triple HostTriple(Args.getLastArgValue(OPT_host_triple_EQ,
                                            sys::getDefaultTargetTriple()));
     LLVMContext Context;
@@ -1461,9 +1460,9 @@ getDeviceInput(const ArgList &Args) {
   const llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
-  // Collect the search paths in command line order. -L paths are used for -l
-  // libraries. link.exe /libpath: paths, in any case, are used for both
-  // libraries and other inputs.
+  // The directories that the host linker searches for libraries and, with
+  // link.exe, for other inputs. They are kept in command line order, which is
+  // the order the host linker searches them in.
   StringRef Root = Args.getLastArgValue(OPT_sysroot_EQ);
   SmallVector<StringRef> LibraryPaths;
   SmallVector<StringRef> InputPaths;
@@ -1483,7 +1482,8 @@ getDeviceInput(const ArgList &Args) {
     InputPaths.push_back(*Path);
   }
 
-  // link.exe also searches the paths in the LIB environment variable.
+  // link.exe also searches the directories listed in the LIB environment
+  // variable.
   std::optional<std::string> LibEnv;
   if (HostTriple.isWindowsMSVCEnvironment())
     LibEnv = sys::Process::GetEnv("LIB");
@@ -1797,8 +1797,8 @@ int main(int Argc, char **Argv) {
     // linking.
     bool EmitFatbinOnly = Args.hasArg(OPT_emit_fatbin_only);
 
-    // With --sycl-device-link, the wrapped device object is the output and the
-    // host linker is not run.
+    // With --sycl-device-link, write the wrapped device object to the output
+    // instead of running the host linker.
     bool SYCLDeviceLink = Args.hasArg(OPT_sycl_device_link);
     if (SYCLDeviceLink) {
       if (EmitFatbinOnly)
