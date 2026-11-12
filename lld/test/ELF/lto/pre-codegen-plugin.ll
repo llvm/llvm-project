@@ -6,10 +6,12 @@
 ; RUN: opt %s -o %t.o
 ; RUN: ld.lld -shared --lto-emit-asm -%loadnewpmbye %t.o -o %t.inactive 2>&1 | count 0
 ; RUN: FileCheck %s --check-prefix=INACTIVE < %t.inactive.lto.s
-; RUN: ld.lld -shared --lto-emit-asm -%loadnewpmbye -mllvm=%loadbye -mllvm=-last-words %t.o -o %t.active
+
+;; Plugins are loaded before -mllvm options are parsed, so their options are available.
+; RUN: ld.lld -shared --lto-emit-asm -%loadnewpmbye -mllvm=-last-words %t.o -o %t.active
 ; RUN: FileCheck %s --check-prefix=ACTIVE < %t.active.lto.s
-; RUN: not ld.lld -shared -%loadnewpmbye -mllvm=%loadbye -mllvm=-last-words %t.o -o %t.err 2>&1 | FileCheck %s --check-prefix=ERR
-; RUN: ld.lld -shared --lto-emit-asm --lto-partitions=2 -%loadnewpmbye -mllvm=%loadbye -mllvm=-last-words %t.o -o %t.parallel
+; RUN: not ld.lld -shared -%loadnewpmbye -mllvm=-last-words %t.o -o %t.err 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: ld.lld -shared --lto-emit-asm --lto-partitions=2 -%loadnewpmbye -mllvm=-last-words %t.o -o %t.parallel
 ; RUN: FileCheck %s --check-prefix=PARALLEL0 < %t.parallel.lto.s
 ; RUN: FileCheck %s --check-prefix=PARALLEL1 < %t.parallel.lto.1.s
 

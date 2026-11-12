@@ -74,6 +74,7 @@ add_lld_library(lldELF
   Object
   Option
   Passes
+  Plugins
   ProfileData
   Support
   TargetParser

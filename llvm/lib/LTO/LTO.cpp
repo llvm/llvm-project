@@ -1318,7 +1318,9 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::setupPassPlugins() {
-  // Filenames are cleared on success, so repeated calls are no-ops.
+  // Transitional support for the deprecated PassPluginFilenames. Filenames are
+  // cleared on success, so repeated calls are no-ops.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   if (Conf.PassPluginFilenames.empty())
     return Error::success();
 
@@ -1341,6 +1343,7 @@ Error LTO::setupPassPlugins() {
                                 FromFiles.begin(), FromFiles.end());
 
   Conf.PassPluginFilenames.clear();
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return Error::success();
 }
 

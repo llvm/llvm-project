@@ -34,6 +34,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -89,6 +90,9 @@ static cl::opt<std::string> RemarksFormat(
 static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
+
+// Loaded plugins must outlive the LTO object
+static SmallVector<PassPlugin, 0> LoadedPassPlugins;
 
 static void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-nvlink-wrapper") << '\n';
@@ -412,8 +416,16 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   Conf.DefaultTriple = Triple.getTriple();
 
   Conf.OptPipeline = Args.getLastArgValue(OPT_lto_newpm_passes, "");
-  Conf.PassPluginFilenames = PassPlugins;
   Conf.DebugPassManager = Args.hasArg(OPT_lto_debug_pass_manager);
+
+  for (const std::string &Filename : PassPlugins) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(Filename);
+    if (!Plugin)
+      return Plugin.takeError();
+    LoadedPassPlugins.push_back(std::move(*Plugin));
+  }
+  for (PassPlugin &Plugin : LoadedPassPlugins)
+    Conf.LoadedPassPlugins.push_back(&Plugin);
 
   Conf.DiagHandler = diagnosticHandler;
   Conf.CGFileType = CodeGenFileType::AssemblyFile;

@@ -23,6 +23,7 @@
 #include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -135,10 +136,11 @@ static lto::Config createConfig(Ctx &ctx) {
   c.StatsFile = std::string(ctx.arg.optStatsFilename);
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
-  for (StringRef pluginFn : ctx.arg.passPlugins)
-    c.PassPluginFilenames.push_back(std::string(pluginFn));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.DwoDir = std::string(ctx.arg.dwoDir);
+
+  for (PassPlugin &plugin : ctx.arg.passPlugins)
+    c.LoadedPassPlugins.push_back(&plugin);
 
   c.HasWholeProgramVisibility = ctx.arg.ltoWholeProgramVisibility;
   c.ValidateAllVtablesHaveTypeInfos =

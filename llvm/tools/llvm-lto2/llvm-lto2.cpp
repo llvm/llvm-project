@@ -22,6 +22,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
@@ -392,7 +393,18 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  llvm::append_range(Conf.PassPluginFilenames, PassPlugins);
+
+  // Loaded plugins must outlive the LTO object
+  SmallVector<PassPlugin, 0> LoadedPlugins;
+  for (const std::string &Filename : PassPlugins) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(Filename);
+    if (!Plugin)
+      check(Plugin.takeError(), "-load-pass-plugin");
+    LoadedPlugins.push_back(std::move(*Plugin));
+  }
+  for (PassPlugin &Plugin : LoadedPlugins)
+    Conf.LoadedPassPlugins.push_back(&Plugin);
+
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {

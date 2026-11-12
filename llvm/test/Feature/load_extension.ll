@@ -1,5 +1,5 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt %s %loadnewpmbye %loadbye -passes="goodbye" -wave-goodbye -disable-output 2>&1 | FileCheck %s
+; RUN: opt %s %loadnewpmbye -passes="goodbye" -plugin-arg=Bye,-wave-goodbye -disable-output 2>&1 | FileCheck %s
 ;; A plugin receives all of its -plugin-arg arguments. -plugin-arg splits at
 ;; the first comma only, so the value may contain commas.
 ; RUN: opt %s %loadnewpmbye -passes="goodbye" -plugin-arg=Bye,-wave-goodbye -plugin-arg=Bye,-bye-greeting=See,you -disable-output 2>&1 | FileCheck %s --check-prefix=BOTH

@@ -52,6 +52,7 @@ add_lld_library(lldMachO
   Object
   Option
   Passes
+  Plugins
   ProfileData
   Support
   TargetParser

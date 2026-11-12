@@ -670,7 +670,8 @@ private:
   // Setup optimization remarks according to the provided configuration.
   Error setupOptimizationRemarks();
 
-  // Pass-plugins that we loaded from the provided configuration.
+  // Pass-plugins that we loaded from the provided configuration. Remove together
+  // with Config::PassPluginFilenames.
   SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
 
   // Load pass-plugins from the provided configuration.

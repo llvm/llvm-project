@@ -29,16 +29,26 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### ELF Improvements
 
+* `--load-pass-plugin` now loads plugins before `-mllvm` options are parsed,
+  so options registered by a plugin can be passed with `-mllvm`.
+
 * `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
   They now mean what they say again; the default behavior is unchanged.
 
 ### Breaking changes
+
+* ELF and MachO: `--load-pass-plugin` now loads plugins while options are
+  parsed, so a plugin that fails to load is an error even if the link doesn't
+  run LTO. Before, such errors went unnoticed in links without LTO.
 
 ### COFF Improvements
 
 ### MinGW Improvements
 
 ### MachO Improvements
+
+* `--load-pass-plugin` now loads plugins before `-mllvm` options are parsed,
+  so options registered by a plugin can be passed with `-mllvm`.
 
 * `__objc_stubs` entries are now ordered by the priority of the sections that
   call them, so that stubs reached from prioritized code are laid out together.
