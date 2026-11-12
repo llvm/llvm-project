@@ -18,6 +18,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "SILowerI1Copies.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -28,6 +29,7 @@
 #define DEBUG_TYPE "amdgpu-global-isel-divergence-lowering"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 namespace {
 
@@ -119,14 +121,11 @@ void DivergenceLoweringHelper::collectIncomingValuesFromPhi(
     SmallVectorImpl<AMDGPU::Incoming> &Incomings) const {
   for (unsigned i = 1; i < MI->getNumOperands(); i += 2) {
     Register IncomingReg = MI->getOperand(i).getReg();
-    MachineInstr *Def = MRI->getUniqueVRegDef(IncomingReg);
-    if (Def && Def->isCopy() && !Def->getOperand(1).getSubReg()) {
-      IncomingReg = Def->getOperand(1).getReg();
-      Def = MRI->getUniqueVRegDef(IncomingReg);
-    }
+    Register CopySrc;
+    if (mi_match(IncomingReg, *MRI, m_Copy(m_Reg(CopySrc))))
+      IncomingReg = CopySrc;
     // Skip undef so the other incoming can be taken as a source (no merge).
-    if (Def && (Def->isImplicitDef() ||
-                Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
+    if (mi_match(IncomingReg, *MRI, m_GImplicitDef()))
       continue;
     Incomings.emplace_back(IncomingReg, MI->getOperand(i + 1).getMBB(),
                            Register());
