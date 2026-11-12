@@ -3822,8 +3822,7 @@ template <class ELFT> void elf::splitSections(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Split sections");
   // splitIntoPieces needs to be called on each MergeInputSection
   // before calling finalizeContents().
-  parallelForFineGrained(ctx.objectFiles.size(), [&](size_t fileIdx) {
-    ELFFileBase *file = ctx.objectFiles[fileIdx];
+  parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
     for (InputSectionBase *sec : file->getSections()) {
       if (!sec)
         continue;

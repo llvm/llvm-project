@@ -13,14 +13,20 @@
 #include <cstddef>
 
 namespace lld {
-// Call fn(i) for each i in [0, n) in parallel, claiming one index at a time.
-// Unlike llvm::parallelFor, which claims fixed chunks, this balances load when
-// per-item cost varies widely.
-void parallelForFineGrained(size_t n, llvm::function_ref<void(size_t)> fn);
+// Call fn(i) for each i in [0, end) in parallel, claiming one index at a time.
+// This balances load when per-item cost varies widely.
+void parallelForFineGrained(size_t end, llvm::function_ref<void(size_t)> fn);
+
+// Like llvm::parallelForEach, but claim one element at a time.
+template <class Range, class Fn>
+void parallelForEachFineGrained(Range &&range, Fn fn) {
+  parallelForFineGrained(range.size(), [&](size_t i) { fn(range[i]); });
+}
 
 // Like parallelForFineGrained, but run up to numShards workers and pass the
-// worker's shard index, which is less than numShards, as the first argument.
-void parallelForSharded(size_t numShards, size_t n,
+// worker's shard index, which is less than numShards, as the first argument for
+// fn.
+void parallelForSharded(size_t numShards, size_t end,
                         llvm::function_ref<void(size_t, size_t)> fn);
 } // namespace lld
 
