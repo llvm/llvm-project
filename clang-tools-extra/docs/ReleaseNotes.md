@@ -424,6 +424,11 @@ infrastructure are described first, followed by tool-specific sections.
   - Added the {option}`AllowTrailingUnderscore`, which permits a
     single trailing underscore on any identifier.
 
+- Improved {doc}`readability-isolate-declaration
+  <clang-tidy/checks/readability/isolate-declaration>` check by fixing
+  incorrect fix-its where a comment following a comma in a multi-line declarator
+  list was moved to the next declaration.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
