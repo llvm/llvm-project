@@ -16,18 +16,19 @@ class StepOverBreakpointsTestCase(TestBase):
         TestBase.setUp(self)
 
         self.build()
-        exe = self.getBuildArtifact("a.out")
         src = lldb.SBFileSpec("main.cpp")
-
-        # Create a target by the debugger.
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
 
         # Setup four breakpoints, two of them with false condition
         self.line1 = line_number("main.cpp", "breakpoint_1")
         self.line4 = line_number("main.cpp", "breakpoint_4")
 
-        self.breakpoint1 = self.target.BreakpointCreateByLocation(src, self.line1)
+        # Start debugging
+        (
+            self.target,
+            self.process,
+            self.thread,
+            self.breakpoint1,
+        ) = lldbutil.run_to_line_breakpoint(self, src, self.line1)
         self.assertTrue(
             self.breakpoint1 and self.breakpoint1.GetNumLocations() == 1,
             VALID_BREAKPOINT,
@@ -44,11 +45,6 @@ class StepOverBreakpointsTestCase(TestBase):
         self.breakpoint3.GetLocationAtIndex(0).SetCondition("false")
 
         self.breakpoint4 = self.target.BreakpointCreateByLocation(src, self.line4)
-
-        # Start debugging
-        _, self.process, self.thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, self.target, self.breakpoint1
-        )
 
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4

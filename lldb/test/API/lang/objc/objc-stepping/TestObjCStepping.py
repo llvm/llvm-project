@@ -32,19 +32,14 @@ class TestObjCStepping(TestBase):
     def test_with_python_api(self):
         """Test stepping through ObjC method dispatch in various forms."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
         breakpoints_to_disable = []
 
-        break1 = target.BreakpointCreateBySourceRegex(
-            "// Set first breakpoint here.", self.main_source_spec
+        target, process, thread, break1 = lldbutil.run_to_source_breakpoint(
+            self, "// Set first breakpoint here.", self.main_source_spec
         )
-        self.assertTrue(break1, VALID_BREAKPOINT)
         breakpoints_to_disable.append(break1)
 
         break2 = target.BreakpointCreateBySourceRegex(
@@ -81,8 +76,6 @@ class TestObjCStepping(TestBase):
             "// Set nil step breakpoint here.", self.main_source_spec
         )
         self.assertTrue(break_step_nil, VALID_BREAKPOINT)
-
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, break1)
 
         mySource = thread.GetFrameAtIndex(0).FindVariable("mySource")
         self.assertTrue(mySource, "Found mySource local variable.")

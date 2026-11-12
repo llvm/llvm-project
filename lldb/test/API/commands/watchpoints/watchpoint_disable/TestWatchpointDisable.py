@@ -26,10 +26,8 @@ class TestWatchpointSetEnable(TestBase):
 
         main_file_spec = lldb.SBFileSpec("main.c")
 
-        self.target = self.createTestTarget()
-
-        bkpt_before = self.target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here", main_file_spec
+        self.target, process, thread, bkpt_before = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", main_file_spec
         )
         self.assertEqual(
             bkpt_before.GetNumLocations(), 1, "Failed setting the before breakpoint."
@@ -40,10 +38,6 @@ class TestWatchpointSetEnable(TestBase):
         )
         self.assertEqual(
             bkpt_after.GetNumLocations(), 1, "Failed setting the after breakpoint."
-        )
-
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, self.target, bkpt_before
         )
 
         ret_val = lldb.SBCommandReturnObject()

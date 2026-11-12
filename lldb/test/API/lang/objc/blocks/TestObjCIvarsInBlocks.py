@@ -24,24 +24,15 @@ class TestObjCIvarsInBlocks(TestBase):
     def test_with_python_api(self):
         """Test printing the ivars of the self when captured in blocks"""
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            "// Break here inside the block.", self.class_source_file_spec
+        target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
+            self, "// Break here inside the block.", self.class_source_file_spec
         )
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         breakpoint_two = target.BreakpointCreateBySourceRegex(
             "// Break here inside the class method block.", self.class_source_file_spec
         )
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, breakpoint
-        )
 
         self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 

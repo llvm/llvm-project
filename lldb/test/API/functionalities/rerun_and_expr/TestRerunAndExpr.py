@@ -36,14 +36,12 @@ class TestRerunExpr(TestBase):
         self.build(dictionary={"CXX_SOURCES": "main.cpp", "EXE": "a.out"})
 
         exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "return", lldb.SBFileSpec("main.cpp")
+        )
         rebuild_bkpt = target.BreakpointCreateBySourceRegex(
             "return", lldb.SBFileSpec("rebuild.cpp")
         )
-        main_bkpt = target.BreakpointCreateBySourceRegex(
-            "return", lldb.SBFileSpec("main.cpp")
-        )
-        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, main_bkpt)
 
         self.expect_expr(
             "foo",

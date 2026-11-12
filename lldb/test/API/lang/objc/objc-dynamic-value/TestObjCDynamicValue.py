@@ -37,14 +37,15 @@ class ObjCDynamicValueTestCase(TestBase):
             self.skipTest("Dynamic types for ObjC V1 runtime not implemented")
 
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Set up our breakpoints:
+
+        target, process, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self,
+            lldb.SBFileSpec(self.source_name, False),
+            self.main_before_setProperty_line,
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
 
         handle_SourceBase_bkpt = target.BreakpointCreateByLocation(
             self.source_name, self.handle_SourceBase
@@ -52,19 +53,6 @@ class ObjCDynamicValueTestCase(TestBase):
         self.assertTrue(
             handle_SourceBase_bkpt and handle_SourceBase_bkpt.GetNumLocations() == 1,
             VALID_BREAKPOINT,
-        )
-
-        main_before_setProperty_bkpt = target.BreakpointCreateByLocation(
-            self.source_name, self.main_before_setProperty_line
-        )
-        self.assertTrue(
-            main_before_setProperty_bkpt
-            and main_before_setProperty_bkpt.GetNumLocations() == 1,
-            VALID_BREAKPOINT,
-        )
-
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, main_before_setProperty_bkpt
         )
 
         #

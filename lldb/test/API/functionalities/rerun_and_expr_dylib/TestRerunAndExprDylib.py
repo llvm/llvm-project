@@ -81,13 +81,10 @@ class TestRerunExprDylib(TestBase):
             }
         )
 
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        dlclose_bkpt = target.BreakpointCreateBySourceRegex(
-            "dlclose", lldb.SBFileSpec("main.cpp")
+        target, process, _, dlclose_bkpt = lldbutil.run_to_source_breakpoint(
+            self, "dlclose", lldb.SBFileSpec("main.cpp")
         )
         target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("main.cpp"))
-        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, dlclose_bkpt)
 
         self.expect_expr(
             "*foo",

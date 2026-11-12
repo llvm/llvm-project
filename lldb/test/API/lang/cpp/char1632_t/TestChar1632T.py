@@ -28,19 +28,17 @@ class Char1632TestCase(TestBase):
     def test(self):
         """Test that the C++11 support for char16_t and char32_t works correctly."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set breakpoints
-        for line in self.lines:
-            lldbutil.run_break_set_by_file_and_line(self, "main.cpp", line)
 
         # Now launch the process, and do not stop at entry point and stop at
         # breakpoint1
-        lldbutil.run_to_breakpoint_do_run(self, target, target.GetBreakpointAtIndex(0))
+        _, _, _, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp", False), self.lines[0]
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+
+        # Set breakpoints
+        for line in self.lines[1:]:
+            lldbutil.run_break_set_by_file_and_line(self, "main.cpp", line)
 
         if self.TraceOn():
             self.runCmd("frame variable")

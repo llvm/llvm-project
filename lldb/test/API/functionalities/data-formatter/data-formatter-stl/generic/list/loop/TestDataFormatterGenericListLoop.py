@@ -15,22 +15,15 @@ class GenericListDataFormatterTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def do_test_with_run_command(self):
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target and target.IsValid(), "Target is valid")
-
         file_spec = lldb.SBFileSpec("main.cpp", False)
-        breakpoint1 = target.BreakpointCreateBySourceRegex(
-            "// Set break point at this line.", file_spec
+        # Run the program, it should stop at breakpoint 1.
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", file_spec
         )
-        self.assertTrue(breakpoint1 and breakpoint1.IsValid())
         breakpoint2 = target.BreakpointCreateBySourceRegex(
             "// Set second break point at this line.", file_spec
         )
         self.assertTrue(breakpoint2 and breakpoint2.IsValid())
-
-        # Run the program, it should stop at breakpoint 1.
-        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint1)
 
         # verify our list is displayed correctly
         self.expect(

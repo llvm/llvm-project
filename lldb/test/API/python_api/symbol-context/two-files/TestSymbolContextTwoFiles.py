@@ -34,9 +34,12 @@ class SymbolContextTwoFilesTestCase(TestBase):
         """This test verifies that we correctly handle the case when multiple
         compile unit contains DW_AT_ranges and DW_AT_ranges_base attributes."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+
+        source2 = "file2.cpp"
+        line2 = line_number(source2, "// Break2")
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(source2, False), line2
+        )
 
         source1 = "file1.cpp"
         line1 = line_number(source1, "// Break1")
@@ -44,15 +47,6 @@ class SymbolContextTwoFilesTestCase(TestBase):
         self.assertIsNotNone(breakpoint1)
         self.assertTrue(breakpoint1.IsValid())
 
-        source2 = "file2.cpp"
-        line2 = line_number(source2, "// Break2")
-        breakpoint2 = target.BreakpointCreateByLocation(source2, line2)
-        self.assertIsNotNone(breakpoint2)
-        self.assertTrue(breakpoint2.IsValid())
-
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, breakpoint2
-        )
         frame = thread.GetFrameAtIndex(0)
         value = frame.FindVariable("x")
         self.assertTrue(value.IsValid())

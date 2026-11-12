@@ -19,21 +19,16 @@ class TestObjCBuiltinTypes(TestBase):
     def test_with_python_api(self):
         """Test expression parser respect for ObjC built-in types."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        bpt = target.BreakpointCreateByLocation(self.main_source, self.break_line)
-        self.assertTrue(bpt, VALID_BREAKPOINT)
+        # Make sure we stopped at the first breakpoint.
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.main_source, False), self.break_line
+        )
 
         bar_bpt = target.BreakpointCreateByLocation(
             self.main_source, self.bar_break_line
         )
         self.assertTrue(bar_bpt, VALID_BREAKPOINT)
-
-        # Make sure we stopped at the first breakpoint.
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, bpt)
 
         # Now make sure we can call a function in the class method we've
         # stopped in.

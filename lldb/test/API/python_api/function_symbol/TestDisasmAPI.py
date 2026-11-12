@@ -26,14 +26,11 @@ class DisasmAPITestCase(TestBase):
     def test(self):
         """Exercise getting SBAddress objects, disassembly, and SBAddress APIs."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Now create the two breakpoints inside function 'a'.
-        breakpoint1 = target.BreakpointCreateByLocation("main.c", self.line1)
+        target, process, thread, breakpoint1 = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c", False), self.line1
+        )
         breakpoint2 = target.BreakpointCreateByLocation("main.c", self.line2)
         self.trace("breakpoint1:", breakpoint1)
         self.trace("breakpoint2:", breakpoint2)
@@ -45,9 +42,6 @@ class DisasmAPITestCase(TestBase):
         )
 
         # Frame #0 should be on self.line1.
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, breakpoint1
-        )
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
         self.assertEqual(lineEntry.GetLine(), self.line1)

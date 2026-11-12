@@ -28,15 +28,11 @@ class ChangeValueAPITestCase(TestBase):
         d = {"EXE": self.exe_name}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact(self.exe_name)
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         # Create the breakpoint inside function 'main'.
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+        target, process, thread, breakpoint = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.c", False), self.line, exe_name=self.exe_name
+        )
 
         # Create the breakpoint inside the function 'main'
         check_breakpoint = target.BreakpointCreateByLocation("main.c", self.check_line)
@@ -47,9 +43,6 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(end_breakpoint, VALID_BREAKPOINT)
 
         # Get Frame #0.
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, breakpoint
-        )
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.IsValid(), "Got a valid frame.")
 

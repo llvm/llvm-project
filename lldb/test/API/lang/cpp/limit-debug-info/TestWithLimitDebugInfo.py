@@ -1,3 +1,4 @@
+import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -9,23 +10,15 @@ class TestWithLimitDebugInfo(TestBase):
     def _run_test(self, build_dict):
         self.build(dictionary=build_dict)
 
-        # Get the path of the executable
-        exe_path = self.getBuildArtifact("a.out")
-
-        # Load the executable
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target.IsValid(), VALID_TARGET)
-
         # Break on main function
-        break1_id = lldbutil.run_break_set_by_file_and_line(
-            self, "derived.h", line_number("derived.h", "// break1")
+        _, _, _, bkpt = lldbutil.run_to_line_breakpoint(
+            self,
+            lldb.SBFileSpec("derived.h", False),
+            line_number("derived.h", "// break1"),
         )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
         lldbutil.run_break_set_by_file_and_line(
             self, "derived.h", line_number("derived.h", "// break2")
-        )
-
-        lldbutil.run_to_breakpoint_do_run(
-            self, target, target.FindBreakpointByID(break1_id)
         )
 
         self.expect_expr("1", result_type="int", result_value="1")

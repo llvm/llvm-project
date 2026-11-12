@@ -23,20 +23,16 @@ class TestCStepping(TestBase):
     def test_and_python_api(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
 
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
         breakpoints_to_disable = []
 
-        break_1_in_main = target.BreakpointCreateBySourceRegex(
+        target, process, thread, break_1_in_main = lldbutil.run_to_source_breakpoint(
+            self,
             "// frame select 2, thread step-out while stopped at .c.1..",
             self.main_source_spec,
         )
-        self.assertTrue(break_1_in_main, VALID_BREAKPOINT)
         breakpoints_to_disable.append(break_1_in_main)
 
         break_in_a = target.BreakpointCreateBySourceRegex(
@@ -56,10 +52,6 @@ class TestCStepping(TestBase):
         )
         self.assertTrue(break_in_c, VALID_BREAKPOINT)
         breakpoints_to_disable.append(break_in_c)
-
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, break_1_in_main
-        )
 
         # Get the stop id and for fun make sure it increases:
         old_stop_id = process.GetStopID()

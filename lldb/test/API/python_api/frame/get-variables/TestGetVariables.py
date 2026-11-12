@@ -43,16 +43,13 @@ class TestGetVariables(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target by the debugger.
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         line1 = line_number(self.source, "// breakpoint 1")
         line2 = line_number(self.source, "// breakpoint 2")
         line3 = line_number(self.source, "// breakpoint 3")
 
-        breakpoint1 = target.BreakpointCreateByLocation(self.source, line1)
+        target, process, thread, breakpoint1 = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source, False), line1
+        )
         breakpoint2 = target.BreakpointCreateByLocation(self.source, line2)
         breakpoint3 = target.BreakpointCreateByLocation(self.source, line3)
 
@@ -60,9 +57,6 @@ class TestGetVariables(TestBase):
         self.assertGreaterEqual(breakpoint2.GetNumLocations(), 1, PROCESS_IS_VALID)
         self.assertGreaterEqual(breakpoint3.GetNumLocations(), 1, PROCESS_IS_VALID)
 
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, breakpoint1
-        )
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid(), "Frame must be valid")
 

@@ -40,28 +40,20 @@ class ExecTestCase(TestBase):
 
     def do_test(self, skip_exec):
         self.build()
-        exe = self.getBuildArtifact("a.out")
         secondprog = self.getBuildArtifact("secondprog")
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
 
         lldbutil.install_to_target(self, secondprog)
 
-        # Create any breakpoints we need
-        breakpoint1 = target.BreakpointCreateBySourceRegex(
-            "Set breakpoint 1 here", lldb.SBFileSpec("main.c", False)
+        # The stop reason of the thread should be breakpoint.
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "Set breakpoint 1 here", lldb.SBFileSpec("main.c", False)
         )
-        self.assertTrue(breakpoint1, VALID_BREAKPOINT)
+
+        # Create any breakpoints we need
         breakpoint2 = target.BreakpointCreateBySourceRegex(
             "Set breakpoint 2 here", lldb.SBFileSpec("secondprog.cpp", False)
         )
         self.assertTrue(breakpoint2, VALID_BREAKPOINT)
-
-        # The stop reason of the thread should be breakpoint.
-        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
-            self, target, breakpoint1
-        )
 
         if self.TraceOn():
             self.runCmd("settings show target.process.stop-on-exec", check=False)
