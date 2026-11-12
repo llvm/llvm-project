@@ -150,15 +150,6 @@ def FeatureVSX       : SubtargetFeature<"vsx","HasVSX", "true",
 def FeatureTwoConstNR :
   SubtargetFeature<"two-const-nr", "NeedsTwoConstNR", "true",
                    "Requires two constant Newton-Raphson computation">;
-def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8Altivec", "true",
-                                        "Enable POWER8 Altivec instructions",
-                                        [FeatureAltivec]>;
-def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8Crypto", "true",
-                                       "Enable POWER8 Crypto instructions",
-                                       [FeatureP8Altivec]>;
-def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8Vector", "true",
-                                        "Enable POWER8 vector instructions",
-                                        [FeatureVSX, FeatureP8Altivec]>;
 def FeatureDirectMove :
   SubtargetFeature<"direct-move", "HasDirectMove", "true",
                    "Enable Power8 direct move instructions",
@@ -281,21 +272,47 @@ def FeatureISAFuture : SubtargetFeature<"isa-future-instructions",
                                         "IsISAFuture", "true",
                                         "Enable instructions for Future ISA.",
                                         [FeatureISA3_1]>;
+
+// The below are feature supersets used to control LLVM's codegen. The names are
+// slight misnomers: power* is a CPU, but it's the ISA level plus features that
+// determines which instructions are available.
+//
+// These are enabled if the "implied by" feature are enabled (happens in
+// `initSubtargetFeatures` since ).
+//
+// Eventually it may be good to deprecate these in favor of setting individual
+// target features or a target CPU.
+def FeatureP8Altivec : SubtargetFeature<"power8-altivec", "HasP8Altivec", "true",
+                                        "Enable POWER8 Altivec instructions. "
+                                        "Implied by isa-v207-instructions+altivec.",
+                                        [FeatureISA2_07, FeatureAltivec]>;
+def FeatureP8Crypto : SubtargetFeature<"crypto", "HasP8Crypto", "true",
+                                       "Enable POWER8 Crypto instructions",
+                                       [FeatureP8Altivec]>;
+def FeatureP8Vector  : SubtargetFeature<"power8-vector", "HasP8Vector", "true",
+                                        "Enable POWER8 vector instructions. "
+                                        "Implied by isa-v207-instructions+vsx",
+                                        [FeatureVSX, FeatureP8Altivec]>;
 def FeatureP9Altivec : SubtargetFeature<"power9-altivec", "HasP9Altivec", "true",
-                                        "Enable POWER9 Altivec instructions",
+                                        "Enable POWER9 Altivec instructions. "
+                                        "Implied by isa-v30-instructions+vsx",
                                         [FeatureISA3_0, FeatureP8Altivec]>;
 def FeatureP9Vector  : SubtargetFeature<"power9-vector", "HasP9Vector", "true",
-                                        "Enable POWER9 vector instructions",
+                                        "Enable POWER9 vector instructions. "
+                                        "Implied by isa-v30-instructions+vsx",
                                         [FeatureISA3_0, FeatureP8Vector,
                                          FeatureP9Altivec]>;
 def FeatureP10Vector  : SubtargetFeature<"power10-vector", "HasP10Vector",
                                          "true",
-                                         "Enable POWER10 vector instructions",
+                                         "Enable POWER10 vector instructions. "
+                                         "Implied by isa-v31-instructions+vsx",
                                          [FeatureISA3_1, FeatureP9Vector]>;
 def FeatureFutureVector : SubtargetFeature<"future-vector", "HasFutureVector",
                                            "true",
-                                           "Enable Future vector instructions",
+                                           "Enable Future vector instructions. "
+                                           "Implied by isa-future-instructions+vsx",
                                            [FeatureISAFuture, FeatureP10Vector]>;
+
 // A separate feature for this even though it is equivalent to P9Vector
 // because this is a feature of the implementation rather than the architecture
 // and may go away with future CPU's.
