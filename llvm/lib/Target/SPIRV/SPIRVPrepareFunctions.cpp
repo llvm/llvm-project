@@ -53,10 +53,6 @@ class SPIRVPrepareFunctionsImpl {
   bool terminateBlocksAfterTrap(Module &M, Intrinsic::ID IID);
   Function *removeAggregateTypesFromSignature(Function *F);
   bool removeAggregateTypesFromCalls(Function *F);
-  void retypeMutatedCalls(Module &M);
-  // The new type of each call keyed in spv.mutated_callsite, applied once
-  // every aggregate signature is cloned.
-  StringMap<FunctionType *> PendingCallTypes;
 
 public:
   SPIRVPrepareFunctionsImpl(
@@ -867,9 +863,11 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
     if (auto *CB = dyn_cast<CallBase>(&I)) {
       if (!CB->getCalledOperand() || CB->getCalledFunction())
         continue;
-      if (CB->getType()->isAggregateType() ||
-          any_of(CB->args(),
-                 [](auto &&Arg) { return Arg->getType()->isAggregateType(); }))
+      // A cloned caller passes its aggregate arguments as i32 already, so
+      // check the call's own function type.
+      FunctionType *FTy = CB->getFunctionType();
+      if (FTy->getReturnType()->isAggregateType() ||
+          any_of(FTy->params(), [](Type *T) { return T->isAggregateType(); }))
         Calls.emplace_back(CB, nullptr);
     }
   }
@@ -890,12 +888,12 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
       RetTy = B.getInt32Ty();
     }
 
-    for (auto &&Arg : CB->args()) {
-      if (Arg->getType()->isAggregateType()) {
+    for (auto [Idx, ParamTy] : enumerate(CB->getFunctionType()->params())) {
+      if (ParamTy->isAggregateType()) {
         NewArgTypes.push_back(B.getInt32Ty());
-        ChangedTypes.emplace_back(Arg.getOperandNo(), Arg->getType());
+        ChangedTypes.emplace_back(Idx, ParamTy);
       } else {
-        NewArgTypes.push_back(Arg->getType());
+        NewArgTypes.push_back(ParamTy);
       }
     }
     NewFnTy = FunctionType::get(RetTy, NewArgTypes,
@@ -919,33 +917,19 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
           ASM->isAlignStack(), ASM->getDialect(), ASM->canThrow()));
     }
 
-    PendingCallTypes[Key] = NewFnTy;
     addFunctionTypeMutation(
         F->getParent()->getOrInsertNamedMetadata("spv.mutated_callsites"),
         std::move(ChangedTypes), Key, Constraints);
   }
 
-  return true;
-}
-
-// Retypes the calls removeAggregateTypesFromCalls keyed, in the cloned bodies.
-void SPIRVPrepareFunctionsImpl::retypeMutatedCalls(Module &M) {
-  for (Function &F : M) {
-    for (Instruction &I : instructions(F)) {
-      auto *CB = dyn_cast<CallBase>(&I);
-      MDNode *MD = CB ? CB->getMetadata("spv.mutated_callsite") : nullptr;
-      if (!MD)
-        continue;
-      auto It =
-          PendingCallTypes.find(cast<MDString>(MD->getOperand(0))->getString());
-      if (It == PendingCallTypes.end())
-        continue;
-      if (It->second->getReturnType() != CB->getType())
-        TM.getSubtarget<SPIRVSubtarget>(F).getSPIRVGlobalRegistry()->addMutated(
-            CB, CB->getType());
-      CB->mutateFunctionType(It->second);
-    }
+  for (auto &&[CB, NewFTy] : Calls) {
+    if (NewFTy->getReturnType() != CB->getType())
+      TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
+          CB, CB->getType());
+    CB->mutateFunctionType(NewFTy);
   }
+
+  return true;
 }
 
 bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
@@ -994,7 +978,6 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);
-    Changed |= removeAggregateTypesFromCalls(&F);
     FuncsWorklist.push_back(&F);
   }
 
@@ -1013,13 +996,14 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   }
   // A direct call has its callee's old type until now: getCalledFunction()
   // no longer matches it, so compare the callee operand and the old type.
-  for (auto [NewF, OldFTy] : NewFuncs)
+  for (const auto &[NewF, OldFTy] : NewFuncs)
     for (User *U : NewF->users())
       if (auto *CB = dyn_cast<CallBase>(U); CB &&
                                             CB->getCalledOperand() == NewF &&
                                             CB->getFunctionType() == OldFTy)
         CB->mutateFunctionType(NewF->getFunctionType());
-  retypeMutatedCalls(M);
+  for (Function &F : M)
+    Changed |= removeAggregateTypesFromCalls(&F);
   return Changed;
 }
 
