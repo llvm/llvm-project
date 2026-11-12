@@ -6,7 +6,6 @@
 ---
 name:            callbr-asm-spills-after-reload
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64, preferred-register: '', flags: [  ] }
   - { id: 1, class: gr32, preferred-register: '', flags: [  ] }

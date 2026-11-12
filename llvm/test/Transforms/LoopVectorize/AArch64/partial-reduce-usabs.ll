@@ -442,3 +442,57 @@ for.body:
 exit:
   ret i32 %res.2
 }
+
+; The absolute difference is computed as smax(X, Y) - smin(X, Y), with X and Y
+; frozen as each is used twice. With loop-invariant %x, freeze %x is a single
+; scalar without underlying instruction.
+define i32 @signed_absolute_difference_invariant_operand(i8 %x, ptr %y) {
+; CHECK-LABEL: define i32 @signed_absolute_difference_invariant_operand(
+; CHECK-SAME: i8 [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[X]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze <16 x i8> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[Y]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze <16 x i8> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.smax.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.smin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = sub <16 x i8> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[TMP5]] to <16 x i32>
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP6]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8000
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[TMP8]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %sum.0 = phi i32 [ 0, %entry ], [ %sum.1, %for.body ]
+  %ext.x = sext i8 %x to i32
+  %y.ptr = getelementptr inbounds nuw i8, ptr %y, i64 %iv
+  %y.val = load i8, ptr %y.ptr, align 1
+  %ext.y = sext i8 %y.val to i32
+  %sub = sub nsw i32 %ext.x, %ext.y
+  %abs.diff = tail call i32 @llvm.abs.i32(i32 %sub, i1 true)
+  %sum.1 = add nsw i32 %abs.diff, %sum.0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 8000
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret i32 %sum.1
+}

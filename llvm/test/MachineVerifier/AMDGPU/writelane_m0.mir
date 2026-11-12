@@ -15,3 +15,4 @@ body: |
   bb.0:
     ; CHECK: $vgpr0 = V_WRITELANE_B32 $sgpr0, $m0, $vgpr0
     $vgpr0 = V_WRITELANE_B32 $sgpr0, $m0, $vgpr0
+...

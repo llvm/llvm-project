@@ -13,9 +13,13 @@
 
 namespace lldb_private {
 
-/// Retrieves a string representing the complete LLDB version, which includes
-/// the lldb version number, as well as embedded compiler versions and the
+/// Retrieves a string representing the LLDB version, which includes
+/// the lldb version number, the repository and revision, and the
 /// vendor tag.
+///
+/// See \c Language::GetVersionWithLanguageInfo() for an augmented
+/// version string that also includes the versions of embedded
+/// compilers.
 const char *GetVersion();
 
 } // namespace lldb_private

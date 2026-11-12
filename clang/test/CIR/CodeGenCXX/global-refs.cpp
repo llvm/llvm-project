@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR,CIR-BEFORE
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR,CIR-AFTER
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMCIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,OGCG
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMCIR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,OGCG
 
 struct DefCtor{};
 struct WithCtor{
@@ -134,6 +134,10 @@ extern WithCtor &ExternRef;
 // CIR: cir.global "private" constant external @ExternRef : !cir.ptr<!rec_WithCtor>
 // LLVM: @ExternRef = external constant ptr
 
+static constexpr int val = 10;
+// CIR: cir.global "private" constant internal {{.*}}@_ZL3val = #cir.int<10> : !s32i align(4)
+// LLVM: @_ZL3val = internal constant i32 10, align 4
+
 void use() {
   // CIR-LABEL: cir.func{{.*}}use
 
@@ -167,6 +171,21 @@ void use() {
 // LLVM: %[[LOCAL:.*]] = alloca ptr
 // LLVM-NEXT: %[[EXT_REF:.*]] = load ptr, ptr @ExternRef
 // LLVM-NEXT: store ptr %[[EXT_REF]], ptr %[[LOCAL]]
+
+consteval const int &get_ref(const int &x) {
+  return x;
+}
+
+const int &test_return() {
+  // CIR-LABEL: cir.func {{.*}} @_Z11test_returnv
+  // CIR: %[[VAL_ADDR:.*]] = cir.const #cir.global_view<@_ZL3val> : !cir.ptr<!s32i>
+  // CIR: cir.store{{.*}} %[[VAL_ADDR]], %[[RET_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // LLVM-LABEL: define {{.*}} @_Z11test_returnv
+  // LLVMCIR: store ptr @_ZL3val
+  // LLVMCIR: ret ptr
+  // OGCG: ret ptr @_ZL3val
+  return get_ref(val);
+}
 
 // TODO(cir): Once we get destructors for temporaries done, we should test them
 // here, same as the 'const-WithCtor' examples, except with the 'withCtorDtor'
