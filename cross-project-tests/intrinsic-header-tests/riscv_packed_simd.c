@@ -4392,289 +4392,289 @@ int64_t test_mqracc_w11_i64(int64_t rd, int32x2_t a, int32x2_t b) {
   return __riscv_mqracc_w11_i64(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4add_i8x4:
+// CHECK-LABEL: test_pm4add_i32:
 // RV32:        pm4add.b
 // RV64:        pm4add.b
-int32_t test_pm4add_i8x4(int8x4_t rs1, int8x4_t rs2) {
-  return __riscv_pm4add_i8x4(rs1, rs2);
+int32_t test_pm4add_i32(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_pm4add_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2add_i16x2:
+// CHECK-LABEL: test_pm2add_i32:
 // RV32:        pm2add.h
 // RV64:        pm2add.h
-int32_t test_pm2add_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2add_i16x2(rs1, rs2);
+int32_t test_pm2add_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2add_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2add_x_i16x2:
+// CHECK-LABEL: test_pm2add_x_i32:
 // RV32:        pm2add.hx
 // RV64:        pm2add.hx
-int32_t test_pm2add_x_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2add_x_i16x2(rs1, rs2);
+int32_t test_pm2add_x_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2add_x_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm4addu_u8x4:
+// CHECK-LABEL: test_pm4addu_u32:
 // RV32:        pm4addu.b
 // RV64:        pm4addu.b
-uint32_t test_pm4addu_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
-  return __riscv_pm4addu_u8x4(rs1, rs2);
+uint32_t test_pm4addu_u32(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pm4addu_u32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2addu_u16x2:
+// CHECK-LABEL: test_pm2addu_u32:
 // RV32:        pm2addu.h
 // RV64:        pm2addu.h
-uint32_t test_pm2addu_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
-  return __riscv_pm2addu_u16x2(rs1, rs2);
+uint32_t test_pm2addu_u32(uint16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2addu_u32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pmq2add_i16x2:
+// CHECK-LABEL: test_pmq2add_i32:
 // RV32:        pmq2add.h
 // RV64:        pmq2add.h
-int32_t test_pmq2add_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pmq2add_i16x2(rs1, rs2);
+int32_t test_pmq2add_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmq2add_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pmqr2add_i16x2:
+// CHECK-LABEL: test_pmqr2add_i32:
 // RV32:        pmqr2add.h
 // RV64:        pmqr2add.h
-int32_t test_pmqr2add_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pmqr2add_i16x2(rs1, rs2);
+int32_t test_pmqr2add_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pmqr2add_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2sadd_i16x2:
+// CHECK-LABEL: test_pm2sadd_i32:
 // RV32:        pm2sadd.h
 // RV64:        pm2sadd.h
-int32_t test_pm2sadd_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2sadd_i16x2(rs1, rs2);
+int32_t test_pm2sadd_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2sadd_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2sadd_x_i16x2:
+// CHECK-LABEL: test_pm2sadd_x_i32:
 // RV32:        pm2sadd.hx
 // RV64:        pm2sadd.hx
-int32_t test_pm2sadd_x_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2sadd_x_i16x2(rs1, rs2);
+int32_t test_pm2sadd_x_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2sadd_x_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2sub_i16x2:
+// CHECK-LABEL: test_pm2sub_i32:
 // RV32:        pm2sub.h
 // RV64:        pm2sub.h
-int32_t test_pm2sub_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2sub_i16x2(rs1, rs2);
+int32_t test_pm2sub_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2sub_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2sub_x_i16x2:
+// CHECK-LABEL: test_pm2sub_x_i32:
 // RV32:        pm2sub.hx
 // RV64:        pm2sub.hx
-int32_t test_pm2sub_x_i16x2(int16x2_t rs1, int16x2_t rs2) {
-  return __riscv_pm2sub_x_i16x2(rs1, rs2);
+int32_t test_pm2sub_x_i32(int16x2_t rs1, int16x2_t rs2) {
+  return __riscv_pm2sub_x_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm4addsu_i8x4:
+// CHECK-LABEL: test_pm4addsu_i32:
 // RV32:        pm4addsu.b
 // RV64:        pm4addsu.b
-int32_t test_pm4addsu_i8x4(int8x4_t rs1, uint8x4_t rs2) {
-  return __riscv_pm4addsu_i8x4(rs1, rs2);
+int32_t test_pm4addsu_i32(int8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_pm4addsu_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2addsu_i16x2:
+// CHECK-LABEL: test_pm2addsu_i32:
 // RV32:        pm2addsu.h
 // RV64:        pm2addsu.h
-int32_t test_pm2addsu_i16x2(int16x2_t rs1, uint16x2_t rs2) {
-  return __riscv_pm2addsu_i16x2(rs1, rs2);
+int32_t test_pm2addsu_i32(int16x2_t rs1, uint16x2_t rs2) {
+  return __riscv_pm2addsu_i32(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm4add_i8x8:
+// CHECK-LABEL: test_pm4add_i32x2:
 // RV32:        pm4add.b
 // RV32:        pm4add.b
 // RV64:        pm4add.b
-int32x2_t test_pm4add_i8x8(int8x8_t rs1, int8x8_t rs2) {
-  return __riscv_pm4add_i8x8(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2add_i16x4:
-// RV32:        pm2add.h
-// RV32:        pm2add.h
-// RV64:        pm2add.h
-int32x2_t test_pm2add_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2add_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2add_x_i16x4:
-// RV32:        pm2add.hx
-// RV32:        pm2add.hx
-// RV64:        pm2add.hx
-int32x2_t test_pm2add_x_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2add_x_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm4addu_u8x8:
-// RV32:        pm4addu.b
-// RV32:        pm4addu.b
-// RV64:        pm4addu.b
-uint32x2_t test_pm4addu_u8x8(uint8x8_t rs1, uint8x8_t rs2) {
-  return __riscv_pm4addu_u8x8(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2addu_u16x4:
-// RV32:        pm2addu.h
-// RV32:        pm2addu.h
-// RV64:        pm2addu.h
-uint32x2_t test_pm2addu_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm2addu_u16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pmq2add_i16x4:
-// RV32:        pmq2add.h
-// RV32:        pmq2add.h
-// RV64:        pmq2add.h
-int32x2_t test_pmq2add_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pmq2add_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pmqr2add_i16x4:
-// RV32:        pmqr2add.h
-// RV32:        pmqr2add.h
-// RV64:        pmqr2add.h
-int32x2_t test_pmqr2add_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pmqr2add_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2sadd_i16x4:
-// RV32:        pm2sadd.h
-// RV32:        pm2sadd.h
-// RV64:        pm2sadd.h
-int32x2_t test_pm2sadd_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2sadd_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2sadd_x_i16x4:
-// RV32:        pm2sadd.hx
-// RV32:        pm2sadd.hx
-// RV64:        pm2sadd.hx
-int32x2_t test_pm2sadd_x_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2sadd_x_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2sub_i16x4:
-// RV32:        pm2sub.h
-// RV32:        pm2sub.h
-// RV64:        pm2sub.h
-int32x2_t test_pm2sub_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2sub_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2sub_x_i16x4:
-// RV32:        pm2sub.hx
-// RV32:        pm2sub.hx
-// RV64:        pm2sub.hx
-int32x2_t test_pm2sub_x_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm2sub_x_i16x4(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm4addsu_i8x8:
-// RV32:        pm4addsu.b
-// RV32:        pm4addsu.b
-// RV64:        pm4addsu.b
-int32x2_t test_pm4addsu_i8x8(int8x8_t rs1, uint8x8_t rs2) {
-  return __riscv_pm4addsu_i8x8(rs1, rs2);
-}
-
-// CHECK-LABEL: test_pm2addsu_i16x4:
-// RV32:        pm2addsu.h
-// RV32:        pm2addsu.h
-// RV64:        pm2addsu.h
-int32x2_t test_pm2addsu_i16x4(int16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm2addsu_i16x4(rs1, rs2);
+int32x2_t test_pm4add_i32x2(int8x8_t rs1, int8x8_t rs2) {
+  return __riscv_pm4add_i32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_pm2add_i32x2:
-// RV32:        wmul
-// RV32:        wmacc
-// RV64:        pm2add.w
-int64_t test_pm2add_i32x2(int32x2_t rs1, int32x2_t rs2) {
+// RV32:        pm2add.h
+// RV32:        pm2add.h
+// RV64:        pm2add.h
+int32x2_t test_pm2add_i32x2(int16x4_t rs1, int16x4_t rs2) {
   return __riscv_pm2add_i32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_pm2add_x_i32x2:
-// RV32:        wmul
-// RV32:        wmacc
-// RV64:        pm2add.wx
-int64_t test_pm2add_x_i32x2(int32x2_t rs1, int32x2_t rs2) {
+// RV32:        pm2add.hx
+// RV32:        pm2add.hx
+// RV64:        pm2add.hx
+int32x2_t test_pm2add_x_i32x2(int16x4_t rs1, int16x4_t rs2) {
   return __riscv_pm2add_x_i32x2(rs1, rs2);
 }
 
+// CHECK-LABEL: test_pm4addu_u32x2:
+// RV32:        pm4addu.b
+// RV32:        pm4addu.b
+// RV64:        pm4addu.b
+uint32x2_t test_pm4addu_u32x2(uint8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_pm4addu_u32x2(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pm2addu_u32x2:
-// RV32:        wmulu
-// RV32:        wmaccu
-// RV64:        pm2addu.w
-uint64_t test_pm2addu_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
+// RV32:        pm2addu.h
+// RV32:        pm2addu.h
+// RV64:        pm2addu.h
+uint32x2_t test_pm2addu_u32x2(uint16x4_t rs1, uint16x4_t rs2) {
   return __riscv_pm2addu_u32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_pmq2add_i32x2:
-// RV32:        mqwacc
-// RV32:        mqwacc
-// RV64:        pmq2add.w
-int64_t test_pmq2add_i32x2(int32x2_t rs1, int32x2_t rs2) {
+// RV32:        pmq2add.h
+// RV32:        pmq2add.h
+// RV64:        pmq2add.h
+int32x2_t test_pmq2add_i32x2(int16x4_t rs1, int16x4_t rs2) {
   return __riscv_pmq2add_i32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_pmqr2add_i32x2:
-// RV32:        mqrwacc
-// RV32:        mqrwacc
-// RV64:        pmqr2add.w
-int64_t test_pmqr2add_i32x2(int32x2_t rs1, int32x2_t rs2) {
+// RV32:        pmqr2add.h
+// RV32:        pmqr2add.h
+// RV64:        pmqr2add.h
+int32x2_t test_pmqr2add_i32x2(int16x4_t rs1, int16x4_t rs2) {
   return __riscv_pmqr2add_i32x2(rs1, rs2);
 }
 
+// CHECK-LABEL: test_pm2sadd_i32x2:
+// RV32:        pm2sadd.h
+// RV32:        pm2sadd.h
+// RV64:        pm2sadd.h
+int32x2_t test_pm2sadd_i32x2(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2sadd_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2sadd_x_i32x2:
+// RV32:        pm2sadd.hx
+// RV32:        pm2sadd.hx
+// RV64:        pm2sadd.hx
+int32x2_t test_pm2sadd_x_i32x2(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2sadd_x_i32x2(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pm2sub_i32x2:
-// RV32:        wmul
-// RV32:        wmul
-// RV32:        subd
-// RV64:        pm2sub.w
-int64_t test_pm2sub_i32x2(int32x2_t rs1, int32x2_t rs2) {
+// RV32:        pm2sub.h
+// RV32:        pm2sub.h
+// RV64:        pm2sub.h
+int32x2_t test_pm2sub_i32x2(int16x4_t rs1, int16x4_t rs2) {
   return __riscv_pm2sub_i32x2(rs1, rs2);
 }
 
 // CHECK-LABEL: test_pm2sub_x_i32x2:
+// RV32:        pm2sub.hx
+// RV32:        pm2sub.hx
+// RV64:        pm2sub.hx
+int32x2_t test_pm2sub_x_i32x2(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm2sub_x_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm4addsu_i32x2:
+// RV32:        pm4addsu.b
+// RV32:        pm4addsu.b
+// RV64:        pm4addsu.b
+int32x2_t test_pm4addsu_i32x2(int8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_pm4addsu_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2addsu_i32x2:
+// RV32:        pm2addsu.h
+// RV32:        pm2addsu.h
+// RV64:        pm2addsu.h
+int32x2_t test_pm2addsu_i32x2(int16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm2addsu_i32x2(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2add_i64:
+// RV32:        wmul
+// RV32:        wmacc
+// RV64:        pm2add.w
+int64_t test_pm2add_i64(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2add_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2add_x_i64:
+// RV32:        wmul
+// RV32:        wmacc
+// RV64:        pm2add.wx
+int64_t test_pm2add_x_i64(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2add_x_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2addu_u64:
+// RV32:        wmulu
+// RV32:        wmaccu
+// RV64:        pm2addu.w
+uint64_t test_pm2addu_u64(uint32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_pm2addu_u64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pmq2add_i64:
+// RV32:        mqwacc
+// RV32:        mqwacc
+// RV64:        pmq2add.w
+int64_t test_pmq2add_i64(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmq2add_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pmqr2add_i64:
+// RV32:        mqrwacc
+// RV32:        mqrwacc
+// RV64:        pmqr2add.w
+int64_t test_pmqr2add_i64(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pmqr2add_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2sub_i64:
+// RV32:        wmul
+// RV32:        wmul
+// RV32:        subd
+// RV64:        pm2sub.w
+int64_t test_pm2sub_i64(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2sub_i64(rs1, rs2);
+}
+
+// CHECK-LABEL: test_pm2sub_x_i64:
 // RV32:        wmul
 // RV32:        wmul
 // RV32:        subd
 // RV64:        pm2sub.wx
-int64_t test_pm2sub_x_i32x2(int32x2_t rs1, int32x2_t rs2) {
-  return __riscv_pm2sub_x_i32x2(rs1, rs2);
+int64_t test_pm2sub_x_i64(int32x2_t rs1, int32x2_t rs2) {
+  return __riscv_pm2sub_x_i64(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm2addsu_i32x2:
+// CHECK-LABEL: test_pm2addsu_i64:
 // RV32:        wmulsu
 // RV32:        wmaccsu
 // RV64:        pm2addsu.w
-int64_t test_pm2addsu_i32x2(int32x2_t rs1, uint32x2_t rs2) {
-  return __riscv_pm2addsu_i32x2(rs1, rs2);
+int64_t test_pm2addsu_i64(int32x2_t rs1, uint32x2_t rs2) {
+  return __riscv_pm2addsu_i64(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm4add_i16x4:
+// CHECK-LABEL: test_pm4add_i64:
 // RV32:        pm2wadd.h
 // RV32:        pm2wadda.h
 // RV64:        pm4add.h
-int64_t test_pm4add_i16x4(int16x4_t rs1, int16x4_t rs2) {
-  return __riscv_pm4add_i16x4(rs1, rs2);
+int64_t test_pm4add_i64(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_pm4add_i64(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm4addu_u16x4:
+// CHECK-LABEL: test_pm4addu_u64:
 // RV32:        pm2waddu.h
 // RV32:        pm2waddau.h
 // RV64:        pm4addu.h
-uint64_t test_pm4addu_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm4addu_u16x4(rs1, rs2);
+uint64_t test_pm4addu_u64(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm4addu_u64(rs1, rs2);
 }
 
-// CHECK-LABEL: test_pm4addsu_i16x4:
+// CHECK-LABEL: test_pm4addsu_i64:
 // RV32:        pm2waddsu.h
 // RV32:        pm2waddasu.h
 // RV64:        pm4addsu.h
-int64_t test_pm4addsu_i16x4(int16x4_t rs1, uint16x4_t rs2) {
-  return __riscv_pm4addsu_i16x4(rs1, rs2);
+int64_t test_pm4addsu_i64(int16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_pm4addsu_i64(rs1, rs2);
 }
 
 // Packed Widening Multiply Accumulate.
@@ -4703,259 +4703,259 @@ int32x2_t test_pwmaccsu_i32x2(int32x2_t rd, int16x2_t rs1, uint16x2_t rs2) {
 }
 
 // Packed Multiplication with Horizontal Addition and Accumulate.
-// CHECK-LABEL: test_pm4adda_i8x4:
+// CHECK-LABEL: test_pm4adda_i32:
 // RV32:        pm4adda.b
 // RV64:        pm4adda.b
-int32_t test_pm4adda_i8x4(int32_t rd, int8x4_t a, int8x4_t b) {
-  return __riscv_pm4adda_i8x4(rd, a, b);
+int32_t test_pm4adda_i32(int32_t rd, int8x4_t a, int8x4_t b) {
+  return __riscv_pm4adda_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2adda_i16x2:
+// CHECK-LABEL: test_pm2adda_i32:
 // RV32:        pm2adda.h
 // RV64:        pm2adda.h
-int32_t test_pm2adda_i16x2(int32_t rd, int16x2_t a, int16x2_t b) {
-  return __riscv_pm2adda_i16x2(rd, a, b);
+int32_t test_pm2adda_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_pm2adda_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2adda_x_i16x2:
+// CHECK-LABEL: test_pm2adda_x_i32:
 // RV32:        pm2adda.hx
 // RV64:        pm2adda.hx
-int32_t test_pm2adda_x_i16x2(int32_t rd, int16x2_t a, int16x2_t b) {
-  return __riscv_pm2adda_x_i16x2(rd, a, b);
+int32_t test_pm2adda_x_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_pm2adda_x_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4addau_u8x4:
+// CHECK-LABEL: test_pm4addau_u32:
 // RV32:        pm4addau.b
 // RV64:        pm4addau.b
-uint32_t test_pm4addau_u8x4(uint32_t rd, uint8x4_t a, uint8x4_t b) {
-  return __riscv_pm4addau_u8x4(rd, a, b);
+uint32_t test_pm4addau_u32(uint32_t rd, uint8x4_t a, uint8x4_t b) {
+  return __riscv_pm4addau_u32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2addau_u16x2:
+// CHECK-LABEL: test_pm2addau_u32:
 // RV32:        pm2addau.h
 // RV64:        pm2addau.h
-uint32_t test_pm2addau_u16x2(uint32_t rd, uint16x2_t a, uint16x2_t b) {
-  return __riscv_pm2addau_u16x2(rd, a, b);
+uint32_t test_pm2addau_u32(uint32_t rd, uint16x2_t a, uint16x2_t b) {
+  return __riscv_pm2addau_u32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pmq2adda_i16x2:
+// CHECK-LABEL: test_pmq2adda_i32:
 // RV32:        pmq2adda.h
 // RV64:        pmq2adda.h
-int32_t test_pmq2adda_i16x2(int32_t rd, int16x2_t a, int16x2_t b) {
-  return __riscv_pmq2adda_i16x2(rd, a, b);
+int32_t test_pmq2adda_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_pmq2adda_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pmqr2adda_i16x2:
+// CHECK-LABEL: test_pmqr2adda_i32:
 // RV32:        pmqr2adda.h
 // RV64:        pmqr2adda.h
-int32_t test_pmqr2adda_i16x2(int32_t rd, int16x2_t a, int16x2_t b) {
-  return __riscv_pmqr2adda_i16x2(rd, a, b);
+int32_t test_pmqr2adda_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_pmqr2adda_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2suba_i16x2:
+// CHECK-LABEL: test_pm2suba_i32:
 // RV32:        pm2suba.h
 // RV64:        pm2suba.h
-int32_t test_pm2suba_i16x2(int32_t rd, int16x2_t a, int16x2_t b) {
-  return __riscv_pm2suba_i16x2(rd, a, b);
+int32_t test_pm2suba_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_pm2suba_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2suba_x_i16x2:
+// CHECK-LABEL: test_pm2suba_x_i32:
 // RV32:        pm2suba.hx
 // RV64:        pm2suba.hx
-int32_t test_pm2suba_x_i16x2(int32_t rd, int16x2_t a, int16x2_t b) {
-  return __riscv_pm2suba_x_i16x2(rd, a, b);
+int32_t test_pm2suba_x_i32(int32_t rd, int16x2_t a, int16x2_t b) {
+  return __riscv_pm2suba_x_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4addasu_i8x4:
+// CHECK-LABEL: test_pm4addasu_i32:
 // RV32:        pm4addasu.b
 // RV64:        pm4addasu.b
-int32_t test_pm4addasu_i8x4(int32_t rd, int8x4_t a, uint8x4_t b) {
-  return __riscv_pm4addasu_i8x4(rd, a, b);
+int32_t test_pm4addasu_i32(int32_t rd, int8x4_t a, uint8x4_t b) {
+  return __riscv_pm4addasu_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2addasu_i16x2:
+// CHECK-LABEL: test_pm2addasu_i32:
 // RV32:        pm2addasu.h
 // RV64:        pm2addasu.h
-int32_t test_pm2addasu_i16x2(int32_t rd, int16x2_t a, uint16x2_t b) {
-  return __riscv_pm2addasu_i16x2(rd, a, b);
+int32_t test_pm2addasu_i32(int32_t rd, int16x2_t a, uint16x2_t b) {
+  return __riscv_pm2addasu_i32(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4adda_i8x8:
+// CHECK-LABEL: test_pm4adda_i32x2:
 // RV32:        pm4adda.b
 // RV32:        pm4adda.b
 // RV64:        pm4adda.b
-int32x2_t test_pm4adda_i8x8(int32x2_t rd, int8x8_t a, int8x8_t b) {
-  return __riscv_pm4adda_i8x8(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm2adda_i16x4:
-// RV32:        pm2adda.h
-// RV32:        pm2adda.h
-// RV64:        pm2adda.h
-int32x2_t test_pm2adda_i16x4(int32x2_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pm2adda_i16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm2adda_x_i16x4:
-// RV32:        pm2adda.hx
-// RV32:        pm2adda.hx
-// RV64:        pm2adda.hx
-int32x2_t test_pm2adda_x_i16x4(int32x2_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pm2adda_x_i16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm4addau_u8x8:
-// RV32:        pm4addau.b
-// RV32:        pm4addau.b
-// RV64:        pm4addau.b
-uint32x2_t test_pm4addau_u8x8(uint32x2_t rd, uint8x8_t a, uint8x8_t b) {
-  return __riscv_pm4addau_u8x8(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm2addau_u16x4:
-// RV32:        pm2addau.h
-// RV32:        pm2addau.h
-// RV64:        pm2addau.h
-uint32x2_t test_pm2addau_u16x4(uint32x2_t rd, uint16x4_t a, uint16x4_t b) {
-  return __riscv_pm2addau_u16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pmq2adda_i16x4:
-// RV32:        pmq2adda.h
-// RV32:        pmq2adda.h
-// RV64:        pmq2adda.h
-int32x2_t test_pmq2adda_i16x4(int32x2_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pmq2adda_i16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pmqr2adda_i16x4:
-// RV32:        pmqr2adda.h
-// RV32:        pmqr2adda.h
-// RV64:        pmqr2adda.h
-int32x2_t test_pmqr2adda_i16x4(int32x2_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pmqr2adda_i16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm2suba_i16x4:
-// RV32:        pm2suba.h
-// RV32:        pm2suba.h
-// RV64:        pm2suba.h
-int32x2_t test_pm2suba_i16x4(int32x2_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pm2suba_i16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm2suba_x_i16x4:
-// RV32:        pm2suba.hx
-// RV32:        pm2suba.hx
-// RV64:        pm2suba.hx
-int32x2_t test_pm2suba_x_i16x4(int32x2_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pm2suba_x_i16x4(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm4addasu_i8x8:
-// RV32:        pm4addasu.b
-// RV32:        pm4addasu.b
-// RV64:        pm4addasu.b
-int32x2_t test_pm4addasu_i8x8(int32x2_t rd, int8x8_t a, uint8x8_t b) {
-  return __riscv_pm4addasu_i8x8(rd, a, b);
-}
-
-// CHECK-LABEL: test_pm2addasu_i16x4:
-// RV32:        pm2addasu.h
-// RV32:        pm2addasu.h
-// RV64:        pm2addasu.h
-int32x2_t test_pm2addasu_i16x4(int32x2_t rd, int16x4_t a, uint16x4_t b) {
-  return __riscv_pm2addasu_i16x4(rd, a, b);
+int32x2_t test_pm4adda_i32x2(int32x2_t rd, int8x8_t a, int8x8_t b) {
+  return __riscv_pm4adda_i32x2(rd, a, b);
 }
 
 // CHECK-LABEL: test_pm2adda_i32x2:
-// RV32:        wmacc
-// RV32:        wmacc
-// RV64:        pm2adda.w
-int64_t test_pm2adda_i32x2(int64_t rd, int32x2_t a, int32x2_t b) {
+// RV32:        pm2adda.h
+// RV32:        pm2adda.h
+// RV64:        pm2adda.h
+int32x2_t test_pm2adda_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
   return __riscv_pm2adda_i32x2(rd, a, b);
 }
 
 // CHECK-LABEL: test_pm2adda_x_i32x2:
-// RV32:        wmacc
-// RV32:        wmacc
-// RV64:        pm2adda.wx
-int64_t test_pm2adda_x_i32x2(int64_t rd, int32x2_t a, int32x2_t b) {
+// RV32:        pm2adda.hx
+// RV32:        pm2adda.hx
+// RV64:        pm2adda.hx
+int32x2_t test_pm2adda_x_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
   return __riscv_pm2adda_x_i32x2(rd, a, b);
 }
 
+// CHECK-LABEL: test_pm4addau_u32x2:
+// RV32:        pm4addau.b
+// RV32:        pm4addau.b
+// RV64:        pm4addau.b
+uint32x2_t test_pm4addau_u32x2(uint32x2_t rd, uint8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addau_u32x2(rd, a, b);
+}
+
 // CHECK-LABEL: test_pm2addau_u32x2:
-// RV32:        wmaccu
-// RV32:        wmaccu
-// RV64:        pm2addau.w
-uint64_t test_pm2addau_u32x2(uint64_t rd, uint32x2_t a, uint32x2_t b) {
+// RV32:        pm2addau.h
+// RV32:        pm2addau.h
+// RV64:        pm2addau.h
+uint32x2_t test_pm2addau_u32x2(uint32x2_t rd, uint16x4_t a, uint16x4_t b) {
   return __riscv_pm2addau_u32x2(rd, a, b);
 }
 
 // CHECK-LABEL: test_pmq2adda_i32x2:
-// RV32:        mqwacc
-// RV32:        mqwacc
-// RV64:        pmq2adda.w
-int64_t test_pmq2adda_i32x2(int64_t rd, int32x2_t a, int32x2_t b) {
+// RV32:        pmq2adda.h
+// RV32:        pmq2adda.h
+// RV64:        pmq2adda.h
+int32x2_t test_pmq2adda_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
   return __riscv_pmq2adda_i32x2(rd, a, b);
 }
 
+// CHECK-LABEL: test_pmqr2adda_i32x2:
+// RV32:        pmqr2adda.h
+// RV32:        pmqr2adda.h
+// RV64:        pmqr2adda.h
+int32x2_t test_pmqr2adda_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pmqr2adda_i32x2(rd, a, b);
+}
+
 // CHECK-LABEL: test_pm2suba_i32x2:
-// RV32:        wmul
-// RV32:        wmacc
-// RV32:        subd
-// RV64:        pm2suba.w
-int64_t test_pm2suba_i32x2(int64_t rd, int32x2_t a, int32x2_t b) {
+// RV32:        pm2suba.h
+// RV32:        pm2suba.h
+// RV64:        pm2suba.h
+int32x2_t test_pm2suba_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
   return __riscv_pm2suba_i32x2(rd, a, b);
 }
 
 // CHECK-LABEL: test_pm2suba_x_i32x2:
+// RV32:        pm2suba.hx
+// RV32:        pm2suba.hx
+// RV64:        pm2suba.hx
+int32x2_t test_pm2suba_x_i32x2(int32x2_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pm2suba_x_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm4addasu_i32x2:
+// RV32:        pm4addasu.b
+// RV32:        pm4addasu.b
+// RV64:        pm4addasu.b
+int32x2_t test_pm4addasu_i32x2(int32x2_t rd, int8x8_t a, uint8x8_t b) {
+  return __riscv_pm4addasu_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm2addasu_i32x2:
+// RV32:        pm2addasu.h
+// RV32:        pm2addasu.h
+// RV64:        pm2addasu.h
+int32x2_t test_pm2addasu_i32x2(int32x2_t rd, int16x4_t a, uint16x4_t b) {
+  return __riscv_pm2addasu_i32x2(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm2adda_i64:
+// RV32:        wmacc
+// RV32:        wmacc
+// RV64:        pm2adda.w
+int64_t test_pm2adda_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_pm2adda_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm2adda_x_i64:
+// RV32:        wmacc
+// RV32:        wmacc
+// RV64:        pm2adda.wx
+int64_t test_pm2adda_x_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_pm2adda_x_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm2addau_u64:
+// RV32:        wmaccu
+// RV32:        wmaccu
+// RV64:        pm2addau.w
+uint64_t test_pm2addau_u64(uint64_t rd, uint32x2_t a, uint32x2_t b) {
+  return __riscv_pm2addau_u64(rd, a, b);
+}
+
+// CHECK-LABEL: test_pmq2adda_i64:
+// RV32:        mqwacc
+// RV32:        mqwacc
+// RV64:        pmq2adda.w
+int64_t test_pmq2adda_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_pmq2adda_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm2suba_i64:
+// RV32:        wmul
+// RV32:        wmacc
+// RV32:        subd
+// RV64:        pm2suba.w
+int64_t test_pm2suba_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_pm2suba_i64(rd, a, b);
+}
+
+// CHECK-LABEL: test_pm2suba_x_i64:
 // RV32:        wmul
 // RV32:        wmacc
 // RV32:        subd
 // RV64:        pm2suba.wx
-int64_t test_pm2suba_x_i32x2(int64_t rd, int32x2_t a, int32x2_t b) {
-  return __riscv_pm2suba_x_i32x2(rd, a, b);
+int64_t test_pm2suba_x_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_pm2suba_x_i64(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm2addasu_i32x2:
+// CHECK-LABEL: test_pm2addasu_i64:
 // RV32:        wmaccsu
 // RV32:        wmaccsu
 // RV64:        pm2addasu.w
-int64_t test_pm2addasu_i32x2(int64_t rd, int32x2_t a, uint32x2_t b) {
-  return __riscv_pm2addasu_i32x2(rd, a, b);
+int64_t test_pm2addasu_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
+  return __riscv_pm2addasu_i64(rd, a, b);
 }
 
-// CHECK-LABEL: test_pmqr2adda_i32x2:
+// CHECK-LABEL: test_pmqr2adda_i64:
 // RV32:        mqrwacc
 // RV32:        mqrwacc
 // RV64:        pmqr2adda.w
-int64_t test_pmqr2adda_i32x2(int64_t rd, int32x2_t a, int32x2_t b) {
-  return __riscv_pmqr2adda_i32x2(rd, a, b);
+int64_t test_pmqr2adda_i64(int64_t rd, int32x2_t a, int32x2_t b) {
+  return __riscv_pmqr2adda_i64(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4adda_i16x4:
+// CHECK-LABEL: test_pm4adda_i64:
 // RV32:        pm2wadda.h
 // RV32:        pm2wadda.h
 // RV64:        pm4adda.h
-int64_t test_pm4adda_i16x4(int64_t rd, int16x4_t a, int16x4_t b) {
-  return __riscv_pm4adda_i16x4(rd, a, b);
+int64_t test_pm4adda_i64(int64_t rd, int16x4_t a, int16x4_t b) {
+  return __riscv_pm4adda_i64(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4addau_u16x4:
+// CHECK-LABEL: test_pm4addau_u64:
 // RV32:        pm2waddau.h
 // RV32:        pm2waddau.h
 // RV64:        pm4addau.h
-uint64_t test_pm4addau_u16x4(uint64_t rd, uint16x4_t a, uint16x4_t b) {
-  return __riscv_pm4addau_u16x4(rd, a, b);
+uint64_t test_pm4addau_u64(uint64_t rd, uint16x4_t a, uint16x4_t b) {
+  return __riscv_pm4addau_u64(rd, a, b);
 }
 
-// CHECK-LABEL: test_pm4addasu_i16x4:
+// CHECK-LABEL: test_pm4addasu_i64:
 // RV32:        pm2waddasu.h
 // RV32:        pm2waddasu.h
 // RV64:        pm4addasu.h
-int64_t test_pm4addasu_i16x4(int64_t rd, int16x4_t a, uint16x4_t b) {
-  return __riscv_pm4addasu_i16x4(rd, a, b);
+int64_t test_pm4addasu_i64(int64_t rd, int16x4_t a, uint16x4_t b) {
+  return __riscv_pm4addasu_i64(rd, a, b);
 }
 
 // Packed Multiplication with Widening Horizontal Addition.
