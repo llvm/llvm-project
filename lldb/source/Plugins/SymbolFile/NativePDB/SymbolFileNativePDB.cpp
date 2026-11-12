@@ -1286,12 +1286,18 @@ bool SymbolFileNativePDB::ParseIsOptimized(CompileUnit &comp_unit) {
 
   CompilandIndexItem *item =
       m_index->compilands().GetCompiland(uid.asCompiland().modi);
-  if (!item)
+  if (!item || !item->m_compile_opts)
     return false;
 
   // CodeView has no optimization flag for a compile unit, but the frame
   // procedure record of each function says whether it was optimized for speed.
   // Functions optimized for size don't get the flag.
+  //
+  // MSVC sets the flag even at /Od, so only trust LLVM, whose backend major
+  // version is always >= 1000.
+  if (item->m_compile_opts->VersionBackendMajor < 1000)
+    return false;
+
   for (const CVSymbol &sym : item->m_debug_stream.getSymbolArray()) {
     if (sym.kind() != S_FRAMEPROC)
       continue;
