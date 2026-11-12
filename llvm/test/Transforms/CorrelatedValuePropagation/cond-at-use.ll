@@ -519,15 +519,14 @@ define i32 @smin_elide_freeze(i32 %m) {
   ret i32 %sel
 }
 
-; Both operands need to be frozen.
+; Not folded: both operands would need to be frozen.
 define i16 @umin_freeze_both(i16 %x, i16 %y) {
 ; CHECK-LABEL: @umin_freeze_both(
-; CHECK-NEXT:    [[X_FR:%.*]] = freeze i16 [[X:%.*]]
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i16 [[Y:%.*]]
-; CHECK-NEXT:    [[CX:%.*]] = icmp ule i16 [[Y_FR]], 10
-; CHECK-NEXT:    [[CY:%.*]] = icmp uge i16 [[X_FR]], 20
+; CHECK-NEXT:    [[CX:%.*]] = icmp ule i16 [[X:%.*]], 10
+; CHECK-NEXT:    [[CY:%.*]] = icmp uge i16 [[Y:%.*]], 20
 ; CHECK-NEXT:    [[C:%.*]] = and i1 [[CX]], [[CY]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i16 [[Y_FR]], i16 42
+; CHECK-NEXT:    [[MIN:%.*]] = call i16 @llvm.umin.i16(i16 [[X]], i16 [[Y]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i16 [[MIN]], i16 42
 ; CHECK-NEXT:    ret i16 [[SEL]]
 ;
   %cx = icmp ule i16 %x, 10

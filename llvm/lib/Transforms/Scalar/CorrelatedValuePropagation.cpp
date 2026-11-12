@@ -654,35 +654,6 @@ bool CVPImpl::processCmpIntrinsic(CmpIntrinsic *CI) {
   return false;
 }
 
-static bool freezeOperands(MinMaxIntrinsic *MM, bool FreezeL, bool FreezeR,
-                           DominatorTree &DT) {
-  Value *LHS = MM->getLHS();
-  Value *RHS = MM->getRHS();
-  FreezeInst *LFI = nullptr;
-  if (FreezeL) {
-    LFI = new FreezeInst(LHS, LHS->getName() + ".fr", MM->getIterator());
-    if (!freezeUsesAfterDef(*LFI, DT)) {
-      LFI->eraseFromParent();
-      return false;
-    }
-    ++NumFrozen;
-  }
-  if (FreezeR) {
-    auto *RFI = new FreezeInst(RHS, RHS->getName() + ".fr", MM->getIterator());
-    if (!freezeUsesAfterDef(*RFI, DT)) {
-      RFI->eraseFromParent();
-      if (LFI) { // Undo the freeze of LHS.
-        LFI->replaceAllUsesWith(LHS);
-        LFI->eraseFromParent();
-        --NumFrozen;
-      }
-      return false;
-    }
-    ++NumFrozen;
-  }
-  return true;
-}
-
 // See if this min/max intrinsic always picks it's one specific operand.
 // If not, check whether we can canonicalize signed minmax into unsigned version
 bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
@@ -718,19 +689,29 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
                                  /*AssumeFrozen*/ true);
   // Freeze the operands whose range is narrowed by it (there is at least one,
   // as the fold without freezing failed above).
-  bool FreezeL = FrozenLRange != LRange;
-  bool FreezeR = FrozenRRange != RRange;
-  if (FrozenLRange.icmp(Pred, FrozenRRange) &&
-      freezeOperands(MM, FreezeL, FreezeR, *DT)) {
+  if (FrozenLRange != LRange && FrozenLRange.icmp(Pred, RRange)) {
+    Value *LHS = MM->getLHS();
+    auto *FI = new FreezeInst(LHS, LHS->getName() + ".fr", MM->getIterator());
+    if (!freezeUsesAfterDef(*FI, *DT)) {
+      FI->eraseFromParent();
+      return false;
+    }
+    ++NumFrozen;
     ++NumMinMax;
-    MM->replaceAllUsesWith(MM->getLHS());
+    MM->replaceAllUsesWith(FI);
     MM->eraseFromParent();
     return true;
   }
-  if (FrozenRRange.icmp(Pred, FrozenLRange) &&
-      freezeOperands(MM, FreezeL, FreezeR, *DT)) {
+  if (FrozenRRange != RRange && FrozenRRange.icmp(Pred, LRange)) {
+    Value *RHS = MM->getRHS();
+    auto *FI = new FreezeInst(RHS, RHS->getName() + ".fr", MM->getIterator());
+    if (!freezeUsesAfterDef(*FI, *DT)) {
+      FI->eraseFromParent();
+      return false;
+    }
+    ++NumFrozen;
     ++NumMinMax;
-    MM->replaceAllUsesWith(MM->getRHS());
+    MM->replaceAllUsesWith(FI);
     MM->eraseFromParent();
     return true;
   }
