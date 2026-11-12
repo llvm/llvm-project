@@ -93,15 +93,20 @@
 #include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetMachine.h"
@@ -124,6 +129,21 @@ static cl::opt<bool> BBSectionsDetectSourceDrift(
     cl::desc("This checks if there is a fdo instr. profile hash "
              "mismatch for this function"),
     cl::init(true), cl::Hidden);
+
+static cl::opt<bool> AlignBlocksInBBSections(
+    "align-blocks-in-bbsections",
+    cl::desc("Defer basic block alignment from MachineBlockPlacement to "
+             "BasicBlockSections"),
+    cl::init(false), cl::Hidden);
+
+bool llvm::shouldAlignBlocksInBBSections() { return AlignBlocksInBBSections; }
+
+bool llvm::shouldAlignBlocksInBBSections(const TargetMachine &TM) {
+  return AlignBlocksInBBSections &&
+         (TM.getBBSectionsType() != BasicBlockSection::None ||
+          TM.Options.BBAddrMap ||
+          TM.Options.FunctionSplitting == FunctionSplittingMode::All);
+}
 
 // FIXME: This cutoff value is CPU dependent and should be moved to
 // TargetTransformInfo once we consider enabling this on other platforms.
@@ -175,10 +195,64 @@ private:
   bool handleBBAddrMap(MachineFunction &MF);
   bool shouldSplitWithPGO(MachineFunction &MF);
   void assignColdSectionWithPGO(MachineFunction &MF);
+  void assignBlockAlignments(MachineFunction &MF);
 
   // Whether functions without a basic block sections profile are split using
   // PGO/AutoFDO profiles (-function-splitting=all).
   const bool SplitWithPGO;
+};
+
+/// Profile queries for `alignMachineBlocks` backed by the basic block sections
+/// profile. Unlike `MachineBlockFrequencyInfo`, the profile provides raw block
+/// and edge execution counts, which may be small.
+class BBSectionsBlockAlignmentProfile final : public BlockAlignmentProfile {
+public:
+  using BlockCountFn = function_ref<uint64_t(const MachineBasicBlock &)>;
+  using EdgeCountFn = function_ref<uint64_t(const MachineBasicBlock &,
+                                            const MachineBasicBlock &)>;
+
+  BBSectionsBlockAlignmentProfile(BlockCountFn BlockCount,
+                                  EdgeCountFn EdgeCount)
+      : BlockCount(BlockCount), EdgeCount(EdgeCount) {}
+
+  bool isColdRelativeTo(const MachineBasicBlock &BB,
+                        const MachineBasicBlock &RefBB,
+                        BranchProbability ColdRatio) const override {
+    uint64_t Count = BlockCount(BB);
+    uint64_t RefCount = BlockCount(RefBB);
+    // A block without any samples is cold. Otherwise, compare the ratio of the
+    // raw counts against `ColdRatio` instead of `Count < RefCount * ColdRatio`,
+    // whose right-hand side truncates to zero for small reference counts.
+    if (Count == 0)
+      return true;
+    if (Count >= RefCount)
+      return false;
+    return BranchProbability::getBranchProbability(Count, RefCount) < ColdRatio;
+  }
+
+  bool isEdgeColdRelativeToDest(const MachineBasicBlock &Src,
+                                const MachineBasicBlock &Dst,
+                                BranchProbability ColdRatio) const override {
+    uint64_t Count = EdgeCount(Src, Dst);
+    uint64_t DstCount = BlockCount(Dst);
+    if (Count == 0)
+      return true;
+    if (Count >= DstCount)
+      return false;
+    return BranchProbability::getBranchProbability(Count, DstCount) <=
+           ColdRatio;
+  }
+
+  // The profile summary thresholds used by profile-guided size optimization are
+  // not comparable with the basic block sections profile counts. Cold blocks
+  // are already excluded by `isColdRelativeTo`.
+  bool shouldOptForSize(const MachineBasicBlock &BB) const override {
+    return false;
+  }
+
+private:
+  BlockCountFn BlockCount;
+  EdgeCountFn EdgeCount;
 };
 
 } // end anonymous namespace
@@ -191,6 +265,8 @@ INITIALIZE_PASS_BEGIN(
     false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "Prepares for basic block sections, by splitting functions "
@@ -544,6 +620,62 @@ void BasicBlockSections::assignColdSectionWithPGO(MachineFunction &MF) {
   }
 }
 
+// Assigns basic block alignments for the final layout when alignment is
+// deferred from MachineBlockPlacement. Functions laid out using a basic block
+// sections profile use that profile's block and edge counts (or inferred
+// weights); all other functions (including those split with PGO or left
+// untouched) use MachineBlockFrequencyInfo.
+void BasicBlockSections::assignBlockAlignments(MachineFunction &MF) {
+  if (MF.size() <= 1)
+    return;
+
+  const MachineLoopInfo &MLI =
+      getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  if (MF.getBBSectionsType() == BasicBlockSection::List) {
+    // The adapter only references the count callbacks, which must outlive it.
+    // With matching and inference, the profile's BBIDs may not correspond to
+    // the function's blocks anymore; use the inferred weights instead.
+    if (auto *BMI = getAnalysisIfAvailable<BasicBlockMatchingAndInference>()) {
+      auto WeightInfo = BMI->getWeightInfo(MF.getName());
+      assert(WeightInfo &&
+             "WeightInfo must exist when BBSectionsType is List with BMI");
+      auto BlockCount = [&](const MachineBasicBlock &BB) {
+        return WeightInfo->BlockWeights.lookup(&BB);
+      };
+      auto EdgeCount = [&](const MachineBasicBlock &Src,
+                           const MachineBasicBlock &Dst) {
+        return WeightInfo->EdgeWeights.lookup(std::make_pair(&Src, &Dst));
+      };
+      BBSectionsBlockAlignmentProfile Prof(BlockCount, EdgeCount);
+      alignMachineBlocks(MF, &MLI, &Prof);
+      return;
+    }
+    const CFGProfile *CFG =
+        getAnalysis<BasicBlockSectionsProfileReaderWrapperPass>()
+            .getFunctionCFGProfile(MF.getName());
+    assert(CFG && "CFGProfile must exist when BBSectionsType is List");
+    auto BlockCount = [CFG](const MachineBasicBlock &BB) {
+      return CFG->getBlockCount(*BB.getBBID());
+    };
+    auto EdgeCount = [CFG](const MachineBasicBlock &Src,
+                           const MachineBasicBlock &Dst) {
+      return CFG->getEdgeCount(*Src.getBBID(), *Dst.getBBID());
+    };
+    BBSectionsBlockAlignmentProfile Prof(BlockCount, EdgeCount);
+    alignMachineBlocks(MF, &MLI, &Prof);
+    return;
+  }
+
+  MBFIWrapper MBFI(
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
+  const MachineBranchProbabilityInfo &MBPI =
+      getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  ProfileSummaryInfo *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  MBFIBlockAlignmentProfile Prof(MBFI, MBPI, PSI);
+  alignMachineBlocks(MF, &MLI, &Prof);
+}
+
 // Identify, arrange, and modify basic blocks which need separate sections
 // according to the specification provided by the -fbasic-block-sections flag,
 // or according to the PGO/AutoFDO profile with -function-splitting=all.
@@ -666,6 +798,8 @@ bool BasicBlockSections::handleBBAddrMap(MachineFunction &MF) {
 bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   // First handle the basic block sections.
   auto R1 = handleBBSections(MF);
+  if (AlignBlocksInBBSections)
+    assignBlockAlignments(MF);
   // Handle basic block address map after basic block sections are finalized.
   auto R2 = handleBBAddrMap(MF);
   return R1 || R2;
@@ -674,9 +808,13 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
-  if (SplitWithPGO) {
+  if (SplitWithPGO || AlignBlocksInBBSections) {
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  }
+  if (AlignBlocksInBBSections) {
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
   }
   AU.addUsedIfAvailable<BasicBlockMatchingAndInference>();
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();

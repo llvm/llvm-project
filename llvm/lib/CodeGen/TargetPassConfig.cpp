@@ -21,6 +21,7 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
@@ -1162,6 +1163,9 @@ void TargetPassConfig::addMachinePasses() {
         addPass(llvm::createInsertCodePrefetchPass());
     }
     addPass(llvm::createBasicBlockSectionsPass(SplitFunctionsWithPGO));
+  } else if (shouldAlignBlocksInBBSections()) {
+    WithColor::warning() << "-align-blocks-in-bbsections has no effect when "
+                            "basic-block-sections is not enabled.\n";
   }
 
   addPostBBSections();
