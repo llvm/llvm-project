@@ -571,14 +571,17 @@ class C : B<A> {};
 // CHECK-NEXT: RelCont | C | c:@N@clangd_issue_504@S@C
 } // namespace clangd_issue_504
 
+#define TRANSPARENT(_name) struct _name _name; struct _name
 namespace using_type {
 namespace ns1 {
 struct A {};
 typedef A T;
+typedef TRANSPARENT(TS) {};
 }
 namespace ns2 {
 using ns1::A;
 using ns1::T;
+using ns1::TS;
 }
 void foo() {
   ns2::A a;
@@ -594,4 +597,12 @@ struct C : ns2::T {};
 // CHECK: [[@LINE-1]]:17 | type-alias/using-struct/C | T | c:index-source.cpp@N@using_type@N@ns1@T@T | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK: [[@LINE-2]]:17 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | C | c:@N@using_type@S@C
+void bar() {
+  ns2::TS ts;
+// CHECK: [[@LINE-1]]:8 | struct/C | TS | c:@N@using_type@N@ns1@S@TS | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | bar | c:@N@using_type@F@bar#
+}
+struct D : ns2::TS {};
+// CHECK: [[@LINE-1]]:17 | struct/C | TS | c:@N@using_type@N@ns1@S@TS | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | D | c:@N@using_type@S@D
 } // namespace using_type

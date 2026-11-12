@@ -57,40 +57,14 @@ public:
                                     SymbolRoleSet());
   }
 
-  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-    SourceLocation Loc = TL.getNameLoc();
-    TypedefNameDecl *ND = TL.getDecl();
-    if (ND->isTransparentTag()) {
-      auto *Underlying = ND->getUnderlyingType()->castAsTagDecl();
-      return IndexCtx.handleReference(Underlying, Loc, Parent,
-                                      ParentDC, SymbolRoleSet(), Relations);
-    }
-    if (IsBase) {
-      TRY_TO(IndexCtx.handleReference(ND, Loc,
-                                      Parent, ParentDC, SymbolRoleSet()));
-      if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
-        TRY_TO(IndexCtx.handleReference(CD, Loc, Parent, ParentDC,
-                                        (unsigned)SymbolRole::Implicit,
-                                        Relations));
-      }
-    } else {
-      TRY_TO(IndexCtx.handleReference(ND, Loc,
-                                      Parent, ParentDC, SymbolRoleSet(),
-                                      Relations));
-    }
-    return true;
-  }
-
-  bool VisitUsingTypeLoc(UsingTypeLoc TL) {
-    // A type found via a using-declaration, e.g. `ns2::A` after
-    // `namespace ns2 { using ns1::A; }`. Like DeclRefExpr, report the target
-    // declaration rather than the UsingShadowDecl.
-    SourceLocation Loc = TL.getNameLoc();
-    NamedDecl *ND = TL.getDecl()->getTargetDecl();
+  bool handleTypeNameReference(NamedDecl *ND, SourceLocation Loc, QualType T) {
+    if (auto *TND = dyn_cast<TypedefNameDecl>(ND))
+      if (TND->isTransparentTag())
+        ND = TND->getUnderlyingType()->castAsTagDecl();
     if (IsBase && !isa<TagDecl>(ND)) {
       TRY_TO(
           IndexCtx.handleReference(ND, Loc, Parent, ParentDC, SymbolRoleSet()));
-      if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
+      if (auto *CD = T->getAsCXXRecordDecl()) {
         TRY_TO(IndexCtx.handleReference(CD, Loc, Parent, ParentDC,
                                         (unsigned)SymbolRole::Implicit,
                                         Relations));
@@ -99,6 +73,18 @@ public:
     }
     return IndexCtx.handleReference(ND, Loc, Parent, ParentDC, SymbolRoleSet(),
                                     Relations);
+  }
+
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    return handleTypeNameReference(TL.getDecl(), TL.getNameLoc(), TL.getType());
+  }
+
+  // A type found via a using-declaration, e.g. `ns2::A` after
+  // `namespace ns2 { using ns1::A; }`. Like DeclRefExpr, report the target
+  // declaration rather than the UsingShadowDecl.
+  bool VisitUsingTypeLoc(UsingTypeLoc TL) {
+    return handleTypeNameReference(TL.getDecl()->getTargetDecl(),
+                                   TL.getNameLoc(), TL.getType());
   }
 
   bool VisitAutoTypeLoc(AutoTypeLoc TL) {
