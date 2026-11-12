@@ -103,8 +103,7 @@ define <vscale x 4 x float> @exp2_nxv4f32_sitofp_i8(<vscale x 4 x i8> %x) {
 define float @exp2_f32_uitofp_i32_ninf(i32 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i32_ninf(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i32 %x to float
@@ -115,8 +114,7 @@ define float @exp2_f32_uitofp_i32_ninf(i32 %x) {
 define float @exp2_f32_uitofp_i32_flags(i32 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i32_flags(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i32 %x to float
@@ -127,8 +125,7 @@ define float @exp2_f32_uitofp_i32_flags(i32 %x) {
 define <2 x float> @exp2_v2f32_uitofp_v2i32_ninf(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x float> @exp2_v2f32_uitofp_v2i32_ninf(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp <2 x i32> [[X]] to <2 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[X]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = uitofp <2 x i32> %x to <2 x float>
@@ -139,8 +136,7 @@ define <2 x float> @exp2_v2f32_uitofp_v2i32_ninf(<2 x i32> %x) {
 define <vscale x 4 x float> @exp2_nxv4f32_uitofp_i32_ninf(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 4 x float> @exp2_nxv4f32_uitofp_i32_ninf(
 ; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp <vscale x 4 x i32> [[X]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x i32> [[X]])
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
   %itofp = uitofp <vscale x 4 x i32> %x to <vscale x 4 x float>
@@ -151,8 +147,7 @@ define <vscale x 4 x float> @exp2_nxv4f32_uitofp_i32_ninf(<vscale x 4 x i32> %x)
 define half @exp2_f16_uitofp_i32_ninf(i32 %x) {
 ; CHECK-LABEL: define half @exp2_f16_uitofp_i32_ninf(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to half
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf half @llvm.exp2.f16(half [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf half @llvm.ldexp.f16.i32(half 1.000000e+00, i32 [[X]])
 ; CHECK-NEXT:    ret half [[EXP2]]
 ;
   %itofp = uitofp i32 %x to half
@@ -163,8 +158,7 @@ define half @exp2_f16_uitofp_i32_ninf(i32 %x) {
 define double @exp2_f64_uitofp_i32_ninf(i32 %x) {
 ; CHECK-LABEL: define double @exp2_f64_uitofp_i32_ninf(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to double
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf double @llvm.exp2.f64(double [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
   %itofp = uitofp i32 %x to double
@@ -175,8 +169,7 @@ define double @exp2_f64_uitofp_i32_ninf(i32 %x) {
 define fp128 @exp2_fp128_uitofp_i32_ninf(i32 %x) {
 ; CHECK-LABEL: define fp128 @exp2_fp128_uitofp_i32_ninf(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to fp128
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf fp128 @llvm.exp2.f128(fp128 [[ITOFP]])
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf fp128 @llvm.ldexp.f128.i32(fp128 1.000000e+00, i32 [[X]])
 ; CHECK-NEXT:    ret fp128 [[EXP2]]
 ;
   %itofp = uitofp i32 %x to fp128
@@ -187,8 +180,8 @@ define fp128 @exp2_fp128_uitofp_i32_ninf(i32 %x) {
 define float @exp2_f32_uitofp_i64_ninf(i64 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i64_ninf(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i64 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call ninf float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[EXP2:%.*]] = call ninf float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i64 %x to float
@@ -201,8 +194,8 @@ define float @exp2_f32_uitofp_i64_ninf(i64 %x) {
 define float @exp2_f32_uitofp_i32(i32 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 128)
+; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i32 %x to float
@@ -213,8 +206,8 @@ define float @exp2_f32_uitofp_i32(i32 %x) {
 define float @exp2_f32_uitofp_i32_nnan(i32 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i32_nnan(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call nnan float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 128)
+; CHECK-NEXT:    [[EXP2:%.*]] = call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i32 %x to float
@@ -225,8 +218,8 @@ define float @exp2_f32_uitofp_i32_nnan(i32 %x) {
 define <2 x float> @exp2_v2f32_uitofp_v2i32(<2 x i32> %x) {
 ; CHECK-LABEL: define <2 x float> @exp2_v2f32_uitofp_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp <2 x i32> [[X]] to <2 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X]], <2 x i32> splat (i32 128))
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = uitofp <2 x i32> %x to <2 x float>
@@ -237,8 +230,8 @@ define <2 x float> @exp2_v2f32_uitofp_v2i32(<2 x i32> %x) {
 define <vscale x 4 x float> @exp2_nxv4f32_uitofp_i32(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 4 x float> @exp2_nxv4f32_uitofp_i32(
 ; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp <vscale x 4 x i32> [[X]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.umin.nxv4i32(<vscale x 4 x i32> [[X]], <vscale x 4 x i32> splat (i32 128))
+; CHECK-NEXT:    [[EXP2:%.*]] = call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
   %itofp = uitofp <vscale x 4 x i32> %x to <vscale x 4 x float>
@@ -249,8 +242,8 @@ define <vscale x 4 x float> @exp2_nxv4f32_uitofp_i32(<vscale x 4 x i32> %x) {
 define half @exp2_f16_uitofp_i32(i32 %x) {
 ; CHECK-LABEL: define half @exp2_f16_uitofp_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to half
-; CHECK-NEXT:    [[EXP2:%.*]] = call half @llvm.exp2.f16(half [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 16)
+; CHECK-NEXT:    [[EXP2:%.*]] = call half @llvm.ldexp.f16.i32(half 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret half [[EXP2]]
 ;
   %itofp = uitofp i32 %x to half
@@ -261,8 +254,8 @@ define half @exp2_f16_uitofp_i32(i32 %x) {
 define double @exp2_f64_uitofp_i32(i32 %x) {
 ; CHECK-LABEL: define double @exp2_f64_uitofp_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to double
-; CHECK-NEXT:    [[EXP2:%.*]] = call double @llvm.exp2.f64(double [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 1024)
+; CHECK-NEXT:    [[EXP2:%.*]] = call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
   %itofp = uitofp i32 %x to double
@@ -273,8 +266,8 @@ define double @exp2_f64_uitofp_i32(i32 %x) {
 define fp128 @exp2_fp128_uitofp_i32(i32 %x) {
 ; CHECK-LABEL: define fp128 @exp2_fp128_uitofp_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to fp128
-; CHECK-NEXT:    [[EXP2:%.*]] = call fp128 @llvm.exp2.f128(fp128 [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 16384)
+; CHECK-NEXT:    [[EXP2:%.*]] = call fp128 @llvm.ldexp.f128.i32(fp128 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret fp128 [[EXP2]]
 ;
   %itofp = uitofp i32 %x to fp128
@@ -285,8 +278,8 @@ define fp128 @exp2_fp128_uitofp_i32(i32 %x) {
 define ppc_fp128 @exp2_ppcf128_uitofp_i32(i32 %x) {
 ; CHECK-LABEL: define ppc_fp128 @exp2_ppcf128_uitofp_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i32 [[X]] to ppc_fp128
-; CHECK-NEXT:    [[EXP2:%.*]] = call ppc_fp128 @llvm.exp2.ppcf128(ppc_fp128 [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 1024)
+; CHECK-NEXT:    [[EXP2:%.*]] = call ppc_fp128 @llvm.ldexp.ppcf128.i32(ppc_fp128 1.000000e+00, i32 [[TMP1]])
 ; CHECK-NEXT:    ret ppc_fp128 [[EXP2]]
 ;
   %itofp = uitofp i32 %x to ppc_fp128
@@ -297,8 +290,9 @@ define ppc_fp128 @exp2_ppcf128_uitofp_i32(i32 %x) {
 define float @exp2_f32_uitofp_i64(i64 %x) {
 ; CHECK-LABEL: define float @exp2_f32_uitofp_i64(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp i64 [[X]] to float
-; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.exp2.f32(float [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umin.i64(i64 [[X]], i64 128)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[EXP2:%.*]] = call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP2]])
 ; CHECK-NEXT:    ret float [[EXP2]]
 ;
   %itofp = uitofp i64 %x to float
@@ -309,8 +303,9 @@ define float @exp2_f32_uitofp_i64(i64 %x) {
 define <2 x float> @exp2_v2f32_uitofp_v2i64(<2 x i64> %x) {
 ; CHECK-LABEL: define <2 x float> @exp2_v2f32_uitofp_v2i64(
 ; CHECK-SAME: <2 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[ITOFP:%.*]] = uitofp <2 x i64> [[X]] to <2 x float>
-; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[ITOFP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[X]], <2 x i64> splat (i64 128))
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[EXP2:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP2]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP2]]
 ;
   %itofp = uitofp <2 x i64> %x to <2 x float>
