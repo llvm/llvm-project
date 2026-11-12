@@ -10,8 +10,6 @@
 #define _LIBCPP___PSTL_BACKENDS_STATPART_COPY_IF_H
 
 #include <__algorithm/copy_if.h>
-#include <__algorithm/fill.h>
-#include <__assert>
 #include <__bit/popcount.h>
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -26,7 +24,6 @@
 #include <__pstl/backends/statpart/bitset.h>
 #include <__pstl/backends/statpart/decoupled_lookback.h>
 #include <__utility/move.h>
-#include <climits> // for CHAR_BIT
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,21 +35,22 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
 namespace __statpart {
 
-// Applies the predicate to each element in [first, last), stored the results in the bitset and returns the number of
+// Applies the predicate to each element in [first, last), stores the results in the bitset and returns the number of
 // 'true' responses of the predicate. Bitset is not required to be initialized before calling this function.
 template <class _ForwardIterator, class _Pred>
 _LIBCPP_HIDE_FROM_ABI size_t __count_and_cache_predicate_results(
-    _ForwardIterator __first, _ForwardIterator __last, const _Pred& __pred, __bitset_view __bitset) {
+    _ForwardIterator __first, _ForwardIterator __last, _Pred& __pred, __bitset_view __bitset) {
   size_t __occupied_count = 0;
   size_t* __bits_word_ptr = __bitset.__bits_;
   size_t __bits_word      = 0;
   size_t __bit_idx        = 0;
   for (; __first != __last; ++__first) {
-    bool __pred_val = __pred(*__first);
+    bool __pred_val = static_cast<bool>(__pred(*__first));
     __bits_word |= static_cast<size_t>(__pred_val) << __bit_idx; // Update the current word with this predicate result
     if (++__bit_idx == __bitset_view::__bits_per_word_) {
       __occupied_count += std::__popcount(__bits_word); // Update the total occupancy with this word
@@ -196,6 +194,7 @@ struct __copy_if<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
