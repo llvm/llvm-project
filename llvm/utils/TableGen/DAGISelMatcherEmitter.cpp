@@ -77,6 +77,7 @@ class MatcherTableEmitter {
   std::map<ValueTypeByHwMode, std::pair<unsigned, unsigned>> ValueTypeMap;
 
   SequenceToOffsetTable<std::vector<uint8_t>> OperandTable;
+  std::map<std::vector<uint8_t>, unsigned> OperandSequenceUsage;
 
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
     const auto [It, Inserted] =
@@ -144,6 +145,7 @@ public:
                 for (unsigned i = 0; i < Len; ++i)
                   OpBytes.push_back(Buffer[i]);
               }
+              ++OperandSequenceUsage[OpBytes];
               OperandTable.add(OpBytes);
             }
           }
@@ -152,7 +154,24 @@ public:
 
     sortValueTypeByHwModeByFrequency();
 
-    OperandTable.layout();
+    // Place frequently referenced sequences first to keep their VBR-encoded
+    // offsets small. Suffixes share storage with the retained sequence that
+    // contains them, so include suffix uses when ranking retained sequences.
+    std::map<std::vector<uint8_t>, unsigned> OperandSequencePriority;
+    for (const auto &[Sequence, Count] : OperandSequenceUsage) {
+      for (const auto &CandidateUsage : OperandSequenceUsage) {
+        const std::vector<uint8_t> &Candidate = CandidateUsage.first;
+        if (Sequence.size() <= Candidate.size() &&
+            std::equal(Sequence.rbegin(), Sequence.rend(), Candidate.rbegin()))
+          OperandSequencePriority[Candidate] += Count;
+      }
+    }
+    OperandTable.layout(
+        [&](const std::vector<uint8_t> &A, const std::vector<uint8_t> &B) {
+          unsigned AUses = OperandSequencePriority.at(A);
+          unsigned BUses = OperandSequencePriority.at(B);
+          return AUses > BUses;
+        });
 
     // Sort ComplexPatterns by usage.
     std::vector<std::pair<const ComplexPattern *, unsigned>> ComplexPatternList(
