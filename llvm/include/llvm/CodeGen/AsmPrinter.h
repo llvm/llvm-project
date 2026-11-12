@@ -195,7 +195,7 @@ public:
   std::function<void(Module &)> EmitStackMaps;
   std::function<void()> AssertDebugEHFinalized;
 
-  LLVM_ABI void emitStackMapsForGCStrategies(ArrayRef<GCStrategy *> Strategies);
+  void emitStackMapsForGCStrategies(ArrayRef<GCStrategy *> Strategies);
 
 private:
   MCSymbol *CurrentFnEnd = nullptr;

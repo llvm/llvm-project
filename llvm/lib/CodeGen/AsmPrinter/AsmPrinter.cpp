@@ -5059,7 +5059,7 @@ void AsmPrinter::emitStackMapsForGCStrategies(
   if (Strategies.empty())
     // No GC strategy, use the default format.
     NeedsDefault = true;
-  else
+  else {
     for (GCStrategy *S : Strategies) {
       if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*S))
         if (MP->emitStackMaps(SM, *this))
@@ -5068,6 +5068,7 @@ void AsmPrinter::emitStackMapsForGCStrategies(
       // Use the default format.
       NeedsDefault = true;
     }
+  }
 
   if (NeedsDefault)
     SM.serializeToStackMapSection();
