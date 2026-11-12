@@ -5906,13 +5906,17 @@ public:
   /// constructor, convert the arguments and add any required default arguments
   /// to form a proper call to this constructor.
   ///
+  /// \param IsUserConversion Whether the constructor is being called as the
+  /// user-defined conversion of an implicit conversion sequence.
+  ///
   /// \returns true if an error occurred, false otherwise.
   bool CompleteConstructorCall(CXXConstructorDecl *Constructor,
                                QualType DeclInitType, MultiExprArg ArgsPtr,
                                SourceLocation Loc,
                                SmallVectorImpl<Expr *> &ConvertedArgs,
                                bool AllowExplicit = false,
-                               bool IsListInitialization = false);
+                               bool IsListInitialization = false,
+                               bool IsUserConversion = false);
 
   /// ActOnCXXEnterDeclInitializer - Invoked when we are about to parse an
   /// initializer for the declaration 'Dcl'.
@@ -8224,12 +8228,16 @@ public:
 
   /// GatherArgumentsForCall - Collector argument expressions for various
   /// form of call prototypes.
+  ///
+  /// \param IsUserConversion Whether the function is being called as the
+  /// user-defined conversion of an implicit conversion sequence.
   bool GatherArgumentsForCall(
       SourceLocation CallLoc, FunctionDecl *FDecl,
       const FunctionProtoType *Proto, unsigned FirstParam,
       ArrayRef<Expr *> Args, SmallVectorImpl<Expr *> &AllArgs,
       VariadicCallType CallType = VariadicCallType::DoesNotApply,
-      bool AllowExplicit = false, bool IsListInitialization = false);
+      bool AllowExplicit = false, bool IsListInitialization = false,
+      bool IsUserConversion = false);
 
   // DefaultVariadicArgumentPromotion - Like DefaultArgumentPromotion, but
   // will create a runtime trap if the resulting type is not a POD type.

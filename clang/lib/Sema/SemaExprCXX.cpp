@@ -4687,7 +4687,9 @@ static ExprResult BuildCXXCastArgument(Sema &S,
       return ExprError();
 
     if (S.CompleteConstructorCall(Constructor, Ty, From, CastLoc,
-                                  ConstructorArgs))
+                                  ConstructorArgs, /*AllowExplicit=*/false,
+                                  /*IsListInitialization=*/false,
+                                  /*IsUserConversion=*/true))
       return ExprError();
 
     S.CheckConstructorAccess(CastLoc, Constructor, FoundDecl,
