@@ -1989,9 +1989,12 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // and also have no sub-registers that are reserved. These will be the can-
   // didates for saving as a whole instead of their individual sub-registers.
   // (Saving R17:16 instead of R16 is fine, but only if R17 was not reserved.)
+  // HLX registers are saved individually: there is no HLX pair spill.
   BitVector TmpSup(Hexagon::NUM_TARGET_REGS);
   for (int x = SRegs.find_first(); x >= 0; x = SRegs.find_next(x)) {
     Register R = x;
+    if (Hexagon::HlxLRRegClass.contains(R))
+      continue;
     for (MCPhysReg SR : TRI->superregs(R))
       TmpSup[SR] = true;
   }
@@ -2052,6 +2055,13 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
     Register R = x;
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(R);
     unsigned Size = TRI->getSpillSize(*RC);
+    // HLX registers are saved in spill slots on the VTCM stack.
+    if (Hexagon::HlxLRRegClass.contains(R)) {
+      int FI = MFI.CreateSpillStackObject(Size, TRI->getSpillAlign(*RC));
+      CSI.push_back(CalleeSavedInfo(R, FI));
+      SRegs[R] = false;
+      continue;
+    }
     int64_t Off = MinOffset - Size;
     Align Alignment = std::min(TRI->getSpillAlign(*RC), getStackAlign());
     Off &= -Alignment.value();

@@ -616,7 +616,19 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   for (const auto &R : RegsToPass)
     Ops.push_back(DAG.getRegister(R.first, R.second.getValueType()));
 
-  const uint32_t *Mask = HRI.getCallPreservedMask(MF, CallConv);
+  // Callees that take or return HLX values preserve L12-L15.
+  bool HasHLXLocs =
+      any_of(ArgLocs,
+             [](const CCValAssign &VA) {
+               return VA.isRegLoc() &&
+                      (Hexagon::HlxLRRegClass.contains(VA.getLocReg()) ||
+                       Hexagon::HlxLLRRegClass.contains(VA.getLocReg()));
+             }) ||
+      any_of(Ins, [this](const ISD::InputArg &In) {
+        return Subtarget.isHLXVectorType(In.VT);
+      });
+  const uint32_t *Mask = HasHLXLocs ? HRI.getHLXCallPreservedMask()
+                                    : HRI.getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -868,6 +880,10 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
       return Reg - Hexagon::V0 + 1;
     case Hexagon::HvxWRRegClassID:
       return (Reg - Hexagon::W0 + 1) * 2;
+    case Hexagon::HlxLRRegClassID:
+      return Reg - Hexagon::L0 + 1;
+    case Hexagon::HlxLLRRegClassID:
+      return (Reg - Hexagon::LL0 + 1) * 2;
     }
     llvm_unreachable("Unexpected register class");
   };
@@ -883,7 +899,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
     bool ByVal = Flags.isByVal();
 
     // Arguments passed in registers:
-    // 1. 32- and 64-bit values and HVX vectors are passed directly,
+    // 1. 32- and 64-bit values and HVX/HLX vectors are passed directly,
     // 2. Large structs are passed via an address, and the address is
     //    passed in a register.
     if (VA.isRegLoc() && ByVal && Flags.getByValSize() <= 8)
@@ -914,7 +930,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 #ifndef NDEBUG
         unsigned RegSize = RegVT.getSizeInBits();
         assert(RegSize == 32 || RegSize == 64 ||
-               Subtarget.isHVXVectorType(RegVT));
+               Subtarget.isHVXVectorType(RegVT) ||
+               Subtarget.isHLXVectorType(RegVT));
 #endif
       }
       InVals.push_back(Copy);

@@ -129,6 +129,15 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
   return Empty;
 }
 
+// Returns true if MF takes HLX arguments or returns an HLX type.
+static bool hasHLXSignature(const MachineFunction &MF) {
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const Function &F = MF.getFunction();
+  return HST.isTypeForHLX(F.getReturnType()) ||
+         any_of(F.args(), [&HST](const Argument &A) {
+           return HST.isTypeForHLX(A.getType());
+         });
+}
 
 const MCPhysReg *
 HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -149,13 +158,18 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
 
+  if (hasHLXSignature(*MF))
+    return HasEHReturn ? HexagonCSR_HLX_EH_SaveList : HexagonCSR_HLX_SaveList;
   return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
 }
-
 
 const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
       const MachineFunction &MF, CallingConv::ID) const {
   return HexagonCSR_RegMask;
+}
+
+const uint32_t *HexagonRegisterInfo::getHLXCallPreservedMask() const {
+  return HexagonCSR_HLX_RegMask;
 }
 
 BitVector
