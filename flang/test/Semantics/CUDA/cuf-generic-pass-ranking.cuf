@@ -195,3 +195,30 @@ contains
     call obj%mixed_reversed(x)
   end subroutine
 end module
+
+! A defined assignment passes its right-hand side in parentheses, which has no
+! CUDA data attribute, so it is not ranked as the passed object.
+module assignment_ranking
+  type :: t
+  contains
+    procedure, pass(rhs) :: from_managed_lhs, from_managed_rhs
+    generic :: assignment(=) => from_managed_lhs, from_managed_rhs
+  end type
+contains
+  subroutine from_managed_lhs(lhs, rhs)
+    integer, managed, intent(out) :: lhs
+    class(t), intent(in) :: rhs
+  end subroutine
+  subroutine from_managed_rhs(lhs, rhs)
+    integer, device, intent(out) :: lhs
+    class(t), managed, intent(in) :: rhs
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMassignment_rankingPcaller(
+  subroutine caller(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    ! CHECK: fir.call @_QMassignment_rankingPfrom_managed_lhs(
+    x = obj
+  end subroutine
+end module

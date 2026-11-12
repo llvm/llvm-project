@@ -6164,8 +6164,10 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
           if (passIndex != GetPassIndex(proc).value_or(-1)) {
             return false;
           }
-          // Rank the operand as the passed object, as for a type-bound call.
-          if (actuals.at(passIndex)) {
+          // Rank an operator's operand as the passed object, as for a
+          // type-bound call. A defined assignment passes its right-hand side
+          // enclosed in parentheses instead (F2023 15.4.3.4.3p2).
+          if (!isSubroutine && actuals.at(passIndex)) {
             actuals.at(passIndex)->set_isPassedObject();
           }
           return true;
