@@ -1365,6 +1365,10 @@ public:
     // Returns true if 'sibNode' can be fused with 'dstNode' for input reuse
     // on 'memref'.
     auto canFuseWithSibNode = [&](Node *sibNode, Value memref) {
+      // The sibling loop is erased after fusion, so preserve it if any of its
+      // results still have users.
+      if (!sibNode->op->use_empty())
+        return false;
       // Skip if 'outEdge' is not a read-after-write dependence.
       // TODO: Remove restrict to single load op restriction.
       if (sibNode->getLoadOpCount(memref) != 1)
