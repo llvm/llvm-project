@@ -941,7 +941,7 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
   unsigned AndMask = 0, OrMask = 0, XorMask = 0;
   for (unsigned B = 0; B < 5; ++B) {
     unsigned Bit0 = (Ids[0] >> B) & 1;
-    unsigned Bit1 = (Ids[1u << B] >> B) & 1;
+    unsigned Bit1 = (Ids[1ull << B] >> B) & 1;
     if (Bit0 != Bit1) {
       AndMask |= 1u << B;
       XorMask |= Bit0 << B;

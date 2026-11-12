@@ -66,6 +66,7 @@ body:             |
     %ubfx:gpr(i32) = G_UBFX %copy, %cst1, %cst2
     $w0 = COPY %ubfx
     RET_ReallyLR implicit $w0
+...
 ---
 name:            ubfx_s32_10_5
 legalized:       true
@@ -106,3 +107,4 @@ body:             |
     %ubfx:gpr(i64) = G_UBFX %copy, %cst1, %cst2
     $x0 = COPY %ubfx
     RET_ReallyLR implicit $x0
+...

@@ -2503,22 +2503,9 @@ bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
 
 template <class T, ArithOp Op>
 std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
-                                    const T &Offset, const Pointer &Ptr,
-                                    bool IsPointerArith = false) {
-  // A zero offset does not change the pointer.
-  if (Offset.isZero())
-    return Ptr;
-
-  if (IsPointerArith && !CheckNull(S, OpPC, Ptr, CSK_ArrayIndex)) {
-    // The CheckNull will have emitted a note already, but we only
-    // abort in C++, since this is fine in C.
-    if (S.getLangOpts().CPlusPlus)
-      return std::nullopt;
-  }
-
-  // Arrays of unknown bounds cannot have pointers into them.
-  if (!CheckArray(S, OpPC, Ptr))
-    return std::nullopt;
+                                    const T &Offset, const Pointer &Ptr) {
+  if (S.getLangOpts().CPlusPlus)
+    assert(!Ptr.isZero());
 
   // This is much simpler for integral pointers, so handle them first.
   if (Ptr.isIntegralPointer()) {
@@ -2562,13 +2549,18 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   }
 
   assert(Ptr.isBlockPointer());
+  PtrView P = Ptr.view();
 
-  uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
+  // Arrays of unknown bounds cannot have pointers into them.
+  if (!CheckArray(S, OpPC, Ptr))
+    return std::nullopt;
+
+  uint64_t MaxIndex = static_cast<uint64_t>(P.getNumElems());
   uint64_t Index;
-  if (Ptr.isOnePastEnd())
+  if (P.isOnePastEnd())
     Index = MaxIndex;
   else
-    Index = Ptr.getIndex();
+    Index = P.getIndex();
 
   bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.
@@ -2579,7 +2571,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
                    /*IsUnsigned=*/false);
     APSInt NewIndex =
         (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
-    diagnoseArrayIndex(S, OpPC, NewIndex, MaxIndex, Ptr.inArray());
+    diagnoseArrayIndex(S, OpPC, NewIndex, MaxIndex, P.inArray());
     Invalid = true;
   };
 
@@ -2604,7 +2596,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       DiagInvalidOffset();
   }
 
-  if (Invalid && (S.getLangOpts().CPlusPlus || Ptr.inArray()))
+  if (Invalid && (S.getLangOpts().CPlusPlus || P.inArray()))
     return std::nullopt;
 
   // Offset is valid - compute it on unsigned.
@@ -2619,13 +2611,13 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   // When the pointer is one-past-end, going back to index 0 is the only
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
-  if (Result == 0 && Ptr.isOnePastEnd()) {
-    if (Ptr.getFieldDesc()->isArray())
-      return Ptr.atIndex(0);
-    return Pointer(Ptr.asBlockPointer().Pointee, Ptr.asBlockPointer().Base);
+  if (Result == 0 && P.isOnePastEnd()) {
+    if (P.getFieldDesc()->isArray())
+      return Pointer(P.atIndex(0));
+    return Pointer(P.Pointee, P.Base);
   }
 
-  return Ptr.atIndex(static_cast<uint64_t>(Result));
+  return Pointer(P.atIndex(static_cast<uint64_t>(Result)));
 }
 
 std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
@@ -2636,6 +2628,11 @@ bool AddOffset(InterpState &S, CodePtr OpPC) {
   const T &Offset = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>().expand();
 
+  if (Offset.isZero()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
   if (Ptr.isOpaquePointer()) {
     if (std::optional<Pointer> Result =
             addSubOffsetOpaque(S, OpPC, Ptr, Offset.toAPSInt(), ArithOp::Add)) {
@@ -2645,8 +2642,11 @@ bool AddOffset(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
-  if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Add>(
-          S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
+  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex) && S.getLangOpts().CPlusPlus)
+    return false;
+
+  if (std::optional<Pointer> Result =
+          OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr)) {
     S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
@@ -2667,8 +2667,16 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
     return false;
   }
 
-  if (std::optional<Pointer> Result = OffsetHelper<T, ArithOp::Sub>(
-          S, OpPC, Offset, Ptr, /*IsPointerArith=*/true)) {
+  if (Offset.isZero()) {
+    S.Stk.push<Pointer>(Ptr);
+    return true;
+  }
+
+  if (!CheckNull(S, OpPC, Ptr, CSK_ArrayIndex) && S.getLangOpts().CPlusPlus)
+    return false;
+
+  if (std::optional<Pointer> Result =
+          OffsetHelper<T, ArithOp::Sub>(S, OpPC, Offset, Ptr)) {
     S.Stk.push<Pointer>(Result->narrow());
     return true;
   }
@@ -2707,8 +2715,7 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
 
   // Now the current Ptr again and a constant 1.
   OneT One = OneT::from(1);
-  if (std::optional<Pointer> Result =
-          OffsetHelper<OneT, Op>(S, OpPC, One, P, /*IsPointerArith=*/true)) {
+  if (std::optional<Pointer> Result = OffsetHelper<OneT, Op>(S, OpPC, One, P)) {
     // Store the new value.
     Ptr.deref<Pointer>() = Result->narrow();
     return true;

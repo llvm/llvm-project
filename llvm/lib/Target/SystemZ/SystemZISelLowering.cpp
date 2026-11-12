@@ -2104,6 +2104,26 @@ static bool analyzeArgSplit(const SmallVectorImpl<ArgTy> &Args,
   return true;
 }
 
+// Return the virtual register holding the incoming "ADA" special register (R5)
+// of an XPLINK function, creating it on first use. LowerFormalArguments is not
+// called for naked functions, but those still get R5 on entry and may use it to
+// address globals and functions.
+static Register getOrCreateADAVirtualRegister(MachineFunction &MF) {
+  SystemZMachineFunctionInfo *FuncInfo =
+      MF.getInfo<SystemZMachineFunctionInfo>();
+  Register ADAvReg = FuncInfo->getADAVirtualRegister();
+  if (ADAvReg)
+    return ADAvReg;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  ADAvReg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
+  auto *Regs = static_cast<SystemZXPLINK64Registers *>(
+      MF.getSubtarget<SystemZSubtarget>().getSpecialRegisters());
+  MRI.addLiveIn(Regs->getADARegister(), ADAvReg);
+  FuncInfo->setADAVirtualRegister(ADAvReg);
+  return ADAvReg;
+}
+
 SDValue SystemZTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -2294,15 +2314,6 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     }
   }
 
-  if (Subtarget.isTargetXPLINK64()) {
-    // Create virual register  for handling incoming "ADA" special register (R5)
-    const TargetRegisterClass *RC = &SystemZ::ADDR64BitRegClass;
-    Register ADAvReg = MRI.createVirtualRegister(RC);
-    auto *Regs = static_cast<SystemZXPLINK64Registers *>(
-        Subtarget.getSpecialRegisters());
-    MRI.addLiveIn(Regs->getADARegister(), ADAvReg);
-    FuncInfo->setADAVirtualRegister(ADAvReg);
-  }
   return Chain;
 }
 
@@ -2330,8 +2341,7 @@ static bool canUseSiblingCall(const CCState &ArgCCInfo,
 static SDValue getADAEntry(SelectionDAG &DAG, SDValue Val, SDLoc DL,
                            unsigned Offset, bool LoadAdr = false) {
   MachineFunction &MF = DAG.getMachineFunction();
-  SystemZMachineFunctionInfo *MFI = MF.getInfo<SystemZMachineFunctionInfo>();
-  Register ADAvReg = MFI->getADAVirtualRegister();
+  Register ADAvReg = getOrCreateADAVirtualRegister(MF);
   EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
 
   SDValue Reg = DAG.getRegister(ADAvReg, PtrVT);
@@ -2383,9 +2393,7 @@ static bool getzOSCalleeAndADA(SelectionDAG &DAG, SDValue &Callee, SDValue &ADA,
     bool IsInternal = (G->getGlobal()->hasInternalLinkage() ||
                        G->getGlobal()->hasPrivateLinkage());
     if (IsInternal) {
-      SystemZMachineFunctionInfo *MFI =
-          MF.getInfo<SystemZMachineFunctionInfo>();
-      Register ADAvReg = MFI->getADAVirtualRegister();
+      Register ADAvReg = getOrCreateADAVirtualRegister(MF);
       ADA = DAG.getCopyFromReg(Chain, DL, ADAvReg, PtrVT);
       Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
       Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);

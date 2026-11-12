@@ -2126,9 +2126,10 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     return DoReadMemory(process_addr, buf, size, error);
   }
 
-  lldb::addr_t addr = process_addr.GetValue();
-  if (ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+  const lldb::addr_t addr = FixAnyAddress(process_addr.GetValue());
+
+  if (!ShouldUseMemoryCache(addr))
+    return DoReadMemory(addr, buf, size, error);
 
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
@@ -2819,16 +2820,19 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
 
   Status error;
   std::unique_ptr<Progress> progress_up;
-  // Reading an ObjectFile from a local corefile is very fast,
-  // only print a progress update if we're reading from a
-  // live session which might go over gdb remote serial protocol.
-  if (IsLiveDebugSession())
+  bool disable_memory_symtab_caching;
+  if (IsLiveDebugSession()) {
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
-
-  // Don't use the index cache for symbol tables of binaries read out of a
-  // corefile.
-  const bool disable_memory_symtab_caching = (bool)GetCoreFile();
+    // Allow caching of memory-read modules in a live process.
+    disable_memory_symtab_caching = false;
+  } else {
+    // This is a corefile target; no memory-read module caching.
+    disable_memory_symtab_caching = true;
+  }
 
   if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
                                      disable_memory_symtab_caching,
