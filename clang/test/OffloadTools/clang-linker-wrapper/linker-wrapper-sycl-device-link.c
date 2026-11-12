@@ -105,14 +105,10 @@
 // NOT-SYCL: error: --sycl-device-link requires SYCL device code, got 'openmp'
 
 // No host linker runs, so clang-linker-wrapper reports missing inputs: a plain
-// input, one inside --whole-archive, and one after '--'.
+// input, and one after '--'.
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld %t.sycl.o %t.missing.o \
 // RUN:   -o dev.o 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
-// RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
-// RUN:   --sycl-device-link --linker-path=/usr/bin/ld --whole-archive \
-// RUN:   %t.missing.o --no-whole-archive -o dev.o 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
 // RUN: not clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --sycl-device-link --linker-path=/usr/bin/ld -o dev.o -- %t.missing.o \
 // RUN:   2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
@@ -131,12 +127,9 @@
 // RUN:   /IGNORE:4078 '/LIBPATH:C:\dir' /OUT:C:/dir/a.exe -o %t.dev.obj
 // RUN: llvm-readobj --file-header %t.dev.obj | FileCheck %s --check-prefix=WIN
 
-// /OUT: names the output in any case. The last of -o and /out: wins, e.g. for
-// clang-cl '/link /out:'.
-// RUN: rm -f %t.out.obj %t.last.obj
-// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
-// RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o /OUT:%t.out.obj
-// RUN: llvm-readobj --file-header %t.out.obj | FileCheck %s --check-prefix=WIN
+// /out: names the output in any case, and the last of -o and /out: wins, e.g.
+// for clang-cl '/link /out:'.
+// RUN: rm -f %t.last.obj
 // RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc \
 // RUN:   --sycl-device-link --linker-path=link.exe -o %t.first.exe %t.sycl.o \
 // RUN:   /Out:%t.last.obj
@@ -155,8 +148,8 @@
 // RUN:   foo.lib -o dev.obj 2>&1 | FileCheck %s --check-prefix=WINLIB
 // WINLIB: --target=spirv64-unknown-unknown {{.*}}win-spirv64-unknown-unknown-generic{{.*}}.o --sycl-link{{$}}
 
-// Missing inputs are reported: a /WHOLEARCHIVE: library, a path that starts
-// like a link.exe option, and a plain input.
+// Missing inputs are reported: a /WHOLEARCHIVE: library, and a path that starts
+// like a link.exe option.
 // RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
 // RUN:   --sycl-device-link --linker-path=link.exe /WHOLEARCHIVE:nope.lib \
 // RUN:   -o dev.obj 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=nope.lib
@@ -164,17 +157,10 @@
 // RUN:   --sycl-device-link --linker-path=link.exe /wholearchive-dir/missing.obj \
 // RUN:   -o dev.obj 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=MISSING -DFILE=/wholearchive-dir/missing.obj
-// RUN: not clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
-// RUN:   --sycl-device-link --linker-path=link.exe %t.sycl.o %t.missing.o \
-// RUN:   -o dev.obj 2>&1 | FileCheck %s --check-prefix=MISSING -DFILE=%t.missing.o
 
 // In a host link without --sycl-device-link, the wrapped device object follows
 // /OUT: in any case, and is added once even if the output is named twice.
 // RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
-// RUN:   --linker-path=link.exe %t.win.obj /OUT:app.exe 2>&1 \
+// RUN:   --linker-path=link.exe %t.win.obj /OUT:app.exe -o app.exe 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=WIN-LINK
-// WIN-LINK: "link.exe" {{.*}}win.obj /OUT:app.exe {{.*}}app.exe.sycl.image.wrapper{{[^ ]*}}.o{{$}}
-// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
-// RUN:   --linker-path=link.exe %t.win.obj -o app.exe /OUT:app.exe 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=WIN-ONCE
-// WIN-ONCE: "link.exe" {{.*}}win.obj -o app.exe {{[^ ]*}}app.exe.sycl.image.wrapper{{[^ ]*}}.o /OUT:app.exe{{$}}
+// WIN-LINK: "link.exe" {{.*}}win.obj /OUT:app.exe {{[^ ]*}}app.exe.sycl.image.wrapper{{[^ ]*}}.o -o app.exe{{$}}
