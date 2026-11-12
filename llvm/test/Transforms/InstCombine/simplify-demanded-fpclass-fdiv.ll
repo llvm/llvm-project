@@ -2498,7 +2498,7 @@ define nofpclass(nan inf pzero sub) float @ret__norm_nzero__fdiv__pzero__unknown
 define nofpclass(inf zero sub norm) float @ret__nan__fdiv__pos_2_0__unknown(float %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret__nan__fdiv__pos_2_0__unknown(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float +qnan
 ;
   %div = fdiv float 2.0, %x
   ret float %div
@@ -2507,7 +2507,7 @@ define nofpclass(inf zero sub norm) float @ret__nan__fdiv__pos_2_0__unknown(floa
 define nofpclass(inf zero sub norm) float @ret__nan__fdiv__unknown__norm(float %x, float nofpclass(nan inf zero sub) %y) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret__nan__fdiv__unknown__norm(
 ; CHECK-SAME: float [[X:%.*]], float nofpclass(nan inf zero sub) [[Y:%.*]]) {
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float +qnan
 ;
   %div = fdiv float %x, %y
   ret float %div

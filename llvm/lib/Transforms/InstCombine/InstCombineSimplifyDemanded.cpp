@@ -2604,14 +2604,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       SrcDemandedMask |= fcSubnormal | fcNormal | fcInf;
     }
 
-    if (DemandedMask & fcNan) {
-      // mul +/-inf, 0 => nan
-      SrcDemandedMask |= fcZero | fcInf | fcNan;
-
-      // TODO: Mode check
-      // mul +/-inf, sub => nan if daz
-      SrcDemandedMask |= fcSubnormal;
-    }
+    // qNaN and sNaN are a vacuum. If one operand is NaN, then the other side
+    // can be any value.
+    if (DemandedMask & fcNan)
+      SrcDemandedMask |= fcAllFlags;
 
     // mul normal, subnormal = normal
     // Normal inputs may result in underflow.
@@ -2619,7 +2615,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       SrcDemandedMask |= fcNormal | fcSubnormal;
 
     if (DemandedMask & fcZero)
-      SrcDemandedMask |= fcNormal | fcSubnormal;
+      SrcDemandedMask |= fcZero | fcNormal | fcSubnormal;
 
     if (X == Y &&
         isGuaranteedNotToBeUndef(X, SQ.AC, SQ.CtxI, SQ.DT, Depth + 1)) {
@@ -2802,19 +2798,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (DemandedMask & (fcSubnormal | fcNormal))
       SrcDemandedMask |= fcNormal;
 
-    if (DemandedMask & fcNan) {
-      // 0 / 0 = nan
-      // inf / inf = nan
-
-      // Subnormal is added in case of DAZ, but this isn't strictly
-      // necessary. Every other input class implies a possible subnormal source,
-      // so this only could matter in the degenerate case of only-nan results.
-      SrcDemandedMask |= fcZero | fcInf | fcNan;
-    }
+    // qNaN and sNaN are a vacuum. If one operand is NaN, then the other side
+    // can be any value.
+    if (DemandedMask & fcNan)
+      SrcDemandedMask |= fcAllFlags;
 
     // Zero outputs may be the result of underflow.
     if (DemandedMask & fcZero)
-      SrcDemandedMask |= fcNormal | fcSubnormal;
+      SrcDemandedMask |= fcZero | fcNormal | fcSubnormal;
 
     FPClassTest LHSDemandedMask = SrcDemandedMask;
     FPClassTest RHSDemandedMask = SrcDemandedMask;
