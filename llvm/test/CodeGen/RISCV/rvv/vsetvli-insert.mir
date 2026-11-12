@@ -706,3 +706,4 @@ body: |
     %3:vr = PseudoVADD_VV_M1 undef $noreg, %1, %2, %0, 6, 0
     $v8 = COPY %3
     PseudoRET implicit $v8
+...

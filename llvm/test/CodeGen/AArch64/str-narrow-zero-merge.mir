@@ -85,7 +85,7 @@ body:             |
     STURBBi $wzr, $x0, 255 :: (store (s8))
     STRBBui $wzr, $x0, 256 :: (store (s8))
     RET undef $lr
----
+...
 ---
 name:  merge_scaled_str_with_unscaled_8_limits
 tracksRegLiveness: false
@@ -97,6 +97,7 @@ body:             |
     STRBBui $wzr, $x0, 254 :: (store (s8))
     STURBBi $wzr, $x0, 255 :: (store (s8))
     RET undef $lr
+...
 ---
 name:  merge_unscaled_str_with_unscaled_str_16
 tracksRegLiveness: false
@@ -180,7 +181,7 @@ body:             |
     STURHHi $wzr, $x0, 254 :: (store (s16))
     STRHHui $wzr, $x0, 128 :: (store (s16))
     RET undef $lr
----
+...
 ---
 name:  merge_scaled_str_with_unscaled_16_limits
 tracksRegLiveness: false
@@ -192,6 +193,7 @@ body:             |
     STRHHui $wzr, $x0, 126 :: (store (s16))
     STURHHi $wzr, $x0, 254 :: (store (s16))
     RET undef $lr
+...
 ---
 name:  merge_unscaled_str_with_unscaled_32
 tracksRegLiveness: false
@@ -275,3 +277,4 @@ body:             |
     STRWui $wzr, $x0, 0 :: (store (s32))
     STURWi $wzr, $x0, -4 :: (store (s32))
     RET undef $lr
+...

@@ -7,7 +7,6 @@
     ret void
   }
 ...
----
 
 ---
 name: exit_to_exact
