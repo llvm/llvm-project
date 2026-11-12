@@ -2877,8 +2877,13 @@ void ChainedFixupsSection::finalizeContents() {
     };
     if (offset % pageSize + target->wordSize > pageSize)
       report("fixup straddles page boundary");
-    if (offset % chainStride() != 0)
-      report("fixup is not " + Twine(chainStride()) + "-byte aligned");
+    // DYLD_CHAINED_PTR_64's 4-byte stride can chain 4-byte aligned pointers.
+    // ld64 rejects them on arm64, so we do too. On x86_64 it falls back to
+    // opcodes, which we can't do this late, so we keep chaining them there.
+    uint32_t align =
+        is_contained({AK_arm64, AK_arm64e}, config->arch()) ? 8 : chainStride();
+    if (offset % align != 0)
+      report("fixup is not " + Twine(align) + "-byte aligned");
     loc.offset = offset;
   }
 
