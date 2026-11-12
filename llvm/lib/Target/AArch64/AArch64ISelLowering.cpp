@@ -33373,30 +33373,22 @@ static void ReplaceMGATHERResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
   assert((VT == MVT::v2f16 || VT == MVT::v2bf16) &&
          "Unexpected MGATHER type for expanding");
 
-  // We need to replace the FP gather with an equivalent integer one and apply
-  // a bitcast to prevent entering an infinite loop where v2f16 gets widened
-  // to v4f16, but then the pointers operand gets split from v4i64 -> v2i64.
-  MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
-
   SDLoc DL(N);
-  SDValue Chain = MGT->getChain();
-  SDValue PassThru = MGT->getPassThru();
-  SDValue Mask = MGT->getMask();
-  SDValue BasePtr = MGT->getBasePtr();
-  SDValue Index = MGT->getIndex();
-  SDValue Scale = MGT->getScale();
+  MaskedGatherSDNode *MGT = cast<MaskedGatherSDNode>(N);
   EVT MemVT = MGT->getMemoryVT();
-  ISD::LoadExtType ExtType = MGT->getExtensionType();
-  ISD::MemIndexType IndexType = MGT->getIndexType();
-
   EVT NewVT = VT.changeVectorElementTypeToInteger();
   EVT NewMemVT = MemVT.changeVectorElementTypeToInteger();
-  PassThru = DAG.getNode(ISD::BITCAST, DL, NewVT, PassThru);
 
-  SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
-  SDValue Load =
-      DAG.getMaskedGather(DAG.getVTList(NewVT, MVT::Other), NewMemVT, DL, Ops,
-                          MGT->getMemOperand(), IndexType, ExtType);
+  // We need to replace the FP gather with an equivalent integer one and apply
+  // bitcasts to the passthru and the result to prevent entering an infinite
+  // loop where v2f16 gets widened to v4f16, but then the pointers operand gets
+  // split from v4i64 -> v2i64.
+  SDValue PassThru = DAG.getNode(ISD::BITCAST, DL, NewVT, MGT->getPassThru());
+  SDValue Ops[] = {MGT->getChain(),   PassThru,        MGT->getMask(),
+                   MGT->getBasePtr(), MGT->getIndex(), MGT->getScale()};
+  SDValue Load = DAG.getMaskedGather(
+      DAG.getVTList(NewVT, MVT::Other), NewMemVT, DL, Ops, MGT->getMemOperand(),
+      MGT->getIndexType(), MGT->getExtensionType());
   SDValue Res = DAG.getNode(ISD::BITCAST, DL, VT, Load.getValue(0));
   Results.push_back(Res);
   Results.push_back(Load.getValue(1));
