@@ -1461,11 +1461,15 @@ static AttributeList legalizeCallAttributes(CallBase *Call, bool IsMemIntrinsic,
 
   // Attach the argument attributes from the original call at the corresponding
   // arguments in the statepoint. Note that any argument attributes that are
-  // invalid after lowering are stripped in stripNonValidDataFromBody.
-  for (unsigned I : llvm::seq(Call->arg_size()))
+  // invalid after lowering are stripped in stripNonValidDataFromBody. The
+  // exception is 'returned': the statepoint returns a token and the call's
+  // result comes back through gc.result, so no argument can carry it.
+  for (unsigned I : llvm::seq(Call->arg_size())) {
+    AttrBuilder ArgAttrs(Ctx, OrigAL.getParamAttrs(I));
+    ArgAttrs.removeAttribute(Attribute::Returned);
     StatepointAL = StatepointAL.addParamAttributes(
-        Ctx, GCStatepointInst::CallArgsBeginPos + I,
-        AttrBuilder(Ctx, OrigAL.getParamAttrs(I)));
+        Ctx, GCStatepointInst::CallArgsBeginPos + I, ArgAttrs);
+  }
 
   // Return attributes are later attached to the gc.result intrinsic.
   return StatepointAL;
