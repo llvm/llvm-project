@@ -9157,7 +9157,7 @@ def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall", "DCC_RtdCall"]>,
   MarshallingInfoEnum<LangOpts<"DefaultCallingConv">, "DCC_None">;
-def fdefault_addr_space_is_generic : Flag<["-"], "fspirv-default-addr-space-is-generic">,
+def fspirv_default_addr_space_is_generic : Flag<["-"], "fspirv-default-addr-space-is-generic">,
   HelpText<"Use generic address space as the default address space for SPIR-V targets">,
   Visibility<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"SPIRVDefaultAddrSpaceIsGeneric">>;
