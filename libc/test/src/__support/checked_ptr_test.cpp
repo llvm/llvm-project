@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/unique_ptr.h"
 #include "src/__support/CPP/utility.h"
@@ -23,13 +24,18 @@ using LIBC_NAMESPACE::CheckedPtr;
 using LIBC_NAMESPACE::make_unique;
 using LIBC_NAMESPACE::make_unique_for_overwrite;
 using LIBC_NAMESPACE::cpp::is_constructible_v;
+using LIBC_NAMESPACE::cpp::is_convertible_v;
 using LIBC_NAMESPACE::cpp::move;
+using LIBC_NAMESPACE::cpp::nullptr_t;
 using LIBC_NAMESPACE::cpp::unique_ptr;
 
 // Verify compile-time properties:
 // - Non-copyable and non-default-constructible.
+// - Implicitly constructible from nullptr.
 // - Explicit conversion to bool is only allowed on non-const lvalues/rvalues.
 static_assert(!is_constructible_v<CheckedPtr<int>>);
+static_assert(is_convertible_v<nullptr_t, CheckedPtr<int>>);
+static_assert(is_convertible_v<nullptr_t, CheckedPtr<int[]>>);
 static_assert(!is_constructible_v<CheckedPtr<int>, const CheckedPtr<int> &>);
 static_assert(is_constructible_v<bool, CheckedPtr<int> &>);
 static_assert(!is_constructible_v<bool, const CheckedPtr<int> &>);
@@ -93,8 +99,11 @@ TEST(LlvmLibcCheckedPtrTest, BasicMakeUniqueAndAccess) {
 }
 
 TEST(LlvmLibcCheckedPtrTest, NullptrCheck) {
-  CheckedPtr<int> ptr(nullptr);
+  CheckedPtr<int> ptr = nullptr;
   EXPECT_FALSE(static_cast<bool>(ptr));
+
+  CheckedPtr<int[]> arr = nullptr;
+  EXPECT_FALSE(static_cast<bool>(arr));
 }
 
 TEST(LlvmLibcCheckedPtrTest, MoveRequiresRecheck) {
@@ -320,6 +329,13 @@ TEST(LlvmLibcCheckedPtrTest, MakeUniqueForOverwriteArray) {
 TEST(LlvmLibcCheckedPtrDeathTest, UncheckedDestructionDies) {
   EXPECT_ASSERT_FAILS([] {
     auto ptr = make_unique<int>(42);
+    (void)ptr;
+  });
+}
+
+TEST(LlvmLibcCheckedPtrDeathTest, UncheckedNullptrDestructionDies) {
+  EXPECT_ASSERT_FAILS([] {
+    CheckedPtr<int> ptr = nullptr;
     (void)ptr;
   });
 }

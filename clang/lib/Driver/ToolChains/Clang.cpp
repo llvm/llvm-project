@@ -4030,7 +4030,8 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
       options::OPT_fhlsl_spv_use_unknown_image_format,
       options::OPT_fhlsl_spv_use_legacy_buffer_matrix_order,
       options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_preserve_interface,
+      options::OPT_fhlsl_spv_support_nonzero_base_instance};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)

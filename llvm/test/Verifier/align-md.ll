@@ -57,3 +57,17 @@ entry:
 }
 ; CHECK: alignment is larger that implementation defined limit
 ; CHECK-NEXT: load ptr, ptr %x
+
+define void @phi_metadata(ptr %x, i64 %i) {
+entry:
+  br label %bb
+
+bb:
+  ; This one is valid
+  phi ptr [%x, %entry], !align !{i64 2}
+  ; CHECK: align applies only to pointer types
+  phi i64 [%i, %entry], !align !{i64 2}
+  ; CHECK: align takes one operand
+  phi ptr [%x, %entry], !align !{}
+  ret void
+}

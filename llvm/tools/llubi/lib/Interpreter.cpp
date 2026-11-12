@@ -85,7 +85,8 @@ static bool violatesNoUndefAttr(const AnyValue &V) {
       return;
     }
     if (Scalar.isByte() && !ContainsPoison) {
-      // For non-byte-sized values, high bits are always zeroed out.
+      // For non-byte-sized values, padding bits are poison if and only if all
+      // non-padding bits in the padding byte are poison.
       ContainsPoison = any_of(Scalar.asByte().bytes(), [](const Byte &V) {
         return V.ConcreteMask != 255;
       });
@@ -680,6 +681,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
               handleFMFFlags(std::move(IncomingVal), FMF, /*IsInput=*/true);
       }
 
+      handleMetadata(PHI->getType(), IncomingVal, *PHI);
+      if (hasProgramExited())
+        return;
+
       IncomingValues.emplace_back(PHI, IncomingVal);
       ++CurrentFrame->PC;
     }
@@ -1228,6 +1233,10 @@ public:
       AttributeSet AttrsAtCallSite = CB.getRetAttributes();
       AttributeSet AttrsAtCallee =
           CurrentFrame->ResolvedCallee->getAttributes().getRetAttrs();
+      if (auto *FPMO = dyn_cast<FPMathOperator>(&CB)) {
+        if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
+          RetVal = handleFMFFlags(std::move(RetVal), FMF, /*IsInput=*/false);
+      }
       handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
       handleMetadata(RetTy, RetVal, CB);
     }

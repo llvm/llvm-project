@@ -28,7 +28,7 @@ using Vec16 = int __attribute__((vector_size(16)));
 
 TEST_SIZE(Global1, char)
 TEST_SIZE(Global2, short)
-TEST_SIZE(Global8, long)
+TEST_SIZE(Global8, long long)
 TEST_SIZE(Global16, Vec16)
 
 struct __attribute__((packed, aligned(4))) Packed {

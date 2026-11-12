@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "llvm/ADT/MapVector.h"
@@ -25,6 +26,15 @@ static cl::opt<std::string>
                       cl::cat(dialectGenCat), cl::CommaSeparated);
 
 namespace {
+/// The kind of entity, attribute or type, that readers and writers are
+/// generated for.
+struct AttrOrTypeKind {
+  /// Lowercase name, e.g. "attribute". Capitalized, it names the generated
+  /// entry points, e.g. `readAttribute` and `writeAttribute`.
+  StringRef name;
+  /// Fully qualified C++ class, e.g. "::mlir::Attribute".
+  StringRef cppClass;
+};
 
 /// Helper class to generate C++ bytecode parser helpers.
 class Generator {
@@ -32,27 +42,28 @@ public:
   Generator(raw_ostream &output) : output(output) {}
 
   /// Returns whether successfully emitted attribute/type parsers.
-  void emitParse(StringRef kind, const Record &x);
+  void emitParse(const AttrOrTypeKind &kind, const Record &x);
 
   /// Returns whether successfully emitted attribute/type printers.
-  void emitPrint(StringRef kind, StringRef type,
+  void emitPrint(const AttrOrTypeKind &kind, StringRef type,
                  ArrayRef<std::pair<int64_t, const Record *>> vec);
 
   /// Emits parse dispatch table.
-  void emitParseDispatch(StringRef kind, ArrayRef<const Record *> vec);
+  void emitParseDispatch(const AttrOrTypeKind &kind,
+                         ArrayRef<const Record *> vec);
 
   /// Emits print dispatch table.
-  void emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec);
+  void emitPrintDispatch(const AttrOrTypeKind &kind, ArrayRef<std::string> vec);
 
 private:
   /// Emits parse calls to construct given kind.
-  void emitParseHelper(StringRef kind, StringRef returnType, StringRef builder,
+  void emitParseHelper(StringRef returnType, StringRef builder,
                        ArrayRef<const Init *> args,
                        ArrayRef<std::string> argNames, StringRef failure,
                        mlir::raw_indented_ostream &ios);
 
   /// Emits print instructions.
-  void emitPrintHelper(const Record *memberRec, StringRef kind,
+  void emitPrintHelper(const Record *memberRec, const AttrOrTypeKind &kind,
                        StringRef parent, StringRef name,
                        mlir::raw_indented_ostream &ios);
 
@@ -81,7 +92,7 @@ static std::string getCType(const Record *def) {
   std::string format = "{0}";
   if (def->isSubClassOf("Array")) {
     def = def->getValueAsDef("elemT");
-    format = "SmallVector<{0}>";
+    format = "::llvm::SmallVector<{0}>";
   }
 
   StringRef cType = def->getValueAsString("cType");
@@ -94,23 +105,23 @@ static std::string getCType(const Record *def) {
   return formatv(format.c_str(), cType.str());
 }
 
-void Generator::emitParseDispatch(StringRef kind,
+void Generator::emitParseDispatch(const AttrOrTypeKind &kind,
                                   ArrayRef<const Record *> vec) {
   mlir::raw_indented_ostream os(output);
-  char const *head =
-      R"(static {0} read{0}(MLIRContext* context, DialectBytecodeReader &reader))";
-  os << formatv(head, capitalize(kind));
+  char const *head = R"(static {0} read{1}(::mlir::MLIRContext* context, )"
+                     R"(::mlir::DialectBytecodeReader &reader))";
+  os << formatv(head, kind.cppClass, capitalize(kind.name));
   auto funScope = os.scope(" {\n", "}\n\n");
 
   if (vec.empty()) {
-    os << "return reader.emitError() << \"unknown attribute\", "
-       << capitalize(kind) << "();\n";
+    os << "return reader.emitError() << \"unknown " << kind.name << "\", "
+       << kind.cppClass << "();\n";
     return;
   }
 
   os << "uint64_t kind;\n";
-  os << "if (failed(reader.readVarInt(kind)))\n"
-     << "  return " << capitalize(kind) << "();\n";
+  os << "if (::mlir::failed(reader.readVarInt(kind)))\n"
+     << "  return " << kind.cppClass << "();\n";
   os << "switch (kind) ";
   {
     auto switchScope = os.scope("{\n", "}\n");
@@ -122,31 +133,29 @@ void Generator::emitParseDispatch(StringRef kind,
                     it.value()->getName(), it.index());
     }
     os << "default:\n"
-       << "  reader.emitError() << \"unknown attribute code: \" "
-       << "<< kind;\n"
-       << "  return " << capitalize(kind) << "();\n";
+       << "  reader.emitError() << \"unknown " << kind.name
+       << " code: \" << kind;\n"
+       << "  return " << kind.cppClass << "();\n";
   }
-  os << "return " << capitalize(kind) << "();\n";
+  os << "return " << kind.cppClass << "();\n";
 }
 
-void Generator::emitParse(StringRef kind, const Record &x) {
+void Generator::emitParse(const AttrOrTypeKind &kind, const Record &x) {
   if (x.getNameInitAsString() == "ReservedOrDead")
     return;
 
-  char const *head =
-      R"(static {0} read{1}(MLIRContext* context, DialectBytecodeReader &reader) )";
+  char const *head = R"(static {0} read{1}(::mlir::MLIRContext* context, )"
+                     R"(::mlir::DialectBytecodeReader &reader) )";
   mlir::raw_indented_ostream os(output);
   std::string returnType = getCType(&x);
-  os << formatv(head,
-                kind == "attribute" ? "::mlir::Attribute" : "::mlir::Type",
-                x.getName());
+  os << formatv(head, kind.cppClass, x.getName());
   const DagInit *members = x.getValueAsDag("members");
   SmallVector<std::string> argNames =
       llvm::map_to_vector(members->getArgNames(), [](const StringInit *init) {
         return init->getAsUnquotedString();
       });
   StringRef builder = x.getValueAsString("cBuilder").trim();
-  emitParseHelper(kind, returnType, builder, members->getArgs(), argNames,
+  emitParseHelper(returnType, builder, members->getArgs(), argNames,
                   returnType + "()", os);
   os << "\n\n";
 }
@@ -180,16 +189,17 @@ static void printParseConditional(mlir::raw_indented_ostream &ios,
           const Record *def = attr->getValueAsDef("elemT");
           bool composite = def->isSubClassOf("CompositeBytecode");
           if (!composite && def->isSubClassOf("AttributeKind"))
-            parser = "succeeded($_reader.readAttributes($_var))";
+            parser = "::mlir::succeeded($_reader.readAttributes($_var))";
           else if (!composite && def->isSubClassOf("TypeKind"))
-            parser = "succeeded($_reader.readTypes($_var))";
+            parser = "::mlir::succeeded($_reader.readTypes($_var))";
           else if (attr->isSubClassOf("ArrayWithKnownSize")) {
             std::string sizeRef = attr->getValueAsString("knownSizeRef").str();
-            parser = ("succeeded($_reader.readListWithKnownSize($_var, " +
-                      sizeRef + ", " + listHelperName(std::get<1>(it)) + "))")
-                         .str();
+            parser =
+                ("::mlir::succeeded($_reader.readListWithKnownSize($_var, " +
+                 sizeRef + ", " + listHelperName(std::get<1>(it)) + "))")
+                    .str();
           } else
-            parser = ("succeeded($_reader.readList($_var, " +
+            parser = ("::mlir::succeeded($_reader.readList($_var, " +
                       listHelperName(std::get<1>(it)) + "))")
                          .str();
         } else {
@@ -203,8 +213,8 @@ static void printParseConditional(mlir::raw_indented_ostream &ios,
       [&]() { ios << " &&\n"; });
 }
 
-void Generator::emitParseHelper(StringRef kind, StringRef returnType,
-                                StringRef builder, ArrayRef<const Init *> args,
+void Generator::emitParseHelper(StringRef returnType, StringRef builder,
+                                ArrayRef<const Init *> args,
                                 ArrayRef<std::string> argNames,
                                 StringRef failure,
                                 mlir::raw_indented_ostream &ios) {
@@ -212,8 +222,8 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
 
   if (args.empty()) {
     ios << formatv(
-        "return getChecked<{0}>([&]() {{ return reader.emitError(); }, "
-        "context);\n",
+        "return ::mlir::getChecked<{0}>([&]() {{ return reader.emitError(); "
+        "}, context);\n",
         returnType);
     return;
   }
@@ -260,7 +270,7 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
       continue;
 
     std::string returnType = getCType(def);
-    ios << "auto " << listHelperName(name) << " = [&]() -> FailureOr<"
+    ios << "auto " << listHelperName(name) << " = [&]() -> ::mlir::FailureOr<"
         << returnType << "> ";
     SmallVector<const Init *> args;
     SmallVector<std::string> argNames;
@@ -275,7 +285,7 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
       argNames = {"temp"};
     }
     StringRef builder = def->getValueAsString("cBuilder");
-    emitParseHelper(kind, returnType, builder, args, argNames, "failure()",
+    emitParseHelper(returnType, builder, args, argNames, "::mlir::failure()",
                     ios);
     ios << ";\n";
   }
@@ -303,15 +313,15 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
   ios << "}\nreturn " << failure << ";\n";
 }
 
-void Generator::emitPrint(StringRef kind, StringRef type,
+void Generator::emitPrint(const AttrOrTypeKind &kind, StringRef type,
                           ArrayRef<std::pair<int64_t, const Record *>> vec) {
   if (type == "ReservedOrDead")
     return;
 
-  char const *head =
-      R"(static LogicalResult write({0} {1}, DialectBytecodeWriter &writer) )";
+  char const *head = R"(static ::llvm::LogicalResult write({0} {1}, )"
+                     R"(::mlir::DialectBytecodeWriter &writer) )";
   mlir::raw_indented_ostream os(output);
-  os << formatv(head, type, kind);
+  os << formatv(head, type, kind.name);
   auto funScope = os.scope("{\n", "}\n\n");
 
   // Check that predicates specified if multiple bytecode instances.
@@ -332,7 +342,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
   for (auto [index, rec] : vec) {
     StringRef pred = rec->getValueAsString("printerPredicate");
     if (!pred.empty()) {
-      os << "if (" << format(pred, {{"$_val", kind.str()}}) << ") {\n";
+      os << "if (" << format(pred, {{"$_val", kind.name.str()}}) << ") {\n";
       os.indent();
     }
 
@@ -345,22 +355,24 @@ void Generator::emitPrint(StringRef kind, StringRef type,
       const DefInit *def = dyn_cast<DefInit>(arg);
       assert(def);
       const Record *memberRec = def->getDef();
-      emitPrintHelper(memberRec, kind, kind, name->getAsUnquotedString(), os);
+      emitPrintHelper(memberRec, kind, kind.name, name->getAsUnquotedString(),
+                      os);
     }
 
     if (!pred.empty()) {
-      os << "return success();\n";
+      os << "return ::mlir::success();\n";
       os.unindent();
       os << "}\n";
     } else {
-      os << "return success();\n";
+      os << "return ::mlir::success();\n";
     }
   }
-  os << "return failure();\n";
+  os << "return ::mlir::failure();\n";
 }
 
-void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
-                                StringRef parent, StringRef name,
+void Generator::emitPrintHelper(const Record *memberRec,
+                                const AttrOrTypeKind &kind, StringRef parent,
+                                StringRef name,
                                 mlir::raw_indented_ostream &ios) {
   std::string getter;
   if (auto cGetter = memberRec->getValueAsOptionalString("cGetter");
@@ -389,7 +401,7 @@ void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
       }
     }
     std::string returnType = getCType(def);
-    std::string nestedName = kind.str();
+    std::string nestedName = kind.name.str();
     StringRef writeMethod = memberRec->isSubClassOf("ArrayWithKnownSize")
                                 ? "writer.writeListWithKnownSize("
                                 : "writer.writeList(";
@@ -412,20 +424,21 @@ void Generator::emitPrintHelper(const Record *memberRec, StringRef kind,
   if (std::string printer = memberRec->getValueAsString("cPrinter").str();
       !printer.empty())
     ios << format(printer, {{"$_writer", "writer"},
-                            {"$_name", kind.str()},
+                            {"$_name", kind.name.str()},
                             {"$_getter", getter}})
         << ";\n";
 }
 
-void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
+void Generator::emitPrintDispatch(const AttrOrTypeKind &kind,
+                                  ArrayRef<std::string> vec) {
   mlir::raw_indented_ostream os(output);
-  char const *head = R"(static LogicalResult write{0}({0} {1},
-                                DialectBytecodeWriter &writer))";
-  os << formatv(head, capitalize(kind), kind);
+  char const *head = R"(static ::llvm::LogicalResult write{0}({1} {2},
+                                ::mlir::DialectBytecodeWriter &writer))";
+  os << formatv(head, capitalize(kind.name), kind.cppClass, kind.name);
   auto funScope = os.scope(" {\n", "}\n\n");
 
-  os << "return TypeSwitch<" << capitalize(kind) << ", LogicalResult>(" << kind
-     << ")";
+  os << "return ::llvm::TypeSwitch<" << kind.cppClass
+     << ", ::llvm::LogicalResult>(" << kind.name << ")";
   auto switchScope = os.scope("", "");
   for (StringRef type : vec) {
     if (type == "ReservedOrDead")
@@ -435,7 +448,8 @@ void Generator::emitPrintDispatch(StringRef kind, ArrayRef<std::string> vec) {
     auto caseScope = os.scope(" {\n", "})");
     os << "return write(t, writer);\n";
   }
-  os << "\n.Default([&](" << capitalize(kind) << ") { return failure(); });\n";
+  os << "\n.Default([&](" << kind.cppClass
+     << ") { return ::mlir::failure(); });\n";
 }
 
 namespace {
@@ -444,6 +458,16 @@ struct AttrOrType {
   std::vector<const Record *> attr, type;
 };
 } // namespace
+
+/// Headers declaring the C++ constructs used by the generated readers and
+/// writers.
+static constexpr StringRef bytecodeIncludes[] = {
+    // `::llvm::TypeSwitch`.
+    "llvm/ADT/TypeSwitch.h",
+    // `::mlir::DialectBytecodeReader`, `::mlir::DialectBytecodeWriter`,
+    // `::mlir::getChecked`, `::mlir::readResourceHandle`.
+    "mlir/Bytecode/BytecodeImplementation.h",
+};
 
 static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
   MapVector<StringRef, AttrOrType> dialectAttrOrType;
@@ -468,14 +492,13 @@ static bool emitBCRW(const RecordKeeper &records, raw_ostream &os) {
                     "one in input file or specified via dialect option)");
 
   auto it = dialectAttrOrType.front();
+  mlir::tblgen::emitIncludes(os, bytecodeIncludes);
   Generator gen(os);
 
-  SmallVector<std::vector<const Record *> *, 2> vecs;
-  SmallVector<std::string, 2> kinds;
-  vecs.push_back(&it.second.attr);
-  kinds.push_back("attribute");
-  vecs.push_back(&it.second.type);
-  kinds.push_back("type");
+  const std::vector<const Record *> *vecs[] = {&it.second.attr,
+                                               &it.second.type};
+  const AttrOrTypeKind kinds[] = {{"attribute", "::mlir::Attribute"},
+                                  {"type", "::mlir::Type"}};
   for (auto [vec, kind] : zip(vecs, kinds)) {
     // Handle Attribute/Type emission.
     std::map<std::string, std::vector<std::pair<int64_t, const Record *>>>

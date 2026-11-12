@@ -273,14 +273,11 @@ fxdivi(IntType n, IntType d) {
     d_mag = d;
   }
 
-  if constexpr (OutRep::INTEGRAL_LEN > 0) {
-    constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1)
-                                  << OutRep::INTEGRAL_LEN;
+  constexpr UInt128 MAX_UNITS = static_cast<UInt128>(1) << OutRep::INTEGRAL_LEN;
 
-    if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
-                      MAX_UNITS * static_cast<UInt128>(d_mag)))
-      return result_is_negative ? OutRep::MIN() : OutRep::MAX();
-  }
+  if (LIBC_UNLIKELY(static_cast<UInt128>(n_mag) >=
+                    MAX_UNITS * static_cast<UInt128>(d_mag)))
+    return result_is_negative ? OutRep::MIN() : OutRep::MAX();
 
   WideFXType res;
 

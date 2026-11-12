@@ -1319,6 +1319,12 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
   case MSVCIntrin::__fastfail:
     cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
     return {};
+  case MSVCIntrin::_ReadWriteBarrier:
+    cir::AtomicFenceOp::create(
+        builder, getLoc(E->getExprLoc()), cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::SingleThread));
+    return mlir::Value{};
   }
   llvm_unreachable("Incorrect MSVC intrinsic!");
 }
@@ -3140,16 +3146,6 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), intrinsicName, i64Ty,
         mlir::ValueRange{ops[0], ops[1], ops[2]});
-  }
-  case X86::BI_ReadWriteBarrier:
-  case X86::BI_ReadBarrier:
-  case X86::BI_WriteBarrier: {
-    cir::AtomicFenceOp::create(
-        builder, getLoc(expr->getExprLoc()),
-        cir::MemOrder::SequentiallyConsistent,
-        cir::SyncScopeKindAttr::get(&getMLIRContext(),
-                                    cir::SyncScopeKind::SingleThread));
-    return mlir::Value{};
   }
   case X86::BI_AddressOfReturnAddress: {
     mlir::Location loc = getLoc(expr->getExprLoc());

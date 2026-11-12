@@ -612,7 +612,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
       setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
-      setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
+      setOperationAction(ISD::BITREVERSE, MVT::v4i16, Legal);
+      setOperationAction(ISD::BITREVERSE, MVT::v8i8, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
@@ -6470,6 +6471,7 @@ static SDValue tryWidenMaskForShuffle(SDValue Op, SelectionDAG &DAG) {
 
 // Match an interleave shuffle that forms a P-extension packed zip:
 //   <a0, b0, a1, b1, ...> -> zip*p/wzip*p
+//   <aN/2, bN/2, aN/2+1, bN/2+1, ...> -> zip*hp
 static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
                                          const RISCVSubtarget &Subtarget,
                                          SelectionDAG &DAG) {
@@ -6503,6 +6505,13 @@ static SDValue lowerVECTOR_SHUFFLEAsPZip(ShuffleVectorSDNode *SVN,
       V1 = DAG.getExtractSubvector(DL, HalfVT, V1, 0);
       V2 = DAG.getExtractSubvector(DL, HalfVT, V2, 0);
       return DAG.getNode(RISCVISD::PWZIP, DL, VT, V2, V1);
+    }
+    if (Subtarget.is64Bit()) {
+      unsigned HalfNumElts = NumElts / 2;
+      if (EvenSrc == HalfNumElts && OddSrc == NumElts + HalfNumElts)
+        return DAG.getNode(RISCVISD::PZIPH, DL, VT, V1, V2);
+      if (EvenSrc == NumElts + HalfNumElts && OddSrc == HalfNumElts)
+        return DAG.getNode(RISCVISD::PZIPH, DL, VT, V2, V1);
     }
   }
 
@@ -8549,6 +8558,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerIS_FPCLASS(Op, DAG);
   case ISD::BITREVERSE: {
     MVT VT = Op.getSimpleValueType();
+    if (VT == MVT::v8i8 && !Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
+      // Split into two v4i8 bitreverses, each of which fits in a GPR.
+      SDLoc DL(Op);
+      auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+      Lo = DAG.getNode(ISD::BITREVERSE, DL, MVT::v4i8, Lo);
+      Hi = DAG.getNode(ISD::BITREVERSE, DL, MVT::v4i8, Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
     if (VT.isFixedLengthVector()) {
       assert(Subtarget.hasStdExtZvbb());
       return lowerToScalableOp(Op, DAG);
@@ -12525,6 +12542,8 @@ static unsigned getRVPScalarOpcode(unsigned IntNo) {
     return ISD::AVGSUBFLOORS;
   case Intrinsic::riscv_asubu_u32:
     return ISD::AVGSUBFLOORU;
+  case Intrinsic::riscv_ssh1sadd_i32:
+    return RISCVISD::SSH1SADD;
   case Intrinsic::riscv_mulhr_i32:
     return RISCVISD::MULHR;
   case Intrinsic::riscv_mulhru_u32:
@@ -13512,6 +13531,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_aaddu_u32:
   case Intrinsic::riscv_asub_i32:
   case Intrinsic::riscv_asubu_u32:
+  case Intrinsic::riscv_ssh1sadd_i32:
   case Intrinsic::riscv_mulhr_i32:
   case Intrinsic::riscv_mulhru_u32:
   case Intrinsic::riscv_mulhsu_i32:
@@ -18600,6 +18620,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_aaddu_u32:
     case Intrinsic::riscv_asub_i32:
     case Intrinsic::riscv_asubu_u32:
+    case Intrinsic::riscv_ssh1sadd_i32:
     case Intrinsic::riscv_mulhr_i32:
     case Intrinsic::riscv_mulhru_u32:
     case Intrinsic::riscv_mulhsu_i32:
@@ -18612,9 +18633,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::riscv_mhraccu_u32:
     case Intrinsic::riscv_mhaccsu_i32:
     case Intrinsic::riscv_mhraccsu_i32: {
-      // RV64 has no scalar averaging, mulh, mulq or mhacc instructions; reuse
-      // the packed .w family on the low words, whose element 0 is the scalar
-      // result.
+      // RV64 has no scalar averaging, shift-add, mulh, mulq or mhacc
+      // instructions; reuse the packed .w family on the low words, whose
+      // element 0 is the scalar result.
       assert(Subtarget.is64Bit() && N->getValueType(0) == MVT::i32 &&
              "Unexpected subtarget or result type");
       unsigned Opc = getRVPScalarOpcode(IntNo);
