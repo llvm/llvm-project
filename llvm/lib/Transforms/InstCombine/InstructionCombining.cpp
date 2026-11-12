@@ -448,6 +448,48 @@ Value *InstCombinerImpl::simplifyIntToPtrRoundTripCast(Value *Val) {
   return nullptr;
 }
 
+/// Try to create X binop Y only if both are selects and either could
+/// imply the other's condition.
+static Value *reassociateBinOpImpliedSelects(BinaryOperator &I,
+                                             BinaryOperator *Inner,
+                                             InstCombinerImpl &IC, Value *X,
+                                             Value *Y) {
+
+  // Group selects when either condition implies the other. This can expose
+  // the select folds in SimplifySelectsFeedingBinaryOp.
+  auto haveImpliedSelectConditions = [&](Value *A, Value *B) {
+    auto *ASel = dyn_cast<SelectInst>(A);
+    auto *BSel = dyn_cast<SelectInst>(B);
+    if (!ASel || !BSel ||
+        ASel->getCondition()->getType() != BSel->getCondition()->getType())
+      return false;
+    Value *ACond = ASel->getCondition();
+    Value *BCond = BSel->getCondition();
+    const DataLayout &DL = IC.getDataLayout();
+    // Either arm of either select may determine the other's condition.
+    return isImpliedCondition(ACond, BCond, DL).has_value() ||
+           isImpliedCondition(ACond, BCond, DL, false).has_value() ||
+           isImpliedCondition(BCond, ACond, DL).has_value() ||
+           isImpliedCondition(BCond, ACond, DL, false).has_value();
+  };
+
+  // Keep an existing pair of related selects together to avoid
+  // repeatedly regrouping three selects.
+  if (!Inner->hasOneUse() || !haveImpliedSelectConditions(X, Y) ||
+      haveImpliedSelectConditions(Inner->getOperand(0), Inner->getOperand(1)) ||
+      (isa<FPMathOperator>(&I) && !Inner->isAssociative()))
+    return nullptr;
+
+  auto *NewOp = BinaryOperator::Create(I.getOpcode(), X, Y);
+  if (isa<FPMathOperator>(&I)) {
+    FastMathFlags FMF = I.getFastMathFlags() & Inner->getFastMathFlags();
+    NewOp->setFastMathFlags(FMF);
+    I.setFastMathFlags(FMF);
+  }
+  IC.InsertNewInstWith(NewOp, I.getIterator());
+  return NewOp;
+}
+
 /// This performs a few simplifications for operators that are associative or
 /// commutative:
 ///
@@ -568,7 +610,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         continue;
       }
 
-      // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A" simplifies.
+      // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A"
+      // simplifies, or group "A op C" if those are related selects.
       if (Op0 && Op0->getOpcode() == Opcode) {
         Value *A = Op0->getOperand(0);
         Value *B = Op0->getOperand(1);
@@ -581,8 +624,11 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
 
         // Does "C op A" simplify?
-        if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
-          // It simplifies to V.  Form "V op B".
+        Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I));
+        if (!V)
+          V = reassociateBinOpImpliedSelects(I, Op0, *this, A, C);
+        if (V) {
+          // Form "V op B".
           replaceOperand(I, 0, V);
           replaceOperand(I, 1, B);
           // Conservatively clear the optional flags, since they may not be
@@ -595,7 +641,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
       }
 
-      // Transform: "A op (B op C)" ==> "B op (C op A)" if "C op A" simplifies.
+      // Transform: "A op (B op C)" ==> "B op (C op A)" if "C op A"
+      // simplifies, or group "A op C" if those are related selects.
       if (Op1 && Op1->getOpcode() == Opcode) {
         Value *A = I.getOperand(0);
         Value *B = Op1->getOperand(0);
@@ -608,8 +655,11 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
 
         // Does "C op A" simplify?
-        if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
-          // It simplifies to V.  Form "B op V".
+        Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I));
+        if (!V)
+          V = reassociateBinOpImpliedSelects(I, Op1, *this, A, C);
+        if (V) {
+          // Form "B op V".
           replaceOperand(I, 0, B);
           replaceOperand(I, 1, V);
           // Conservatively clear the optional flags, since they may not be
