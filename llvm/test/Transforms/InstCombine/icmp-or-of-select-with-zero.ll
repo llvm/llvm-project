@@ -310,3 +310,29 @@ entry:
   %cmp = icmp ne <4 x i32> %or, zeroinitializer
   ret <4 x i1> %cmp
 }
+
+; Zero-test on "or(add(X, Y), Y)" can be folded to "or(X, Y)"
+
+define i1 @or_add_eq(i64 %x, i64 %y) {
+; CHECK-LABEL: @or_add_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i64 %x, %y
+  %or = or i64 %add, %y
+  %cmp = icmp eq i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @or_add_ne(i64 %x, i64 %y) {
+; CHECK-LABEL: @or_add_ne(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i64 %x, %y
+  %or = or i64 %add, %y
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
