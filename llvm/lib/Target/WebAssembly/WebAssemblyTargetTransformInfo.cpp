@@ -22,12 +22,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasmtti"
 
-TargetTransformInfo::PopcntSupportKind
-WebAssemblyTTIImpl::getPopcntSupport(unsigned TyWidth) const {
-  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return TargetTransformInfo::PSK_FastHardware;
-}
-
 unsigned WebAssemblyTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   unsigned Result = BaseT::getNumberOfRegisters(ClassID);
 

@@ -62,9 +62,6 @@ public:
   /// \name Scalar TTI Implementations
   /// @{
 
-  TTI::PopcntSupportKind
-  getPopcntSupport(unsigned IntTyWidthInBit) const override;
-
   // The Hexagon target can unroll loops with run-time trip counts.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,

@@ -147,30 +147,51 @@ while.end:                                        ; preds = %while.body, %entry
 }
 
 define i32 @popcount_i128(i128 %a) nounwind uwtable readnone ssp {
-; SPARC-CPOP-LABEL: @popcount_i128(
-; SPARC-CPOP-NEXT:  entry:
-; SPARC-CPOP-NEXT:    [[TMP0:%.*]] = call i128 @llvm.ctpop.i128(i128 [[A:%.*]])
-; SPARC-CPOP-NEXT:    [[TMP1:%.*]] = trunc i128 [[TMP0]] to i32
-; SPARC-CPOP-NEXT:    [[TOBOOL3:%.*]] = icmp eq i128 [[TMP0]], 0
-; SPARC-CPOP-NEXT:    br i1 [[TOBOOL3]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
-; SPARC-CPOP:       while.body.preheader:
-; SPARC-CPOP-NEXT:    br label [[WHILE_BODY:%.*]]
-; SPARC-CPOP:       while.body:
-; SPARC-CPOP-NEXT:    [[TCPHI:%.*]] = phi i128 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], [[WHILE_BODY]] ]
-; SPARC-CPOP-NEXT:    [[C_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
-; SPARC-CPOP-NEXT:    [[A_ADDR_04:%.*]] = phi i128 [ [[AND:%.*]], [[WHILE_BODY]] ], [ [[A]], [[WHILE_BODY_PREHEADER]] ]
-; SPARC-CPOP-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
-; SPARC-CPOP-NEXT:    [[SUB:%.*]] = add i128 [[A_ADDR_04]], -1
-; SPARC-CPOP-NEXT:    [[AND]] = and i128 [[SUB]], [[A_ADDR_04]]
-; SPARC-CPOP-NEXT:    [[TCDEC]] = sub nuw i128 [[TCPHI]], 1
-; SPARC-CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i128 [[TCDEC]], 0
-; SPARC-CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
-; SPARC-CPOP:       while.end.loopexit:
-; SPARC-CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY]] ]
-; SPARC-CPOP-NEXT:    br label [[WHILE_END]]
-; SPARC-CPOP:       while.end:
-; SPARC-CPOP-NEXT:    [[C_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
-; SPARC-CPOP-NEXT:    ret i32 [[C_0_LCSSA]]
+; SPARC32-CPOP-LABEL: @popcount_i128(
+; SPARC32-CPOP-NEXT:  entry:
+; SPARC32-CPOP-NEXT:    [[TOBOOL3:%.*]] = icmp eq i128 [[A:%.*]], 0
+; SPARC32-CPOP-NEXT:    br i1 [[TOBOOL3]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
+; SPARC32-CPOP:       while.body.preheader:
+; SPARC32-CPOP-NEXT:    br label [[WHILE_BODY:%.*]]
+; SPARC32-CPOP:       while.body:
+; SPARC32-CPOP-NEXT:    [[C_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; SPARC32-CPOP-NEXT:    [[A_ADDR_04:%.*]] = phi i128 [ [[AND:%.*]], [[WHILE_BODY]] ], [ [[A]], [[WHILE_BODY_PREHEADER]] ]
+; SPARC32-CPOP-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
+; SPARC32-CPOP-NEXT:    [[SUB:%.*]] = add i128 [[A_ADDR_04]], -1
+; SPARC32-CPOP-NEXT:    [[AND]] = and i128 [[SUB]], [[A_ADDR_04]]
+; SPARC32-CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i128 [[AND]], 0
+; SPARC32-CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; SPARC32-CPOP:       while.end.loopexit:
+; SPARC32-CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ]
+; SPARC32-CPOP-NEXT:    br label [[WHILE_END]]
+; SPARC32-CPOP:       while.end:
+; SPARC32-CPOP-NEXT:    [[C_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
+; SPARC32-CPOP-NEXT:    ret i32 [[C_0_LCSSA]]
+;
+; SPARC64-CPOP-LABEL: @popcount_i128(
+; SPARC64-CPOP-NEXT:  entry:
+; SPARC64-CPOP-NEXT:    [[TMP0:%.*]] = call i128 @llvm.ctpop.i128(i128 [[A:%.*]])
+; SPARC64-CPOP-NEXT:    [[TMP1:%.*]] = trunc i128 [[TMP0]] to i32
+; SPARC64-CPOP-NEXT:    [[TMP2:%.*]] = icmp eq i128 [[TMP0]], 0
+; SPARC64-CPOP-NEXT:    br i1 [[TMP2]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
+; SPARC64-CPOP:       while.body.preheader:
+; SPARC64-CPOP-NEXT:    br label [[WHILE_BODY:%.*]]
+; SPARC64-CPOP:       while.body:
+; SPARC64-CPOP-NEXT:    [[TCPHI:%.*]] = phi i128 [ [[TMP0]], [[WHILE_BODY_PREHEADER]] ], [ [[TCDEC:%.*]], [[WHILE_BODY]] ]
+; SPARC64-CPOP-NEXT:    [[C_05:%.*]] = phi i32 [ [[INC:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_PREHEADER]] ]
+; SPARC64-CPOP-NEXT:    [[A_ADDR_04:%.*]] = phi i128 [ [[AND:%.*]], [[WHILE_BODY]] ], [ [[A]], [[WHILE_BODY_PREHEADER]] ]
+; SPARC64-CPOP-NEXT:    [[INC]] = add nsw i32 [[C_05]], 1
+; SPARC64-CPOP-NEXT:    [[SUB:%.*]] = add i128 [[A_ADDR_04]], -1
+; SPARC64-CPOP-NEXT:    [[AND]] = and i128 [[SUB]], [[A_ADDR_04]]
+; SPARC64-CPOP-NEXT:    [[TCDEC]] = sub nuw i128 [[TCPHI]], 1
+; SPARC64-CPOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i128 [[TCDEC]], 0
+; SPARC64-CPOP-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
+; SPARC64-CPOP:       while.end.loopexit:
+; SPARC64-CPOP-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], [[WHILE_BODY]] ]
+; SPARC64-CPOP-NEXT:    br label [[WHILE_END]]
+; SPARC64-CPOP:       while.end:
+; SPARC64-CPOP-NEXT:    [[C_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC_LCSSA]], [[WHILE_END_LOOPEXIT]] ]
+; SPARC64-CPOP-NEXT:    ret i32 [[C_0_LCSSA]]
 ;
 ; SPARC-NOCPOP-LABEL: @popcount_i128(
 ; SPARC-NOCPOP-NEXT:  entry:
@@ -319,7 +340,5 @@ while.end:                                        ; preds = %while.body, %entry
   ret i32 %add2
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; SPARC32-CPOP: {{.*}}
 ; SPARC32-NOCPOP: {{.*}}
-; SPARC64-CPOP: {{.*}}
 ; SPARC64-NOCPOP: {{.*}}

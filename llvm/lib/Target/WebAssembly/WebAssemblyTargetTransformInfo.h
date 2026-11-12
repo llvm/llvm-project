@@ -45,8 +45,6 @@ public:
 
   // TODO: Implement more Scalar TTI for WebAssembly
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
-
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;

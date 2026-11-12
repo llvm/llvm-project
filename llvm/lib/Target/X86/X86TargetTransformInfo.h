@@ -41,12 +41,6 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  /// \name Scalar TTI Implementations
-  /// @{
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
-
-  /// @}
-
   /// \name Cache TTI Implementation
   /// @{
   std::optional<unsigned> getCacheSize(

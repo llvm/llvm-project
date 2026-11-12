@@ -7,19 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SparcTargetTransformInfo.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "sparctti"
-
-TargetTransformInfo::PopcntSupportKind
-SparcTTIImpl::getPopcntSupport(unsigned TyWidth) const {
-  assert(isPowerOf2_32(TyWidth) && "Type width must be power of 2");
-  if (ST->usePopc())
-    return TTI::PSK_FastHardware;
-  return TTI::PSK_Software;
-}
 
 unsigned SparcTTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
   if (Vector)

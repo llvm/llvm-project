@@ -55,6 +55,23 @@ ValueUniformity llvm::SPIRVTTIImpl::getValueUniformity(const Value *V) const {
                                  : ValueUniformity::Default;
 }
 
+InstructionCost
+llvm::SPIRVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                          TTI::TargetCostKind CostKind) const {
+  // SPIR-V natively supports OpBitCount, per 3.53.14 in the spec, as such it
+  // is reasonable to assume the Op is fast / preferable to the expanded loop.
+  // Furthermore, this prevents information being lost if transforms are
+  // applied to SPIR-V before lowering to a concrete target.
+  if (ICA.getID() == Intrinsic::ctpop) {
+    Type *Ty = ICA.getReturnType();
+    // Arbitrary bit-width INT is not core SPIR-V.
+    if (Ty->isIntegerTy() && isPowerOf2_32(Ty->getIntegerBitWidth()) &&
+        Ty->getIntegerBitWidth() <= 64)
+      return TTI::TCC_Basic;
+  }
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
 bool llvm::SPIRVTTIImpl::collectFlatAddressOperands(
     SmallVectorImpl<int> &OpIndexes, Intrinsic::ID IID) const {
   switch (IID) {

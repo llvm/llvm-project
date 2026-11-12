@@ -804,11 +804,6 @@ TargetTransformInfo::allowsMisalignedMemoryAccesses(LLVMContext &Context,
                                                  AddressSpace, Alignment, Fast);
 }
 
-TargetTransformInfo::PopcntSupportKind
-TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
-  return TTIImpl->getPopcntSupport(IntTyWidthInBit);
-}
-
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }

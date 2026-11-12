@@ -38,11 +38,6 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  /// \name Scalar TTI Implementations
-  /// @{
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
-  /// @}
-
   /// \name Vector TTI Implementations
   /// @{
   enum SparcRegisterClass { GPRRC, FPRRC, FP128RRC, VRRC };

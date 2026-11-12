@@ -43,13 +43,6 @@ public:
 
   bool shouldBuildLookupTables() const override { return false; }
 
-  TargetTransformInfo::PopcntSupportKind
-  getPopcntSupport(unsigned TyWidth) const override {
-    if (TyWidth == 32)
-      return TTI::PSK_FastHardware;
-    return TTI::PSK_Software;
-  }
-
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind) const override {
     assert(Ty->isIntegerTy());

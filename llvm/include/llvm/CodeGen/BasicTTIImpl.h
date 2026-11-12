@@ -2808,9 +2808,6 @@ public:
     }
     case Intrinsic::ctpop:
       ISD = ISD::CTPOP;
-      // In case of legalization use TCC_Expensive. This is cheaper than a
-      // library call but still not a cheap instruction.
-      SingleCallCost = TargetTransformInfo::TCC_Expensive;
       break;
     case Intrinsic::ctlz:
       ISD = ISD::CTLZ;
@@ -3224,6 +3221,44 @@ public:
         return LT.first + FCanonicalizeCost * 2;
       }
       break;
+    }
+    case Intrinsic::ctpop: {
+      // This cost model should match the expansion in
+      // TargetLowering::expandCTPOP. Vectors are scalarized below.
+      if (RetTy->isVectorTy())
+        break;
+      unsigned BW = RetTy->getScalarSizeInBits();
+      if (BW > 128 || BW % 8 != 0)
+        break;
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost AddCost =
+          thisT()->getArithmeticInstrCost(Instruction::Add, RetTy, CostKind);
+      InstructionCost SubCost =
+          thisT()->getArithmeticInstrCost(Instruction::Sub, RetTy, CostKind);
+      InstructionCost LShrCost =
+          thisT()->getArithmeticInstrCost(Instruction::LShr, RetTy, CostKind);
+
+      // v = v - ((v >> 1) & 0x55...)
+      // v = (v & 0x33...) + ((v >> 2) & 0x33...)
+      // v = (v + (v >> 4)) & 0x0F...
+      InstructionCost Cost = 3 * LShrCost + 4 * AndCost + SubCost + 2 * AddCost;
+      if (BW == 8)
+        return Cost;
+      // v = (v + (v >> 8)) & 0xFF
+      if (BW == 16)
+        return Cost + LShrCost + AddCost + AndCost;
+      // v = (v * 0x0101...) >> (BW - 8), with the multiply done as shifts and
+      // adds if there is no multiply.
+      InstructionCost MulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+      InstructionCost ShlCost =
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      if (getTLI()->isOperationLegalOrCustomOrPromote(ISD::MUL, LT.second))
+        Cost += MulCost;
+      else
+        Cost += Log2_32(BW / 8) * (ShlCost + AddCost);
+      return Cost + LShrCost;
     }
     case Intrinsic::clmul: {
       // This cost model should match the expansion in

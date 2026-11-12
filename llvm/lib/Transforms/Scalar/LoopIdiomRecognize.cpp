@@ -2897,9 +2897,6 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
 /// If detected, transforms the relevant code to issue the popcount intrinsic
 /// function call, and returns true; otherwise, returns false.
 bool LoopIdiomRecognize::recognizePopcount() {
-  if (TTI->getPopcntSupport(32) != TargetTransformInfo::PSK_FastHardware)
-    return false;
-
   // Counting population are usually conducted by few arithmetic instructions.
   // Such instructions can be easily "absorbed" by vacant slots in a
   // non-compact loop. Therefore, recognizing popcount idiom only makes sense
@@ -2936,6 +2933,18 @@ bool LoopIdiomRecognize::recognizePopcount() {
   PHINode *CntPhi;
   Value *Val;
   if (!detectPopcountIdiom(CurLoop, PreCondBB, CntInst, CntPhi, Val))
+    return false;
+
+  // The loop runs at least once, so the popcount is profitable if it costs no
+  // more than one iteration of the loop.
+  constexpr auto CostKind = TargetTransformInfo::TCK_SizeAndLatency;
+  InstructionCost LoopCost = 0;
+  for (Instruction &I :
+       make_range(LoopBody->getFirstNonPHIIt(), LoopBody->end()))
+    LoopCost += TTI->getInstructionCost(&I, CostKind);
+  Type *Ty = Val->getType();
+  IntrinsicCostAttributes Attrs(Intrinsic::ctpop, Ty, {Ty});
+  if (TTI->getIntrinsicInstrCost(Attrs, CostKind) > LoopCost)
     return false;
 
   transformLoopToPopcount(PreCondBB, CntInst, CntPhi, Val);

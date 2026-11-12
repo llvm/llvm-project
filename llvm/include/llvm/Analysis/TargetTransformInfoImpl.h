@@ -585,11 +585,6 @@ public:
     return false;
   }
 
-  virtual TTI::PopcntSupportKind
-  getPopcntSupport(unsigned IntTyWidthInBit) const {
-    return TTI::PSK_Software;
-  }
-
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
 
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {

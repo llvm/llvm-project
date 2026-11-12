@@ -336,12 +336,6 @@ bool RISCVTTIImpl::hasActiveVectorLength() const {
   return ST->hasVInstructions();
 }
 
-TargetTransformInfo::PopcntSupportKind
-RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
-  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  return ST->hasCPOPLike() ? TTI::PSK_FastHardware : TTI::PSK_Software;
-}
-
 InstructionCost RISCVTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,

@@ -354,14 +354,6 @@ SystemZTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return SystemZTTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
-TargetTransformInfo::PopcntSupportKind
-SystemZTTIImpl::getPopcntSupport(unsigned TyWidth) const {
-  assert(isPowerOf2_32(TyWidth) && "Type width must be power of 2");
-  if (ST->hasPopulationCount() && TyWidth <= 64)
-    return TTI::PSK_FastHardware;
-  return TTI::PSK_Software;
-}
-
 void SystemZTTIImpl::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
     OptimizationRemarkEmitter *ORE) const {

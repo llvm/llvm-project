@@ -48,7 +48,6 @@ public:
   unsigned getMaxInterleaveFactor(ElementCount VF,
                                   bool HasUnorderedReductions) const override;
   const char *getRegisterClassName(unsigned ClassID) const override;
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   unsigned getCacheLineSize() const override;
 
