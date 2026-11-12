@@ -344,8 +344,31 @@ define void @test_sequenced_stores_remain_clusterable(ptr %p) {
 ; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Barrier
 ; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Cluster
 ; CHECK:       SU([[S]]): STRXui %{{[0-9]+}}:gpr64, %{{[0-9]+}}:gpr64common, 1 :: (store (s64) into %ir.p.gep.1)
-  %p.gep.1 = getelementptr i8, ptr %p, i64 8
+  %p.gep.1 = getelementptr i64, ptr %p, i64 1
   store i64 0, ptr %p
   store i64 1, ptr %p.gep.1
+  ret void
+}
+
+define void @test_sequenced_memops_with_unsafe_path_unclustered(ptr %p, i64 %i) {
+; CHECK-LABEL: test_sequenced_memops_with_unsafe_path_unclustered:%bb.0
+; CHECK:       Promoting SU([[S:[0-9]+]]) to sequencing store
+; CHECK-NOT:   Promoting
+
+; CHECK:       SU({{[0-9]+}}): STRXui $xzr, %{{[0-9]+}}:gpr64common, 0 :: (store (s64) into %ir.p)
+; CHECK:       Successors:
+; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Barrier
+; CHECK-NEXT:    SU([[T:[0-9]+]]): Ord Latency=0 Memory
+; CHECK-NOT:     Ord
+; CHECK:       SU([[T]]): STRXroX %{{[0-9]+}}:gpr64, %{{[0-9]+}}:gpr64common, %{{[0-9]+}}:gpr64, 0, 1 :: (store (s64) into %ir.p.gep.i)
+; CHECK-NOT:   {{^}}SU(
+; CHECK:       Successors:
+; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Barrier
+; CHECK:       SU([[S]]): STRXui %{{[0-9]+}}:gpr64, %{{[0-9]+}}:gpr64common, 1 :: (store (s64) into %ir.p.gep.1)
+  %p.gep.1 = getelementptr i64, ptr %p, i64 1
+  %p.gep.i = getelementptr i64, ptr %p, i64 %i
+  store i64 0, ptr %p
+  store i64 1, ptr %p.gep.i
+  store i64 2, ptr %p.gep.1
   ret void
 }

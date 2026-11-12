@@ -2332,6 +2332,15 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     }
   };
 
+  /// Encodes a relationship between two memops, A and B. Here, a path is 'safe'
+  /// if it is of length 1 and consists of only memory or barrier edges.
+  enum class MemOpRelationship {
+    Path,       ///< There is an unsafe path in either direction.
+    Unrelated,  ///< The two memops are mutually unreachable.
+    DirectOrd,  ///< All paths from A to B are safe and there is such a path.
+    ReverseOrd, ///< All paths from B to A are safe and there is such a path.
+  };
+
   const TargetInstrInfo *TII;
   bool IsLoad;
   bool ReorderWhileClustering;
@@ -2345,8 +2354,8 @@ public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
 private:
-  bool canCluster(ScheduleDAGInstrs *DAG, SUnit *SUa, SUnit *SUb,
-                  bool ReorderWhileClustering);
+  MemOpRelationship computeRelationship(ScheduleDAGInstrs *DAG, SUnit *SUa,
+                                        SUnit *SUb);
 
 protected:
   void clusterNeighboringMemOps(ArrayRef<MemOpInfo> MemOps, bool FastCluster,
@@ -2387,42 +2396,43 @@ llvm::createStoreClusterDAGMutation(const TargetInstrInfo *TII,
                             : nullptr;
 }
 
-// Return true if \p SUa and \p SUb are clusterable. This means that they are
-// either independent or ordered directly by a memory ordering edge.
-bool BaseMemOpClusterMutation::canCluster(ScheduleDAGInstrs *DAG, SUnit *SUa,
-                                          SUnit *SUb,
-                                          bool ReorderWhileClustering) {
+BaseMemOpClusterMutation::MemOpRelationship
+BaseMemOpClusterMutation::computeRelationship(ScheduleDAGInstrs *DAG,
+                                              SUnit *SUa, SUnit *SUb) {
   bool AReachesB = DAG->IsReachable(SUb, SUa);
   bool BReachesA = DAG->IsReachable(SUa, SUb);
 
   if (!BReachesA && !AReachesB)
-    return true;
+    return MemOpRelationship::Unrelated;
 
-  // We have a path. Make sure the only path between the two SUs is a single
-  // memory ordering edge.
+  // We have a path. Determine whether all paths are safe and which order they
+  // run.
+
+  // If the path runs from B -> A, normalise so that it runs from A -> B for
+  // the search.
+  bool Reverse = false;
   if (BReachesA) {
-    // If the path runs from B -> A, normalise so that it runs from A -> B,
-    // unless reordering while clustering is enabled, in which case give up.
     assert(!AReachesB && "Cycle detected");
-    if (ReorderWhileClustering)
-      return false;
     std::swap(SUa, SUb);
+    Reverse = true;
   }
 
+  // Check each successor of A for reachability against B. For edges from A to
+  // B, check that they are all memory or barrier edges.
   for (const SDep &Succ : SUa->Succs) {
     if (Succ.getSUnit() == &DAG->ExitSU)
       continue;
     if (Succ.getSUnit() == SUb) {
       if (!Succ.isNormalMemoryOrBarrier())
-        return false;
+        return MemOpRelationship::Path;
       continue;
     }
 
     if (DAG->IsReachable(SUb, Succ.getSUnit()))
-      return false;
+      return MemOpRelationship::Path;
   }
 
-  return true;
+  return Reverse ? MemOpRelationship::ReverseOrd : MemOpRelationship::DirectOrd;
 }
 
 // Sorting all the loads/stores first, then for each load/store, checking the
@@ -2442,15 +2452,27 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     // Decision to cluster mem ops is taken based on target dependent logic
     auto MemOpa = MemOpRecords[Idx];
+    MemOpRelationship Relationship = MemOpRelationship::Path;
 
     // Seek for the next load/store to do the cluster.
     unsigned NextIdx = Idx + 1;
-    for (; NextIdx < End; ++NextIdx)
+    for (; NextIdx < End; ++NextIdx) {
       // Skip if MemOpb has been clustered already or can't cluster with MemOpa.
-      if (!SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum) &&
-          (FastCluster || canCluster(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU,
-                                     ReorderWhileClustering)))
-        break;
+      if (!SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum)) {
+        if (FastCluster) {
+          // If FastCluster is enabled, we assume everything is unrelated and
+          // therefore trivially clusterable.
+          Relationship = MemOpRelationship::Unrelated;
+          break;
+        }
+
+        Relationship =
+            computeRelationship(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU);
+        if (Relationship != MemOpRelationship::Path)
+          break;
+      }
+    }
+
     if (NextIdx == End)
       continue;
 
@@ -2474,10 +2496,16 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     SUnit *SUa = MemOpa.SU;
     SUnit *SUb = MemOpb.SU;
 
-    if (!ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum)
+    // We insert each edge from A to B. Switch if such an edge would run in the
+    // wrong order. When ReorderWhileClustering is disabled, so long as A and B
+    // are unrelated, the 'wrong order' is any order contrary to program order.
+    if (Relationship == MemOpRelationship::ReverseOrd ||
+        (Relationship == MemOpRelationship::Unrelated &&
+         !ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum))
       std::swap(SUa, SUb);
 
-    // FIXME: Is this check really required?
+    // This check is necessary to ensure we don't create a cycle with
+    // FastCluster enabled.
     if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster)))
       continue;
 
