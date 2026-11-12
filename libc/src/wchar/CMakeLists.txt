@@ -767,3 +767,16 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  wcwidth
+  SRCS
+    wcwidth.cpp
+  HDRS
+    wcwidth.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.wctype_utils
+)
