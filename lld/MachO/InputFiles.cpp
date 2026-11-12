@@ -185,7 +185,7 @@ static bool checkCompatibility(const InputFile *input) {
 }
 
 // The CPU subtype of an arm64e object also holds its pointer authentication
-// ABI version. ld64 names each version as a separate architecture.
+// ABI version. ld-prime names each version as a separate architecture.
 static StringRef getArm64eArchName(uint32_t cpuSubtype) {
   if (!CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype))
     return "arm64e.old";
@@ -200,9 +200,9 @@ static StringRef getArm64eArchName(uint32_t cpuSubtype) {
   }
 }
 
-// Like ld64, take only userland pointer authentication ABI version 0, even on
-// macOS, whose executables are marked version 1. Static and preload links also
-// take unversioned and kernel objects.
+// Like ld-prime, take only userland pointer authentication ABI version 0, even
+// on macOS, whose executables are marked version 1. Static and preload links
+// also take unversioned and kernel objects.
 static bool hasCompatiblePtrAuthABI(uint32_t cpuSubtype) {
   if (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype) != 0)
     return false;

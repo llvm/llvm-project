@@ -1,10 +1,10 @@
 # REQUIRES: aarch64
 ## The CPU subtype of an arm64e object also holds its pointer authentication ABI
-## version. Like ld64, an arm64e link takes only objects with userland version 0,
-## even on macOS, whose executables are marked version 1. Static and preload
-## links also take unversioned and kernel objects. Any other object is ignored
-## with a warning, or rejected with -arch_errors_fatal, and named the way ld64
-## names it.
+## version. Like ld-prime, an arm64e link takes only objects with userland
+## version 0, even on macOS, whose executables are marked version 1. Static and
+## preload links also take unversioned and kernel objects. Any other object is
+## ignored with a warning, or rejected with -arch_errors_fatal, and named the
+## way ld-prime names it.
 
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos11.0 %t/main.s -o %t/main.o
