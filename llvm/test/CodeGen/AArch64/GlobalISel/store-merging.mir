@@ -174,7 +174,6 @@
 ---
 name:            test_simple_2xs8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -208,7 +207,6 @@ body:             |
 ---
 name:            test_simple_2xs16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -238,7 +236,6 @@ body:             |
 ---
 name:            test_simple_4xs16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -276,7 +273,6 @@ body:             |
 ---
 name:            test_simple_2xs32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -306,7 +302,6 @@ body:             |
 ---
 name:            test_simple_2xs64_illegal
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -340,7 +335,6 @@ body:             |
 ---
 name:            test_simple_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -382,7 +376,6 @@ body:             |
 ---
 name:            test_unknown_alias
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -423,7 +416,6 @@ body:             |
 ---
 name:            test_2x_2xs32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -467,7 +459,6 @@ body:             |
 ---
 name:            test_simple_var_2xs8
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -507,7 +498,6 @@ body:             |
 ---
 name:            test_simple_var_2xs16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -547,7 +537,6 @@ body:             |
 ---
 name:            test_simple_var_2xs32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$w1' }
@@ -583,7 +572,6 @@ body:             |
 ---
 name:            test_alias_4xs16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -637,7 +625,6 @@ body:             |
 ---
 name:            test_alias2_4xs16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -695,7 +682,6 @@ body:             |
 ---
 name:            test_alias3_4xs16
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -763,7 +749,6 @@ body:             |
 ---
 name:            test_alias_allocas_2xs32
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -802,7 +787,6 @@ body:             |
 ---
 name:            test_simple_2xs32_with_align
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:
@@ -832,7 +816,6 @@ body:             |
 ---
 name:            invalid_zero_offset_no_merge
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 frameInfo:

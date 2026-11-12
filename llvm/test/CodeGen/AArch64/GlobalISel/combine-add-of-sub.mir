@@ -5,7 +5,6 @@
 ---
 # (x + y) - y -> x
 name:            simplify_to_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -25,7 +24,6 @@ body:             |
 ---
 #  (x + y) - x -> y
 name:            simplify_to_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -45,7 +43,6 @@ body:             |
 ---
 # (x + 1) - 1 -> x
 name:            simplify_to_constant_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -66,7 +63,6 @@ body:             |
 ---
 # (x + y) - x -> y
 name:            simplify_to_constant_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -87,7 +83,6 @@ body:             |
 ---
 # (x + y) - y -> x
 name:            vector_simplify_to_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -107,7 +102,6 @@ body:             |
 ---
 # (x + 1) - 1 -> x
 name:            splat_simplify_to_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -129,7 +123,6 @@ body:             |
 ---
 #  (x + y) - x -> y
 name:            unique_registers_no_fold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -154,7 +147,6 @@ body:             |
 ---
 # (x + y) - x -> y
 name:            unique_constants_no_fold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -177,7 +169,6 @@ body:             |
 ---
 #  x - (y + x) -> 0 - y
 name:            simplify_to_neg_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -199,7 +190,6 @@ body:             |
 ---
 #  y - (y + x) -> 0 - x
 name:            simplify_to_neg_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -221,7 +211,6 @@ body:             |
 ---
 #  x - (y + x) -> 0 - y
 name:            simplify_to_neg_y_constant
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -244,7 +233,6 @@ body:             |
 ---
 #  y - (y + x) -> 0 - x
 name:            simplify_to_neg_x_constant
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -267,7 +255,6 @@ body:             |
 ---
 #  y - (y + x) -> 0 - x
 name:            vector_simplify_to_neg_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -290,7 +277,6 @@ body:             |
 ---
 # x - (y + x) -> 0 - y
 name:            vector_simplify_to_neg_y_constant
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0, $d1
@@ -315,7 +301,6 @@ body:             |
 ---
 # y - (y + x) -> 0 - x
 name:            unique_registers_neg_no_fold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -340,7 +325,6 @@ body:             |
 ---
 #  x - (y + x) -> 0 - y
 name:            wrong_constant_neg_no_fold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1

@@ -1262,10 +1262,13 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     for (const auto &Alias : A.Aliases) {
       auto *FramePtr =
           createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
-      auto &Value = *Alias.second;
-      auto ITy = IntegerType::get(C, Value.getBitWidth());
-      auto *AliasPtr =
-          Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Value));
+      auto &Offset = *Alias.second;
+      auto ITy = IntegerType::get(C, Offset.getBitWidth());
+      Value *AliasPtr =
+          Builder.CreateInBoundsPtrAdd(FramePtr, ConstantInt::get(ITy, Offset));
+      if (auto *CI = dyn_cast<CastInst>(Alias.first);
+          CI && !CI->getType()->isPtrOrPtrVectorTy())
+        AliasPtr = Builder.CreateCast(CI->getOpcode(), AliasPtr, CI->getType());
       Alias.first->replaceUsesWithIf(
           AliasPtr, [&](Use &U) { return DT.dominates(Shape.CoroBegin, U); });
     }

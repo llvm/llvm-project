@@ -388,6 +388,10 @@ static Value *copyFlags(const CallInst &Old, Value *New) {
 static Value *mergeAttributesAndFlags(CallInst *NewCI, const CallInst &Old) {
   NewCI->setAttributes(AttributeList::get(
       NewCI->getContext(), {NewCI->getAttributes(), Old.getAttributes()}));
+  if (NewCI->getType()->isVoidTy()) {
+    for (unsigned I = 0; I < NewCI->arg_size(); ++I)
+      NewCI->removeParamAttr(I, Attribute::Returned);
+  }
   NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(
       NewCI->getType(), NewCI->getRetAttributes()));
   for (unsigned I = 0; I < NewCI->arg_size(); ++I)
@@ -1110,7 +1114,7 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
-  unsigned WCharSize = TLI->getWCharSize(M);
+  unsigned WCharSize = M.getWCharSize();
   // We cannot perform this optimization without wchar_size metadata.
   if (WCharSize == 0)
     return nullptr;
@@ -4242,6 +4246,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
   case LibFunc_scalbn:
   case LibFunc_scalbnf:
   case LibFunc_scalbnl:
@@ -4401,6 +4408,15 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
   Module *M = CI->getModule();
   assert(!CI->isMustTailCall() && "These transforms aren't musttail safe.");
 
+  Function *Callee = CI->getCalledFunction();
+  LibFunc Func = TLI->getLibFunc(*Callee);
+
+  // Most calls are neither intrinsics nor known library functions. Bail out
+  // before doing the (comparatively expensive) set-up below. This also covers
+  // nobuiltin calls, since operator new calls are always library functions.
+  if (Func == NotLibFunc && !isa<IntrinsicInst>(CI))
+    return nullptr;
+
   // TODO: Split out the code below that operates on FP calls so that
   //       we can all non-FP calls with the StrictFP attribute to be
   //       optimized.
@@ -4409,8 +4425,6 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     return maybeOptimizeNoBuiltinOperatorNew(CI, Builder);
   }
 
-  Function *Callee = CI->getCalledFunction();
-  LibFunc Func = TLI->getLibFunc(*Callee);
   bool IsCallingConvC = TargetLibraryInfoImpl::isCallingConvCCompatible(CI);
 
   SmallVector<OperandBundleDef, 2> OpBundles;

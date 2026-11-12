@@ -71,7 +71,7 @@ CoarrayRef::CoarrayRef(
     DataRef &&base, std::vector<Expr<SubscriptInteger>> &&css)
     : base_{std::move(base)}, cosubscript_(std::move(css)) {}
 
-std::optional<Expr<SomeInteger>> CoarrayRef::stat() const {
+std::optional<Expr<Type<TypeCategory::Integer>>> CoarrayRef::stat() const {
   if (stat_) {
     return stat_.value().value();
   } else {
@@ -95,7 +95,7 @@ std::optional<Expr<SomeType>> CoarrayRef::notify() const {
   }
 }
 
-CoarrayRef &CoarrayRef::set_stat(Expr<SomeInteger> &&v) {
+CoarrayRef &CoarrayRef::set_stat(Expr<Type<TypeCategory::Integer>> &&v) {
   CHECK(IsVariable(v));
   stat_.emplace(std::move(v));
   return *this;
@@ -163,7 +163,8 @@ Substring &Substring::set_upper(Expr<SubscriptInteger> &&expr) {
   return *this;
 }
 
-std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
+std::optional<Expr<Type<TypeCategory::Character>>> Substring::Fold(
+    FoldingContext &context) {
   if (!upper_) {
     upper_ = upper();
     if (!upper_) {
@@ -190,35 +191,32 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
     upper_ = MakeSubscriptIntExpr(*ubi);
   }
   std::optional<ConstantSubscript> length;
-  std::optional<Expr<SomeCharacter>> strings; // a Constant<Character>
+  std::optional<Expr<Type<TypeCategory::Character>>>
+      strings; // a Constant<Character>
   if (const auto *literal{std::get_if<StaticDataObject::Pointer>(&parent_)}) {
     length = (*literal)->data().size();
     if (auto str{(*literal)->AsString()}) {
-      strings = Expr<SomeCharacter>(MakeAsciiExpr(*str));
+      strings = Expr<Type<TypeCategory::Character>>(MakeAsciiExpr(*str));
     }
   } else if (const auto *dataRef{std::get_if<DataRef>(&parent_)}) {
     if (auto expr{AsGenericExpr(DataRef{*dataRef})}) {
       auto folded{evaluate::Fold(context, std::move(*expr))};
       if (IsActuallyConstant(folded)) {
-        if (const auto *value{UnwrapExpr<Expr<SomeCharacter>>(folded)}) {
+        if (const auto *value{
+                UnwrapExpr<Expr<Type<TypeCategory::Character>>>(folded)}) {
           strings = *value;
         }
       }
     }
   }
-  std::optional<Expr<SomeCharacter>> result;
+  std::optional<Expr<Type<TypeCategory::Character>>> result;
   if (strings) {
-    result = common::visit(
-        [&](const auto &expr) -> std::optional<Expr<SomeCharacter>> {
-          using Type = typename std::decay_t<decltype(expr)>::Result;
-          if (const auto *cc{std::get_if<Constant<Type>>(&expr.u)}) {
-            if (auto substr{cc->Substring(*lbi, *ubi)}) {
-              return Expr<SomeCharacter>{Expr<Type>{*substr}};
-            }
-          }
-          return std::nullopt;
-        },
-        strings->u);
+    if (const auto *cc{std::get_if<Constant<Type<TypeCategory::Character>>>(
+            &strings->u)}) {
+      if (auto substr{cc->Substring(*lbi, *ubi)}) {
+        result = Expr<Type<TypeCategory::Character>>{*substr};
+      }
+    }
   }
   if (!result) { // error cases
     if (*lbi < 1) {
@@ -262,7 +260,8 @@ DescriptorInquiry::DescriptorInquiry(NamedEntity &&base, Field field, int dim)
 static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
   if (const auto *assoc{ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(assoc->expr())}) {
+    if (const auto *chExpr{
+            UnwrapExpr<Expr<Type<TypeCategory::Character>>>(assoc->expr())}) {
       return chExpr->LEN();
     }
   }

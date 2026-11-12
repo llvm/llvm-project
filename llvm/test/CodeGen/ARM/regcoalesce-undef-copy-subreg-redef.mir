@@ -13,7 +13,6 @@
 
 ---
 name:            init
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: init
   ; CHECK: bb.0:

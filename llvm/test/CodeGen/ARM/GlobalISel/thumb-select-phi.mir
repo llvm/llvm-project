@@ -9,7 +9,6 @@ legalized:       true
 regBankSelected: true
 selected:        false
 # CHECK: selected: true
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }

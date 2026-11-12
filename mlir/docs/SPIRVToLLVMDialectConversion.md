@@ -463,6 +463,32 @@ way and additionally sets the `inbounds` flag on the resulting
 %el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr, i32, i32, i32), !llvm.struct<packed (f32, array<4 x f32>)>
 ```
 
+#### `spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain`
+
+`spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain` are also mapped to
+`llvm.getelementptr`. These ops treat the base pointer as pointing into an
+array of its pointee type and take an additional `element` operand that selects
+the array element. This matches the semantics of the first GEP index, so the
+`element` operand is used as the first index instead of the constant 0 that is
+prepended for `spirv.AccessChain`, and the remaining indices follow unchanged.
+`spirv.InBoundsPtrAccessChain` additionally sets the `inbounds` flag on the
+resulting `llvm.getelementptr`.
+
+```mlir
+// Access member 1 of the 2nd struct after the one %ptr points to
+%el  = spirv.PtrAccessChain %ptr[%elem %i] : !spirv.ptr<!spirv.struct<(f32, i32)>, CrossWorkgroup>, i64, i32 -> !spirv.ptr<i32, CrossWorkgroup>
+
+// Corresponding LLVM dialect code
+%el  = llvm.getelementptr %ptr[%elem, 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<packed (f32, i32)>
+```
+
+The element stride is the size of the converted pointee type. The SPIR-V
+specification lets an `ArrayStride` decoration on the base pointer override the
+stride for the Uniform, StorageBuffer, PhysicalStorageBuffer and PushConstant
+storage classes. Since the SPIR-V dialect does not model this decoration on
+pointer types, conversion of these two ops rejects base pointers in those
+storage classes rather than assuming a natural stride.
+
 #### `spirv.CopyMemory`
 
 `spirv.CopyMemory` is converted to the `llvm.intr.memcpy` intrinsic. The number

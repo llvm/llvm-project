@@ -12,7 +12,6 @@
 # CHECK-DBG: %5 [32r,112r:1)[112r,112d:0) 0@112r 1@32r  weight:0.000000e+00
 ---
 name:            test
-tracksRegLiveness: true
 fixedStack:      []
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 65, alignment: 16,
@@ -48,7 +47,6 @@ body:             |
 # CHECK-DBG-SAME: weight:0.000000e+00
 ---
 name:              reproducer
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:gpr32 = MOVi32imm 1
@@ -94,7 +92,6 @@ body:             |
 # CHECK-DBG-SAME: weight:0.000000e+00
 ---
 name:              reproducer2
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:gpr32 = MOVi32imm 1
