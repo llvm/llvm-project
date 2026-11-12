@@ -309,11 +309,11 @@ static void print_ids(int level) {
          ompt_get_thread_data()->value, ((char *)addr) - 8,                    \
          ((char *)addr) - 12)
 #endif
-#elif KMP_ARCH_LOONGARCH64
-// On LoongArch64 the NOP instruction is 4 bytes long, can be followed by
-// inserted jump instruction (another 4 bytes long). And an additional jump
-// instruction may appear (adding 4 more bytes) when the NOP is referenced
-// elsewhere (ie. another branch).
+#elif KMP_ARCH_LOONGARCH64 || KMP_ARCH_PPC
+// On LoongArch64 and 32-bit PowerPC the NOP instruction is 4 bytes long, can
+// be followed by inserted jump instruction (another 4 bytes long). And an
+// additional jump instruction may appear (adding 4 more bytes) when the NOP is
+// referenced elsewhere (ie. another branch).
 #define print_possible_return_addresses(addr)                                  \
   printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
          ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
