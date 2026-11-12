@@ -31,9 +31,6 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
-#if SANITIZER_APPLE && !SANITIZER_GO
-#  include "tsan_flags.h"
-#endif
 #include "tsan_adaptive_delay.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
@@ -41,6 +38,10 @@
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 #include "tsan_suppressions.h"
+
+#if SANITIZER_APPLE
+#  include <dlfcn.h>
+#endif
 
 using namespace __tsan;
 
@@ -450,7 +451,15 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
   SCOPED_INTERCEPTOR_RAW(atexit, f);
-  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, 0);
+  void* dso = nullptr;
+#  if SANITIZER_APPLE
+  // Darwin's libc runs an atexit callback when the image containing it is
+  // dlclose'd. Pass that image as the DSO so the wrapper runs then too.
+  Dl_info info;
+  if (dladdr((const void*)f, &info))
+    dso = info.dli_fbase;
+#  endif
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), f, 0, dso);
 }
 #endif
 

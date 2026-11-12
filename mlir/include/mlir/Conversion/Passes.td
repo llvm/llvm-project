@@ -1383,6 +1383,8 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
 	     clEnumValN(::mlir::spirv::ClientAPI::Vulkan, "Vulkan", "Vulkan"),
 	     clEnumValN(::mlir::spirv::ClientAPI::WebGPU, "WebGPU", "WebGPU")
 	   )}]>,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
   ];
 }
 
@@ -1614,18 +1616,25 @@ def UBToSPIRVConversionPass : Pass<"convert-ub-to-spirv"> {
 // VectorToGPU
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToGPU : Pass<"convert-vector-to-gpu"> {
+def ConvertVectorToGPUPass : Pass<"convert-vector-to-gpu"> {
   let summary = "Lower the operations from the vector dialect into the GPU "
                 "dialect";
-  let constructor = "mlir::createConvertVectorToGPUPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
     "vector::VectorDialect"
   ];
+}
 
-  let options = [
-    Option<"useNvGpu", "use-nvgpu", "bool", /*default=*/"false",
-      "convert to NvGPU ops instead of GPU dialect ops">
+//===----------------------------------------------------------------------===//
+// VectorToNVGPU
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToNVGPUPass : Pass<"convert-vector-to-nvgpu"> {
+  let summary = "Lower the operations from the vector dialect into the NVGPU "
+                "dialect";
+  let dependentDialects = [
+    "memref::MemRefDialect", "gpu::GPUDialect", "affine::AffineDialect",
+    "vector::VectorDialect", "nvgpu::NVGPUDialect"
   ];
 }
 
