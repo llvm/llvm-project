@@ -524,8 +524,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
-  if (EnableKnowledgeRetention)
-    FPM.addPass(AssumeSimplifyPass());
 
   // Hoisting of scalars and load expressions.
   if (Opts.enable_gvn_hoist)
