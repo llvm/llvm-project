@@ -1154,6 +1154,19 @@ static Value *createBoundedMemSetSplat(IRBuilderBase &B, Value *SetValue,
   return B.CreateVectorSplat(Size, SetValue, "setvalue.splat");
 }
 
+static Value *createBoundedMemSetPatternSplat(IRBuilderBase &B, Value *Pattern,
+                                              uint64_t Size) {
+  if (Size == 1)
+    return Pattern;
+  // A vector pattern can't be a vector element, so splat it as an integer.
+  Type *PatternTy = Pattern->getType();
+  if (!VectorType::isValidElementType(PatternTy))
+    Pattern = B.CreateBitCast(Pattern,
+                              B.getIntNTy(PatternTy->getPrimitiveSizeInBits()),
+                              "pattern.int");
+  return B.CreateVectorSplat(Size, Pattern, "pattern.splat");
+}
+
 static void
 createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
                           ConstantInt *Len, Value *SetValue, Align DstAlign,
@@ -1549,6 +1562,31 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
   expandMemSetAsLoop(MemSet, &TTI);
 }
 
+// Returns the VP memop size data of a bounded memset (or memset.pattern) as
+// prefix sums sorted by value, dropping values the expansion can't see.
+static SmallVector<InstrProfValueData>
+getBoundedMemSetPrefixSum(const Instruction &MemSet, uint64_t MinLen,
+                          uint64_t MaxLen, uint64_t MinStoreSize) {
+  uint64_t TotalCount = 0;
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
+  llvm::sort(ProfData,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Value < B.Value;
+             });
+  SmallVector<InstrProfValueData> MemSetPrefixSum;
+  uint64_t TotalSeenWeight = 0;
+  for (const InstrProfValueData &SizeWeight : ProfData) {
+    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
+        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
+      continue;
+    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
+    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
+  }
+  return MemSetPrefixSum;
+}
+
 static MDNode *
 getBoundedMemSetBranchWeights(uint64_t Size,
                               ArrayRef<InstrProfValueData> MemSetPrefixSum,
@@ -1643,23 +1681,8 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   //     br label %memset_done
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
-  uint64_t TotalCount = 0;
-  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
-      *MemSet, InstrProfValueKind::IPVK_MemOPSize,
-      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
-  llvm::sort(ProfData,
-             [](const InstrProfValueData &A, const InstrProfValueData &B) {
-               return A.Value < B.Value;
-             });
-  SmallVector<InstrProfValueData> MemSetPrefixSum;
-  uint64_t TotalSeenWeight = 0;
-  for (const InstrProfValueData &SizeWeight : ProfData) {
-    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
-        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
-      continue;
-    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
-    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
-  }
+  SmallVector<InstrProfValueData> MemSetPrefixSum =
+      getBoundedMemSetPrefixSum(*MemSet, MinLen, MaxLen, MinStoreSize);
   for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
     if (MinLen < Size) {
@@ -1700,6 +1723,103 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   }
 
   MemSet->getParent()->setName("memset_done");
+}
+
+void llvm::expandBoundedMemSetPattern(MemSetPatternInst *MemSet,
+                                      uint64_t MinCount, uint64_t MaxCount,
+                                      const KnownBits &CountKnown) {
+  assert(MinCount <= MaxCount && "Invalid count bounds");
+  assert(!MemSet->isVolatile() && "Cannot split a volatile memset.pattern");
+
+  // Known bits make the count a multiple of MinStoreCount, so no smaller store
+  // is needed, and a count below it can only be zero.
+  uint64_t MinStoreCount = uint64_t(1)
+                           << std::min(CountKnown.countMinTrailingZeros(), 63u);
+  if (MaxCount < MinStoreCount)
+    return;
+
+  Value *Dst = MemSet->getRawDest();
+  Value *Count = MemSet->getLength();
+  Value *Pattern = MemSet->getValue();
+  Type *CountTy = Count->getType();
+  Type *PatternTy = Pattern->getType();
+  const DataLayout &DL = MemSet->getDataLayout();
+  uint64_t PatternSize = DL.getTypeStoreSize(PatternTy).getFixedValue();
+  Align DstAlign = MemSet->getDestAlign().valueOrOne();
+  Align TailAlign = commonAlignment(DstAlign, MinStoreCount * PatternSize);
+
+  // The same branches as for a memset (see above), but counting copies of the
+  // pattern instead of bytes. A store of Size copies stores the pattern
+  // splatted into a vector. E.g. for an i32 pattern and a count in [0, 4]:
+  //
+  //     %count.ge4 = icmp uge i64 %count, 4
+  //     br i1 %count.ge4, label %memset_pattern_store4,
+  //                       label %memset_pattern_lt4
+  //   memset_pattern_store4:         ; count 4, so no tail store
+  //     store <4 x i32> splat (i32 7), ptr %dst
+  //     br label %memset_pattern_done
+  //   memset_pattern_lt4:
+  //     %count.ge2 = icmp uge i64 %count, 2
+  //     br i1 %count.ge2, label %memset_pattern_store2,
+  //                       label %memset_pattern_lt2
+  //   memset_pattern_store2:         ; count 2 or 3
+  //     store <2 x i32> splat (i32 7), ptr %dst
+  //     %tail.off = sub i64 %count, 2
+  //     %tail = getelementptr inbounds i32, ptr %dst, i64 %tail.off
+  //     store <2 x i32> splat (i32 7), ptr %tail  ; <<< may overlap!
+  //     br label %memset_pattern_done
+  //   memset_pattern_lt2:
+  //     %count.ge1 = icmp uge i64 %count, 1
+  //     br i1 %count.ge1, label %memset_pattern_store1,
+  //                       label %memset_pattern_done
+  //   memset_pattern_store1:         ; count 1
+  //     store i32 7, ptr %dst
+  //     br label %memset_pattern_done
+  uint64_t TopSize = llvm::bit_floor(MaxCount);
+  SmallVector<InstrProfValueData> MemSetPrefixSum =
+      getBoundedMemSetPrefixSum(*MemSet, MinCount, MaxCount, MinStoreCount);
+  Instruction *InsertBefore = MemSet;
+  for (uint64_t Size = TopSize; Size >= MinStoreCount; Size /= 2) {
+    Instruction *StoreBefore = InsertBefore;
+    if (MinCount < Size) {
+      IRBuilder<> B(InsertBefore);
+      Value *Cond = B.CreateICmpUGE(Count, ConstantInt::get(CountTy, Size),
+                                    "count.ge" + Twine(Size));
+      MDNode *BranchWeights = getBoundedMemSetBranchWeights(
+          Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
+      if (Size == MinStoreCount) {
+        StoreBefore =
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, BranchWeights);
+      } else {
+        Instruction *ElseTerm;
+        SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
+                                      &ElseTerm, BranchWeights);
+        ElseTerm->getParent()->setName("memset_pattern_lt" + Twine(Size));
+        InsertBefore = ElseTerm;
+      }
+      StoreBefore->getParent()->setName("memset_pattern_store" + Twine(Size));
+    }
+
+    // Do the store of Size copies
+    IRBuilder<> B(StoreBefore);
+    Value *Val = createBoundedMemSetPatternSplat(B, Pattern, Size);
+    B.CreateAlignedStore(Val, Dst, DstAlign);
+
+    // The possibly-overlapping "remainder" store
+    uint64_t MaxCountForSize =
+        Size == TopSize ? MaxCount : 2 * Size - MinStoreCount;
+    if (MaxCountForSize > Size) {
+      Value *TailOff =
+          B.CreateSub(Count, ConstantInt::get(CountTy, Size), "tail.off");
+      Value *TailPtr = B.CreateInBoundsGEP(PatternTy, Dst, TailOff, "tail");
+      B.CreateAlignedStore(Val, TailPtr, TailAlign);
+    }
+
+    if (MinCount >= Size)
+      break;
+  }
+
+  MemSet->getParent()->setName("memset_pattern_done");
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,
