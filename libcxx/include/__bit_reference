@@ -479,21 +479,21 @@ private:
   friend struct __bit_array;
 
   template <class _Dp, bool _IC>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_backward_aligned(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_backward_aligned(
       __bit_iterator<_Dp, _IC> __first, __bit_iterator<_Dp, _IC> __last, __bit_iterator<_Dp, false> __result);
   template <class _Dp, bool _IC>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_backward_unaligned(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_backward_unaligned(
       __bit_iterator<_Dp, _IC> __first, __bit_iterator<_Dp, _IC> __last, __bit_iterator<_Dp, false> __result);
   template <class _AlgPolicy>
   friend struct __copy_backward_impl;
   template <class, class _Dp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend pair<__bit_iterator<_Dp, false>, __bit_iterator<_Dp, false> >
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend pair<__bit_iterator<_Dp, false>, __bit_iterator<_Dp, false> >
       __rotate(__bit_iterator<_Dp, false>, __bit_iterator<_Dp, false>, __bit_iterator<_Dp, false>);
   template <class _Dp, bool _IsConst1, bool _IsConst2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
       __equal_aligned(__bit_iterator<_Dp, _IsConst1>, __bit_iterator<_Dp, _IsConst1>, __bit_iterator<_Dp, _IsConst2>);
   template <class _Dp, bool _IsConst1, bool _IsConst2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
       __equal_unaligned(__bit_iterator<_Dp, _IsConst1>, __bit_iterator<_Dp, _IsConst1>, __bit_iterator<_Dp, _IsConst2>);
   template <class _Dp,
             bool _IsConst1,
@@ -530,7 +530,7 @@ private:
       _Proj1&,
       _Proj2&);
   template <bool _ToFind, class _Dp, bool _IC>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, _IC>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, _IC>
       __find_bool(__bit_iterator<_Dp, _IC>, typename __size_difference_type_traits<_Dp>::size_type);
   template <bool _ToCount, class _Dp, bool _IC>
   friend typename __bit_iterator<_Dp, _IC>::difference_type _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
