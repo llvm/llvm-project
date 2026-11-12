@@ -10,9 +10,8 @@
 ; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %s -o %t.s
 ; RUN: FileCheck %s < %t.s
 
-;; The policy lets a spillable range evict an unspillable one, which then takes
-;; the evictor cascade. On requeue it only interferes with spillable ranges of
-;; that cascade, and evicting them must stay legal.
+;; A spillable range must not evict an unspillable one. The evicted range would
+;; take the evictor cascade and on requeue find only ranges of that cascade.
 
 ; CHECK-LABEL: f:
 
