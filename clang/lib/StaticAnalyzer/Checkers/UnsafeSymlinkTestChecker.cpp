@@ -137,12 +137,12 @@ struct FileDataOpened {
 };
 
 struct ASTData {
-  const FieldDecl *StModeFD;
-  const FieldDecl *StInoFD;
-  const FieldDecl *StDevFD;
+  const FieldDecl *StModeFD = nullptr;
+  const FieldDecl *StInoFD = nullptr;
+  const FieldDecl *StDevFD = nullptr;
   QualType StructStatType;
-  int64_t O_NOFOLLOWValue;
-  bool IsValid;
+  int64_t O_NOFOLLOWValue = 0;
+  bool IsValid = false;
   void checkValid() {
     IsValid = StModeFD && StInoFD && StDevFD && !StructStatType.isNull();
   }
@@ -304,7 +304,7 @@ void UnsafeSymlinkTestChecker::initData(const RecordDecl *StatDecl,
     if (std::optional<int> Val = tryExpandAsInteger("O_NOFOLLOW", PP))
       ASTValues->O_NOFOLLOWValue = *Val;
   } else {
-    ASTValues = {nullptr};
+    ASTValues = ASTData{};
   }
   ASTValues->checkValid();
 }
