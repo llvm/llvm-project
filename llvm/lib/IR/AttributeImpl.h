@@ -328,7 +328,6 @@ class AttributeListImpl final
   friend TrailingObjects;
 
 private:
-  unsigned NumAttrSets; ///< Number of entries in this set.
   /// Union of enum attributes available at any index.
   AttributeBitSet AvailableSomewhereAttrs;
 
