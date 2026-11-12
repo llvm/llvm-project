@@ -1,9 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,NOAVX,NOAVX512
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DEFAULT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,NOAVX512,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DEFAULT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,DIRECT
 
 typedef long double ld1 __attribute__((vector_size(16)));
 typedef long double ld2 __attribute__((vector_size(32)));
@@ -117,7 +120,11 @@ struct AB ab(struct AB s) { return s; }
 union __attribute__((aligned(32))) UA32 { ld1 v; };
 union UA32 ua32(union UA32 u) { return u; }
 // NOAVX: define{{.*}} void @ua32(ptr dead_on_unwind noalias writable sret(%union.UA32) align 32 %{{.*}}, ptr noundef byval(%union.UA32) align 32 %{{.*}})
-// AVX: define{{.*}} <4 x double> @ua32(<4 x double> %{{.*}})
+// The default classifier keeps the trailing eightbytes as NO_CLASS, making the
+// union MEMORY even with AVX. Clang 23 and experimental ABI lowering retain the
+// direct coercion when AVX is available.
+// DEFAULT: define{{.*}} void @ua32(ptr dead_on_unwind noalias writable sret(%union.UA32) align 32 %{{.*}}, ptr noundef byval(%union.UA32) align 32 %{{.*}})
+// DIRECT: define{{.*}} <4 x double> @ua32(<4 x double> %{{.*}})
 
 struct __attribute__((aligned(32))) SF32 { f3 v; };
 struct SF32 sf32(struct SF32 s) { return s; }

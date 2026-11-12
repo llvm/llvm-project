@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,DIRECT
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fexperimental-abi-lowering -fclang-abi-compat=23 %s -o - | FileCheck %s --check-prefixes=CHECK,DIRECT
 
 typedef _Bool b3 __attribute__((ext_vector_type(3)));
 typedef _Bool b4 __attribute__((ext_vector_type(4)));
@@ -180,7 +181,7 @@ struct LongB12 longb12(struct LongB12 s) { return s; }
 ub1x4 vub1x4(ub1x4 v) { return v; }
 // CHECK: define dso_local i32 @vub1x4(i32 %{{.*}})
 
-// A one-bit _BitInt, char or float vector is not a bool vector, so the
+// A one-bit _BitInt or char vector is not a bool vector, so the
 // eightbyte holding it stays an i64.
 struct LongUB1x4 { long l; ub1x4 v; };
 struct LongUB1x4 longub1x4(struct LongUB1x4 s) { return s; }
@@ -194,6 +195,9 @@ struct LongC1 { long l; c1 v; };
 struct LongC1 longc1(struct LongC1 s) { return s; }
 // CHECK: define dso_local { i64, i64 } @longc1(i64 %{{.*}}, i64 %{{.*}})
 
+// The default classifier passes a single-element float vector and its wrapper
+// in memory. Clang 23 and experimental ABI lowering retain the direct coercion.
 struct LongF1 { long l; f1 v; };
 struct LongF1 longf1(struct LongF1 s) { return s; }
-// CHECK: define dso_local { i64, i64 } @longf1(i64 %{{.*}}, i64 %{{.*}})
+// DEFAULT: define dso_local void @longf1(ptr dead_on_unwind noalias writable sret(%struct.LongF1) align 8 %{{.*}}, ptr noundef byval(%struct.LongF1) align 8 %{{.*}})
+// DIRECT: define dso_local { i64, i64 } @longf1(i64 %{{.*}}, i64 %{{.*}})
