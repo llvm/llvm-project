@@ -1257,7 +1257,11 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
-  bool isOnlyUsedByAssume(const Instruction &I) const {
+  bool isOnlyUsedByAssume(const Instruction &I) {
+    const Function &F = *I.getFunction();
+    FunctionInfo &FI = getFunctionInfo(F);
+    if (!FI.AssumeOnlyValuesCollected)
+      collectAssumeOnlyValues(FI);
     return AssumeOnlyValues.contains(&I);
   }
 
@@ -1304,6 +1308,17 @@ struct InformationCache {
   LLVM_ABI ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return true if \p F has an exact definition or is inlineable.
+  ///
+  /// This is computed once when the information of \p F is initialized. For
+  /// functions that are not initialized yet, only the definition is checked,
+  /// as InlineableFunctions is also only filled on initialization.
+  bool isExactOrInlineable(const Function &F) const {
+    if (const FunctionInfo *FI = FuncInfoMap.lookup(&F))
+      return FI->IsExactOrInlineable;
+    return F.hasExactDefinition();
+  }
+
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
@@ -1312,6 +1327,9 @@ struct InformationCache {
 private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
+
+    /// Whether the function has an exact definition or is inlineable.
+    bool IsExactOrInlineable = false;
 
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
@@ -1329,6 +1347,10 @@ private:
 
     /// Function has the `"kernel"` attribute
     bool IsKernel;
+
+    /// The values only used by `llvm.assume`s in the function have been added
+    /// to AssumeOnlyValues.
+    bool AssumeOnlyValuesCollected = false;
   };
 
   /// A map type from functions to informatio about it.
@@ -1350,6 +1372,10 @@ private:
   /// Vector of functions that might be callable indirectly, i.a., via a
   /// function pointer.
   SmallVector<Function *> IndirectlyCallableFunctions;
+
+  /// Add the values only used by `llvm.assume`s in the function of \p FI to
+  /// AssumeOnlyValues. This is done on demand, as few users need them.
+  LLVM_ABI void collectAssumeOnlyValues(FunctionInfo &FI);
 
   /// Initialize the function information cache \p FI for the function \p F.
   ///
@@ -1814,7 +1840,7 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+    return InfoCache.isExactOrInlineable(F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
@@ -3211,6 +3237,10 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   const StateType &getState() const override { return *this; }
+
+  bool isAtFixpoint() const final { return StateTy::isAtFixpoint(); }
+
+  bool isStateAtFixpoint() const final { return StateTy::isAtFixpoint(); }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3386,6 +3416,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
   virtual const StateType &getState() const = 0;
+
+  /// Return true if the state is at a fixpoint, like
+  /// getState().isAtFixpoint() but with a single virtual call.
+  virtual bool isStateAtFixpoint() const { return getState().isAtFixpoint(); }
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; };

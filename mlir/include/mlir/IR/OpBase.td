@@ -361,6 +361,12 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // Optional. The group of ops this op is part of.
   OpDocGroup opDocGroup = ?;
 
+  // Optional. The partition of this op. `-gen-op-decls` and `-gen-op-defs`
+  // generate the ops of one partition at a time with `-op-partition=...`,
+  // which requires every generated op to be in a partition. Ignored without
+  // `-op-partition`.
+  Partition partition = ?;
+
   // Dag containing the arguments of the op. Default to 0 arguments.
   dag arguments = (ins);
 

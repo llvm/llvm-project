@@ -2119,8 +2119,18 @@ Expected<bool> FunctionImporter::importFunctions(
 
   IRMover Mover(DestModule);
 
+  // Import from the source modules in module hash order. The IRMover appends
+  // imported globals and named metadata (e.g. llvm.linker.options) in import
+  // order, so this must not depend on the module paths, which the ThinLTO
+  // cache key (see computeLTOCacheKey) leaves out. Modules with the same hash
+  // keep the alphabetical order.
+  SmallVector<std::pair<ModuleHash, StringRef>, 0> SourceModules;
+  for (StringRef ModName : ImportList.getSourceModules())
+    SourceModules.emplace_back(Index.getModuleHash(ModName), ModName);
+  llvm::sort(SourceModules);
+
   // Do the actual import of functions now, one Module at a time
-  for (const auto &ModName : ImportList.getSourceModules()) {
+  for (const auto &[ModHash, ModName] : SourceModules) {
     llvm::TimeTraceScope timeScope("Import", ModName);
     // Get the module for the import
     Expected<std::unique_ptr<Module>> SrcModuleOrErr = ModuleLoader(ModName);
@@ -2339,8 +2349,31 @@ Expected<bool> FunctionImporter::importFunctions(
     // from linked IR, it creates attribute-less declarations for aliases, and
     // it does not copy metadata from source definitions.
     for (auto &DI : DeclInfos) {
-      if (DestModule.getNamedValue(DI.Name))
+      // Record the GUID of the original value, which may differ from the GUID
+      // computed from the current name if it was a promoted local. This allows
+      // the declaration to be located via the GUID, e.g. by MemProf ICP.
+      auto SetGUID = [&](Function *F) {
+        F->setMetadata(
+            LLVMContext::MD_guid,
+            MDNode::get(
+                DestModule.getContext(),
+                {ConstantAsMetadata::get(ConstantInt::get(
+                    Type::getInt64Ty(DestModule.getContext()), DI.GUID))}));
+      };
+      if (GlobalValue *Existing = DestModule.getNamedValue(DI.Name)) {
+        // A declaration created by the IRMover as a side effect of importing a
+        // definition that references it (e.g. a vtable initializer) does not
+        // carry the original GUID, so attach it here.
+        // TODO: Consider having IRMover propagate !guid metadata onto
+        // declarations it creates for referenced values (including functions
+        // and global variables not in DeclInfos), especially if we move toward
+        // attaching !guid uniformly to all declarations.
+        if (auto *ExistingF = dyn_cast<Function>(Existing);
+            ExistingF && ExistingF->isDeclaration() &&
+            !ExistingF->getMetadata(LLVMContext::MD_guid))
+          SetGUID(ExistingF);
         continue;
+      }
       Function *F = Function::Create(DI.Ty, GlobalValue::ExternalLinkage,
                                      DI.AddrSpace, DI.Name, &DestModule);
       F->setCallingConv(DI.CC);
@@ -2349,14 +2382,7 @@ Expected<bool> FunctionImporter::importFunctions(
       // setDSOLocal(false) is not allowed on an implicitly dso_local value.
       F->setVisibility(DI.Visibility);
       F->setDSOLocal(DI.DSOLocal);
-      // Record the GUID of the original value, which may differ from the GUID
-      // computed from the current name if it was a promoted local. This allows
-      // the declaration to be located via the GUID, e.g. by MemProf ICP.
-      F->setMetadata(LLVMContext::MD_guid,
-                     MDNode::get(DestModule.getContext(),
-                                 {ConstantAsMetadata::get(ConstantInt::get(
-                                     Type::getInt64Ty(DestModule.getContext()),
-                                     DI.GUID))}));
+      SetGUID(F);
       NumImportedFunctionDecls++;
     }
   }

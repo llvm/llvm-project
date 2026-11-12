@@ -86,7 +86,6 @@ static void transformGlobalArray(StringRef ArrayName, Module &M,
   if (!GVCtor)
     return;
 
-  IRBuilder<> IRB(M);
   SmallVector<Constant *, 16> CurrentCtors;
   bool Changed = false;
   StructType *EltTy =

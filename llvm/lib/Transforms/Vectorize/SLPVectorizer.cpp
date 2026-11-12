@@ -226,7 +226,6 @@ public:
         TTI(Tti), TLI(TLi), LI(Li), DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE),
         CostKind(getSLPCostKind(Func)),
         Builder(Se->getModule(), TargetFolder(*DL)) {
-    Builder.disableGEPCanonicalization();
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
     // by a command-line option.
@@ -21611,8 +21610,13 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         const TreeEntry *VTE = *It;
         if (none_of(TE->CombinedEntriesWithIndices,
                     [&](const auto &P) { return P.first == VTE->Idx; })) {
-          Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+          // The emitted split node goes after the vectors of its operands,
+          // which may follow its last instruction. Check the vector instead.
+          auto *LastBundleInst =
+              dyn_cast_if_present<Instruction>(VTE->VectorizedValue);
+          if (!LastBundleInst)
+            LastBundleInst = &getLastInstructionInBundle(VTE);
+          if (LastBundleInst == TEInsertPt || !CheckOrdering(LastBundleInst))
             continue;
         }
         // The node is reused - exit.
@@ -23338,14 +23342,14 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   auto FindReusedSplat = [&](MutableArrayRef<int> Mask, unsigned InputVF,
                              unsigned I, unsigned SliceSize,
                              bool IsNotPoisonous) {
+    TreeEntry *UserTE = E->UserTreeIndex.UserTE;
+    if (!UserTE || UserTE->getNumOperands() != 2)
+      return false;
     if (!isSplat(E->Scalars) || none_of(E->Scalars, [](Value *V) {
           return isa<UndefValue>(V) && !isa<PoisonValue>(V);
         }))
       return false;
-    TreeEntry *UserTE = E->UserTreeIndex.UserTE;
     unsigned EdgeIdx = E->UserTreeIndex.EdgeIdx;
-    if (UserTE->getNumOperands() != 2)
-      return false;
     if (!IsNotPoisonous) {
       auto *It = find_if(ArrayRef(VectorizableTree).drop_front(UserTE->Idx + 1),
                          [=](const std::unique_ptr<TreeEntry> &TE) {
@@ -27036,7 +27040,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             auto *ScalarTy = FTy->getElementType();
             auto Key = std::make_pair(Vec, ScalarTy);
             auto VecIt = VectorCasts.find(Key);
-            if (VecIt == VectorCasts.end()) {
+            if (VecIt == VectorCasts.end() ||
+                !DT->dominates(VecIt->second, VU)) {
               IRBuilderBase::InsertPointGuard Guard(Builder);
               if (auto *IVec = dyn_cast<PHINode>(Vec)) {
                 if (IVec->getParent()->isLandingPad())
@@ -27046,7 +27051,12 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                   Builder.SetInsertPoint(
                       IVec->getParent()->getFirstNonPHIOrLifetime());
               } else if (auto *IVec = dyn_cast<Instruction>(Vec)) {
-                Builder.SetInsertPoint(IVec->getNextNode());
+                // The result of callbr is available in several successors and
+                // has no single dominating insertion point, so emit the cast
+                // in the block of the vectorized scalars.
+                Builder.SetInsertPoint(
+                    IVec->getInsertionPointAfterDef().value_or(
+                        E->getMainOp()->getParent()->getFirstInsertionPt()));
               }
               Vec = Builder.CreateIntCast(
                   Vec,
@@ -27054,7 +27064,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
                       ScalarTy,
                       cast<FixedVectorType>(Vec->getType())->getNumElements()),
                   BWIt->second.second);
-              VectorCasts.try_emplace(Key, Vec);
+              VectorCasts.insert_or_assign(Key, Vec);
             } else {
               Vec = VecIt->second;
             }
@@ -33843,7 +33853,10 @@ public:
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.
-        if (OptReusedScalars && !SameScaleFactor) {
+        // The roots, reduced in-tree, produce the scalar result of the or
+        // reduction, which is not affected by the reused values.
+        if (OptReusedScalars && !SameScaleFactor && !V.isReducedBitcastRoot() &&
+            !V.isReducedCmpBitcastRoot()) {
           // The reuse counters are stored in the deduplicated candidates
           // order, but the emitted reduction vector lane order is defined by
           // the root node, which may be reordered, split or have copyable
