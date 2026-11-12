@@ -1913,8 +1913,7 @@ define nofpclass(inf nan norm zero) half @sub_result_demands_sub_rhs(i1 %cond, h
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) half @sub_result_demands_sub_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call half @returns_sub()
-; CHECK-NEXT:    [[SUB_OR_UNKNOWN:%.*]] = select i1 [[COND]], half [[SUB]], half [[UNKNOWN0]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[SUB_OR_UNKNOWN]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nnan ninf half [[UNKNOWN1]], [[UNKNOWN0]]
 ; CHECK-NEXT:    ret half [[DIV]]
 ;
   %sub = call half @returns_sub()

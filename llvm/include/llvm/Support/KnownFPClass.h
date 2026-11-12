@@ -682,6 +682,16 @@ public:
   LLVM_ABI static KnownFPClass powi(const KnownFPClass &Src,
                                     const KnownBits &N);
 
+  /// Computes the possible inputs for fmul from the result assuming that both
+  /// inputs are unknown and uncorrelated.
+  LLVM_ABI static KnownFPClass inverse_fmul(const KnownFPClass &Output,
+                                            DenormalMode Mode);
+
+  /// Computes the possible inputs for fdiv from the result assuming that both
+  /// inputs are unknown and uncorrelated.
+  LLVM_ABI static std::pair<KnownFPClass, KnownFPClass>
+  inverse_fdiv(const KnownFPClass &Output, DenormalMode Mode);
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
