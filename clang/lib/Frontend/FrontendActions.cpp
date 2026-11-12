@@ -137,6 +137,11 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
                                                     std::string &Sysroot) {
   Sysroot = CI.getHeaderSearchOpts().Sysroot;
+  if (CI.getFrontendOpts().RelocatablePCH &&
+      CI.getHeaderSearchOpts().PCHBaseDirIsCwd) {
+    CI.getDiagnostics().Report(diag::err_pch_base_dir_is_cwd_relocatable);
+    return false;
+  }
   if (CI.getFrontendOpts().RelocatablePCH && Sysroot.empty()) {
     CI.getDiagnostics().Report(diag::err_relocatable_without_isysroot);
     return false;

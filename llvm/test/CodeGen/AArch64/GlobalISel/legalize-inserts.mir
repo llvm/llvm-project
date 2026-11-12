@@ -449,3 +449,4 @@ body: |
     %ins:_(i32) = G_INSERT %val1, %op(i4), 0
     $w0 = COPY %ins
     RET_ReallyLR implicit $w0
+...
