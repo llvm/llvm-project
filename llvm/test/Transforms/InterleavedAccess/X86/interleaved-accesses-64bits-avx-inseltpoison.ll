@@ -6,13 +6,12 @@
 
 define <4 x double> @load_factorf64_4(ptr %ptr) {
 ; CHECK-LABEL: @load_factorf64_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x double>, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[TMP1]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <4 x double>, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[TMP3]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <4 x double>, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 64
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x double>, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <4 x double>, ptr [[PTR]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 96
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x double>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -40,13 +39,12 @@ define <4 x double> @load_factorf64_4(ptr %ptr) {
 
 define <4 x i64> @load_factori64_4(ptr %ptr) {
 ; CHECK-LABEL: @load_factori64_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x i64>, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <4 x i64>, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[TMP3]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <4 x i64>, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 64
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <4 x i64>, ptr [[PTR]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 96
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i64>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -74,13 +72,12 @@ define <4 x i64> @load_factori64_4(ptr %ptr) {
 
 define <4 x double> @load_factorf64_1(ptr %ptr) {
 ; CHECK-LABEL: @load_factorf64_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <4 x double>, ptr [[PTR:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[TMP1]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <4 x double>, ptr [[PTR]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[TMP3]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <4 x double>, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP1]], i64 64
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x double>, ptr [[TMP5]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <4 x double>, ptr [[PTR]], i32 3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1]], i64 96
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x double>, ptr [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
